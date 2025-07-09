@@ -153,6 +153,12 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'PATCH /api/ars/access-requests/*': 204,
 
   /**
+   * RTS API
+   */
+  // Download metadata for a study
+  'GET /api/rts/studies/GHGAS12345678901234': 404,
+
+  /**
    * WKVS API
    */
   // Get human-readable storage aliases

@@ -40,6 +40,7 @@ import { WellKnownValueService } from '@app/metadata/services/well-known-value.s
 import { AddPluralS } from '@app/shared/pipes/add-plural-s.pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes.pipe';
 import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
+import { ConfigService } from '@app/shared/services/config.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { ParagraphsComponent } from '../../../shared/ui/paragraphs/paragraphs.component';
 
@@ -80,12 +81,18 @@ const COLUMNS = {
 })
 export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   id = input.required<string>();
+  #config = inject(ConfigService);
   #location = inject(Location);
   #title = inject(Title);
   #notify = inject(NotificationService);
   #metadata = inject(MetadataService);
   #dins = inject(DatasetInformationService);
   #wkvs = inject(WellKnownValueService);
+
+  #rtsUrl = this.#config.rtsUrl;
+  metadataDownloadUrl = computed(
+    () => `${this.#rtsUrl}/studies/${this.study().accession}`,
+  );
 
   #datasetDetails = this.#metadata.datasetDetails;
   #datasetDetailsError = this.#datasetDetails.error;

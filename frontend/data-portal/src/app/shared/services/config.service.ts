@@ -13,6 +13,7 @@ interface Config {
   dins_url: string;
   mass_url: string;
   metldata_url: string;
+  rts_url: string;
   wps_url: string;
   wkvs_url: string | null;
   ribbon_text: string;
@@ -123,6 +124,14 @@ export class ConfigService {
    */
   get metldataUrl(): string {
     return sansEndSlash(this.#config.metldata_url);
+  }
+
+  /**
+   * Gets the RTS URL from the config object.
+   * @returns the RTS URL sans end slash
+   */
+  get rtsUrl(): string {
+    return sansEndSlash(this.#config.rts_url);
   }
 
   /**

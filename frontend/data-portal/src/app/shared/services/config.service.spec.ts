@@ -15,6 +15,7 @@ const mockConfig = {
   dins_url: '/test/dins',
   mass_url: '/test/mass',
   metldata_url: '/test/metldata',
+  rts_url: '/test/rts',
   wps_url: '/test/wps',
   wkvs_url: null,
   ribbon_text: 'Test ribbon text',

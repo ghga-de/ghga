@@ -73,12 +73,23 @@
               @if (study().ega_accession) {
                 <a
                   mat-stroked-button
-                  class="mb-4 w-64 sm:float-right sm:mb-0"
+                  class="mb-4 ml-2 w-64 sm:float-right sm:mb-0"
                   [href]="'https://ega-archive.org/studies/' + study().ega_accession"
                   target="_blank"
                   rel="noopener noreferrer"
                   data-umami-event="Dataset Details Visit EGA Study Page Clicked"
                   ><mat-icon>open_in_new</mat-icon>Visit EGA Study Page</a
+                >
+              }
+              @if (study().accession) {
+                <a
+                  mat-raised-button
+                  class="raised-button-quaternary mb-4 ml-2 w-64 sm:float-right sm:mb-0"
+                  [href]="metadataDownloadUrl()"
+                  download
+                  title="Download the study metadata as an Excel file"
+                  data-umami-event="Study Metadata Download Clicked"
+                  ><mat-icon>download</mat-icon>Download Metadata</a
                 >
               }
               <h4 class="flex items-center sm:inline-flex">

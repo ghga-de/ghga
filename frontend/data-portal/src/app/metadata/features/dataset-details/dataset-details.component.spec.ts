@@ -13,6 +13,13 @@ import { MetadataService } from '@app/metadata/services/metadata.service';
 import { DatasetDetailsComponent } from './dataset-details.component';
 
 /**
+ * Mock the config service as needed by the dataset details component
+ */
+class MockConfigService {
+  rtsUrl = 'http://mock.dev/rts';
+}
+
+/**
  * Mock the metadata service as needed for the dataset details
  */
 class MockMetadataService {
@@ -32,6 +39,7 @@ import {
 } from '@app/access-requests/services/access-request.service';
 import { AuthService } from '@app/auth/services/auth.service';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value.service';
+import { ConfigService } from '@app/shared/services/config.service';
 import { screen } from '@testing-library/angular';
 
 /**
@@ -75,6 +83,7 @@ describe('DatasetDetailsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DatasetDetailsComponent],
       providers: [
+        { provide: ConfigService, useClass: MockConfigService },
         { provide: DatasetInformationService, useClass: MockDatasetInformationService },
         { provide: WellKnownValueService, useClass: MockWellKnownValueService },
         { provide: AuthService, useClass: MockAuthService },
