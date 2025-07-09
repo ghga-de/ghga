@@ -18,6 +18,7 @@ changes.
 ### Included/Required:
 - Update `hexkit` to remove string serialization for UUIDs and datetimes, as well as
   add support for BSON UUID and Date types in MongoDB providers.
+- Update `hexkit` to replace `motor` with the async tools from `pymongo`.
 - Rollout:
   - Update `ghga-service-commons`, then `ghga-event-schemas`, then other services:
     - Update to new `hexkit` version
@@ -69,6 +70,14 @@ Changes needed:
   that publishing DTOs to Kafka still works, especially in the case of the MongoKafka
   provider.
 - Update Correlation ID canonical type to `UUID` (from `str`)
+- The async client driver we've used for accessing MongoDB, `motor`, is being deprecated
+  next year. The official recommendation is to move to `pymongo`'s asynchronous tools.
+  This entails replacing usage of `motor`'s classes for clients, collections, databases,
+  etc. with the async `pymongo` equivalents. Pymongo Async produces more verbose output
+  if you don't clean up the connections (e.g. in tests), so there are some other
+  changes involved beyond merely swapping the classes, but they are not too disruptive.
+  For example, we can wrap client access in a context manager to close clients once
+  we're finished with them. The work for replacing `motor` will have its own PR.
 
 ### Database Migrations:
 
