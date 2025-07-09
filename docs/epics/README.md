@@ -94,3 +94,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://ghga.pag
 - (75) [Eurasian Blackbird](./75-eurasian-blackbird/technical_specification.md): Kafka Event IDs
 - (76) [Lynx Boreal](./76-lynx-boreal/technical_specification.md): Upload Service Redux
 - (77) [Alpine Longhorn Beetle](./77-alpine-longhorn-beetle/technical_specification.md): Make Metadata Downloadable
+- (79) [Miniature Horse](./79-miniature-horse/technical_specification.md): Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs
