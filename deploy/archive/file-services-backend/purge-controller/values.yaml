@@ -47,4 +47,3 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create

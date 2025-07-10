@@ -54,7 +54,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   filesToDelete:
     # as consumer
     topic:
@@ -66,7 +65,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   datasetUpsertionEvent:
     # as consumer
     topic:
@@ -78,7 +76,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   datasetDeletionEvent:
     # as consumer
     topic:
@@ -90,7 +87,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as producer
   deadLetterQueue:
     topic:
@@ -99,7 +95,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:
@@ -108,4 +103,3 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create

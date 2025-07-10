@@ -48,7 +48,7 @@ spec:
     {{- $kafkaUser := hasKey $topicValue "kafkaUser" | ternary (get $topicValue "kafkaUser") dict -}}
     {{- $kafkaUser := hasKey $kafkaUser "operations" | ternary $kafkaUser (merge $kafkaUser (dict "operations" (list "All"))) -}}
     {{- $kafkaUser := hasKey $kafkaUser "resource" | ternary $kafkaUser (merge $kafkaUser (dict "resource" (dict "patternType" "literal" "type" "topic"))) -}}
-    {{- $kafkaUser := set $kafkaUser "operations" (append $kafkaUser.operations "Describe" | uniq) -}}
+    {{- $kafkaUser := set $kafkaUser "operations" (concat $kafkaUser.operations (list "Describe" "Create") | uniq) -}}
     {{- if eq $topicKey "wildcard" }}
     {{- $kafkaUser = (merge $kafkaUser (dict "resource" (dict "name" $topicValue.topic.value))) -}}
     {{- /* The services do not support a configurable topic name or prefix at the moment for the `retry` topics. */ -}}

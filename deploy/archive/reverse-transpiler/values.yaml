@@ -81,7 +81,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:
@@ -90,4 +89,3 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create

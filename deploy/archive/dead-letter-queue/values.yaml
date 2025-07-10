@@ -63,7 +63,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
         - Describe
       resource:
         patternType: prefix
