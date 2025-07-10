@@ -68,8 +68,8 @@
       <th class="w-36 min-w-36 pe-1 text-start align-middle">Access duration:</th>
       <td class="flex min-w-60 items-center pb-1">
         <span class="grow">
-          {{ fromField() | date }} to
-          {{ untilField() | date }}
+          {{ fromField() | date: periodFormat : periodTimeZone }} to
+          {{ untilField() | date: periodFormat : periodTimeZone }}
         </span>
         <mat-chip
           (click)="open()"

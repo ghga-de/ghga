@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe } from '@angular/common';
+import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -22,6 +22,11 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
+import { DatePipe } from '@app/shared/pipes/date.pipe';
+import {
+  DEFAULT_DATE_OUTPUT_FORMAT,
+  DEFAULT_TIME_ZONE,
+} from '@app/shared/utils/date-formats';
 import { AccessRequestManagerDialogComponent } from '../access-request-manager-dialog/access-request-manager-dialog.component';
 
 /**
@@ -40,6 +45,7 @@ import { AccessRequestManagerDialogComponent } from '../access-request-manager-d
     AccessRequestStatusClassPipe,
     MatIconModule,
   ],
+  providers: [CommonDatePipe],
   templateUrl: './access-request-manager-list.component.html',
   styleUrl: './access-request-manager-list.component.scss',
 })
@@ -56,6 +62,9 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
 
   defaultTablePageSize = 10;
   tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
+
+  periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
+  periodTimeZone = DEFAULT_TIME_ZONE;
 
   #updateSourceEffect = effect(() => (this.source.data = this.accessRequests()));
 

@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe } from '@angular/common';
+import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   Component,
   computed,
@@ -31,7 +31,13 @@ import {
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
+import { DatePipe } from '@app/shared/pipes/date.pipe';
 import { ConfigService } from '@app/shared/services/config.service';
+import {
+  DEFAULT_DATE_OUTPUT_FORMAT,
+  DEFAULT_TIME_ZONE,
+  timeZoneToUTC,
+} from '@app/shared/utils/date-formats';
 
 /**
  * Editor for the duration of access requests.
@@ -47,6 +53,7 @@ import { ConfigService } from '@app/shared/services/config.service';
     DatePipe,
     ReactiveFormsModule,
   ],
+  providers: [CommonDatePipe],
   templateUrl: './access-request-duration-edit.component.html',
   styleUrl: './access-request-duration-edit.component.scss',
 })
@@ -55,6 +62,9 @@ export class AccessRequestDurationEditComponent implements OnInit {
   maxDays = this.#config.accessGrantMaxDays;
   maxExtend = this.#config.accessGrantMaxExtend;
   defaultDuration = this.#config.defaultAccessDurationDays;
+
+  periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
+  periodTimeZone = DEFAULT_TIME_ZONE;
 
   request = input.required<AccessRequest>();
 
@@ -307,33 +317,22 @@ export class AccessRequestDurationEditComponent implements OnInit {
     if (this.fromField() && this.untilField()) {
       this.onDateSelected(new Date(this.fromField() as Date), true);
       this.onDateSelected(new Date(this.untilField() as Date), false);
-      const fromDate = new Date(this.fromField()!);
-      const untilDate = new Date(this.untilField()!);
-      const fromUTCDate = new Date(
-        Date.UTC(
-          fromDate.getFullYear(),
-          fromDate.getMonth(),
-          fromDate.getDate(),
-          0,
-          0,
-          0,
-          0,
-        ),
+      const from = new Date(this.fromField()!);
+      const until = new Date(this.untilField()!);
+      const fromDate = timeZoneToUTC(
+        from.getFullYear(),
+        from.getMonth(),
+        from.getDate(),
       );
-      const untilUTCDate = new Date(
-        Date.UTC(
-          untilDate.getFullYear(),
-          untilDate.getMonth(),
-          untilDate.getDate(),
-          23,
-          59,
-          59,
-          999,
-        ),
+      const untilDate = timeZoneToUTC(
+        until.getFullYear(),
+        until.getMonth(),
+        until.getDate(),
+        true,
       );
-      if (fromDate && untilDate) {
-        const fromISO = fromUTCDate.toISOString();
-        const untilISO = untilUTCDate.toISOString();
+      if (from && until) {
+        const fromISO = fromDate.toISOString();
+        const untilISO = untilDate.toISOString();
         if (this.isModified()) {
           const saveMap = new Map<keyof AccessRequest, string>();
           saveMap.set('access_starts', fromISO);

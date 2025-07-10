@@ -35,13 +35,13 @@
       <ng-container matColumnDef="starts">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Access start</th>
         <td mat-cell *matCellDef="let ar">
-          {{ ar.access_starts | date }}
+          {{ ar.access_starts | date: periodFormat : periodTimeZone }}
         </td>
       </ng-container>
       <ng-container matColumnDef="ends">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Access end</th>
         <td mat-cell *matCellDef="let ar">
-          {{ ar.access_ends | date }}
+          {{ ar.access_ends | date: periodFormat : periodTimeZone }}
         </td>
       </ng-container>
       <ng-container matColumnDef="requested">

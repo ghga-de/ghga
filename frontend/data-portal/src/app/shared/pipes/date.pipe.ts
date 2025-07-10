@@ -23,7 +23,7 @@ import { inject, Pipe, PipeTransform } from '@angular/core';
  * We assume the Intl API is supported since all modern browsers have it.
  * If it is not supported, it behaves like the original DatePipe.
  */
-@Pipe({ name: 'DatePipe' })
+@Pipe({ name: 'date' })
 export class DatePipe implements PipeTransform {
   #datePipe = inject(CommonDatePipe);
 
