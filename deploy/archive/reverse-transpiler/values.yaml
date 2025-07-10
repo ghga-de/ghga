@@ -1,0 +1,93 @@
+image:
+  repository: "ghga/reverse-transpiler-service"
+
+configPrefix: rts
+
+# Service parameters
+
+# Service base path
+apiBasePath: /rts/
+# Name of the database
+mongodb:
+  dbName: reverse-transpiler
+# This parameter is used as Kafka's group id
+serviceName: rts-rest
+# This parameter specifies the client id in Kafka
+serviceInstanceId: rts-rest-1
+# This parameter is used as Kafka's group id
+serviceNameConsumer: rts-consumer
+# This parameter specifies the client id in Kafka
+serviceInstanceIdConsumer: rts-consumer-1
+
+parameters:
+  default:
+    host: "0.0.0.0"
+    service_instance_id: 'rts_1'
+    service_name: rts
+    kafka_enable_dlq: true
+    mongo_dsn: null
+    db_name: rts
+    artifact_topic: artifacts
+    sheet_names:
+      analyses: Analysis
+      analysis_methods: AnalysisMethod
+      analysis_method_supporting_files: AnalysisMethodSupportingFile
+      studies: Study
+      individuals: Individual
+      individual_supporting_files: IndividualSupportingFile
+      samples: Sample
+      experiment_methods: ExperimentMethod
+      experiment_method_supporting_files: ExperimentMethodSupportingFile
+      experiments: Experiment
+      research_data_files: ResearchDataFile
+      process_data_files: ProcessDataFile
+      datasets: Dataset
+      data_access_policies: DataAccessPolicy
+      data_access_committees: DataAccessCommittee
+      publications: Publication
+  rest:
+    service_instance_id: 'rest.1'
+  consumer:
+    service_instance_id: 'consumer.1'
+
+containers:
+- name: rest
+  type: "rest"
+  cmd: rts run-rest
+  config:
+    name: parameters-rest
+    key: parameters-rest
+- name: consumer
+  type: "consumer"
+  cmd: rts consume-events
+  config:
+    name: parameters-consumer
+    key: parameters-consumer
+
+_topics:
+  artifactsEvent:
+    # as consumer
+    topic:
+      name: artifact_topic
+      value: artifacts
+    kafkaUser:
+      operations:
+        - Read
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+        - Create
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read
+        - Create
