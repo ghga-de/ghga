@@ -28,7 +28,6 @@ parameters:
     primary_artifact_name: embedded_public
     primary_dataset_name: EmbeddedDataset
     service_instance_id: 'rest.1'
-    artifact_topic: artifacts
     publishable_artifacts:
     - "added_accessions"
 
@@ -41,6 +40,14 @@ containers:
     key: parameters
 
 _topics:
+  artifactsEvent:
+    # as producer
+    topic:
+      name: artifact_topic
+      value: artifacts
+    kafkaUser:
+      operations:
+        - Write
   datasetChangeEvent:
     # as producer
     topic:
