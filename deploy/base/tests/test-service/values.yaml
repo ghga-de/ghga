@@ -27,6 +27,7 @@ cluster:
 parameters:
   default:
     foo: bar
+    db_name: test-database # That should be omitted and set dynamically to release name
   rest:
     service_instance_id: 'rest.1'
   consumer:

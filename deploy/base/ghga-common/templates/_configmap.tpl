@@ -8,7 +8,9 @@ metadata:
 data:
 {{- range $container := .Values.containers }}
   parameters-{{ $container.type }}: |
-    {{- merge (get $.Values.parameters $container.type) $.Values.parameters.default | toYaml | nindent 4 }}
+    {{- $parameters := merge (get $.Values.parameters $container.type) $.Values.parameters.default -}}
+    {{- $parameters := omit $parameters "db_name" "api_root_path" "service_name" "service_instance_id" -}}  
+    {{- $parameters | toYaml | nindent 4 }}
     {{- include "ghga-common.kafkaTopicsParameters" $ | nindent 2 }}
     {{- if (include "ghga-common.apiBasePath" $) }}
     api_root_path: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.apiBasePath" $) "context" $) }}
@@ -31,7 +33,9 @@ data:
     {{- end }}
 {{- end }}
   parameters: |
-    {{- toYaml .Values.parameters.default | nindent 4 }}
+    {{- $parameters := .Values.parameters.default }}
+    {{- $parameters := omit $parameters "db_name" "api_root_path" "service_name" "service_instance_id" -}}  
+    {{- $parameters | toYaml | nindent 4 }}
     {{- include "ghga-common.kafkaTopicsParameters" . | nindent 2 }}
     {{- if (include "ghga-common.apiBasePath" $) }}
     api_root_path: {{ include "common.tplvalues.render" (dict "value" (include "ghga-common.apiBasePath" $) "context" $) }}
