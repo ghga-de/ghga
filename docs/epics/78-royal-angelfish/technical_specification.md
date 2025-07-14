@@ -31,6 +31,8 @@ The UI should be similar to the already existing Access Request and IVA manager 
     request text, resolution date, ticket ID, DAC
   - revoke an existing access grant
 - Necessary extensions to backend services to support the above pages
+- Adaptation of the existing access request and IVA management pages
+  so that the managers link to each other and work consistently
 
 ### Not included:
 
@@ -38,10 +40,18 @@ The UI should be similar to the already existing Access Request and IVA manager 
 
 ## User Interface
 
+Rough mockups of the UI to be implemented:
+
 - User Management: ![User Management](./User_Management.png)
 - User Details: ![User Details](./User_Details.png)
 - Access Grants: ![Access Grants](./Access_Grants.png)
 - Access Grant: ![Access Grant](./Access_Grant.png)
+
+The existing UI of the access request and IVA manager should be adapted to match the new UI as part of this epic:
+- Reduce the number of filter fields by combining some of the fields
+- Add detail buttons in addition to making table row clickable
+- Add a hover and focus effect for the table rows
+- Convert detail dialogs to navigable standalone pages, with transitions
 
 ## API Definitions
 
