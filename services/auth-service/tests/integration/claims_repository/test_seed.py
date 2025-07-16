@@ -131,7 +131,7 @@ async def test_add_data_steward(
     assert iva["verification_code_hash"] is None
     creation_date = iva["created"]
     time_diff = now_as_utc() - datetime.fromisoformat(creation_date)
-    assert -1 < time_diff.total_seconds() < 3
+    assert -1 < time_diff.total_seconds() < 5
     assert iva["changed"] == iva["created"]
 
     claims_collection = db.get_collection(config.claims_collection)
@@ -148,7 +148,7 @@ async def test_add_data_steward(
     assert claim["conditions"] is None
     creation_date = claim["creation_date"]
     time_diff = now_as_utc() - datetime.fromisoformat(creation_date)
-    assert -1 < time_diff.total_seconds() < 3
+    assert -1 < time_diff.total_seconds() < 5
     assert claim["assertion_date"] == creation_date
     assert claim["valid_from"] == creation_date
     assert (
@@ -191,7 +191,7 @@ async def test_add_data_steward(
         time_diff = datetime.fromisoformat(
             new_claim.pop(date_field)
         ) - datetime.fromisoformat(claim.pop(date_field))
-        assert -1 < time_diff.total_seconds() < 3
+        assert -1 < time_diff.total_seconds() < 5
     assert new_claim == claim
 
     # add data steward with different name

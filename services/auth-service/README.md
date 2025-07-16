@@ -47,13 +47,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:6.0.2
+docker pull ghga/auth-service:6.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:6.0.2 .
+docker build -t ghga/auth-service:6.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -61,7 +61,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/auth-service:6.0.2 --help
+docker run -p 8080:8080 ghga/auth-service:6.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -82,7 +82,7 @@ The service requires the following configuration parameters:
 
 - <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. Minimum: `0`. Maximum: `1`. Default: `1.0`.
 
-- <a id="properties/otel_exporter_protocol"></a>**`otel_exporter_protocol`** *(string)*: Specifies which protocol should be used by exporters. Must be one of: `["grpc", "http/protobuf"]`. Default: `"http/protobuf"`.
+- <a id="properties/otel_exporter_protocol"></a>**`otel_exporter_protocol`** *(string)*: Specifies which protocol should be used by exporters. Must be one of: "grpc" or "http/protobuf". Default: `"http/protobuf"`.
 
 - <a id="properties/otel_exporter_endpoint"></a>**`otel_exporter_endpoint`** *(string, format: uri, required)*: Base endpoint URL for the collector that receives content from the exporter. Length must be at least 1.
 
@@ -176,7 +176,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/kafka_security_protocol"></a>**`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
+- <a id="properties/kafka_security_protocol"></a>**`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: "PLAINTEXT" or "SSL". Default: `"PLAINTEXT"`.
 
 - <a id="properties/kafka_ssl_cafile"></a>**`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
 
@@ -220,7 +220,7 @@ The service requires the following configuration parameters:
 
   - **Any of**
 
-    - <a id="properties/kafka_compression_type/anyOf/0"></a>*string*: Must be one of: `["gzip", "snappy", "lz4", "zstd"]`.
+    - <a id="properties/kafka_compression_type/anyOf/0"></a>*string*: Must be one of: "gzip", "snappy", "lz4", or "zstd".
 
     - <a id="properties/kafka_compression_type/anyOf/1"></a>*null*
 
@@ -393,7 +393,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
 
 - <a id="properties/log_format"></a>**`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
 
@@ -616,7 +616,7 @@ The service requires the following configuration parameters:
 
 - <a id="properties/provide_apis"></a>**`provide_apis`** *(array)*: Which REST APIs should be provided. Default: `[]`.
 
-  - <a id="properties/provide_apis/items"></a>**Items** *(string)*: Must be one of: `["ext_auth", "users", "claims", "access"]`.
+  - <a id="properties/provide_apis/items"></a>**Items** *(string)*: Must be one of: "ext_auth", "users", "claims", or "access".
 
 
   Examples:
@@ -674,9 +674,9 @@ The service requires the following configuration parameters:
 ## Definitions
 
 
-- <a id="%24defs/IvaType"></a>**`IvaType`** *(string)*: The type of IVA. Must be one of: `["Phone", "Fax", "PostalAddress", "InPerson"]`.
+- <a id="%24defs/IvaType"></a>**`IvaType`** *(string)*: The type of IVA. Must be one of: "Phone", "Fax", "PostalAddress", or "InPerson".
 
-- <a id="%24defs/TOTPAlgorithm"></a>**`TOTPAlgorithm`** *(string)*: Hash algorithm used for TOTP code generation. Must be one of: `["sha1", "sha256", "sha512"]`.
+- <a id="%24defs/TOTPAlgorithm"></a>**`TOTPAlgorithm`** *(string)*: Hash algorithm used for TOTP code generation. Must be one of: "sha1", "sha256", or "sha512".
 
 - <a id="%24defs/UserWithIVA"></a>**`UserWithIVA`** *(object)*: User with external ID and associated IVA. Cannot contain additional properties.
 
@@ -686,7 +686,7 @@ The service requires the following configuration parameters:
 
   - <a id="%24defs/UserWithIVA/properties/email"></a>**`email`** *(string, required)*: The email address of the user.
 
-  - <a id="%24defs/UserWithIVA/properties/iva_type"></a>**`iva_type`**: The type of the validation address of the user. Refer to *[#/$defs/IvaType](#%24defs/IvaType)*.
+  - <a id="%24defs/UserWithIVA/properties/iva_type"></a>**`iva_type`** *(required)*: The type of the validation address of the user. Refer to *[#/$defs/IvaType](#%24defs/IvaType)*.
 
   - <a id="%24defs/UserWithIVA/properties/iva_value"></a>**`iva_value`** *(string, required)*: The actual validation address of the user.
 

@@ -310,6 +310,70 @@ components:
       - matches
       title: Condition
       type: object
+    Grant:
+      additionalProperties: false
+      description: An access grant based on a corresponding claim.
+      properties:
+        created:
+          description: Date of creation of this grant
+          format: date-time
+          title: Created
+          type: string
+        dataset_id:
+          description: ID of the dataset this grant is for
+          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
+          title: Dataset Id
+          type: string
+        id:
+          description: Internal grant ID (same as claim ID)
+          title: Id
+          type: string
+        iva_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of an IVA associated with this grant
+          title: Iva Id
+        user_email:
+          description: The email address of the user
+          format: email
+          title: User Email
+          type: string
+        user_id:
+          description: Internal user ID
+          title: User Id
+          type: string
+        user_name:
+          description: Full name of the user
+          title: User Name
+          type: string
+        user_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Academic title of the user
+          title: User Title
+        valid_from:
+          description: Start date of validity
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - id
+      - user_id
+      - dataset_id
+      - created
+      - valid_from
+      - valid_until
+      - user_name
+      - user_email
+      title: Grant
+      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -751,9 +815,101 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 6.0.2
+  version: 6.1.0
 openapi: 3.1.0
 paths:
+  /download-access/grants:
+    get:
+      description: Endpoint to get the list of all download access grants. Can be
+        filtered by user ID, IVA ID, and dataset ID.
+      operationId: get_download_access_grants
+      parameters:
+      - description: The internal ID of the user
+        in: query
+        name: user_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The internal ID of the user
+          title: User Id
+      - description: The ID of the IVA
+        in: query
+        name: iva_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The ID of the IVA
+          title: Iva Id
+      - description: The ID of the dataset
+        in: query
+        name: dataset_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The ID of the dataset
+          title: Dataset Id
+      - description: Whether the grant is currently valid
+        in: query
+        name: valid
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Whether the grant is currently valid
+          title: Valid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Grant'
+                title: Response 200 Get Download Access Grants
+                type: array
+          description: Access grants have been fetched.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get download access grants
+      tags:
+      - access
+  /download-access/grants/{grant_id}:
+    delete:
+      description: Endpoint to revoke an existing download access grant.
+      operationId: revoke_download_access_grant
+      parameters:
+      - description: The ID of the grant to revoke
+        in: path
+        name: grant_id
+        required: true
+        schema:
+          description: The ID of the grant to revoke
+          title: Grant Id
+          type: string
+      responses:
+        '204':
+          description: Access grant has been revoked.
+        '404':
+          description: The access grant was not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Revoke a download access grant
+      tags:
+      - access
   /download-access/users/{user_id}/datasets:
     get:
       description: Endpoint to get the IDs of all datasets that can be downloaded

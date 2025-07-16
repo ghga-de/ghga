@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test the REST API"""
+"""Test the access grant REST API"""
 
 from datetime import datetime
-from operator import itemgetter
 from typing import Any
 
 import pytest
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
 
+from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_registry.models.ivas import (
     Iva,
@@ -31,258 +31,11 @@ from auth_service.user_registry.models.ivas import (
 )
 from auth_service.user_registry.models.users import UserStatus
 
-from ...fixtures.utils import DummyIvaDao, DummyUserDao
+from ...fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
 from .fixtures import FullClient, fixture_full_client  # noqa: F401
+from .test_claims_api import DATASET_CLAIM_DATA
 
 pytestmark = pytest.mark.asyncio()
-
-ROLE_CLAIM_DATA = {
-    "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
-    "visa_value": "data_steward@ghga.de",
-    "valid_from": "2022-10-01T12:00:00Z",
-    "valid_until": "2022-10-31T12:00:00Z",
-    "assertion_date": "2022-09-01T12:00:00Z",
-    "source": "https://ghga.de",
-    "asserted_by": "system",
-}
-
-DATASET_CLAIM_DATA = {
-    "visa_type": "ControlledAccessGrants",
-    "visa_value": "https://ghga.de/datasets/DS0815",
-    "assertion_date": "2022-06-01T12:00:00Z",
-    "source": "https://ghga.de",
-    "asserted_by": "system",
-}
-
-
-async def test_health_check(full_client: FullClient):
-    """Test that the health check endpoint works."""
-    response = await full_client.get("/health")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"status": "OK"}
-
-
-async def test_get_from_a_random_path(full_client: FullClient):
-    """Test that a GET request to a random path raises a not found error."""
-    response = await full_client.post("/some/random/path")
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_post_claim(full_client: FullClient):
-    """Test that creating a user claim works."""
-    user_dao = DummyUserDao()
-    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-
-    response = await full_client.post(
-        "/users/john@ghga.de/claims", json=ROLE_CLAIM_DATA
-    )
-
-    claim = response.json()
-    assert response.status_code == status.HTTP_201_CREATED, claim
-
-    claim_id = claim.pop("id", None)
-    assert claim_id is not None
-    assert len(claim_id) == 36
-    assert claim_id.count("-") == 4
-    assert claim.pop("user_id") == "john@ghga.de"
-    assert claim.pop("iva_id") is None
-    assert claim.pop("sub_source") is None
-
-    assert claim.pop("conditions") is None
-    assert claim.pop("revocation_date") is None
-    assert claim.pop("creation_date") is not None
-
-    assert claim == ROLE_CLAIM_DATA
-
-    # test with non-existing user
-    response = await full_client.post(
-        "/users/john@haag.de/claims", json=ROLE_CLAIM_DATA
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "The user was not found."
-
-
-async def test_get_claims(full_client: FullClient):
-    """Test that getting all claims of a user works."""
-    user_dao = DummyUserDao()
-    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-
-    user_id = "john@ghga.de"
-
-    # post two different claims
-    claim1 = ROLE_CLAIM_DATA
-    claim2 = {
-        **claim1,
-        "assertion_date": "2022-09-01T13:00:00Z",
-        "visa_type": "ResearcherStatus",
-        "visa_value": "researcher@ghga.de",
-    }
-    posted_claims = []
-    for claim in (claim1, claim2):
-        response = await full_client.post(f"/users/{user_id}/claims", json=claim)
-        assert response.status_code == status.HTTP_201_CREATED
-        posted_claims.append(response.json())
-
-    response = await full_client.get(f"/users/{user_id}/claims")
-    assert response.status_code == status.HTTP_200_OK
-    requested_claims = response.json()
-    requested_claims.sort(key=itemgetter("assertion_date"))
-
-    assert requested_claims == posted_claims
-
-    assert requested_claims[0]["user_id"] == user_id
-    assert requested_claims[1]["user_id"] == user_id
-    assert requested_claims[0]["visa_type"] == ROLE_CLAIM_DATA["visa_type"]
-    assert requested_claims[1]["visa_type"] == "ResearcherStatus"
-    assert requested_claims[0]["visa_value"] != requested_claims[1]["visa_value"]
-
-    # test with non-existing user
-    response = await full_client.get("/users/john@haag.de/claims")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "The user was not found."
-
-
-async def test_patch_claim(full_client: FullClient):
-    """Test that revoking a user claim works."""
-    user_dao = DummyUserDao()
-    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-
-    user_id = "john@ghga.de"
-
-    # post test claim
-    response = await full_client.post(f"/users/{user_id}/claims", json=ROLE_CLAIM_DATA)
-    posted_claim = response.json()
-    assert response.status_code == status.HTTP_201_CREATED
-
-    claim_id = posted_claim["id"]
-    assert claim_id is not None
-    assert posted_claim.pop("revocation_date") is None
-
-    # revoke test claim
-    revocation_date = "2022-10-15T12:00:00Z"
-    patch_data = {"revocation_date": revocation_date}
-    response = await full_client.patch(
-        f"/users/{user_id}/claims/{claim_id}", json=patch_data
-    )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # test that claim has been revoked
-    response = await full_client.get(f"/users/{user_id}/claims")
-    assert response.status_code == status.HTTP_200_OK
-    claims = response.json()
-    assert len(claims) == 1
-    claim = claims[0]
-    assert claim.pop("revocation_date") == revocation_date
-    assert claim == posted_claim
-
-    # test without revocation date
-    patch_data = {"revocation_date": None}  # type: ignore
-    response = await full_client.patch(
-        f"/users/{user_id}/claims/{claim_id}", json=patch_data
-    )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-    # test with later revocation date
-    patch_data = {"revocation_date": "2022-10-15T13:00:00Z"}
-    response = await full_client.patch(
-        f"/users/{user_id}/claims/{claim_id}", json=patch_data
-    )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    assert response.json()["detail"] == "Already revoked earlier."
-
-    # test with earlier revocation date
-    revocation_date = "2022-10-15T11:00:00Z"
-    patch_data = {"revocation_date": revocation_date}
-    response = await full_client.patch(
-        f"/users/{user_id}/claims/{claim_id}", json=patch_data
-    )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # test that revocation was advanced
-    response = await full_client.get(f"/users/{user_id}/claims")
-    assert response.status_code == status.HTTP_200_OK
-    claims = response.json()
-    assert len(claims) == 1
-    claim = claims[0]
-    assert claim.pop("revocation_date") == revocation_date
-    assert claim == posted_claim
-
-    # test with non-existing user
-    response = await full_client.patch(
-        f"/users/john@haag.de/claims/{claim_id}", json=patch_data
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "The user was not found."
-    # test with non-existing claim
-    response = await full_client.patch(
-        f"/users/{user_id}/claims/invalid-claim-id", json=patch_data
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "The user claim was not found."
-
-
-async def test_delete_claim(full_client: FullClient):
-    """Test that deleting a user claim works."""
-    user_dao = DummyUserDao()
-    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-
-    user_id = "john@ghga.de"
-
-    # post two different claims
-    claim1 = ROLE_CLAIM_DATA.copy()
-    claim2 = ROLE_CLAIM_DATA.copy()
-    claim2["visa_type"] = "ResearcherStatus"
-    for claim in (claim1, claim2):
-        response = await full_client.post(f"/users/{user_id}/claims", json=claim)
-        assert response.status_code == status.HTTP_201_CREATED
-        claim_id = response.json()["id"]
-        assert claim_id
-        claim["id"] = claim_id
-
-    # test deletion of first claim with non-existing user
-    claim_id = claim1["id"]
-    response = await full_client.delete(f"/users/john@haag.de/claims/{claim_id}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    # test that claims have been posted
-    response = await full_client.get(f"/users/{user_id}/claims")
-    assert response.status_code == status.HTTP_200_OK
-    claims = response.json()
-    assert len(claims) == 2
-
-    # delete first claim properly
-    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # test that claim has been deleted
-    response = await full_client.get(f"/users/{user_id}/claims")
-    assert response.status_code == status.HTTP_200_OK
-    claims = response.json()
-    assert len(claims) == 1
-    claim = claims[0]
-    assert claim["id"] == claim2["id"]
-    assert claim["visa_type"] == "ResearcherStatus"
-
-    # delete again
-    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    # delete second claim
-    claim_id = claim2["id"]
-    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # test that claim has been deleted
-    response = await full_client.get(f"/users/{user_id}/claims")
-    assert response.status_code == status.HTTP_200_OK
-    claims = response.json()
-    assert len(claims) == 0
-
-    # delete again
-    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_grant_download_access(full_client: FullClient):
@@ -806,27 +559,127 @@ async def test_get_datasets_with_download_access(full_client: FullClient):
     assert response.json()["detail"] == "The user was not found."
 
 
-async def test_get_claims_for_seeded_data_steward(full_client: FullClient):
-    """Test that the database is seeded with the configured data steward."""
-    response = await full_client.get("/users/the-id-of-rod-steward/claims")
-    assert response.status_code == status.HTTP_200_OK
-    claims = response.json()
-    assert len(claims) == 1
-    claim = claims[0]
+async def test_fetch_access_grants(full_client: FullClient):
+    """Test that access grants can be fetched and filters can be used."""
+    user_dao = DummyUserDao(title="Prof.", name="John Doe Sr.")
+    full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
+    claim_dao = DummyClaimDao()
+    full_client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
+    user = user_dao.users[0]
+    assert user.name == "John Doe Sr."
+    claim = claim_dao.claims[1]
+    assert claim.visa_type == "ControlledAccessGrants"
+    assert claim.user_id == user.id
+    dt_to_str = lambda dt: dt.isoformat().replace("+00:00", "Z")
+    expected_grants = [
+        {
+            "created": dt_to_str(claim.creation_date),
+            "dataset_id": "DS0815",
+            "id": "data-access-claim-id",
+            "iva_id": "data-access-iva-id",
+            "user_email": "john@home.org",
+            "user_id": "john@ghga.de",
+            "user_name": "John Doe Sr.",
+            "user_title": "Prof.",
+            "valid_from": dt_to_str(claim.valid_from),
+            "valid_until": dt_to_str(claim.valid_until),
+        },
+    ]
 
-    assert claim.pop("id")
-    assert claim.pop("iva_id")
-    assertion_date = claim.pop("assertion_date")
-    assert claim.pop("creation_date") == assertion_date
-    assert claim.pop("valid_from") == assertion_date
-    assert claim.pop("valid_until") > assertion_date
-    assert claim == {
-        "asserted_by": "system",
-        "conditions": None,
-        "revocation_date": None,
-        "user_id": "the-id-of-rod-steward",
-        "source": "https://ghga.de",
-        "sub_source": None,
-        "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
-        "visa_value": "data_steward@ghga.de",
-    }
+    response = await full_client.get("/download-access/grants")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == expected_grants
+
+    # check filtering for the user ID
+    response = await full_client.get("/download-access/grants?user_id=jack@ghga.de")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+    response = await full_client.get("/download-access/grants?user_id=invalid-email")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+    response = await full_client.get("/download-access/grants?user_id=john@ghga.de")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == expected_grants
+
+    # check filtering for the IVA ID
+    response = await full_client.get(
+        "/download-access/grants?iva_id=no-data-access-iva-id"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+    response = await full_client.get(
+        "/download-access/grants?iva_id=data-access-iva-id"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == expected_grants
+
+    # check filtering for the dataset ID
+    response = await full_client.get("/download-access/grants?dataset_id=DS0917")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+    response = await full_client.get(
+        "/download-access/grants?dataset_id=invalid-accession"
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+    response = await full_client.get("/download-access/grants?dataset_id=DS0815")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == expected_grants
+
+    # check filtering for the validity
+    response = await full_client.get("/download-access/grants?valid=false")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+    response = await full_client.get("/download-access/grants?valid=true")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == expected_grants
+
+
+async def test_delete_access_grants(full_client: FullClient):
+    """Test that access grants can be revoked."""
+    claim_dao = DummyClaimDao()
+    full_client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
+    claim = claim_dao.claims[1]
+    assert claim.visa_type == "ControlledAccessGrants"
+    claim_id = claim.id
+    assert claim_id == "data-access-claim-id"
+    num_claims = len(claim_dao.claims)
+
+    assert await claim_dao.get_by_id(claim_id) is claim
+
+    expected_error_status = status.HTTP_404_NOT_FOUND
+    expected_error_detail = "The download access grant was not found."
+
+    # try to revoke a claim that does not correspond to an access grant
+    response = await full_client.delete("/download-access/grants/data-steward-claim-id")
+    assert response.status_code == expected_error_status
+    assert response.json()["detail"] == expected_error_detail
+
+    # try to revoke a non-existing claim
+    response = await full_client.delete("/download-access/grants/some-other-claim-id")
+    assert response.status_code == expected_error_status
+    assert response.json()["detail"] == expected_error_detail
+
+    # make sure that nothing has been changed
+    assert len(claim_dao.claims) == num_claims
+    assert await claim_dao.get_by_id(claim_id) is claim
+
+    # revoke the existing access grant
+    response = await full_client.delete(f"/download-access/grants/{claim_id}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # make sure the claim has actually been revoked, but not deleted
+    assert len(claim_dao.claims) == num_claims
+    updated_claim = await claim_dao.get_by_id(claim_id)
+    assert updated_claim.revocation_date is not None
+    assert 0 <= (now_as_utc() - updated_claim.revocation_date).total_seconds() < 3
+    assert updated_claim.model_copy(update={"revocation_date": None}) == claim
+
+    # try to revoke the access grant again
+    response = await full_client.delete(f"/download-access/grants/{claim_id}")
+    assert response.status_code == expected_error_status
+    assert response.json()["detail"] == expected_error_detail
+
+    # make sure that nothing has been changed
+    assert len(claim_dao.claims) == num_claims
+    assert await claim_dao.get_by_id(claim_id) is updated_claim

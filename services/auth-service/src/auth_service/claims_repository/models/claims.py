@@ -213,3 +213,35 @@ class Claim(ClaimCreation):
     revocation_date: UTCDatetime | None = Field(
         default=None, description="If revoked, date of revocation"
     )
+
+
+class Grant(BaseDto):
+    """An access grant based on a corresponding claim."""
+
+    id: str = Field(  # actually UUID
+        ..., description="Internal grant ID (same as claim ID)"
+    )
+    user_id: str = Field(  # actually UUID
+        default=..., description="Internal user ID"
+    )
+    iva_id: str | None = Field(  # actually UUID
+        default=None, description="ID of an IVA associated with this grant"
+    )
+    dataset_id: Accession = Field(
+        default=..., description="ID of the dataset this grant is for"
+    )
+
+    created: UTCDatetime = Field(
+        default=..., description="Date of creation of this grant"
+    )
+    valid_from: UTCDatetime = Field(default=..., description="Start date of validity")
+    valid_until: UTCDatetime = Field(default=..., description="End date of validity")
+
+    user_name: str = Field(default=..., description="Full name of the user")
+    user_email: EmailStr = Field(
+        default=...,
+        description="The email address of the user",
+    )
+    user_title: str | None = Field(
+        default=None, description="Academic title of the user"
+    )

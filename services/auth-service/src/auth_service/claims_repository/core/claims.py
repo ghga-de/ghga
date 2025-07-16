@@ -147,13 +147,27 @@ def create_controlled_access_claim(
     )
 
 
-def create_controlled_access_filter(dataset_id: str) -> dict[str, str]:
-    """Create a mapping for filtering controlled access grants for a given dataset."""
-    return {
+def create_controlled_access_filter(
+    *,
+    user_id: str | None = None,
+    iva_id: str | None = None,
+    dataset_id: str | None = None,
+) -> dict[str, str]:
+    """Create a mapping for filtering controlled access grants.
+
+    If a user, IVA or dataset ID is given, filter values will be set accordingly.
+    """
+    mapping = {
         "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS.value,
-        "visa_value": DATASET_PREFIX + dataset_id,
         "source": str(INTERNAL_SOURCE).rstrip("/"),
     }
+    if user_id:
+        mapping["user_id"] = user_id
+    if iva_id:
+        mapping["iva_id"] = iva_id
+    if dataset_id:
+        mapping["visa_value"] = DATASET_PREFIX + dataset_id
+    return mapping
 
 
 def get_dataset_for_value(value: str) -> str | None:

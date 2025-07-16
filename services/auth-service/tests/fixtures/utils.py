@@ -26,7 +26,11 @@ from fastapi import Request
 from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_datetime
 from hexkit.config import config_from_yaml
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
+from hexkit.protocols.dao import (
+    MultipleHitsFoundError,
+    NoHitsFoundError,
+    ResourceNotFoundError,
+)
 from jwcrypto import jwk, jwt
 
 from auth_service.auth_adapter.core.session_store import Session
@@ -260,7 +264,7 @@ class DummyUserDao:
                 return user
         raise ResourceNotFoundError(id_=id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> User | None:
+    async def find_one(self, *, mapping: Mapping[str, Any]) -> User:
         """Find the dummy user via LS-ID."""
         mapping = json.loads(json.dumps(mapping))
         ext_id = mapping.get("ext_id")
@@ -452,6 +456,17 @@ class DummyClaimDao:
             if claim.id == id_:
                 return claim
         raise ResourceNotFoundError(id_=id_)
+
+    async def find_one(self, *, mapping: Mapping[str, Any]) -> Claim:
+        """Find a dummy user claim."""
+        claims = []
+        async for claim in self.find_all(mapping=mapping):
+            claims.append(claim)
+        if not claims:
+            raise NoHitsFoundError(mapping=mapping)
+        if len(claims) > 1:
+            raise MultipleHitsFoundError(mapping=mapping)
+        return claims[0]
 
     async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[Claim]:
         """Find all dummy user claims."""
