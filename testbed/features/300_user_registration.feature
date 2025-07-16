@@ -50,7 +50,7 @@ Feature: 300 User Registration
   Scenario: The user re-registers with the new email address
     When "Dr. John Doe" re-registers with the new email
     Then the response status code is "204"
-    And "Account Details Changed" was sent to "Dr. John Doe"
+    And "Account Details Changed" email was sent to "Dr. John Doe"
 
   Scenario: Trying to change the title without authentication
     When "Dr. John Doe" changes the title to "Prof."
@@ -65,7 +65,7 @@ Feature: 300 User Registration
     Given I am authenticated as "Dr. John Doe"
     When "Dr. John Doe" changes the title to "Prof."
     Then the response status code is "204"
-    And "Second Factor Recreated" was sent to "Dr. John Doe (new email)"
+    And "Second Factor Recreated" email was sent to "Dr. John Doe (new email)"
 
   Scenario: Access user data again after changes
     Given I am logged in as "Prof. John Doe"
@@ -84,7 +84,7 @@ Feature: 300 User Registration
     And I am logged in as "Dr. John Doe"
     When "Dr. John Doe" re-registers with the old email
     Then the response status code is "204"
-    And "Account Details Changed" was sent to "Dr. John Doe (new email)"
+    And "Account Details Changed" email was sent to "Dr. John Doe (new email)"
 
   Scenario: The user creates another TOTP token
     Given I am logged in as "Dr. John Doe"
@@ -96,7 +96,7 @@ Feature: 300 User Registration
     And I am authenticated as "Dr. John Doe"
     When "Dr. John Doe" retrieves their user data
     Then the expected user data of "Dr. John Doe" is returned
-    And "Second Factor Recreated" was sent to "Dr. John Doe"
+    And "Second Factor Recreated" email was sent to "Dr. John Doe"
 
   Scenario: The data steward lost the TOTP token
     Given I lost my TOTP token as "Data Steward"

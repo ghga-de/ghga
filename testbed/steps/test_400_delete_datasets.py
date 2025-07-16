@@ -63,7 +63,7 @@ def delete_artifacts_for_complete_datasets(fixtures: JointFixture):
         if artifact_path.exists():
             artifact_path.unlink()
             num_deleted_artifacts += 1
-    assert num_artifact_types == 5
+    assert num_artifact_types == 6
     if num_deleted_artifacts:  # allow that they have already been deleted
         assert num_deleted_artifacts == num_artifact_types
 

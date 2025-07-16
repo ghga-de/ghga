@@ -11,5 +11,6 @@ Feature: 13 Load Metadata
     Then the stats for the datasets exist in the database
     And the test datasets exist as embedded dataset in the database
     And the test datasets are known to the work package service
+    And the test datasets are known to the access request service
 
     Then set the state to "metadata has been loaded into the system"

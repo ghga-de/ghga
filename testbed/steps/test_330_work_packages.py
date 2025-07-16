@@ -149,7 +149,7 @@ def check_download_token(
     fixtures: JointFixture, response: Response, file_scope: str, dataset_char: str
 ):
     data = response.json()
-    assert set(data) == {"id", "token"}
+    assert set(data) == {"id", "token", "expires"}
     id_, token = data["id"], data["token"]
     assert 20 <= len(id_) < 40 and 80 < len(token) < 120
     id_and_token = f"{id_}:{token}"

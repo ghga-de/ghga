@@ -35,7 +35,8 @@ def run_the_load_command(fixtures: JointFixture):
         LoadConfig(
             event_store_path=fixtures.dsk.config.event_store,
             artifact_topic_prefix="artifact",
-            artifact_types=["embedded_public", "stats_public"],
+            artifact_types=["embedded_public", "stats_public", "added_accessions"],
+            publishable_artifacts=["added_accessions"],
             loader_api_root=fixtures.config.metldata_url,
         )
     )
@@ -100,7 +101,9 @@ def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
 
 
 @then("the test datasets exist as embedded dataset in the database")
-def check_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
+def check_datasets_in_metldata_database(
+    fixtures: JointFixture, config: Config, mongo: MongoFixture
+):
     datasets = mongo.wait_for_documents(
         config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
     )
@@ -130,11 +133,21 @@ def check_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
             "title": "The complete-B dataset",
         },
     }
+    accession_map = {
+        d["content"]["alias"]: {
+            "dataset_accession": d["content"]["accession"],
+            "study_accession": d["content"]["study"]["accession"],
+        }
+        for d in datasets
+    }
+    assert "DS_A" in accession_map
+    assert "DS_B" in accession_map
+    fixtures.state.set_state("dataset_accessions", accession_map)
 
 
 @then("the test datasets are known to the work package service")
 def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
-    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {})
+    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=2)
     assert datasets
     assert len(datasets) == 2
     simplified_datasets = {}
@@ -160,5 +173,42 @@ def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
         "The complete-B dataset": {
             "description": "An interesting dataset B of complete example set",
             "files": Counter({".fastq.gz": 6, ".txt": 1}),
+        },
+    }
+
+
+@then("the test datasets are known to the access request service")
+def check_datasets_in_ars_database(config: Config, mongo: MongoFixture):
+    datasets = mongo.wait_for_documents(config.ars_db_name, "datasets", {}, number=2)
+    assert datasets
+    assert len(datasets) == 2
+    simplified_datasets = {}
+    for dataset in datasets:
+        accession = dataset.get("_id")
+        assert isinstance(accession, str)
+        assert accession.startswith("GHGAD")
+        title = dataset.get("title")
+        assert title
+        description = dataset.get("description")
+        assert description
+        dac_alias = dataset.get("dac_alias")
+        assert dac_alias
+        dac_email = dataset.get("dac_email")
+        assert dac_alias
+        simplified_datasets[title] = {
+            "description": description,
+            "dac_alias": dac_alias,
+            "dac_email": dac_email,
+        }
+    assert simplified_datasets == {
+        "The complete-A dataset": {
+            "description": "An interesting dataset A of complete example set",
+            "dac_alias": "DAC_1",
+            "dac_email": "dac_institute_a@dac.dac",
+        },
+        "The complete-B dataset": {
+            "description": "An interesting dataset B of complete example set",
+            "dac_alias": "DAC_1",
+            "dac_email": "dac_institute_a@dac.dac",
         },
     }

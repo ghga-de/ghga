@@ -56,7 +56,7 @@ def publish_event(
     event_topic_type_map = {
         "dataset creation": (
             fixtures.config.dataset_change_topic,
-            fixtures.config.dataset_created_type,
+            fixtures.config.dataset_upserted_type,
         ),
         "file deletion": (
             fixtures.config.file_deletion_request_topic,
@@ -166,11 +166,11 @@ def publish_corrected_event(
         description=None,
         files=[
             MetadataDatasetFile(
-                accession="GHGAF123",
-                description=None,
-                file_extension=".example",
+                accession="GHGAF123", description=None, file_extension=".example"
             )
         ],
+        dac_alias="DAC_1",
+        dac_email="example@dac.com",
     )
 
     request_body = {

@@ -121,7 +121,7 @@ def call_data_steward_kit_batch_upload(
     if "ERROR" in completed_upload.stderr or completed_upload.returncode:
         print(completed_upload.stderr)
 
-    assert not completed_upload.stdout
+    assert "Starting batch upload" in completed_upload.stdout
     assert "ERROR" not in completed_upload.stderr
     assert not completed_upload.returncode
 

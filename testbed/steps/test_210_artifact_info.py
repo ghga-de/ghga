@@ -30,9 +30,10 @@ def request_info_on_artifacts(config: Config, http: HttpClient):
 def check_artifacts(response: Response):
     artifact_infos = response.json()
     assert isinstance(artifact_infos, list)
-    assert len(artifact_infos) == 5
+    assert len(artifact_infos) == 6
     artifacts = {artifact["name"]: artifact for artifact in artifact_infos}
     assert sorted(artifacts) == [
+        "added_accessions",
         "embedded_public",
         "embedded_restricted",
         "resolved_public",
@@ -48,6 +49,25 @@ def check_artifacts(response: Response):
     assert "EmbeddedDataset" in embedded_public_classes
     stats_public_classes = artifacts["stats_public"]["resource_classes"]
     assert "DatasetStats" in stats_public_classes
+    added_accessions = artifacts["added_accessions"]["resource_classes"]
+    assert sorted(added_accessions.keys()) == [
+        "Analysis",
+        "AnalysisMethod",
+        "AnalysisMethodSupportingFile",
+        "DataAccessCommittee",
+        "DataAccessPolicy",
+        "Dataset",
+        "Experiment",
+        "ExperimentMethod",
+        "ExperimentMethodSupportingFile",
+        "Individual",
+        "IndividualSupportingFile",
+        "ProcessDataFile",
+        "Publication",
+        "ResearchDataFile",
+        "Sample",
+        "Study",
+    ]
 
 
 @when(

@@ -90,6 +90,7 @@ class Config(BaseSettings):
         "dins",
         "pcs",
         "dlq",
+        "rts",
     ]
 
     object_storages: ObjectStoragesConfig = ObjectStoragesConfig(
@@ -144,6 +145,7 @@ class Config(BaseSettings):
         "dins",
         "pcs",
         "dlq",
+        "rts",
     ]
 
     # internal APIs
@@ -183,6 +185,7 @@ class Config(BaseSettings):
 
     # ars
     ars_db_name: str = "ars"
+    ars_access_requests_collection: str = "accessRequests"
     ars_url: str = "http://ars"
 
     # ums
@@ -251,12 +254,19 @@ class Config(BaseSettings):
     dlq_db_name: str = "dlqs"
     dlq_events_collection: str = "dlqEvents"
 
+    # rts
+    rts_url: str = "http://rts"
+    rts_db_name: str = "rts"
+    rts_expected_files: dict = {
+        "DS_A": "DS_A-downloaded.xlsx",
+    }
+
     dataset_change_topic: str = "metadata-datasets"
-    dataset_created_type: str = "dataset_created"
+    dataset_upserted_type: str = "dataset_upserted"
     file_deletion_request_topic: str = "purges"
     file_deletion_request_type: str = "file_deletion_requested"
     access_request_topic: str = "access-requests"
-    access_request_created_type: str = "access_request_created"
+    access_request_created_type: str = "upserted"
     resource_change_topic: str = "searchable-resources"
     resource_change_type: str = "searchable_resource_upserted"
     notification_topic: str = "notifications"

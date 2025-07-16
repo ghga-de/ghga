@@ -39,7 +39,10 @@ scenarios("../features/320_access_request.feature")
 @given("no access requests have been made yet")
 def ars_database_is_empty(fixtures: JointFixture):
     assert not fixtures.state.get_state("is allowed to download")
-    fixtures.mongo.empty_databases(fixtures.config.ars_db_name)
+    fixtures.mongo.empty_databases(
+        fixtures.config.ars_db_name,
+        collection_names=[fixtures.config.ars_access_requests_collection],
+    )
     fixtures.state.unset_state("is allowed to download")
 
 
@@ -87,16 +90,43 @@ def request_access_for_dataset(full_name: str, alias: str, fixtures: JointFixtur
 
 
 @when(
-    parse('"{full_name}" fetches the list of access requests'),
+    parse('"{full_name}" updates "{field}" of the request to "{value}"'),
     target_fixture="response",
 )
-def fetch_list_of_access_requests(fixtures: JointFixture, full_name: str):
-    url = f"{fixtures.config.ars_url}/access-requests"
+def update_access_request(
+    full_name: str, field: str, value: str, fixtures: JointFixture, requests
+):
+    assert len(requests) == 1
     session = fixtures.auth.get_saved_session(
         name=full_name, state_store=fixtures.state
     )
     headers = fixtures.auth.headers(session=session)
-    return fixtures.http.get(url, headers=headers)
+    assert session
+    field_key = field.lower().replace(" ", "_")
+    data = {field_key: value}
+    access_request_id = requests[0]["id"]
+    url = f"{fixtures.config.ars_url}/access-requests/{access_request_id}"
+    return fixtures.http.patch(url, headers=headers, json=data)
+
+
+@when(
+    parse('"{full_name}" fetches the list of access requests for "{alias}"'),
+    target_fixture="response",
+)
+def fetch_access_requests(fixtures: JointFixture, full_name: str, alias: str | None):
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    headers = fixtures.auth.headers(session=session)
+    url = f"{fixtures.config.ars_url}/access-requests"
+
+    params = {}
+    if alias and alias != "all":
+        datasets = fixtures.state.get_state("all available datasets")
+        assert alias in datasets
+        dataset_id = datasets[alias]["accession"]
+        params["dataset_id"] = dataset_id
+    return fixtures.http.get(url, headers=headers, params=params)
 
 
 @then(
@@ -166,9 +196,15 @@ def user_has_access_to_datasets(fixtures: JointFixture, allowed_requests):
     fixtures.state.set_state("datasets users can access", datasets_with_access)
 
 
-@then(parse('the status of the request from "{name}" is "{status}"'))
-def there_are_access_requests(name: str, status: str, requests):
-    requests = [request for request in requests if request["full_user_name"] == name]
+@then(parse('the "{field}" of the request for dataset "{alias}" is "{value}"'))
+def there_are_access_requests(
+    field: str, alias: str, value: str, fixtures: JointFixture, requests
+):
+    datasets = fixtures.state.get_state("all available datasets")
+    field = field.lower().replace(" ", "_")
+    assert alias in datasets
+    dataset_id = datasets[alias]["accession"]
+    requests = [request for request in requests if request["dataset_id"] == dataset_id]
     assert len(requests) == 1
     request = requests[0]
-    assert request["status"] == status
+    assert request[field] == value

@@ -69,7 +69,8 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901
                 msg = f"unexpected response: {ret}"
     assert not msg, f"Health check at endpoint {health_endpoint}: {msg}"
     if api == "ums":
-        check_user_management_apis_are_healthy(fixtures)
+        user_id = check_user_management_apis_are_healthy(fixtures)
+        check_claims_repository(fixtures, user_id)
 
 
 def check_user_management_apis_are_healthy(fixtures: JointFixture):
@@ -95,26 +96,18 @@ def check_user_management_apis_are_healthy(fixtures: JointFixture):
     user_id = ret.get("id")
     assert user_id, f"No user ID when requesting info for {name}"
     assert user_id == session.user_id, f"Unexpected user ID for {name}"
-    url = f"{ums_url}/users/{user_id}/claims"
+    return user_id
+
+
+def check_claims_repository(fixtures: JointFixture, user_id: str):
+    """Check that the core claims API is not accessible."""
+    url = f"{fixtures.config.ums_url}/users/{user_id}/claims"
     response = fixtures.http.get(url)
     status_code = response.status_code
-    if fixtures.config.use_api_gateway:
-        assert status_code == 404, (
-            "The claims repository should not be reachable from outside,"
-            f" but responds with status code {status_code}"
-        )
-    else:
-        assert status_code == 200, (
-            f"Error {status_code} when requesting claims for {name}"
-        )
-        ret = response.json()
-        if not (
-            isinstance(ret, list)
-            and len(ret) == 1
-            and ret[0]["visa_type"] == "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0"
-            and ret[0]["visa_value"] == "data_steward@ghga.de"
-        ):
-            assert False, f"{name} should have exactly one data steward claim"
+    assert status_code == 404, (
+        "The claims API should not be accessible,"
+        f" but responds with status code {status_code}"
+    )
 
 
 @when("all service APIs are checked", target_fixture="apis")
@@ -127,3 +120,24 @@ def check_service_health(apis: list[str], fixtures: JointFixture):
     """Check health of all service APIs depending on the test mode."""
     for api in apis:
         check_api_is_healthy(api, fixtures)
+
+
+@then("we have a valid Data Steward account for testing")
+def check_data_steward_account(fixtures: JointFixture):
+    """Check that we have a valid Data Steward account for testing."""
+    if not fixtures.config.use_api_gateway:
+        data_steward_claim = fixtures.mongo.wait_for_documents(
+            fixtures.config.ums_db_name,
+            fixtures.config.ums_claims_collection,
+            {
+                "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
+                "visa_value": "data_steward@ghga.de",
+            },
+        )
+        assert data_steward_claim, (
+            f"Data steward claim not found in {fixtures.config.ums_db_name}."
+        )
+        assert len(data_steward_claim) == 1, (
+            f"Multiple data steward claims found in {fixtures.config.ums_db_name}."
+            "Expected: 1."
+        )

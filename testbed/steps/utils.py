@@ -40,8 +40,8 @@ FILE_OVERVIEW_KEYS = {
     "size",
 }
 EXPECTED_NOTIFICATIONS = {
-    "access_request_created": "A data download access request has been created",
-    "access_request_allowed": "Data download access has been allowed",
+    "access_request_created": "New Data Access Request by John Doe",
+    "access_request_allowed": "Access Request for John Doe has been approved",
     "access_request_registered": "Your data download access request has been registered",
     "access_request_accepted": "Your data download access request has been accepted",
     "access_request_denied": "Your data download access request has been rejected",
@@ -50,7 +50,6 @@ EXPECTED_NOTIFICATIONS = {
     "iva_code_requested": "IVA Request Received",
     "iva_verification_requested": "Contact Address Verification Request Received",
     "iva_code_transmitted": "Contact Address Verification Code Transmitted",
-    "iva_code_submitted": "IVA Verification Code Submitted",
 }
 
 
@@ -91,6 +90,7 @@ def load_config_as_file(config: LoadConfig):
         "artifact_topic_prefix": config.artifact_topic_prefix,
         "artifact_types": config.artifact_types,
         "loader_api_root": config.loader_api_root,
+        "publishable_artifacts": config.publishable_artifacts,
     }
 
     return write_data_to_yaml(data=load_config)

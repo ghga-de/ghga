@@ -294,7 +294,7 @@ def check_item_count_in_list(count: int, results: list):
     assert len(results) == count
 
 
-@then(parse('"{notification_type}" was sent to "{full_name}"'))
+@then(parse('"{notification_type}" email was sent to "{full_name}"'))
 def check_email_sent_to(
     notification_type: str,
     full_name: str,
@@ -311,6 +311,7 @@ def check_email_sent_to(
     url = f"{fixtures.config.mail_url}/api/v2/search"
     slept: float = 0
     subject = EXPECTED_NOTIFICATIONS.get(notification_type)
+    assert subject, f"Undefined notification type: {notification_type}"
     if "(" in full_name:
         full_name, note = full_name.split("(", 1)
         full_name, note = full_name.rstrip(), note.rstrip(")")
@@ -319,7 +320,6 @@ def check_email_sent_to(
     email = fixtures.auth.get_email(full_name)
     if "new email" in note:
         email = email.replace("@home", "@new-home")
-    assert subject, f"Undefined notification type: {notification_type}"
     while slept < timeout:
         response = fixtures.http.get(
             url,

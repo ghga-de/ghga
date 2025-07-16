@@ -81,7 +81,7 @@ def run_the_download_command(
 
     assert "Please paste the complete download token" in completed_download.stdout
     assert "Downloading file" in completed_download.stdout
-    assert not completed_download.stderr
+    assert "ERROR" not in completed_download.stderr
 
 
 @then(

@@ -1,8 +1,8 @@
 # Requirements that are only needed during development of the test bed:
 
-pre-commit>=3.7.1
+pre-commit>=4.2
 
-mypy>=1.10.1
+mypy>=1.15
 mypy-extensions>=1.0.0
 
-ruff>=0.5.2
+ruff>=0.11

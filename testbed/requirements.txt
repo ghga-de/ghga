@@ -1,11 +1,12 @@
 # All your requirements go here. Please adapt as needed:
 
-ghga-connector==1.6.0
-ghga-datasteward-kit==4.5.0
+ghga-connector==1.7.3
+ghga-datasteward-kit==5.0.1
 
-ghga-event-schemas>=3.3.0,<4
-ghga-service-commons[auth,crypt]>=3.2.0,<4
-hexkit[all]>=3.8.0,<4
+ghga-event-schemas>=9.2,<10
+ghga-service-commons[auth,crypt]>=4.1.0,<5
+hexkit[all]>=5.3,<6
+openpyxl >= 3.0.0,<4
 
 crypt4gh>=1.7,<2
 
