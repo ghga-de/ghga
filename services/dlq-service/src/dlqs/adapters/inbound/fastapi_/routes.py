@@ -14,6 +14,7 @@
 # limitations under the License.
 """FastAPI endpoint function definitions"""
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, status
@@ -43,6 +44,8 @@ RESPONSES = {
     "emptyDLQError": {"model": HttpEmptyDLQError.get_body_model()},
     "dlqSequenceError": {"model": HttpSequenceError.get_body_model()},
 }
+
+log = logging.getLogger(__name__)
 
 
 @router.get(
@@ -85,6 +88,18 @@ async def get_events(
         raise HttpPreviewParamsError(skip=skip, limit=limit) from err
     except Exception as exc:
         # DLQPreviewError and all others get caught here
+        log.error(
+            "Got an error while previewing events. See traceback for details.",
+            exc_info=True,
+            extra={
+                "request_parameters": {
+                    "service": service,
+                    "topic": topic,
+                    "skip": skip,
+                    "limit": limit,
+                }
+            },
+        )
         raise HttpInternalServerError() from exc
 
 
@@ -134,6 +149,17 @@ async def process_event(  # noqa: PLR0913
         raise HttpOverrideValidationError(event=override, reason=str(err)) from err
     except Exception as exc:
         # lump all other errors here
+        log.error(
+            "Got an error while processing event. See traceback for details.",
+            exc_info=True,
+            extra={
+                "request_parameters": {
+                    "service": service,
+                    "topic": topic,
+                    "dlq_id": dlq_id,
+                }
+            },
+        )
         raise HttpInternalServerError() from exc
 
 
@@ -153,4 +179,9 @@ async def discard_event(
         return await dlq_manager.discard_event(dlq_id=dlq_id)
     except Exception as exc:
         # lump all other errors here
+        log.error(
+            "Got an error while deleting event. See traceback for details.",
+            exc_info=True,
+            extra={"request_parameters": {"dlq_id": dlq_id}},
+        )
         raise HttpInternalServerError() from exc

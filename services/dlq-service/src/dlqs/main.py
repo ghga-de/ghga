@@ -20,17 +20,28 @@ Additional endpoints might be structured in dedicated modules
 (each of them having a sub-router).
 """
 
+import logging
+
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 
 from dlqs.config import Config
 from dlqs.inject import prepare_dlq_subscriber, prepare_rest_app
 
+log = logging.getLogger(__name__)
+
 
 async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()  # type: ignore [call-arg]
     configure_logging(config=config)
+
+    if config.kafka_max_message_size < 16_000_000:
+        log.warning(
+            "Kafka max message size is set to less than 16 MB. "
+            "This may lead to issues with large DLQ events.",
+            extra={"config.kafka_max_message_size": config.kafka_max_message_size},
+        )
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
