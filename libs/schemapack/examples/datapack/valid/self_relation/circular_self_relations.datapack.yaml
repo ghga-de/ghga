@@ -1,6 +1,6 @@
 # This datapack contains a resource that is in relation to itself:
 # (This is valid, but no denormalization can be performed.)
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   SomeClass:
     a:

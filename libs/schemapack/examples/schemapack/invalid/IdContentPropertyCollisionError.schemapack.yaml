@@ -1,4 +1,4 @@
-schemapack: 0.3.0
+schemapack: 3.0.0
 description: A collision between the ID property and the content properties
 classes:
   File:

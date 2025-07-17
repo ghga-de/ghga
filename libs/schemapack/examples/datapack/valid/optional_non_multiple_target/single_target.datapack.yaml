@@ -1,6 +1,6 @@
 # An origin resource references a single target resources even though the relation is
 # defined optional at the target end:
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   A:
     a1:

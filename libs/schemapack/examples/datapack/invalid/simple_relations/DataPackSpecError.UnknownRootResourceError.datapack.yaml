@@ -1,5 +1,5 @@
 # Using a root resource that is not in datapack SomCelass resources
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   SomeClass:
     a:

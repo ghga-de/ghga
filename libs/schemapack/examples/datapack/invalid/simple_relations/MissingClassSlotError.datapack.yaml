@@ -1,6 +1,6 @@
 # Every class defined in the schemapack must be present in the datapack even if no
 # resources for that class are available:
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   # missing slot for File
   Dataset:

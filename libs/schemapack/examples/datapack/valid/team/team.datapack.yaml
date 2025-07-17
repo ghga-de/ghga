@@ -1,4 +1,4 @@
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
     Person:
         Alice:

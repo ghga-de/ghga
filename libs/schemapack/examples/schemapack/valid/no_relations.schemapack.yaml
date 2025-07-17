@@ -1,4 +1,4 @@
-schemapack: 0.3.0
+schemapack: 3.0.0
 description: there is little value in a schemapack without relations but it is syntactically valid
 classes:
   File:

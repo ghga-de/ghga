@@ -1,6 +1,6 @@
 # Using comments in content should not cause any problems
 # but did in the past.
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   SomeClass:
     a:

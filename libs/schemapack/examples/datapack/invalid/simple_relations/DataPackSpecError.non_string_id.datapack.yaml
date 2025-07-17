@@ -1,5 +1,5 @@
 # Using a non-string value as resource identifier:
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   File:
     1234: # <-

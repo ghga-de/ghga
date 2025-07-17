@@ -1,5 +1,5 @@
 # Every target class defined in the relations must be present in the datapack
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   Dataset:
     example_dataset:

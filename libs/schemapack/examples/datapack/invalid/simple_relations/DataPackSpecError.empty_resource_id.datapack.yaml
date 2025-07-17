@@ -1,5 +1,5 @@
 # using an empty string as resource ID:
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   File:
     example_file_a:

@@ -1,5 +1,5 @@
 # Every target is referenced but not all by the same origin resource:
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   A:
     a1:

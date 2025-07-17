@@ -1,4 +1,4 @@
-schemapack: 0.3.0
+schemapack: 3.0.0
 description: A simple schemapack # with no root class but with descriptions.
 classes:
   File:

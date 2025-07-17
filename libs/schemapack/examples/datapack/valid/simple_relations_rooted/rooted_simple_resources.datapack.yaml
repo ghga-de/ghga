@@ -1,5 +1,5 @@
 # Same as ./non_rooted.datapack.yaml, but rooted to example_dataset:
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   File:
     example_file_a:

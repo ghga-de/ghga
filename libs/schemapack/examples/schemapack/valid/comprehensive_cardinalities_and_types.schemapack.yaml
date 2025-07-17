@@ -1,4 +1,4 @@
-schemapack: 0.3.0
+schemapack: 3.0.0
 description: a schemapack that utilizes most cardinalities, modalities and json schema types
 classes:
   Customer:
@@ -124,7 +124,6 @@ classes:
         multiple:
           origin: true
           target: true
-
 
   ProductCategory:
     id:

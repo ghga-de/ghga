@@ -1,4 +1,4 @@
-schemapack: 0.3.0
+schemapack: 3.0.0
 description: a schemapack with a many-to-one relation that is mandatory at both ends
 classes:
   A:

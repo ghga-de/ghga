@@ -1,5 +1,5 @@
 # a simple schemapack:
-schemapack: 0.3.0
+schemapack: 3.0.0
 classes:
   A:
     id:

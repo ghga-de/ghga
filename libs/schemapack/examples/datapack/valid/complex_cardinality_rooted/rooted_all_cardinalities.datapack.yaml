@@ -1,6 +1,6 @@
 # Contains all cardinality types:
 # (Same as ./all_cardinalities.datapack.yaml, but rooted to a1.)
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   A:
     a1:

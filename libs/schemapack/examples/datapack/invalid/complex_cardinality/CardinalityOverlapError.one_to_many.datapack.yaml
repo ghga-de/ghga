@@ -1,5 +1,5 @@
 # Partial overlap in a relation property with one_to_many cardinality:
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   A:
     a1:

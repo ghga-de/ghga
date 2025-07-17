@@ -43,7 +43,7 @@ from schemapack.spec.custom_types import (
 )
 from schemapack.utils import read_json_or_yaml_mapping
 
-SupportedSchemaPackVersions = Literal["0.3.0"]
+SupportedSchemaPackVersions = Literal["3.0.0", "3.1.0", "4.0.0"]
 SUPPORTED_SCHEMA_PACK_VERSIONS = typing.get_args(SupportedSchemaPackVersions)
 
 

@@ -1,5 +1,5 @@
 # Additional field that is not part of the DataPack specification:
-datapack: 0.3.0
+datapack: 3.0.0
 resources:
   File: {}
   Dataset:
