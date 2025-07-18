@@ -28,10 +28,12 @@ from hexkit.custom_types import ID
 from hexkit.protocols.dao import ResourceAlreadyExistsError
 
 from ars.core.models import (
+    AccessGrant,
     AccessRequest,
     AccessRequestCreationData,
     AccessRequestPatchData,
     AccessRequestStatus,
+    BaseAccessGrant,
     Dataset,
 )
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
@@ -244,7 +246,7 @@ class DatasetDaoDummy(DatasetDaoPort):  # pyright: ignore
         self.last_upsert = self._datasets[dto.id] = dto
 
     async def get_by_id(self, id_: ID) -> Dataset:
-        """Get a dataset by providing its ID.."""
+        """Get a dataset by providing its ID."""
         try:
             return self._datasets[id_]
         except KeyError as error:
@@ -284,6 +286,45 @@ class AccessGrantsDummy(AccessGrantsPort):
             f"to {user_id} with {iva_id}"
             f" for {dataset_id} from {valid_from} until {valid_until}"
         )
+
+    async def get_download_access_grants(
+        self,
+        user_id: str | None = None,
+        iva_id: str | None = None,
+        dataset_id: str | None = None,
+        valid: bool | None = None,
+    ) -> list[BaseAccessGrant]:
+        """Get download access grants."""
+        # The list is created based on the dummy access requests.
+        return [
+            BaseAccessGrant(
+                id=ar.id.replace("request", "grant"),
+                user_id=ar.user_id,
+                iva_id=ar.iva_id or "some-iva-id",
+                dataset_id=ar.dataset_id,
+                created=IAT,
+                valid_from=ar.access_starts,
+                valid_until=ar.access_ends,
+                user_name=ar.full_user_name.removeprefix("Dr. "),
+                user_email=ar.email,
+                user_title="Dr." if ar.full_user_name.startswith("Dr.") else None,
+            )
+            for ar in ACCESS_REQUESTS
+            if (user_id is None or user_id == ar.user_id)
+            and (iva_id is None or iva_id == (ar.iva_id or "some-iva-id"))
+            and (dataset_id is None or dataset_id == ar.dataset_id)
+            and (valid is None or valid == (ar.status is AccessRequestStatus.ALLOWED))
+        ]
+
+    async def revoke_download_access_grant(self, grant_id: str) -> None:
+        """Revoke a download access grant.
+
+        May raise an `AccessGrantNotFoundError` or a general `AccessGrantsError`.
+        """
+        for ar in ACCESS_REQUESTS:
+            if ar.id.replace("request", "grant") == grant_id:
+                return
+        raise self.AccessGrantNotFoundError(f"Grant with ID {grant_id} not found")
 
 
 access_request_dao = AccessRequestDaoDummy()  # type: ignore
@@ -756,7 +797,7 @@ async def test_set_status_to_allowed_without_iva():
     assert original_dict.pop("changed_by") is None
 
     with pytest.raises(
-        repository.AccessRequestMissingIva, match="An IVA ID must be specified"
+        repository.AccessRequestMissingIva, match="Access request is missing an IVA"
     ):
         await repository.update(
             "request-id-4",
@@ -1177,3 +1218,109 @@ async def test_keeps_processed_request_when_deleting_its_dataset(
     request = await access_request_dao.get_by_id(request.id)
     assert request.status == status
     assert request.status_changed == status_changed
+
+
+async def test_can_get_all_access_grants():
+    """Test that all access grants can be retrieved."""
+    # first register all datasets
+    for ar in ACCESS_REQUESTS:
+        await repository.register_dataset(
+            Dataset(
+                id=ar.dataset_id,
+                title=ar.dataset_title,
+                description=None,
+                dac_alias=ar.dac_alias,
+                dac_email=ar.dac_email,
+            )
+        )
+    # then fetch all access grants as data steward
+    grants = await repository.get_grants(auth_context=auth_context_steward)
+    assert isinstance(grants, list)
+    assert len(grants) == len(ACCESS_REQUESTS)
+    assert all(isinstance(grant, AccessGrant) for grant in grants)
+
+    # check that as a normal user we get only our own access grants
+    grants = await repository.get_grants(auth_context=auth_context_doe)
+    assert isinstance(grants, list)
+    assert len(grants) < len(ACCESS_REQUESTS)
+    assert all(isinstance(grant, AccessGrant) for grant in grants)
+    assert all(grant.user_id == auth_context_doe.id for grant in grants)
+    # it also works when specifying the own user ID
+    assert grants == await repository.get_grants(
+        user_id=auth_context_doe.id, auth_context=auth_context_doe
+    )
+
+
+async def test_can_get_filtered_access_grants():
+    """Test that access grants can be filtered."""
+    # first register the dataset
+    ar = ACCESS_REQUESTS[0]
+    await repository.register_dataset(
+        Dataset(
+            id=ar.dataset_id,
+            title=ar.dataset_title,
+            description=None,
+            dac_alias=ar.dac_alias,
+            dac_email=ar.dac_email,
+        )
+    )
+    # then fetch only the first access grant using filter parameters
+    grants = await repository.get_grants(
+        user_id=ar.user_id,
+        iva_id="some-iva-id",
+        dataset_id=ar.dataset_id,
+        valid=True,
+        auth_context=auth_context_steward,
+    )
+    assert isinstance(grants, list)
+    assert len(grants) == 1
+    grant = grants[0]
+    # test that the returned info is correct and complete
+    assert grant == AccessGrant(
+        id="grant-id-1",
+        user_id=ar.user_id,
+        user_title="Dr.",
+        user_name="John Doe",
+        user_email=ar.email,
+        dataset_id=ar.dataset_id,
+        iva_id="some-iva-id",
+        created=ar.request_created,
+        valid_from=ar.access_starts,
+        valid_until=ar.access_ends,
+        dataset_title=ar.dataset_title,
+        dac_alias=ar.dac_alias,
+        dac_email=ar.dac_email,
+    )
+
+
+async def test_get_access_grants_with_missing_dataset():
+    """Test that getting grants raises the proper error if a dataset is missing."""
+    # fetch the first access grant without registering the dataset
+    ar = ACCESS_REQUESTS[0]
+    with pytest.raises(repository.DatasetNotFoundError):
+        await repository.get_grants(
+            user_id=ar.user_id,
+            iva_id="some-iva-id",
+            dataset_id=ar.dataset_id,
+            valid=True,
+            auth_context=auth_context_steward,
+        )
+
+
+async def test_get_access_grants_without_authorization():
+    """Test that getting an access grant of another user needs proper authorization."""
+    with pytest.raises(repository.AccessRequestAuthorizationError):
+        await repository.get_grants(
+            user_id="another-user-id", auth_context=auth_context_doe
+        )
+
+
+async def test_revoke_an_existing_access_grant():
+    """Test that an existing access grant can be revoked."""
+    await repository.revoke_grant("grant-id-1", auth_context=auth_context_steward)
+
+
+async def test_revoke_an_access_grant_without_authorization():
+    """Test that revoking an access grant needs proper authorization."""
+    with pytest.raises(repository.AccessRequestAuthorizationError):
+        await repository.revoke_grant("grant-id-1", auth_context=auth_context_doe)

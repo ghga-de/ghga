@@ -22,7 +22,14 @@ from uuid import uuid4
 
 from ghga_event_schemas.pydantic_ import AccessRequestStatus
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 __all__ = [
     "AccessRequest",
@@ -167,3 +174,68 @@ class AccessRequestPatchData(BaseDto):
         default=None,
         description="A note about the access request that is visible to the requester",
     )
+
+
+class BaseAccessGrant(BaseDto):
+    """An access grant based on a corresponding claim with info about the user."""
+
+    id: str = Field(  # actually UUID
+        ..., description="Internal grant ID (same as claim ID)"
+    )
+    user_id: str = Field(  # actually UUID
+        default=..., description="Internal user ID"
+    )
+    iva_id: str | None = Field(  # actually UUID
+        default=None, description="ID of an IVA associated with this grant"
+    )
+    dataset_id: Accession = Field(
+        default=..., description="ID of the dataset this grant is for"
+    )
+
+    created: UTCDatetime = Field(
+        default=..., description="Date of creation of this grant"
+    )
+    valid_from: UTCDatetime = Field(default=..., description="Start date of validity")
+    valid_until: UTCDatetime = Field(default=..., description="End date of validity")
+
+    user_name: str = Field(default=..., description="Full name of the user")
+    user_email: EmailStr = Field(
+        default=...,
+        description="The email address of the user",
+    )
+    user_title: str | None = Field(
+        default=None, description="Academic title of the user"
+    )
+
+
+class AccessGrant(BaseAccessGrant):
+    """An access grant with additional info about the dataset."""
+
+    dataset_title: str = Field(default=..., description="Title of the dataset")
+    dac_alias: str = Field(
+        default=..., description="The alias of the Data Access Committee"
+    )
+    dac_email: EmailStr = Field(
+        default=..., description="The email address of the Data Access Committee"
+    )
+
+
+class GrantValidity(BaseModel):
+    """Start and end dates for validating access grants."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    valid_from: UTCDatetime = Field(
+        ..., description="Start date of validity", examples=["2023-01-01T00:00:00Z"]
+    )
+    valid_until: UTCDatetime = Field(
+        ..., description="End date of validity", examples=["2023-12-31T23:59:59Z"]
+    )
+
+    @model_validator(mode="after")
+    def period_is_valid(self):
+        """Validate that the dates of the period are in the right order."""
+        if self.valid_until <= self.valid_from:
+            raise ValueError("'valid_until' must be later than 'valid_from'")
+
+        return self

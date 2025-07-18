@@ -1,5 +1,85 @@
 components:
   schemas:
+    AccessGrant:
+      additionalProperties: false
+      description: An access grant with additional info about the dataset.
+      properties:
+        created:
+          description: Date of creation of this grant
+          format: date-time
+          title: Created
+          type: string
+        dac_alias:
+          description: The alias of the Data Access Committee
+          title: Dac Alias
+          type: string
+        dac_email:
+          description: The email address of the Data Access Committee
+          format: email
+          title: Dac Email
+          type: string
+        dataset_id:
+          description: ID of the dataset this grant is for
+          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
+          title: Dataset Id
+          type: string
+        dataset_title:
+          description: Title of the dataset
+          title: Dataset Title
+          type: string
+        id:
+          description: Internal grant ID (same as claim ID)
+          title: Id
+          type: string
+        iva_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of an IVA associated with this grant
+          title: Iva Id
+        user_email:
+          description: The email address of the user
+          format: email
+          title: User Email
+          type: string
+        user_id:
+          description: Internal user ID
+          title: User Id
+          type: string
+        user_name:
+          description: Full name of the user
+          title: User Name
+          type: string
+        user_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Academic title of the user
+          title: User Title
+        valid_from:
+          description: Start date of validity
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - id
+      - user_id
+      - dataset_id
+      - created
+      - valid_from
+      - valid_until
+      - user_name
+      - user_email
+      - dataset_title
+      - dac_alias
+      - dac_email
+      title: AccessGrant
+      type: object
     AccessRequest:
       additionalProperties: false
       description: All data that describes an access request.
@@ -225,6 +305,36 @@ components:
       - pending
       title: AccessRequestStatus
       type: string
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
   securitySchemes:
     HTTPBearer:
       scheme: bearer
@@ -235,34 +345,135 @@ info:
   version: 5.1.1
 openapi: 3.1.0
 paths:
-  /access-requests:
+  /access-grants:
     get:
-      description: Endpoint used to get existing access requests
-      operationId: get_access_request
+      description: Endpoint to get the list of all data access grants
+      operationId: get_access_grants
       parameters:
-      - in: query
-        name: dataset_id
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Dataset Id
-      - in: query
+      - description: The internal ID of the user
+        in: query
         name: user_id
         required: false
         schema:
           anyOf:
           - type: string
           - type: 'null'
+          description: The internal ID of the user
           title: User Id
-      - in: query
+      - description: The ID of the IVA
+        in: query
+        name: iva_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The ID of the IVA
+          title: Iva Id
+      - description: The ID of the dataset
+        in: query
+        name: dataset_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The ID of the dataset
+          title: Dataset Id
+      - description: Whether the grant is currently valid
+        in: query
+        name: valid
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Whether the grant is currently valid
+          title: Valid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AccessGrant'
+                title: Response 200 Get Access Grants
+                type: array
+          description: Access grants have been fetched.
+        '403':
+          description: Not authorized to get access grants.
+        '422':
+          description: Validation error in submitted parameters.
+      security:
+      - HTTPBearer: []
+      summary: Get data access grants
+      tags:
+      - AccessGrants
+  /access-grants/{grant_id}:
+    delete:
+      description: Endpoint to revoke an existing data access grant.
+      operationId: revoke_access_grant
+      parameters:
+      - description: The ID of the data access grant to revoke
+        in: path
+        name: grant_id
+        required: true
+        schema:
+          description: The ID of the data access grant to revoke
+          title: Grant Id
+          type: string
+      responses:
+        '204':
+          description: The data access grant has been revoked.
+        '403':
+          description: Not authorized to revoke a data access grant.
+        '404':
+          description: The data access grant was not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Revoke a data access grant
+      tags:
+      - AccessGrants
+  /access-requests:
+    get:
+      description: Endpoint used to get existing access requests
+      operationId: get_access_request
+      parameters:
+      - description: The internal ID of the user
+        in: query
+        name: user_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The internal ID of the user
+          title: User Id
+      - description: The ID of the dataset
+        in: query
+        name: dataset_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The ID of the dataset
+          title: Dataset Id
+      - description: The status of the access request
+        in: query
         name: status
         required: false
         schema:
           anyOf:
           - $ref: '#/components/schemas/AccessRequestStatus'
           - type: 'null'
+          description: The status of the access request
           title: Status
       responses:
         '200':
@@ -317,10 +528,12 @@ paths:
         request
       operationId: patch_access_request
       parameters:
-      - in: path
+      - description: ID of the access request
+        in: path
         name: access_request_id
         required: true
         schema:
+          description: ID of the access request
           title: Access Request Id
           type: string
       requestBody:

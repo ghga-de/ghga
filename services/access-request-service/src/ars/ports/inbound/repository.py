@@ -21,6 +21,7 @@ from abc import ABC, abstractmethod
 from ghga_service_commons.auth.ghga import AuthContext
 
 from ars.core.models import (
+    AccessGrant,
     AccessRequest,
     AccessRequestCreationData,
     AccessRequestPatchData,
@@ -35,14 +36,30 @@ class AccessRequestRepositoryPort(ABC):
     class AccessRequestError(RuntimeError):
         """Error that is raised when an access request cannot be processed."""
 
+        def __init__(self, message: str = "Access request error"):
+            super().__init__(message)
+            self.message = message
+
     class AccessRequestAuthorizationError(AccessRequestError):
         """Error that is raised when the user is not authorized."""
+
+        def __init__(self, message: str = "Not authorized"):
+            super().__init__(message)
+            self.message = message
 
     class AccessRequestMissingIva(AccessRequestError):
         """Error raised when an IVA is needed, but not provided."""
 
+        def __init__(self, message: str = "Access request is missing an IVA"):
+            super().__init__(message)
+            self.message = message
+
     class AccessRequestClosed(AccessRequestError):
         """Error raised when the access request was already processed."""
+
+        def __init__(self, message: str = "Access request has already been processed"):
+            super().__init__(message)
+            self.message = message
 
     class AccessRequestInvalidDuration(AccessRequestError):
         """Error raised when the time frame for access is invalid."""
@@ -50,11 +67,33 @@ class AccessRequestRepositoryPort(ABC):
     class AccessRequestNotFoundError(AccessRequestError):
         """Error raised when an access request cannot be found."""
 
+        def __init__(self, message: str = "Access request not found"):
+            super().__init__(message)
+            self.message = message
+
     class AccessRequestServerError(AccessRequestError):
         """Error raised when there was some kind of server error."""
 
     class DatasetNotFoundError(RuntimeError):
         """Error raised when a dataset cannot be found."""
+
+        def __init__(self, message: str = "Dataset not found"):
+            super().__init__(message)
+            self.message = message
+
+    class AccessGrantsError(RuntimeError):
+        """Error that is raised when access grants cannot be processed."""
+
+        def __init__(self, message: str = "Access grants error"):
+            super().__init__(message)
+            self.message = message
+
+    class AccessGrantNotFoundError(AccessGrantsError):
+        """Error raised when an access grant cannot be found."""
+
+        def __init__(self, message: str = "Access grant not found"):
+            super().__init__(message)
+            self.message = message
 
     @abstractmethod
     async def create(
@@ -135,5 +174,46 @@ class AccessRequestRepositoryPort(ABC):
         """Get the registered dataset with the given ID.
 
         Raises a `DatasetNotFoundError` if the dataset was not found.
+        """
+        ...
+
+    @abstractmethod
+    async def get_grants(
+        self,
+        *,
+        user_id: str | None = None,
+        iva_id: str | None = None,
+        dataset_id: str | None = None,
+        valid: bool | None = None,
+        auth_context: AuthContext,
+    ) -> list[AccessGrant]:
+        """Get the list of all download access grants with the given properties.
+
+        The list also contains information about the corresponding user and dataset.
+
+        Only data stewards may list grants created by other users.
+
+        Raises:
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        - `AccessGrantsError` if the grants could not be fetched
+        - `DatasetNotFoundError` if any of the corresponding datasets was not found
+        """
+        ...
+
+    @abstractmethod
+    async def revoke_grant(
+        self,
+        grant_id: str,
+        *,
+        auth_context: AuthContext,
+    ) -> None:
+        """Revoke an existing download access grant.
+
+        Only data stewards may use this method.
+
+        Raises:
+        - `AccessGrantNotFoundError` if the specified grant was not found
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        - `AccessRequestServerError` if the access grant could not be registered
         """
         ...

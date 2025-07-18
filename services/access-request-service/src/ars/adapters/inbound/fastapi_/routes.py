@@ -17,13 +17,15 @@
 """Module containing the main FastAPI router and all route functions."""
 
 import logging
+from typing import Annotated
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Path, Query, Response
 from fastapi.exceptions import HTTPException
 
 from ars.adapters.inbound.fastapi_ import dummies
 from ars.adapters.inbound.fastapi_.auth import StewardAuthContext, UserAuthContext
 from ars.core.models import (
+    AccessGrant,
     AccessRequest,
     AccessRequestCreationData,
     AccessRequestPatchData,
@@ -108,26 +110,46 @@ async def create_access_request(
 async def get_access_requests(
     repository: dummies.AccessRequestRepoDummy,
     auth_context: UserAuthContext,
-    dataset_id: str | None = None,
-    user_id: str | None = None,
-    status: AccessRequestStatus | None = None,
+    user_id: Annotated[
+        str | None,
+        Query(
+            ...,
+            alias="user_id",
+            description="The internal ID of the user",
+        ),
+    ] = None,
+    dataset_id: Annotated[
+        str | None,
+        Query(
+            ...,
+            alias="dataset_id",
+            description="The ID of the dataset",
+        ),
+    ] = None,
+    status: Annotated[
+        AccessRequestStatus | None,
+        Query(
+            ...,
+            alias="status",
+            description="The status of the access request",
+        ),
+    ] = None,
 ) -> list[AccessRequest]:
     """Get access requests"""
     try:
-        requests = await repository.get(
+        return await repository.get(
             user_id=user_id,
             dataset_id=dataset_id,
             status=status,
             auth_context=auth_context,
         )
-    except repository.AccessRequestError as exc:
+    except repository.AccessRequestAuthorizationError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except Exception as exc:
+    except repository.AccessRequestError as exc:
         log.error("Could not get access requests: %s", exc)
         raise HTTPException(
             status_code=500, detail="Access requests could not be fetched."
         ) from exc
-    return requests
 
 
 @router.patch(
@@ -145,7 +167,10 @@ async def get_access_requests(
     status_code=204,
 )
 async def patch_access_request(
-    access_request_id: str,
+    access_request_id: Annotated[
+        str,
+        Path(..., alias="access_request_id", description="ID of the access request"),
+    ],
     patch_data: AccessRequestPatchData,
     repository: dummies.AccessRequestRepoDummy,
     auth_context: StewardAuthContext,
@@ -173,4 +198,124 @@ async def patch_access_request(
         raise HTTPException(
             status_code=500, detail="Access request could not be modified."
         ) from exc
+    return Response(status_code=204)
+
+
+@router.get(
+    "/access-grants",
+    operation_id="get_access_grants",
+    tags=["AccessGrants"],
+    summary="Get data access grants",
+    description="Endpoint to get the list of all data access grants",
+    responses={
+        200: {
+            "model": list[AccessGrant],
+            "description": "Access grants have been fetched.",
+        },
+        403: {"description": "Not authorized to get access grants."},
+        422: {"description": "Validation error in submitted parameters."},
+    },
+    status_code=200,
+)
+async def get_access_grants(  # noqa: PLR0913
+    repository: dummies.AccessRequestRepoDummy,
+    auth_context: UserAuthContext,
+    user_id: Annotated[
+        str | None,
+        Query(
+            ...,
+            alias="user_id",
+            description="The internal ID of the user",
+        ),
+    ] = None,
+    iva_id: Annotated[
+        str | None,
+        Query(
+            ...,
+            alias="iva_id",
+            description="The ID of the IVA",
+        ),
+    ] = None,
+    dataset_id: Annotated[
+        str | None,
+        Query(
+            ...,
+            alias="dataset_id",
+            description="The ID of the dataset",
+        ),
+    ] = None,
+    valid: Annotated[
+        bool | None,
+        Query(
+            ...,
+            alias="valid",
+            description="Whether the grant is currently valid",
+        ),
+    ] = None,
+) -> list[AccessGrant]:
+    """Get data access grants.
+
+    You can filter the grants by user ID, IVA ID, and dataset ID
+    and by whether the grant is currently valid or not.
+    """
+    try:
+        return await repository.get_grants(
+            user_id=user_id,
+            iva_id=iva_id,
+            dataset_id=dataset_id,
+            valid=valid,
+            auth_context=auth_context,
+        )
+    except repository.AccessRequestAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except (repository.AccessGrantsError, repository.DatasetNotFoundError) as exc:
+        log.error("Could not get data access grants: %s", exc)
+        raise HTTPException(
+            status_code=500, detail="Access requests could not be fetched."
+        ) from exc
+
+
+@router.delete(
+    "/access-grants/{grant_id}",
+    operation_id="revoke_access_grant",
+    tags=["AccessGrants"],
+    summary="Revoke a data access grant",
+    description="Endpoint to revoke an existing data access grant.",
+    responses={
+        204: {
+            "description": "The data access grant has been revoked.",
+        },
+        403: {"description": "Not authorized to revoke a data access grant."},
+        404: {"description": "The data access grant was not found."},
+    },
+    status_code=204,
+)
+async def revoke_access_grant(
+    grant_id: Annotated[
+        str,
+        Path(
+            ...,
+            alias="grant_id",
+            description="The ID of the data access grant to revoke",
+        ),
+    ],
+    repository: dummies.AccessRequestRepoDummy,
+    auth_context: StewardAuthContext,
+) -> Response:
+    """Revoke an existing data access grant."""
+    try:
+        await repository.revoke_grant(
+            grant_id,
+            auth_context=auth_context,
+        )
+    except repository.AccessRequestAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except repository.AccessGrantNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except repository.AccessGrantsError as exc:
+        log.error("Could not revoke data access grant: %s", exc)
+        raise HTTPException(
+            status_code=500, detail="Data access grant could not be revoked."
+        ) from exc
+
     return Response(status_code=204)

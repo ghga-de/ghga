@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pytest_httpx import HTTPXMock
 
@@ -35,14 +36,40 @@ DATASET_DESCRIPTION = "This is a description of A Great Dataset"
 DAC_ALIAS = "Some DAC"
 DAC_EMAIL = "dac@some.org"
 
+
+def isoformat(date: datetime) -> str:
+    """Get the ISO format of the given date with Zulu spelling."""
+    return date.isoformat().replace("+00:00", "Z")
+
+
 CREATION_DATA = {
     "user_id": "id-of-john-doe@ghga.de",
     "dataset_id": "DS001",
     "iva_id": "some-iva",
     "email": "me@john-doe.name",
     "request_text": "Can I access some dataset?",
-    "access_starts": DATE_NOW.isoformat(),
-    "access_ends": (DATE_NOW + ONE_YEAR).isoformat(),
+    "access_starts": isoformat(DATE_NOW),
+    "access_ends": isoformat(DATE_NOW + ONE_YEAR),
+}
+
+BASE_GRANT_DATA = {
+    "id": "some-grant-id",
+    "user_id": "id-of-john-doe@ghga.de",
+    "iva_id": "some-iva",
+    "dataset_id": "DS001",
+    "created": isoformat(DATE_NOW - timedelta(days=14)),
+    "valid_from": isoformat(DATE_NOW),
+    "valid_until": isoformat(DATE_NOW + ONE_YEAR),
+    "user_name": "John Doe",
+    "user_title": None,
+    "user_email": "doe@home.org",
+}
+
+GRANT_DATA = {
+    **BASE_GRANT_DATA,
+    "dataset_title": DATASET_TITLE,
+    "dac_alias": DAC_ALIAS,
+    "dac_email": DAC_EMAIL,
 }
 
 
@@ -56,20 +83,24 @@ def assert_is_uuid(value: str) -> None:
 
 def iso2timestamp(iso_date: str) -> float:
     """Get timestamp from given date in iso format."""
+    if iso_date.endswith("Z"):  # convert from Zulu time
+        iso_date = iso_date[:-1] + "+00:00"
     return datetime.fromisoformat(iso_date).timestamp()
-
-
-def norm_utc(date: str) -> str:
-    """Replace Z with +00:00 in the given date string."""
-    return date[:-1] + "+00:00" if date.endswith("Z") else date
 
 
 def assert_same_datetime(date1: str, date2: str, max_diff_seconds=5) -> None:
     """Assert that the two given dates in iso format are very close."""
-    assert (
-        abs(iso2timestamp(norm_utc(date2)) - iso2timestamp(norm_utc(date1)))
-        < max_diff_seconds
-    )
+    assert abs(iso2timestamp(date2) - iso2timestamp(date1)) <= max_diff_seconds
+
+
+def norm_payload(data: JsonObject) -> None:
+    """Normalize all date strings in the given payload dict."""
+    assert isinstance(data, dict)
+    for key in data:
+        if key in ("access_starts", "access_ends"):
+            value = data[key]
+            if value and isinstance(value, str) and value.endswith("+00:00"):
+                data[key] = value[:-6] + "Z"  # convert to Zulu time
 
 
 @pytest.fixture(name="use_test_dataset", autouse=True)
@@ -114,14 +145,16 @@ async def test_create_access_request(
     recorded_event = recorder.recorded_events[0]
     assert recorded_event.key == access_request_id
 
+    payload = recorded_event.payload
+    norm_payload(payload)
     for key in ["user_id", "dataset_id", "request_text", "access_ends"]:
-        assert recorded_event.payload[key] == CREATION_DATA[key]
+        assert payload[key] == CREATION_DATA[key]
 
-    assert recorded_event.payload["status"] == "pending"
-    assert recorded_event.payload["dataset_title"] == DATASET_TITLE
-    assert recorded_event.payload["dataset_description"] == DATASET_DESCRIPTION
-    assert recorded_event.payload["dac_alias"] == DAC_ALIAS
-    assert recorded_event.payload["dac_email"] == DAC_EMAIL
+    assert payload["status"] == "pending"
+    assert payload["dataset_title"] == DATASET_TITLE
+    assert payload["dataset_description"] == DATASET_DESCRIPTION
+    assert payload["dac_alias"] == DAC_ALIAS
+    assert payload["dac_email"] == DAC_EMAIL
     assert recorded_event.type_ == "upserted"
 
 
@@ -151,7 +184,7 @@ async def test_create_access_request_that_is_too_long(
         "/access-requests",
         json={
             **CREATION_DATA,
-            "access_ends": (DATE_NOW + 3 * ONE_YEAR).isoformat(),
+            "access_ends": isoformat(DATE_NOW + 3 * ONE_YEAR),
         },
         headers=auth_headers_doe,
     )
@@ -372,20 +405,23 @@ async def test_patch_access_request_status(
     validity = json.loads(grant_request.content)
     # validity period may start a bit later because integration tests can be slow
     assert_same_datetime(validity["valid_from"], CREATION_DATA["access_starts"], 300)
-    assert norm_utc(validity["valid_until"]) == CREATION_DATA["access_ends"]
+    assert validity["valid_until"] == CREATION_DATA["access_ends"]
 
     # check that an event was published for 'access request allowed'
     assert len(recorder.recorded_events) == 1
     recorded_event = recorder.recorded_events[0]
     assert recorded_event.key == access_request_id
-    for key in ["user_id", "dataset_id", "request_text", "access_ends"]:
-        assert recorded_event.payload[key] == CREATION_DATA[key]
 
-    assert recorded_event.payload["status"] == "allowed"
-    assert recorded_event.payload["dataset_title"] == DATASET_TITLE
-    assert recorded_event.payload["dataset_description"] == DATASET_DESCRIPTION
-    assert recorded_event.payload["dac_alias"] == DAC_ALIAS
-    assert recorded_event.payload["dac_email"] == DAC_EMAIL
+    payload = recorded_event.payload
+    norm_payload(payload)
+    for key in ["user_id", "dataset_id", "request_text", "access_ends"]:
+        assert payload[key] == CREATION_DATA[key]
+
+    assert payload["status"] == "allowed"
+    assert payload["dataset_title"] == DATASET_TITLE
+    assert payload["dataset_description"] == DATASET_DESCRIPTION
+    assert payload["dac_alias"] == DAC_ALIAS
+    assert payload["dac_email"] == DAC_EMAIL
     assert recorded_event.type_ == "upserted"
 
     # get request as user
@@ -405,7 +441,7 @@ async def test_patch_access_request_status(
     assert request["status_changed"]
     assert request["changed_by"] is None  # cannot see internals
     assert_same_datetime(request["access_starts"], CREATION_DATA["access_starts"], 300)
-    assert norm_utc(request["access_ends"]) == CREATION_DATA["access_ends"]
+    assert request["access_ends"] == CREATION_DATA["access_ends"]
 
     # get request as data steward
     response = await client.get("/access-requests", headers=auth_headers_steward)
@@ -424,7 +460,7 @@ async def test_patch_access_request_status(
     assert request["status_changed"]
     assert request["changed_by"] == "id-of-rod-steward@ghga.de"  # can see internals
     assert_same_datetime(request["access_starts"], CREATION_DATA["access_starts"], 300)
-    assert norm_utc(request["access_ends"]) == CREATION_DATA["access_ends"]
+    assert request["access_ends"] == CREATION_DATA["access_ends"]
 
 
 async def test_patch_access_request_with_another_iva(
@@ -561,7 +597,7 @@ async def test_patch_only_iva_id(
     assert request["status_changed"] is None
     assert request["changed_by"] is None
     assert_same_datetime(request["access_starts"], CREATION_DATA["access_starts"], 300)
-    assert norm_utc(request["access_ends"]) == CREATION_DATA["access_ends"]
+    assert request["access_ends"] == CREATION_DATA["access_ends"]
 
 
 async def test_patch_only_access_duration(
@@ -579,8 +615,8 @@ async def test_patch_only_access_duration(
     access_request_id = response.json()
     assert_is_uuid(access_request_id)
 
-    access_starts = (DATE_NOW + ONE_YEAR).isoformat()
-    access_ends = (DATE_NOW + 4 * ONE_YEAR).isoformat()
+    access_starts = isoformat(DATE_NOW + ONE_YEAR)
+    access_ends = isoformat(DATE_NOW + 4 * ONE_YEAR)
 
     response = await rest.rest_client.patch(
         f"/access-requests/{access_request_id}",
@@ -609,8 +645,8 @@ async def test_patch_only_access_duration(
     assert request["status"] == "pending"
     assert request["status_changed"] is None
     assert request["changed_by"] is None
-    assert norm_utc(request["access_starts"]) == access_starts
-    assert norm_utc(request["access_ends"]) == access_ends
+    assert request["access_starts"] == access_starts
+    assert request["access_ends"] == access_ends
 
 
 async def test_patch_invalid_access_duration(
@@ -692,7 +728,7 @@ async def test_patch_access_duration_for_allowed_request(
     # try to change the end date of the request
     response = await rest.rest_client.patch(
         f"/access-requests/{access_request_id}",
-        json={"access_ends": (DATE_NOW + 2 * ONE_YEAR).isoformat()},
+        json={"access_ends": isoformat(DATE_NOW + 2 * ONE_YEAR)},
         headers=auth_headers_steward,
     )
     assert response.status_code == 422
@@ -762,8 +798,8 @@ async def test_patch_everything_when_allowing_request(
     access_request_id = response.json()
     assert_is_uuid(access_request_id)
 
-    access_starts = (DATE_NOW + 2 * ONE_YEAR).isoformat()
-    access_ends = (DATE_NOW + 3 * ONE_YEAR).isoformat()
+    access_starts = isoformat(DATE_NOW + 2 * ONE_YEAR)
+    access_ends = isoformat(DATE_NOW + 3 * ONE_YEAR)
 
     # set status to allowed and patch everything as data steward
     response = await rest.rest_client.patch(
@@ -798,8 +834,8 @@ async def test_patch_everything_when_allowing_request(
     assert request["status"] == "allowed"
     assert request["status_changed"]
     assert request["changed_by"] == "id-of-rod-steward@ghga.de"
-    assert norm_utc(request["access_starts"]) == access_starts
-    assert norm_utc(request["access_ends"]) == access_ends
+    assert request["access_starts"] == access_starts
+    assert request["access_ends"] == access_ends
     assert request["ticket_id"] == "some-ticket-id"
     assert request["internal_note"] == "Some internal note"
     assert request["note_to_requester"] == "Some note to requester"
@@ -903,3 +939,251 @@ async def test_patch_ticket_id_and_notes(
     assert request["note_to_requester"] is None
     assert request["status"] == "pending"
     assert not request["status_changed"]
+
+
+async def test_get_own_access_grants(
+    rest: RestFixture,
+    httpx_mock: HTTPXMock,
+    auth_headers_doe: dict[str, str],
+):
+    """Test that users can get their own access grants."""
+    client = rest.rest_client
+
+    user_id = GRANT_DATA["user_id"]
+
+    # mock getting the access grants of the user
+    httpx_mock.add_response(
+        method="GET",
+        url=f"http://access/grants?user_id={user_id}",
+        status_code=200,
+        json=[BASE_GRANT_DATA],
+        is_reusable=True,
+    )
+
+    # get own access grants as user without specifying a user ID
+    response = await client.get("/access-grants", headers=auth_headers_doe)
+
+    assert response.status_code == 200
+    grants = response.json()
+    assert grants == [GRANT_DATA]
+
+    # get own access grants specifying a user ID
+    response = await client.get(
+        f"/access-grants?user_id={user_id}", headers=auth_headers_doe
+    )
+
+    assert response.status_code == 200
+    grants = response.json()
+    assert grants == [GRANT_DATA]
+
+
+async def test_get_other_access_grants(
+    rest: RestFixture,
+    httpx_mock: HTTPXMock,
+    auth_headers_steward: dict[str, str],
+):
+    """Test that data stewards can get access grants of other users."""
+    client = rest.rest_client
+
+    user_id = GRANT_DATA["user_id"]
+
+    # mock getting the access grant of the user
+    httpx_mock.add_response(
+        method="GET",
+        url=f"http://access/grants?user_id={user_id}",
+        status_code=200,
+        json=[BASE_GRANT_DATA],
+    )
+
+    # get access grants of a specific user as data steward
+    response = await client.get(
+        f"/access-grants?user_id={user_id}", headers=auth_headers_steward
+    )
+
+    assert response.status_code == 200
+    grants = response.json()
+    assert grants == [GRANT_DATA]
+
+    # mock getting the access grants of all users
+    httpx_mock.add_response(
+        method="GET",
+        url="http://access/grants",
+        status_code=200,
+        json=[BASE_GRANT_DATA],
+    )
+
+    # get access grants of all users
+    response = await client.get("/access-grants", headers=auth_headers_steward)
+
+    assert response.status_code == 200
+    grants = response.json()
+    assert grants == [GRANT_DATA]
+
+
+async def test_get_filtered_access_grants(
+    rest: RestFixture,
+    httpx_mock: HTTPXMock,
+    auth_headers_steward: dict[str, str],
+):
+    """Test that data stewards can get a filtered list of access grants."""
+    client = rest.rest_client
+
+    user_id = GRANT_DATA["user_id"]
+    iva_id = GRANT_DATA["iva_id"]
+    dataset_id = GRANT_DATA["dataset_id"]
+
+    query = f"user_id={user_id}&iva_id={iva_id}&dataset_id={dataset_id}&valid=true"
+
+    # mock getting the filtered access grant list
+    httpx_mock.add_response(
+        method="GET",
+        url=f"http://access/grants?{query}",
+        status_code=200,
+        json=[BASE_GRANT_DATA],
+    )
+
+    # get filtered access grant list
+    response = await client.get(
+        f"/access-grants?{query}",
+        headers=auth_headers_steward,
+    )
+
+    assert response.status_code == 200
+    grants = response.json()
+    assert grants == [GRANT_DATA]
+
+
+async def test_get_access_grants_unauthorized(
+    rest: RestFixture, auth_headers_doe: dict[str, str]
+):
+    """Test that getting access grants needs authorization."""
+    client = rest.rest_client
+
+    # test without authentication
+    response = await client.get("/access-grants")
+    assert response.status_code == 403
+
+    # test getting access grants for another user
+    response = await client.get(
+        "/access-grants?user_id=some-other-user@ghga.de",
+        headers=auth_headers_doe,
+    )
+    assert response.status_code == 403
+
+
+async def test_get_access_grants_with_invalid_claims(
+    rest: RestFixture, httpx_mock: HTTPXMock, auth_headers_steward: dict[str, str]
+):
+    """Test that getting access grants when claims repository returns invalid data."""
+    client = rest.rest_client
+
+    httpx_mock.add_response(
+        method="GET",
+        url="http://access/grants",
+        status_code=200,
+        json={"foo": "bar"},
+    )
+
+    # test getting access grants when there is a downstream schema mismatch
+    response = await client.get(
+        "/access-grants",
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Access requests could not be fetched."
+
+
+async def test_get_access_grants_with_missing_dataset(
+    rest: RestFixture, httpx_mock: HTTPXMock, auth_headers_steward: dict[str, str]
+):
+    """Test that if a grant is missing its dataset we get an error."""
+    client = rest.rest_client
+
+    httpx_mock.add_response(
+        method="GET",
+        url="http://access/grants",
+        status_code=200,
+        json=[{**BASE_GRANT_DATA, "dataset_id": "non-existing-dataset-id"}],
+    )
+
+    # test getting access grants when the corresponding dataset is not found
+    # (this should not crash the service, but log and return an error
+    # since it indicates that the database is out of sync with upstream services)
+    response = await client.get(
+        "/access-grants",
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Access requests could not be fetched."
+
+
+async def test_revoke_existing_access_grant(
+    rest: RestFixture,
+    httpx_mock: HTTPXMock,
+    auth_headers_steward: dict[str, str],
+):
+    """Test that an existing access grant can be revoked."""
+    client = rest.rest_client
+
+    grant_id = GRANT_DATA["id"]
+
+    # mock revoking the access grant
+    httpx_mock.add_response(
+        method="DELETE",
+        url=f"http://access/grants/{grant_id}",
+        status_code=204,
+    )
+
+    # get filtered access grant list
+    response = await client.delete(
+        f"/access-grants/{grant_id}",
+        headers=auth_headers_steward,
+    )
+
+    assert response.status_code == 204
+    assert not response.content
+
+
+async def test_revoke_non_existing_access_grant(
+    rest: RestFixture,
+    httpx_mock: HTTPXMock,
+    auth_headers_steward: dict[str, str],
+):
+    """Test that we get the proper error when revoking a non-existent access grant."""
+    client = rest.rest_client
+
+    grant_id = GRANT_DATA["id"]
+
+    # mock revoking the access grant
+    httpx_mock.add_response(
+        method="DELETE",
+        url=f"http://access/grants/{grant_id}",
+        status_code=404,
+    )
+
+    # get filtered access grant list
+    response = await client.delete(
+        f"/access-grants/{grant_id}",
+        headers=auth_headers_steward,
+    )
+
+    assert response.status_code == 404
+    msg = str(response.json()["detail"])
+    assert msg == "Access grant not found"
+
+
+async def test_revoke_access_grant_unauthorized(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+):
+    """Test that we need proper authorization to revoke an access grant."""
+    client = rest.rest_client
+
+    grant_id = GRANT_DATA["id"]
+
+    # get filtered access grant list
+    response = await client.delete(
+        f"/access-grants/{grant_id}",
+        headers=auth_headers_doe,
+    )
+    assert response.status_code == 403

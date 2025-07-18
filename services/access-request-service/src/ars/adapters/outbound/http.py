@@ -21,35 +21,15 @@ from contextlib import asynccontextmanager
 
 import httpx
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings
 
+from ars.core.models import BaseAccessGrant, GrantValidity
 from ars.ports.outbound.access_grants import AccessGrantsPort
 
 __all__ = ["AccessGrantsAdapter", "AccessGrantsConfig"]
 
 TIMEOUT = 60
-
-
-class ClaimValidity(BaseModel):
-    """Start and end dates for validating claims."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    valid_from: UTCDatetime = Field(
-        ..., description="Start date of validity", examples=["2023-01-01T00:00:00Z"]
-    )
-    valid_until: UTCDatetime = Field(
-        ..., description="End date of validity", examples=["2023-12-31T23:59:59Z"]
-    )
-
-    @model_validator(mode="after")
-    def period_is_valid(self):
-        """Validate that the dates of the period are in the right order."""
-        if self.valid_until <= self.valid_from:
-            raise ValueError("'valid_until' must be later than 'valid_from'")
-
-        return self
 
 
 class AccessGrantsConfig(BaseSettings):
@@ -63,7 +43,11 @@ class AccessGrantsConfig(BaseSettings):
 
 
 class AccessGrantsAdapter(AccessGrantsPort):
-    """An adapter for granting access permissions for datasets."""
+    """An adapter for checking and granting access permissions for datasets.
+
+    This adapter proxies requests to the claims repository service
+    which can be accessed only internally for security reasons.
+    """
 
     def __init__(self, *, config: AccessGrantsConfig, client: httpx.AsyncClient):
         """Configure the access grant adapter."""
@@ -87,11 +71,14 @@ class AccessGrantsAdapter(AccessGrantsPort):
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
     ) -> None:
-        """Grant download access to a given user with an IVA for a given dataset."""
+        """Grant download access to a given user with an IVA for a given dataset.
+
+        May raise an `AccessGrantsInvalidPeriodError` or a general `AccessGrantsError`.
+        """
         url = f"{self._url}/users/{user_id}/ivas/{iva_id}/datasets/{dataset_id}"
         try:
-            validity = ClaimValidity(valid_from=valid_from, valid_until=valid_until)
-        except ValueError as error:
+            validity = GrantValidity(valid_from=valid_from, valid_until=valid_until)
+        except ValidationError as error:
             raise self.AccessGrantsInvalidPeriodError(
                 "Invalid validity period"
             ) from error
@@ -101,5 +88,67 @@ class AccessGrantsAdapter(AccessGrantsPort):
             raise self.AccessGrantsError(f"HTTP request error: {error}") from error
         if response.status_code != httpx.codes.NO_CONTENT:
             raise self.AccessGrantsError(
-                f"Unexpected HTTP response status code {response.status_code}"
+                f"Unexpected response status code {response.status_code}"
+            )
+
+    async def get_download_access_grants(
+        self,
+        user_id: str | None = None,
+        iva_id: str | None = None,
+        dataset_id: str | None = None,
+        valid: bool | None = None,
+    ) -> list[BaseAccessGrant]:
+        """Get download access grants.
+
+        You can filter the grants by user ID, IVA ID, dataset ID and whether the grant
+        is currently valid or not.
+
+        May raise an `AccessGrantsError`.
+        """
+        url = f"{self._url}/grants"
+        params: dict[str, str] = {}
+        if user_id is not None:
+            params["user_id"] = user_id
+        if iva_id is not None:
+            params["iva_id"] = iva_id
+        if dataset_id is not None:
+            params["dataset_id"] = dataset_id
+        if valid is not None:
+            params["valid"] = str(valid).lower()
+        try:
+            response = await self._client.get(url, params=params)
+        except httpx.RequestError as error:
+            raise self.AccessGrantsError(f"HTTP request error: {error}") from error
+        if response.status_code != httpx.codes.OK:
+            raise self.AccessGrantsError(
+                f"Unexpected response status code {response.status_code}"
+            )
+        response_data = response.json()
+        if not isinstance(response_data, list):
+            raise self.AccessGrantsError(
+                "Unexpected response data format: expected an array"
+            )
+        try:
+            return [BaseAccessGrant(**grant_data) for grant_data in response_data]
+        except ValidationError as error:
+            raise self.AccessGrantsError(
+                f"Invalid data in response: {error}"
+            ) from error
+
+    async def revoke_download_access_grant(self, grant_id: str) -> None:
+        """Revoke a download access grant.
+
+        May raise an `AccessGrantNotFoundError` or a general `AccessGrantsError`.
+        """
+        ...
+        url = f"{self._url}/grants/{grant_id}"
+        try:
+            response = await self._client.delete(url)
+        except httpx.RequestError as error:
+            raise self.AccessGrantsError(f"HTTP request error: {error}") from error
+        if response.status_code == httpx.codes.NOT_FOUND:
+            raise self.AccessGrantNotFoundError(f"Grant with ID {grant_id} not found")
+        if response.status_code != httpx.codes.NO_CONTENT:
+            raise self.AccessGrantsError(
+                f"Unexpected response status code {response.status_code}"
             )
