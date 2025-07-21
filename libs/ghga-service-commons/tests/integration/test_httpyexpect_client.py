@@ -105,7 +105,7 @@ def test_typical_client_usage(
 
 def test_compatibility_with_httpx():
     """Make sure that our Response protocol is compatible with the httpx library."""
-    from httpx import Response as HttpxResponse
+    from httpx import Response as HttpxResponse  # noqa: PLC0415
 
     httpx_response = HttpxResponse(status_code=200, content=b'{"hello": "world"}')
     response: Response = httpx_response  # mypy should not complain here
@@ -115,7 +115,7 @@ def test_compatibility_with_httpx():
 
 def test_compatibility_with_requests():
     """Make sure that our Response protocol is compatible with the requests library."""
-    from requests import Response as RequestsResponse
+    from requests import Response as RequestsResponse  # noqa: PLC0415
 
     requests_response = RequestsResponse()
     requests_response.status_code = 200

@@ -137,9 +137,20 @@ class ApiConfigBase(BaseSettings):
         description=(
             "A list of HTTP request headers that should be supported for cross-origin"
             + " requests. Defaults to []."
-            + " You can use ['*'] to allow all headers."
-            + " The Accept, Accept-Language, Content-Language and Content-Type headers"
+            + " You can use ['*'] to allow all request headers."
+            + " The Accept, Accept-Language, Content-Language, Content-Type and some"
             + " are always allowed for CORS requests."
+        ),
+    )
+    cors_exposed_headers: Optional[Sequence[str]] = Field(
+        default=None,
+        examples=[[]],
+        description=(
+            "A list of HTTP response headers that should be exposed for cross-origin"
+            + " responses. Defaults to []."
+            + " Note that you can NOT use ['*'] to expose all response headers."
+            + " The Cache-Control, Content-Language, Content-Length, Content-Type, Expires,"
+            + " Last-Modified and Pragma headers are always exposed for CORS responses."
         ),
     )
     generate_correlation_id: bool = Field(
@@ -349,10 +360,12 @@ def configure_app(app: FastAPI, config: ApiConfigBase):
         kwargs["allow_methods"] = config.cors_allowed_methods
     if config.cors_allow_credentials is not None:
         kwargs["allow_credentials"] = config.cors_allow_credentials
+    if config.cors_exposed_headers is not None:
+        kwargs["exposed_headers"] = config.cors_exposed_headers
 
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(CorrelationIdMiddleware, config.generate_correlation_id)
-    app.add_middleware(CORSMiddleware, **kwargs)
+    app.add_middleware(CORSMiddleware, **kwargs)  # type: ignore[arg-type]
 
     # Configure the exception handler to issue error according to httpyexpect model:
     configure_exception_handler(app)
