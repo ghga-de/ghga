@@ -24,9 +24,9 @@ spec:
   {{- 
     $defaults := dict 
       "jobName" (include "common.names.fullname" .) 
-      "prober" (.Values.probe.url) 
+      "prober" .Values.probe.url
       "module" "http_2xx" 
-      "targets" dict "staticConfig" (dict "static" (list (print "http://" .Values.probe.hostname (include "ghga-common.apiFullBasePath" .) "/health")))
+      "targets" (dict "staticConfig" (dict "static" (list (print "http://" .Values.probe.hostname (include "ghga-common.apiFullBasePath" .) "/health"))))
   -}}
 {{- include "common.tplvalues.render" ( dict "value" (omit (merge .Values.probe $defaults) "enabled" "hostname") "context" $ ) | nindent 2 }}
 {{- end -}}

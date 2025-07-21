@@ -16,7 +16,7 @@ metadata:
 spec:
   jobName: test-service
   module: http_2xx
-  staticConfig:
-    static:
-    - https://default.ghga.dev/path/v1/test/health
-  targets: {}
+  targets:
+    staticConfig:
+      static:
+      - http://default.ghga.dev/path/v1/test/health
