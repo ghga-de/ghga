@@ -228,6 +228,8 @@ exports:
       enabled: false
       hostname: default.ghga.dev
 
+    healthEndpoint: "/health"
+
     vaultAgent:
       enabled: false
       annotations:
