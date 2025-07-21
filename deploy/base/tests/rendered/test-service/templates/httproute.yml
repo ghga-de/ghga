@@ -38,6 +38,6 @@ spec:
     matches:
     - path:
         type: PathPrefix
-        value: /path/v1/test/
+        value: /path/v1/test
   hostnames:
   - my.test.com

@@ -1,5 +1,5 @@
 {{- define "ghga-common.apiFullBasePath" -}}
-{{ .Values.apiBasePathPrefix | empty | ternary .Values.apiBasePath (cat .Values.apiBasePathPrefix .Values.apiBasePath ) | nospace }}
+{{ .Values.apiBasePathPrefix | empty | ternary .Values.apiBasePath (cat .Values.apiBasePathPrefix .Values.apiBasePath ) | nospace | trimSuffix "/" }}
 {{- end -}}
 {{- define "ghga-common.apiBasePath" -}}
 {{- if .Values.apiBasePath -}}

@@ -13,7 +13,7 @@ metadata:
     app.kubernetes.io/version: "0.0.0"
     app: test-service
   annotations:
-    configmap-hash: fbf011e86cf6ddcd36b3435696676249f7050e6e3c6497fc65182372cb0d22d0
+    configmap-hash: b7ace94177d50933f2551e0cde60f088dda3f390d348ab677aef30c1668694ff
 spec:
   replicas: 1
   revisionHistoryLimit: 1
@@ -26,7 +26,7 @@ spec:
   template:
     metadata:
       annotations:
-        configmap-hash: fbf011e86cf6ddcd36b3435696676249f7050e6e3c6497fc65182372cb0d22d0
+        configmap-hash: b7ace94177d50933f2551e0cde60f088dda3f390d348ab677aef30c1668694ff
         vault.hashicorp.com/agent-cache-enable: "true"
         vault.hashicorp.com/agent-init-first: "true"
         vault.hashicorp.com/agent-inject: "true"

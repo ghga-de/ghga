@@ -9,6 +9,6 @@ spec:
   ambassador_id: [default]
   service: "test-service:8080"
   hostname: my.test.com
-  prefix: /path/v1/test/
+  prefix: /path/v1/test
   rewrite: /
   timeout_ms: 3000

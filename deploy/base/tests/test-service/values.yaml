@@ -134,3 +134,6 @@ _topics:
         - Describe
       resource:
         patternType: prefix
+
+probe:
+  enabled: true

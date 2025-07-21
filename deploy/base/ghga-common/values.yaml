@@ -223,6 +223,10 @@ exports:
     httpRoute:
       enabled: false
       rules: []
+    
+    probe:
+      enabled: false
+      hostname: default.ghga.dev
 
     vaultAgent:
       enabled: false
