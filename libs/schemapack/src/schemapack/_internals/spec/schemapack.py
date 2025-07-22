@@ -371,7 +371,7 @@ class SchemaPack(_FrozenNoExtraBaseModel):
             "Optionally, define the name of a class that should acting as the root of"
             + " the schemapack."
             + " Corresponding datapacks must define a root resource of this class."
-            + "If not specified , i.e. set to None (the default), the datapack must no"
+            + "If not specified , i.e. set to None (the default), the datapack must not"
             + " specify a root resource."
         ),
     )

@@ -145,8 +145,8 @@ def condense_schemapack(
         ),
     ] = False,
 ):
-    """Writes a condensed version of the provided schemapack that contains content
-    schemas to stdout.
+    """Writes a version of the provided schemapack with embedded content schemas to
+    stdout.
     """
     with expect_schemapack_errors():
         schemapack_dict = load_schemapack(schemapack)
