@@ -2,8 +2,21 @@
 root = "."
 page-fallback = "./index.html"
 
+# Cache hashed static assets for 1 year (immutable)
 [[advanced.headers]]
-source = "/index.html"
+source = "**/*.{js,css,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot,webp,avif,map,wasm}"
+[advanced.headers.headers]
+Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache other assets for shorter time (30 days)
+[[advanced.headers]]
+source = "**/*.{json,xml,txt,md,xlsx,zip,gz,py,scss}"
+[advanced.headers.headers]
+Cache-Control = "public, max-age=2592000"
+
+# No cache for HTML pages and SPA routes
+[[advanced.headers]]
+source = "**"
 [advanced.headers.headers]
 Cache-Control = "no-cache, no-store, must-revalidate, proxy-revalidate"
 Pragma = "no-cache"
