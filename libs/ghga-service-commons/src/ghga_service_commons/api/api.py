@@ -361,7 +361,7 @@ def configure_app(app: FastAPI, config: ApiConfigBase):
     if config.cors_allow_credentials is not None:
         kwargs["allow_credentials"] = config.cors_allow_credentials
     if config.cors_exposed_headers is not None:
-        kwargs["exposed_headers"] = config.cors_exposed_headers
+        kwargs["expose_headers"] = config.cors_exposed_headers
 
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(CorrelationIdMiddleware, config.generate_correlation_id)
