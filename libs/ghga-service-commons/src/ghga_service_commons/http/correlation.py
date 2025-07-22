@@ -45,7 +45,7 @@ async def _cid_request_hook(request, generate_correlation_id: bool):
             correlation_id = new_correlation_id()
         else:
             raise
-    request.headers[CORRELATION_ID_HEADER_NAME] = correlation_id
+    request.headers[CORRELATION_ID_HEADER_NAME] = str(correlation_id)
 
 
 def attach_correlation_id_to_requests(

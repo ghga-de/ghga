@@ -31,11 +31,11 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from hexkit.correlation import (
     InvalidCorrelationIdError,
+    correlation_id_from_str,
     new_correlation_id,
     set_correlation_id,
-    validate_correlation_id,
 )
-from pydantic import Field
+from pydantic import UUID4, Field
 from pydantic_settings import BaseSettings
 
 from ghga_service_commons.httpyexpect.models import HttpExceptionBody
@@ -164,10 +164,10 @@ class ApiConfigBase(BaseSettings):
     )
 
 
-def set_header_correlation_id(request: Request, correlation_id: str):
+def set_header_correlation_id(request: Request, correlation_id: UUID4):
     """Set the correlation ID on the request header. Modifies the header in-place."""
     headers = request.headers.mutablecopy()
-    headers[CORRELATION_ID_HEADER_NAME] = correlation_id
+    headers[CORRELATION_ID_HEADER_NAME] = str(correlation_id)
     request.scope.update(headers=headers.raw)
     # delete _headers to force update
     delattr(request, "_headers")
@@ -176,7 +176,7 @@ def set_header_correlation_id(request: Request, correlation_id: str):
 
 def get_validated_correlation_id(
     correlation_id: str, generate_correlation_id: bool
-) -> str:
+) -> UUID4:
     """Returns valid correlation ID.
 
     If `correlation_id` is valid, it returns that.
@@ -184,15 +184,15 @@ def get_validated_correlation_id(
     Otherwise, an error is raised.
 
     Raises:
-        InvalidCorrelationIdError: If a correlation ID is invalid or empty (and
+        InvalidCorrelationIdError: If a correlation ID is invalid (and
             `generate_correlation_id` is False).
     """
     if not correlation_id and generate_correlation_id:
-        correlation_id = new_correlation_id()
+        valid_correlation_id = new_correlation_id()
         log.debug("Generated new correlation id: %s", correlation_id)
     else:
-        validate_correlation_id(correlation_id)
-    return correlation_id
+        valid_correlation_id = correlation_id_from_str(correlation_id)
+    return valid_correlation_id
 
 
 class UnexpectedCorrelationIdError(RuntimeError):
@@ -234,13 +234,13 @@ class CorrelationIdMiddleware:
         request = Request(scope)
         headers = request.headers
 
-        correlation_id = headers.get(CORRELATION_ID_HEADER_NAME, "")
+        correlation_id_from_headers = headers.get(CORRELATION_ID_HEADER_NAME, "")
 
         # Validate the correlation ID.
         # If validation fails, create a response with bad request status.
         try:
             validated_correlation_id = get_validated_correlation_id(
-                correlation_id, self.generate_correlation_id
+                correlation_id_from_headers, self.generate_correlation_id
             )
         except InvalidCorrelationIdError as error:
             # report the plain error without any traceback
@@ -266,7 +266,7 @@ class CorrelationIdMiddleware:
             return
 
         # Update header if the validated value differs
-        if validated_correlation_id != correlation_id:
+        if str(validated_correlation_id) != correlation_id_from_headers:
             set_header_correlation_id(request, validated_correlation_id)
 
         async def send_wrapper(message):
@@ -275,7 +275,7 @@ class CorrelationIdMiddleware:
                 # Get the original response headers
                 headers = message.setdefault("headers", [])
                 header_name = CORRELATION_ID_HEADER_NAME.lower().encode()
-                header_value = validated_correlation_id.encode()
+                header_value = str(validated_correlation_id).encode()
                 for header in headers:
                     key = header[0]
                     if key.lower() == header_name:

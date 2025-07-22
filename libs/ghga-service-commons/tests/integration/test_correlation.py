@@ -23,10 +23,10 @@ import pytest
 from fastapi import FastAPI, Request, Response
 from hexkit.correlation import (
     CorrelationIdContextError,
+    correlation_id_from_str,
     get_correlation_id,
     new_correlation_id,
     set_new_correlation_id,
-    validate_correlation_id,
 )
 
 from ghga_service_commons.api.api import (
@@ -91,27 +91,32 @@ async def test_middleware_responses(use_unexpected_cid: bool):
     @app.get("/")
     async def endpoint():
         if use_unexpected_cid:
-            return Response(headers={CORRELATION_ID_HEADER_NAME: new_correlation_id()})
+            return Response(
+                headers={CORRELATION_ID_HEADER_NAME: str(new_correlation_id())}
+            )
         return "done"
 
-    async with set_new_correlation_id() as correlation_id:
-        async with AsyncTestClient(app=app) as rest_client:
-            # If 'use_unexpected_cid' is set, then the endpoint will return a different
-            #  cid in the header. The middleware should detect this and raise an error.
-            #  Our services should not have a reason to modify this value.
-            with (
-                pytest.raises(UnexpectedCorrelationIdError)
-                if use_unexpected_cid
-                else nullcontext()
-            ):
-                response = await rest_client.get(
-                    "/", headers={CORRELATION_ID_HEADER_NAME: correlation_id}
-                )
+    async with (
+        set_new_correlation_id() as correlation_id,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        # If 'use_unexpected_cid' is set, then the endpoint will return a different
+        #  cid in the header. The middleware should detect this and raise an error.
+        #  Our services should not have a reason to modify this value.
+        cid_string = str(correlation_id)
+        with (
+            pytest.raises(UnexpectedCorrelationIdError)
+            if use_unexpected_cid
+            else nullcontext()
+        ):
+            response = await rest_client.get(
+                "/", headers={CORRELATION_ID_HEADER_NAME: cid_string}
+            )
 
-            # Only check the response headers now if we used the normal CID
-            if not use_unexpected_cid:
-                assert CORRELATION_ID_HEADER_NAME in response.headers
-                assert response.headers[CORRELATION_ID_HEADER_NAME] == correlation_id
+        # Only check the response headers now if we used the normal CID
+        if not use_unexpected_cid:
+            assert CORRELATION_ID_HEADER_NAME in response.headers
+            assert response.headers[CORRELATION_ID_HEADER_NAME] == cid_string
 
 
 async def test_correlation_id_request_hook():
@@ -134,7 +139,7 @@ async def test_correlation_id_request_hook():
     @this_service.get("/")
     async def first_endpoint():
         """Call the other endpoint"""
-        correlation_id = get_correlation_id()
+        correlation_id = str(get_correlation_id())
 
         async with AsyncTestClient(app=some_other_service) as client:
             # Make a call to the other API and verify that the CID isn't passed on
@@ -160,8 +165,9 @@ async def test_correlation_id_request_hook():
         # Verify that the CID is propagated from here to the final API endpoint and back
         async with set_new_correlation_id() as correlation_id:
             response = await rest_client.get("/")
-            assert response.json() == correlation_id
-            assert response.headers[CORRELATION_ID_HEADER_NAME] == correlation_id
+            cid_string = str(correlation_id)
+            assert response.json() == cid_string
+            assert response.headers[CORRELATION_ID_HEADER_NAME] == cid_string
 
 
 async def test_hook_errors():
@@ -197,8 +203,10 @@ async def test_async_client(generate_correlation_id: bool):
     async def endpoint(request: Request):
         """Return the correlation ID header value from the request."""
         assert CORRELATION_ID_HEADER_NAME in request.headers
-        validate_correlation_id(request.headers[CORRELATION_ID_HEADER_NAME])
-        return request.headers[CORRELATION_ID_HEADER_NAME]
+        correlation_id = correlation_id_from_str(
+            request.headers[CORRELATION_ID_HEADER_NAME]
+        )
+        return correlation_id
 
     # Create an AsyncClient instance (NOT AsyncTestClient!)
     async with AsyncClient(
@@ -217,10 +225,13 @@ async def test_async_client(generate_correlation_id: bool):
         # Check the response headers, but only in the non-erring case
         if generate_correlation_id:
             assert CORRELATION_ID_HEADER_NAME in response.headers
-            validate_correlation_id(response.headers[CORRELATION_ID_HEADER_NAME])
+            correlation_id = correlation_id_from_str(
+                response.headers[CORRELATION_ID_HEADER_NAME]
+            )
 
         # Verify that the CID is passed when it exists
         async with set_new_correlation_id() as correlation_id:
+            cid_string = str(correlation_id)
             response = await client.get("/")
-            assert response.headers[CORRELATION_ID_HEADER_NAME] == correlation_id
-            assert response.json() == correlation_id
+            assert response.headers[CORRELATION_ID_HEADER_NAME] == cid_string
+            assert response.json() == cid_string

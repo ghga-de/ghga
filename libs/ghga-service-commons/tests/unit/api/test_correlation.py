@@ -15,6 +15,8 @@
 #
 """Tests for the correlation ID functionality."""
 
+from uuid import UUID
+
 from fastapi import Request
 
 from ghga_service_commons.api.api import (
@@ -31,7 +33,7 @@ def test_header_update_function():
         "path": "/",
         "headers": [],
     }
-
+    cid = UUID("9c68468c-c82a-4744-80aa-a06e3a54e5b5")
     request = Request(scope=scope)
-    set_header_correlation_id(request, "id123")
-    assert request.headers.get(CORRELATION_ID_HEADER_NAME) == "id123"
+    set_header_correlation_id(request, cid)
+    assert request.headers.get(CORRELATION_ID_HEADER_NAME) == str(cid)
