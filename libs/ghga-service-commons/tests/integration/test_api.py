@@ -61,6 +61,55 @@ async def test_run_server():
     assert response.json() == GREETING
 
 
+async def test_configure_cors_headers():
+    """Test configuring the CORS headers."""
+    # Configure the FastAPI app with nontrivial CORS settings
+    cors_config = ApiConfigBase(
+        cors_allowed_origins=["http://test.dev"],
+        cors_allowed_methods=["GET"],
+        cors_allowed_headers=["X-Custom-Request-Header"],
+        cors_exposed_headers=["X-Custom-Response-Header"],
+    )
+
+    app = FastAPI()
+    configure_app(app, cors_config)
+
+    # Check that the app is configured properly
+    client = AsyncTestClient(app)
+
+    # Add a simple endpoint to test CORS
+    @app.get("/test")
+    async def test_endpoint():
+        return {"message": "test"}
+
+    # Test preflight request
+    response = await client.options(
+        "/test",
+        headers={
+            "Origin": "http://test.dev",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "X-Custom-Request-Header",
+        },
+    )
+
+    # Verify CORS headers are set correctly
+    assert response.status_code == 200
+    headers = response.headers
+    assert headers["access-control-allow-origin"] == "http://test.dev"
+    assert headers["access-control-allow-methods"] == "GET"
+    allow_headers = headers["access-control-allow-headers"].split(", ")
+    assert "X-Custom-Request-Header" in allow_headers
+
+    # Test actual request with CORS headers
+    response = await client.get("/test", headers={"Origin": "http://test.dev"})
+
+    assert response.status_code == 200
+    headers = response.headers
+    assert headers["access-control-allow-origin"] == "http://test.dev"
+    expose_headers = headers["access-control-expose-headers"].split(", ")
+    assert "X-Custom-Response-Header" in expose_headers
+
+
 async def test_configure_exception_handler():
     """Test the exception handler configuration of a FastAPI app."""
     # example params for an http exception
