@@ -24,7 +24,7 @@ spec:
   {{- 
     $defaults := dict 
       "jobName" (include "common.names.fullname" .) 
-      "prober" .Values.probe.url
+      "prober" (dict "url" "prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115" )
       "module" "http_2xx" 
       "targets" (dict "staticConfig" (dict "static" (list (print "http://" .Values.probe.hostname (include "ghga-common.apiFullBasePath" .) .Values.healthEndpoint))))
   -}}

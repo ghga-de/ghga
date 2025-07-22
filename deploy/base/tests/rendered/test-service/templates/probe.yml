@@ -16,6 +16,8 @@ metadata:
 spec:
   jobName: test-service
   module: http_2xx
+  prober:
+    url: prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
   targets:
     staticConfig:
       static:
