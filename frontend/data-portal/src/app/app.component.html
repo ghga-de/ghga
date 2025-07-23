@@ -1,10 +1,18 @@
 <div class="flex min-h-screen flex-col">
+  <!-- Skip to content link for accessibility -->
+  <div class="flex w-full justify-center">
+    <a
+      href="#content"
+      class="absolute z-50 -translate-y-1000 rounded border-2 border-black bg-white p-2 text-black duration-300 focus:translate-y-0"
+      >Skip to content</a
+    >
+  </div>
   <app-version-ribbon></app-version-ribbon>
   <header class="mb-2">
     <app-site-header></app-site-header>
   </header>
 
-  <main class="grow p-5 text-xl break-words">
+  <main id="content" class="grow p-5 text-xl break-words">
     <router-outlet />
   </main>
 
