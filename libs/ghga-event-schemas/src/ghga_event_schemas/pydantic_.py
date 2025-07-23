@@ -23,9 +23,7 @@ from enum import StrEnum
 from typing import Any
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
-
-from ghga_event_schemas.validation import validated_upload_date
+from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field
 
 
 class MetadataDatasetStage(StrEnum):
@@ -116,31 +114,29 @@ class MetadataDatasetOverview(MetadataDatasetID):
 class UploadDateModel(BaseModel):
     """
     Custom base model for common datetime validation.
-    Models containing stringified upload_date datetimes should be derived from this.
+    Models containing upload_date datetimes should be derived from this.
     """
 
-    upload_date: str = Field(
+    upload_date: UTCDatetime = Field(
         ...,
-        description="The date and time when this file was uploaded."
-        + "String format should follow ISO 8601 as produced by datetime.utcnow().isoformat()",
+        description="The date and time when this file was uploaded.",
     )
 
-    @field_validator("upload_date")
-    @classmethod
-    def check_datetime_format(cls, upload_date):
-        """Validate provided upload date string can be interpreted as datetime"""
-        return validated_upload_date(upload_date)
+
+class FileIdModel(BaseModel):
+    """Base model for events that contain a file ID."""
+
+    file_id: str = Field(
+        ..., description="The public ID of the file as present in the metadata catalog."
+    )
 
 
-class MetadataSubmissionFiles(BaseModel):
+class MetadataSubmissionFiles(FileIdModel):
     """
     Models files that are associated with or affected by a new or updated metadata
     submission.
     """
 
-    file_id: str = Field(
-        ..., description="The public ID of the file as present in the metadata catalog."
-    )
     file_name: str = Field(
         ...,
         description="The name of the file as it was submitted.",
@@ -165,14 +161,10 @@ class MetadataSubmissionUpserted(BaseModel):
     model_config = ConfigDict(title="metadata_submission_upserted")
 
 
-class FileUploadReceived(UploadDateModel):
+class FileUploadReceived(UploadDateModel, FileIdModel):
     """This event is triggered when a new file upload is received."""
 
-    file_id: str = Field(
-        ...,
-        description="The public ID of the file as present in the metadata catalog.",
-    )
-    object_id: str = Field(
+    object_id: UUID4 = Field(
         ..., description="The ID of the file in the specific S3 bucket."
     )
     bucket_id: str = Field(
@@ -201,13 +193,10 @@ class FileUploadReceived(UploadDateModel):
     model_config = ConfigDict(title="file_upload_received")
 
 
-class FileUploadValidationSuccess(UploadDateModel):
+class FileUploadValidationSuccess(UploadDateModel, FileIdModel):
     """This event is triggered when an uploaded file is successfully validated."""
 
-    file_id: str = Field(
-        ..., description="The public ID of the file as present in the metadata catalog."
-    )
-    object_id: str = Field(
+    object_id: UUID4 = Field(
         ..., description="The ID of the file in the specific S3 bucket."
     )
     bucket_id: str = Field(
@@ -266,13 +255,10 @@ class FileUploadValidationSuccess(UploadDateModel):
     model_config = ConfigDict(title="file_upload_validation_success")
 
 
-class FileUploadValidationFailure(UploadDateModel):
+class FileUploadValidationFailure(UploadDateModel, FileIdModel):
     """This event is triggered when an uploaded file failed to validate."""
 
-    file_id: str = Field(
-        ..., description="The public ID of the file as present in the metadata catalog."
-    )
-    object_id: str = Field(
+    object_id: UUID4 = Field(
         ..., description="The ID of the file in the specific S3 bucket."
     )
     bucket_id: str = Field(
@@ -302,15 +288,12 @@ class FileInternallyRegistered(FileUploadValidationSuccess):
     model_config = ConfigDict(title="file_internally_registered")
 
 
-class FileRegisteredForDownload(UploadDateModel):
+class FileRegisteredForDownload(UploadDateModel, FileIdModel):
     """
     This event is triggered when a newly uploaded file becomes available for
     download via a GA4GH DRS-compatible API.
     """
 
-    file_id: str = Field(
-        ..., description="The public ID of the file as present in the metadata catalog."
-    )
     decrypted_sha256: str = Field(
         ...,
         description="The SHA-256 checksum of the entire decrypted file content.",
@@ -322,16 +305,13 @@ class FileRegisteredForDownload(UploadDateModel):
     model_config = ConfigDict(title="file_registered_for_download")
 
 
-class NonStagedFileRequested(BaseModel):
+class NonStagedFileRequested(FileIdModel):
     """
     This event type is triggered when a user requests to download a file that is not
     yet present in the outbox and needs to be staged.
     """
 
-    file_id: str = Field(
-        ..., description="The public ID of the file as present in the metadata catalog."
-    )
-    target_object_id: str = Field(
+    target_object_id: UUID4 = Field(
         ..., description="The ID of the file in the specific S3 bucket."
     )
     target_bucket_id: str = Field(
@@ -398,15 +378,12 @@ class Notification(BaseModel):
     model_config = ConfigDict(title="notification")
 
 
-class FileDeletionRequested(BaseModel):
+class FileDeletionRequested(FileIdModel):
     """
     This event is emitted when a request to delete a certain file from the file
     backend has been made.
     """
 
-    file_id: str = Field(
-        ..., description="The public ID of the file as present in the metadata catalog."
-    )
     model_config = ConfigDict(title="file_deletion_requested")
 
 
@@ -422,7 +399,7 @@ class FileDeletionSuccess(FileDeletionRequested):
 class UserID(BaseModel):
     """Generic event payload to relay a user ID."""
 
-    user_id: str = Field(..., description="The user ID")
+    user_id: UUID4 = Field(..., description="The user ID")
 
 
 class AcademicTitle(StrEnum):
@@ -461,7 +438,7 @@ class AccessRequestStatus(StrEnum):
 class AccessRequestDetails(UserID):
     """Event used to convey the details an access request."""
 
-    id: str = Field(..., description="The access request ID")
+    id: UUID4 = Field(..., description="The access request ID")
     dataset_id: str = Field(..., description="The dataset ID")
     dataset_title: str = Field(..., description="The dataset title")
     dataset_description: str | None = Field(

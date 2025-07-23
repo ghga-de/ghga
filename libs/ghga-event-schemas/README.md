@@ -17,13 +17,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-event-schemas):
 ```bash
-docker pull ghga/ghga-event-schemas:9.2.0
+docker pull ghga/ghga-event-schemas:10.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-event-schemas:9.2.0 .
+docker build -t ghga/ghga-event-schemas:10.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -31,7 +31,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/ghga-event-schemas:9.2.0 --help
+docker run -p 8080:8080 ghga/ghga-event-schemas:10.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -48,7 +48,7 @@ ghga_event_schemas --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
 
 - <a id="properties/service_name"></a>**`service_name`** *(string)*: Short name of this service. Default: `"my_microservice"`.
 
@@ -190,13 +190,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/language"></a>**`language`** *(string)*: The language. Must be one of: `["Greek", "Croatian", "French", "German"]`. Default: `"Croatian"`.
+- <a id="properties/language"></a>**`language`** *(string)*: The language. Must be one of: "Greek", "Croatian", "French", or "German". Default: `"Croatian"`.
 
 
 ### Usage:
 
 A template YAML for configuring the service can be found at
-[`./example-config.yaml`](./example-config.yaml).
+[`./example_config.yaml`](./example_config.yaml).
 Please adapt it, rename it to `.ghga_event_schemas.yaml`, and place it in one of the following locations:
 - in the current working directory where you execute the service (on Linux: `./.ghga_event_schemas.yaml`)
 - in your home directory (on Linux: `~/.ghga_event_schemas.yaml`)
@@ -205,7 +205,7 @@ The config yaml will be automatically parsed by the service.
 
 **Important: If you are using containers, the locations refer to paths within the container.**
 
-All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
+All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml)
 could also be set using environment variables or file secrets.
 
 For naming the environment variables, just prefix the parameter name with `ghga_event_schemas_`,
@@ -252,7 +252,7 @@ It installs the service with all development dependencies, and it installs pre-c
 
 The installation is performed automatically when you build the devcontainer. However,
 if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
-[`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
+[`lock/requirements-dev.txt`](./lock/requirements-dev.txt), please run it again.
 
 ## License
 
@@ -261,5 +261,5 @@ This repository is free to use and modify according to the
 
 ## README Generation
 
-This README file is auto-generated, please see [`readme_generation.md`](./readme_generation.md)
+This README file is auto-generated, please see [.readme_generation/README.md](./.readme_generation/README.md)
 for details.

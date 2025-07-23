@@ -16,7 +16,6 @@
 """Test schema validation utils."""
 
 import json
-from datetime import datetime
 from typing import Any
 
 import pytest
@@ -53,25 +52,11 @@ def test_failure():
         _ = get_validated_payload(payload=payload, schema=ExampleSchema)
 
 
-def test_datetime_validation_happy():
-    """Check validation hook for upload date - happy path"""
-    payload = {"upload_date": datetime.now().isoformat()}
-    validated_payload = get_validated_payload(payload=payload, schema=UploadDateModel)
-    assert isinstance(validated_payload, UploadDateModel)
-
-
-def test_datetime_validation_failure():
-    """Check validation hook for upload date with invalid string"""
-    payload = {"upload_date": "test o'clock"}
-    with pytest.raises(EventSchemaValidationError):
-        _ = get_validated_payload(payload=payload, schema=UploadDateModel)
-
-
 @pytest.mark.parametrize(
     "payload,assertions",
     [
         ({}, ["type=missing"]),
-        ({"upload_date": True}, ["type=string", "should be a valid string"]),
+        ({"upload_date": True}, ["type=datetime", "should be a valid datetime"]),
     ],
 )
 def test_error_messages(payload: dict[str, Any], assertions: list[str]):

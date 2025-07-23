@@ -47,7 +47,7 @@ class EventSchemaValidationError(ValueError):
         super().__init__(message)
 
 
-def get_validated_payload(payload: JsonObject, schema: type[Schema]) -> Schema:
+def get_validated_payload(payload: JsonObject, schema: type[Schema]) -> Schema:  # noqa: UP047
     """Validate an event payload against a specified pydantic-based event schema
     and return the validated pydantic model.
     """
