@@ -1,0 +1,96 @@
+@if (user(); as currentUser) {
+  <div class="mx-auto max-w-[1200px] p-6">
+    <div class="clearfix mb-6">
+      <button
+        mat-icon-button
+        (click)="goBack()"
+        aria-label="Go back to user list"
+        class="text-primary float-left mt-1 mr-4"
+      >
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <h1>User: {{ currentUser.displayName }}</h1>
+    </div>
+
+    <div class="rounded-lg bg-white p-6 shadow-md">
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div>
+          <h2 class="mb-4 text-xl font-semibold">Basic Information</h2>
+          <div class="space-y-3">
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Name</span>
+              <p class="mt-1 text-sm text-gray-900">{{ currentUser.name }}</p>
+            </div>
+            @if (currentUser.title) {
+              <div>
+                <span class="block text-sm font-medium text-gray-700">Title</span>
+                <p class="mt-1 text-sm text-gray-900">{{ currentUser.title }}</p>
+              </div>
+            }
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Email</span>
+              <p class="mt-1 text-sm text-gray-900">{{ currentUser.email }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="mb-4 text-xl font-semibold">Account Details</h2>
+          <div class="space-y-3">
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Status</span>
+              <p
+                class="mt-1 text-sm capitalize"
+                [class]="
+                  currentUser.status === 'active' ? 'text-green-600' : 'text-red-600'
+                "
+              >
+                {{ currentUser.status }}
+              </p>
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-700"
+                >Registration Date</span
+              >
+              <p class="mt-1 text-sm text-gray-900">
+                {{ currentUser.registration_date | date: friendlyDateFormat }}
+              </p>
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-700">Roles</span>
+              <div class="mt-1 flex flex-wrap gap-1">
+                @for (roleName of currentUser.roleNames; track roleName) {
+                  <mat-chip>{{ roleName }}</mat-chip>
+                } @empty {
+                  <p class="text-sm text-gray-500">No roles assigned</p>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- External ID in full row -->
+      <div class="mt-6 pt-6">
+        <div>
+          <span class="block text-sm font-medium text-gray-700">External ID</span>
+          <p class="mt-1 font-mono text-sm break-all text-gray-900">
+            {{ currentUser.ext_id }}
+          </p>
+        </div>
+      </div>
+
+      <!-- TODO: Detail view functionality still needs to be implemented -->
+    </div>
+  </div>
+} @else {
+  <div class="container mx-auto p-6">
+    <div class="text-center">
+      <h1 class="mb-4 text-2xl font-bold text-red-600">User Not Found</h1>
+      <p class="mb-6 text-gray-600">The requested user could not be found.</p>
+      <button mat-raised-button color="primary" (click)="goBack()">
+        Back to User List
+      </button>
+    </div>
+  </div>
+}

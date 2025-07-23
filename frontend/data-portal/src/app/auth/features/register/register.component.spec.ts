@@ -6,7 +6,7 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { User } from '@app/auth/models/user';
+import { UserSession } from '@app/auth/models/user';
 import { AuthService } from '@app/auth/services/auth.service';
 import { RegisterComponent } from './register.component';
 
@@ -18,7 +18,7 @@ class MockAuthService {
    * Provide a dummy user with data from first factor authentication
    * @returns a dummy user with all properties set
    */
-  user(): User {
+  user(): UserSession {
     return {
       name: 'John Doe',
       title: 'Dr.',

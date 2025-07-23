@@ -19,6 +19,7 @@ import {
   metadataGlobalSummary,
   searchResults,
   storageLabels,
+  users,
   workPackageResponse,
 } from './data';
 
@@ -39,6 +40,8 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // User Data
   'GET /api/auth/users/doe@test.dev': user,
+
+  'GET /api/auth/users': users,
 
   // User IVAs
   'GET /api/auth/users/doe@test.dev/ivas': allIvasOfDoe,

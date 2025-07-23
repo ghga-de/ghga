@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { RegisteredUser } from '@app/auth/models/user';
 import { DatasetDetailsRaw } from '@app/metadata/models/dataset-details';
 import { DatasetInformation } from '@app/metadata/models/dataset-information';
 import { DatasetSummary } from '@app/metadata/models/dataset-summary';
@@ -13,6 +14,73 @@ import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { IvaState, IvaType, UserWithIva } from '@app/verification-addresses/models/iva';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
+
+/**
+ * Users
+ */
+
+export const users: RegisteredUser[] = [
+  {
+    id: 'doe@test.dev',
+    ext_id: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
+    name: 'John Doe',
+    title: 'Dr.',
+    email: 'doe@home.org',
+    roles: ['data_steward'],
+    status: 'active',
+    registration_date: '2022-06-01T00:00:00',
+  },
+  {
+    id: 'roe@test.dev',
+    ext_id: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaae@lifescience-ri.eu',
+    name: 'Jane Roe',
+    title: 'Prof.',
+    email: 'roe@home.org',
+    roles: [],
+    status: 'active',
+    registration_date: '2023-01-01T00:00:00',
+  },
+  {
+    id: 'fred.flintstone@test.dev',
+    ext_id: 'caffeecaffeecaffeecaffeecaffeecaffeeaafaa@lifescience-ri.eu',
+    name: 'Fred Flintstone',
+    title: null,
+    email: 'fred@flintstones.org',
+    roles: [],
+    status: 'active',
+    registration_date: '2023-08-15T00:00:00',
+  },
+  {
+    id: 'wilma.flintstone@test.dev',
+    ext_id: 'caffeecaffeecaffeecaffeecaffeecaffeeabaaa@lifescience-ri.eu',
+    name: 'Wilma Flintstone',
+    title: null,
+    email: 'wilma@flintstones.org',
+    roles: [],
+    status: 'active',
+    registration_date: '2023-08-15T00:00:00',
+  },
+  {
+    id: 'barney.gumble@test.dev',
+    ext_id: 'caffeecaffeecaffeecaffeecaffeecaffeeacdaa@lifescience-ri.eu',
+    name: 'Barney Gumble',
+    title: null,
+    email: 'barnie@flintstones.org',
+    roles: [],
+    status: 'inactive',
+    registration_date: '2024-08-15T00:00:00',
+  },
+  {
+    id: 'oscar.flintstone@test.dev',
+    ext_id: 'caffeecaffeecaffeecaffeecaffeecaffeeadeaa@lifescience-ri.eu',
+    name: 'Jeffrey Spencer Slate Sr.',
+    title: 'Prof.',
+    email: 'jeff@flintstones.org',
+    roles: ['data_steward'],
+    status: 'inactive',
+    registration_date: '2024-09-01T00:00:00',
+  },
+];
 
 /**
  * IVAs

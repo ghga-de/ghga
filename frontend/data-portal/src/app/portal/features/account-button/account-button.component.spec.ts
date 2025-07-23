@@ -9,7 +9,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { screen } from '@testing-library/angular';
 
-import { RoleNames, User } from '@app/auth/models/user';
+import { RoleNames, UserSession } from '@app/auth/models/user';
 import { AuthService } from '@app/auth/services/auth.service';
 
 import { AccountButtonComponent } from './account-button.component';
@@ -23,7 +23,7 @@ export const USER = {
   full_name: 'Dr. John Doe',
   roles: ['data_steward'],
   state: 'Authenticated',
-} as User;
+} as UserSession;
 
 /**
  * Mock the auth service as needed for the account button

@@ -34,7 +34,7 @@ import {
 } from '@app/access-requests/models/access-requests';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
-import { User } from '@app/auth/models/user';
+import { UserSession } from '@app/auth/models/user';
 import { SplitLinesPipe } from '@app/shared/pipes/split-lines.pipe';
 import { ConfigService } from '@app/shared/services/config.service';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
@@ -111,7 +111,7 @@ export class AccessRequestManagerDialogComponent implements OnInit {
       return `${this.#usersUrl}/${userId}`;
     },
     {
-      parse: (raw) => (raw as User).ext_id,
+      parse: (raw) => (raw as UserSession).ext_id,
       defaultValue: undefined,
     },
   );

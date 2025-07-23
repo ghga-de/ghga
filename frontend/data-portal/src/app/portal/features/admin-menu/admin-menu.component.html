@@ -10,6 +10,14 @@
   </a>
   <mat-menu #menu="matMenu">
     <a
+      [id]="isUserManagerRoute() ? 'activePage' : ''"
+      mat-menu-item
+      routerLink="/user-manager"
+      class="mx-1"
+      data-umami-event="Admin Menu User Manager Clicked"
+      ><mat-icon>people</mat-icon> User Manager</a
+    >
+    <a
       [id]="isIvaManagerRoute() ? 'activePage' : ''"
       mat-menu-item
       routerLink="/iva-manager"

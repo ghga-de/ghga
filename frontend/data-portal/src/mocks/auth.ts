@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { LoginState, User } from '@app/auth/models/user';
+import { LoginState, UserSession } from '@app/auth/models/user';
 import { http, HttpResponse } from 'msw';
 
 /**
@@ -39,7 +39,7 @@ const USER_STATE_KEY = 'user.state';
 /**
  * The dummy user object for MSW
  */
-export const user: User = {
+export const user: UserSession = {
   ext_id: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
   name: 'John Doe',
   title: 'Dr.',
