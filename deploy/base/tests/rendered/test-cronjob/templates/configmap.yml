@@ -1,9 +1,9 @@
 ---
-# Source: test-job/templates/configmap.yml
+# Source: test-cronjob/templates/configmap.yml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: test-job
+  name: test-cronjob
   namespace: "test"
 data:
   config: |
