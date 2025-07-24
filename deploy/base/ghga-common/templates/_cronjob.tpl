@@ -73,21 +73,21 @@ spec:
               {{- end }}
             {{- end }}
             {{- if .Values.containerSecurityContext.enabled }}
-            name: {{ .Release.Name }}
             securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
+            {{- end }}
+            name: {{ .Release.Name }}
             volumeMounts:
-            {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 14 }}
             {{- if .Values.extraVolumeMounts }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 14 }}
             {{- end }}
             {{- if .Values.kafkaUser.enabled }}
-            - mountPath: "/kafka-secrets/"
-              name: kafka-secret
-              readOnly: true
-            - mountPath:  "/cluster-ca-cert/"
-              name: cluster-ca-cert
-              readOnly: true
-            {{- end }}
+              - mountPath: "/kafka-secrets/"
+                name: kafka-secret
+                readOnly: true
+              - mountPath:  "/cluster-ca-cert/"
+                name: cluster-ca-cert
+                readOnly: true
             {{- end }}
           volumes:
           {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 12 }}
@@ -95,14 +95,14 @@ spec:
           {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
           {{- end }}
           {{- if .Values.kafkaUser.enabled }}
-          - name: kafka-secret
-            secret:
-              secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
-              optional: false
-          - name: cluster-ca-cert
-            secret:
-              secretName: {{ .Values.kafkaUser.caCertSecretName }}
-              optional: false
+            - name: kafka-secret
+              secret:
+                secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
+                optional: false
+            - name: cluster-ca-cert
+              secret:
+                secretName: {{ .Values.kafkaUser.caCertSecretName }}
+                optional: false
           {{- end }}
 {{- end -}}
 {{- end -}}

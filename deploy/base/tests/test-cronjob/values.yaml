@@ -19,7 +19,8 @@ cronjob:
   enabled: true
 
 cmd: sleep 100000000
-
+kafkaUser:
+  enabled: true
 vaultAgent:
   enabled: true
   secrets:

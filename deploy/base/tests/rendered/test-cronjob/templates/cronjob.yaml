@@ -95,6 +95,12 @@ spec:
                 name: config
                 readOnly: true
                 subPath: config.yaml
+              - mountPath: "/kafka-secrets/"
+                name: kafka-secret
+                readOnly: true
+              - mountPath:  "/cluster-ca-cert/"
+                name: cluster-ca-cert
+                readOnly: true
           volumes:
             - configMap:
                 items:
@@ -102,3 +108,11 @@ spec:
                   path: config.yaml
                 name: test-cronjob
               name: config
+            - name: kafka-secret
+              secret:
+                secretName: test-test-cronjob
+                optional: false
+            - name: cluster-ca-cert
+              secret:
+                secretName: kafka-cluster-ca-cert
+                optional: false
