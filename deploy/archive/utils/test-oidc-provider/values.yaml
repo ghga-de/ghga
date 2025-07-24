@@ -7,19 +7,11 @@ configPrefix: top
 
 # Service base path
 apiBasePath: /test/op/
+
 # This parameter is used as Kafka's group id
 serviceName: top
-# This parameter specifies the client id in Kafka
-serviceInstanceId: "1"
 
-parameters:
-  default:
-    host: 0.0.0.0
+config:
+  host: 0.0.0.0
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: top
-  config:
-    name: parameters
-    key: parameters
+cmd: top

@@ -10,25 +10,16 @@ mongodb:
   dbName: internal-file-registry
 # This parameter is used as Kafka's group id
 serviceName: ifrs
-# This parameter specifies the client id in Kafka
-serviceInstanceId: ifrs-1
 
-parameters:
-  default:
-    mongo_dsn: null
-    object_storages: {}
-    kafka_enable_dlq: true
-    enable_opentelemetry: false
-    otel_exporter_endpoint: "http://localhost:4318/"
-    otel_exporter_protocol: "http/protobuf"
+config:
+  mongo_dsn: null
+  object_storages: {}
+  kafka_enable_dlq: true
+  enable_opentelemetry: false
+  otel_exporter_endpoint: "http://localhost:4318/"
+  otel_exporter_protocol: "http/protobuf"
 
-containers:
-- name: consumer
-  type: "consumer"
-  cmd: ifrs consume-events
-  config:
-    name: parameters
-    key: parameters
+cmd: ifrs consume-events
 
 _topics:
   fileDeletedEvent:

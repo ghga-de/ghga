@@ -85,11 +85,7 @@ exports:
 
     podRestartPolicy: Always
 
-    containers:
-      - config: {}
-        name: default
-        cmd: /bin/sh
-        type: rest
+    cmd: /bin/sh
 
     ports:
       - name: http
@@ -141,7 +137,7 @@ exports:
 
     sidecars: []
 
-    envVars: null
+    envVars: []
 
     envVarsConfigMap: ""
 
@@ -202,10 +198,15 @@ exports:
     serviceInstanceId: ""
     serviceNameConsumer: ""
     serviceInstanceIdConsumer: ""
-    parameters:
-      default: {}
-      rest: {}
-      consumer: {}
+
+    configMap:
+      enabled: true
+      mountPath: /etc/config.yaml
+      subPath: config.yaml
+      envVar:
+        enabled: true
+
+    config: {}
 
     configPrefix: ""
 

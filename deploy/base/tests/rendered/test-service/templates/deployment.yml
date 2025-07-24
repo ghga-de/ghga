@@ -13,7 +13,7 @@ metadata:
     app.kubernetes.io/version: "0.0.0"
     app: test-service
   annotations:
-    configmap-hash: b7ace94177d50933f2551e0cde60f088dda3f390d348ab677aef30c1668694ff
+    configmap-hash: c52c5c852ff403cb7657a888f6d38f130fceaaf38581f49aa574ea6cbb720ce9
 spec:
   replicas: 1
   revisionHistoryLimit: 1
@@ -26,7 +26,7 @@ spec:
   template:
     metadata:
       annotations:
-        configmap-hash: b7ace94177d50933f2551e0cde60f088dda3f390d348ab677aef30c1668694ff
+        configmap-hash: c52c5c852ff403cb7657a888f6d38f130fceaaf38581f49aa574ea6cbb720ce9
         vault.hashicorp.com/agent-cache-enable: "true"
         vault.hashicorp.com/agent-init-first: "true"
         vault.hashicorp.com/agent-inject: "true"
@@ -102,8 +102,10 @@ spec:
                 done;
               fi;
               test;
-          
-          name: test-service-rest
+          env:
+            - name: TEST_CONFIG_YAML
+              value: /etc/config.yaml
+          name: test-service
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -136,10 +138,10 @@ spec:
               cpu: 1000m
               memory: 1024M
           volumeMounts:
-            - name: parameters-rest
-              mountPath: /home/appuser/.test.yaml
-              subPath: .test.yaml
+            - mountPath: /etc/config.yaml
+              name: config
               readOnly: true
+              subPath: config.yaml
             - mountPath: "/kafka-secrets/"
               name: kafka-secret
               readOnly: true
@@ -147,12 +149,12 @@ spec:
               name: cluster-ca-cert
               readOnly: true
       volumes:
-        - name: parameters-rest
-          configMap:
-            name: test-service
+        - configMap:
             items:
-            - key: parameters-rest
-              path: .test.yaml
+            - key: config
+              path: config.yaml
+            name: test-service
+          name: config
         - name: kafka-secret
           secret:
             secretName: test-test-service

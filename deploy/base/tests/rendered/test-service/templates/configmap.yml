@@ -6,7 +6,7 @@ metadata:
   name: test-service
   namespace: "test"
 data:
-  parameters-rest: |
+  config: |
     foo: bar
   
     kafka_dlq_topic: prefix-dlq
@@ -21,20 +21,3 @@ data:
     api_root_path: /path/v1/test
     db_name: test
     service_name: test-service-name
-    service_instance_id: test-service-instance-id
-  parameters: |
-    foo: bar
-  
-    kafka_dlq_topic: prefix-dlq
-    test_event_topic: prefix-my-topic
-    test_event_type: searchable_resource_deleted
-    resource_upsertion_event_type: searchable_resource_upserted
-    kafka_ssl_password: ""
-    kafka_ssl_cafile: /cluster-ca-cert/ca.crt
-    kafka_ssl_certfile: /kafka-secrets/user.crt
-    kafka_ssl_keyfile: /kafka-secrets/user.key
-    kafka_security_protocol: SSL
-    api_root_path: /path/v1/test
-    db_name: test
-    service_name: test-service-name
-    service_instance_id: test-service-instance-id

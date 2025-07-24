@@ -51,44 +51,36 @@ spec:
           imagePullSecrets: {{- include "common.tplvalues.render" (dict "value" .Values.imagePullSecrets "context" $) | nindent 12 }}
           {{- end }}
           containers:
-          {{- range $container := .Values.containers }}
-          - image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart ) }}
-            imagePullPolicy: {{ default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }}
-            {{- include "ghga-common.command-args" (list $ $container.cmd) | nindent 12 }}
-            {{- if $.Values.args }}
-            args: {{- include "common.tplvalues.render" (dict "value" $.Values.args "context" $) | nindent 14 }}
+          - image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart ) }}
+            imagePullPolicy: {{ default (eq .Values.image.tag "latest" | ternary "Always" "IfNotPresent") .Values.image.pullPolicy }}
+            {{- include "ghga-common.command-args" (list $ .Values.cmd) | nindent 12 }}
+            {{- if .Values.args }}
+            args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 14 }}
             {{- end }}
-            {{- if $.Values.envVars }}
-            env: {{ include "common.tplvalues.render" (dict "value" $.Values.envVars "context" $) | nindent 14 }}
+            {{- $envVars := include "ghga-common.env-vars" $ | fromYaml | dig "envVars" list -}}
+            {{- if $envVars -}}
+            env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
             {{- end }}
-            {{- if or $.Values.envVarsConfigMap $.Values.envVarsSecret }}
+            {{- if or .Values.envVarsConfigMap .Values.envVarsSecret }}
             envFrom:
-              {{- if $.Values.envVarsConfigMap }}
+              {{- if .Values.envVarsConfigMap }}
               - configMapRef:
-                  name: {{ include "common.tplvalues.render" (dict "value" $.Values.envVarsConfigMap "context" $) }}
+                  name: {{ include "common.tplvalues.render" (dict "value" .Values.envVarsConfigMap "context" $) }}
               {{- end }}
-              {{- if $.Values.envVarsSecret }}
+              {{- if .Values.envVarsSecret }}
               - secretRef:
-                  name: {{ include "common.tplvalues.render" (dict "value" $.Values.envVarsSecret "context" $) }}
+                  name: {{ include "common.tplvalues.render" (dict "value" .Values.envVarsSecret "context" $) }}
               {{- end }}
             {{- end }}
-            {{- if $.Values.containerSecurityContext.enabled }}
-            name: {{ $.Release.Name }}-{{ $container.name }}
-            securityContext: {{- omit $.Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
+            {{- if .Values.containerSecurityContext.enabled }}
+            name: {{ .Release.Name }}
+            securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
             volumeMounts:
-            - name: {{ $container.config.name | default "config" }}
-              {{- if $container.config.fileName }}
-              mountPath: /home/{{ $container.config.appuser | default "appuser" }}/{{ $container.config.fileName }}
-              subPath: {{ $container.config.fileName }}
-              {{- else }}
-              mountPath: /home/{{ $container.config.appuser | default "appuser" }}/.{{ $.Values.configPrefix }}.yaml
-              subPath: .{{ $.Values.configPrefix }}.yaml
-              {{- end }}
-              readOnly: true
-            {{- if $.Values.extraVolumeMounts }}
-            {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 12 }}
+            {{- if .Values.extraVolumeMounts }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
-            {{- if $.Values.kafkaUser.enabled }}
+            {{- if .Values.kafkaUser.enabled }}
             - mountPath: "/kafka-secrets/"
               name: kafka-secret
               readOnly: true
@@ -97,20 +89,8 @@ spec:
               readOnly: true
             {{- end }}
             {{- end }}
-          {{- end }}
           volumes:
-          {{- range $container := .Values.containers }}
-          - name: {{ $container.config.name | default "config" }}
-            configMap:
-              name: {{ include "common.names.fullname" $ }}
-              items:
-              - key: {{ $container.config.key | default "parameters" }}
-                {{- if $container.config.fileName }}
-                path: {{ $container.config.fileName }}
-                {{- else }}
-                path: .{{ $.Values.configPrefix }}.yaml
-                {{- end }}
-          {{- end }}
+          {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 12 }}
           {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
           {{- end }}

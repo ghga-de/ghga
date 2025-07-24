@@ -10,34 +10,27 @@ apiBasePath: /metldata/
 # Name of the database
 mongodb:
   dbName: metadata-artifacts
+
 # This parameter is used as Kafka's group id
 serviceName: metldata
-# This parameter specifies the client id in Kafka
-serviceInstanceId: metldata-1
+
 
 mapping:
   timeoutLoadArtifacts: 10000
 
-parameters:
-  default:
-    artifact_infos: []
-    mongo_dsn: null
-    db_name: metadata_artifacts
-    host: 0.0.0.0
-    loader_token_hashes: null  # <Please fill - The tokens must be the loader token generated using the data steward kit.>
-    primary_artifact_name: embedded_public
-    primary_dataset_name: EmbeddedDataset
-    service_instance_id: 'rest.1'
-    publishable_artifacts:
-    - "added_accessions"
+config:
+  artifact_infos: []
+  mongo_dsn: null
+  db_name: metadata_artifacts
+  host: 0.0.0.0
+  loader_token_hashes: null  # <Please fill - The tokens must be the loader token generated using the data steward kit.>
+  primary_artifact_name: embedded_public
+  primary_dataset_name: EmbeddedDataset
+  service_instance_id: 'rest.1'
+  publishable_artifacts:
+  - "added_accessions"
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: metldata
-  config:
-    name: parameters
-    key: parameters
+cmd: metldata
 
 _topics:
   artifactsEvent:

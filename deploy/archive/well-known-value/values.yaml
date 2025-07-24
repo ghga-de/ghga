@@ -7,23 +7,15 @@ configPrefix: wkvs
 
 # Service base path
 apiBasePath: /.well-known/
+
 # This parameter is used as Kafka's group id
 serviceName: wkvs
-# This parameter specifies the client id in Kafka
-serviceInstanceId: wkvs-rest-1
 
-parameters:
-  default:
-    crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
-    dcs_api_url: http://download-controller/download
-    host: "0.0.0.0"
-    ucs_api_url: http://upload-controller/upload
-    wps_api_url: http://work-package/
+config:
+  crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
+  dcs_api_url: http://download-controller/download
+  host: "0.0.0.0"
+  ucs_api_url: http://upload-controller/upload
+  wps_api_url: http://work-package/
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: wkvs
-  config:
-    name: parameters
-    key: parameters
+cmd: wkvs

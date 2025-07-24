@@ -3,15 +3,15 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: test-job
+  name: test-cronjob-test-job
   namespace: "test"
   labels:
     app.kubernetes.io/name: test-job
     helm.sh/chart: test-job-0.0.0
-    app.kubernetes.io/instance: test-job
+    app.kubernetes.io/instance: test-cronjob
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/version: "0.0.0"
-    app: test-job
+    app: test-cronjob-test-job
   annotations:
 spec:
   schedule: 0 0 1 1 0
@@ -22,7 +22,7 @@ spec:
       labels:
         app.kubernetes.io/name: test-job
         helm.sh/chart: test-job-0.0.0
-        app.kubernetes.io/instance: test-job
+        app.kubernetes.io/instance: test-cronjob
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/version: "0.0.0"
     spec:
@@ -35,34 +35,34 @@ spec:
             vault.hashicorp.com/agent-pre-populate-only: "false"
             vault.hashicorp.com/agent-run-as-same-user: "true"
             vault.hashicorp.com/tls-skip-verify: "false"
-            vault.hashicorp.com/role: "test-job"
+            vault.hashicorp.com/role: "test-cronjob"
             vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
               kill -TERM $(pgrep python)
-            vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: default-mongodb-mongodb/creds/test-job
+            vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: default-mongodb-mongodb/creds/test-cronjob
             vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
-              {{- with secret "default-mongodb-mongodb/creds/test-job" -}}
+              {{- with secret "default-mongodb-mongodb/creds/test-cronjob" -}}
               export TEST_DB="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
               export DB_CONNECTION_STR=$TEST_DB
               export MONGO_DSN=$TEST_DB
               {{- end -}}
             vault.hashicorp.com/agent-inject-command-service-secrets: |
               kill -TERM $(pgrep python)
-            vault.hashicorp.com/agent-inject-secret-service-secrets: operational-secrets/data/unique/apps/archive/default/test-job
+            vault.hashicorp.com/agent-inject-secret-service-secrets: operational-secrets/data/unique/apps/archive/default/test-cronjob
             vault.hashicorp.com/agent-inject-template-service-secrets: |
-              {{ with secret "operational-secrets/data/unique/apps/archive/default/test-job" -}}
+              {{ with secret "operational-secrets/data/unique/apps/archive/default/test-cronjob" -}}
               {{ if .Data.data }}{{- range $k, $v := .Data.data }}
               export {{ $k }}='{{ $v }}'
               {{- end }}{{- end }}{{- end }}
           labels:
             app.kubernetes.io/name: test-job
             helm.sh/chart: test-job-0.0.0
-            app.kubernetes.io/instance: test-job
+            app.kubernetes.io/instance: test-cronjob
             app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/version: "0.0.0"
-            app: test-job
+            app: test-cronjob-test-job
         spec:
           restartPolicy: "OnFailure"
-          serviceAccountName: test-job
+          serviceAccountName: test-cronjob-test-job
           shareProcessNamespace: false
           containers:
           - image: docker.io/busybox:latest
@@ -79,7 +79,7 @@ spec:
                 fi;
                 sleep 100000000;
             
-            name: test-job-job
+            name: test-cronjob
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:
@@ -91,14 +91,14 @@ spec:
               seccompProfile:
                 type: RuntimeDefault
             volumeMounts:
-            - name: config
-              mountPath: /home/appuser/.config.yaml
-              subPath: .config.yaml
+            - mountPath: /home/appuser/config.yaml
+              name: config
               readOnly: true
+              subPath: config.yaml
           volumes:
-          - name: config
-            configMap:
-              name: test-job
-              items:
-              - key: parameters
-                path: .config.yaml
+            - configMap:
+                items:
+                - key: config
+                  path: config.yaml
+                name: test-cronjob-test-job
+              name: config

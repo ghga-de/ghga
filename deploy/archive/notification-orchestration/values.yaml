@@ -8,29 +8,17 @@ configPrefix: nos
 # Name of the database
 mongodb:
   dbName: notification-orchestration
+
 # This parameter is used as Kafka's group id
 serviceName: nos-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceId: nos-consumer-1
-# This parameter is used as Kafka's group id
-serviceNameConsumer: nos-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceIdConsumer: nos-consumer-1
 
-parameters:
-  default:
-    central_data_stewardship_email: helpdesk@ghga.de
-    helpdesk_email: helpdesk@ghga.de
-    kafka_enable_dlq: true
+config:
+  central_data_stewardship_email: helpdesk@ghga.de
+  helpdesk_email: helpdesk@ghga.de
+  kafka_enable_dlq: true
 
 
-containers:
-- name: consumer
-  type: consumer
-  cmd: nos
-  config:
-    name: parameters
-    key: parameters
+cmd: nos
 
 _topics:
   accessRequestEvents:

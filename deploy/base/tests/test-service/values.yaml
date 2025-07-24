@@ -24,23 +24,12 @@ serviceInstanceIdConsumer: test-service-instance-id-consumer
 cluster:
   name: default-cluster
 
-parameters:
-  default:
-    foo: bar
-    db_name: test-database # That should be omitted and set dynamically to release name
-  rest:
-    service_instance_id: 'rest.1'
-  consumer:
-    service_instance_id: 'consumer.1'
+config:
+  foo: bar
+  db_name: test-database # That should be omitted and set dynamically to release name
 
-containers:
-- name: rest
-  type: "rest"
-  cmd:  test
-  config:
-    name: parameters-rest
-    key: parameters-rest
-    #mountPath: /app/config
+cmd:  test
+
 
 vaultAgent:
   enabled: true

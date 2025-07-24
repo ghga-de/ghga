@@ -10,36 +10,18 @@ apiBasePath: /dins/
 # Name of the database
 mongodb:
   dbName: dataset-information
+
 # This parameter is used as Kafka's group id
-serviceName: dins-rest
-# This parameter specifies the client id in Kafka
-serviceInstanceId: dins-rest-1
-# This parameter is used as Kafka's group id
-serviceNameConsumer: dins-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceIdConsumer: dins-consumer-1
+serviceName: dins-consumer
 
 # Those values are directly injected into the service's configuration
-parameters:
-  default:
-    host: 0.0.0.0
-    mongo_dsn: null
-    kafka_enable_dlq: true
+config:
+  host: 0.0.0.0
+  mongo_dsn: null
+  kafka_enable_dlq: true
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: dins run-rest
-  config:
-    name: parameters-rest
-    key: parameters-rest
-- name: consumer
-  type: "consumer"
-  cmd: dins consume-events
-  config:
-    name: parameters-consumer
-    key: parameters-consumer
-
+cmd: dins run-rest
+# cmd: dins consume-events
 
 _topics:
 

@@ -63,64 +63,57 @@ spec:
       {{- end }}
       enableServiceLinks: {{ .Values.enableServiceLinks }}
       containers:
-      {{- range $container := .Values.containers }}
-        - image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart ) }}
-          imagePullPolicy: {{ default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }}
-          {{- include "ghga-common.command-args" (list $ $container.cmd)  | nindent 10 }}
-          {{- if $.Values.args }}
-          args: {{- include "common.tplvalues.render" (dict "value" $.Values.args "context" $) | nindent 12 }}
+        - image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart ) }}
+          imagePullPolicy: {{ default (eq .Values.image.tag "latest" | ternary "Always" "IfNotPresent") .Values.image.pullPolicy }}
+          {{- include "ghga-common.command-args" (list $ .Values.cmd)  | nindent 10 }}
+          {{- if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
           {{- end }}
-          {{- if $.Values.envVars }}
-          env: {{ include "common.tplvalues.render" (dict "value" $.Values.envVars "context" $) | nindent 12 }}
+          {{- $envVars := include "ghga-common.env-vars" $ | fromYaml | dig "envVars" list -}}
+          {{- if $envVars -}}
+          env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
           {{- end }}
-          {{- if or $.Values.envVarsConfigMap $.Values.envVarsSecret }}
+          {{- if or .Values.envVarsConfigMap .Values.envVarsSecret }}
           envFrom:
-            {{- if $.Values.envVarsConfigMap }}
+            {{- if .Values.envVarsConfigMap }}
             - configMapRef:
-                name: {{ include "common.tplvalues.render" (dict "value" $.Values.envVarsConfigMap "context" $) }}
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.envVarsConfigMap "context" $) }}
             {{- end }}
-            {{- if $.Values.envVarsSecret }}
+            {{- if .Values.envVarsSecret }}
             - secretRef:
-                name: {{ include "common.tplvalues.render" (dict "value" $.Values.envVarsSecret "context" $) }}
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.envVarsSecret "context" $) }}
             {{- end }}
           {{- end }}
-          {{- if $.Values.ports }}
-          {{- if $.Values.containerSecurityContext.enabled }}
-          name: {{ $.Release.Name }}-{{ $container.name }}
-          securityContext: {{- omit $.Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          {{- if .Values.ports }}
+          {{- if .Values.containerSecurityContext.enabled }}
+          name: {{ .Release.Name }}
+          securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
-          {{- if eq $container.type "rest" }}
-          ports: {{- include "common.tplvalues.render" (dict "value" $.Values.ports "context" $) | nindent 12 }}
-          {{- if and $.Values.readinessProbe.enabled (omit $.Values.readinessProbe "enabled") }}
-          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit $.Values.readinessProbe "enabled") "context" $) | nindent 12 }}
+          {{- if .Values.ports }}
+          ports: {{- include "common.tplvalues.render" (dict "value" .Values.ports "context" $) | nindent 12 }}
+          {{- if and .Values.readinessProbe.enabled (omit .Values.readinessProbe "enabled") }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
           {{- end }}
-          {{- if and $.Values.livenessProbe.enabled (omit $.Values.livenessProbe "enabled") }}
-          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit $.Values.livenessProbe "enabled") "context" $) | nindent 12 }}
+          {{- if and .Values.livenessProbe.enabled (omit .Values.livenessProbe "enabled") }}
+          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.livenessProbe "enabled") "context" $) | nindent 12 }}
           {{- end }}
-          {{- if and $.Values.startupProbe.enabled (omit $.Values.startupProbe "enabled") }}
-          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit $.Values.startupProbe "enabled") "context" $) | nindent 12 }}
+          {{- if and .Values.startupProbe.enabled (omit .Values.startupProbe "enabled") }}
+          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
           {{- end }}
           {{- end }}
           {{- end }}
-          {{- if $.Values.resources }}
-          resources: {{- toYaml $.Values.resources | nindent 12 }}
+          {{- if .Values.resources }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
-          {{- if $.Values.lifecycleHooks }}
-          lifecycle: {{- include "common.tplvalues.render" (dict "value" $.Values.lifecycleHooks "context" $) | nindent 12 }}
+          {{- if .Values.lifecycleHooks }}
+          lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: {{ $container.config.name | default "config" }}
-              {{- if $container.config.mountPath }}
-              mountPath: {{ $container.config.mountPath }}
-              {{- else }}
-              mountPath: /home/{{ $container.config.appuser | default "appuser" }}/.{{ $.Values.configPrefix }}.yaml
-              {{- end }}
-              subPath: .{{ $.Values.configPrefix }}.yaml
-              readOnly: true
-            {{- if $.Values.extraVolumeMounts }}
-            {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 12 }}
+            {{- if .Values.extraVolumeMounts }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
-            {{- if $.Values.kafkaUser.enabled }}
+            {{- if .Values.kafkaUser.enabled }}
             - mountPath: "/kafka-secrets/"
               name: kafka-secret
               readOnly: true
@@ -128,19 +121,11 @@ spec:
               name: cluster-ca-cert
               readOnly: true
             {{- end }}
-        {{- if $.Values.sidecars }}
+        {{- if .Values.sidecars }}
         {{- include "common.tplvalues.render" (dict "value" $.Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
-      {{- end }}
       volumes:
-      {{- range $container := .Values.containers }}
-        - name: {{ $container.config.name | default "config" }}
-          configMap:
-            name: {{ include "common.names.fullname" $ }}
-            items:
-            - key: {{ $container.config.key | default "parameters" }}
-              path: .{{ $.Values.configPrefix }}.yaml
-      {{- end }}
+        {{- include "common.tplvalues.render" ( dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 8 }}
         {{- if .Values.extraVolumes }}
         {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}

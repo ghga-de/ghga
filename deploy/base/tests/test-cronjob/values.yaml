@@ -4,16 +4,19 @@ image:
 
 configPrefix: ""
 
-
-job:
-  enabled: true
+cronSchedule: "0 0 1 1 0"
 
 config:
   foo: bar
 
 configMap:
+  mountPath: /home/appuser/config.yaml
+  subPath: config.yaml
   envVar:
-    enabled: true
+    enabled: false
+
+cronjob:
+  enabled: true
 
 cmd: sleep 100000000
 

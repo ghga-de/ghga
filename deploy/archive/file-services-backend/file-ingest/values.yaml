@@ -10,33 +10,24 @@ apiBasePath: /fis/
 # Name of the database
 mongodb:
   dbName: file-ingest
+
 # This parameter is used as Kafka's group id
 serviceName: fis-rest
-# This parameter specifies the client id in Kafka
-serviceInstanceId: fis-rest-1
 
-parameters:
-  default:
-    host: 0.0.0.0
-    private_key_path: <Please fill>
-    vault_url: http://vault:8200
-    vault_path: ekss
-    mongo_dsn: null
-    token_hashes: []
-    db_version_collection: "fisDbVersions"
-    migration_wait_sec: 10
-    enable_opentelemetry: false
-    otel_exporter_endpoint: "http://localhost:4318/"
-    otel_exporter_protocol: "http/protobuf"
+config:
+  host: 0.0.0.0
+  private_key_path: <Please fill>
+  vault_url: http://vault:8200
+  vault_path: ekss
+  mongo_dsn: null
+  token_hashes: []
+  db_version_collection: "fisDbVersions"
+  migration_wait_sec: 10
+  enable_opentelemetry: false
+  otel_exporter_endpoint: "http://localhost:4318/"
+  otel_exporter_protocol: "http/protobuf"
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: fis run-rest
-  config:
-    name: parameters
-    key: parameters
-
+cmd: fis run-rest
 
 _topics:
   fileUploadValidationSuccess:

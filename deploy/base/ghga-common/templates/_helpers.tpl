@@ -24,13 +24,25 @@
     {{ .Values.serviceInstanceIdPrefix | empty | ternary .Values.serviceInstanceId (cat .Values.serviceInstanceIdPrefix "-" .Values.serviceInstanceId ) | nospace }}
 {{- end -}}
 {{- end -}}
-{{- define "ghga-common.serviceNameConsumer" -}}
-{{- if .Values.serviceNameConsumer -}}
-    {{ .Values.serviceNamePrefix | empty | ternary .Values.serviceNameConsumer (cat .Values.serviceNamePrefix "-" .Values.serviceNameConsumer ) | nospace }}
+{{- define "ghga-common.configVolume" -}}
+{{- if .Values.configMap.enabled -}}
+name: config
+configMap:
+    name: {{ include "common.names.fullname" $ }}
+    items:
+    - key: config
+      path: {{ .Values.configMap.subPath }}
 {{- end -}}
 {{- end -}}
-{{- define "ghga-common.serviceInstanceIdConsumer" -}}
-{{- if .Values.serviceInstanceIdConsumer -}}
-    {{ .Values.serviceInstanceIdPrefix | empty | ternary .Values.serviceInstanceIdConsumer (cat .Values.serviceInstanceIdPrefix "-" .Values.serviceInstanceIdConsumer ) | nospace }}
+{{- define "ghga-common.configVolumeMount" -}}
+{{- if .Values.configMap.enabled -}}
+name: config
+mountPath: {{ .Values.configMap.mountPath }}
+subPath: {{ .Values.configMap.subPath }}
+readOnly: true
 {{- end -}}
+{{- end -}}
+{{- define "ghga-common.env-vars" -}}
+{{- $envVars := .Values.configMap.envVar.enabled | ternary (append .Values.envVars (dict "name" (print .Values.configPrefix "_CONFIG_YAML" | upper) "value" .Values.configMap.mountPath)) .Values.envVars }}
+{{- dict "envVars" $envVars | toYaml -}}
 {{- end -}}
