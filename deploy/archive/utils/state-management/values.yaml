@@ -21,7 +21,7 @@ config:
   object_storages: {}
   vault_url: http://vault:8200
   # Is set in the request
-    vault_path: ""
+  vault_path: ""
 
 cmd: sms
 
