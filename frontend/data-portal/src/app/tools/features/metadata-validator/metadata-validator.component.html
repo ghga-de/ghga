@@ -1,0 +1,154 @@
+<div class="container mx-auto max-w-5xl p-4 md:p-8">
+  <header class="mb-8 text-center">
+    <h1 class="text-4xl font-bold text-slate-800">GHGA Transpiler</h1>
+    <p class="text-slate-600">
+      Select an XLSX file to transpile it to JSON using the GHGA Schemapack Transpiler
+      and Validator.<br />If errors occur, check the Process Log / Errors section below.
+    </p>
+  </header>
+
+  <div id="statusArea" class="mb-6 rounded-md p-4 text-center">
+    <div id="statusIndicator" class="flex items-center justify-center">
+      <span
+        id="statusSpinner"
+        [class.hidden]="!showSpinner()"
+        class="spinner mr-2"
+      ></span>
+      <span
+        id="statusText"
+        [class.text-red-600]="isStatusError()"
+        [class.text-green-600]="!isStatusError() && statusText() !== 'Initializing...'"
+        [class.text-slate-700]="statusText() === 'Initializing...'"
+        class="font-medium"
+        >{{ statusText() }}</span
+      >
+    </div>
+  </div>
+
+  <app-stepper [steps]="stepDetails()" />
+
+  <button
+    id="dropArea"
+    class="drop-area mb-6 cursor-pointer bg-white hover:bg-slate-50"
+    (click)="xlsxFileInput.click()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    [class.dragover]="isDragOver()"
+  >
+    <input
+      type="file"
+      id="xlsxFile"
+      accept=".xlsx"
+      class="hidden"
+      #xlsxFileInput
+      (change)="onFileSelected($event)"
+      (focus)="isDragOver.set(true)"
+      (blur)="isDragOver.set(false)"
+    />
+    <p id="dropAreaText" [class.hidden]="fileName()" class="text-slate-500">
+      Drag & drop your XLSX file here, or click to select.
+    </p>
+    <p id="fileName" class="mt-2 font-semibold text-slate-700">
+      {{ fileName() }}
+    </p>
+  </button>
+
+  <div class="mb-8 flex flex-col justify-center gap-4 sm:flex-row">
+    <button
+      mat-raised-button
+      id="processButton"
+      class="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+      [disabled]="!processButtonEnabled()"
+      (click)="transpileFile()"
+    >
+      Transpile and Validate
+    </button>
+  </div>
+
+  <div class="mb-6 space-y-6">
+    @if (
+      jsonOutput() &&
+      jsonOutput() !== 'Awaiting XLSX file...' &&
+      jsonOutput() !== 'Processing...' &&
+      !jsonOutput().startsWith('Transpilation ')
+    ) {
+      <div>
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-2xl font-semibold text-slate-700">Generated JSON Output</h2>
+          <button
+            matButton
+            id="downloadJsonButton"
+            class="rounded-md px-3 py-1 text-sm text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800"
+            (click)="downloadJson()"
+          >
+            Download JSON
+          </button>
+        </div>
+        <div>
+          <pre
+            id="jsonOutput"
+            class="max-h-[400px] min-h-[200px] overflow-y-auto rounded-lg bg-slate-800 p-4 break-words whitespace-pre-wrap text-slate-200 shadow-inner"
+            >{{ jsonOutput() }}</pre
+          >
+        </div>
+      </div>
+    } @else {
+      <div>
+        <h2 class="mb-3 text-2xl font-semibold text-slate-700">
+          Generated JSON Output
+        </h2>
+        <pre
+          id="jsonOutput"
+          class="max-h-[400px] min-h-[200px] overflow-y-auto rounded-lg border bg-slate-800 bg-white p-4 font-mono text-sm break-words whitespace-pre-wrap text-slate-200 shadow-inner shadow-md"
+          >{{ jsonOutput() }}</pre
+        >
+      </div>
+    }
+
+    <div>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-2xl font-semibold text-slate-700">Process Log / Errors</h2>
+        <button
+          matButton
+          id="toggleLogButton"
+          class="rounded-md px-3 py-1 text-sm text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800"
+          (click)="toggleLog()"
+        >
+          {{ showLog() ? 'Hide Log' : 'Show Log' }}
+        </button>
+      </div>
+      <div
+        id="processLogContainer"
+        [class.hidden]="!showLog()"
+        class="min-h-[100px] overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 font-mono text-sm shadow-md"
+      >
+        <div class="mb-4">
+          @for (logEntry of processLogEntries(); track logEntry.message) {
+            <div class="mb-2">
+              <span class="mr-2 text-xs text-gray-400">[{{ logEntry.time }}]</span>
+              <span
+                [class.text-red-500]="logEntry.type === 'error'"
+                [class.text-green-600]="logEntry.type === 'success'"
+                [class.text-purple-600]="logEntry.type === 'debug'"
+                [class.text-slate-700]="logEntry.type === 'info'"
+                >{{ logEntry.message }}</span
+              >
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (validationOutputDetails()) {
+      <div>
+        <h2 class="mb-3 text-2xl font-semibold text-red-700">Validation Errors</h2>
+        <pre
+          id="validationErrorOutput"
+          class="min-h-[100px] overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 text-left font-mono text-sm shadow-md"
+          >{{ validationOutputDetails() | formatSchemapackError }}</pre
+        >
+      </div>
+    }
+  </div>
+</div>

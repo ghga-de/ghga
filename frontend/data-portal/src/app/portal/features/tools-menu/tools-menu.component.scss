@@ -1,0 +1,12 @@
+a#activePage {
+  background-color: var(--mat-sys-tertiary);
+}
+
+a.mat-mdc-menu-item#activePage {
+  background-color: var(--mat-sys-tertiary-fixed-dim);
+}
+
+a.flex-row-reverse mat-icon {
+  scale: 0.8;
+  margin: 0 -5px 0 0;
+}

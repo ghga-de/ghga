@@ -1,0 +1,27 @@
+<a
+  mat-button
+  [matMenuTriggerFor]="menu"
+  aria-label="Tools"
+  class="mx-1 flex-row-reverse"
+  [id]="isToolsRoute() ? 'activePage' : ''"
+>
+  Tools <mat-icon>arrow_drop_down</mat-icon>
+</a>
+<mat-menu #menu="matMenu">
+  <a
+    [id]="isMetadataRoute() ? 'activePage' : ''"
+    mat-menu-item
+    routerLink="/metadata-validator"
+    class="mx-1"
+    data-umami-event="Metadata Validator Clicked"
+    ><mat-icon>fact_check</mat-icon> Metadata Validator</a
+  >
+  <a
+    [id]="isPlaygroundRoute() ? 'activePage' : ''"
+    mat-menu-item
+    routerLink="/schemapack-playground"
+    class="mx-1"
+    data-umami-event="Schemapack Playground Clicked"
+    ><mat-icon>data_object</mat-icon> Schemapack Playground</a
+  >
+</mat-menu>

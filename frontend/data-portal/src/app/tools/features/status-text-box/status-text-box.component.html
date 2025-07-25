@@ -1,0 +1,9 @@
+<div
+  id="statusText"
+  class="mb-4 p-4 font-medium"
+  [class.text-red-600]="isError()"
+  [class.text-green-600]="isSuccess()"
+  [class.text-slate-700]="isReady() || isLoading()"
+>
+  {{ statusText() }}
+</div>

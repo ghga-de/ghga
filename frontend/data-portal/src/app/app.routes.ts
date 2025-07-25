@@ -29,6 +29,22 @@ export const routes: Routes = [
     title: 'Browse Datasets',
   },
   {
+    path: 'metadata-validator',
+    loadComponent: () =>
+      import('./tools/features/metadata-validator/metadata-validator.component').then(
+        (m) => m.MetadataValidatorComponent,
+      ),
+    title: 'Validate Metadata',
+  },
+  {
+    path: 'schemapack-playground',
+    loadComponent: () =>
+      import(
+        './tools/features/schemapack-playground/schemapack-playground.component'
+      ).then((m) => m.SchemapackPlaygroundComponent),
+    title: 'Schemapack Playground',
+  },
+  {
     path: 'dataset/:id',
     loadComponent: () =>
       import('./metadata/features/dataset-details/dataset-details.component').then(

@@ -1,0 +1,43 @@
+<div class="mb-2 flex items-center justify-between text-sm">
+  @for (step of steps(); track $index) {
+    @if (!$first) {
+      <div class="h-0.5 flex-1 bg-gray-300"></div>
+    }
+    <div
+      class="flex flex-1 items-center justify-center"
+      [class.text-blue-600]="step.status === 'idle' || step.status === 'ongoing'"
+      [class.text-green-600]="step.status === 'succeeded'"
+      [class.text-red-600]="step.status === 'failed'"
+    >
+      @switch (step.status) {
+        @case ('ongoing') {
+          <mat-icon class="animate-spin text-current">sync</mat-icon>
+        }
+        @case ('succeeded') {
+          <mat-icon class="text-green-600">check_circle</mat-icon>
+        }
+        @case ('failed') {
+          <mat-icon class="text-red-600">error</mat-icon>
+        }
+        @default {
+          <mat-icon class="text-gray-400">circle</mat-icon>
+        }
+      }
+    </div>
+  }
+</div>
+
+<div class="mb-6 flex items-start justify-between text-sm">
+  @for (step of steps(); track $index) {
+    @if (!$first) {
+      <div class="flex-1"></div>
+    }
+    <span
+      class="flex flex-1 justify-center text-center font-medium"
+      [class.text-blue-600]="step.status === 'idle' || step.status === 'ongoing'"
+      [class.text-green-600]="step.status === 'succeeded'"
+      [class.text-red-600]="step.status === 'failed'"
+      >{{ $index + 1 }}. {{ step.name }}</span
+    >
+  }
+</div>

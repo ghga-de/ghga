@@ -183,3 +183,7 @@ if (config.mock_api) {
 } else {
   handlers.push(...noMockHandler('/*'));
 }
+
+handlers.push(...noMockHandler('https://cdn.jsdelivr.net/pyodide/*'));
+handlers.push(...noMockHandler('https://pypi.org/simple/*'));
+handlers.push(...noMockHandler('https://files.pythonhosted.org/packages/*'));
