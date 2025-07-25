@@ -1,4 +1,5 @@
 db_name: dev_db
+db_version_collection: nsDbVersions
 from_address: test@test.com
 generate_correlation_id: true
 html_email_template: '<!DOCTYPE html><html><head></head><body style="color: #00393f;padding:
@@ -20,6 +21,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 notification_topic: notifications

@@ -16,13 +16,12 @@
 """Test basic event consumption"""
 
 import html
-import json
 import smtplib
 from contextlib import contextmanager
 from email.message import EmailMessage
-from hashlib import sha256
 from typing import cast
 from unittest.mock import AsyncMock, Mock
+from uuid import UUID
 
 import pytest
 from hexkit.correlation import correlation_id_var
@@ -34,8 +33,8 @@ from ns.adapters.outbound.smtp_client import (
     SmtpClient,
     SmtpClientConfig,
 )
-from ns.core.models import NotificationRecord
 from ns.core.notifier import Notifier
+from ns.ports.outbound.dao import EventIdDaoPort
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.server import DummyServer
@@ -43,7 +42,8 @@ from tests.fixtures.utils import make_notification
 
 pytestmark = pytest.mark.asyncio()
 
-TEST_CORRELATION_ID = "6914c8cd-1f18-43da-ac6c-c43cca3f36cc"
+TEST_CORRELATION_ID = UUID("6914c8cd-1f18-43da-ac6c-c43cca3f36cc")
+TEST_EVENT_ID = UUID("f8b1c5d2-3e4f-4a5b-8c6d-7e8f9a0b1c2d")
 
 sample_notification = {
     "recipient_email": "test@example.com",
@@ -167,7 +167,7 @@ async def test_smtp_authentication(smtp_auth: SmtpAuthConfig | None):
 async def test_failed_authentication(joint_fixture: JointFixture):
     """Test that we raise the expected error when auth fails on a secured SMTP server."""
     # Cast notifier type
-    joint_fixture.notifier = cast(Notifier, joint_fixture.notifier)
+    notifier = cast(Notifier, joint_fixture.notifier)
 
     server = DummyServer(config=joint_fixture.config)
 
@@ -176,25 +176,20 @@ async def test_failed_authentication(joint_fixture: JointFixture):
     server.password = "notCorrect"
     notification = make_notification(sample_notification)
 
-    expected_email = joint_fixture.notifier._construct_email(
-        notification=notification,
-    )
+    expected_email = notifier._construct_email(notification=notification)
 
     # send the notification so it gets intercepted by the dummy client
     with pytest.raises(SmtpClient.FailedLoginError):
         async with server.expect_email(expected_email=expected_email):
-            await joint_fixture.notifier.send_notification(notification=notification)
+            await notifier.send_notification(notification=notification)
 
-    # verify that the email is in the database but not marked as sent
-    expected_record = joint_fixture.notifier._create_notification_record(
-        notification=notification
+    # Make sure the event ID was not saved in the DB
+    event_id_dao = cast(
+        EventIdDaoPort,
+        joint_fixture.event_subscriber._translator._event_id_dao,  # type: ignore
     )
-
-    record_in_db = await joint_fixture.notifier._notification_record_dao.get_by_id(
-        id_=expected_record.hash_sum
-    )
-
-    assert not record_in_db.sent
+    with pytest.raises(ResourceNotFoundError):
+        _ = await event_id_dao.get_by_id(TEST_EVENT_ID)
 
 
 async def test_consume_thru_send(joint_fixture: JointFixture):
@@ -219,107 +214,47 @@ async def test_consume_thru_send(joint_fixture: JointFixture):
         await joint_fixture.event_subscriber.run(forever=False)
 
 
-async def test_helper_functions(joint_fixture: JointFixture):
-    """Unit test for the _has_been_sent function, _create_notification_record,
-    and _register_new_notification function.
-    """
-    # Cast notifier type
-    joint_fixture.notifier = cast(Notifier, joint_fixture.notifier)
-
-    # first, create a notification
-    notification = make_notification(sample_notification)
-
-    # manually create a NotificationRecord for the notification
-    concatenated = TEST_CORRELATION_ID + json.dumps(
-        notification.model_dump(), sort_keys=True
-    )
-    expected_record = NotificationRecord(
-        hash_sum=sha256(concatenated.encode("utf-8")).hexdigest(), sent=False
-    )
-
-    # Now create the record using the notifier's function and compare
-    actual_record = joint_fixture.notifier._create_notification_record(
-        notification=notification
-    )
-
-    assert actual_record.model_dump() == expected_record.model_dump()
-
-    # Now check the _has_been_sent function before the record has been inserted
-    assert not await joint_fixture.notifier._has_been_sent(
-        hash_sum=actual_record.hash_sum
-    )
-
-    # register the notification
-    await joint_fixture.notifier._register_new_notification(
-        notification_record=actual_record
-    )
-
-    # Verify the record is in the database
-    record_in_db = await joint_fixture.notifier._notification_record_dao.get_by_id(
-        id_=actual_record.hash_sum
-    )
-
-    # Extra sanity check to make sure they're the same
-    assert record_in_db.model_dump() == actual_record.model_dump()
-
-    # Record still has not been sent, but now it's in the database. Do another check
-    assert not await joint_fixture.notifier._has_been_sent(
-        hash_sum=actual_record.hash_sum
-    )
-
-    # Now mark the record as sent
-    actual_record.sent = True
-    await joint_fixture.notifier._notification_record_dao.update(dto=actual_record)
-
-    # Now the record has been marked as sent, so _has_been_sent should return False
-    assert await joint_fixture.notifier._has_been_sent(hash_sum=actual_record.hash_sum)
-
-
 async def test_idempotence_and_transmission(joint_fixture: JointFixture):
     """Consume identical events and verify that only one email is sent."""
     # Cast notifier type
-    joint_fixture.notifier = cast(Notifier, joint_fixture.notifier)
+    notifier = cast(Notifier, joint_fixture.notifier)
 
     notification_event = make_notification(sample_notification)
 
+    # Publish the notification event (this is what the NOS would do upstream)
     await joint_fixture.kafka.publish_event(
         payload=notification_event.model_dump(),
         type_=joint_fixture.config.notification_type,
         topic=joint_fixture.config.notification_topic,
+        event_id=TEST_EVENT_ID,
     )
 
-    # generate the hash sum for the notification
-    record = joint_fixture.notifier._create_notification_record(
-        notification=notification_event
+    # the event is new, so there should be no matching event id in the database yet
+    event_id_dao = cast(
+        EventIdDaoPort,
+        joint_fixture.event_subscriber._translator._event_id_dao,  # type: ignore
     )
-
-    # verify the hash is generated with the keys sorted and correlation ID prepended
-    concatenated = TEST_CORRELATION_ID + json.dumps(
-        notification_event.model_dump(), sort_keys=True
-    )
-    assert record.hash_sum == sha256(concatenated.encode("utf-8")).hexdigest()
-
-    # the record hasn't been sent, so this should return False
-    assert not await joint_fixture.notifier._has_been_sent(hash_sum=record.hash_sum)
+    with pytest.raises(ResourceNotFoundError):
+        _ = await event_id_dao.get_by_id(TEST_EVENT_ID)
 
     server = DummyServer(config=joint_fixture.config)
-    expected_email = joint_fixture.notifier._construct_email(
-        notification=notification_event,
-    )
+    expected_email = notifier._construct_email(notification=notification_event)
 
     # Intercept the email with a dummy server and check content upon receipt
     async with server.expect_email(expected_email=expected_email):
         # consume the event to send the notification email to the dummy server
         await joint_fixture.event_subscriber.run(forever=False)
 
-    # Verify that the notification has now been marked as sent
-    assert await joint_fixture.notifier._has_been_sent(hash_sum=record.hash_sum)
+    # Verify that the event id is now in the database
+    event_id = await event_id_dao.get_by_id(TEST_EVENT_ID)
+    assert event_id.event_id == TEST_EVENT_ID
 
     # Now publish the same event again
     await joint_fixture.kafka.publish_event(
         payload=notification_event.model_dump(),
         type_=joint_fixture.config.notification_type,
         topic=joint_fixture.config.notification_topic,
+        event_id=TEST_EVENT_ID,  # same event ID to ensure idempotence
     )
 
     # Consume the event, which should NOT send anything and create no ConnectionError
@@ -388,11 +323,9 @@ async def test_timeout(port: int):
     config = get_config(sources=[client_config])
     smtp_client = SmtpClient(config=config)
     dao_mock = AsyncMock()
-    dao_mock.get_by_id.side_effect = ResourceNotFoundError(id_="test")
+    dao_mock.get_by_id.side_effect = ResourceNotFoundError(id_=TEST_EVENT_ID)
 
-    notifier = Notifier(
-        config=config, smtp_client=smtp_client, notification_record_dao=dao_mock
-    )
+    notifier = Notifier(config=config, smtp_client=smtp_client)
     with pytest.raises(smtp_client.ConnectionAttemptError):
         await notifier.send_notification(
             notification=make_notification(sample_notification)

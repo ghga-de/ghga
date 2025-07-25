@@ -12,20 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Produce a DAO using a DAO factory"""
+"""DB Migration logic"""
 
-from hexkit.protocols.dao import DaoFactoryProtocol
+from .definitions import V2Migration
+from .entry import run_db_migrations
 
-from ns.models import EventId
-from ns.ports.outbound.dao import EventIdDaoPort
-
-
-async def get_event_id_dao(*, dao_factory: DaoFactoryProtocol) -> EventIdDaoPort:
-    """Construct a EventIdDaoPort from the provided dao_factory"""
-    return await dao_factory.get_dao(
-        name="events",
-        dto_model=EventId,
-        id_field="event_id",
-    )
+__all__ = ["V2Migration", "run_db_migrations"]

@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ns"
-version = "4.0.2"
+version = "5.0.0"
 description = "The Notification Service (NS) handles notification kafka events."
 dependencies = [
-    "typer>=0.16",
-    "ghga-event-schemas~=9.2",
-    "ghga-service-commons>=4.1",
-    "hexkit[akafka,mongodb]>=5.3",
+    "typer>=0.15",
+    "ghga-event-schemas>=10, < 11",
+    "ghga-service-commons>=5",
+    "hexkit[akafka,mongodb]>=6",
 ]
 
 [project.license]

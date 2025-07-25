@@ -12,20 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-"""Contains models for the notification service."""
 
-from pydantic import BaseModel, Field
+"""Non-domain-specific models for the notification service."""
+
+from pydantic import UUID4, BaseModel
 
 
-class NotificationRecord(BaseModel):
-    """Model for tracking which notifications have been sent.
+class EventId(BaseModel):
+    """A model to represent a Kafka event ID."""
 
-    The hash sum is used to identify the notification event content and the sent flag
-    indicates if the notification has been sent.
-    """
-
-    hash_sum: str = Field(..., description="Hash sum of notification event")
-    sent: bool = Field(
-        ..., description="Flag indicating if the notification has been sent"
-    )
+    event_id: UUID4

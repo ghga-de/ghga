@@ -17,14 +17,13 @@
 """DI functions."""
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
-from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 
-from ns.adapters.inbound.akafka import EventSubTranslator
-from ns.adapters.outbound.dao import notification_record_dao_factory
+from ns.adapters.inbound.event_sub import EventSubTranslator
+from ns.adapters.outbound.dao import get_event_id_dao
 from ns.adapters.outbound.smtp_client import SmtpClient
 from ns.config import Config
 from ns.core.notifier import Notifier
@@ -35,15 +34,8 @@ from ns.ports.inbound.notifier import NotifierPort
 async def prepare_core(*, config: Config) -> AsyncGenerator[NotifierPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     smtp_client = SmtpClient(config=config)
-    dao_factory = MongoDbDaoFactory(config=config)
-    notification_record_dao = await notification_record_dao_factory(
-        dao_factory=dao_factory
-    )
-    notifier = Notifier(
-        config=config,
-        smtp_client=smtp_client,
-        notification_record_dao=notification_record_dao,
-    )
+
+    notifier = Notifier(config=config, smtp_client=smtp_client)
     yield notifier
 
 
@@ -52,7 +44,7 @@ def prepare_core_with_override(
 ):
     """Resolve the notifier context manager based on config and override (if any)."""
     return (
-        asyncnullcontext(notifier_override)
+        nullcontext(notifier_override)
         if notifier_override
         else prepare_core(config=config)
     )
@@ -68,12 +60,17 @@ async def prepare_event_subscriber(
     By default, the core dependencies are automatically prepared but you can also
     provide them using the notifier_override parameter.
     """
-    async with prepare_core_with_override(
-        config=config, notifier_override=notifier_override
-    ) as notifier:
+    async with (
+        prepare_core_with_override(
+            config=config, notifier_override=notifier_override
+        ) as notifier,
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
+    ):
+        event_id_dao = await get_event_id_dao(dao_factory=dao_factory)
         event_sub_translator = EventSubTranslator(
             notifier=notifier,
             config=config,
+            event_id_dao=event_id_dao,
         )
 
         async with (
