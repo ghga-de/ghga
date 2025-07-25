@@ -8,6 +8,7 @@ metadata:
 data:
   config: |
     foo: bar
+    service_instance_id: test-id
   
     kafka_dlq_topic: prefix-dlq
     test_event_topic: prefix-my-topic

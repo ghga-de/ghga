@@ -8,7 +8,7 @@ metadata:
 data:
   config: |
     {{- $config := .Values.config -}}
-    {{- $config := omit $config "db_name" "api_root_path" "service_name" "service_instance_id" -}}  
+    {{- $config := omit $config "db_name" "api_root_path" "service_name" -}}  
     {{- $config | toYaml | nindent 4 }}
     {{- include "ghga-common.kafkaTopicsParameters" $ | nindent 2 }}
     {{- if (include "ghga-common.apiBasePath" $) }}
