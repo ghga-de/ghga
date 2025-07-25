@@ -54,7 +54,7 @@ class Notification(NamedTuple):
             )
         except KeyError as err:
             interpolation_error = NotificationInterpolationError(kwargs)
-            log.error(interpolation_error)
+            log.error(interpolation_error, exc_info=True)
             raise interpolation_error from err
 
 

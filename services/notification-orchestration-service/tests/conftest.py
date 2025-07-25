@@ -15,6 +15,8 @@
 #
 """Test-suite-wide fixture declaration."""
 
+from uuid import UUID
+
 import pytest_asyncio
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
@@ -29,8 +31,9 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
 
 from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
 
+TEST_USER_ID = UUID("dcc8c67d-78a1-4395-8e84-6e9a57de4a12")
 TEST_USER = event_schemas.User(
-    user_id="test_id",
+    user_id=TEST_USER_ID,
     name="test user",
     title=event_schemas.AcademicTitle.DR,
     email="user@test.abc",

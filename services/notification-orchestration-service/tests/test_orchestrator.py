@@ -15,45 +15,24 @@
 #
 """Tests for event sub/pub"""
 
-from datetime import timedelta
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from logot import Logot, logged
+from pydantic import UUID4
 
 from nos.core import notifications
 from tests.conftest import TEST_USER
 from tests.fixtures.joint import JointFixture
+from tests.fixtures.utils import DATASET_ID, make_access_request
 
-DATASET_ID = "dataset1"
 pytestmark = pytest.mark.asyncio()
 
 
-def access_request_payload(user_id: str, status: str = "pending") -> dict[str, Any]:
-    """Succinctly create the payload for an access request event."""
-    start = now_as_utc()
-    end = start + timedelta(days=180)
-    return event_schemas.AccessRequestDetails(
-        id="access-request-id1",
-        user_id=user_id,
-        dataset_id=DATASET_ID,
-        dataset_title="A Great Dataset",
-        dataset_description="Some Dataset",
-        dac_alias="Some DAC",
-        dac_email="dac@some.org",
-        status=status,
-        request_text="Please grant me access to this data.",
-        note_to_requester="Thank you",
-        access_starts=start,
-        access_ends=end,
-        ticket_id="123456",
-    ).model_dump()
-
-
-def iva_state_payload(user_id: str, state: event_schemas.IvaState) -> dict[str, Any]:
+def iva_state_payload(user_id: UUID4, state: event_schemas.IvaState) -> dict[str, Any]:
     """Succinctly create the payload for an IVA state change event."""
     return event_schemas.UserIvaState(
         user_id=user_id,
@@ -154,7 +133,7 @@ async def test_access_request(
     ]
 
     # Create the kafka event that would be published by the access request service
-    payload = access_request_payload(test_user.user_id, status)
+    payload = make_access_request(test_user.user_id, status).model_dump()
     await joint_fixture.kafka.publish_event(
         payload=payload,
         type_="upserted",
@@ -200,7 +179,7 @@ async def test_access_request_no_ticket_id(
     allowed/denied notifications, not the created notification.
     """
     # Create an access request payload and clear out the ticket
-    access_request = access_request_payload(TEST_USER.user_id, status=status)
+    access_request = make_access_request(TEST_USER.user_id, status=status).model_dump()
     access_request["ticket_id"] = ""
 
     # Publish the access request event
@@ -244,7 +223,7 @@ async def test_missing_user_id_access_requests(
     """Test for error handling in case of invalid user id, specifically for the access
     request events.
     """
-    payload = access_request_payload("bogus_user_id")
+    payload = make_access_request(uuid4()).model_dump()
     await joint_fixture.kafka.publish_event(
         payload=payload,
         type_="upserted",
@@ -263,7 +242,7 @@ async def test_missing_user_id_access_requests(
     logot.assert_logged(
         logged.error(
             "Unable to publish 'Access Request Created' notification as"
-            + f" user ID '{payload['user_id']}' was not found in the database."
+            + f" user ID {payload['user_id']!r} was not found in the database."
         )
     )
 
@@ -271,13 +250,13 @@ async def test_missing_user_id_access_requests(
 async def test_missing_user_id_iva_state_changes(
     joint_fixture: JointFixture, logot: Logot
 ):
-    """Test for error handling in case of invalid user id, specifically for the IVA
+    """Test for error handling in case of missing user id, specifically for the IVA
     state change events.
     """
     payloads = (
-        iva_state_payload("bogus_user_id", event_schemas.IvaState.CODE_REQUESTED),
-        iva_state_payload("bogus_user_id", event_schemas.IvaState.CODE_TRANSMITTED),
-        iva_state_payload("bogus_user_id", event_schemas.IvaState.UNVERIFIED),
+        iva_state_payload(uuid4(), event_schemas.IvaState.CODE_REQUESTED),
+        iva_state_payload(uuid4(), event_schemas.IvaState.CODE_TRANSMITTED),
+        iva_state_payload(uuid4(), event_schemas.IvaState.UNVERIFIED),
     )
 
     event_types = (
@@ -312,7 +291,7 @@ async def test_missing_user_id_iva_state_changes(
         logot.assert_logged(
             logged.error(
                 f"Unable to publish '{notification_name}' notification as user"
-                + f" ID '{payload['user_id']}' was not found in the database."
+                + f" ID {payload['user_id']!r} was not found in the database."
             )
         )
 
@@ -361,7 +340,7 @@ async def test_iva_state_change(
         payload=trigger_event.model_dump(),
         type_=joint_fixture.config.iva_state_changed_type,
         topic=joint_fixture.config.iva_state_changed_topic,
-        key=TEST_USER.user_id,
+        key=str(TEST_USER.user_id),
     )
 
     # Build a notification payload for the user, if applicable
@@ -467,16 +446,14 @@ If you have any questions, please contact the GHGA Helpdesk: {helpdesk_email}
 async def test_second_factor_recreated_notification(joint_fixture: JointFixture):
     """Test that the second factor recreated event is translated into a notification."""
     # Prepare triggering event (the second factor recreated event).
-    payload = event_schemas.UserID(
-        user_id=TEST_USER.user_id,
-    )
+    payload = event_schemas.UserID(user_id=TEST_USER.user_id)
 
     # Publish the trigger event
     await joint_fixture.kafka.publish_event(
         payload=payload.model_dump(),
         type_=joint_fixture.config.second_factor_recreated_type,
         topic=joint_fixture.config.auth_topic,
-        key=TEST_USER.user_id,
+        key=str(TEST_USER.user_id),
     )
 
     # Define the event that should be published by the NOS when the trigger is consumed
@@ -511,14 +488,14 @@ async def test_iva_verified_event_sub(joint_fixture: JointFixture):
     for having removed the notification.
     """
     # Prepare triggering event (the IVA state change event).
-    iva_event = iva_state_payload("bogus_user_id", event_schemas.IvaState.VERIFIED)
+    iva_event = iva_state_payload(uuid4(), event_schemas.IvaState.VERIFIED)
 
     # Publish the trigger event
     await joint_fixture.kafka.publish_event(
         payload=iva_event,
         type_=joint_fixture.config.iva_state_changed_type,
         topic=joint_fixture.config.iva_state_changed_topic,
-        key=TEST_USER.user_id,
+        key=str(TEST_USER.user_id),
     )
 
     async with joint_fixture.kafka.record_events(

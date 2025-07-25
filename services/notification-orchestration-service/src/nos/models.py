@@ -12,23 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""DAO interface for accessing the database."""
+"""Model definitions for the NOS"""
 
-from ghga_event_schemas import pydantic_ as event_schemas
-from hexkit.protocols.dao import Dao, ResourceNotFoundError
+from pydantic import UUID4, BaseModel
 
-from nos.models import EventId
 
-__all__ = [
-    "AccessRequestDaoPort",
-    "EventIdDaoPort",
-    "ResourceNotFoundError",
-    "UserDaoPort",
-]
+class EventId(BaseModel):
+    """A model to represent a Kafka event ID."""
 
-# ports described by type aliases:
-AccessRequestDaoPort = Dao[event_schemas.AccessRequestDetails]
-UserDaoPort = Dao[event_schemas.User]
-EventIdDaoPort = Dao[EventId]
+    event_id: UUID4

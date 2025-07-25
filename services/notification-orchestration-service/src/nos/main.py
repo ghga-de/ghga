@@ -19,6 +19,9 @@ from hexkit.log import configure_logging
 
 from nos.config import Config
 from nos.inject import prepare_event_subscriber
+from nos.migrations import run_db_migrations
+
+DB_VERSION = 2
 
 
 async def consume_events(run_forever: bool = True):
@@ -26,5 +29,8 @@ async def consume_events(run_forever: bool = True):
     config = Config()  # type: ignore
 
     configure_logging(config=config)
+
+    await run_db_migrations(config=config, target_version=DB_VERSION)
+
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)

@@ -48,12 +48,17 @@ async def test_event_subscriber_dlq(joint_fixture: JointFixture):
 
 
 async def test_combined_subscriber_types(joint_fixture: JointFixture):
-    """Test if running normal and outbox subscribers simultaneously breaks the retry topic functionality"""
+    """Test if running normal and outbox subscribers simultaneously breaks the
+    retry topic functionality.
+
+    The purpose is to make sure this service is set up to correctly consume both
+    kinds of events simultaneously, e.g. by using the ComboTranslator class.
+    """
     config = joint_fixture.config
     assert config.kafka_enable_dlq
 
     # Publish a normal event with a valid payload to the retry topic
-    payload = event_schemas.UserID(user_id="test_id").model_dump()
+    payload = event_schemas.UserID(user_id=TEST_USER.user_id).model_dump()
     await joint_fixture.kafka.publish_event(
         payload=payload,
         type_=config.second_factor_recreated_type,
@@ -67,7 +72,7 @@ async def test_combined_subscriber_types(joint_fixture: JointFixture):
         payload=TEST_USER.model_dump(),
         type_="upserted",
         topic=f"retry-{config.service_name}",
-        key=TEST_USER.user_id,
+        key=str(TEST_USER.user_id),
         headers={"original_topic": config.user_topic},
     )
 

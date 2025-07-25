@@ -22,6 +22,7 @@ from contextlib import suppress
 from functools import partial
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from pydantic import UUID4
 
 from nos.config import Config
 from nos.core import notifications
@@ -347,7 +348,7 @@ class Orchestrator(OrchestratorPort):
             self._config.central_data_stewardship_email,
         )
 
-    async def process_all_ivas_invalidated(self, *, user_id: str):
+    async def process_all_ivas_invalidated(self, *, user_id: UUID4):
         """Send a notification to the user when all their IVAs are reset."""
         try:
             user = await self._user_dao.get_by_id(user_id)
@@ -406,9 +407,7 @@ class Orchestrator(OrchestratorPort):
             unexpected_iva_state_error = self.UnexpectedIvaState(state=user_iva.state)
             log.error(
                 unexpected_iva_state_error,
-                extra={
-                    "user_id": user_iva.user_id,
-                },
+                extra={"user_id": user_iva.user_id},
             )
             raise unexpected_iva_state_error
 
@@ -462,21 +461,19 @@ class Orchestrator(OrchestratorPort):
 
         await self._access_request_dao.upsert(access_request)
 
-    async def delete_access_request(self, *, resource_id: str) -> None:
+    async def delete_access_request(self, *, access_request_id: UUID4) -> None:
         """Delete an access request object."""
         with suppress(ResourceNotFoundError):
-            await self._access_request_dao.delete(resource_id)
+            await self._access_request_dao.delete(access_request_id)
 
-    async def upsert_user_data(
-        self, resource_id: str, update: event_schemas.User
-    ) -> None:
+    async def upsert_user_data(self, update: event_schemas.User) -> None:
         """Upsert the user data.
 
         This method will also examine the user data and send out notifications for
         user re-registration.
         """
         with suppress(ResourceNotFoundError):
-            existing_user = await self._user_dao.get_by_id(resource_id)
+            existing_user = await self._user_dao.get_by_id(update.user_id)
             if changed_details := self._changed_info(existing_user, update):
                 await self._notification_emitter.notify(
                     email=existing_user.email,
@@ -494,19 +491,19 @@ class Orchestrator(OrchestratorPort):
 
         await self._user_dao.upsert(dto=update)
 
-    async def delete_user_data(self, resource_id: str) -> None:
+    async def delete_user_data(self, user_id: UUID4) -> None:
         """Delete the user data.
 
         In the case that the user ID does not exist in the database, this method will
         log the fact but not raise an error.
         """
         try:
-            await self._user_dao.delete(resource_id)
+            await self._user_dao.delete(user_id)
         except ResourceNotFoundError:
             # do not raise an error if the user is not found, just log it.
-            log.warning("User not found for deletion", extra={"user_id": resource_id})
+            log.warning("User not found for deletion", extra={"user_id": user_id})
 
-    async def process_second_factor_recreated(self, *, user_id: str) -> None:
+    async def process_second_factor_recreated(self, *, user_id: UUID4) -> None:
         """Send a notification to the user that their second factor has been recreated."""
         try:
             user = await self._user_dao.get_by_id(user_id)

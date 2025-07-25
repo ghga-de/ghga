@@ -25,16 +25,20 @@ from hexkit.providers.akafka import (
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from nos.config import Config
-from nos.core.orchestrator import Orchestrator
-from nos.ports.inbound.orchestrator import OrchestratorPort
-from nos.translators.inbound.event_sub import (
+from nos.adapters.inbound.event_sub import (
     AccessRequestOutboxTranslator,
     EventSubTranslator,
     UserOutboxTranslator,
 )
-from nos.translators.outbound.dao import get_access_request_dao, get_user_dao
-from nos.translators.outbound.event_pub import NotificationEmitter
+from nos.adapters.outbound.dao import (
+    get_access_request_dao,
+    get_event_id_dao,
+    get_user_dao,
+)
+from nos.adapters.outbound.event_pub import NotificationEmitter
+from nos.config import Config
+from nos.core.orchestrator import Orchestrator
+from nos.ports.inbound.orchestrator import OrchestratorPort
 
 
 @asynccontextmanager
@@ -43,11 +47,12 @@ async def prepare_core(
     config: Config,
 ) -> AsyncGenerator[OrchestratorPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    user_dao = await get_user_dao(dao_factory=dao_factory)
-    access_request_dao = await get_access_request_dao(dao_factory=dao_factory)
-
-    async with KafkaEventPublisher.construct(config=config) as event_publisher:
+    async with (
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
+        KafkaEventPublisher.construct(config=config) as event_publisher,
+    ):
+        user_dao = await get_user_dao(dao_factory=dao_factory)
+        access_request_dao = await get_access_request_dao(dao_factory=dao_factory)
         notification_emitter = NotificationEmitter(
             config=config, event_publisher=event_publisher
         )
@@ -78,12 +83,17 @@ async def prepare_event_subscriber(
     By default, the core dependencies are automatically prepared but you can also
     provide them using the override parameter.
     """
-    async with prepare_core_with_override(
-        config=config, core_override=core_override
-    ) as orchestrator:
+    async with (
+        prepare_core_with_override(
+            config=config, core_override=core_override
+        ) as orchestrator,
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
+    ):
+        event_id_dao = await get_event_id_dao(dao_factory=dao_factory)
         event_sub_translator = EventSubTranslator(
             orchestrator=orchestrator,
             config=config,
+            event_id_dao=event_id_dao,
         )
         access_request_outbox_translator = AccessRequestOutboxTranslator(
             config=config,

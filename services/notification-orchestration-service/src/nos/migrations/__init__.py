@@ -12,23 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""DAO interface for accessing the database."""
+"""DB Migration logic"""
 
-from ghga_event_schemas import pydantic_ as event_schemas
-from hexkit.protocols.dao import Dao, ResourceNotFoundError
+from .definitions import V2Migration
+from .entry import run_db_migrations
 
-from nos.models import EventId
-
-__all__ = [
-    "AccessRequestDaoPort",
-    "EventIdDaoPort",
-    "ResourceNotFoundError",
-    "UserDaoPort",
-]
-
-# ports described by type aliases:
-AccessRequestDaoPort = Dao[event_schemas.AccessRequestDetails]
-UserDaoPort = Dao[event_schemas.User]
-EventIdDaoPort = Dao[EventId]
+__all__ = ["V2Migration", "run_db_migrations"]

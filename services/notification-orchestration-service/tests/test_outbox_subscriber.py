@@ -15,6 +15,8 @@
 
 """Verify functionality related to the consumption of KafkaOutbox events."""
 
+from uuid import uuid4
+
 import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
@@ -30,16 +32,17 @@ DELETE_EVENT_TYPE = "deleted"
 pytestmark = pytest.mark.asyncio()
 
 
-@pytest.mark.parametrize("user_id", ["test_id", "does_not_exist"])
-async def test_user_data_deletion(joint_fixture: JointFixture, user_id: str):
+@pytest.mark.parametrize("use_test_data", [True, False])
+async def test_user_data_deletion(joint_fixture: JointFixture, use_test_data: bool):
     """Ensure that the `delete` function works correctly.
 
     The event should trigger the deletion of the user data via the orchestrator.
-    The user_id 'test_id' should be found and deleted.
-    The user_id 'does_not_exist' should not be found but also not raise an error.
+    When using the test data (pre-populated) the test user should be found and deleted.
+    Otherwise, the random ID should not be found but also not raise an error.
     """
     # 1. Double check that the user data is found before running deletion.
-    if user_id == "test_id":
+    user_id = TEST_USER.user_id if use_test_data else uuid4()
+    if use_test_data:
         assert await joint_fixture.user_dao.get_by_id(user_id)
 
     # 2. Publish the event.
@@ -47,10 +50,10 @@ async def test_user_data_deletion(joint_fixture: JointFixture, user_id: str):
         payload={},
         type_=DELETE_EVENT_TYPE,
         topic=joint_fixture.config.user_topic,
-        key=user_id,
+        key=str(user_id),
     )
 
-    # 3. Run the outbox subscriber.
+    # 3. Run the outbox subscriber. This triggers the actual deletion.
     await joint_fixture.event_subscriber.run(forever=False)
 
     # 4. Check that the user data is not found.
@@ -68,9 +71,7 @@ async def test_user_data_deletion(joint_fixture: JointFixture, user_id: str):
                 "email": "modified@test.com",
             }
         ),
-        event_schemas.User(
-            user_id="new_user", name="new user", email="new_user@xyz.com"
-        ),
+        event_schemas.User(user_id=uuid4(), name="new user", email="new_user@xyz.com"),
     ],
     ids=["modified user", "new user"],
 )
@@ -95,7 +96,7 @@ async def test_user_data_upsert(
         payload=user.model_dump(),
         type_=CHANGE_EVENT_TYPE,
         topic=joint_fixture.config.user_topic,
-        key=user.user_id,
+        key=str(user.user_id),
     )
 
     # Run the outbox subscriber.
@@ -134,7 +135,7 @@ async def test_user_reregistration_notifications(
         payload=user.model_dump(),
         type_=CHANGE_EVENT_TYPE,
         topic=joint_fixture.config.user_topic,
-        key=user.user_id,
+        key=str(user.user_id),
     )
 
     # Prepare the expected notification.

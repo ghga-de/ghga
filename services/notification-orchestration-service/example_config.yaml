@@ -2,6 +2,7 @@ access_request_topic: access_request_events
 auth_topic: auth
 central_data_stewardship_email: test@test.abc
 db_name: nos
+db_version_collection: nosDbVersions
 generate_correlation_id: true
 helpdesk_email: test@test.def
 iva_state_changed_topic: ivas
@@ -22,6 +23,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 notification_topic: notification_events

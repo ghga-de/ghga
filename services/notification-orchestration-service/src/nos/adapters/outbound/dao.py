@@ -19,7 +19,8 @@
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import DaoFactoryProtocol
 
-from nos.ports.outbound.dao import AccessRequestDaoPort, UserDaoPort
+from nos.models import EventId
+from nos.ports.outbound.dao import AccessRequestDaoPort, EventIdDaoPort, UserDaoPort
 
 
 async def get_user_dao(*, dao_factory: DaoFactoryProtocol) -> UserDaoPort:
@@ -39,4 +40,13 @@ async def get_access_request_dao(
         name="accessRequests",
         dto_model=event_schemas.AccessRequestDetails,
         id_field="id",
+    )
+
+
+async def get_event_id_dao(*, dao_factory: DaoFactoryProtocol) -> EventIdDaoPort:
+    """Construct an EventIdDaoPort from the provided dao_factory"""
+    return await dao_factory.get_dao(
+        name="nosEventIds",
+        dto_model=EventId,
+        id_field="event_id",
     )

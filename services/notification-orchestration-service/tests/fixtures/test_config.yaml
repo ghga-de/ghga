@@ -13,3 +13,5 @@ user_topic: users
 auth_topic: auth
 second_factor_recreated_type: second_factor_recreated
 kafka_enable_dlq: True
+migration_wait_sec: 2
+db_version_collection: nosDbVersions

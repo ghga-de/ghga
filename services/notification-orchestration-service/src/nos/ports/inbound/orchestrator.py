@@ -19,6 +19,7 @@
 from abc import ABC, abstractmethod
 
 from ghga_event_schemas import pydantic_ as event_schemas
+from pydantic import UUID4
 
 
 class OrchestratorPort(ABC):
@@ -30,10 +31,10 @@ class OrchestratorPort(ABC):
         The notification title is included to aid in debugging.
         """
 
-        def __init__(self, *, user_id: str, notification_name: str) -> None:
+        def __init__(self, *, user_id: UUID4, notification_name: str) -> None:
             message = (
                 f"Unable to publish '{notification_name}' notification as user ID"
-                + f" '{user_id}' was not found in the database."
+                + f" {user_id!r} was not found in the database."
             )
             super().__init__(message)
 
@@ -56,8 +57,8 @@ class OrchestratorPort(ABC):
         """
 
     @abstractmethod
-    async def process_all_ivas_invalidated(self, *, user_id: str):
-        """Handle notifications for all IVA resets."""
+    async def process_all_ivas_invalidated(self, *, user_id: UUID4):
+        """Send a notification to the user when all their IVAs are reset."""
 
     @abstractmethod
     async def process_iva_state_change(self, *, user_iva: event_schemas.UserIvaState):
@@ -70,22 +71,19 @@ class OrchestratorPort(ABC):
         """Upsert an access request object and send out the appropriate notification."""
 
     @abstractmethod
-    async def delete_access_request(self, *, resource_id: str) -> None:
+    async def delete_access_request(self, *, access_request_id: UUID4) -> None:
         """Delete an access request object."""
 
     @abstractmethod
-    async def upsert_user_data(
-        self, resource_id: str, update: event_schemas.User
-    ) -> None:
+    async def upsert_user_data(self, update: event_schemas.User) -> None:
         """Upsert the user data.
 
-        This method will also examine the user data and send out notifications for the
-        following:
-        - User re-registration
+        This method will also examine the user data and send out notifications for
+        user re-registration.
         """
 
     @abstractmethod
-    async def delete_user_data(self, resource_id: str) -> None:
+    async def delete_user_data(self, user_id: UUID4) -> None:
         """Delete the user data.
 
         In the case that the user ID does not exist in the database, this method will
@@ -93,5 +91,5 @@ class OrchestratorPort(ABC):
         """
 
     @abstractmethod
-    async def process_second_factor_recreated(self, *, user_id: str) -> None:
+    async def process_second_factor_recreated(self, *, user_id: UUID4) -> None:
         """Send a notification to the user that their second factor has been recreated."""

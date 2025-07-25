@@ -18,14 +18,14 @@
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 from pydantic import Field
 
-from nos.translators.inbound.event_sub import (
+from nos.adapters.inbound.event_sub import (
     EventSubTranslatorConfig,
     OutboxSubTranslatorConfig,
 )
-from nos.translators.outbound.event_pub import NotificationEmitterConfig
+from nos.adapters.outbound.event_pub import NotificationEmitterConfig
 
 SERVICE_NAME: str = "nos"
 
@@ -37,7 +37,7 @@ class Config(
     EventSubTranslatorConfig,
     OutboxSubTranslatorConfig,
     NotificationEmitterConfig,
-    MongoDbConfig,
+    MigrationConfig,
 ):
     """Config parameters and their defaults."""
 
