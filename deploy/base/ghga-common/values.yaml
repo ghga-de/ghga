@@ -88,19 +88,21 @@ exports:
     cmd: /bin/sh
 
     ports:
-      - name: http
-        containerPort: 8080
-        protocol: TCP
+      enabled: false
+      ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
 
     livenessProbe:
-      enabled: true
+      enabled: false
       tcpSocket:
         port: 8080
       initialDelaySeconds: 30
       periodSeconds: 15
 
     readinessProbe:
-      enabled: true
+      enabled: false
       tcpSocket:
         port: 8080
       initialDelaySeconds: 30

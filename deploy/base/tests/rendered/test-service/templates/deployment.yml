@@ -116,7 +116,7 @@ spec:
             runAsUser: 1000
             seccompProfile:
               type: RuntimeDefault
-          ports:
+          readinessProbe:
             - containerPort: 8080
               name: http
               protocol: TCP

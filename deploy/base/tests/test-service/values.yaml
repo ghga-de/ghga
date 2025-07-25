@@ -30,6 +30,14 @@ config:
 
 cmd:  test
 
+ports:
+  enabled: true
+
+livenessProbe:
+  enabled: true
+
+readinessProbe:
+  enabled: true    
 
 vaultAgent:
   enabled: true

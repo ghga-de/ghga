@@ -84,13 +84,13 @@ spec:
                 name: {{ include "common.tplvalues.render" (dict "value" .Values.envVarsSecret "context" $) }}
             {{- end }}
           {{- end }}
-          {{- if .Values.ports }}
-          {{- if .Values.containerSecurityContext.enabled }}
           name: {{ .Release.Name }}
+          {{- if .Values.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
-          {{- if .Values.ports }}
-          ports: {{- include "common.tplvalues.render" (dict "value" .Values.ports "context" $) | nindent 12 }}
+          {{- if and .Values.ports.enabled (omit .Values.ports "enabled") }}
+          readinessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.ports.ports "context" $) | nindent 12 }}
+          {{- end }}
           {{- if and .Values.readinessProbe.enabled (omit .Values.readinessProbe "enabled") }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
           {{- end }}
@@ -99,8 +99,6 @@ spec:
           {{- end }}
           {{- if and .Values.startupProbe.enabled (omit .Values.startupProbe "enabled") }}
           startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
-          {{- end }}
-          {{- end }}
           {{- end }}
           {{- if .Values.resources }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
