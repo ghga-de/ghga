@@ -4,13 +4,13 @@
  * @license Apache-2.0
  */
 
-import { Component } from '@angular/core';
+import { Component, inject, ViewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatNavList } from '@angular/material/list';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { RouterLink } from '@angular/router';
+import { NavigationStart, Router, RouterLink } from '@angular/router';
 import { AccountButtonComponent } from '../account-button/account-button.component';
 import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-header-nav-buttons.component';
 
@@ -33,4 +33,15 @@ import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-h
   ],
   styleUrl: './site-header.component.scss',
 })
-export class SiteHeaderComponent {}
+export class SiteHeaderComponent {
+  #router = inject(Router);
+  @ViewChild('sidenav') sidenav: MatSidenav | undefined;
+
+  constructor() {
+    this.#router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.sidenav?.close();
+      }
+    });
+  }
+}

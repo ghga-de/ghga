@@ -1,6 +1,6 @@
 <mat-toolbar>
   <mat-toolbar-row class="flex justify-between align-middle">
-    <div class="flex h-full xl:basis-1/4">
+    <div class="flex h-full w-4/5 sm:w-[initial] xl:basis-1/4">
       <a
         matRipple
         routerLink="/"
@@ -8,13 +8,17 @@
         data-umami-event="Site Header Home Clicked"
         ><img
           src="assets/images/ghga-logo-clean.png"
-          class="max-h-12"
+          class="max-h-12 w-2/3 sm:w-auto"
           alt="GHGA Logo"
         />
-        <div class="ms-2 border-l ps-2 pt-1 uppercase">
-          <span class="border-quinary text-quinary text-3xl leading-3 tracking-wider"
+        <div class="ms-2 w-1/2 border-l ps-2 pt-1 uppercase">
+          <span
+            class="border-quinary text-quinary text-[9vw] leading-3 tracking-wider min-[400px]:text-[5vw] sm:text-3xl"
             >Data</span
-          ><br /><span class="text-quinary">Portal</span>
+          ><br /><span
+            class="text-quinary text-[6.5vw] min-[400px]:text-[3.6vw] sm:text-[22px]"
+            >Portal</span
+          >
         </div></a
       >
     </div>
@@ -50,8 +54,7 @@
           </div>
           <mat-nav-list>
             <app-site-header-nav-buttons
-              class="mb-4 grid grid-cols-1 gap-y-2 px-4"
-              (click)="sidenav.toggle()" /><app-account-button /></mat-nav-list
+              class="mb-4 grid grid-cols-1 gap-y-2 px-4" /><app-account-button /></mat-nav-list
         ></mat-sidenav>
         <mat-sidenav-container></mat-sidenav-container>
       </mat-sidenav-container>

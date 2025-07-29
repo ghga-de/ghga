@@ -6,6 +6,7 @@
 
 import { Component, effect, inject, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -28,6 +29,7 @@ import { IvaService } from '@app/verification-addresses/services/iva.service';
   imports: [
     FormsModule,
     MatCardModule,
+    MatButtonModule,
     MatInputModule,
     MatDatepickerModule,
     MatSelectModule,
@@ -44,6 +46,8 @@ export class IvaManagerFilterComponent {
   #filter = this.#ivaService.allIvasFilter;
 
   #ivaStatePipe = inject(IvaStatePipe);
+
+  displayFilters = false;
 
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
 

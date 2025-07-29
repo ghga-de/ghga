@@ -6,6 +6,7 @@
 
 import { Component, effect, inject, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -29,6 +30,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
     FormsModule,
     MatCardModule,
     MatInputModule,
+    MatButtonModule,
     MatDatepickerModule,
     MatSelectModule,
     MatFormFieldModule,
@@ -44,6 +46,8 @@ export class AccessRequestManagerFilterComponent {
   #filter = this.#ars.allAccessRequestsFilter;
 
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
+
+  displayFilters = false;
 
   /**
    * The model for the filter properties

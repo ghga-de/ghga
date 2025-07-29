@@ -9,6 +9,17 @@ mat-toolbar {
   );
 }
 
+mat-sidenav {
+  @include mat.sidenav-overrides(
+    (
+      container-width: 100%,
+    )
+  );
+}
+mat-sidenav {
+  max-width: 400px;
+}
+
 // Tailwind classes do not override the Material classes, so we have to do it here
 mat-toolbar-row {
   padding-left: 0;
