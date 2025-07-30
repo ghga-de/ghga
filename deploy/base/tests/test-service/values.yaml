@@ -24,25 +24,25 @@ serviceInstanceIdConsumer: test-service-instance-id-consumer
 cluster:
   name: default-cluster
 
-parameters:
-  default:
-    foo: bar
-  rest:
-    service_instance_id: 'rest.1'
-  consumer:
-    service_instance_id: 'consumer.1'
+config:
+  foo: bar
+  db_name: test-database # That should be omitted and set dynamically to release name
+  service_instance_id: test-id
 
-containers:
-- name: rest
-  type: "rest"
-  cmd:  test
-  config:
-    name: parameters-rest
-    key: parameters-rest
-    #mountPath: /app/config
+cmd:  test
+
+ports:
+  enabled: true
+
+livenessProbe:
+  enabled: true
+
+readinessProbe:
+  enabled: true    
 
 vaultAgent:
   enabled: true
+  releaseNameOverwrite: overwritten-release-name
   secrets:
     generic:
       ghga-auth-public:
@@ -80,6 +80,8 @@ httpRoute:
           weight: 1
           port: 80
 
+topicPrefix: prefix
+
 kafkaUser:
   enabled: true
 
@@ -103,7 +105,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as producer
   deadLetterQueue:
     topic:
@@ -112,7 +113,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:
@@ -129,7 +129,6 @@ _topics:
       operations:
         - Read
         - Write
-        - Create
   deadLetterQueueRetries:
     topic:
       name: null
@@ -137,7 +136,9 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
         - Describe
       resource:
         patternType: prefix
+
+probe:
+  enabled: true

@@ -5,10 +5,9 @@ configPrefix: data_portal
 apiBasePath: /
 
 # Service parameters
-parameters:
-  default:
-    host: 0.0.0.0
-    oidc_use_discovery: false
+config:
+  host: 0.0.0.0
+  oidc_use_discovery: false
 
 
 containerSecurityContext:
@@ -16,13 +15,6 @@ containerSecurityContext:
   # In Data-Portal-UI, node is user 1000 and appuser is user 1001
   runAsUser: 1001
 
-# Type needs to be fixed, it is used for exposed pods and probes
-containers:
-- name: rest
-  type: "rest"
-  cmd: "node /home/appuser/run.mjs"
-  config:
-    name: parameters
-    key: parameters
-    appuser: appuser
-    mountPath: /home/appuser/data-portal.yaml
+cmd: "node /home/appuser/run.mjs"
+config:
+  mountPath: /home/appuser/data-portal.yaml

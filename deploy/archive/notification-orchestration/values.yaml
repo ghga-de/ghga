@@ -8,29 +8,17 @@ configPrefix: nos
 # Name of the database
 mongodb:
   dbName: notification-orchestration
+
 # This parameter is used as Kafka's group id
 serviceName: nos-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceId: nos-consumer-1
-# This parameter is used as Kafka's group id
-serviceNameConsumer: nos-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceIdConsumer: nos-consumer-1
 
-parameters:
-  default:
-    central_data_stewardship_email: helpdesk@ghga.de
-    helpdesk_email: helpdesk@ghga.de
-    kafka_enable_dlq: true
+config:
+  central_data_stewardship_email: helpdesk@ghga.de
+  helpdesk_email: helpdesk@ghga.de
+  kafka_enable_dlq: true
 
 
-containers:
-- name: consumer
-  type: consumer
-  cmd: nos
-  config:
-    name: parameters
-    key: parameters
+cmd: nos
 
 _consumer_group:
 
@@ -40,17 +28,9 @@ _topics:
     topic:
       name: access_request_topic
       value: access-requests
-    types:
-    - name: access_request_created_type
-      value: access_request_created
-    - name: access_request_allowed_type
-      value: access_request_allowed
-    - name: access_request_denied_type
-      value: access_request_denied
     kafkaUser:
       operations:
         - Read
-        - Create
   ivaStateChangeEvent:
     # as consumer
     topic:
@@ -62,7 +42,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   notificationEvent:
     # as producer
     topic:
@@ -74,7 +53,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   secondFactorRecreatedEvent:
     # as consumer
     topic:
@@ -86,7 +64,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   userEvents:
     # as consumer
     topic:
@@ -95,7 +72,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   # as producer
   deadLetterQueue:
     topic:
@@ -104,7 +80,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:
@@ -113,4 +88,3 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create

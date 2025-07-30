@@ -1,0 +1,25 @@
+name: test-cronjob
+description: A meta-absurdist reflection on templating—where structure dissolves into recursion, defaults deceive, and clarity is an illusion.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.0.0
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "0.0.0"
+
+# The major version of the API. Minor versions and patches are not relevant as they do not
+# introduce breaking changes.
+apiVersion: v2
+
+dependencies:
+- name: ghga-common
+  version: 2.4.2
+  repository: file://../../ghga-common
+  import-values:
+  - defaults

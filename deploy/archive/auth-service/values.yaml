@@ -11,34 +11,21 @@ apiBasePath: /auth-ext/
 mongodb:
   dbName: auth-service
 # This parameter is used as Kafka's group id
-serviceName: auth-adapter-rest
-# This parameter specifies the client id in Kafka
-serviceInstanceId: auth-adapter
-# This parameter is used as Kafka's group id
-serviceNameConsumer: auth-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceIdConsumer: auth-consumer-1
+serviceName: auth-consumer
 
-parameters:
-  default:
-    mongo_dsn: null
-    host: 0.0.0.0
-    enable_opentelemetry: false
-    otel_exporter_endpoint: "http://localhost:4318/"
-    otel_exporter_protocol: "http/protobuf"
+config:
+  mongo_dsn: null
+  host: 0.0.0.0
+  enable_opentelemetry: false
+  otel_exporter_endpoint: "http://localhost:4318/"
+  otel_exporter_protocol: "http/protobuf"
 
 authService:
   emissary:
     enabled: false
     name: authentication
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: auth-service
-  config:
-    name: parameters
-    key: parameters
+cmd: auth-service
 
 _consumer_group:
 
@@ -54,7 +41,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   ivaEvents:
     # as producer
     topic:
@@ -66,7 +52,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   datasetChangeEvent:
     # as consumer
     topic:
@@ -88,4 +73,3 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create

@@ -10,48 +10,27 @@ apiBasePath: /wps/
 # Name of the database
 mongodb:
   dbName: work-package
+
 # This parameter is used as Kafka's group id
-serviceName: wps-rest
-# This parameter specifies the client id in Kafka
-serviceInstanceId: wps-rest-1
-# This parameter is used as Kafka's group id
-serviceNameConsumer: wps-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceIdConsumer: wps-consumer-1
+serviceName: wps-consumer
 
-parameters:
-  default:
-    auth_key: '{}'
-    mongo_dsn: null
-    db_name: wps
-    download_access_url: http://claims-repository:8080/download-access
-    host: "0.0.0.0"
-    service_instance_id: 'wps_1'
-    service_name: wps
-    work_package_signing_key: '{}'
-    kafka_enable_dlq: true
-    enable_opentelemetry: false
-    otel_exporter_endpoint: "http://localhost:4318/"
-    otel_exporter_protocol: "http/protobuf"
+config:
+  auth_key: '{}'
+  mongo_dsn: null
+  db_name: wps
+  download_access_url: http://claims-repository:8080/download-access
+  host: "0.0.0.0"
+  service_instance_id: 'wps_1'
+  service_name: wps
+  work_package_signing_key: '{}'
+  kafka_enable_dlq: true
+  enable_opentelemetry: false
+  otel_exporter_endpoint: "http://localhost:4318/"
+  otel_exporter_protocol: "http/protobuf"
 
-  rest:
-    service_instance_id: 'rest.1'
-  consumer:
-    service_instance_id: 'consumer.1'
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: wps run-rest
-  config:
-    name: parameters-rest
-    key: parameters-rest
-- name: consumer
-  type: "consumer"
-  cmd: wps consume-events
-  config:
-    name: parameters-consumer
-    key: parameters-consumer
+cmd: wps run-rest
+# cmd: wps consume-events
 
 _consumer_group:
 
@@ -69,7 +48,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   # as producer
   deadLetterQueue:
     topic:
@@ -78,7 +56,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:
@@ -87,4 +64,3 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create

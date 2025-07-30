@@ -3,6 +3,9 @@ image:
 
 configPrefix: auth_km_jobs
 
+cronjob:
+  enabled: true
+
 cronSchedule: "0 0 1 1 0"
 
 containers:

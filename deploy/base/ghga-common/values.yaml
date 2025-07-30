@@ -11,7 +11,10 @@ exports:
 
     job:
       enabled: false
-
+    
+    cronjob:
+      enabled: false
+    
     nameOverride: ""
 
     fullnameOverride: ""
@@ -82,26 +85,24 @@ exports:
 
     podRestartPolicy: Always
 
-    containers:
-      - config: {}
-        name: default
-        cmd: /bin/sh
-        type: rest
+    cmd: /bin/sh
 
     ports:
-      - name: http
-        containerPort: 8080
-        protocol: TCP
+      enabled: false
+      ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
 
     livenessProbe:
-      enabled: true
+      enabled: false
       tcpSocket:
         port: 8080
       initialDelaySeconds: 30
       periodSeconds: 15
 
     readinessProbe:
-      enabled: true
+      enabled: false
       tcpSocket:
         port: 8080
       initialDelaySeconds: 30
@@ -138,7 +139,7 @@ exports:
 
     sidecars: []
 
-    envVars: null
+    envVars: []
 
     envVarsConfigMap: ""
 
@@ -199,10 +200,15 @@ exports:
     serviceInstanceId: ""
     serviceNameConsumer: ""
     serviceInstanceIdConsumer: ""
-    parameters:
-      default: {}
-      rest: {}
-      consumer: {}
+
+    configMap:
+      enabled: true
+      mountPath: /etc/config.yaml
+      subPath: config.yaml
+      envVar:
+        enabled: true
+
+    config: {}
 
     configPrefix: ""
 
@@ -220,6 +226,12 @@ exports:
     httpRoute:
       enabled: false
       rules: []
+    
+    probe:
+      enabled: false
+      hostname: default.ghga.dev
+
+    healthEndpoint: "/health"
 
     vaultAgent:
       enabled: false

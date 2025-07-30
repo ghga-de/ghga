@@ -44,7 +44,7 @@ vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
 {{- $vaultSecretPath = .Values.vaultAgent.secrets.service.secretPath }}
 {{- else }}
 {{- with .Values.vaultAgent.secrets.service.pathPrefix }}
-{{- $vaultSecretPath = list . $.Values.environment.name $.Release.Name | join "/" }}
+{{- $vaultSecretPath = list . $.Values.environment.name ( $.Values.vaultAgent.releaseNameOverwrite | default $.Release.Name ) | join "/" }}
 {{- end }}
 {{- end }}
 vault.hashicorp.com/agent-inject-command-service-secrets: |

@@ -14,16 +14,16 @@ spec:
     acls:
     - operations:
       - Write
-      - Create
       - Describe
+      - Create
       resource:
-        name: dlq
+        name: prefix-dlq
         patternType: literal
         type: topic
     - operations:
       - Write
-      - Create
       - Describe
+      - Create
       resource:
         name: retry-
         patternType: prefix
@@ -31,23 +31,24 @@ spec:
     - operations:
       - Read
       - Describe
+      - Create
       resource:
         name: retry-test-service-name
         patternType: literal
         type: topic
     - operations:
       - Write
-      - Create
       - Describe
+      - Create
       resource:
-        name: my-topic
+        name: prefix-my-topic
         patternType: literal
         type: topic
     - operations:
       - Read
       - Write
-      - Create
       - Describe
+      - Create
       resource:
         name: '*'
         patternType: literal

@@ -4,19 +4,18 @@ image:
 
 configPrefix: ""
 
-cronSchedule: "0 0 1 1 0"
 
-parameters:
-  default:
-    foo: bar
+job:
+  enabled: true
 
-containers:
-- name: job
-  type: default
-  cmd: sleep 100000000
-  config:
-    key: parameters
-    fileName: .config.yaml
+config:
+  foo: bar
+
+configMap:
+  envVar:
+    enabled: true
+
+cmd: sleep 100000000
 
 vaultAgent:
   enabled: true

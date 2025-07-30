@@ -10,44 +10,27 @@ apiBasePath: /ga4gh/drs/v1/
 # Name of the database
 mongodb:
   dbName: download-controller
-# This parameter is used as Kafka's group id
-serviceName: dcs-rest
-# This parameter specifies the client id in Kafka
-serviceInstanceId: dcs-rest-1
-# This parameter is used as Kafka's group id
-serviceNameConsumer: dcs-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceIdConsumer: dcs-consumer-1
 
-parameters:
-  default:
-    auth_key: '{}'
-    mongo_dsn: null
-    drs_server_uri: drs://localhost:8080/
-    ekss_base_url: http://encryption-key-store:8080
-    host: "0.0.0.0"
-    presigned_url_expires_after: 10
-    object_storages: {}
-    kafka_enable_dlq: true
-    enable_opentelemetry: false
-    otel_exporter_endpoint: "http://localhost:4318/"
-    otel_exporter_protocol: "http/protobuf"
+# This parameter is used as Kafka's group id
+serviceName: dcs-consumer
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: dcs run-rest
-  config:
-    name: parameters-rest
-    key: parameters-rest
-- name: consumer
-  type: "consumer"
-  cmd: dcs consume-events
-  config:
-    name: parameters-consumer
-    key: parameters-consumer
+config:
+  auth_key: '{}'
+  mongo_dsn: null
+  drs_server_uri: drs://localhost:8080/
+  ekss_base_url: http://encryption-key-store:8080
+  host: "0.0.0.0"
+  presigned_url_expires_after: 10
+  object_storages: {}
+  kafka_enable_dlq: true
+  enable_opentelemetry: false
+  otel_exporter_endpoint: "http://localhost:4318/"
+  otel_exporter_protocol: "http/protobuf"
 
 _consumer_group:
+
+cmd: dcs run-rest
+# cmd: dcs consume-events
 
 _topics:
   fileRegisteredEvent:
@@ -61,7 +44,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   fileDeletedEvent:
     # as producer
     topic:
@@ -73,7 +55,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   filesToRegister:
     # as consumer
     topic:
@@ -85,7 +66,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   filesToDelete:
     # as consumer
     topic:
@@ -97,7 +77,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   downloadServed:
     # as producer
     topic:
@@ -109,7 +88,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   unstagedDownload:
     # as producer
     topic:
@@ -121,7 +99,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as producer
   deadLetterQueue:
     topic:
@@ -130,7 +107,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:
@@ -139,4 +115,3 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create

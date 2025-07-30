@@ -1,0 +1,31 @@
+image:
+  repository: busybox
+  tag: latest
+
+configPrefix: ""
+
+cronSchedule: "0 0 1 1 0"
+
+config:
+  foo: bar
+
+configMap:
+  mountPath: /home/appuser/config.yaml
+  subPath: config.yaml
+  envVar:
+    enabled: false
+
+cronjob:
+  enabled: true
+
+cmd: sleep 100000000
+kafkaUser:
+  enabled: true
+vaultAgent:
+  enabled: true
+  secrets:
+    mongodb:
+      enabled: true
+      parameterName: TEST_DB
+    service:
+      enabled: true

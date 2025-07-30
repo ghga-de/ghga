@@ -4,10 +4,11 @@ apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
   name: test-service
+  namespace: "test"
 spec:
   ambassador_id: [default]
   service: "test-service:8080"
   hostname: my.test.com
-  prefix: /path/v1/test/
+  prefix: /path/v1/test
   rewrite: /
   timeout_ms: 3000

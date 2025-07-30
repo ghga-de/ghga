@@ -1,0 +1,24 @@
+---
+# Source: test-service/templates/probe.yml
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: test-service
+  namespace: "test"
+  labels:
+    app.kubernetes.io/name: test-service
+    helm.sh/chart: test-service-0.0.0
+    app.kubernetes.io/instance: test-service
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "0.0.0"
+    app: test-service
+  annotations:
+spec:
+  jobName: test-service
+  module: http_2xx
+  prober:
+    url: prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+      - http://default.ghga.dev/path/v1/test/health

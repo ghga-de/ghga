@@ -7,24 +7,15 @@ configPrefix: ekss
 
 # This parameter is used as Kafka's group id
 serviceName: ekss-rest
-# This parameter specifies the client id in Kafka
-serviceInstanceId: ekss-rest-1
 
-parameters:
-  default:
-    host: 0.0.0.0
-    server_private_key_path: <Please fill>
-    server_public_key_path: <Please fill>
-    vault_url: http://vault:8200
-    vault_path: ekss
-    enable_opentelemetry: false
-    otel_exporter_endpoint: "http://localhost:4318/"
-    otel_exporter_protocol: "http/protobuf"
+config:
+  host: 0.0.0.0
+  server_private_key_path: <Please fill>
+  server_public_key_path: <Please fill>
+  vault_url: http://vault:8200
+  vault_path: ekss
+  enable_opentelemetry: false
+  otel_exporter_endpoint: "http://localhost:4318/"
+  otel_exporter_protocol: "http/protobuf"
 
-containers:
-- name: rest
-  type: "rest"
-  cmd: ekss
-  config:
-    name: parameters
-    key: parameters
+cmd: ekss

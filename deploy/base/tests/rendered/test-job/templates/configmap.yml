@@ -4,13 +4,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: test-job
+  namespace: "test"
 data:
-  parameters-default: |
-    foo: bar
-  
-    
-    
-    
-    
-  parameters: |
+  config: |
     foo: bar

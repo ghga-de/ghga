@@ -1,0 +1,69 @@
+image:
+  repository: "ghga/reverse-transpiler-service"
+
+configPrefix: rts
+
+# Service parameters
+
+# Service base path
+apiBasePath: /rts/
+# Name of the database
+mongodb:
+  dbName: reverse-transpiler
+
+# This parameter is used as Kafka's group id
+serviceName: rts-consumer
+
+config:
+  host: "0.0.0.0"
+  service_instance_id: 'rts_1'
+  service_name: rts
+  kafka_enable_dlq: true
+  mongo_dsn: null
+  artifact_topic: artifacts
+  sheet_names:
+    analyses: Analysis
+    analysis_methods: AnalysisMethod
+    analysis_method_supporting_files: AnalysisMethodSupportingFile
+    studies: Study
+    individuals: Individual
+    individual_supporting_files: IndividualSupportingFile
+    samples: Sample
+    experiment_methods: ExperimentMethod
+    experiment_method_supporting_files: ExperimentMethodSupportingFile
+    experiments: Experiment
+    research_data_files: ResearchDataFile
+    process_data_files: ProcessDataFile
+    datasets: Dataset
+    data_access_policies: DataAccessPolicy
+    data_access_committees: DataAccessCommittee
+    publications: Publication
+
+cmd: rts run-rest
+# cmd: rts consume-events
+
+_topics:
+  artifactsEvent:
+    # as consumer
+    topic:
+      name: artifact_topic
+      value: artifacts
+    kafkaUser:
+      operations:
+        - Read
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read

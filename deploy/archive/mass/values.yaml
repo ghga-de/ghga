@@ -10,55 +10,33 @@ apiBasePath: /mass/
 # Name of the database
 mongodb:
   dbName: mass
+
 # This parameter is used as Kafka's group id
-serviceName: mass-rest
-# This parameter specifies the client id in Kafka
-serviceInstanceId: mass-rest-1
-# This parameter is used as Kafka's group id
-serviceNameConsumer: mass-consumer
-# This parameter specifies the client id in Kafka
-serviceInstanceIdConsumer: mass-consumer-1
+serviceName: mass-consumer
 
-parameters:
-  default:
-    mongo_dsn: null
-    db_name: metadata-store
-    host: "0.0.0.0"
-    searchable_classes:
-      EmbeddedDataset:
-        description: Dataset grouping files under controlled access.
-        facetable_fields:
-        - key: alias
-          name: Dataset alias
-        - key: title
-          name: Dataset title
-        selected_fields:
-        - key: ega_accession
-          name: EGA accession
-        - key: title
-          name: Dataset title
-    kafka_enable_dlq: true
-
-  rest:
-    service_instance_id: 'rest.1'
-  consumer:
-    service_instance_id: 'consumer.1'
-
-containers:
-- name: rest
-  type: "rest"
-  cmd: mass run-rest
-  config:
-    name: parameters-rest
-    key: parameters-rest
-- name: consumer
-  type: "consumer"
-  cmd: mass consume-events
-  config:
-    name: parameters-consumer
-    key: parameters-consumer
+config:
+  mongo_dsn: null
+  db_name: metadata-store
+  host: "0.0.0.0"
+  searchable_classes:
+    EmbeddedDataset:
+      description: Dataset grouping files under controlled access.
+      facetable_fields:
+      - key: alias
+        name: Dataset alias
+      - key: title
+        name: Dataset title
+      selected_fields:
+      - key: ega_accession
+        name: EGA accession
+      - key: title
+        name: Dataset title
+  kafka_enable_dlq: true
 
 _consumer_group:
+
+cmd: mass run-rest
+# cmd: mass consume-events
 
 _topics:
   resourceChangeEvent:
@@ -74,7 +52,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
   # as producer
   deadLetterQueue:
     topic:
@@ -83,7 +60,6 @@ _topics:
     kafkaUser:
       operations:
         - Write
-        - Create
   # as consumer
   deadLetterQueueRetry:
     topic:
@@ -92,4 +68,3 @@ _topics:
     kafkaUser:
       operations:
         - Read
-        - Create
