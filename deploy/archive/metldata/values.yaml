@@ -37,6 +37,8 @@ containers:
     name: parameters
     key: parameters
 
+_consumer_group:
+
 _topics:
   datasetChangeEvent:
     # as producer

@@ -47,6 +47,7 @@ containers:
     name: parameters-consumer
     key: parameters-consumer
 
+_consumer_group:
 
 _topics:
   fileRegisteredEvent:

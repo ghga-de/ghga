@@ -31,6 +31,8 @@ containers:
     name: parameters
     key: parameters
 
+_consumer_group:
+
 _topics:
   fileRegisteredEvent:
     # as producer

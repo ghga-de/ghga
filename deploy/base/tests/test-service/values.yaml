@@ -83,6 +83,13 @@ httpRoute:
 kafkaUser:
   enabled: true
 
+_consumer_group:
+  operations:
+    - Read
+  resource:
+    patternType: literal
+    type: group
+
 _topics:
   testEvent:
     topic:
@@ -123,6 +130,7 @@ _topics:
         - Read
         - Write
         - Create
+
   deadLetterQueueRetries:
     topic:
       name: null
