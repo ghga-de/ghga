@@ -52,6 +52,12 @@ spec:
         name: '*'
         patternType: literal
         type: topic
+    - operations:
+      - Read
+      resource:
+        name: test-service-name-consumer
+        patternType: literal
+        type: group
     type: simple
   template:
     secret:
