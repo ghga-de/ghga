@@ -130,7 +130,6 @@ _topics:
         - Read
         - Write
         - Create
-
   deadLetterQueueRetries:
     topic:
       name: null
