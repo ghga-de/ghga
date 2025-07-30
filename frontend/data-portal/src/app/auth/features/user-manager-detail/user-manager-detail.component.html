@@ -1,5 +1,8 @@
 @if (user(); as currentUser) {
-  <div class="mx-auto max-w-[1200px] p-6">
+  <div
+    class="mx-auto max-w-[1200px] p-6"
+    [style.view-transition-name]="showTransition ? 'detail' : null"
+  >
     <div class="clearfix mb-6">
       <button
         mat-icon-button

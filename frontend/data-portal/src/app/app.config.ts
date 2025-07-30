@@ -11,6 +11,7 @@ import {
   provideRouter,
   TitleStrategy,
   withComponentInputBinding,
+  withViewTransitions,
 } from '@angular/router';
 import { provideHttpCache, withHttpCacheInterceptor } from '@ngneat/cashew';
 
@@ -30,7 +31,7 @@ import {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
     { provide: TitleStrategy, useClass: TemplatePageTitleStrategy },
     provideHttpClient(
       withFetch(),

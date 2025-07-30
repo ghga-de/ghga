@@ -120,8 +120,9 @@ describe('UserManagerDetailComponent', () => {
     expect(user?.title).toBe('Dr.');
   });
 
-  it('should navigate back when goBack is called', () => {
+  it('should navigate back when goBack is called', async () => {
     component.goBack();
+    await new Promise((resolve) => setTimeout(resolve));
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/user-manager']);
   });
 

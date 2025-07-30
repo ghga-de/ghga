@@ -234,3 +234,56 @@ mat-sidenav-container > div.mat-drawer-backdrop.mat-drawer-shown {
 mat-sidenav-container.mat-sidenav-container {
   z-index: 2;
 }
+
+/* View transitions for list-detail navigation */
+@supports (view-transition-name: none) {
+  /* Default root transition */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 275ms;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Detail view transitions */
+  /* When navigating to a detail page, slide in from right */
+  ::view-transition-new(detail) {
+    animation-name: slide-in-right;
+  }
+
+  /* When navigating from a detail page, slide out to right */
+  ::view-transition-old(detail) {
+    animation-name: slide-out-right;
+  }
+
+  /* Keyframe animations */
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-out-right {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Ensure detail view appears on top during transitions */
+  ::view-transition-new(detail) {
+    z-index: 2;
+  }
+
+  ::view-transition-old(detail) {
+    z-index: 1;
+  }
+}

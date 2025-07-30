@@ -5,7 +5,7 @@
  */
 
 import { DatePipe as CommonDatePipe } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -27,8 +27,10 @@ import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
   templateUrl: './user-manager-detail.component.html',
   styleUrl: './user-manager-detail.component.scss',
 })
-export class UserManagerDetailComponent {
+export class UserManagerDetailComponent implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+
+  showTransition = false;
 
   #route = inject(ActivatedRoute);
   #router = inject(Router);
@@ -47,9 +49,21 @@ export class UserManagerDetailComponent {
   });
 
   /**
+   * On initialization, allow the transition effect,
+   * but then remove it so it applies only when we navigate back.
+   */
+  ngOnInit() {
+    this.showTransition = true;
+    setTimeout(() => (this.showTransition = false), 300);
+  }
+
+  /**
    * Navigate back to the user list
    */
   goBack(): void {
-    this.#router.navigate(['/user-manager']);
+    this.showTransition = true;
+    setTimeout(() => {
+      this.#router.navigate(['/user-manager']);
+    });
   }
 }
