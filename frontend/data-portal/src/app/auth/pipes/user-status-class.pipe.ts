@@ -5,13 +5,13 @@
  */
 
 import { Pipe, PipeTransform } from '@angular/core';
-import { UserState } from '../models/user';
+import { UserStatus } from '../models/user';
 
 /**
  * Mapping of user status to CSS classes
  */
 export const UserStatusClass: {
-  [K in UserState]: string;
+  [K in UserStatus]: string;
 } = {
   active: 'text-success',
   inactive: 'text-error',
@@ -29,7 +29,7 @@ export class UserStatusClassPipe implements PipeTransform {
    * @param status The user status to process
    * @returns The CSS class based on the user status
    */
-  transform(status: UserState): string {
+  transform(status: UserStatus): string {
     return UserStatusClass[status];
   }
 }

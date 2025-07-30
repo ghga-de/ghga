@@ -7,6 +7,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { UserService } from '@app/auth/services/user.service';
 import { ConfigService } from '@app/shared/services/config.service';
@@ -22,36 +23,25 @@ class MockConfigService {
 /**
  * Mock UserService for testing
  */
-class MockUserService {
-  users = {
-    value: jest.fn(() => []),
-    isLoading: jest.fn(() => false),
-    error: jest.fn(() => null),
-  };
-}
+const MockUserService = {
+  loadUsers: jest.fn(),
+};
 
 describe('UserManagerComponent', () => {
   let component: UserManagerComponent;
   let fixture: ComponentFixture<UserManagerComponent>;
-  let mockUserService: MockUserService;
 
   beforeEach(async () => {
-    mockUserService = new MockUserService();
-
     await TestBed.configureTestingModule({
       imports: [UserManagerComponent, NoopAnimationsModule],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideNativeDateAdapter(),
         { provide: ConfigService, useClass: MockConfigService },
+        { provide: UserService, useValue: MockUserService },
       ],
-    })
-      .overrideComponent(UserManagerComponent, {
-        set: {
-          providers: [{ provide: UserService, useValue: mockUserService }],
-        },
-      })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(UserManagerComponent);
     component = fixture.componentInstance;
@@ -71,10 +61,10 @@ describe('UserManagerComponent', () => {
     expect(compiled.querySelector('h1')?.textContent).toContain('User Management');
   });
 
-  it('should render placeholder content', () => {
+  it('should render filter and list', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('User filters will be implemented here');
+    expect(compiled.querySelector('app-user-manager-filter')).toBeTruthy();
     expect(compiled.querySelector('app-user-manager-list')).toBeTruthy();
   });
 });

@@ -12,10 +12,7 @@
     }
   </button>
 </div>
-<aside
-  [class.hidden]="!displayFilters"
-  class="col-span-12 mt-4 lg:col-span-4 lg:block xl:col-span-3"
->
+<aside [class.hidden]="!displayFilters" class="mt-4 lg:block">
   <mat-card appearance="outlined" class="max-w-[1800px] overflow-x-auto">
     <mat-card-content class="min-w-sm">
       <div class="flex gap-4">
@@ -26,7 +23,7 @@
           class="grid flex-grow grid-cols-1 gap-2 gap-x-8 lg:grid-cols-2 2xl:grid-cols-4"
         >
           <div class="flex grow flex-col gap-2">
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Ticket ID</mat-label>
                 <input matInput [(ngModel)]="ticketId" />
@@ -35,14 +32,13 @@
                 mat-icon-button
                 aria-label="Remove filter for ticket ID"
                 [class.invisible]="!this.ticketId()"
-                class="pb-2.5"
                 (click)="this.ticketId.set('')"
                 data-umami-event="Access Request Filters Ticket ID Clear Clicked"
               >
                 <mat-icon>cancel</mat-icon>
               </button>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Dataset ID</mat-label>
                 <input matInput [(ngModel)]="datasetId" />
@@ -51,14 +47,13 @@
                 mat-icon-button
                 aria-label="Remove filter for dataset ID"
                 [class.invisible]="!this.datasetId()"
-                class="pb-2.5"
                 (click)="this.datasetId.set('')"
                 data-umami-event="Access Request Filters Dataset ID Clear Clicked"
               >
                 <mat-icon>cancel</mat-icon>
               </button>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Dataset title</mat-label>
                 <input matInput [(ngModel)]="datasetTitle" />
@@ -67,7 +62,6 @@
                 mat-icon-button
                 aria-label="Remove filter for dataset title"
                 [class.invisible]="!this.datasetTitle()"
-                class="pb-2.5"
                 (click)="this.datasetTitle.set('')"
                 data-umami-event="Access Request Filters Dataset Title Clear Clicked"
               >
@@ -76,7 +70,7 @@
             </div>
           </div>
           <div class="flex grow flex-col gap-2">
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Name of user</mat-label>
                 <input matInput [(ngModel)]="name" />
@@ -86,14 +80,13 @@
                 mat-icon-button
                 aria-label="Remove filter for user name"
                 [class.invisible]="!this.name()"
-                class="pb-2.5"
                 (click)="this.name.set('')"
                 data-umami-event="Access Request Filters User Name Clear Clicked"
               >
                 <mat-icon>cancel</mat-icon>
               </button>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Data access committee</mat-label>
                 <input matInput [(ngModel)]="dac" />
@@ -102,7 +95,6 @@
                 mat-icon-button
                 aria-label="Remove filter for data access committee"
                 [class.invisible]="!this.dac()"
-                class="pb-2.5"
                 (click)="this.dac.set('')"
                 data-umami-event="Access Request Filters DAC Clear Clicked"
               >
@@ -111,7 +103,7 @@
             </div>
           </div>
           <div class="flex grow flex-col gap-2">
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>
                   @if (status()) {
@@ -133,14 +125,13 @@
                 mat-icon-button
                 aria-label="Remove filter for request status"
                 [class.invisible]="!this.status()"
-                class="pb-2.5"
                 (click)="this.status.set(undefined)"
                 data-umami-event="Access Request Filters Status Clear Clicked"
               >
                 <mat-icon>cancel</mat-icon>
               </button>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Request creation date from</mat-label>
                 <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
@@ -155,14 +146,13 @@
                 mat-icon-button
                 aria-label="Remove filter for dates ranging from"
                 [class.invisible]="!this.fromDate()"
-                class="pb-2.5"
                 (click)="this.fromDate.set(undefined)"
                 data-umami-event="Access Request Filters Request Created From Clear Clicked"
               >
                 <mat-icon>cancel</mat-icon>
               </button>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Request creation date until</mat-label>
                 <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
@@ -177,7 +167,6 @@
                 mat-icon-button
                 aria-label="Remove filter for dates ranging from"
                 [class.invisible]="!this.toDate()"
-                class="pb-2.5"
                 (click)="this.toDate.set(undefined)"
                 data-umami-event="Access Request Filters Request Created Until Clear Clicked"
               >
@@ -186,7 +175,7 @@
             </div>
           </div>
           <div class="flex grow flex-col gap-2">
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Request details</mat-label>
                 <input matInput [(ngModel)]="requestText" />
@@ -195,14 +184,13 @@
                 mat-icon-button
                 aria-label="Remove filter for the request details"
                 [class.invisible]="!this.requestText()"
-                class="pb-2.5"
                 (click)="this.requestText.set('')"
                 data-umami-event="Access Request Filters Request Text Clear Clicked"
               >
                 <mat-icon>cancel</mat-icon>
               </button>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Note to requester</mat-label>
                 <input matInput [(ngModel)]="noteToRequester" />
@@ -211,14 +199,13 @@
                 mat-icon-button
                 aria-label="Remove filter for the note to requester"
                 [class.invisible]="!this.noteToRequester()"
-                class="pb-2.5"
                 (click)="this.noteToRequester.set('')"
                 data-umami-event="Access Request Filters Note To Requester Clear Clicked"
               >
                 <mat-icon>cancel</mat-icon>
               </button>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Internal note</mat-label>
                 <input matInput [(ngModel)]="internalNote" />
@@ -227,7 +214,6 @@
                 mat-icon-button
                 aria-label="Remove filter for internal note"
                 [class.invisible]="!this.internalNote()"
-                class="pb-2.5"
                 (click)="this.internalNote.set('')"
                 data-umami-event="Access Request Filters Internal Note Clear Clicked"
               >

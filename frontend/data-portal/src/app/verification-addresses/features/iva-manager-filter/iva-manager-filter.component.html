@@ -12,10 +12,7 @@
     }
   </button>
 </div>
-<aside
-  [class.hidden]="!displayFilters"
-  class="col-span-12 mt-4 lg:col-span-4 lg:block xl:col-span-3"
->
+<aside [class.hidden]="!displayFilters" class="mt-4 lg:block">
   <mat-card appearance="outlined" class="w-full overflow-x-auto lg:w-auto lg:max-w-lg">
     <mat-card-content class="min-w-sm">
       <div class="flex gap-4">
@@ -23,7 +20,7 @@
           <mat-icon aria-label="Filter" class="large-icon">filter_alt</mat-icon>
         </div>
         <div class="flex grow flex-col gap-2">
-          <div class="flex gap-2">
+          <div class="flex items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Name of user</mat-label>
               <input matInput [(ngModel)]="name" />
@@ -33,14 +30,13 @@
               mat-icon-button
               aria-label="Remove filter for user name"
               [class.invisible]="!this.name()"
-              class="pb-2.5"
               (click)="this.name.set('')"
               data-umami-event="IVA Manager Filters User Name Clear Clicked"
             >
               <mat-icon>cancel</mat-icon>
             </button>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Last modified from</mat-label>
               <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
@@ -55,14 +51,13 @@
               mat-icon-button
               aria-label="Remove filter for dates ranging from"
               [class.invisible]="!this.fromDate()"
-              class="pb-2.5"
               (click)="this.fromDate.set(undefined)"
               data-umami-event="IVA Manager Filters Changed Dates From Clear Clicked"
             >
               <mat-icon>cancel</mat-icon>
             </button>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Last modified until</mat-label>
               <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
@@ -75,16 +70,15 @@
             </mat-form-field>
             <button
               mat-icon-button
-              aria-label="Remove filter for dates ranging from"
+              aria-label="Remove filter for dates ranging to"
               [class.invisible]="!this.toDate()"
-              class="pb-2.5"
               (click)="this.toDate.set(undefined)"
               data-umami-event="IVA Manager Filters Changed Dates To Clear Clicked"
             >
               <mat-icon>cancel</mat-icon>
             </button>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>
                 @if (state()) {
@@ -103,7 +97,6 @@
               mat-icon-button
               aria-label="Remove filter for status"
               [class.invisible]="!this.state()"
-              class="pb-2.5"
               (click)="this.state.set(undefined)"
               data-umami-event="IVA Manager Filters State Clear Clicked"
             >

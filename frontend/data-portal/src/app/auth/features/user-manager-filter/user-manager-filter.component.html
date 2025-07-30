@@ -1,0 +1,88 @@
+<div class="toggle-filters col-span-12 lg:hidden">
+  <button
+    mat-stroked-button
+    class="toggle-filters w-full font-bold"
+    (click)="displayFilters = !displayFilters"
+  >
+    <mat-icon>filter_alt</mat-icon>
+    @if (displayFilters) {
+      Close filters
+    } @else {
+      Filter addresses
+    }
+  </button>
+</div>
+<aside [class.hidden]="!displayFilters" class="mt-4 lg:block">
+  <mat-card
+    appearance="outlined"
+    class="lg:max-w-auto w-full overflow-x-auto lg:w-auto lg:max-w-[1440px]"
+  >
+    <mat-card-content class="min-w-sm">
+      <div class="flex gap-4">
+        <div class="hidden sm:block">
+          <mat-icon aria-label="Filter" class="large-icon">filter_alt</mat-icon>
+        </div>
+        <div
+          class="flex grow flex-col justify-center gap-x-10 gap-y-2 lg:flex-row lg:max-xl:flex-wrap"
+        >
+          <div class="flex min-w-96 grow items-baseline gap-2">
+            <mat-form-field class="grow">
+              <mat-label>Name, email, or LS ID of user</mat-label>
+              <input matInput [(ngModel)]="idStrings" />
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for user name, email, and LS ID"
+              [class.invisible]="!this.idStrings()"
+              (click)="this.idStrings.set('')"
+              data-umami-event="User Manager Filters User Name Email LSID Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
+          <div class="flex min-w-96 grow items-baseline gap-2">
+            <mat-form-field class="grow">
+              <mat-label>
+                @if (roles()?.length) {
+                  Roles
+                } @else {
+                  Any role
+                }
+              </mat-label>
+              <mat-select matInput [(ngModel)]="roles" multiple>
+                <mat-select-trigger>
+                  {{ roleSelection() }}
+                </mat-select-trigger>
+                <mat-option [value]="null">No assigned role</mat-option>
+                @for (opt of roleOptions; track opt) {
+                  <mat-option [value]="opt.value">{{ opt.text }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button
+              mat-icon-button
+              aria-label="Remove filter for user role"
+              [class.invisible]="!this.roles() || this.roles()?.length === 0"
+              (click)="this.roles.set(undefined)"
+              data-umami-event="User Manager Filters User Role Clear Clicked"
+            >
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </div>
+          <div class="flex items-center gap-2 pe-12 pb-2.5 lg:pe-0 xl:grow">
+            <mat-button-toggle-group class="grow" [(ngModel)]="status" value="all">
+              <mat-button-toggle value="all" class="grow"
+                >All accounts</mat-button-toggle
+              >
+              @for (opt of statusOptions; track opt) {
+                <mat-button-toggle [value]="opt.value" class="grow">{{
+                  opt.text
+                }}</mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</aside>

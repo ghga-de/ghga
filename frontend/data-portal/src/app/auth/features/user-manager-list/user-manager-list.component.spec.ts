@@ -29,6 +29,7 @@ class MockUserService {
     isLoading: jest.fn(() => false),
     error: jest.fn(() => null),
   };
+  usersFiltered = () => this.users.value();
 }
 
 /**

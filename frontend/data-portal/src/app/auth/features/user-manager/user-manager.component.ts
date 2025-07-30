@@ -4,8 +4,9 @@
  * @license Apache-2.0
  */
 
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { UserService } from '@app/auth/services/user.service';
+import { UserManagerFilterComponent } from '../user-manager-filter/user-manager-filter.component';
 import { UserManagerListComponent } from '../user-manager-list/user-manager-list.component';
 
 /**
@@ -16,10 +17,17 @@ import { UserManagerListComponent } from '../user-manager-list/user-manager-list
  */
 @Component({
   selector: 'app-user-manager',
-  imports: [UserManagerListComponent],
+  imports: [UserManagerListComponent, UserManagerFilterComponent],
   providers: [UserService],
   templateUrl: './user-manager.component.html',
 })
-export class UserManagerComponent {
+export class UserManagerComponent implements OnInit {
   userService = inject(UserService);
+
+  /**
+   * Load the users when the component is initialized
+   */
+  ngOnInit(): void {
+    this.userService.loadUsers();
+  }
 }

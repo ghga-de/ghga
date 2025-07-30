@@ -17,11 +17,7 @@ import { IvaManagerListComponent } from '../iva-manager-list/iva-manager-list.co
  */
 @Component({
   selector: 'app-iva-manager',
-  imports: [
-    IvaManagerListComponent,
-    IvaManagerListComponent,
-    IvaManagerFilterComponent,
-  ],
+  imports: [IvaManagerListComponent, IvaManagerFilterComponent],
   templateUrl: './iva-manager.component.html',
 })
 export class IvaManagerComponent implements OnInit {
