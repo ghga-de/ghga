@@ -41,7 +41,6 @@ config:
 
 cmd: ns
 
-
 _topics:
   notificationEvent:
     topic:
