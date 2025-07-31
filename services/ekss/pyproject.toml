@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ekss"
-version = "3.1.1"
+version = "3.1.2"
 description = "Encryption Key Store Service - providing crypt4gh file secret extraction, storage and envelope generation"
 readme = "README.md"
 authors = [
