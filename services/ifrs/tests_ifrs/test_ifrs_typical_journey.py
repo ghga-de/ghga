@@ -44,7 +44,7 @@ async def test_happy_journey(
     file_object = tmp_file.model_copy(
         update={
             "bucket_id": joint_fixture.staging_bucket,
-            "object_id": EXAMPLE_METADATA.object_id,
+            "object_id": str(EXAMPLE_METADATA.object_id),
         }
     )
     await storage.populate_file_objects(file_objects=[file_object])
@@ -78,7 +78,7 @@ async def test_happy_journey(
     # check that the file content is now in both the staging and the permanent storage:
     assert await storage.storage.does_object_exist(
         bucket_id=joint_fixture.staging_bucket,
-        object_id=EXAMPLE_METADATA.object_id,
+        object_id=str(EXAMPLE_METADATA.object_id),
     )
     assert await storage.storage.does_object_exist(
         bucket_id=bucket_id,
@@ -112,20 +112,20 @@ async def test_happy_journey(
     # check that the file content is now in all three storage entities:
     assert await storage.storage.does_object_exist(
         bucket_id=joint_fixture.staging_bucket,
-        object_id=EXAMPLE_METADATA.object_id,
+        object_id=str(EXAMPLE_METADATA.object_id),
     )
     assert await storage.storage.does_object_exist(
         bucket_id=bucket_id,
         object_id=object_id,
     )
     assert await storage.storage.does_object_exist(
-        bucket_id=joint_fixture.outbox_bucket, object_id=EXAMPLE_METADATA.object_id
+        bucket_id=joint_fixture.outbox_bucket, object_id=str(EXAMPLE_METADATA.object_id)
     )
 
     # check that the file content in the outbox is identical to the content in the
     # staging:
     download_url = await storage.storage.get_object_download_url(
-        bucket_id=joint_fixture.outbox_bucket, object_id=EXAMPLE_METADATA.object_id
+        bucket_id=joint_fixture.outbox_bucket, object_id=str(EXAMPLE_METADATA.object_id)
     )
     response = requests.get(download_url, timeout=60)
     response.raise_for_status()

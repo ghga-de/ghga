@@ -15,8 +15,6 @@
 
 """Adapter for publishing events to other services."""
 
-import json
-
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     FileDeletedEventsConfig,
@@ -25,6 +23,7 @@ from ghga_event_schemas.configs import (
 )
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventpub import EventPublisherProtocol
+from pydantic import UUID4
 
 from ifrs.core import models
 from ifrs.ports.outbound.event_pub import EventPublisherPort
@@ -70,10 +69,9 @@ class EventPubTranslator(EventPublisherPort):
             encrypted_parts_sha256=file.encrypted_parts_sha256,
             upload_date=file.upload_date,
         )
-        payload_dict = json.loads(payload.model_dump_json())
 
         await self._provider.publish(
-            payload=payload_dict,
+            payload=payload.model_dump(mode="json"),
             type_=self._config.file_internally_registered_type,
             topic=self._config.file_internally_registered_topic,
             key=file.file_id,
@@ -85,7 +83,7 @@ class EventPubTranslator(EventPublisherPort):
         *,
         file_id: str,
         decrypted_sha256: str,
-        target_object_id: str,
+        target_object_id: UUID4,
         target_bucket_id: str,
         storage_alias: str,
     ) -> None:
@@ -97,10 +95,9 @@ class EventPubTranslator(EventPublisherPort):
             target_object_id=target_object_id,
             target_bucket_id=target_bucket_id,
         )
-        payload_dict = json.loads(payload.model_dump_json())
 
         await self._provider.publish(
-            payload=payload_dict,
+            payload=payload.model_dump(mode="json"),
             type_=self._config.file_staged_type,
             topic=self._config.file_staged_topic,
             key=file_id,
@@ -110,10 +107,9 @@ class EventPubTranslator(EventPublisherPort):
     async def file_deleted(self, *, file_id: str) -> None:
         """Communicates the event that a file has been successfully deleted."""
         payload = event_schemas.FileDeletionSuccess(file_id=file_id)
-        payload_dict = json.loads(payload.model_dump_json())
 
         await self._provider.publish(
-            payload=payload_dict,
+            payload=payload.model_dump(),
             type_=self._config.file_deleted_type,
             topic=self._config.file_deleted_topic,
             key=file_id,

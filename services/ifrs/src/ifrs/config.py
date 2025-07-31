@@ -20,7 +20,7 @@ from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 
 from ifrs.adapters.inbound.event_sub import EventSubTranslatorConfig
 from ifrs.adapters.outbound.event_pub import EventPubTranslatorConfig
@@ -30,7 +30,7 @@ SERVICE_NAME = "ifrs"
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
-    MongoDbConfig,
+    MigrationConfig,
     KafkaConfig,
     EventSubTranslatorConfig,
     EventPubTranslatorConfig,

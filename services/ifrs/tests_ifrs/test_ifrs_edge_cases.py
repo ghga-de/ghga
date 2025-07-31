@@ -17,10 +17,10 @@
 
 import logging
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.custom_types import JsonObject
 from hexkit.providers.s3.testutils import (
     FileObject,
@@ -28,6 +28,7 @@ from hexkit.providers.s3.testutils import (
     temp_file_object,
     tmp_file,  # noqa: F401
 )
+from hexkit.utils import now_utc_ms_prec
 
 from ifrs.ports.inbound.file_registry import FileRegistryPort
 from tests_ifrs.fixtures.example_data import EXAMPLE_METADATA, EXAMPLE_METADATA_BASE
@@ -38,16 +39,16 @@ pytestmark = pytest.mark.asyncio()
 TEST_FILE_ID = "test_id"
 TEST_NONSTAGED_FILE_REQUESTED = event_schemas.NonStagedFileRequested(
     file_id=TEST_FILE_ID,
-    target_object_id="",
+    target_object_id=uuid4(),
     target_bucket_id="",
     s3_endpoint_alias="",
     decrypted_sha256="",
 )
 
 TEST_FILE_UPLOAD_VALIDATION_SUCCESS = event_schemas.FileUploadValidationSuccess(
-    upload_date=now_as_utc().isoformat(),
+    upload_date=now_utc_ms_prec(),
     file_id=TEST_FILE_ID,
-    object_id="",
+    object_id=uuid4(),
     bucket_id="",
     s3_endpoint_alias="",
     decrypted_size=0,
@@ -67,7 +68,7 @@ async def test_register_with_empty_staging(joint_fixture: JointFixture):
     with pytest.raises(FileRegistryPort.FileContentNotInStagingError):
         await joint_fixture.file_registry.register_file(
             file_without_object_id=EXAMPLE_METADATA_BASE,
-            staging_object_id="missing",
+            staging_object_id=uuid4(),
             staging_bucket_id=joint_fixture.staging_bucket,
         )
 
@@ -86,7 +87,7 @@ async def test_reregistration(
     file_object = tmp_file.model_copy(
         update={
             "bucket_id": joint_fixture.staging_bucket,
-            "object_id": EXAMPLE_METADATA.object_id,
+            "object_id": str(EXAMPLE_METADATA.object_id),
         }
     )
     await storage.populate_file_objects(file_objects=[file_object])
@@ -138,7 +139,7 @@ async def test_reregistration_with_updated_metadata(
     file_object = tmp_file.model_copy(
         update={
             "bucket_id": joint_fixture.staging_bucket,
-            "object_id": EXAMPLE_METADATA.object_id,
+            "object_id": str(EXAMPLE_METADATA.object_id),
         }
     )
     await storage.populate_file_objects(file_objects=[file_object])
@@ -169,7 +170,7 @@ async def test_reregistration_with_updated_metadata(
 
     caplog.clear()
 
-    with caplog.at_level(level=logging.ERROR, logger="ifrs.core.file_registry"):
+    with caplog.at_level(level=logging.WARNING, logger="ifrs.core.file_registry"):
         expected_message = str(
             FileRegistryPort.FileUpdateError(file_id=file_metadata_base.file_id)
         )
@@ -220,7 +221,7 @@ async def test_stage_checksum_mismatch(
     file_object = tmp_file.model_copy(
         update={
             "bucket_id": bucket_id,
-            "object_id": EXAMPLE_METADATA.object_id,
+            "object_id": str(EXAMPLE_METADATA.object_id),
         }
     )
     await storage.populate_file_objects(file_objects=[file_object])
@@ -314,7 +315,7 @@ async def test_error_during_copy(joint_fixture: JointFixture, caplog):
     outbox_bucket = "outbox-bucket"
 
     # Upload a matching object to S3
-    with temp_file_object(source_bucket, EXAMPLE_METADATA.object_id) as file:
+    with temp_file_object(source_bucket, str(EXAMPLE_METADATA.object_id)) as file:
         await joint_fixture.s3.populate_file_objects([file])
 
     # Run the file-staging operation to encounter an error (outbox bucket doesn't exist)
@@ -331,13 +332,13 @@ async def test_error_during_copy(joint_fixture: JointFixture, caplog):
     # Verify the log message exists
     assert caplog.records
     assert caplog.records[0].message == (
-        "Fatal error occurred while copying file with the ID 'examplefile001' to the"
-        + " bucket 'outbox-bucket'. The exception is: The bucket with ID 'outbox-bucket'"
-        + " does not exist."
+        "Fatal error occurred while copying file with the ID 'examplefile001'"
+        + " to the bucket 'outbox-bucket'. The exception is: The bucket"
+        + " with ID 'outbox-bucket' does not exist."
     )
 
     # Upload the file to the outbox bucket so we trigger ObjectAlreadyExistsError
-    with temp_file_object(outbox_bucket, EXAMPLE_METADATA.object_id) as file:
+    with temp_file_object(outbox_bucket, str(EXAMPLE_METADATA.object_id)) as file:
         await joint_fixture.s3.populate_file_objects([file])
 
     # Run the file-staging operation to encounter the error
@@ -368,10 +369,10 @@ async def test_copy_when_file_exists_in_outbox(joint_fixture: JointFixture, capl
     s3_alias = EXAMPLE_METADATA.storage_alias
     source_bucket = joint_fixture.config.object_storages[s3_alias].bucket
     outbox_bucket = "outbox-bucket"
-    with temp_file_object(source_bucket, EXAMPLE_METADATA.object_id) as file:
+    with temp_file_object(source_bucket, str(EXAMPLE_METADATA.object_id)) as file:
         await joint_fixture.s3.populate_file_objects([file])
 
-    with temp_file_object(outbox_bucket, EXAMPLE_METADATA.object_id) as file:
+    with temp_file_object(outbox_bucket, str(EXAMPLE_METADATA.object_id)) as file:
         await joint_fixture.s3.populate_file_objects([file])
 
     # Run the file-staging operation, which should return early (it will catch the

@@ -21,6 +21,7 @@ from contextlib import suppress
 
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
 from hexkit.opentelemetry import start_span
+from pydantic import UUID4
 
 from ifrs.config import Config
 from ifrs.core import models
@@ -80,7 +81,7 @@ class FileRegistry(FileRegistryPort):
         self,
         *,
         file_without_object_id: models.FileMetadataBase,
-        staging_object_id: str,
+        staging_object_id: UUID4,
         staging_bucket_id: str,
     ) -> None:
         """Registers a file and moves its content from the staging into the permanent
@@ -90,7 +91,7 @@ class FileRegistry(FileRegistryPort):
         Args:
             file_without_object_id: metadata on the file to register.
             staging_object_id:
-                The S3 object ID for the staging bucket.
+                The UUID4 S3 object ID for the staging bucket.
             staging_bucket_id:
                 The S3 bucket ID for staging.
 
@@ -113,7 +114,11 @@ class FileRegistry(FileRegistryPort):
             alias_not_configured = ValueError(
                 f"Storage alias '{storage_alias}' not configured."
             )
-            log.critical(alias_not_configured, extra={"storage_alias": storage_alias})
+            log.critical(
+                alias_not_configured,
+                extra={"storage_alias": storage_alias},
+                exc_info=True,
+            )
             raise alias_not_configured from error
 
         try:
@@ -130,7 +135,7 @@ class FileRegistry(FileRegistryPort):
             # trying to re-register with different metadata should not crash the consumer
             # this is not a service internal inconsistency and would cause unnecessary
             # crashes on additional consumption attempts
-            log.error(error)
+            log.warning(error)
             return
 
         # Generate & assign object ID to metadata
@@ -138,15 +143,15 @@ class FileRegistry(FileRegistryPort):
             "File with ID '%s' is not yet registered. Generating object ID.",
             file_without_object_id.file_id,
         )
-        object_id = str(uuid.uuid4())
+        object_id = uuid.uuid4()
 
         # Copy the file from staging to permanent storage
         try:
             await object_storage.copy_object(
                 source_bucket_id=staging_bucket_id,
-                source_object_id=staging_object_id,
+                source_object_id=str(staging_object_id),
                 dest_bucket_id=permanent_bucket_id,
-                dest_object_id=object_id,
+                dest_object_id=str(object_id),
             )
         except object_storage.ObjectAlreadyExistsError:
             # the content is already where it should go, there is nothing to do
@@ -164,6 +169,7 @@ class FileRegistry(FileRegistryPort):
             log.error(
                 content_not_in_staging,
                 extra={"file_id": file_without_object_id.file_id},
+                exc_info=True,
             )
             raise content_not_in_staging from exc
         except Exception as exc:
@@ -173,11 +179,11 @@ class FileRegistry(FileRegistryPort):
                 dest_bucket_id=permanent_bucket_id,
                 exc_text=str(exc),
             )
-            log.critical(obj_error)
+            log.critical(obj_error, exc_info=True)
             raise obj_error from exc
 
         object_size = await object_storage.get_object_size(
-            bucket_id=permanent_bucket_id, object_id=object_id
+            bucket_id=permanent_bucket_id, object_id=str(object_id)
         )
         file = models.FileMetadata(
             **file_without_object_id.model_dump(),
@@ -198,7 +204,7 @@ class FileRegistry(FileRegistryPort):
         *,
         file_id: str,
         decrypted_sha256: str,
-        outbox_object_id: str,
+        outbox_object_id: UUID4,
         outbox_bucket_id: str,
     ) -> None:
         """Stage a registered file to the outbox.
@@ -210,7 +216,7 @@ class FileRegistry(FileRegistryPort):
                 The checksum of the decrypted content. This is used to make sure that
                 this service and the outside client are talking about the same file.
             outbox_object_id:
-                The S3 object ID for the outbox bucket.
+                The UUID4 S3 object ID for the outbox bucket.
             outbox_bucket_id:
                 The S3 bucket ID for the outbox.
 
@@ -228,7 +234,9 @@ class FileRegistry(FileRegistryPort):
             file = await self._file_metadata_dao.get_by_id(file_id)
         except ResourceNotFoundError:
             file_not_in_registry_error = self.FileNotInRegistryError(file_id=file_id)
-            log.error(file_not_in_registry_error, extra={"file_id": file_id})
+            log.error(
+                file_not_in_registry_error, extra={"file_id": file_id}, exc_info=True
+            )
             return
 
         if decrypted_sha256 != file.decrypted_sha256:
@@ -244,6 +252,7 @@ class FileRegistry(FileRegistryPort):
                     "provided_checksum": decrypted_sha256,
                     "expected_checksum": file.decrypted_sha256,
                 },
+                exc_info=True,
             )
             raise checksum_error
 
@@ -255,9 +264,9 @@ class FileRegistry(FileRegistryPort):
         try:
             await object_storage.copy_object(
                 source_bucket_id=permanent_bucket_id,
-                source_object_id=file.object_id,
+                source_object_id=str(file.object_id),
                 dest_bucket_id=outbox_bucket_id,
-                dest_object_id=outbox_object_id,
+                dest_object_id=str(outbox_object_id),
             )
         except object_storage.ObjectAlreadyExistsError:
             # the content is already where it should go, there is nothing to do
@@ -272,14 +281,16 @@ class FileRegistry(FileRegistryPort):
             not_in_storage_error = self.FileInRegistryButNotInStorageError(
                 file_id=file_id
             )
-            log.critical(msg=not_in_storage_error, extra={"file_id": file_id})
+            log.critical(
+                msg=not_in_storage_error, extra={"file_id": file_id}, exc_info=True
+            )
             raise not_in_storage_error from exc
         except Exception as exc:
             # Irreconcilable object error -- event needs investigation
             obj_error = self.CopyOperationError(
                 file_id=file_id, dest_bucket_id=outbox_bucket_id, exc_text=str(exc)
             )
-            log.critical(obj_error)
+            log.critical(obj_error, exc_info=True)
             raise obj_error from exc
 
         log.info(
@@ -321,7 +332,9 @@ class FileRegistry(FileRegistryPort):
         # Try to remove file from S3
         with suppress(object_storage.ObjectNotFoundError):
             # If file does not exist anyways, we are done.
-            await object_storage.delete_object(bucket_id=bucket_id, object_id=object_id)
+            await object_storage.delete_object(
+                bucket_id=bucket_id, object_id=str(object_id)
+            )
 
         # Try to remove file from database
         with suppress(ResourceNotFoundError):

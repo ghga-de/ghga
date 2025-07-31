@@ -17,6 +17,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 from ifrs.core import models
 
 
@@ -106,7 +108,7 @@ class FileRegistryPort(ABC):
         self,
         *,
         file_without_object_id: models.FileMetadataBase,
-        staging_object_id: str,
+        staging_object_id: UUID4,
         staging_bucket_id: str,
     ) -> None:
         """Registers a file and moves its content from the staging into the permanent
@@ -116,7 +118,7 @@ class FileRegistryPort(ABC):
         Args:
             file_without_object_id: metadata on the file to register.
             staging_object_id:
-                The S3 object ID for the staging bucket.
+                The UUID4 S3 object ID for the staging bucket.
             staging_bucket_id:
                 The S3 bucket ID for staging.
 
@@ -134,7 +136,7 @@ class FileRegistryPort(ABC):
         *,
         file_id: str,
         decrypted_sha256: str,
-        outbox_object_id: str,
+        outbox_object_id: UUID4,
         outbox_bucket_id: str,
     ) -> None:
         """Stage a registered file to the outbox.
@@ -146,7 +148,7 @@ class FileRegistryPort(ABC):
                 The checksum of the decrypted content. This is used to make sure that
                 this service and the outside client are talking about the same file.
             outbox_object_id:
-                The S3 object ID for the outbox bucket.
+                The UUID4 S3 object ID for the outbox bucket.
             outbox_bucket_id:
                 The S3 bucket ID for the outbox.
 

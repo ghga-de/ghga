@@ -15,13 +15,15 @@
 
 """Example data used for testing."""
 
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from uuid import uuid4
+
+from hexkit.utils import now_utc_ms_prec
 
 from ifrs.core import models
 
 EXAMPLE_METADATA_BASE = models.FileMetadataBase(
     file_id="examplefile001",
-    upload_date=now_as_utc().isoformat(),
+    upload_date=now_utc_ms_prec(),
     decryption_secret_id="some-secret-id",
     decrypted_size=64 * 1024**2,
     encrypted_part_size=16 * 1024**2,
@@ -43,6 +45,6 @@ EXAMPLE_METADATA_BASE = models.FileMetadataBase(
 
 EXAMPLE_METADATA = models.FileMetadata(
     **EXAMPLE_METADATA_BASE.model_dump(),
-    object_id="objectid001",
+    object_id=uuid4(),
     object_size=64 * 1024**2 + 1234567,  #  dummy value
 )

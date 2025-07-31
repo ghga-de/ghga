@@ -17,6 +17,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 from ifrs.core import models
 
 
@@ -36,7 +38,7 @@ class EventPublisherPort(ABC):
         *,
         file_id: str,
         decrypted_sha256: str,
-        target_object_id: str,
+        target_object_id: UUID4,
         target_bucket_id: str,
         storage_alias: str,
     ) -> None:

@@ -336,7 +336,7 @@
     },
     "generate_correlation_id": {
       "default": true,
-      "description": "A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, the a newly correlation ID will be generated and used in the event header.",
+      "description": "A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, a new correlation ID will be generated and used in the event header.",
       "examples": [
         true,
         false
@@ -464,6 +464,43 @@
         null
       ],
       "title": "Mongo Timeout"
+    },
+    "db_version_collection": {
+      "description": "The name of the collection containing DB version information for this service",
+      "examples": [
+        "ifrsDbVersions"
+      ],
+      "title": "Db Version Collection",
+      "type": "string"
+    },
+    "migration_wait_sec": {
+      "description": "The number of seconds to wait before checking the DB version again",
+      "examples": [
+        5,
+        30,
+        180
+      ],
+      "title": "Migration Wait Sec",
+      "type": "integer"
+    },
+    "migration_max_wait_sec": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+      "examples": [
+        null,
+        300,
+        600,
+        3600
+      ],
+      "title": "Migration Max Wait Sec"
     }
   },
   "required": [
@@ -484,7 +521,9 @@
     "files_to_stage_type",
     "kafka_servers",
     "mongo_dsn",
-    "db_name"
+    "db_name",
+    "db_version_collection",
+    "migration_wait_sec"
   ],
   "title": "ModSettings",
   "type": "object"

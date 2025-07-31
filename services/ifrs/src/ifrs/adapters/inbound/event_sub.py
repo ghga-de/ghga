@@ -27,6 +27,7 @@ from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import UUID4
 
 from ifrs.core.models import FileMetadataBase
 from ifrs.ports.inbound.file_registry import FileRegistryPort
@@ -109,7 +110,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         )
 
     async def _consume_validated(
-        self, *, payload: JsonObject, type_: str, topic: str, key: str
+        self, *, payload: JsonObject, type_: str, topic: str, key: str, event_id: UUID4
     ):
         """Process an inbound event"""
         if (

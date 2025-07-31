@@ -32,7 +32,6 @@ from ghga_service_commons.utils.multinode_storage import (
 )
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
 
@@ -94,24 +93,25 @@ async def joint_fixture(
 
     # merge configs from different sources with the default one:
     config = get_config(sources=[mongodb.config, object_storage_config, kafka.config])
-    dao_factory = MongoDbDaoFactory(config=config)
-    file_metadata_dao = await get_file_metadata_dao(dao_factory=dao_factory)
+    file_metadata_dao = await get_file_metadata_dao(dao_factory=mongodb.dao_factory)
 
     # Prepare the file registry (core)
-    async with prepare_core(config=config) as file_registry:
-        async with prepare_event_subscriber(
+    async with (
+        prepare_core(config=config) as file_registry,
+        prepare_event_subscriber(
             config=config,
             core_override=file_registry,
-        ) as event_subscriber:
-            yield JointFixture(
-                config=config,
-                mongodb=mongodb,
-                s3=s3,
-                file_metadata_dao=file_metadata_dao,
-                file_registry=file_registry,
-                kafka=kafka,
-                event_subscriber=event_subscriber,
-                outbox_bucket=OUTBOX_BUCKET,
-                staging_bucket=STAGING_BUCKET,
-                storage_aliases=storage_aliases,
-            )
+        ) as event_subscriber,
+    ):
+        yield JointFixture(
+            config=config,
+            mongodb=mongodb,
+            s3=s3,
+            file_metadata_dao=file_metadata_dao,
+            file_registry=file_registry,
+            kafka=kafka,
+            event_subscriber=event_subscriber,
+            outbox_bucket=OUTBOX_BUCKET,
+            staging_bucket=STAGING_BUCKET,
+            storage_aliases=storage_aliases,
+        )

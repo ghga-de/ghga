@@ -15,7 +15,8 @@
 
 """Defines dataclasses for holding business-logic data"""
 
-from pydantic import BaseModel, Field
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from pydantic import UUID4, BaseModel, Field
 
 
 class FileMetadataBase(BaseModel):
@@ -24,7 +25,7 @@ class FileMetadataBase(BaseModel):
     file_id: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
     )
-    upload_date: str = Field(
+    upload_date: UTCDatetime = Field(
         ...,
         description="The date and time when this file was ingested into the system.",
     )
@@ -82,7 +83,7 @@ class FileMetadataBase(BaseModel):
 class FileMetadata(FileMetadataBase):
     """The file metadata plus a object storage ID generated upon registration"""
 
-    object_id: str = Field(
+    object_id: UUID4 = Field(
         ..., description="A UUID to identify the file in object storage"
     )
     object_size: int = Field(
