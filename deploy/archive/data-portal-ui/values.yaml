@@ -8,7 +8,7 @@ apiBasePath: /
 config:
   host: 0.0.0.0
   oidc_use_discovery: false
-
+  mountPath: /home/appuser/data-portal.yaml
 
 containerSecurityContext:
   readOnlyRootFilesystem: false
@@ -16,5 +16,3 @@ containerSecurityContext:
   runAsUser: 1001
 
 cmd: "node /home/appuser/run.mjs"
-config:
-  mountPath: /home/appuser/data-portal.yaml
