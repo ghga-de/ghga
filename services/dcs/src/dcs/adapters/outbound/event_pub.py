@@ -15,8 +15,6 @@
 
 """Adapter for publishing events to other services."""
 
-import json
-
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     DownloadServedEventsConfig,
@@ -64,10 +62,9 @@ class EventPubTranslator(EventPublisherPort):
             target_bucket_id=bucket_id,
             decrypted_sha256=drs_object.decrypted_sha256,
         )
-        payload_dict = json.loads(payload.model_dump_json())
 
         await self._provider.publish(
-            payload=payload_dict,
+            payload=payload.model_dump(),
             topic=self._config.files_to_stage_topic,
             type_=self._config.files_to_stage_type,
             key=drs_object.file_id,
@@ -91,10 +88,9 @@ class EventPubTranslator(EventPublisherPort):
             decrypted_sha256=drs_object.decrypted_sha256,
             context="unknown",
         )
-        payload_dict = json.loads(payload.model_dump_json())
 
         await self._provider.publish(
-            payload=payload_dict,
+            payload=payload.model_dump(),
             type_=self._config.download_served_type,
             topic=self._config.download_served_topic,
             key=drs_object.file_id,
@@ -109,10 +105,9 @@ class EventPubTranslator(EventPublisherPort):
             upload_date=drs_object.creation_date,
             drs_uri=drs_object.self_uri,
         )
-        payload_dict = json.loads(payload.model_dump_json())
 
         await self._provider.publish(
-            payload=payload_dict,
+            payload=payload.model_dump(),
             type_=self._config.file_registered_for_download_type,
             topic=self._config.file_registered_for_download_topic,
             key=drs_object.file_id,
@@ -122,10 +117,9 @@ class EventPubTranslator(EventPublisherPort):
     async def file_deleted(self, *, file_id: str) -> None:
         """Communicates the event that a file has been successfully deleted."""
         payload = event_schemas.FileDeletionSuccess(file_id=file_id)
-        payload_dict = json.loads(payload.model_dump_json())
 
         await self._provider.publish(
-            payload=payload_dict,
+            payload=payload.model_dump(),
             type_=self._config.file_deleted_type,
             topic=self._config.file_deleted_topic,
             key=file_id,

@@ -45,3 +45,5 @@ auth_key: "{}"
 log_level: INFO
 
 otel_exporter_endpoint: http://localhost:4318
+migration_wait_sec: 10
+db_version_collection: dcsDbVersions

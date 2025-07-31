@@ -23,7 +23,7 @@ from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 from pydantic import Field
 
 from dcs.adapters.inbound.event_sub import EventSubTranslatorConfig
@@ -50,7 +50,7 @@ class Config(
     DrsApiConfig,
     WorkOrderTokenConfig,
     DataRepositoryConfig,
-    MongoDbConfig,
+    MigrationConfig,
     KafkaConfig,
     EventPubTranslatorConfig,
     EventSubTranslatorConfig,

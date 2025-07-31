@@ -20,8 +20,8 @@ in the api.
 import re
 from typing import Literal
 
-from ghga_service_commons.utils import utc_dates
-from pydantic import BaseModel, field_validator
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from pydantic import UUID4, BaseModel, field_validator
 
 
 class AccessURL(BaseModel):
@@ -47,25 +47,25 @@ class Checksum(BaseModel):
 class DrsObjectBase(BaseModel):
     """A model containing the metadata needed to register a new DRS object."""
 
-    file_id: str
+    file_id: str  # the file accession
     decryption_secret_id: str
     decrypted_sha256: str
     decrypted_size: int
     encrypted_size: int
-    creation_date: str
+    creation_date: UTCDatetime
     s3_endpoint_alias: str
 
 
 class DrsObject(DrsObjectBase):
     """A DrsObjectBase with the object_id generated"""
 
-    object_id: str
+    object_id: UUID4  # the S3 object ID as uuid4
 
 
 class AccessTimeDrsObject(DrsObject):
     """DRS Model with information for outbox caching strategy"""
 
-    last_accessed: utc_dates.UTCDatetime
+    last_accessed: UTCDatetime
 
 
 class DrsObjectWithUri(DrsObject):
@@ -98,7 +98,7 @@ class DrsObjectWithAccess(DrsObjectWithUri):
         return DrsObjectResponseModel(
             access_methods=[access_method],
             checksums=[checksum],
-            created_time=self.creation_date,
+            created_time=self.creation_date.isoformat(),
             id=self.file_id,
             self_uri=self.self_uri,
             size=size,

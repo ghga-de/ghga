@@ -28,6 +28,7 @@ import json
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import timedelta
+from uuid import UUID
 
 import httpx
 import pytest_asyncio
@@ -42,6 +43,7 @@ from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture, temp_file_object
+from hexkit.utils import now_utc_ms_prec
 from jwcrypto.jwk import JWK
 from pydantic_settings import BaseSettings
 
@@ -63,23 +65,27 @@ from tests_dcs.fixtures.utils import (
 
 STORAGE_ALIAS = "test"
 
+EXAMPLE_OBJECT_ID = UUID("309b034b-9517-4adc-9e06-c77b09cecfea")
+CACHED_OBJECT_ID = UUID("038dfa61-19f6-4279-a894-4e8794013c44")
+EXPIRED_OBJECT_ID = UUID("9c8f2155-1fbe-418e-8159-274a4dfc6d8a")
+
 EXAMPLE_FILE = models.AccessTimeDrsObject(
     file_id="examplefile001",
-    object_id="object001",
+    object_id=EXAMPLE_OBJECT_ID,
     decrypted_sha256="0677de3685577a06862f226bb1bfa8f889e96e59439d915543929fb4f011d096",
-    creation_date=utc_dates.now_as_utc().isoformat(),
+    creation_date=now_utc_ms_prec(),
     decrypted_size=12345,
     decryption_secret_id="some-secret",
     encrypted_size=23456,
     s3_endpoint_alias=STORAGE_ALIAS,
-    last_accessed=utc_dates.now_as_utc(),
+    last_accessed=now_utc_ms_prec(),
 )
 
 
 @dataclass
 class EndpointAliases:
     valid_node: str = STORAGE_ALIAS
-    fake: str = f"{STORAGE_ALIAS}_fake"
+    fake_node: str = f"{STORAGE_ALIAS}_fake"
 
 
 class EKSSBaseInjector(BaseSettings):
@@ -261,19 +267,17 @@ async def cleanup_fixture(
 
     # create AccessTimeDrsObjects for valid cached and expired cached file
     cached_file_id = file.file_id + "_cached"
-    cached_object_id = file.object_id + "-cached"
 
     test_file_cached = file.model_copy(deep=True)
     test_file_cached.file_id = cached_file_id
-    test_file_cached.object_id = cached_object_id
+    test_file_cached.object_id = CACHED_OBJECT_ID
     test_file_cached.last_accessed = utc_dates.now_as_utc()
 
     expired_file_id = file.file_id + "_expired"
-    expired_object_id = file.object_id + "-expired"
 
     test_file_expired = file.model_copy(deep=True)
     test_file_expired.file_id = expired_file_id
-    test_file_expired.object_id = expired_object_id
+    test_file_expired.object_id = EXPIRED_OBJECT_ID
     test_file_expired.last_accessed = utc_dates.now_as_utc() - timedelta(
         days=joint_fixture.config.outbox_cache_timeout
     )
@@ -285,11 +289,11 @@ async def cleanup_fixture(
     # populate storage
     with temp_file_object(
         bucket_id=joint_fixture.bucket_id,
-        object_id=test_file_cached.object_id,
+        object_id=str(test_file_cached.object_id),
     ) as cached_file:
         with temp_file_object(
             bucket_id=joint_fixture.bucket_id,
-            object_id=test_file_expired.object_id,
+            object_id=str(test_file_expired.object_id),
         ) as expired_file:
             await s3.populate_file_objects([cached_file, expired_file])
 

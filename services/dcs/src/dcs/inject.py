@@ -16,7 +16,7 @@
 """Module hosting the dependency injection container."""
 
 from collections.abc import AsyncGenerator, Coroutine
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from typing import Any, TypeAlias
 
 from fastapi import FastAPI
@@ -43,31 +43,39 @@ async def get_persistent_publisher(
     config: Config, dao_factory: MongoDbDaoFactory | None = None
 ) -> AsyncGenerator[PersistentKafkaPublisher, None]:
     """Construct and return a PersistentKafkaPublisher."""
-    dao_factory = dao_factory or MongoDbDaoFactory(config=config)
-    async with PersistentKafkaPublisher.construct(
-        config=config,
-        dao_factory=dao_factory,
-        compacted_topics={
-            config.file_deleted_topic,
-            config.download_served_topic,
-            config.file_registered_for_download_topic,
-        },
-        topics_not_stored={config.files_to_stage_topic},
-        collection_name="dcsPersistedEvents",
-    ) as persistent_publisher:
+    async with (
+        (  # use provided factory if supplied or create new one
+            nullcontext(dao_factory)
+            if dao_factory
+            else MongoDbDaoFactory.construct(config=config)
+        ) as _dao_factory,
+        PersistentKafkaPublisher.construct(
+            config=config,
+            dao_factory=_dao_factory,
+            compacted_topics={
+                config.file_deleted_topic,
+                config.download_served_topic,
+                config.file_registered_for_download_topic,
+            },
+            topics_not_stored={config.files_to_stage_topic},
+            collection_name="dcsPersistedEvents",
+        ) as persistent_publisher,
+    ):
         yield persistent_publisher
 
 
 @asynccontextmanager
 async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    drs_object_dao = await get_drs_dao(dao_factory=dao_factory)
     object_storages = S3ObjectStorages(config=config)
 
-    async with get_persistent_publisher(
-        config=config, dao_factory=dao_factory
-    ) as persistent_pub_provider:
+    async with (
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
+        get_persistent_publisher(
+            config=config, dao_factory=dao_factory
+        ) as persistent_pub_provider,
+    ):
+        drs_object_dao = await get_drs_dao(dao_factory=dao_factory)
         event_publisher = EventPubTranslator(
             config=config, provider=persistent_pub_provider
         )

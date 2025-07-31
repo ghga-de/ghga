@@ -15,6 +15,9 @@
 
 """Test to make sure that the DLQ is correctly set up for this service."""
 
+from datetime import datetime
+from uuid import uuid4
+
 import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import KafkaFixture
@@ -58,13 +61,13 @@ async def test_consume_from_retry(joint_fixture: JointFixture):
     # Override the kafka test fixture's default for kafka_enable_dlq
     config = joint_fixture.config
     assert config.kafka_enable_dlq
-
     outbox_payload = event_schemas.FileDeletionRequested(file_id="123")
+    upload_date = datetime.fromisoformat("2025-02-25T16:15:28.148287+00:00")
     event_payload = event_schemas.FileInternallyRegistered(
         bucket_id="test",
-        upload_date="2025-02-25T16:15:28.148287+00:00",
+        upload_date=upload_date,
         file_id="",
-        object_id="",
+        object_id=uuid4(),
         s3_endpoint_alias="",
         decrypted_size=12345678,
         decrypted_sha256="fake-checksum",

@@ -22,13 +22,13 @@ import uuid
 from datetime import timedelta
 from time import perf_counter
 
-from ghga_service_commons.utils import utc_dates
 from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorages,
     S3ObjectStoragesConfig,
 )
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.objstorage import ObjectStorageProtocol
+from hexkit.utils import now_utc_ms_prec
 from pydantic import Field, PositiveInt, field_validator
 from pydantic_settings import BaseSettings
 
@@ -158,7 +158,7 @@ class DataRepository(DataRepositoryPort):
         # custom non-matching span name, describes the important part of the action better
         access_url = await object_storage.get_object_download_url(
             bucket_id=bucket_id,
-            object_id=drs_object.object_id,
+            object_id=str(drs_object.object_id),
             expires_after=self._config.presigned_url_expires_after,
         )
 
@@ -227,7 +227,7 @@ class DataRepository(DataRepositoryPort):
 
         # Successfully staged, update access information now
         log.debug("Updating access time of for '%s'.", drs_id)
-        drs_object_with_access_time.last_accessed = utc_dates.now_as_utc()
+        drs_object_with_access_time.last_accessed = now_utc_ms_prec()
         started = perf_counter()
         await self._drs_object_dao.update(drs_object_with_access_time)
         stopped = perf_counter() - started
@@ -281,12 +281,15 @@ class DataRepository(DataRepositoryPort):
             )
             return
 
-        threshold = utc_dates.now_as_utc() - timedelta(
+        threshold = now_utc_ms_prec() - timedelta(
             days=self._config.outbox_cache_timeout
         )
 
         # filter to get all files in outbox that should be removed
-        object_ids = await object_storage.list_all_object_ids(bucket_id=bucket_id)
+        object_ids = [
+            uuid.UUID(x)
+            for x in await object_storage.list_all_object_ids(bucket_id=bucket_id)
+        ]
         log.debug(
             f"Retrieved list of deletion candidates for storage '{storage_alias}'"
         )
@@ -309,7 +312,7 @@ class DataRepository(DataRepositoryPort):
                 log.info(f"Deleting object {object_id} from storage {storage_alias}.")
                 try:
                     await object_storage.delete_object(
-                        bucket_id=bucket_id, object_id=object_id
+                        bucket_id=bucket_id, object_id=str(object_id)
                     )
                 except (
                     object_storage.ObjectError,
@@ -326,7 +329,7 @@ class DataRepository(DataRepositoryPort):
 
     async def register_new_file(self, *, file: models.DrsObjectBase):
         """Register a file as a new DRS Object."""
-        object_id = str(uuid.uuid4())
+        object_id = uuid.uuid4()
 
         with contextlib.suppress(ResourceNotFoundError):
             await self._drs_object_dao.get_by_id(file.file_id)
@@ -339,7 +342,7 @@ class DataRepository(DataRepositoryPort):
 
         file_with_access_time = models.AccessTimeDrsObject(
             **drs_object.model_dump(),
-            last_accessed=utc_dates.now_as_utc(),
+            last_accessed=now_utc_ms_prec(),
         )
         # write file entry to database
         await self._drs_object_dao.insert(file_with_access_time)
@@ -433,7 +436,7 @@ class DataRepository(DataRepositoryPort):
         # Try to remove file from S3
         with contextlib.suppress(object_storage.ObjectNotFoundError):
             await object_storage.delete_object(
-                bucket_id=bucket_id, object_id=drs_object.object_id
+                bucket_id=bucket_id, object_id=str(drs_object.object_id)
             )
             log.debug(
                 f"Successfully deleted file object for '{file_id}' from object storage identified by '{alias}'."

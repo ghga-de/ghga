@@ -111,7 +111,7 @@ async def test_happy_journey(
     file_object = tmp_file.model_copy(
         update={
             "bucket_id": joint_fixture.bucket_id,
-            "object_id": object_id,
+            "object_id": str(object_id),
         }
     )
 
@@ -190,7 +190,7 @@ async def test_happy_deletion(
 
     drs_id = populated_fixture.example_file.file_id
     drs_object = await populated_fixture.mongodb_dao.get_by_id(drs_id)
-    object_id = drs_object.object_id
+    object_id = str(drs_object.object_id)
 
     # place example content in the outbox bucket:
     file_object = tmp_file.model_copy(
@@ -237,24 +237,24 @@ async def test_bucket_cleanup(cleanup_fixture: CleanupFixture, caplog):
     cached_object = await cleanup_fixture.mongodb_dao.get_by_id(cached_id)
     assert await s3.storage.does_object_exist(
         bucket_id=cleanup_fixture.joint.bucket_id,
-        object_id=cached_object.object_id,
+        object_id=str(cached_object.object_id),
     )
 
     # check if expired object has been removed from outbox
     expired_object = await cleanup_fixture.mongodb_dao.get_by_id(expired_id)
     assert not await s3.storage.does_object_exist(
         bucket_id=cleanup_fixture.joint.bucket_id,
-        object_id=expired_object.object_id,
+        object_id=str(expired_object.object_id),
     )
 
     with caplog.at_level(logging.ERROR):
         await data_repository.cleanup_outbox(
-            storage_alias=cleanup_fixture.joint.endpoint_aliases.fake
+            storage_alias=cleanup_fixture.joint.endpoint_aliases.fake_node
         )
 
     expected_message = str(
         data_repository.StorageAliasNotConfiguredError(
-            alias=cleanup_fixture.joint.endpoint_aliases.fake
+            alias=cleanup_fixture.joint.endpoint_aliases.fake_node
         )
     )
 

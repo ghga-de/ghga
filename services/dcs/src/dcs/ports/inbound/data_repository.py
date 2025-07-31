@@ -18,6 +18,7 @@
 from abc import ABC, abstractmethod
 
 from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
+from pydantic import UUID4
 
 from dcs.core import models
 
@@ -38,7 +39,7 @@ class DataRepositoryPort(ABC):
         an underlying issue
         """
 
-        def __init__(self, *, object_id: str, from_error: Exception):
+        def __init__(self, *, object_id: UUID4, from_error: Exception):
             message = f"Could not remove object {object_id} from outbox bucket: {str(from_error)}"
             super().__init__(message)
 
@@ -52,7 +53,7 @@ class DataRepositoryPort(ABC):
     class EnvelopeNotFoundError(RuntimeError):
         """Raised when an envelope for a given download was not found"""
 
-        def __init__(self, *, object_id: str):
+        def __init__(self, *, object_id: UUID4):
             message = f"Envelope not found for object {object_id}"
             super().__init__(message)
 

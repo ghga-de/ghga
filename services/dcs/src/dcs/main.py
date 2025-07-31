@@ -26,6 +26,9 @@ from dcs.inject import (
     prepare_outbox_cleaner,
     prepare_rest_app,
 )
+from dcs.migrations import run_db_migrations
+
+DB_VERSION = 2
 
 
 async def run_rest_app():
@@ -33,6 +36,7 @@ async def run_rest_app():
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
+    await run_db_migrations(config=config, target_version=DB_VERSION)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -43,6 +47,7 @@ async def consume_events(run_forever: bool = True):
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
+    await run_db_migrations(config=config, target_version=DB_VERSION)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
@@ -53,6 +58,7 @@ async def run_outbox_cleanup():
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
+    await run_db_migrations(config=config, target_version=DB_VERSION)
 
     async with prepare_outbox_cleaner(config=config) as cleanup_outbox:
         await cleanup_outbox
@@ -63,6 +69,7 @@ async def publish_events(*, all: bool = False):
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
+    await run_db_migrations(config=config, target_version=DB_VERSION)
 
     async with get_persistent_publisher(config=config) as persistent_publisher:
         if all:

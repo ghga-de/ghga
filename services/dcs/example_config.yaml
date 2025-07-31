@@ -18,7 +18,9 @@ cors_allow_credentials: false
 cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
+cors_exposed_headers: null
 db_name: dev
+db_version_collection: dcsDbVersions
 docs_url: /docs
 download_served_topic: file-downloads
 download_served_type: download_served
@@ -54,6 +56,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 object_storages:

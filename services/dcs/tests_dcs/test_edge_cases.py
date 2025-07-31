@@ -49,12 +49,9 @@ class StorageUnavailableFixture:
 @pytest_asyncio.fixture
 async def storage_unavailable_fixture(joint_fixture: JointFixture):
     """Set up file with unavailable storage alias"""
-    alias = joint_fixture.endpoint_aliases.fake
-
     test_file = EXAMPLE_FILE.model_copy(deep=True)
-    test_file.file_id = alias
-    test_file.object_id = alias
-    test_file.s3_endpoint_alias = alias
+    test_file.file_id = "some_random_accession"
+    test_file.s3_endpoint_alias = joint_fixture.endpoint_aliases.fake_node
 
     # populate DB entry
     mongodb_dao = await joint_fixture.mongodb.dao_factory.get_dao(

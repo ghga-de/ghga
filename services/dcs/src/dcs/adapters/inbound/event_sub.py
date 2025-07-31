@@ -26,6 +26,7 @@ from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import UUID4
 
 from dcs.core import models
 from dcs.ports.inbound.data_repository import DataRepositoryPort
@@ -95,7 +96,13 @@ class EventSubTranslator(EventSubscriberProtocol):
         await self._data_repository.delete_file(file_id=validated_payload.file_id)
 
     async def _consume_validated(
-        self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: str
+        self,
+        *,
+        payload: JsonObject,
+        type_: Ascii,
+        topic: Ascii,
+        key: str,
+        event_id: UUID4,
     ) -> None:
         """Consume events from the topics of interest."""
         if type_ == self._config.file_internally_registered_type:
