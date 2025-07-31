@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ucs"
-version = "6.1.1"
+version = "7.0.0"
 description = "Upload Controller Service - manages uploads to an S3 inbox bucket."
 readme = "README.md"
 authors = [

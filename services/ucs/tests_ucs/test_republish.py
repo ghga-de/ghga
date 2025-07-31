@@ -15,6 +15,7 @@
 """Test the republish mechanism of the persistent publisher."""
 
 import pytest
+from ghga_event_schemas.pydantic_ import FileUploadReceived
 from hexkit.correlation import set_new_correlation_id
 
 from tests_ucs.fixtures.joint import JointFixture
@@ -55,6 +56,7 @@ async def test_republish(joint_fixture: JointFixture):
     new_doc = {**docs[0]}
     new_doc["payload"]["file_id"] = unpublished_event.file_id
     new_doc["payload"]["upload_date"] = unpublished_event.upload_date
+    new_doc["payload"]["object_id"] = unpublished_event.object_id
     new_doc["_id"] = f"{topic}:{unpublished_event.file_id}"
     new_doc["key"] = unpublished_event.file_id
     new_doc["published"] = False
@@ -68,7 +70,10 @@ async def test_republish(joint_fixture: JointFixture):
     # Verify that only the unpublished event was published
     assert len(recorder.recorded_events) == 1
     event = recorder.recorded_events[0]
-    assert event.payload == unpublished_event.model_dump()
+    assert (
+        FileUploadReceived(**event.payload).model_dump()
+        == unpublished_event.model_dump()
+    )
     assert event.key == unpublished_event.file_id
 
     # Publish all events again

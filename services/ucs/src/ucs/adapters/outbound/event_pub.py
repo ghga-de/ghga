@@ -15,7 +15,7 @@
 
 """Kafka-based event publishing adapters and the exception they may throw."""
 
-import json
+from uuid import UUID
 
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
@@ -50,7 +50,7 @@ class EventPubTranslator(EventPublisherPort):
         event_payload = event_schemas.FileDeletionSuccess(file_id=file_id)
 
         await self._provider.publish(
-            payload=json.loads(event_payload.model_dump_json()),
+            payload=event_payload.model_dump(),
             type_=self._config.file_deleted_type,
             topic=self._config.file_deleted_topic,
             key=file_id,
@@ -70,15 +70,15 @@ class EventPubTranslator(EventPublisherPort):
         event_payload = event_schemas.FileUploadReceived(
             s3_endpoint_alias=storage_alias,
             file_id=file_metadata.file_id,
-            object_id=object_id,
+            object_id=UUID(object_id),
             bucket_id=bucket_id,
-            upload_date=upload_date.isoformat(),
+            upload_date=upload_date,
             submitter_public_key=submitter_public_key,
             decrypted_size=file_metadata.decrypted_size,
             expected_decrypted_sha256=file_metadata.decrypted_sha256,
         )
         await self._provider.publish(
-            payload=json.loads(event_payload.model_dump_json()),
+            payload=event_payload.model_dump(),
             type_=self._config.file_upload_received_type,
             topic=self._config.file_upload_received_topic,
             key=event_payload.file_id,

@@ -15,8 +15,6 @@
 
 """A collextion of http exceptions."""
 
-import json
-
 from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import BaseModel
 
@@ -114,7 +112,7 @@ class HttpExistingActiveUploadError(HttpCustomExceptionBase):
             ),
             data={
                 "file_id": file_id,
-                "active_upload": json.loads(active_upload.model_dump_json()),
+                "active_upload": active_upload.model_dump(mode="json"),
             },
         )
 

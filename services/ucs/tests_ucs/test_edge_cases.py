@@ -18,7 +18,6 @@
 Note: This test module uses the module-scoped fixtures.
 """
 
-import json
 from contextlib import suppress
 
 import pytest
@@ -154,8 +153,8 @@ async def test_create_upload_other_active(
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     response_body = response.json()
     assert response_body["exception_id"] == "existingActiveUpload"
-    assert response_body["data"]["active_upload"] == json.loads(
-        existing_upload.model_dump_json()
+    assert response_body["data"]["active_upload"] == existing_upload.model_dump(
+        mode="json"
     )
 
 
@@ -194,8 +193,8 @@ async def test_create_upload_accepted(
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     response_body = response.json()
     assert response_body["exception_id"] == "existingActiveUpload"
-    assert response_body["data"]["active_upload"] == json.loads(
-        existing_upload.model_dump_json()
+    assert response_body["data"]["active_upload"] == existing_upload.model_dump(
+        mode="json"
     )
 
 
@@ -343,7 +342,7 @@ async def test_deletion_upload_ongoing(joint_fixture: JointFixture):
     # Request deletion
     deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
     await joint_fixture.kafka.publish_event(
-        payload=json.loads(deletion_event.model_dump_json()),
+        payload=deletion_event.model_dump(),
         type_=joint_fixture.config.file_deletion_request_type,
         topic=joint_fixture.config.file_deletion_request_topic,
     )
@@ -381,7 +380,7 @@ async def test_deletion_with_no_file(joint_fixture: JointFixture):
     file_id = "aint_no_such"
     deletion_event = event_schemas.FileDeletionRequested(file_id=file_id)
     await joint_fixture.kafka.publish_event(
-        payload=json.loads(deletion_event.model_dump_json()),
+        payload=deletion_event.model_dump(),
         type_=joint_fixture.config.file_deletion_request_type,
         topic=joint_fixture.config.file_deletion_request_topic,
     )

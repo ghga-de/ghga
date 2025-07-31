@@ -16,15 +16,16 @@
 """General testing utilities"""
 
 from pathlib import Path
+from uuid import uuid4
 
 from ghga_event_schemas.pydantic_ import FileUploadReceived
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.utils import now_utc_ms_prec
 
 BASE_DIR = Path(__file__).parent.resolve()
 
 
 def null_func(*args, **kwargs):
-    """I am accepting any args and kwargs but I am doing nothing."""
+    """I accept any args and kwargs but I do nothing."""
     pass
 
 
@@ -36,9 +37,9 @@ def is_success_http_code(http_code: int) -> bool:
 def make_test_event(file_id: str) -> FileUploadReceived:
     """Return a FileUploadReceived event with the given file ID."""
     event = FileUploadReceived(
-        upload_date=now_as_utc().isoformat(),
+        upload_date=now_utc_ms_prec(),
         file_id=file_id,
-        object_id="",
+        object_id=uuid4(),
         bucket_id="",
         s3_endpoint_alias="",
         decrypted_size=0,

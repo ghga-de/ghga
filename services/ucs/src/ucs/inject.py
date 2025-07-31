@@ -16,10 +16,9 @@
 """Module hosting the dependency injection container."""
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
@@ -43,13 +42,22 @@ async def get_persistent_publisher(
     config: Config, dao_factory: MongoDbDaoFactory | None = None
 ) -> AsyncGenerator[PersistentKafkaPublisher, None]:
     """Construct and return a PersistentKafkaPublisher."""
-    dao_factory = dao_factory or MongoDbDaoFactory(config=config)
-    async with PersistentKafkaPublisher.construct(
-        config=config,
-        dao_factory=dao_factory,
-        compacted_topics={config.file_deleted_topic, config.file_upload_received_topic},
-        collection_name="ucsPersistedEvents",
-    ) as persistent_publisher:
+    async with (
+        (
+            nullcontext(dao_factory)
+            if dao_factory
+            else MongoDbDaoFactory.construct(config=config)
+        ) as _dao_factory,
+        PersistentKafkaPublisher.construct(
+            config=config,
+            dao_factory=_dao_factory,
+            compacted_topics={
+                config.file_deleted_topic,
+                config.file_upload_received_topic,
+            },
+            collection_name="ucsPersistedEvents",
+        ) as persistent_publisher,
+    ):
         yield persistent_publisher
 
 
@@ -60,10 +68,12 @@ async def prepare_core(
 ) -> AsyncGenerator[tuple[UploadServicePort, FileMetadataServicePort], None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     object_storages = S3ObjectStorages(config=config)
-    dao_factory = MongoDbDaoFactory(config=config)
-    dao_collection = await DaoCollectionTranslator.construct(provider=dao_factory)
 
-    async with get_persistent_publisher(config=config) as persistent_publisher:
+    async with (
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
+        get_persistent_publisher(config=config) as persistent_publisher,
+    ):
+        dao_collection = await DaoCollectionTranslator.construct(provider=dao_factory)
         event_pub_translator = EventPubTranslator(
             config=config, provider=persistent_publisher
         )
@@ -82,11 +92,7 @@ def prepare_core_with_override(
     core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
-    return (
-        asyncnullcontext(core_override)
-        if core_override
-        else prepare_core(config=config)
-    )
+    return nullcontext(core_override) if core_override else prepare_core(config=config)
 
 
 @asynccontextmanager
@@ -148,9 +154,9 @@ async def prepare_event_subscriber(
 async def prepare_storage_inspector(*, config: Config):
     """Alternative to prepare_core for storage inspection CLI command without Kafka."""
     object_storages = S3ObjectStorages(config=config)
-    dao_factory = MongoDbDaoFactory(config=config)
-    dao_collection = await DaoCollectionTranslator.construct(provider=dao_factory)
 
-    yield InboxInspector(
-        config=config, daos=dao_collection, object_storages=object_storages
-    )
+    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
+        dao_collection = await DaoCollectionTranslator.construct(provider=dao_factory)
+        yield InboxInspector(
+            config=config, daos=dao_collection, object_storages=object_storages
+        )

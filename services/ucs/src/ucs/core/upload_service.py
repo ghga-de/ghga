@@ -22,8 +22,7 @@ from collections.abc import Callable
 from contextlib import suppress
 
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
-from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.utils import calc_part_size
+from hexkit.utils import calc_part_size, now_utc_ms_prec
 
 from ucs.core import models
 from ucs.ports.inbound.upload_service import UploadServicePort
@@ -363,7 +362,7 @@ class UploadService(UploadServicePort):
             object_id=object_id,
             status=models.UploadStatus.PENDING,
             part_size=part_size,
-            creation_date=now_as_utc(),
+            creation_date=now_utc_ms_prec(),
             completion_date=None,
             submitter_public_key=submitter_public_key,
             storage_alias=storage_alias,
@@ -456,7 +455,7 @@ class UploadService(UploadServicePort):
             raise upload_completion_error from error
 
         # mark the upload as complete (uploaded) in the database:
-        completion_date = now_as_utc()
+        completion_date = now_utc_ms_prec()
         updated_upload = upload.model_copy(
             update={
                 "status": models.UploadStatus.UPLOADED,

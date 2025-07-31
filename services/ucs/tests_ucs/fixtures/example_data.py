@@ -18,7 +18,7 @@
 from dataclasses import dataclass
 
 from ghga_event_schemas.pydantic_ import MetadataSubmissionFiles
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.utils import now_utc_ms_prec
 
 from ucs.core import models
 
@@ -55,10 +55,10 @@ EXAMPLE_FILE_2 = EXAMPLE_FILE_1.model_copy(
 EXAMPLE_UPLOAD_1 = models.UploadAttempt(
     upload_id="testUpload001",
     file_id=EXAMPLE_FILE_1.file_id,
-    object_id="object001",
+    object_id="4060783e-da17-4830-a55e-f32486828540",
     status=models.UploadStatus.PENDING,
     part_size=1234,
-    creation_date=now_as_utc(),
+    creation_date=now_utc_ms_prec(),
     submitter_public_key="test-key",
     completion_date=None,
     storage_alias=STORAGE_ALIASES[0],
@@ -66,7 +66,7 @@ EXAMPLE_UPLOAD_1 = models.UploadAttempt(
 EXAMPLE_UPLOAD_2 = EXAMPLE_UPLOAD_1.model_copy(
     update={
         "upload_id": "testUpload002",
-        "object_id": "object002",
+        "object_id": "824188b5-13fc-4f5d-84e2-04338b733cb7",
         "file_id": EXAMPLE_FILE_2.file_id,
         "storage_alias": STORAGE_ALIASES[1],
     }

@@ -15,9 +15,9 @@
 
 """Defines dataclasses for holding business-logic data"""
 
-from datetime import datetime
 from enum import Enum
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -55,10 +55,10 @@ class UploadAttempt(BaseModel):
     part_size: int = Field(
         default=..., description="Part size to be used for upload. Specified in bytes."
     )
-    creation_date: datetime = Field(
+    creation_date: UTCDatetime = Field(
         default=..., description="Datetime when the upload attempt was created."
     )
-    completion_date: datetime | None = Field(
+    completion_date: UTCDatetime | None = Field(
         default=None,
         description=(
             "Datetime when the upload attempt was declared as completed by the client."

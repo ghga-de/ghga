@@ -27,6 +27,7 @@ from ghga_event_schemas.configs import (
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import UUID4
 
 from ucs.core import models
 from ucs.ports.inbound.file_service import FileMetadataServicePort
@@ -125,6 +126,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         type_: Ascii,
         topic: Ascii,
         key: Ascii,
+        event_id: UUID4,
     ) -> None:
         """Consume events from the topics of interest."""
         if type_ == self._config.file_metadata_type:
