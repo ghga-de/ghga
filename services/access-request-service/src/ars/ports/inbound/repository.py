@@ -115,6 +115,23 @@ class AccessRequestRepositoryPort(ABC):
     @abstractmethod
     async def get(
         self,
+        access_request_id: str,
+        *,
+        auth_context: AuthContext,
+    ) -> AccessRequest:
+        """Get the an existing access requests with the given ID.
+
+        Only data stewards are able to get requests created by other users.
+
+        Raises:
+        - `AccessRequestNotFoundError` if the specified request was not found
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        """
+        ...
+
+    @abstractmethod
+    async def find_all(
+        self,
         *,
         dataset_id: str | None = None,
         user_id: str | None = None,

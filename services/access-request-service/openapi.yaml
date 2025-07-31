@@ -342,7 +342,7 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 5.1.1
+  version: 5.2.0
 openapi: 3.1.0
 paths:
   /access-grants:
@@ -523,6 +523,40 @@ paths:
       tags:
       - AccessRequests
   /access-requests/{access_request_id}:
+    get:
+      description: Endpoint used to get an existing access request
+      operationId: get_access_request
+      parameters:
+      - description: ID of the access request
+        in: path
+        name: access_request_id
+        required: true
+        schema:
+          description: ID of the access request
+          title: Access Request Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessRequest'
+          description: Access request has been fetched.
+        '403':
+          description: Not authorized to get access request.
+        '404':
+          description: Access request does not exist.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Get access request
+      tags:
+      - AccessRequests
     patch:
       description: Endpoint used to set the status or modify other fields of an access
         request

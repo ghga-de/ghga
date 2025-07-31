@@ -553,9 +553,64 @@ async def test_cannot_create_request_nonexistent_dataset():
         _ = await repository.create(creation_data, auth_context=auth_context_doe)
 
 
+async def test_can_get_own_request_as_requester():
+    """Test that requesters can get their own request individually."""
+    for request in ACCESS_REQUESTS:
+        if request.user_id == auth_context_doe.id:
+            break
+    else:
+        assert False, "Test request cannot be found"
+    assert (
+        await repository.get(
+            access_request_id=request.id, auth_context=auth_context_doe
+        )
+        == request
+    )
+
+
+async def test_users_cannot_get_request_of_other_user():
+    """Test that non data stewards cannot get individual requests made by others."""
+    for request in ACCESS_REQUESTS:
+        if request.user_id != auth_context_doe.id:
+            break
+    else:
+        assert False, "Test request cannot be found"
+    with pytest.raises(
+        repository.AccessRequestNotFoundError, match="Access request not found"
+    ):
+        await repository.get(
+            access_request_id=request.id, auth_context=auth_context_doe
+        )
+
+
+async def test_data_steward_can_get_request_of_other_user():
+    """Test that data stewards can get individual requests made by others."""
+    for request in ACCESS_REQUESTS:
+        if request.user_id != auth_context_steward.id:
+            break
+    else:
+        assert False, "Test request cannot be found"
+    assert (
+        await repository.get(
+            access_request_id=request.id, auth_context=auth_context_steward
+        )
+        == request
+    )
+
+
+async def test_data_steward_cannot_get_non_existing_requests():
+    """Test that the proper error is raised when getting a non-existing request."""
+    with pytest.raises(
+        repository.AccessRequestNotFoundError, match="Access request not found"
+    ):
+        await repository.get(
+            access_request_id="non-existing-id", auth_context=auth_context_steward
+        )
+
+
 async def test_can_get_all_requests_as_data_steward():
     """Test that a data steward can get all requests."""
-    requests = await repository.get(auth_context=auth_context_steward)
+    requests = await repository.find_all(auth_context=auth_context_steward)
     assert requests == sorted(
         ACCESS_REQUESTS, key=attrgetter("request_created"), reverse=True
     )
@@ -563,7 +618,7 @@ async def test_can_get_all_requests_as_data_steward():
 
 async def test_can_get_all_own_requests_as_requester():
     """Test that requesters can get their own requests."""
-    requests = await repository.get(auth_context=auth_context_doe)
+    requests = await repository.find_all(auth_context=auth_context_doe)
     assert 0 < len(requests) < len(ACCESS_REQUESTS)
     assert requests == sorted(
         (
@@ -578,15 +633,17 @@ async def test_can_get_all_own_requests_as_requester():
 
 async def test_users_cannot_get_requests_of_other_users():
     """Test that non data stewards cannot get requests of others."""
-    with pytest.raises(repository.AccessRequestError, match="Not authorized"):
-        await repository.get(
+    with pytest.raises(
+        repository.AccessRequestAuthorizationError, match="Not authorized"
+    ):
+        await repository.find_all(
             auth_context=auth_context_doe, user_id="id-of-jane-roe@ghga.de"
         )
 
 
 async def test_data_steward_can_get_requests_of_specific_user():
     """Test that data stewards can get requests of specific users."""
-    requests = await repository.get(
+    requests = await repository.find_all(
         auth_context=auth_context_steward, user_id="id-of-jane-roe@ghga.de"
     )
     assert len(requests) == 1
@@ -599,7 +656,9 @@ async def test_data_steward_can_get_requests_of_specific_user():
 
 async def test_data_steward_can_get_requests_for_specific_dataset():
     """Test getting requests for a specific dataset."""
-    requests = await repository.get(auth_context=auth_context_doe, dataset_id="DS002")
+    requests = await repository.find_all(
+        auth_context=auth_context_doe, dataset_id="DS002"
+    )
     assert len(requests) == 1
     assert requests == [
         request.model_copy(update={"changed_by": None})  # data steward is hidden
@@ -610,7 +669,7 @@ async def test_data_steward_can_get_requests_for_specific_dataset():
 
 async def test_data_steward_can_get_pending_requests():
     """Test getting only the pending requests."""
-    requests = await repository.get(
+    requests = await repository.find_all(
         auth_context=auth_context_doe, status=AccessRequestStatus.PENDING
     )
     assert len(requests) == 2
@@ -623,7 +682,7 @@ async def test_data_steward_can_get_pending_requests():
 
 async def test_filtering_using_multiple_criteria():
     """Test filtering using multiple criteria at the same time."""
-    requests = await repository.get(
+    requests = await repository.find_all(
         auth_context=auth_context_steward,
         user_id="id-of-john-doe@ghga.de",
         dataset_id="DS001",
@@ -886,7 +945,9 @@ async def test_set_status_of_non_existing_request():
 
 async def test_set_status_when_not_a_data_steward():
     """Test setting the status of a request when not being a data steward."""
-    with pytest.raises(repository.AccessRequestError, match="Not authorized"):
+    with pytest.raises(
+        repository.AccessRequestAuthorizationError, match="Not authorized"
+    ):
         await repository.update(
             "request-id-4",
             patch_data=AccessRequestPatchData(status=AccessRequestStatus.ALLOWED),

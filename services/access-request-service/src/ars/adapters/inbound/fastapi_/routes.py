@@ -84,7 +84,7 @@ async def create_access_request(
     except repository.AccessRequestInvalidDuration as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        log.error("Could not create access request: %s", exc)
+        log.error("Could not create access request: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=500, detail="Access request could not be created."
         ) from exc
@@ -137,7 +137,7 @@ async def get_access_requests(
 ) -> list[AccessRequest]:
     """Get access requests"""
     try:
-        return await repository.get(
+        return await repository.find_all(
             user_id=user_id,
             dataset_id=dataset_id,
             status=status,
@@ -149,6 +149,47 @@ async def get_access_requests(
         log.error("Could not get access requests: %s", exc)
         raise HTTPException(
             status_code=500, detail="Access requests could not be fetched."
+        ) from exc
+
+
+@router.get(
+    "/access-requests/{access_request_id}",
+    operation_id="get_access_request",
+    tags=["AccessRequests"],
+    summary="Get access request",
+    description="Endpoint used to get an existing access request",
+    responses={
+        200: {
+            "model": AccessRequest,
+            "description": "Access request has been fetched.",
+        },
+        403: {"description": "Not authorized to get access request."},
+        404: {"description": "Access request does not exist."},
+    },
+    status_code=200,
+)
+async def get_access_request(
+    repository: dummies.AccessRequestRepoDummy,
+    auth_context: UserAuthContext,
+    access_request_id: Annotated[
+        str,
+        Path(..., alias="access_request_id", description="ID of the access request"),
+    ],
+) -> AccessRequest:
+    """Get access request"""
+    try:
+        return await repository.get(
+            access_request_id=access_request_id,
+            auth_context=auth_context,
+        )
+    except repository.AccessRequestAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except repository.AccessRequestNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        log.error("Could not get access request: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Access request could not be fetched."
         ) from exc
 
 
@@ -194,7 +235,7 @@ async def patch_access_request(
     ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        log.error("Could not modify access request: %s", exc)
+        log.error("Could not modify access request: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=500, detail="Access request could not be modified."
         ) from exc

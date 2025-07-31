@@ -162,6 +162,40 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
     async def get(
         self,
+        access_request_id: str,
+        *,
+        auth_context: AuthContext,
+    ) -> AccessRequest:
+        """Get the an existing access requests with the given ID.
+
+        Only data stewards are able to get requests created by other users.
+
+        Raises:
+        - `AccessRequestNotFoundError` if the specified request was not found
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        """
+        if not auth_context.id:
+            authorization_error = self.AccessRequestAuthorizationError()
+            log.error(authorization_error)
+            raise authorization_error
+
+        try:
+            request = await self._request_dao.get_by_id(access_request_id)
+            if (
+                not has_role(auth_context, DATA_STEWARD_ROLE)
+                and request.user_id != auth_context.id
+            ):
+                # if the user does not have access, report this as not found
+                raise ResourceNotFoundError(id_=access_request_id)
+        except ResourceNotFoundError as error:
+            not_found_error = self.AccessRequestNotFoundError()
+            log.error(not_found_error, extra={"access_request_id": access_request_id})
+            raise not_found_error from error
+
+        return request
+
+    async def find_all(
+        self,
         *,
         dataset_id: str | None = None,
         user_id: str | None = None,

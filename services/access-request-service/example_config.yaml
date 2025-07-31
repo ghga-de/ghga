@@ -19,6 +19,7 @@ cors_allow_credentials: false
 cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
+cors_exposed_headers: null
 dataset_change_topic: metadata_datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created

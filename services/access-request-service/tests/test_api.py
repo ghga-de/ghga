@@ -158,6 +158,98 @@ async def test_create_access_request(
     assert recorded_event.type_ == "upserted"
 
 
+async def test_get_access_request(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+):
+    """Test that users can get an individual access request."""
+    client = rest.rest_client
+    # create access request as user
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+    assert_is_uuid(access_request_id)
+
+    # get own request as user
+    response = await client.get(
+        f"/access-requests/{access_request_id}", headers=auth_headers_doe
+    )
+
+    assert response.status_code == 200
+    request = response.json()
+
+    assert isinstance(request, dict)
+    assert request["id"] == access_request_id
+    assert request["user_id"] == "id-of-john-doe@ghga.de"
+    assert request["iva_id"] == "some-iva"
+    assert request["dataset_id"] == "DS001"
+    assert request["status"] == "pending"
+
+    # get request as data steward
+    response = await client.get(
+        f"/access-requests/{access_request_id}", headers=auth_headers_steward
+    )
+
+    assert response.status_code == 200
+    request_as_steward = response.json()
+
+    assert isinstance(request_as_steward, dict)
+    assert request_as_steward == request
+
+
+async def test_get_access_request_of_other_user(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+):
+    """Test that users cannot get individual access requests of others."""
+    client = rest.rest_client
+    # create access request as data steward
+    response = await client.post(
+        "/access-requests",
+        json={**CREATION_DATA, "user_id": "id-of-rod-steward@ghga.de"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+    assert_is_uuid(access_request_id)
+
+    # should not be found when requesting as user
+    response = await client.get(
+        f"/access-requests/{access_request_id}", headers=auth_headers_doe
+    )
+    assert response.status_code == 404
+    msg = str(response.json()["detail"])
+    assert msg == "Access request not found"
+
+
+async def test_get_non_existing_access_request(
+    rest: RestFixture,
+    auth_headers_steward: dict[str, str],
+):
+    """Test that users cannot get individual access requests of others."""
+    client = rest.rest_client
+
+    # get non-existing request
+    response = await client.get(
+        "/access-requests/non-existing-id", headers=auth_headers_steward
+    )
+    assert response.status_code == 404
+    msg = str(response.json()["detail"])
+    assert msg == "Access request not found"
+
+
+async def test_get_access_request_unauthorized(rest: RestFixture):
+    """Test that getting an individual access request needs authorization."""
+    client = rest.rest_client
+    # test unauthenticated
+    response = await client.get("/access-requests/some-request-id")
+    assert response.status_code == 403
+
+
 async def test_create_access_request_unauthorized(
     rest: RestFixture, auth_headers_doe: dict[str, str]
 ):
@@ -239,17 +331,17 @@ async def test_get_access_requests(
         "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
     )
     assert response.status_code == 201
-    access_request_id = response.json()
-    assert_is_uuid(access_request_id)
+    access_request_id_doe = response.json()
+    assert_is_uuid(access_request_id_doe)
     response = await client.post(
         "/access-requests",
         json={**CREATION_DATA, "user_id": "id-of-rod-steward@ghga.de"},
         headers=auth_headers_steward,
     )
     assert response.status_code == 201
-    another_access_request_id = response.json()
-    assert_is_uuid(another_access_request_id)
-    assert another_access_request_id != access_request_id
+    access_request_id_steward = response.json()
+    assert_is_uuid(access_request_id_steward)
+    assert access_request_id_steward != access_request_id_doe
 
     # get own requests as user
     response = await client.get("/access-requests", headers=auth_headers_doe)
@@ -260,7 +352,7 @@ async def test_get_access_requests(
     assert isinstance(requests, list)
     assert len(requests) == 1
     request = requests[0]
-    assert request["id"] == access_request_id
+    assert request["id"] == access_request_id_doe
     assert request["user_id"] == "id-of-john-doe@ghga.de"
     assert request["iva_id"] == "some-iva"
     assert request["dataset_id"] == "DS001"
@@ -276,12 +368,12 @@ async def test_get_access_requests(
     assert len(requests) == 2
     request = requests[0]
     # last made request comes first
-    assert request["id"] == another_access_request_id
+    assert request["id"] == access_request_id_steward
     assert request["user_id"] == "id-of-rod-steward@ghga.de"
     assert request["dataset_id"] == "DS001"
     assert request["status"] == "pending"
     request = requests[1]
-    assert request["id"] == access_request_id
+    assert request["id"] == access_request_id_doe
     assert request["user_id"] == "id-of-john-doe@ghga.de"
     assert request["dataset_id"] == "DS001"
     assert request["status"] == "pending"
