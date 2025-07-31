@@ -20,9 +20,9 @@ from hexkit.providers.mongodb.migrations import (
     MigrationMap,
 )
 
-from fis.migrations.definitions import V2Migration
+from fis.migrations.definitions import V2Migration, V3Migration
 
-MIGRATION_MAP = {2: V2Migration}
+MIGRATION_MAP = {2: V2Migration, 3: V3Migration}
 
 
 async def run_db_migrations(

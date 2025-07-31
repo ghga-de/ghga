@@ -16,8 +16,8 @@
 
 from ghga_event_schemas.configs import FileInterrogationSuccessEventsConfig
 from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.eventpub import EventPublisherProtocol
+from hexkit.utils import now_utc_ms_prec
 
 from fis.core import models
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
@@ -48,7 +48,7 @@ class EventPubTranslator(EventPubTranslatorPort):
     ):
         """Send FileUploadValidationSuccess event to downstream services"""
         payload = FileUploadValidationSuccess(
-            upload_date=now_as_utc().isoformat(),
+            upload_date=now_utc_ms_prec(),
             file_id=upload_metadata.file_id,
             object_id=upload_metadata.object_id,
             bucket_id=upload_metadata.bucket_id,

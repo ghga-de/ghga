@@ -14,7 +14,7 @@
 # limitations under the License.
 """Models for internal representation"""
 
-from pydantic import BaseModel, SecretStr
+from pydantic import UUID4, BaseModel, SecretStr
 
 
 class EncryptedPayload(BaseModel):
@@ -37,7 +37,7 @@ class UploadMetadataBase(FileIdModel):
     representing the S3 upload script output
     """
 
-    object_id: str
+    object_id: UUID4
     bucket_id: str
     part_size: int
     unencrypted_size: int

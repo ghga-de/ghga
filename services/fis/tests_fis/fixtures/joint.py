@@ -20,6 +20,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import mkstemp
+from uuid import UUID
 
 import httpx
 import pytest_asyncio
@@ -42,10 +43,12 @@ from tests_fis.fixtures.config import get_config
 
 __all__ = ["TEST_PAYLOAD", "JointFixture", "joint_fixture"]
 
+TEST_OBJECT_ID = UUID("794fa7ab-fa80-493b-a08d-a6be41a07cde")
+
 TEST_PAYLOAD = UploadMetadataBase(
     file_id="abc",
     bucket_id="staging",
-    object_id="happy_little_object",
+    object_id=TEST_OBJECT_ID,
     part_size=16 * 1024**2,
     unencrypted_size=50 * 1024**2,
     encrypted_size=50 * 1024**2 + 128,

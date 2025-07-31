@@ -22,7 +22,7 @@ from fis.config import Config
 from fis.inject import get_persistent_publisher, prepare_rest_app
 from fis.migrations import run_db_migrations
 
-DB_VERSION = 2
+DB_VERSION = 3
 
 
 async def run_rest():

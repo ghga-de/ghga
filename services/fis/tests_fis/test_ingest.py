@@ -41,7 +41,7 @@ async def test_legacy_decryption_happy(joint_fixture: JointFixture):
 
     encrypted_payload = EncryptedPayload(
         payload=encrypt(
-            data=json.dumps(payload),
+            data=json.dumps(payload, default=str),
             key=joint_fixture.keypair.public,
         )
     )

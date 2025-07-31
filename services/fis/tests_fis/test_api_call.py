@@ -19,6 +19,7 @@
 import base64
 import json
 import os
+from datetime import datetime
 
 import pytest
 from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
@@ -92,6 +93,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
         **TEST_PAYLOAD.model_dump(),
         secret_id=secret_id,
     )
+    json_payload = payload.model_dump(mode="json")
 
     event_recorder = EventRecorder(
         kafka_servers=joint_fixture.kafka.config.kafka_servers,
@@ -101,7 +103,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
     async with event_recorder:
         response = await joint_fixture.rest_client.post(
             "/federated/ingest_metadata",
-            json=payload.model_dump(),
+            json=json_payload,
             headers=headers,
         )
 
@@ -110,7 +112,9 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     # can't get exact event time for equality comparison, don't check but get directly
     # from the recorded event instead
-    expected_upload_date = str(event_recorder.recorded_events[0].payload["upload_date"])
+    expected_upload_date = datetime.fromisoformat(
+        event_recorder.recorded_events[0].payload["upload_date"]  # type: ignore
+    )
 
     expected_payload = FileUploadValidationSuccess(
         upload_date=expected_upload_date,
@@ -146,7 +150,7 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
     async with event_recorder:
         response = await joint_fixture.rest_client.post(
             "/federated/ingest_metadata",
-            json=payload.model_dump(),
+            json=json_payload,
             headers=headers,
         )
 
@@ -158,15 +162,14 @@ async def test_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     # test missing authorization
     response = await joint_fixture.rest_client.post(
-        "/federated/ingest_metadata", json=payload.model_dump()
+        "/federated/ingest_metadata", json=json_payload
     )
     assert response.status_code == 403
 
     # test malformed payload
-    nonsense_payload = expected_payload
     response = await joint_fixture.rest_client.post(
         "/federated/ingest_metadata",
-        json=nonsense_payload.model_dump(),
+        json=expected_payload.model_dump(mode="json"),
         headers=headers,
     )
     assert response.status_code == 422
@@ -180,7 +183,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     encrypted_payload = EncryptedPayload(
         payload=encrypt(
-            data=json.dumps(payload),
+            data=json.dumps(payload, default=str),
             key=joint_fixture.keypair.public,
         )
     )
@@ -213,7 +216,9 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
 
     # can't get exact event time for equality comparison, don't check but get directly
     # from the recorded event instead
-    expected_upload_date = str(event_recorder.recorded_events[0].payload["upload_date"])
+    expected_upload_date = datetime.fromisoformat(
+        event_recorder.recorded_events[0].payload["upload_date"]  # type: ignore
+    )
 
     expected_payload = FileUploadValidationSuccess(
         upload_date=expected_upload_date,
@@ -250,7 +255,7 @@ async def test_legacy_api_calls(monkeypatch, joint_fixture: JointFixture):
     async with event_recorder:
         response = await joint_fixture.rest_client.post(
             "/legacy/ingest",
-            json=encrypted_payload.model_dump(),
+            json=encrypted_payload.model_dump(mode="json"),
             headers=headers,
         )
     assert response.status_code == 409

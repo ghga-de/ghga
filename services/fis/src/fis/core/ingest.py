@@ -16,6 +16,7 @@
 
 import json
 import logging
+from contextlib import suppress
 from pathlib import Path
 
 from crypt4gh.keys import get_private_key
@@ -104,11 +105,10 @@ class LegacyUploadMetadataProcessor(LegacyUploadMetadataProcessorPort):
 
     async def has_already_been_processed(self, *, file_id: str):
         """Check if file metadata has already been seen and successfully processed."""
-        try:
+        with suppress(ResourceNotFoundError):
             await self._file_dao.get_by_id(file_id)
-        except ResourceNotFoundError:
-            return False
-        return True
+            return True
+        return False
 
     async def populate_by_event(
         self, *, upload_metadata: models.LegacyUploadMetadata, secret_id: str
