@@ -4,7 +4,9 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+cors_exposed_headers: null
 db_name: dev
+db_version_collection: pcsDbVersions
 docs_url: /docs
 enable_opentelemetry: false
 file_deletion_request_topic: file-deletion-requests
@@ -27,6 +29,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json
