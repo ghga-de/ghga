@@ -32,7 +32,6 @@ config:
 cmd: wps run-rest
 # cmd: wps consume-events
 
-
 _topics:
   datasetChangeEvent:
     # as consumer

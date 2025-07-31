@@ -26,7 +26,6 @@ config:
 cmd: dlqs run-rest
 # cmd: dlqs consume-events
 
-
 _topics:
   # as consumer
   deadLetterQueue:

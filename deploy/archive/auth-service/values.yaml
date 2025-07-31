@@ -27,7 +27,6 @@ authService:
 
 cmd: auth-service
 
-
 _topics:
   authEvents:
     # as producer

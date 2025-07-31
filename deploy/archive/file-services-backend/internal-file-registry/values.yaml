@@ -21,7 +21,6 @@ config:
 
 cmd: ifrs consume-events
 
-
 _topics:
   fileDeletedEvent:
     # as producer

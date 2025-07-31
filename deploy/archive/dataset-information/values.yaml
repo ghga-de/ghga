@@ -20,7 +20,6 @@ config:
   mongo_dsn: null
   kafka_enable_dlq: true
 
-
 cmd: dins run-rest
 # cmd: dins consume-events
 

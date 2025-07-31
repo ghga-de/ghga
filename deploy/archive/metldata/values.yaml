@@ -32,7 +32,6 @@ config:
 
 cmd: metldata
 
-
 _topics:
   artifactsEvent:
     # as producer
