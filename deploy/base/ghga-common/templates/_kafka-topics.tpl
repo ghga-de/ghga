@@ -70,7 +70,7 @@ spec:
     {{- end }}
     {{- include "common.tplvalues.render" (dict "value" $topicsACL "context" $) | nindent 4 }}
     {{- end }}
-    {{- with .Values._consumer_group -}}
+    {{- with .Values._consumerGroup -}}
     {{- $consumerGroupACL := list -}}
     {{- $aclEntry := hasKey . "operations" | ternary . (dict "operations" (list "Read")) -}}
     {{- $aclEntry = hasKey . "resource" | ternary (merge $aclEntry .) (merge $aclEntry (dict "resource" (dict "patternType" "literal" "type" "group"))) -}}

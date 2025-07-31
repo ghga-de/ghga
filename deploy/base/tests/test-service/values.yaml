@@ -85,7 +85,7 @@ topicPrefix: prefix
 kafkaUser:
   enabled: true
 
-_consumer_group:
+_consumerGroup:
   operations:
     - Read
   resource:

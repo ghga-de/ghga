@@ -41,7 +41,6 @@ config:
 
 cmd: ns
 
-_consumer_group:
 
 _topics:
   notificationEvent:

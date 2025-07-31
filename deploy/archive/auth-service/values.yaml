@@ -27,7 +27,6 @@ authService:
 
 cmd: auth-service
 
-_consumer_group:
 
 _topics:
   authEvents:

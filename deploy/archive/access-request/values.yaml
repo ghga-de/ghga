@@ -28,7 +28,6 @@ config:
 cmd: ars run-rest
 # cmd: ars consume-events
 
-_consumer_group:
 
 _topics:
   fileRegisteredEvent:

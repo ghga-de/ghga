@@ -33,7 +33,6 @@ config:
         name: Dataset title
   kafka_enable_dlq: true
 
-_consumer_group:
 
 cmd: mass run-rest
 # cmd: mass consume-events

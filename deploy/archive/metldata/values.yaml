@@ -32,7 +32,6 @@ config:
 
 cmd: metldata
 
-_consumer_group:
 
 _topics:
   artifactsEvent:

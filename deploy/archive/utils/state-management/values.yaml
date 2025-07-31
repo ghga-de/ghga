@@ -28,7 +28,6 @@ cmd: sms
 # SMS is just used for testing, it requires access to all topics to clear them
 kafkaTopicsParameters: false
 
-_consumer_group:
 
 _topics:
   wildcard:
