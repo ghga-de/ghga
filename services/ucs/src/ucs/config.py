@@ -26,8 +26,7 @@ from hexkit.providers.mongokafka import MongoKafkaConfig
 
 from ucs.adapters.inbound.event_sub import EventSubTranslatorConfig
 from ucs.adapters.outbound.event_pub import EventPubTranslatorConfig
-
-SERVICE_NAME = "ucs"
+from ucs.constants import SERVICE_NAME
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
