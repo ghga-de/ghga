@@ -22,6 +22,5 @@ file_staged_topic: file-stagings
 file_staged_type: file_staged_for_download
 file_deleted_topic: file-deletions
 file_deleted_type: file_deleted
-otel_exporter_endpoint: http://localhost:4318
 migration_wait_sec: 10
 db_version_collection: ifrsDbVersions

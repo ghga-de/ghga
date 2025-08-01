@@ -25,10 +25,10 @@ from ghga_event_schemas.configs import (
 )
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
-from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import UUID4
 
+from ifrs.constants import TRACER
 from ifrs.core.models import FileMetadataBase
 from ifrs.ports.inbound.file_registry import FileRegistryPort
 
@@ -62,7 +62,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             config.interrogation_success_type,
         ]
 
-    @start_span()
+    @TRACER.start_as_current_span("EventSubTranslator._consume_file_staging_request")
     async def _consume_file_staging_request(self, *, payload: JsonObject):
         """Consume an event requesting a file to be staged to the outbox bucket"""
         validated_payload = get_validated_payload(
@@ -76,7 +76,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             outbox_bucket_id=validated_payload.target_bucket_id,
         )
 
-    @start_span()
+    @TRACER.start_as_current_span("EventSubTranslator._consume_file_deletion_request")
     async def _consume_file_deletion_request(self, *, payload: JsonObject):
         """Consume an event requesting a file to be deleted"""
         validated_payload = get_validated_payload(
@@ -84,7 +84,9 @@ class EventSubTranslator(EventSubscriberProtocol):
         )
         await self._file_registry.delete_file(file_id=validated_payload.file_id)
 
-    @start_span()
+    @TRACER.start_as_current_span(
+        "EventSubTranslator._consume_file_interrogation_success"
+    )
     async def _consume_file_interrogation_success(self, *, payload: JsonObject):
         """Consume an event indicating that a file has passed validation"""
         validated_payload = get_validated_payload(
