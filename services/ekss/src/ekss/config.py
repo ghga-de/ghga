@@ -24,7 +24,7 @@ from hexkit.opentelemetry import OpenTelemetryConfig
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
-SERVICE_NAME = "ekss"
+from ekss.constants import SERVICE_NAME
 
 
 class VaultConfig(BaseSettings):

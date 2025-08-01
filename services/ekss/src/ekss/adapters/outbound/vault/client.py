@@ -20,11 +20,11 @@ from uuid import uuid4
 
 import hvac
 import hvac.exceptions
-from hexkit.opentelemetry import start_span
 from hvac.api.auth_methods import Kubernetes
 
 from ekss.adapters.outbound.vault import exceptions
 from ekss.config import VaultConfig
+from ekss.constants import TRACER
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ class VaultAdapter:
                 role_id=self._role_id, secret_id=self._secret_id
             )
 
-    @start_span()
+    @TRACER.start_as_current_span("VaultAdapter.store_secret")
     def store_secret(self, *, secret: bytes) -> str:
         """
         Store a secret under a subpath of the given prefix.
@@ -108,7 +108,7 @@ class VaultAdapter:
             raise exceptions.SecretInsertionError() from exc
         return key
 
-    @start_span()
+    @TRACER.start_as_current_span("VaultAdapter.get_secret")
     def get_secret(self, *, key: str) -> bytes:
         """
         Retrieve a secret at the subpath of the given prefix denoted by key.
@@ -130,7 +130,7 @@ class VaultAdapter:
         secret = response["data"]["data"][key]
         return base64.b64decode(secret)
 
-    @start_span()
+    @TRACER.start_as_current_span("VaultAdapter.delete_secret")
     def delete_secret(self, *, key: str) -> None:
         """Delete a secret"""
         self._check_auth()

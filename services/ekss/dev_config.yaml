@@ -9,5 +9,3 @@ service_instance_id: "1"
 
 server_private_key_path: key.sec
 server_public_key_path: key.pub
-
-otel_exporter_endpoint: http://localhost:4318

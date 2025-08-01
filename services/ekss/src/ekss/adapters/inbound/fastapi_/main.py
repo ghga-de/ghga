@@ -23,7 +23,7 @@ from fastapi import FastAPI
 from ghga_service_commons.api import ApiConfigBase, configure_app
 
 from ekss.adapters.inbound.fastapi_.custom_openapi import get_openapi_schema
-from ekss.adapters.inbound.fastapi_.router import router
+from ekss.adapters.inbound.fastapi_.routes import router
 
 
 def setup_app(config: ApiConfigBase):
