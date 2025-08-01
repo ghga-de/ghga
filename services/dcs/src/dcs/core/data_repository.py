@@ -26,7 +26,6 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorages,
     S3ObjectStoragesConfig,
 )
-from hexkit.opentelemetry import start_span
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
 from pydantic import Field, PositiveInt, field_validator
@@ -37,6 +36,7 @@ from dcs.adapters.outbound.http.api_calls import (
     delete_secret_from_ekss,
     get_envelope_from_ekss,
 )
+from dcs.constants import TRACER
 from dcs.core import models
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort, ResourceNotFoundError
@@ -146,7 +146,7 @@ class DataRepository(DataRepositoryPort):
             self_uri=self._get_drs_uri(drs_id=drs_object.file_id),
         )
 
-    @start_span()
+    @TRACER.start_as_current_span("DataRepository._get_access_model")
     async def _get_access_model(
         self,
         *,

@@ -17,7 +17,6 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
-from hexkit.opentelemetry import start_span
 
 from dcs.adapters.inbound.fastapi_ import (
     dummies,
@@ -26,12 +25,12 @@ from dcs.adapters.inbound.fastapi_ import (
     http_response_models,
     http_responses,
 )
+from dcs.constants import TRACER
 from dcs.core.auth_policies import WorkOrderContext
 from dcs.core.models import DrsObjectResponseModel
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 
 router = APIRouter()
-
 
 RESPONSES = {
     "internalServerError": {
@@ -66,7 +65,7 @@ RESPONSES = {
 }
 
 
-@start_span()
+@TRACER.start_as_current_span("routes.health")
 @router.get(
     "/health",
     summary="health",
@@ -78,7 +77,7 @@ async def health():
     return {"status": "OK"}
 
 
-@start_span()
+@TRACER.start_as_current_span("routes.get_drs_object")
 @router.get(
     "/objects/{object_id}",
     summary="Returns object metadata, and a list of access methods that can be used "
@@ -134,7 +133,7 @@ async def get_drs_object(
         raise http_exceptions.HttpInternalServerError() from configuration_error
 
 
-@start_span()
+@TRACER.start_as_current_span("routes.get_envelope")
 @router.get(
     "/objects/{object_id}/envelopes",
     summary="Returns base64 encoded, personalized file envelope",

@@ -111,26 +111,6 @@
       "title": "Otel Trace Sampling Rate",
       "type": "number"
     },
-    "otel_exporter_protocol": {
-      "default": "http/protobuf",
-      "description": "Specifies which protocol should be used by exporters.",
-      "enum": [
-        "grpc",
-        "http/protobuf"
-      ],
-      "title": "Otel Exporter Protocol",
-      "type": "string"
-    },
-    "otel_exporter_endpoint": {
-      "description": "Base endpoint URL for the collector that receives content from the exporter.",
-      "examples": [
-        "http://localhost:4318"
-      ],
-      "format": "uri",
-      "minLength": 1,
-      "title": "Otel Exporter Endpoint",
-      "type": "string"
-    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -775,7 +755,6 @@
     }
   },
   "required": [
-    "otel_exporter_endpoint",
     "service_instance_id",
     "object_storages",
     "file_deletion_request_topic",

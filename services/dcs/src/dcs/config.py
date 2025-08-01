@@ -29,9 +29,8 @@ from pydantic import Field
 from dcs.adapters.inbound.event_sub import EventSubTranslatorConfig
 from dcs.adapters.inbound.fastapi_.configure import DrsApiConfig
 from dcs.adapters.outbound.event_pub import EventPubTranslatorConfig
+from dcs.constants import SERVICE_NAME
 from dcs.core.data_repository import DataRepositoryConfig
-
-SERVICE_NAME = "dcs"
 
 
 class WorkOrderTokenConfig(AuthConfig):
