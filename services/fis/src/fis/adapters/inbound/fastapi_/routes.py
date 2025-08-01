@@ -18,13 +18,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import JSONResponse
-from hexkit.opentelemetry import start_span
 
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.http_authorization import (
     IngestTokenAuthContext,
     require_token,
 )
+from fis.constants import TRACER
 from fis.core.models import EncryptedPayload, UploadMetadata
 from fis.ports.inbound.ingest import (
     DecryptionError,
@@ -35,19 +35,18 @@ from fis.ports.inbound.ingest import (
 router = APIRouter()
 
 
-@start_span()
 @router.get(
     "/health",
     summary="health",
     tags=["FileIngestService"],
     status_code=200,
 )
+@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}
 
 
-@start_span()
 @router.post(
     "/legacy/ingest",
     summary="Processes encrypted output data from the S3 upload script and ingests it "
@@ -71,6 +70,7 @@ async def health():
         },
     },
 )
+@TRACER.start_as_current_span("routes.ingest_legacy_metadata")
 async def ingest_legacy_metadata(
     encrypted_payload: EncryptedPayload,
     upload_metadata_processor: dummies.LegacyUploadProcessor,
@@ -109,7 +109,6 @@ async def ingest_legacy_metadata(
     return Response(status_code=202)
 
 
-@start_span()
 @router.post(
     "/federated/ingest_metadata",
     summary="Processes encrypted output data from the S3 upload script and ingests it "
@@ -124,6 +123,7 @@ async def ingest_legacy_metadata(
         }
     },
 )
+@TRACER.start_as_current_span("routes.ingest_metadata")
 async def ingest_metadata(
     payload: UploadMetadata,
     upload_metadata_processor: dummies.UploadProcessorPort,
@@ -147,7 +147,6 @@ async def ingest_metadata(
     return Response(status_code=202)
 
 
-@start_span()
 @router.post(
     "/federated/ingest_secret",
     summary="Store file encryption/decryption secret and return secret ID.",
@@ -166,6 +165,7 @@ async def ingest_metadata(
         },
     },
 )
+@TRACER.start_as_current_span("routes.ingest_secret")
 async def ingest_secret(
     encrypted_payload: EncryptedPayload,
     upload_metadata_processor: dummies.UploadProcessorPort,

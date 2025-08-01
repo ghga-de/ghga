@@ -35,8 +35,6 @@ migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json
-otel_exporter_endpoint: http://localhost:4318/
-otel_exporter_protocol: http/protobuf
 otel_trace_sampling_rate: 1.0
 port: 8080
 private_key_passphrase: null

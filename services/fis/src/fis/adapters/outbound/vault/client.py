@@ -19,11 +19,11 @@ from uuid import uuid4
 
 import hvac
 import hvac.exceptions
-from hexkit.opentelemetry import start_span
 from hvac.api.auth_methods import Kubernetes
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
+from fis.constants import TRACER
 from fis.ports.outbound.vault.client import VaultAdapterPort
 
 
@@ -132,7 +132,7 @@ class VaultAdapter(VaultAdapterPort):
                 role_id=self._role_id, secret_id=self._secret_id
             )
 
-    @start_span()
+    @TRACER.start_as_current_span("VaultAdapter.store_secret")
     def store_secret(self, *, secret: SecretStr) -> str:
         """
         Store a secret under a subpath of the given prefix.

@@ -24,9 +24,8 @@ from pydantic import Field
 
 from fis.adapters.outbound.event_pub import EventPubTranslatorConfig
 from fis.adapters.outbound.vault import VaultConfig
+from fis.constants import SERVICE_NAME
 from fis.core.ingest import ServiceConfig
-
-SERVICE_NAME = "fis"
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
