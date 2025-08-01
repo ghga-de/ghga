@@ -20,6 +20,5 @@ token_hashes: [abcdef, ghijkl]
 mongo_dsn: "mongodb://mongodb:27017"
 db_name: "dev"
 
-otel_exporter_endpoint: http://localhost:4318
 migration_wait_sec: 10
 db_version_collection: pcsDbVersions

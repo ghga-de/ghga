@@ -17,30 +17,29 @@
 from typing import Annotated
 
 from fastapi import APIRouter, status
-from hexkit.opentelemetry import start_span
 
 from pcs.adapters.inbound.fastapi_ import dummies
 from pcs.adapters.inbound.fastapi_.http_authorization import (
     TokenAuthContext,
     require_token,
 )
+from pcs.constants import TRACER
 
 router = APIRouter()
 
 
-@start_span()
 @router.get(
     "/health",
     summary="health",
     tags=["PurgeControllerService"],
     status_code=status.HTTP_200_OK,
 )
+@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}
 
 
-@start_span()
 @router.delete(
     "/files/{file_id}",
     summary="Deletes the corresponding file.",
@@ -49,6 +48,7 @@ async def health():
     status_code=status.HTTP_202_ACCEPTED,
     response_description="Commissioned file deletion",
 )
+@TRACER.start_as_current_span("routes.delete_file")
 async def delete_file(
     file_id: str,
     file_deletion: dummies.FileDeletionDummy,

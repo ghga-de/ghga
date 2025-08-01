@@ -24,8 +24,7 @@ from hexkit.providers.mongodb.migrations import MigrationConfig
 
 from pcs.adapters.inbound.fastapi_.config import TokenHashConfig
 from pcs.adapters.outbound.event_pub import EventPubTranslatorConfig
-
-SERVICE_NAME = "pcs"
+from pcs.constants import SERVICE_NAME
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
