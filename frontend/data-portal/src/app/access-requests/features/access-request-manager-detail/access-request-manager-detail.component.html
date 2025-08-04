@@ -172,7 +172,10 @@
               <p>Loading verification addresses...</p>
             } @else if (ivasError() || !ivas().length) {
               <p>
-                No corresponding verification addresses found, cannot process request.
+                No corresponding verification addresses found.
+                @if (ar.status === 'pending') {
+                  The request can only be allowed when there is a corresponding IVA.
+                }
               </p>
             } @else if (!changeable()) {
               @let iva = associatedIva();
@@ -251,7 +254,7 @@
     </div>
 
     <div class="mt-8 flex">
-      @if (ivasAreLoading() || ivasError() || !ivas().length || !changeable()) {
+      @if (ivasAreLoading() || !changeable()) {
         <button
           mat-stroked-button
           (click)="goBack()"
@@ -281,11 +284,7 @@
               data-umami-event="Access Request Manager Deny Clicked"
               [disabled]="ar.status === 'denied'"
             >
-              @if (ar.status === 'allowed') {
-                Revoke access
-              } @else {
-                Deny
-              }
+              Deny
             </button>
           </div>
           <div class="w-full sm:w-auto">
@@ -294,17 +293,9 @@
               class="success w-full sm:w-auto"
               (click)="saveBeforeStatusChange('allow')"
               data-umami-event="Access Request Manager Allow Clicked"
-              [disabled]="
-                ar.status === 'allowed' &&
-                (!selectedIvaIdRadioButton() ||
-                  ar.iva_id === selectedIvaIdRadioButton())
-              "
+              [disabled]="ar.status === 'allowed' || ivasError() || !ivas().length"
             >
-              @if (ar.status === 'allowed') {
-                Change address
-              } @else {
-                Allow
-              }
+              Allow
             </button>
           </div>
         </div>

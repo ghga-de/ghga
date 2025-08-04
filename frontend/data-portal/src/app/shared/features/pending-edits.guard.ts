@@ -22,7 +22,7 @@ export interface HasPendingEdits {
 /**
  * Generic guard to prevent navigation away from components with unsaved changes.
  * Components must implement the HasPendingEdits interface.
- * @param component
+ * @param component the component to check for pending edits
  * @returns a guard result which is or can be resolved to a boolean
  */
 export const pendingEditsGuard: CanDeactivateFn<HasPendingEdits> = (component) => {
