@@ -153,6 +153,7 @@ async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
                 config=config,
                 user_dao=user_dao,
                 iva_dao=iva_dao,
+                claim_dao=claim_dao,
                 event_pub=event_pub,
             )
             app.dependency_overrides[get_user_registry] = lambda: user_registry

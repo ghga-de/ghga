@@ -26,7 +26,6 @@ from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.auth_adapter.deps import UserTokenDaoDependency
-from auth_service.claims_repository.deps import ClaimDaoDependency
 
 from ...auth_adapter.rest.dto import TOTPTokenResponse
 from ...rest.auth import (
@@ -49,17 +48,51 @@ from ..models.users import (
     UserModifiableData,
     UserRegisteredData,
     UserStatus,
+    UserWithRoles,
 )
 
 __all__ = ["router"]
 
 router = APIRouter()
 
-INITIAL_USER_STATUS = UserStatus.ACTIVE
-
 TAGS_USERS: list[str | Enum] = ["users"]
 TAGS_SESSION: list[str | Enum] = ["session"]
 TAGS_TOTP: list[str | Enum] = ["totp"]
+
+
+@start_span()
+@router.get(
+    "/users",
+    operation_id="get_users",
+    tags=TAGS_USERS,
+    summary="Get user data of all users",
+    description="Endpoint used to retrieve user data for all users including all their roles."
+    " Can only be performed by a data steward.",
+    responses={
+        200: {
+            "model": list[User],
+            "description": "User data was successfully retrieved.",
+        },
+        401: {"description": "Not authorized to request user data."},
+        409: {"description": "User was already registered."},
+    },
+    status_code=200,
+)
+async def get_users(
+    user_registry: UserRegistryDependency,
+    _auth_context: StewardAuthContext,
+    status: Annotated[
+        UserStatus | None,
+        Query(
+            description="Filter for the status of the user",
+        ),
+    ] = None,
+) -> list[UserWithRoles]:
+    """Get user data of all users including their roles."""
+    try:
+        return await user_registry.get_users_with_roles(status=status)
+    except user_registry.IvaRetrievalError as error:
+        raise HTTPException(status_code=500, detail="Cannot retrieve users.") from error
 
 
 @start_span()
@@ -72,7 +105,10 @@ TAGS_TOTP: list[str | Enum] = ["totp"]
     " May only be performed by the users themselves."
     " Data delivered by the OIDC provider may not be altered.",
     responses={
-        201: {"model": User, "description": "User was successfully registered."},
+        201: {
+            "model": UserWithRoles,
+            "description": "User was successfully registered.",
+        },
         401: {"description": "Not authorized to register users."},
         403: {"description": "Not authorized to register this user."},
         409: {"description": "User was already registered."},
@@ -84,7 +120,7 @@ async def post_user(
     user_data: UserRegisteredData,
     user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
-) -> User:
+) -> UserWithRoles:
     """Register a user."""
     ext_id = user_data.ext_id
     # note that the auth context contains the external ID for this endpoint (only)
@@ -166,7 +202,7 @@ async def put_user(
     operation_id="get_user",
     tags=TAGS_USERS,
     summary="Get user data",
-    description="Endpoint used to get the user data for a specified user."
+    description="Endpoint used to get the user data for a specified user including all roles."
     " Can only be performed by a data steward or the same user.",
     responses={
         200: {"model": User, "description": "Requested user has been found."},
@@ -188,13 +224,13 @@ async def get_user(
     ],
     user_registry: UserRegistryDependency,
     auth_context: UserAuthContext,
-) -> User:
-    """Get user data."""
+) -> UserWithRoles:
+    """Get user data including their roles."""
     # only data stewards can request other user accounts
     if not (is_steward(auth_context) or id_ == auth_context.id):
         raise HTTPException(status_code=403, detail="Not authorized to request user.")
     try:
-        user = await user_registry.get_user(id_)
+        user = await user_registry.get_user_with_roles(id_)
     except user_registry.UserDoesNotExistError as error:
         raise HTTPException(
             status_code=404, detail="The user was not found."
@@ -297,7 +333,6 @@ async def delete_user(
     ],
     user_registry: UserRegistryDependency,
     token_dao: UserTokenDaoDependency,
-    claim_dao: ClaimDaoDependency,
     auth_context: StewardAuthContext,
 ) -> Response:
     """Delete user."""
@@ -311,10 +346,6 @@ async def delete_user(
         # delete associated tokens belonging to the auth adapter
         with suppress(ResourceNotFoundError):
             await token_dao.delete(id_)
-        # delete associated claims belonging to the claims repository
-        async for claim in claim_dao.find_all(mapping={"user_id": id_}):
-            with suppress(ResourceNotFoundError):
-                await claim_dao.delete(claim.id)
     except user_registry.UserDoesNotExistError as error:
         raise HTTPException(
             status_code=404, detail="The user was not found."

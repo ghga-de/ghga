@@ -24,7 +24,11 @@ import pytest
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import RecordedEvent
+from hexkit.providers.mongodb import MongoDbDaoFactory
 
+from auth_service.claims_repository.core.claims import Role, create_internal_role_claim
+from auth_service.claims_repository.translators.dao import ClaimDaoFactory
+from auth_service.config import Config
 from auth_service.user_registry.core.registry import UserRegistry
 
 from ...fixtures.utils import get_headers_for
@@ -59,6 +63,15 @@ def seconds_passed(date_string: str) -> float:
     return (
         now_as_utc() - datetime.fromisoformat(date_string.replace("Z", "+00:00"))
     ).total_seconds()
+
+
+async def add_admin_role(user_id: str, config: Config, role: Role = Role.ADMIN) -> None:
+    """Add an admin role to the claims database."""
+    dao_factory = MongoDbDaoFactory(config=config)
+    claim_dao_factory = ClaimDaoFactory(config=config, dao_factory=dao_factory)
+    claim_dao = await claim_dao_factory.get_claim_dao()
+    claim = create_internal_role_claim(user_id, role)
+    await claim_dao.insert(claim)
 
 
 async def test_health_check(bare_client: BareClient):
@@ -97,6 +110,7 @@ async def test_post_user(full_client: FullClient, new_user_headers: dict[str, st
 
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
+    assert user.pop("roles") == []
 
     assert user == user_data
 
@@ -145,6 +159,7 @@ async def test_post_user_with_minimal_data(
 
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
+    assert user.pop("roles") == []
 
     assert user == {**MIN_USER_DATA, **dict.fromkeys(OPT_USER_DATA)}
 
@@ -306,6 +321,7 @@ async def test_put_user(full_client: FullClient, new_user_headers: dict[str, str
     assert 0 <= seconds_passed(user.pop("registration_date")) <= 10
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
+    assert user.pop("roles") == []
 
     assert user == new_data
 
@@ -422,7 +438,18 @@ async def test_get_user_via_id(
 
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
+    assert isinstance(user, dict)
+    assert user == expected_user
 
+    # also test that we see the role when the user has one
+
+    await add_admin_role(id_, config=full_client.config)
+    response = await full_client.get(f"/users/{id_}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    user = response.json()
+    assert isinstance(user, dict)
+    assert user["roles"] == ["admin"]
+    user["roles"] = []
     assert user == expected_user
 
 
@@ -483,6 +510,98 @@ async def test_get_user_unauthenticated(bare_client: BareClient):
     assert response.status_code == status.HTTP_403_FORBIDDEN
     error = response.json()
     assert error == {"detail": "Not authenticated"}
+
+
+async def test_get_users(
+    full_client: FullClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test that a data steward can fetch the list of users."""
+    # in the beginning the user list is empty
+    response = await full_client.get("/users", headers=steward_headers)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert isinstance(users, list)
+    assert not users
+
+    # now create a user
+    user_data = MAX_USER_DATA
+    response = await full_client.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    expected_user = response.json()
+
+    # get the full list of users
+    response = await full_client.get("/users", headers=steward_headers)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert isinstance(users, list)
+    assert len(users) == 1
+    user = users[0]
+    assert isinstance(user, dict)
+    assert user["roles"] == []
+    assert user == expected_user
+
+    # test that we can also filter for active users
+    response = await full_client.get("/users?status=active", headers=steward_headers)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert users
+    user = users[0]
+    assert user["roles"] == []
+    assert user == expected_user
+
+    # test that we can filter for inactive users
+    response = await full_client.get("/users?status=inactive", headers=steward_headers)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert users == []
+
+    # also test that we can see the roles
+    await add_admin_role(user["id"], config=full_client.config)
+    response = await full_client.get("/users", headers=steward_headers)
+    users = response.json()
+    assert users
+    user = users[0]
+    assert user["roles"] == ["admin"]
+    user["roles"] = []
+    assert user == expected_user
+
+
+async def test_get_users_with_invalid_status(
+    bare_client: BareClient,
+    steward_headers: dict[str, str],
+):
+    """Test that we get an error when fetching users with invalid status filter."""
+    response = await bare_client.get("/users?status=foo", headers=steward_headers)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_get_users_unauthenticated(bare_client: BareClient):
+    """Test requesting the user list without authentication."""
+    response = await bare_client.get("/users")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authenticated"}
+
+
+async def test_get_users_unauthorized(
+    bare_client: BareClient,
+    user_headers: dict[str, str],
+):
+    """Test requesting a user with insufficient authorization."""
+    response = await bare_client.get("/users", headers=user_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized"}
+
+    response = await bare_client.get("/users?status=active", headers=user_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    error = response.json()
+    assert error == {"detail": "Not authorized"}
 
 
 async def test_patch_non_existing_user(

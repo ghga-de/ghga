@@ -36,7 +36,7 @@ from auth_service.claims_repository.translators.dao import (
 from auth_service.claims_repository.translators.event_sub import (
     EventSubTranslatorConfig,
 )
-from auth_service.user_registry.core.registry import UserRegistryConfig
+from auth_service.user_registry.core.config import UserRegistryConfig
 from auth_service.user_registry.translators.dao import UserDaoConfig
 from auth_service.user_registry.translators.event_pub import (
     EventPubTranslatorConfig,

@@ -771,6 +771,86 @@ components:
       - inactive
       title: UserStatus
       type: string
+    UserWithRoles:
+      additionalProperties: false
+      description: Complete User model plus roles
+      properties:
+        active_access_requests:
+          default: []
+          description: List of IDs of all active data access requests created by the
+            user
+          items:
+            type: string
+          title: Active Access Requests
+          type: array
+        active_submissions:
+          default: []
+          description: List of IDs of all active submissions created by the user
+          items:
+            type: string
+          title: Active Submissions
+          type: array
+        email:
+          description: Preferred e-mail address of the user
+          examples:
+          - user@home.org
+          format: email
+          title: Email
+          type: string
+        ext_id:
+          description: External (Life Science) ID
+          examples:
+          - user@lifescience-ri.eu
+          format: email
+          title: External ID
+          type: string
+        id:
+          description: Internal user ID
+          title: Id
+          type: string
+        name:
+          description: Full name of the user
+          examples:
+          - Rosalind Franklin
+          title: Name
+          type: string
+        registration_date:
+          description: Date when the user was registered
+          format: date-time
+          title: Registration Date
+          type: string
+        roles:
+          default: []
+          description: List of roles assigned to the user
+          examples:
+          - data_steward
+          - data_provider
+          items:
+            type: string
+          title: Roles
+          type: array
+        status:
+          $ref: '#/components/schemas/UserStatus'
+          description: Registration status of the user
+        status_change:
+          anyOf:
+          - $ref: '#/components/schemas/StatusChange'
+          - type: 'null'
+          description: Last status change
+        title:
+          anyOf:
+          - $ref: '#/components/schemas/AcademicTitle'
+          - type: 'null'
+          description: Academic title of the user
+          title: Academic title
+      required:
+      - registration_date
+      - name
+      - email
+      - ext_id
+      - status
+      title: UserWithRoles
+      type: object
     ValidationError:
       properties:
         loc:
@@ -815,7 +895,7 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 6.1.1
+  version: 7.0.0
 openapi: 3.1.0
 paths:
   /download-access/grants:
@@ -1372,6 +1452,46 @@ paths:
       tags:
       - totp
   /users:
+    get:
+      description: Endpoint used to retrieve user data for all users including all
+        their roles. Can only be performed by a data steward.
+      operationId: get_users
+      parameters:
+      - description: Filter for the status of the user
+        in: query
+        name: status
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/UserStatus'
+          - type: 'null'
+          description: Filter for the status of the user
+          title: Status
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/User'
+                title: Response 200 Get Users
+                type: array
+          description: User data was successfully retrieved.
+        '401':
+          description: Not authorized to request user data.
+        '409':
+          description: User was already registered.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Get user data of all users
+      tags:
+      - users
     post:
       description: Endpoint used to register a new user. May only be performed by
         the users themselves. Data delivered by the OIDC provider may not be altered.
@@ -1387,7 +1507,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/UserWithRoles'
           description: User was successfully registered.
         '401':
           description: Not authorized to register users.
@@ -1438,8 +1558,8 @@ paths:
       tags:
       - users
     get:
-      description: Endpoint used to get the user data for a specified user. Can only
-        be performed by a data steward or the same user.
+      description: Endpoint used to get the user data for a specified user including
+        all roles. Can only be performed by a data steward or the same user.
       operationId: get_user
       parameters:
       - description: Internal User ID

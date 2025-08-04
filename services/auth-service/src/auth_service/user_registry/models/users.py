@@ -23,7 +23,7 @@ from pydantic import EmailStr, Field
 
 from . import BaseDto
 
-__all__ = ["StatusChange", "User", "UserData", "UserStatus"]
+__all__ = ["StatusChange", "User", "UserData", "UserStatus", "UserWithRoles"]
 
 
 class UserStatus(StrEnum):
@@ -131,4 +131,14 @@ class User(UserData):
 
     id: str = Field(
         default_factory=lambda: str(uuid4()), description="Internal user ID"
+    )
+
+
+class UserWithRoles(User):
+    """Complete User model plus roles"""
+
+    roles: list[str] = Field(
+        default=[],
+        description="List of roles assigned to the user",
+        examples=["data_steward", "data_provider"],
     )

@@ -41,6 +41,7 @@ from auth_service.user_registry.models.users import (
     UserModifiableData,
     UserRegisteredData,
     UserStatus,
+    UserWithRoles,
 )
 
 from ...fixtures.utils import DummyUserRegistry
@@ -94,7 +95,6 @@ async def test_create_existing_user():
 async def test_create_new_user():
     """Test creating a user account that does not yet exist."""
     registry = DummyUserRegistry()
-    user = registry.dummy_user
     user_data = UserRegisteredData(
         ext_id="jane@aai.org",
         name="John Roe",
@@ -103,7 +103,7 @@ async def test_create_new_user():
     )
     user = await registry.create_user(user_data)
     user = user.model_copy(update={"id": "jane@ghga.de"})
-    assert user == registry.dummy_user
+    assert user == UserWithRoles(**registry.dummy_user.model_dump(), roles=[])
     assert registry.is_internal_user_id(user.id)
     assert user.ext_id == "jane@aai.org"
     assert user.status == UserStatus.ACTIVE

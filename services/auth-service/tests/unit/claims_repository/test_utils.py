@@ -28,6 +28,7 @@ from auth_service.claims_repository.core.utils import (
     user_exists,
     user_is_active,
     user_with_iva_exists,
+    with_added_roles,
 )
 from auth_service.claims_repository.ports.dao import ClaimDao
 from auth_service.user_registry.models.ivas import (
@@ -35,7 +36,7 @@ from auth_service.user_registry.models.ivas import (
     IvaState,
     IvaType,
 )
-from auth_service.user_registry.models.users import UserStatus
+from auth_service.user_registry.models.users import UserStatus, UserWithRoles
 from auth_service.user_registry.ports.dao import IvaDao, UserDao
 
 from ...fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
@@ -135,6 +136,18 @@ async def test_iva_is_verified(state: IvaState):
     assert await iva_is_verified(user_id, "other-iva-id", **kwargs) is False
     expected_verified = state == IvaState.VERIFIED
     assert await iva_is_verified(user_id, iva_id, **kwargs) is expected_verified
+
+
+async def test_get_active_roles_without_iva():
+    """Internal role claims without IVA can be requested."""
+    user_id = "james@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    expected_roles = ["data_steward"]
+    assert (
+        await get_active_roles(user_id, user_dao=user_dao, claim_dao=claim_dao)
+        == expected_roles
+    )
 
 
 @pytest.mark.parametrize("state", IvaState)
@@ -359,3 +372,22 @@ async def test_get_active_role_with_inactive_user(status: UserStatus):
             )
             == expected_roles
         )
+
+
+async def test_empty_user_list_with_added_roles():
+    """Adding roles works with an empty list of users."""
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    assert await with_added_roles([], claim_dao=claim_dao) == []
+
+
+async def test_non_empty_user_list_with_added_roles():
+    """The proper roles are added to a non-empty list of users."""
+    user_id = "james@ghga.de"
+    user_dao = cast(UserDao, DummyUserDao(id_=user_id))
+    claim_dao = cast(ClaimDao, DummyClaimDao())
+    user = await user_dao.get_by_id(user_id)
+    user_with_roles = UserWithRoles(
+        **user.model_dump(),
+        roles=["data_steward"],
+    )
+    assert await with_added_roles([user], claim_dao=claim_dao) == [user_with_roles]
