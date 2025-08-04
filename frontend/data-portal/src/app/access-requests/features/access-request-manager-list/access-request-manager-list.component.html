@@ -1,7 +1,8 @@
 @if (accessRequestsAreLoading()) {
   <p class="text-base">Loading access requests...</p>
 } @else {
-  @let columns = ['ticket', 'dataset', 'user', 'starts', 'ends', 'requested', 'status'];
+  @let columns =
+    ['ticket', 'dataset', 'user', 'starts', 'ends', 'requested', 'status', 'details'];
   <div class="overflow-auto">
     <table
       mat-table
@@ -67,13 +68,26 @@
           {{ ar.status }}
         </td>
       </ng-container>
+      <ng-container matColumnDef="details">
+        <th mat-header-cell *matHeaderCellDef class="w-24">Details</th>
+        <td mat-cell *matCellDef="let ar">
+          <button
+            mat-icon-button
+            (click)="viewDetails(ar); $event.stopPropagation()"
+            aria-label="View access request details"
+            class="text-primary"
+          >
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </td>
+      </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="columns"></tr>
       <tr
         mat-row
         *matRowDef="let row; columns: columns"
         class="duration-200 hover:cursor-pointer hover:bg-black/[0.05] hover:transition"
-        (click)="openDetails(row)"
+        (click)="viewDetails(row)"
       ></tr>
 
       <tr class="mat-row" *matNoDataRow>

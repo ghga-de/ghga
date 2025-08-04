@@ -7,7 +7,12 @@
 import { httpResource } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config.service';
-import { RegisteredUser, RegisteredUserFilter, RoleNames } from '../models/user';
+import {
+  RegisteredUser,
+  RegisteredUserFilter,
+  RoleNames,
+  UserStatus,
+} from '../models/user';
 
 /**
  * Display user interface with additional properties for template use
@@ -127,7 +132,7 @@ export class UserService {
       filter || {
         idStrings: '',
         roles: undefined,
-        status: undefined,
+        status: UserStatus.active,
       }
     );
   });
@@ -137,9 +142,7 @@ export class UserService {
    * @param filter - the filter to apply
    */
   setUsersFilter(filter: RegisteredUserFilter): void {
-    this.#usersFilter.set(
-      filter.idStrings || filter.roles?.length || filter.status ? filter : undefined,
-    );
+    this.#usersFilter.set(filter);
   }
 
   /**

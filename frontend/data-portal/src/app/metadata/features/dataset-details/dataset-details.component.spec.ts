@@ -8,6 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { datasetDetails, datasetInformation } from '@app/../mocks/data';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information.service';
 import { MetadataService } from '@app/metadata/services/metadata.service';
 import { DatasetDetailsComponent } from './dataset-details.component';
@@ -32,11 +33,8 @@ class MockMetadataService {
 }
 
 import { ActivatedRoute } from '@angular/router';
-import { fakeActivatedRoute } from '@app/../mocks/route';
-import {
-  AccessRequestService,
-  MockAccessRequestService,
-} from '@app/access-requests/services/access-request.service';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { AuthService } from '@app/auth/services/auth.service';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value.service';
 import { ConfigService } from '@app/shared/services/config.service';

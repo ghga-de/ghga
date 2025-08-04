@@ -25,7 +25,7 @@ import {
 } from '@angular/material/dialog';
 import { MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { AccessRequestDialogData } from '@app/access-requests/models/access-requests';
+import { AccessRequestDetailData } from '@app/access-requests/models/access-requests';
 import { ConfigService } from '@app/shared/services/config.service';
 import { DATE_INPUT_FORMAT_HINT, timeZoneToUTC } from '@app/shared/utils/date-formats';
 
@@ -49,7 +49,7 @@ import { DATE_INPUT_FORMAT_HINT, timeZoneToUTC } from '@app/shared/utils/date-fo
 })
 export class AccessRequestDialogComponent {
   readonly dialogRef = inject(MatDialogRef<AccessRequestDialogComponent>);
-  readonly data = inject<AccessRequestDialogData>(MAT_DIALOG_DATA);
+  readonly data = inject<AccessRequestDetailData>(MAT_DIALOG_DATA);
   #config = inject(ConfigService);
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
   readonly emailFormControl = new FormControl(this.data.email, [

@@ -8,10 +8,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import {
-  AccessRequestService,
-  MockAccessRequestService,
-} from '@app/access-requests/services/access-request.service';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { PendingAccessRequestsListComponent } from './pending-access-requests-list.component';
 
 describe('PendingAccessRequestsListComponent', () => {

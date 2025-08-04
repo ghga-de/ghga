@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 import {
   AccessRequest,
-  AccessRequestDialogData,
+  AccessRequestDetailData,
   AccessRequestStatus,
   GrantedAccessRequest,
 } from '@app/access-requests/models/access-requests';
@@ -62,7 +62,7 @@ export class DynamicAccessRequestButtonComponent {
       return;
     }
 
-    const data: AccessRequestDialogData = {
+    const data: AccessRequestDetailData = {
       datasetID: this.datasetID(),
       email: this.#auth.email() || '',
       description: '',
@@ -83,7 +83,7 @@ export class DynamicAccessRequestButtonComponent {
       });
   };
 
-  #processAccessRequest = (data: AccessRequestDialogData) => {
+  #processAccessRequest = (data: AccessRequestDetailData) => {
     const userid = this.#auth.user()?.id;
     if (!this.#auth.isAuthenticated() || !userid) {
       return;

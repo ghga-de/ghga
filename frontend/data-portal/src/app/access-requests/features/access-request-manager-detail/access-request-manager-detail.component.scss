@@ -18,23 +18,19 @@ mat-card {
 :not(mat-radio-group) > table td {
   text-align: left;
   vertical-align: top;
-  min-width: 240px;
+  min-width: 280px;
   padding-bottom: 4px;
 }
 
 th {
-  width: 144px;
-  min-width: 144px;
+  width: 192px;
+  min-width: 192px;
   text-align: left;
   vertical-align: top;
 }
 
 p.last {
   margin-bottom: 0;
-}
-
-mat-dialog-actions {
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 a mat-icon {

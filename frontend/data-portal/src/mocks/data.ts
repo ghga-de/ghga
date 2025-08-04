@@ -41,6 +41,16 @@ export const users: RegisteredUser[] = [
     registration_date: '2023-01-01T00:00:00',
   },
   {
+    id: 'mar@test.dev',
+    ext_id: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaaf@lifescience-ri.eu',
+    name: 'Joan Mar',
+    title: 'Dr.',
+    email: 'mar@home.or',
+    roles: [],
+    status: UserStatus.active,
+    registration_date: '2023-03-01T00:00:00',
+  },
+  {
     id: 'fred.flintstone@test.dev',
     ext_id: 'caffeecaffeecaffeecaffeecaffeecaffeeaafaa@lifescience-ri.eu',
     name: 'Fred Flintstone',

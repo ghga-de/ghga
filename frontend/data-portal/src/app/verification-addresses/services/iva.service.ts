@@ -108,11 +108,7 @@ export class IvaService {
    * @param filter - the filter to apply
    */
   setAllIvasFilter(filter: IvaFilter): void {
-    this.#allIvasFilter.set(
-      filter.name || filter.fromDate || filter.toDate || filter.state
-        ? filter
-        : undefined,
-    );
+    this.#allIvasFilter.set(filter);
   }
 
   /**

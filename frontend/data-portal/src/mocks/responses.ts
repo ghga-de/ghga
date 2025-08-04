@@ -7,6 +7,7 @@
 import { user } from './auth';
 
 import {
+  accessRequests,
   allIvas,
   allIvasOfDoe,
   allIvasOfMar,
@@ -40,6 +41,8 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // User Data
   'GET /api/auth/users/doe@test.dev': user,
+  'GET /api/auth/users/roe@test.dev': users[1],
+  'GET /api/auth/users/mar@test.dev': users[2],
 
   'GET /api/auth/users': users,
 
@@ -137,6 +140,10 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   /**
    * ARS API
    */
+
+  // Specific access request
+  'GET /api/ars/access-requests/*': accessRequests[4],
+
   // Specific dataset and user access requests
   'GET /api/ars/access-requests?dataset_id=GHGAD12345678901234&*': getAccessRequests(
     'doe@test.dev',

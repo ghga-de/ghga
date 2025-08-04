@@ -12,7 +12,7 @@ import { NotificationService } from '@app/shared/services/notification.service';
 import { Observable, tap } from 'rxjs';
 import {
   AccessRequest,
-  AccessRequestDialogData,
+  AccessRequestDetailData,
   AccessRequestFilter,
   AccessRequestStatus,
   GrantedAccessRequest,
@@ -34,7 +34,7 @@ export class AccessRequestService {
   #userAccessRequestsUrl = (userId: string) =>
     `${this.#arsEndpointUrl}?user_id=${userId}`;
 
-  performAccessRequest = (data: AccessRequestDialogData) => {
+  performAccessRequest = (data: AccessRequestDetailData) => {
     this.#http
       .post<void>(this.#arsEndpointUrl, {
         user_id: data.userId,
@@ -152,21 +152,7 @@ export class AccessRequestService {
    * @param filter - the filter to apply
    */
   setAllAccessRequestsFilter(filter: AccessRequestFilter): void {
-    this.#allAccessRequestsFilter.set(
-      filter.ticketId ||
-        filter.datasetId ||
-        filter.datasetTitle ||
-        filter.name ||
-        filter.dac ||
-        filter.fromDate ||
-        filter.toDate ||
-        filter.status ||
-        filter.requestText ||
-        filter.noteToRequester ||
-        filter.internalNote
-        ? filter
-        : undefined,
-    );
+    this.#allAccessRequestsFilter.set(filter);
   }
 
   /**
@@ -249,6 +235,30 @@ export class AccessRequestService {
     return requests;
   });
 
+  // signal to load an individual access request
+  #loadSingle = signal<string>('');
+
+  /**
+   * Load an individual access request
+   * @param id - the ID of the access request to load
+   */
+  loadAccessRequest(id: string): void {
+    this.#loadSingle.set(id);
+  }
+
+  /** Resource for loading an individual access request. */
+  accessRequest = httpResource<AccessRequest>(
+    () => {
+      const id = this.#loadSingle();
+      if (!id) return undefined;
+      return `${this.#arsEndpointUrl}/${id}`;
+    },
+    {
+      defaultValue: undefined,
+      parse: (raw) => raw as AccessRequest,
+    },
+  );
+
   /**
    * Update the lists of access requests locally.
    * @param id - the ID of the updated access request
@@ -285,81 +295,4 @@ export class AccessRequestService {
       .patch<null>(`${this.#arsEndpointUrl}/${id}`, changes)
       .pipe(tap(() => this.#updateAccessRequestLocally(id, changes)));
   }
-}
-
-let dateInOneYear = new Date();
-dateInOneYear.setDate(dateInOneYear.getDate() + 365);
-dateInOneYear.setTime(dateInOneYear.getTime() + 60 * 60 * 1000);
-
-let dateYesterday = new Date();
-dateYesterday.setDate(dateYesterday.getDate() - 1);
-
-let dateOneYearAgo = new Date();
-dateOneYearAgo.setDate(dateOneYearAgo.getDate() - 365);
-
-/**
- * Mock for the Access Request Service
- */
-export class MockAccessRequestService {
-  userAccessRequests = {
-    isLoading: signal(false),
-    error: signal(undefined),
-  };
-  grantedUserAccessRequests = signal([
-    {
-      request: {
-        id: 'GHGAR12345678901234',
-        user_id: '',
-        dataset_id: 'GHGAD12345678901234',
-        full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
-        email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
-        request_text: 'unit test request',
-        access_starts: Date.now().toString(),
-        access_ends: dateInOneYear.toString(),
-        request_created: Date.now().toString(),
-        status: 'approved',
-        status_changed: '',
-        changed_by: '',
-        iva_id: '',
-      },
-      isExpired: false,
-      daysRemaining: 365,
-    },
-    {
-      request: {
-        id: 'GHGAR12345678901235',
-        user_id: '',
-        dataset_id: 'GHGAD12345678901234',
-        full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
-        email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
-        request_text: 'unit test request 2',
-        access_starts: dateOneYearAgo.toString(),
-        access_ends: dateYesterday.toString(),
-        request_created: dateOneYearAgo.toString(),
-        status: 'approved',
-        status_changed: '',
-        changed_by: '',
-        iva_id: '',
-      },
-      isExpired: false,
-      daysRemaining: -1,
-    },
-  ]);
-  pendingUserAccessRequests = signal([
-    {
-      id: 'GHGAR12345678901236',
-      user_id: '',
-      dataset_id: 'GHGAD12345678901234',
-      full_user_name: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
-      email: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaad@lifescience-ri.eu',
-      request_text: 'unit test request',
-      access_starts: Date.now().toString(),
-      access_ends: Date.now().toString(),
-      request_created: Date.now().toString(),
-      status: 'pending',
-      status_changed: '',
-      changed_by: '',
-      iva_id: '',
-    },
-  ]);
 }

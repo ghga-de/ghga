@@ -8,10 +8,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import {
-  AccessRequestService,
-  MockAccessRequestService,
-} from '@app/access-requests/services/access-request.service';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { AuthService } from '@app/auth/services/auth.service';
 import { UserIvaListComponent } from '@app/verification-addresses/features/user-iva-list/user-iva-list.component';
 import { AccountComponent } from './account.component';

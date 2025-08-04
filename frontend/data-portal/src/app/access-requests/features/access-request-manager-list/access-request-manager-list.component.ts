@@ -14,11 +14,12 @@ import {
   ViewChild,
   ViewChildren,
 } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { Router } from '@angular/router';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
@@ -27,7 +28,6 @@ import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
 } from '@app/shared/utils/date-formats';
-import { AccessRequestManagerDialogComponent } from '../access-request-manager-dialog/access-request-manager-dialog.component';
 
 /**
  * Access Request Manager List component.
@@ -41,6 +41,7 @@ import { AccessRequestManagerDialogComponent } from '../access-request-manager-d
     MatTableModule,
     MatSortModule,
     MatPaginatorModule,
+    MatButtonModule,
     DatePipe,
     AccessRequestStatusClassPipe,
     MatIconModule,
@@ -50,8 +51,8 @@ import { AccessRequestManagerDialogComponent } from '../access-request-manager-d
   styleUrl: './access-request-manager-list.component.scss',
 })
 export class AccessRequestManagerListComponent implements AfterViewInit {
+  #router = inject(Router);
   #ars = inject(AccessRequestService);
-  #dialog = inject(MatDialog);
 
   #accessRequests = this.#ars.allAccessRequests;
   accessRequests = this.#ars.allAccessRequestsFiltered;
@@ -124,14 +125,10 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
   }
 
   /**
-   * Open the details dialog
-   * @param row - the selected row to open the details for
+   * Navigate to access request details page
+   * @param ar - the selected access request
    */
-  openDetails(row: AccessRequest): void {
-    this.#dialog.open(AccessRequestManagerDialogComponent, {
-      data: row,
-      width: '80vw',
-      maxWidth: '1200px',
-    });
+  viewDetails(ar: AccessRequest): void {
+    this.#router.navigate(['/access-request-manager', ar.id]);
   }
 }

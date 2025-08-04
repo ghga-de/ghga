@@ -1,7 +1,21 @@
-<div>
-  <h2 mat-dialog-title>Access Request Detail</h2>
-  <mat-dialog-content>
-    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+<div
+  class="mx-auto max-w-[1440px] p-6"
+  [style.view-transition-name]="showTransition ? 'detail' : null"
+>
+  <div class="clearfix mb-6">
+    <button
+      mat-icon-button
+      (click)="goBack()"
+      data-umami-event="Access Request Manager Back Link Clicked"
+      aria-label="Go back to user list"
+      class="text-primary float-left mt-1 mr-4"
+    >
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <h1>Access Request Detail</h1>
+  </div>
+  @if (request(); as ar) {
+    <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
       <div class="my-2 flex flex-col items-start gap-3">
         <mat-card>
           <mat-card-header>
@@ -11,7 +25,7 @@
             <table class="w-full">
               <tbody>
                 <app-access-request-field-edit
-                  [request]="data"
+                  [request]="ar"
                   name="ticket_id"
                   label="Ticket ID"
                   (saved)="saved($event)"
@@ -22,23 +36,23 @@
                   <th>Dataset ID:</th>
                   <td>
                     <a
-                      [href]="'/dataset/' + data.dataset_id"
+                      [href]="'/dataset/' + ar.dataset_id"
                       target="_blank"
                       tabindex="-1"
-                      >{{ data.dataset_id
+                      >{{ ar.dataset_id
                       }}<mat-icon aria-hidden="true">open_in_new</mat-icon>
                     </a>
                   </td>
                 </tr>
                 <tr>
                   <th>Dataset title:</th>
-                  <td>{{ data.dataset_title }}</td>
+                  <td>{{ ar.dataset_title }}</td>
                 </tr>
                 <tr>
                   <th>Status:</th>
                   <td>
-                    <strong class="{{ data.status | AccessRequestStatusClassPipe }}">{{
-                      data.status
+                    <strong class="{{ ar.status | AccessRequestStatusClassPipe }}">{{
+                      ar.status
                     }}</strong>
                   </td>
                 </tr>
@@ -54,7 +68,7 @@
             <table class="w-full">
               <tbody>
                 <app-access-request-duration-edit
-                  [request]="data"
+                  [request]="ar"
                   (saved)="saved($event)"
                   (edited)="edited($event)"
                   class="contents"
@@ -63,7 +77,7 @@
                   <th>Request details:</th>
                   <td class="max-h-38 overflow-y-auto">
                     @for (
-                      line of data.request_text | splitLines;
+                      line of ar.request_text | splitLines;
                       track line;
                       let last = $last
                     ) {
@@ -72,9 +86,9 @@
                   </td>
                 </tr>
                 <tr>
-                  <th>Requested on:</th>
+                  <th>Requested:</th>
                   <td>
-                    {{ data.request_created | date }}
+                    {{ ar.request_created | date }}
                   </td>
                 </tr>
               </tbody>
@@ -89,32 +103,32 @@
             <table class="w-full">
               <tbody>
                 <tr>
-                  <th>Data Access Committee:</th>
+                  <th>DAC:</th>
                   <td>
-                    <span class="italic">{{ data.dac_alias }}</span> -
-                    <a [href]="'mailto:' + data.dac_email" tabindex="-1">{{
-                      data.dac_email
+                    <span class="italic">{{ ar.dac_alias }}</span> -
+                    <a [href]="'mailto:' + ar.dac_email" tabindex="-1">{{
+                      ar.dac_email
                     }}</a>
                   </td>
                 </tr>
                 <tr>
                   <th>Requester:</th>
                   <td>
-                    <span class="italic">{{ data.full_user_name }}</span> -
-                    <a [href]="'mailto:' + data.email" tabindex="-1">{{
-                      data.email
-                    }}</a>
+                    <span class="italic">{{ ar.full_user_name }}</span> -
+                    <a [href]="'mailto:' + ar.email" tabindex="-1">{{ ar.email }}</a>
                   </td>
                 </tr>
                 <tr>
-                  <th>LifeScience ID:</th>
+                  <th>LS ID:</th>
                   <td>
                     @if (userExtId.isLoading()) {
                       <em class="text-gray-400">Loading...</em>
                     } @else if (userExtId.error() || !userExtId.value()) {
                       <em class="text-red-600">could not be retrieved</em>
                     } @else {
-                      {{ userExtId.value()!.split('@', 2).join('\u200B@') }}
+                      <code class="text-base"
+                        >{{ userExtId.value()!.split('@', 2).join('\u200B@') }}
+                      </code>
                     }
                   </td>
                 </tr>
@@ -130,7 +144,7 @@
             <table class="w-full">
               <tbody>
                 <app-access-request-field-edit
-                  [request]="data"
+                  [request]="ar"
                   name="note_to_requester"
                   label="Note to requester"
                   (saved)="saved($event)"
@@ -138,7 +152,7 @@
                   class="contents"
                 ></app-access-request-field-edit>
                 <app-access-request-field-edit
-                  [request]="data"
+                  [request]="ar"
                   name="internal_note"
                   label="Internal note"
                   (saved)="saved($event)"
@@ -185,14 +199,14 @@
                   </div>
                   <div
                     [class]="(iva.state | IvaStatePipe).class"
-                    class="w-40 flex-shrink-0 py-2 ps-4 align-middle"
+                    class="w-48 flex-shrink-0 py-2 ps-4 align-middle"
                   >
                     {{ (iva.state | IvaStatePipe).name }}
                   </div>
                 </div>
               </div>
             } @else {
-              <label for="iva-selection-group" class="mb-2 font-medium">
+              <label for="iva-selection-group">
                 @if (selectedIvaIdRadioButton()) {
                   The user has already specified a preferred verification address to use
                   for this access request. If you wish to change it, please select it
@@ -215,12 +229,14 @@
                     <div class="flex min-w-md items-center">
                       <div class="grow py-1">
                         <mat-radio-button [value]="iva.id">
-                          {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}
+                          <span class="text-base"
+                            >{{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}</span
+                          >
                         </mat-radio-button>
                       </div>
                       <div
                         [class]="(iva.state | IvaStatePipe).class"
-                        class="w-40 flex-shrink-0 py-2 ps-4 align-middle"
+                        class="w-48 flex-shrink-0 py-2 ps-4 align-middle"
                       >
                         {{ (iva.state | IvaStatePipe).name }}
                       </div>
@@ -233,65 +249,79 @@
         </mat-card>
       </div>
     </div>
-  </mat-dialog-content>
-  <mat-dialog-actions class="flex gap-x-2 gap-y-4 border-gray-500 pt-4">
-    @if (ivasAreLoading() || ivasError() || !ivas().length || !changeable()) {
-      <button
-        mat-stroked-button
-        (click)="cancel()"
-        data-umami-event="Access Request Manager Close Clicked"
-      >
-        Close
-      </button>
-    } @else {
-      <div class="w-full sm:w-auto">
+
+    <div class="mt-8 flex">
+      @if (ivasAreLoading() || ivasError() || !ivas().length || !changeable()) {
         <button
-          autoFocus
           mat-stroked-button
-          class="w-full sm:w-auto"
-          (click)="cancel()"
-          data-umami-event="Access Request Manager Cancel Clicked"
+          (click)="goBack()"
+          data-umami-event="Access Request Manager Back Button Clicked"
         >
-          Cancel
+          Back
         </button>
-      </div>
-      <div class="flex-grow"></div>
-      <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
+      } @else {
         <div class="w-full sm:w-auto">
           <button
-            mat-raised-button
-            class="error w-full sm:w-auto"
-            (click)="saveBeforeStatusChange('deny')"
-            data-umami-event="Access Request Manager Deny Clicked"
-            [disabled]="data.status === 'denied'"
+            autoFocus
+            mat-stroked-button
+            class="w-full sm:w-auto"
+            (click)="goBack()"
+            data-umami-event="Access Request Manager Back Button Clicked"
           >
-            @if (data.status === 'allowed') {
-              Revoke access
-            } @else {
-              Deny
-            }
+            Back
           </button>
         </div>
-        <div class="w-full sm:w-auto">
-          <button
-            mat-raised-button
-            class="success w-full sm:w-auto"
-            (click)="saveBeforeStatusChange('allow')"
-            data-umami-event="Access Request Manager Allow Clicked"
-            [disabled]="
-              data.status === 'allowed' &&
-              (!selectedIvaIdRadioButton() ||
-                data.iva_id === selectedIvaIdRadioButton())
-            "
-          >
-            @if (data.status === 'allowed') {
-              Change address
-            } @else {
-              Allow
-            }
-          </button>
+        <div class="flex-grow"></div>
+        <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
+          <div class="w-full sm:w-auto">
+            <button
+              mat-raised-button
+              class="error w-full sm:w-auto"
+              (click)="saveBeforeStatusChange('deny')"
+              data-umami-event="Access Request Manager Deny Clicked"
+              [disabled]="ar.status === 'denied'"
+            >
+              @if (ar.status === 'allowed') {
+                Revoke access
+              } @else {
+                Deny
+              }
+            </button>
+          </div>
+          <div class="w-full sm:w-auto">
+            <button
+              mat-raised-button
+              class="success w-full sm:w-auto"
+              (click)="saveBeforeStatusChange('allow')"
+              data-umami-event="Access Request Manager Allow Clicked"
+              [disabled]="
+                ar.status === 'allowed' &&
+                (!selectedIvaIdRadioButton() ||
+                  ar.iva_id === selectedIvaIdRadioButton())
+              "
+            >
+              @if (ar.status === 'allowed') {
+                Change address
+              } @else {
+                Allow
+              }
+            </button>
+          </div>
         </div>
-      </div>
-    }
-  </mat-dialog-actions>
+      }
+    </div>
+  } @else if (loading()) {
+    <p>Loading request details...</p>
+  } @else {
+    <div class="container mx-auto p-6">
+      <p class="text-center text-red-600">
+        @if (error() === 'not found') {
+          The selected access request could not be found.
+        } @else {
+          An error occurred while loading the access request details. Please try again
+          later.
+        }
+      </p>
+    </div>
+  }
 </div>

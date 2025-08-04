@@ -122,12 +122,4 @@ export class UserManagerListComponent implements AfterViewInit {
   viewDetails(user: DisplayUser): void {
     this.#router.navigate(['/user-manager', user.id]);
   }
-
-  /**
-   * Open the details view for a user (placeholder for future implementation)
-   * @param row - the selected user row
-   */
-  openDetails(row: DisplayUser): void {
-    this.viewDetails(row);
-  }
 }
