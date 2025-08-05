@@ -11,6 +11,9 @@ import { ConfigService } from '@app/shared/services/config.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { Observable, tap } from 'rxjs';
 import {
+  AccessGrant,
+  AccessGrantFilter,
+  AccessGrantStatus,
   AccessRequest,
   AccessRequestDetailData,
   AccessRequestFilter,
@@ -31,6 +34,8 @@ export class AccessRequestService {
 
   #arsBaseUrl = this.#config.arsUrl;
   #arsEndpointUrl = `${this.#arsBaseUrl}/access-requests`;
+  #arsManagementUrl = `${this.#arsBaseUrl}/access-grants`;
+
   #userAccessRequestsUrl = (userId: string) =>
     `${this.#arsEndpointUrl}?user_id=${userId}`;
 
@@ -118,13 +123,13 @@ export class AccessRequestService {
   #allAccessRequestsFilter = signal<AccessRequestFilter | undefined>(undefined);
 
   // signal to load all users' access requests
-  #loadAll = signal<boolean>(false);
+  #loadAllAccessRequests = signal<boolean>(false);
 
   /**
    * Load all users' access requests
    */
   loadAllAccessRequests(): void {
-    this.#loadAll.set(true);
+    this.#loadAllAccessRequests.set(true);
   }
 
   /**
@@ -161,7 +166,7 @@ export class AccessRequestService {
    * but in principle we can also do some filtering on the sever.
    */
   allAccessRequests = httpResource<AccessRequest[]>(
-    () => (this.#loadAll() ? this.#arsEndpointUrl : undefined),
+    () => (this.#loadAllAccessRequests() ? this.#arsEndpointUrl : undefined),
     {
       defaultValue: [],
     },
@@ -295,4 +300,103 @@ export class AccessRequestService {
       .patch<null>(`${this.#arsEndpointUrl}/${id}`, changes)
       .pipe(tap(() => this.#updateAccessRequestLocally(id, changes)));
   }
+
+  // signal to load all users' access grants
+  #loadAllAccessGrants = signal<boolean>(false);
+
+  /**
+   * Load all users' access grants
+   */
+  loadAllAccessGrants(): void {
+    this.#loadAllAccessGrants.set(true);
+  }
+
+  // Similar structure to what we do for access requests but for access grants
+  #allAccessGrantsFilter = signal<AccessGrantFilter | undefined>(undefined);
+  allAccessGrantsFilter = computed(
+    () =>
+      this.#allAccessGrantsFilter() ?? {
+        status: undefined,
+        user: undefined,
+        dataset_id: undefined,
+      },
+  );
+
+  /**
+   * Load all access grants
+   * @param filter the filter to apply
+   */
+  setAllAccessGrantsFilter(filter: AccessGrantFilter): void {
+    this.#allAccessGrantsFilter.set(filter);
+  }
+
+  allAccessGrantsResource = httpResource<AccessGrant[]>(
+    () => (this.#loadAllAccessGrants() ? this.#arsManagementUrl : undefined),
+    {
+      defaultValue: [],
+    },
+  );
+
+  allAccessGrants = computed<AccessGrant[]>(() => {
+    const grants = this.allAccessGrantsResource.value();
+    if (grants && Array.isArray(grants)) {
+      return grants.map((grant) => {
+        const updatedGrant = { ...grant };
+        updatedGrant.status = this.computeStatusForAccessGrant(grant);
+        return updatedGrant;
+      });
+    }
+    return [];
+  });
+
+  computeStatusForAccessGrant = (grant: AccessGrant): AccessGrantStatus => {
+    const now = new Date();
+    const hasStarted = now >= new Date(grant.valid_from);
+    const hasEnded = now >= new Date(grant.valid_until);
+    if (hasStarted && !hasEnded) {
+      return AccessGrantStatus.active;
+    } else if (hasEnded) {
+      return AccessGrantStatus.expired;
+    } else {
+      return AccessGrantStatus.waiting;
+    }
+  };
+
+  allAccessGrantsFiltered = computed(() => {
+    let grants = this.allAccessGrants();
+    const filter = this.#allAccessGrantsFilter();
+    if (grants.length && filter) {
+      if (filter.dataset_id !== undefined && filter.dataset_id !== '') {
+        grants = grants.filter((g) =>
+          g.dataset_id.includes(filter.dataset_id as string),
+        );
+      }
+      if (filter.dataset_id) {
+        grants = grants.filter((g) =>
+          g.dataset_id.includes(filter.dataset_id as string),
+        );
+      }
+      if (filter.user) {
+        grants = grants.filter(
+          (g) =>
+            g.user_name.toLowerCase().includes((filter.user as string).toLowerCase()) ||
+            g.user_email.toLowerCase().includes((filter.user as string).toLowerCase()),
+        );
+      }
+      if (filter.status !== undefined) {
+        const now = new Date();
+
+        grants = grants.filter((g) => {
+          const has_started = now >= new Date(g.valid_from);
+          const has_ended = now >= new Date(g.valid_until);
+          return (
+            (filter.status === 'Active' && has_started && !has_ended) ||
+            (filter.status === 'Expired' && has_ended) ||
+            (filter.status === 'Waiting' && !has_started)
+          );
+        });
+      }
+    }
+    return grants;
+  });
 }

@@ -28,6 +28,9 @@ export class AdminMenuComponent {
   isDataSteward = computed(() => this.#auth.roles().includes('data_steward'));
   isUserManagerRoute = computed<boolean>(() => this.#route() === 'user-manager');
   isIvaManagerRoute = computed<boolean>(() => this.#route() === 'iva-manager');
+  isAccessGrantManagerRoute = computed<boolean>(
+    () => this.#route() === 'access-grant-manager',
+  );
   isAccessRequestsManagerRoute = computed<boolean>(
     () => this.#route() === 'access-request-manager',
   );

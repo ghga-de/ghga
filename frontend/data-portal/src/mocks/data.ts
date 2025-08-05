@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { AccessGrant } from '@app/access-requests/models/access-requests';
 import { RegisteredUser, UserStatus } from '@app/auth/models/user';
 import { DatasetDetailsRaw } from '@app/metadata/models/dataset-details';
 import { DatasetInformation } from '@app/metadata/models/dataset-information';
@@ -729,6 +730,54 @@ export const accessRequests = [
     internal_note: 'We need to ask X about this.',
     note_to_requester: 'Please wait for the approval. Additional steps were required.',
     ticket_id: '1138',
+  },
+];
+
+export const accessGrants: AccessGrant[] = [
+  {
+    id: 'grant-ghga-8c4b9d5a1f0a',
+    user_id: 'doe@test.dev',
+    dataset_id: 'GHGAD12345678901234',
+    created: '2025-07-20T10:00:00Z',
+    valid_from: '2025-08-01T00:00:00Z',
+    valid_until: '2026-08-01T00:00:00Z',
+    user_name: 'John Doe',
+    user_title: 'Dr.',
+    user_email: 'test@home.org',
+    dataset_title: 'Test dataset for details',
+    dac_alias: 'SOME-DAC',
+    dac_email: 'dac-main@some.org',
+    iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
+  },
+  {
+    id: 'grant-ghga-8c4b9d5a1f0b',
+    user_id: 'doe@test.dev',
+    dataset_id: 'GHGAD12345678901235',
+    created: '2025-01-01T10:00:00Z',
+    valid_from: '2025-01-05T00:00:00Z',
+    valid_until: '2025-01-10T00:00:00Z',
+    user_name: 'John Doe',
+    user_title: 'Dr.',
+    user_email: 'doe@home.org',
+    dataset_title: 'Test dataset for details',
+    dac_alias: 'SOME-DAC',
+    dac_email: 'dac-main@some.org',
+    iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
+  },
+  {
+    id: 'grant-ghga-8c4b9d5a1f0c',
+    user_id: 'doe@test.dev',
+    dataset_id: 'GHGAD12345678901236',
+    created: '2025-07-20T10:00:00Z',
+    valid_from: '2027-08-01T00:00:00Z',
+    valid_until: '2028-08-01T00:00:00Z',
+    user_name: 'Jane Doe',
+    user_title: 'Dr.',
+    user_email: 'doe@home.org',
+    dataset_title: 'Test dataset for details',
+    dac_alias: 'SOME-DAC',
+    dac_email: 'dac-main@some.org',
+    iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
   },
 ];
 

@@ -7,6 +7,7 @@
 import { user } from './auth';
 
 import {
+  accessGrants,
   accessRequests,
   allIvas,
   allIvasOfDoe,
@@ -155,6 +156,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // All access requests
   'GET /api/ars/access-requests': getAccessRequests(),
+
+  // All access grants
+  'GET /api/ars/access-grants': accessGrants,
 
   // Create an access request
   'POST /api/ars/access-requests': 204,

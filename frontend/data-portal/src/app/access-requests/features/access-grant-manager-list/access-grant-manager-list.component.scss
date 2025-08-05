@@ -1,0 +1,10 @@
+@use '@angular/material' as mat;
+
+table {
+  @include mat.table-overrides(
+    (
+      header-headline-size: var(--mat-sys-title-medium-size),
+      row-item-label-text-size: var(--mat-sys-body-large-size),
+    )
+  );
+}

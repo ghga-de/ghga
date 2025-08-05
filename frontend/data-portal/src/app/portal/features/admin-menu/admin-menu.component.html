@@ -33,5 +33,13 @@
       data-umami-event="Admin Menu Access Request Manager Clicked"
       ><mat-icon>person_raised_hand</mat-icon> Access Request Manager</a
     >
+    <a
+      [id]="isAccessGrantManagerRoute() ? 'activePage' : ''"
+      mat-menu-item
+      routerLink="/access-grant-manager"
+      class="mx-1"
+      data-umami-event="Admin Menu Access Grant Manager Clicked"
+      ><mat-icon>admin_panel_settings</mat-icon> Access Grant Manager</a
+    >
   </mat-menu>
 }
