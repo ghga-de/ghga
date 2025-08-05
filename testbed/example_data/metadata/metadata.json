@@ -113,7 +113,7 @@
       "alias": "DS_A",
       "data_access_policy": "DAP_1",
       "description": "An interesting dataset A of complete example set",
-      "ega_accession": "EGADATASET12345",
+      "ega_accession": "EGADATASET000A",
       "study": "STUDY_A",
       "title": "The complete-A dataset",
       "types": [
@@ -125,7 +125,7 @@
       "alias": "DS_B",
       "data_access_policy": "DAP_2",
       "description": "An interesting dataset B of complete example set",
-      "ega_accession": "EGADATASET12346",
+      "ega_accession": "EGADATASET000B",
       "study": "STUDY_B",
       "title": "The complete-B dataset",
       "types": [

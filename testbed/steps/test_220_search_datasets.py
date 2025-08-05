@@ -24,7 +24,7 @@ from .conftest import (
     then,
     when,
 )
-from .utils import search_dataset
+from .utils import get_alias_from_ega_accession, search_dataset
 
 scenarios("../features/220_search_datasets.feature")
 
@@ -77,13 +77,11 @@ SEARCH_ALL_DATASETS = {
     "count": 2,
     "hits": [
         {
-            "alias": "DS_A",
-            "ega_accession": "EGADATASET12345",
+            "ega_accession": "EGADATASET000A",
             "title": "The complete-A dataset",
         },
         {
-            "alias": "DS_B",
-            "ega_accession": "EGADATASET12346",
+            "ega_accession": "EGADATASET000B",
             "title": "The complete-B dataset",
         },
     ],
@@ -115,8 +113,13 @@ def check_search_without_keyword_results(state: StateStorage, response: Response
         hit = hit.pop("content")
         hits[i] = hit
         summary = hit.copy()
-        summary["accession"] = accession
-        alias = summary.pop("alias")
+        assert "ega_accession" in summary
+        ega_accession = summary.get("ega_accession")
+        summary["accession"] = (
+            accession  # save the GHGA accession to the summary for later use
+        )
+        assert ega_accession.startswith("EGAD")
+        alias = get_alias_from_ega_accession(state, ega_accession)
         datasets[alias] = summary
     assert results == SEARCH_ALL_DATASETS
     # memorize the overview of all datasets as mapping from alias to search summary

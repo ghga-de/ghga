@@ -15,6 +15,8 @@
 
 """Step definitions for the dataset summary view in the frontend"""
 
+from steps.utils import get_alias_from_ega_accession
+
 from .conftest import (
     Config,
     HttpClient,
@@ -29,7 +31,7 @@ from .conftest import (
 scenarios("../features/260_dataset_summary.feature")
 
 EXPECTED_SUMMARIES = {
-    "DS_B": {
+    "EGADATASET000B": {
         "title": "The complete-B dataset",
         "dac_email": "dac_institute_a@dac.dac",
         "types": ["And another Type"],
@@ -60,7 +62,7 @@ EXPECTED_SUMMARIES = {
             },
         },
     },
-    "DS_A": {
+    "EGADATASET000A": {
         "title": "The complete-A dataset",
         "dac_email": "dac_institute_a@dac.dac",
         "types": ["Another Type", "A Type"],
@@ -99,14 +101,18 @@ EXPECTED_SUMMARIES = {
 }
 
 
-@when(parse('I request the summary of "{alias}" dataset'), target_fixture="response")
+@when(
+    parse('I request the summary of "{ega_accession}" dataset'),
+    target_fixture="response",
+)
 def request_dataset_summary(
-    alias: str, config: Config, http: HttpClient, state: StateStorage
+    ega_accession: str, config: Config, http: HttpClient, state: StateStorage
 ) -> Response:
-    datasets = state.get_state("all available datasets")
-    if alias == "non-existing":
-        accession = alias
+    if ega_accession == "non-existing":
+        accession = ega_accession
     else:
+        alias = get_alias_from_ega_accession(state, ega_accession)
+        datasets = state.get_state("all available datasets")
         assert alias in datasets
         accession = datasets[alias]["accession"]
     url = (

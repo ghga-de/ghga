@@ -266,11 +266,11 @@ def empty_mail_server(fixtures: JointFixture):
     fixtures.http.delete(f"{fixtures.config.mail_url}/api/v1/messages")
 
 
-@then(parse('I get only dataset "{alias}" as search result'))
-def check_study_search_result(alias: str, response: Response):
+@then(parse('I get only dataset "{ega_accession}" as search result'))
+def check_study_search_result(ega_accession: str, response: Response):
     results = response.json()
     assert results["count"] == 1
-    assert results["hits"][0]["content"]["alias"] == alias
+    assert results["hits"][0]["content"]["ega_accession"] == ega_accession
 
 
 @then(parse('I get "{count:d}" search results'))

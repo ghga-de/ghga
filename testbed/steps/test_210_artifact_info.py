@@ -126,7 +126,6 @@ def check_searchable_classes(response: Response):
             "selected_fields": [
                 {"key": "ega_accession", "name": "EGA accession"},
                 {"key": "title", "name": "Dataset title"},
-                {"key": "alias", "name": "Dataset alias"},
             ],
         }
     }

@@ -9,10 +9,10 @@ Feature: 23 Filter Datasets
     When I query documents with invalid class name
     Then the response status code is "422"
 
-  Scenario: Filter datasets by alias
-    When I filter datasets with alias "DS_B"
+  Scenario: Filter datasets by EGA accession
+    When I filter datasets with EGA accession "EGADATASET000B"
     Then the response status code is "200"
-    And I get only dataset "DS_B" as search result
+    And I get only dataset "EGADATASET000B" as search result
 
   Scenario: Filter datasets by study type
     When I filter datasets with the study type "EXOME_SEQUENCING"
@@ -21,7 +21,7 @@ Feature: 23 Filter Datasets
 
     When I filter datasets with the study type "SYNTHETIC_GENOMICS"
     Then the response status code is "200"
-    And I get only dataset "DS_A" as search result
+    And I get only dataset "EGADATASET000A" as search result
 
     When I filter datasets with the study type "WHOLE_GENOME_SEQUENCING"
     Then the response status code is "200"
@@ -58,4 +58,4 @@ Feature: 23 Filter Datasets
   Scenario: Filter datasets for sequencing file
     When I filter datasets with individual supporting file alias
     Then the response status code is "200"
-    And I get only dataset "DS_A" as search result
+    And I get only dataset "EGADATASET000A" as search result

@@ -15,7 +15,7 @@ Feature: 25 Combined Browsing of Datasets
   Scenario: Filtering datasets by type
     When I filter datasets with type "A Type"
     Then the response status code is "200"
-    And I get only dataset "DS_A" as search result
+    And I get only dataset "EGADATASET000A" as search result
 
   Scenario: Searching in filtered datasets
     When I search "STUDY_B" in datasets with type "A Type"

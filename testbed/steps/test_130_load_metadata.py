@@ -137,6 +137,7 @@ def check_datasets_in_metldata_database(
         d["content"]["alias"]: {
             "dataset_accession": d["content"]["accession"],
             "study_accession": d["content"]["study"]["accession"],
+            "ega_accession": d["content"]["ega_accession"],
         }
         for d in datasets
     }

@@ -27,7 +27,7 @@ Feature: 22 Search Datasets
   Scenario: Search datasets with study alias
     When I search datasets with the "STUDY_A" query
     Then the response status code is "200"
-    And I get only dataset "DS_A" as search result
+    And I get only dataset "EGADATASET000A" as search result
 
   Scenario: Search datasets by keyword matching
     When I search datasets with the "An interesting dataset C" query
@@ -37,4 +37,4 @@ Feature: 22 Search Datasets
   Scenario: Search datasets with exact description
     When I search datasets with the ""An interesting dataset B"" query
     Then the response status code is "200"
-    And I get only dataset "DS_B" as search result
+    And I get only dataset "EGADATASET000B" as search result

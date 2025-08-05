@@ -26,9 +26,12 @@ def query_with_invalid_class(fixtures: JointFixture):
     return search_dataset(fixtures=fixtures, class_name="InvalidClass")
 
 
-@when(parse('I filter datasets with alias "{alias}"'), target_fixture="response")
-def filter_datasets_with_alias(alias: str, fixtures: JointFixture):
-    filters = {"alias": alias}
+@when(
+    parse('I filter datasets with EGA accession "{ega_accession}"'),
+    target_fixture="response",
+)
+def filter_datasets_with_alias(ega_accession: str, fixtures: JointFixture):
+    filters = {"ega_accession": ega_accession}
     return search_dataset(fixtures=fixtures, filters=filters)
 
 

@@ -27,18 +27,20 @@ from .conftest import (
     then,
     when,
 )
-from .utils import get_dataset_search_summary
+from .utils import get_alias_from_ega_accession, get_dataset_search_summary
 
 scenarios("../features/270_dataset_details.feature")
 
 
 def get_dataset_details(
-    alias: str, config: Config, http: HttpClient, state: StateStorage
+    ega_accession: str, config: Config, http: HttpClient, state: StateStorage
 ) -> Response:
     datasets = state.get_state("all available datasets")
-    if alias == "non-existing":
-        accession = alias
+    if ega_accession == "non-existing":
+        accession = ega_accession
     else:
+        alias = get_alias_from_ega_accession(state, ega_accession)
+        datasets = state.get_state("all available datasets")
         assert alias in datasets
         accession = datasets[alias]["accession"]
     url = (
@@ -48,19 +50,25 @@ def get_dataset_details(
     return http.get(url)
 
 
-@when(parse('I request the details of "{alias}" dataset'), target_fixture="response")
+@when(
+    parse('I request the details of "{ega_accession}" dataset'),
+    target_fixture="response",
+)
 def request_dataset_details(
-    alias: str, config: Config, http: HttpClient, state: StateStorage
+    ega_accession: str, config: Config, http: HttpClient, state: StateStorage
 ) -> Response:
-    return get_dataset_details(alias=alias, config=config, http=http, state=state)
+    return get_dataset_details(
+        ega_accession=ega_accession, config=config, http=http, state=state
+    )
 
 
-@then(parse('I get the details of "{alias}" dataset'))
-def check_dataset_details(alias: str, response: Response, state: StateStorage):
+@then(parse('I get the details of "{ega_accession}" dataset'))
+def check_dataset_details(ega_accession: str, response: Response, state: StateStorage):
     result = response.json()
     assert result
-    assert alias == result.get("alias")
+    assert ega_accession == result.get("ega_accession")
     datasets = state.get_state("all available datasets")
+    alias = get_alias_from_ega_accession(state, ega_accession)
     assert alias in datasets
     dataset = datasets[alias]
     details = dataset.pop("details", None)
@@ -74,13 +82,15 @@ def check_dataset_details(alias: str, response: Response, state: StateStorage):
 
 
 @when(
-    parse('I request an associated sample resource for "{alias}" dataset'),
+    parse('I request an associated sample resource for "{ega_accession}" dataset'),
     target_fixture="response",
 )
 def request_one_associated_samples(
-    alias: str, config: Config, http: HttpClient, state: StateStorage
+    ega_accession: str, config: Config, http: HttpClient, state: StateStorage
 ) -> Response:
-    response = get_dataset_details(alias=alias, config=config, http=http, state=state)
+    response = get_dataset_details(
+        ega_accession=ega_accession, config=config, http=http, state=state
+    )
     result = response.json()
     match = re.search("'sample': '(GHGAN[0-9]+)'", repr(result))
     assert match

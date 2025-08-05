@@ -23,6 +23,7 @@ from typing import Any
 
 from fixtures import Config, JointFixture, MongoFixture, Response
 from fixtures.config import S3StorageConfig
+from fixtures.state import StateStorage
 from fixtures.utils import write_data_to_yaml
 from ghga_datasteward_kit.file_ingest import IngestConfig
 from ghga_datasteward_kit.loading import LoadConfig
@@ -305,3 +306,11 @@ def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
         timeout=1,
     )
     assert document
+
+
+def get_alias_from_ega_accession(state: StateStorage, ega_accession):
+    dataset_accessions = state.get_state("dataset_accessions")
+    ega_acc_to_alias = {
+        d["ega_accession"]: alias for alias, d in dataset_accessions.items()
+    }
+    return ega_acc_to_alias[ega_accession]
