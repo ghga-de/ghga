@@ -5,6 +5,7 @@ exports:
       imagePullSecrets: []
       storageClass: ""
       _topics: {}
+      _consumerGroup: {}
 
     deployment:
       enabled: true
@@ -179,6 +180,7 @@ exports:
 
     topicPrefix: ""
     _topics: {}
+    _consumerGroup: {}
     kafkaTopicsParameters: true
 
     kafkaUser:

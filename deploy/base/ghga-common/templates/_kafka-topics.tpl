@@ -70,12 +70,13 @@ spec:
     {{- end }}
     {{- include "common.tplvalues.render" (dict "value" $topicsACL "context" $) | nindent 4 }}
     {{- end }}
-    - operations:
-      - All
-      resource:
-        name: '*'
-        patternType: literal
-        type: group
+    {{- with .Values._consumerGroup -}}
+    {{- $consumerGroupACL := list -}}
+    {{- $aclEntry := hasKey . "operations" | ternary . (dict "operations" (list "Read")) -}}
+    {{- $aclEntry = hasKey . "resource" | ternary (merge $aclEntry .) (merge $aclEntry (dict "resource" (dict "patternType" "literal" "type" "group" "name" $.Values.serviceName))) -}}
+    {{- $consumerGroupACL = append $consumerGroupACL $aclEntry -}}
+    {{- include "common.tplvalues.render" (dict "value" $consumerGroupACL "context" $) | nindent 4 }}
+    {{- end }}
     type: simple
   template:
     secret:

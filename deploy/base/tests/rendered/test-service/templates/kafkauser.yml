@@ -54,9 +54,9 @@ spec:
         patternType: literal
         type: topic
     - operations:
-      - All
+      - Read
       resource:
-        name: '*'
+        name: test-service-name-consumer
         patternType: literal
         type: group
     type: simple
