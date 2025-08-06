@@ -14,7 +14,10 @@
 # limitations under the License.
 """Contains the implementation of the DocsDao, providing the state management for MongoDB"""
 
-from motor.motor_asyncio import AsyncIOMotorClient
+from contextlib import asynccontextmanager
+
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient
+from pymongo import AsyncMongoClient
 
 from sms.config import Config
 from sms.models import Criteria, DocumentType
@@ -26,23 +29,18 @@ DEFAULT_DBS: tuple[str, str, str] = ("admin", "config", "local")
 class DocsDao(DocsDaoPort):
     """A class to perform CRUD operations in MongoDB."""
 
-    def __init__(self, *, config: Config):
-        """Initialize a DocDao instance. Do not call this directly, instead use context
-        manager.
+    @classmethod
+    @asynccontextmanager
+    async def construct(cls, *, config: Config):
+        """Construct and automatically close a DAO"""
+        async with ConfiguredMongoClient(config=config) as client:  # type: ignore
+            yield cls(client=client)
+
+    def __init__(self, *, client: AsyncMongoClient):
+        """Initialize a DocDao instance. Do not call this directly, instead use
+        the construct() method as async context manager.
         """
-        self._config = config
-
-    async def __aenter__(self):
-        """Enter the context manager."""
-        self._client: AsyncIOMotorClient = AsyncIOMotorClient(
-            str(self._config.mongo_dsn.get_secret_value())
-        )
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb):
-        """Exit the context manager and close the client connection."""
-        if self._client:
-            self._client.close()
+        self._client = client
 
     async def get(
         self, *, db_name: str, collection: str, criteria: Criteria

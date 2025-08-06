@@ -17,7 +17,7 @@
 from collections.abc import Mapping
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import UUID4, BaseModel, Field
 
 DocumentType = Mapping[str, Any]
 Criteria = Mapping[str, Any]
@@ -43,6 +43,7 @@ class EventDetails(BaseModel):
     topic: str = Field(default=..., description="The topic to publish the event to.")
     type_: str = Field(default=..., description="The type of the event.")
     key: str = Field(default=..., description="The key of the event.")
+    event_id: UUID4 | None = Field(default=None, description="The event ID to use.")
     headers: Mapping[str, str] | None = Field(
         None, description="The headers for the event."
     )

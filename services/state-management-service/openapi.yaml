@@ -3,6 +3,13 @@ components:
     EventDetails:
       description: Details for publishing events.
       properties:
+        event_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The event ID to use.
+          title: Event Id
         headers:
           anyOf:
           - additionalProperties:
@@ -95,7 +102,7 @@ components:
 info:
   description: A service for basic infrastructure technology state management.
   title: State Management Service
-  version: 4.0.2
+  version: 4.1.0
 openapi: 3.1.0
 paths:
   /documents/permissions:

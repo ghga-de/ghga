@@ -59,7 +59,7 @@ async def prepare_docs_handler(
     *, config: Config
 ) -> AsyncGenerator[DocsHandlerPort, None]:
     """Prepare the DocsHandler with a DocsDao to manage the database."""
-    async with DocsDao(config=config) as docs_dao:
+    async with DocsDao.construct(config=config) as docs_dao:
         docs_handler = DocsHandler(config=config, docs_dao=docs_dao)
         yield docs_handler
 

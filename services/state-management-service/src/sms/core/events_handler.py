@@ -177,6 +177,7 @@ class EventsHandler(EventsHandlerPort):
                 type_=event_details.type_,
                 topic=event_details.topic,
                 key=event_details.key,
+                event_id=event_details.event_id,
                 headers=event_details.headers,
             )
         except Exception as exc:

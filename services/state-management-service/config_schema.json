@@ -172,7 +172,7 @@
     },
     "kafka_max_message_size": {
       "default": 1048576,
-      "description": "The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this.",
+      "description": "The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size.",
       "examples": [
         1048576,
         16777216
@@ -180,6 +180,32 @@
       "exclusiveMinimum": 0,
       "title": "Kafka Max Message Size",
       "type": "integer"
+    },
+    "kafka_compression_type": {
+      "anyOf": [
+        {
+          "enum": [
+            "gzip",
+            "snappy",
+            "lz4",
+            "zstd"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio.",
+      "examples": [
+        null,
+        "gzip",
+        "snappy",
+        "lz4",
+        "zstd"
+      ],
+      "title": "Kafka Compression Type"
     },
     "kafka_max_retries": {
       "default": 0,
@@ -408,6 +434,25 @@
       "title": "Mongo Dsn",
       "type": "string"
     },
+    "mongo_timeout": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior).",
+      "examples": [
+        300,
+        600,
+        null
+      ],
+      "title": "Mongo Timeout"
+    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -562,11 +607,30 @@
         }
       ],
       "default": null,
-      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
+      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests.",
       "examples": [
         []
       ],
       "title": "Cors Allowed Headers"
+    },
+    "cors_exposed_headers": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses.",
+      "examples": [
+        []
+      ],
+      "title": "Cors Exposed Headers"
     }
   },
   "required": [

@@ -32,7 +32,7 @@ async def test_all_ops(mongodb: MongoDbFixture):
     config = get_config(sources=[mongodb.config])
 
     # Verify the db is empty
-    async with DocsDao(config=config) as docs_dao:
+    async with DocsDao.construct(config=config) as docs_dao:
         with pytest.raises(DocsDao.DbNotFoundError):
             await docs_dao.get(db_name=TESTDB, collection=ALLOPS, criteria={})
 
@@ -106,7 +106,7 @@ async def test_get_db_map_for_prefix(
     db_name2 = "db2"
     db_map_prefix_set = {db_name1: ["test", "test2"], db_name2: ["test1"]}
 
-    async with DocsDao(config=config) as docs_dao:
+    async with DocsDao.construct(config=config) as docs_dao:
         # MongoDbFixture reset only empties collections, it doesn't delete them
         # so we need to drop the databases manually to verify the functionality
         for db in await docs_dao._client.list_database_names():
@@ -133,7 +133,7 @@ async def test_deletion_on_nonexistent_resources(mongodb: MongoDbFixture):
     """
     config = get_config(sources=[mongodb.config])
 
-    async with DocsDao(config=config) as docs_dao:
+    async with DocsDao.construct(config=config) as docs_dao:
         await docs_dao._client["exists"]["exists"].insert_one({"key": "value"})
         # Delete nonexistent db contents
         await docs_dao.delete(

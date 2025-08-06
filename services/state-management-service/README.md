@@ -24,13 +24,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/state-management-service):
 ```bash
-docker pull ghga/state-management-service:4.0.2
+docker pull ghga/state-management-service:4.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/state-management-service:4.0.2 .
+docker build -t ghga/state-management-service:4.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -38,7 +38,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/state-management-service:4.0.2 --help
+docker run -p 8080:8080 ghga/state-management-service:4.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -81,7 +81,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/kafka_security_protocol"></a>**`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: `["PLAINTEXT", "SSL"]`. Default: `"PLAINTEXT"`.
+- <a id="properties/kafka_security_protocol"></a>**`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: "PLAINTEXT" or "SSL". Default: `"PLAINTEXT"`.
 
 - <a id="properties/kafka_ssl_cafile"></a>**`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
 
@@ -106,7 +106,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/kafka_max_message_size"></a>**`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes. Only services that have a need to send/receive larger messages should set this. Exclusive minimum: `0`. Default: `1048576`.
+- <a id="properties/kafka_max_message_size"></a>**`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size. Exclusive minimum: `0`. Default: `1048576`.
 
 
   Examples:
@@ -118,6 +118,42 @@ The service requires the following configuration parameters:
 
   ```json
   16777216
+  ```
+
+
+- <a id="properties/kafka_compression_type"></a>**`kafka_compression_type`**: The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/kafka_compression_type/anyOf/0"></a>*string*: Must be one of: "gzip", "snappy", "lz4", or "zstd".
+
+    - <a id="properties/kafka_compression_type/anyOf/1"></a>*null*
+
+
+  Examples:
+
+  ```json
+  null
+  ```
+
+
+  ```json
+  "gzip"
+  ```
+
+
+  ```json
+  "snappy"
+  ```
+
+
+  ```json
+  "lz4"
+  ```
+
+
+  ```json
+  "zstd"
   ```
 
 
@@ -418,7 +454,33 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: `["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"]`. Default: `"INFO"`.
+- <a id="properties/mongo_timeout"></a>**`mongo_timeout`**: Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/mongo_timeout/anyOf/0"></a>*integer*: Exclusive minimum: `0`.
+
+    - <a id="properties/mongo_timeout/anyOf/1"></a>*null*
+
+
+  Examples:
+
+  ```json
+  300
+  ```
+
+
+  ```json
+  600
+  ```
+
+
+  ```json
+  null
+  ```
+
+
+- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
 
 - <a id="properties/log_format"></a>**`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
 
@@ -517,7 +579,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. Default: `null`.
 
   - **Any of**
 
@@ -526,6 +588,24 @@ The service requires the following configuration parameters:
       - <a id="properties/cors_allowed_headers/anyOf/0/items"></a>**Items** *(string)*
 
     - <a id="properties/cors_allowed_headers/anyOf/1"></a>*null*
+
+
+  Examples:
+
+  ```json
+  []
+  ```
+
+
+- <a id="properties/cors_exposed_headers"></a>**`cors_exposed_headers`**: A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/cors_exposed_headers/anyOf/0"></a>*array*
+
+      - <a id="properties/cors_exposed_headers/anyOf/0/items"></a>**Items** *(string)*
+
+    - <a id="properties/cors_exposed_headers/anyOf/1"></a>*null*
 
 
   Examples:
@@ -577,7 +657,7 @@ to talk to an S3 service in the backend.<br>  Args:
     ```
 
 
-  - <a id="%24defs/S3Config/properties/s3_secret_access_key"></a>**`s3_secret_access_key`** *(string, format: password, required, write-only)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
+  - <a id="%24defs/S3Config/properties/s3_secret_access_key"></a>**`s3_secret_access_key`** *(string, format: password, required and write-only)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
 
 
     Examples:
@@ -623,13 +703,13 @@ to talk to an S3 service in the backend.<br>  Args:
 
   - <a id="%24defs/S3ObjectStorageNodeConfig/properties/bucket"></a>**`bucket`** *(string, required)*
 
-  - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`**: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
+  - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`** *(required)*: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
 
 
 ### Usage:
 
 A template YAML for configuring the service can be found at
-[`./example-config.yaml`](./example-config.yaml).
+[`./example_config.yaml`](./example_config.yaml).
 Please adapt it, rename it to `.sms.yaml`, and place it in one of the following locations:
 - in the current working directory where you execute the service (on Linux: `./.sms.yaml`)
 - in your home directory (on Linux: `~/.sms.yaml`)
@@ -638,7 +718,7 @@ The config yaml will be automatically parsed by the service.
 
 **Important: If you are using containers, the locations refer to paths within the container.**
 
-All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
+All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml)
 could also be set using environment variables or file secrets.
 
 For naming the environment variables, just prefix the parameter name with `sms_`,
@@ -695,7 +775,7 @@ It installs the service with all development dependencies, and it installs pre-c
 
 The installation is performed automatically when you build the devcontainer. However,
 if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
-[`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
+[`lock/requirements-dev.txt`](./lock/requirements-dev.txt), please run it again.
 
 ## License
 
@@ -704,5 +784,5 @@ This repository is free to use and modify according to the
 
 ## README Generation
 
-This README file is auto-generated, please see [`readme_generation.md`](./readme_generation.md)
+This README file is auto-generated, please see [.readme_generation/README.md](./.readme_generation/README.md)
 for details.

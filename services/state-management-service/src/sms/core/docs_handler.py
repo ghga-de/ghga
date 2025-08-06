@@ -153,7 +153,7 @@ class DocsHandler(DocsHandlerPort):
             raise namespace_error from err
         except Exception as err:
             error = self.ReadOperationError(criteria=criteria)
-            log.error(error)
+            log.error(error, exc_info=True)
             raise error from err
 
         return results
@@ -200,10 +200,7 @@ class DocsHandler(DocsHandlerPort):
             )
         except Exception as err:
             error = self.UpsertionError(id_field=id_field)
-            log.error(
-                error,
-                extra={"documents": documents},
-            )
+            log.error(error, extra={"documents": documents}, exc_info=True)
             raise error from err
 
     async def _delete(self, db_name: str, collection: str, criteria: Criteria) -> None:
@@ -219,7 +216,7 @@ class DocsHandler(DocsHandlerPort):
             )
         except Exception as err:
             error = self.DeletionError(criteria=criteria)
-            log.error(error)
+            log.error(error, exc_info=True)
             raise error from err
 
     async def delete(self, db_name: str, collection: str, criteria: Criteria) -> None:

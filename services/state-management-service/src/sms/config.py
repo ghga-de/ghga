@@ -23,7 +23,14 @@ from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
-from pydantic import Field, MongoDsn, Secret, field_validator, model_validator
+from pydantic import (
+    Field,
+    MongoDsn,
+    PositiveInt,
+    Secret,
+    field_validator,
+    model_validator,
+)
 
 from sms.core.secrets_handler import VaultConfig
 
@@ -79,6 +86,17 @@ class SmsConfig(VaultConfig):
             "MongoDB connection string. Might include credentials."
             + " For more information see:"
             + " https://naiveskill.com/mongodb-connection-string/"
+        ),
+    )
+    mongo_timeout: PositiveInt | None = Field(
+        default=None,
+        examples=[300, 600, None],
+        description=(
+            "Timeout in seconds for API calls to MongoDB. The timeout applies to all steps"
+            + " needed to complete the operation, including server selection, connection"
+            + " checkout, serialization, and server-side execution. When the timeout"
+            + " expires, PyMongo raises a timeout exception. If set to None, the"
+            + " operation will not time out (default MongoDB behavior)."
         ),
     )
 
