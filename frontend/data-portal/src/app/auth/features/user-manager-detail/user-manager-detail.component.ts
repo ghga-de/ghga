@@ -78,7 +78,6 @@ export class UserManagerDetailComponent implements OnInit {
   error = computed<undefined | 'not found' | 'other'>(() => {
     if (this.#cachedUser()) return undefined;
     const error = this.#user.error();
-    console.log(error);
     if (!error) return undefined;
 
     return (error as HttpErrorResponse)?.status === 404 ? 'not found' : 'other';

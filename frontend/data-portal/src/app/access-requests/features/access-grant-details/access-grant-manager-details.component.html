@@ -26,7 +26,11 @@
           <span class="font-bold">Dataset:</span>
           <span class="w-24 capitalize"
             >&nbsp;
-            <a href="/dataset/{{ ag?.dataset_id }}">{{ ag?.dataset_id }}</a>
+            <a
+              routerLink="/dataset/{{ ag?.dataset_id }}"
+              data-umami-event="Access Grant Details Dataset Clicked"
+              >{{ ag?.dataset_id }}</a
+            >
           </span>
         </div>
       </div>

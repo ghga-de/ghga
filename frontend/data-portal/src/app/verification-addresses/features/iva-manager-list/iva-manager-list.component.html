@@ -7,7 +7,11 @@
       <ng-container matColumnDef="user">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>User</th>
         <td mat-cell *matCellDef="let iva" class="min-w-48">
-          {{ iva.user_name }}
+          <a
+            routerLink="/user-manager/{{ iva.user_id }}"
+            data-umami-event="IVA Manager User Name Clicked"
+            >{{ iva.user_name }}</a
+          >
         </td>
       </ng-container>
       <ng-container matColumnDef="type">

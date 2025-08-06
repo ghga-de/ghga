@@ -130,7 +130,11 @@ export class IvaService {
     if (ivas.length && filter) {
       const name = filter.name.trim().toLowerCase();
       if (name) {
-        ivas = ivas.filter((iva) => iva.user_name.toLowerCase().includes(name));
+        ivas = ivas.filter(
+          (iva) =>
+            iva.user_name.toLowerCase().includes(name) ||
+            iva.user_email.toLowerCase().includes(name),
+        );
       }
       if (filter.fromDate) {
         const fromDate = filter.fromDate.toISOString();

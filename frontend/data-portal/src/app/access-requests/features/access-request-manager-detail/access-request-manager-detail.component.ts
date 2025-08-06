@@ -263,7 +263,6 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
    */
   edited(event: [keyof AccessRequest, boolean]): void {
     const [name, edited] = event;
-    console.log('EDITED', name, edited);
     if (edited) this.#pendingEdits.add(name);
     else this.#pendingEdits.delete(name);
   }

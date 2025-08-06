@@ -6,6 +6,7 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { ActivatedRoute } from '@angular/router';
 import { allIvas } from '@app/../mocks/data';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
 import { IvaManagerListComponent } from './iva-manager-list.component';
@@ -25,7 +26,10 @@ describe('IvaManagerListComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [IvaManagerListComponent],
-      providers: [{ provide: IvaService, useClass: MockIvaService }],
+      providers: [
+        { provide: IvaService, useClass: MockIvaService },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(IvaManagerListComponent);

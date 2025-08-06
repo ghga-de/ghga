@@ -46,7 +46,7 @@ export const users: RegisteredUser[] = [
     ext_id: 'aacaffeecaffeecaffeecaffeecaffeecaffeeaaf@lifescience-ri.eu',
     name: 'Joan Mar',
     title: 'Dr.',
-    email: 'mar@home.or',
+    email: 'mar@home.org',
     roles: [],
     status: UserStatus.active,
     registration_date: '2023-03-01T00:00:00',

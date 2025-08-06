@@ -63,7 +63,7 @@ describe('IvaManagerFilterComponent', () => {
   });
 
   it('should set the filter after typing a name', async () => {
-    const textbox = screen.getByRole('textbox', { name: 'Name of user' });
+    const textbox = screen.getByRole('textbox', { name: 'Name or email of user' });
 
     await userEvent.type(textbox, 'Doe');
     await fixture.whenStable();

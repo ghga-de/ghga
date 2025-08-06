@@ -21,6 +21,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { RouterLink } from '@angular/router';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { UserWithIva } from '@app/verification-addresses/models/iva';
@@ -46,6 +47,7 @@ import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creati
     MatPaginatorModule,
     IvaTypePipe,
     IvaStatePipe,
+    RouterLink,
   ],
   providers: [IvaTypePipe],
   templateUrl: './iva-manager-list.component.html',
