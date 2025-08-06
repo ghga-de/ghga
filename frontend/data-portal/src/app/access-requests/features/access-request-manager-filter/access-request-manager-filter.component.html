@@ -40,30 +40,15 @@
             </div>
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
-                <mat-label>Dataset ID</mat-label>
-                <input matInput [(ngModel)]="datasetId" />
+                <mat-label>Dataset title or ID</mat-label>
+                <input matInput [(ngModel)]="dataset" />
               </mat-form-field>
               <button
                 mat-icon-button
-                aria-label="Remove filter for dataset ID"
-                [class.invisible]="!this.datasetId()"
-                (click)="this.datasetId.set('')"
-                data-umami-event="Access Request Filters Dataset ID Clear Clicked"
-              >
-                <mat-icon>cancel</mat-icon>
-              </button>
-            </div>
-            <div class="flex items-baseline gap-2">
-              <mat-form-field class="grow">
-                <mat-label>Dataset title</mat-label>
-                <input matInput [(ngModel)]="datasetTitle" />
-              </mat-form-field>
-              <button
-                mat-icon-button
-                aria-label="Remove filter for dataset title"
-                [class.invisible]="!this.datasetTitle()"
-                (click)="this.datasetTitle.set('')"
-                data-umami-event="Access Request Filters Dataset Title Clear Clicked"
+                aria-label="Remove filter for dataset"
+                [class.invisible]="!this.dataset()"
+                (click)="this.dataset.set('')"
+                data-umami-event="Access Request Filters Dataset Clear Clicked"
               >
                 <mat-icon>cancel</mat-icon>
               </button>
@@ -72,7 +57,7 @@
           <div class="flex grow flex-col gap-2">
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
-                <mat-label>Name of user</mat-label>
+                <mat-label>Name or email of requester</mat-label>
                 <input matInput [(ngModel)]="name" />
                 <mat-hint>You can also filter with partial names</mat-hint>
               </mat-form-field>
@@ -88,7 +73,7 @@
             </div>
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
-                <mat-label>Data access committee</mat-label>
+                <mat-label>Name or email of DAC</mat-label>
                 <input matInput [(ngModel)]="dac" />
               </mat-form-field>
               <button

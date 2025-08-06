@@ -139,9 +139,8 @@ export class AccessRequestService {
     () =>
       this.#allAccessRequestsFilter() ?? {
         ticketId: '',
-        datasetId: '',
-        datasetTitle: '',
-        name: '',
+        dataset: '',
+        requester: '',
         dac: '',
         fromDate: undefined,
         toDate: undefined,
@@ -185,27 +184,29 @@ export class AccessRequestService {
           ar.ticket_id?.toLowerCase().includes(ticketId),
         );
       }
-      const datasetId = filter.datasetId?.trim().toLowerCase();
-      if (datasetId) {
-        requests = requests.filter((ar) =>
-          ar.dataset_id.toLowerCase().includes(datasetId),
+      const dataset = filter.dataset?.trim().toLowerCase();
+      if (dataset) {
+        requests = requests.filter(
+          (ar) =>
+            ar.dataset_id.toLowerCase().includes(dataset) ||
+            ar.dataset_title.toLowerCase().includes(dataset),
         );
       }
-      const datasetTitle = filter.datasetTitle?.trim().toLowerCase();
-      if (datasetTitle) {
-        requests = requests.filter((ar) =>
-          ar.dataset_title.toLowerCase().includes(datasetTitle),
-        );
-      }
-      const name = filter.name?.trim().toLowerCase();
+      const name = filter.requester?.trim().toLowerCase();
       if (name) {
-        requests = requests.filter((ar) =>
-          ar.full_user_name.toLowerCase().includes(name),
+        requests = requests.filter(
+          (ar) =>
+            ar.full_user_name.toLowerCase().includes(name) ||
+            ar.email.toLowerCase().includes(name),
         );
       }
       const dac = filter.dac?.trim().toLowerCase();
       if (dac) {
-        requests = requests.filter((ar) => ar.dac_alias.toLowerCase().includes(dac));
+        requests = requests.filter(
+          (ar) =>
+            ar.dac_alias.toLowerCase().includes(dac) ||
+            ar.dac_email.toLowerCase().includes(dac),
+        );
       }
       if (filter.fromDate) {
         const fromDate = filter.fromDate.toISOString();

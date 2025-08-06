@@ -59,8 +59,9 @@ describe('AccessRequestManagerFilterComponent', () => {
 
   it('should reset the filter upon initialization', async () => {
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
-      datasetId: '',
-      name: '',
+      dataset: undefined,
+      requester: undefined,
+      dac: undefined,
       fromDate: undefined,
       toDate: undefined,
       status: undefined,
@@ -71,14 +72,14 @@ describe('AccessRequestManagerFilterComponent', () => {
   });
 
   it('should set the filter after typing a name', async () => {
-    const textbox = screen.getByRole('textbox', { name: 'Name of user' });
+    const textbox = screen.getByRole('textbox', { name: 'Name or email of requester' });
 
     await userEvent.type(textbox, 'Doe');
     await fixture.whenStable();
 
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
-      datasetId: '',
-      name: 'Doe',
+      dataset: undefined,
+      requester: 'Doe',
       fromDate: undefined,
       toDate: undefined,
       status: undefined,
@@ -95,8 +96,8 @@ describe('AccessRequestManagerFilterComponent', () => {
     await fixture.whenStable();
 
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
-      datasetId: '',
-      name: '',
+      dataset: undefined,
+      requester: undefined,
       fromDate: undefined,
       toDate: undefined,
       status: undefined,
@@ -117,8 +118,8 @@ describe('AccessRequestManagerFilterComponent', () => {
     await fixture.whenStable();
 
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
-      datasetId: '',
-      name: '',
+      dataset: undefined,
+      requester: undefined,
       fromDate: undefined,
       toDate: undefined,
       status: AccessRequestStatus.allowed,
@@ -135,8 +136,8 @@ describe('AccessRequestManagerFilterComponent', () => {
     await fixture.whenStable();
 
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
-      datasetId: '',
-      name: '',
+      dataset: undefined,
+      requester: undefined,
       fromDate: undefined,
       toDate: undefined,
       status: undefined,
@@ -153,8 +154,8 @@ describe('AccessRequestManagerFilterComponent', () => {
     await fixture.whenStable();
 
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
-      datasetId: '',
-      name: '',
+      dataset: undefined,
+      requester: undefined,
       fromDate: undefined,
       toDate: undefined,
       status: undefined,

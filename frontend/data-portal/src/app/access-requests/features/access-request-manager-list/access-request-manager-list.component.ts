@@ -75,13 +75,15 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
         return ar.ticket_id || '';
       case 'dataset':
         return ar.dataset_id;
-      case 'user':
+      case 'requester':
         const parts = ar.full_user_name.split(' ');
+        parts.push(ar.email);
         return parts.reverse().join(',');
-      case 'starts':
-        return ar.access_starts;
-      case 'ends':
-        return ar.access_ends;
+      case 'status':
+        const rank = { allowed: 0, pending: 1, denied: 2 }[ar.status as string] ?? 3;
+        return `${rank}:${ar.access_starts}-${ar.access_ends})`;
+      case 'period':
+        return `${ar.access_starts}-${ar.access_ends})`;
       case 'requested':
         return ar.request_created;
       default:

@@ -66,9 +66,8 @@ export interface AccessRequestDetailData {
 
 export interface AccessRequestFilter {
   ticketId: string | undefined;
-  datasetId: string | undefined;
-  datasetTitle: string | undefined;
-  name: string | undefined;
+  dataset: string | undefined;
+  requester: string | undefined;
   dac: string | undefined;
   fromDate: Date | undefined;
   toDate: Date | undefined;

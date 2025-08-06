@@ -53,9 +53,8 @@ export class AccessRequestManagerFilterComponent {
    * The model for the filter properties
    */
   ticketId = model<string | undefined>(this.#filter().ticketId);
-  datasetId = model<string | undefined>(this.#filter().datasetId);
-  datasetTitle = model<string | undefined>(this.#filter().datasetTitle);
-  name = model<string | undefined>(this.#filter().name);
+  dataset = model<string | undefined>(this.#filter().dataset);
+  name = model<string | undefined>(this.#filter().requester);
   dac = model<string | undefined>(this.#filter().dac);
   fromDate = model<Date | undefined>(this.#filter().fromDate);
   toDate = model<Date | undefined>(this.#filter().toDate);
@@ -70,9 +69,8 @@ export class AccessRequestManagerFilterComponent {
   #filterEffect = effect(() => {
     this.#ars.setAllAccessRequestsFilter({
       ticketId: this.ticketId(),
-      datasetId: this.datasetId(),
-      datasetTitle: this.datasetTitle(),
-      name: this.name(),
+      dataset: this.dataset(),
+      requester: this.name(),
       dac: this.dac(),
       fromDate: this.fromDate(),
       toDate: this.toDate(),
