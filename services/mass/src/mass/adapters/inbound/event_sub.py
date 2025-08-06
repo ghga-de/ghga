@@ -25,6 +25,7 @@ from ghga_event_schemas.validation import (
 )
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import UUID4
 
 from mass.core.models import Resource
 from mass.ports.inbound.query_handler import QueryHandlerPort
@@ -130,6 +131,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         type_: Ascii,
         topic: Ascii,
         key: Ascii,
+        event_id: UUID4,
     ) -> None:
         """Consumes an event"""
         log.info(EVENT_RECEIVED_LOG_MESSAGE, type)

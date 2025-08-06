@@ -17,7 +17,8 @@
 """Contains the ResourceDaoCollection, which houses a DAO for each resource class"""
 
 from hexkit.protocols.dao import DaoFactoryProtocol
-from pymongo import TEXT, MongoClient
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient
+from pymongo import TEXT
 
 from mass.config import Config
 from mass.core import models
@@ -77,30 +78,28 @@ class DaoCollection(DaoCollectionPort):
             return
 
         # get client
-        client: MongoClient = MongoClient(
-            str(self._config.mongo_dsn.get_secret_value())
-        )
-        db = client[self._config.db_name]
+        with ConfiguredMongoClient(config=self._config) as client:
+            db = client[self._config.db_name]
 
-        existing_collections = set(db.list_collection_names())
+            existing_collections = set(db.list_collection_names())
 
-        # loop through configured classes (i.e. the expected collection names)
-        for expected_collection_name in self._config.searchable_classes:
-            if expected_collection_name not in existing_collections:
-                db.create_collection(expected_collection_name)
-            collection = db[expected_collection_name]
+            # loop through configured classes (i.e. the expected collection names)
+            for expected_collection_name in self._config.searchable_classes:
+                if expected_collection_name not in existing_collections:
+                    db.create_collection(expected_collection_name)
+                collection = db[expected_collection_name]
 
-            # see if the wildcard text index exists and add it if not
-            wildcard_text_index_exists = any(
-                index["name"] == f"$**_{TEXT}" for index in collection.list_indexes()
-            )
+                # see if the wildcard text index exists and add it if not
+                wildcard_text_index_exists = any(
+                    index["name"] == f"$**_{TEXT}"
+                    for index in collection.list_indexes()
+                )
 
-            if not wildcard_text_index_exists:
-                collection.create_index([("$**", TEXT)])
+                if not wildcard_text_index_exists:
+                    collection.create_index([("$**", TEXT)])
 
-        # close client and remember that the indexes have been set up
-        client.close()
-        self._indexes_created = True
+            # remember that the indexes have been set up
+            self._indexes_created = True
 
     def recreate_collections_and_indexes(self) -> None:
         """Recreate collections and indexes if they have been removed."""

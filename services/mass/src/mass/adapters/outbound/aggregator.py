@@ -15,9 +15,12 @@
 #
 """Contains concrete implementation of the Aggregator and its Factory"""
 
+from contextlib import asynccontextmanager
+
 from hexkit.custom_types import JsonObject
-from hexkit.providers.mongodb.provider import MongoDbConfig
-from motor.motor_asyncio import AsyncIOMotorClient
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient, MongoDbConfig
+from pymongo.asynchronous.collection import AsyncCollection
+from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import OperationFailure
 
 from mass.adapters.outbound import utils
@@ -33,7 +36,7 @@ from mass.ports.outbound.aggregator import (
 class Aggregator(AggregatorPort):
     """Concrete implementation of an Aggregator"""
 
-    def __init__(self, *, collection):
+    def __init__(self, *, collection: AsyncCollection):
         """Initialize with a MongoDB collection"""
         self._collection = collection
 
@@ -64,9 +67,9 @@ class Aggregator(AggregatorPort):
         )
 
         try:
-            [results] = [
-                item async for item in self._collection.aggregate(pipeline=pipeline)
-            ]
+            cursor = await self._collection.aggregate(pipeline=pipeline)
+            [results] = await cursor.to_list()
+            return results
         except OperationFailure as err:
             filter_repr = [{f.key: f.value} for f in filters]
             facet_repr = [{f.key: f.name} for f in facet_fields]
@@ -86,19 +89,21 @@ class Aggregator(AggregatorPort):
                 missing_index=missing_index,
             ) from err
 
-        return results
-
 
 class AggregatorFactory:
     """Produces aggregators for a given resource class"""
 
-    def __init__(self, *, config: MongoDbConfig):
+    @classmethod
+    @asynccontextmanager
+    async def construct(cls, *, config: MongoDbConfig):
+        """Set up the factory"""
+        async with ConfiguredMongoClient(config=config) as client:
+            db = client[config.db_name]
+            yield cls(db=db)
+
+    def __init__(self, *, db: AsyncDatabase):
         """Initialize the factory with the DB config information"""
-        self._config = config
-        self._client: AsyncIOMotorClient = AsyncIOMotorClient(
-            str(self._config.mongo_dsn.get_secret_value())
-        )
-        self._db = self._client[self._config.db_name]
+        self._db = db
 
     def get_aggregator(self, *, name: str) -> Aggregator:
         """Returns an aggregator with a collection set up"""

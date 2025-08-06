@@ -16,10 +16,9 @@
 """Module hosting the dependency injection container."""
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 
@@ -36,20 +35,22 @@ from mass.ports.inbound.query_handler import QueryHandlerPort
 @asynccontextmanager
 async def prepare_core(*, config: Config) -> AsyncGenerator[QueryHandlerPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    dao_collection = await DaoCollection.construct(
-        dao_factory=dao_factory, config=config
-    )
-    aggregator_factory = AggregatorFactory(config=config)
-    aggregator_collection = await AggregatorCollection.construct(
-        aggregator_factory=aggregator_factory, config=config
-    )
+    async with (
+        AggregatorFactory.construct(config=config) as aggregator_factory,
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
+    ):
+        dao_collection = await DaoCollection.construct(
+            dao_factory=dao_factory, config=config
+        )
+        aggregator_collection = await AggregatorCollection.construct(
+            aggregator_factory=aggregator_factory, config=config
+        )
 
-    yield QueryHandler(
-        config=config,
-        aggregator_collection=aggregator_collection,
-        dao_collection=dao_collection,
-    )
+        yield QueryHandler(
+            config=config,
+            aggregator_collection=aggregator_collection,
+            dao_collection=dao_collection,
+        )
 
 
 def prepare_core_with_override(
@@ -57,7 +58,7 @@ def prepare_core_with_override(
 ):
     """Resolve the query_handler context manager based on config and override (if any)."""
     return (
-        asyncnullcontext(query_handler_override)
+        nullcontext(query_handler_override)
         if query_handler_override
         else prepare_core(config=config)
     )

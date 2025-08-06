@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "mass"
-version = "5.0.2"
+version = "6.0.0"
 description = "Metadata Artifact Search Service - A service for searching metadata artifacts and filtering results."
 dependencies = [
     "typer>=0.16",
-    "ghga-service-commons[api]>=4.1.0",
-    "ghga-event-schemas~=9.2.0",
-    "hexkit[mongodb,akafka]>=5.3.0",
+    "ghga-service-commons[api]>=5",
+    "ghga-event-schemas~=10.0",
+    "hexkit[mongodb,akafka]>=6",
 ]
 
 [project.license]

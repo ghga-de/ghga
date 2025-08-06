@@ -127,7 +127,7 @@ class QueryHandler(QueryHandlerPort):
                         log.error("Cannot recreate text indexes: %s", recreation_error)
                         raise self.SearchError() from recreation_error
                     continue
-                log.warning("Search operation error: %s", err)
+                log.error("Search operation error: %s", err)
                 raise self.SearchError() from err
             break
 

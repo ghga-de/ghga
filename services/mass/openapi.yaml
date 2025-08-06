@@ -189,7 +189,7 @@ info:
     name: Apache 2.0
   summary: A service for searching metadata artifacts and filtering results.
   title: Metadata Artifact Search Service
-  version: 5.0.2
+  version: 6.0.0
 openapi: 3.1.0
 paths:
   /health:

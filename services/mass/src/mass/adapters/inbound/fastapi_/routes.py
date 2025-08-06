@@ -16,6 +16,7 @@
 
 """API endpoints"""
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
@@ -23,6 +24,8 @@ from fastapi.exceptions import HTTPException
 
 from mass.adapters.inbound.fastapi_.dummies import ConfigDummy, QueryHandlerDummy
 from mass.core import models
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -127,6 +130,7 @@ async def search(  # noqa: PLR0913
             + " See /search-options for a list of valid class names.",
         ) from err
     except (query_handler.SearchError, query_handler.ValidationError) as err:
+        log.error(err, exc_info=True)
         raise HTTPException(
             status_code=500, detail="An error occurred during the search operation"
         ) from err
