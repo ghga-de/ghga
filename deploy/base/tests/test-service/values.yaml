@@ -85,13 +85,6 @@ topicPrefix: prefix
 kafkaUser:
   enabled: true
 
-_consumerGroup:
-  operations:
-    - Read
-  resource:
-    patternType: literal
-    type: group
-
 _topics:
   testEvent:
     topic:
@@ -142,3 +135,4 @@ _topics:
 
 probe:
   enabled: true
+

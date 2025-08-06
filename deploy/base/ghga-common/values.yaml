@@ -5,7 +5,12 @@ exports:
       imagePullSecrets: []
       storageClass: ""
       _topics: {}
-      _consumerGroup: {}
+      _consumerGroup:
+        operations:
+          - Read
+        resource:
+          patternType: literal
+          type: group
 
     deployment:
       enabled: true
@@ -180,7 +185,12 @@ exports:
 
     topicPrefix: ""
     _topics: {}
-    _consumerGroup: {}
+    _consumerGroup:
+      operations:
+        - Read
+      resource:
+        patternType: literal
+        type: group
     kafkaTopicsParameters: true
 
     kafkaUser:

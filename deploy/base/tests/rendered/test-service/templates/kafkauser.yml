@@ -56,7 +56,7 @@ spec:
     - operations:
       - Read
       resource:
-        name: test-service-name-consumer
+        name: test-service-name
         patternType: literal
         type: group
     type: simple
