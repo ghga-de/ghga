@@ -60,7 +60,7 @@ AUTH_CLAIMS = {
     "name": "John Doe",
     "email": "john@home.org",
     "title": "Dr.",
-    "id": "john-doe@ghga.de",
+    "id": "a86f8281-e18a-429e-88a9-a5c8ea0cf754",
 }
 
 

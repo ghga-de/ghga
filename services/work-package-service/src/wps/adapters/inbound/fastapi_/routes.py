@@ -17,14 +17,14 @@
 """Module containing the main FastAPI router and all route functions."""
 
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
-from hexkit.opentelemetry import start_span
 
 from wps.adapters.inbound.fastapi_.auth import UserAuthContext, WorkPackageAccessToken
 from wps.adapters.inbound.fastapi_.dummies import WorkPackageRepositoryDummy
-from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
+from wps.constants import TRACER, WORK_ORDER_TOKEN_VALID_SECONDS
 from wps.core.models import (
     Dataset,
     DatasetWithExpiration,
@@ -39,19 +39,18 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@start_span()
 @router.get(
     "/health",
     summary="health",
     tags=["WorkPackages"],
     status_code=status.HTTP_200_OK,
 )
+@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}
 
 
-@start_span()
 @router.post(
     "/work-packages",
     operation_id="create_work_package",
@@ -68,6 +67,7 @@ async def health():
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("routes.create_work_package")
 async def create_work_package(
     creation_data: WorkPackageCreationData,
     repository: WorkPackageRepositoryDummy,
@@ -82,7 +82,6 @@ async def create_work_package(
         raise HTTPException(status_code=403, detail=str(error)) from error
 
 
-@start_span()
 @router.get(
     "/work-packages/{work_package_id}",
     operation_id="get_work_package",
@@ -99,8 +98,9 @@ async def create_work_package(
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("routes.get_work_package")
 async def get_work_package(
-    work_package_id: str,
+    work_package_id: UUID,
     repository: WorkPackageRepositoryDummy,
     work_package_access_token: WorkPackageAccessToken,
 ) -> WorkPackageDetails:
@@ -123,7 +123,6 @@ async def get_work_package(
     )
 
 
-@start_span()
 @router.post(
     "/work-packages/{work_package_id}/files/{file_id}/work-order-tokens",
     operation_id="create_work_order_token",
@@ -139,8 +138,9 @@ async def get_work_package(
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("routes.create_work_order_token")
 async def create_work_order_token(
-    work_package_id: str,
+    work_package_id: UUID,
     file_id: str,
     repository: WorkPackageRepositoryDummy,
     work_package_access_token: WorkPackageAccessToken,
@@ -165,7 +165,6 @@ async def create_work_order_token(
         raise HTTPException(status_code=403, detail=str(error)) from error
 
 
-@start_span()
 @router.get(
     "/users/{user_id}/datasets",
     operation_id="get_datasets",
@@ -183,6 +182,7 @@ async def create_work_order_token(
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("routes.get_datasets")
 async def get_datasets(
     user_id: str,
     repository: WorkPackageRepositoryDummy,

@@ -17,7 +17,7 @@
 """Test the creation of dataclasses and DTOs"""
 
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -37,7 +37,7 @@ def test_work_order_token():
     token = WorkOrderToken(
         type=WorkType.DOWNLOAD,
         file_id="some-file-id",
-        user_id="some-user-id",
+        user_id=uuid4(),
         user_public_crypt4gh_key="some-public-key",
         full_user_name="Dr. John Doe",
         email="john@home.org",
@@ -114,7 +114,7 @@ def test_work_package():
     """Test instantiating a work package DTO."""
     package = WorkPackage(
         id=TEST_ID,
-        user_id="some-user-id",
+        user_id=uuid4(),
         dataset_id="some-dataset-id",
         type=WorkType.DOWNLOAD,
         files={"some-file-id": ".sam", "another-file-id": ".bam"},

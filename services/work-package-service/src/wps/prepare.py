@@ -16,12 +16,11 @@
 """Module hosting the code to prepare the application by providing dependencies."""
 
 from collections.abc import AsyncGenerator
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from contextlib import AbstractAsyncContextManager, asynccontextmanager, nullcontext
 from typing import NamedTuple
 
 from fastapi import FastAPI
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
-from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
@@ -43,12 +42,14 @@ async def prepare_core(
     config: Config,
 ) -> AsyncGenerator[WorkPackageRepositoryPort, None]:
     """Constructs and initializes all core components with outbound dependencies."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    work_package_dao = await get_work_package_dao(
-        config=config, dao_factory=dao_factory
-    )
-    dataset_dao = await get_dataset_dao(config=config, dao_factory=dao_factory)
-    async with AccessCheckAdapter.construct(config=config) as download_access_checks:
+    async with (
+        AccessCheckAdapter.construct(config=config) as download_access_checks,
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
+    ):
+        work_package_dao = await get_work_package_dao(
+            config=config, dao_factory=dao_factory
+        )
+        dataset_dao = await get_dataset_dao(config=config, dao_factory=dao_factory)
         yield WorkPackageRepository(
             config=config,
             access_check=download_access_checks,
@@ -64,7 +65,7 @@ def _prepare_core_with_override(
 ) -> AbstractAsyncContextManager[WorkPackageRepositoryPort]:
     """Get context manager for preparing the core components or provide override."""
     return (
-        asyncnullcontext(work_package_repo_override)
+        nullcontext(work_package_repo_override)
         if work_package_repo_override
         else prepare_core(config=config)
     )

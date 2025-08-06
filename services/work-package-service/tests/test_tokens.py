@@ -16,6 +16,8 @@
 
 """Test the tokens module."""
 
+from uuid import uuid4
+
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
     generate_jwk,
@@ -61,7 +63,7 @@ def test_sign_work_order_token():
     work_order_token = WorkOrderToken(
         type=WorkType.DOWNLOAD,
         file_id="some-file-id",
-        user_id="some-user-id",
+        user_id=uuid4(),
         user_public_crypt4gh_key="some-public-key",
         full_user_name="Dr. John Doe",
         email="john@home.org",
@@ -76,5 +78,5 @@ def test_sign_work_order_token():
     token_dict = decode_and_validate_token(token_str, key)
     assert isinstance(token_dict, dict)
     assert token_dict.pop("exp") - token_dict.pop("iat") == 30
-    expected_token_dict = work_order_token.model_dump()
+    expected_token_dict = work_order_token.model_dump(mode="json")
     assert token_dict == expected_token_dict

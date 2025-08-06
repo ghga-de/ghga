@@ -188,7 +188,7 @@ components:
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
-  version: 5.0.1
+  version: 6.0.0
 openapi: 3.1.0
 paths:
   /health:
@@ -270,6 +270,7 @@ paths:
         name: work_package_id
         required: true
         schema:
+          format: uuid
           title: Work Package Id
           type: string
       responses:
@@ -297,6 +298,7 @@ paths:
         name: work_package_id
         required: true
         schema:
+          format: uuid
           title: Work Package Id
           type: string
       - in: path

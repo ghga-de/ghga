@@ -55,5 +55,5 @@ def sign_work_order_token(
     valid_seconds: int = WORK_ORDER_TOKEN_VALID_SECONDS,
 ):
     """Sign the given work order token."""
-    claims = work_order_token.model_dump()
+    claims = work_order_token.model_dump(mode="json")
     return sign_and_serialize_token(claims, key=key, valid_seconds=valid_seconds)

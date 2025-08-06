@@ -21,13 +21,12 @@ from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 
 from wps.adapters.inbound.event_sub import EventSubTranslatorConfig
 from wps.adapters.outbound.http import AccessCheckConfig
+from wps.constants import SERVICE_NAME
 from wps.core.repository import WorkPackageConfig
-
-SERVICE_NAME = "wps"
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
@@ -37,7 +36,7 @@ class Config(
     AccessCheckConfig,
     EventSubTranslatorConfig,
     KafkaConfig,
-    MongoDbConfig,
+    MigrationConfig,
     WorkPackageConfig,
     LoggingConfig,
     OpenTelemetryConfig,

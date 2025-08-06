@@ -18,6 +18,7 @@
 
 import logging
 from datetime import timedelta
+from uuid import UUID
 
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.crypt import encrypt
@@ -109,7 +110,13 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         - the files in th dataset cannot be determined
         - no existing files in the dataset have been specified
         """
-        user_id = auth_context.id
+        try:
+            user_id = UUID(auth_context.id)
+        except ValueError as error:
+            access_error = self.WorkPackageAccessError("Malformed user ID supplied")
+            log.error(access_error)
+            raise access_error from error
+
         if user_id is None:
             access_error = self.WorkPackageAccessError("No internal user specified")
             log.error(access_error)
@@ -191,7 +198,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
     async def get(
         self,
-        work_package_id: str,
+        work_package_id: UUID,
         *,
         check_valid: bool = True,
         work_package_access_token: str | None = None,
@@ -245,7 +252,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
     async def work_order_token(
         self,
         *,
-        work_package_id: str,
+        work_package_id: UUID,
         file_id: str,
         check_valid: bool = True,
         work_package_access_token: str | None = None,
@@ -331,7 +338,13 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
         Note that currently only downloadable datasets are supported.
         """
-        user_id = auth_context.id
+        try:
+            user_id = UUID(auth_context.id)
+        except ValueError as error:
+            access_error = self.WorkPackageAccessError("Malformed user ID supplied")
+            log.error(access_error)
+            raise access_error from error
+
         if user_id is None:
             access_error = self.WorkPackageAccessError("No internal user specified")
             log.error(access_error)

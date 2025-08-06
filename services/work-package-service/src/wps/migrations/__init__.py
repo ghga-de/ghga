@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Non-configurable values used in multiple modules"""
 
-from opentelemetry import trace
+"""Database migration logic"""
 
-WORK_ORDER_TOKEN_VALID_SECONDS = 30
-SERVICE_NAME = "wps"
-TRACER = trace.get_tracer(SERVICE_NAME)
+from .definitions import V2Migration
+from .entry import run_db_migrations
+
+__all__ = ["V2Migration", "run_db_migrations"]

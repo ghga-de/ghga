@@ -17,6 +17,7 @@
 """Test the API of the work package service."""
 
 from datetime import datetime, timedelta
+from uuid import uuid4
 
 import pytest
 from fastapi import status
@@ -96,7 +97,7 @@ async def test_create_work_order_token(
     valid_until = (now_as_utc() + timedelta(days=365)).isoformat()
     httpx_mock.add_response(
         method="GET",
-        url="http://access/users/john-doe@ghga.de/datasets/some-dataset-id",
+        url="http://access/users/a86f8281-e18a-429e-88a9-a5c8ea0cf754/datasets/some-dataset-id",
         json=valid_until,
     )
 
@@ -132,10 +133,16 @@ async def test_create_work_order_token(
     response = await client.get(f"/work-packages/{work_package_id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    # try to get a non-existing work package with authorization
+    # try to get a non-existing work package with authorization and malformed ID
 
     response = await client.get(
         "/work-packages/some-work-package-id", headers=headers_for_token(token)
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    # try to get a non-existing work package with authorization
+    response = await client.get(
+        f"/work-packages/{uuid4()}", headers=headers_for_token(token)
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -171,7 +178,7 @@ async def test_create_work_order_token(
     # try to get a work order token for a non-existing work package with authorization
 
     response = await client.post(
-        "/work-packages/some-bad-id/files/file-id-1/work-order-tokens",
+        f"/work-packages/{uuid4()}/files/file-id-1/work-order-tokens",
         headers=headers_for_token(token),
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -228,7 +235,7 @@ async def test_create_work_order_token(
     assert wot_dict == {
         "type": "download",
         "file_id": "file-id-3",
-        "user_id": "john-doe@ghga.de",
+        "user_id": "a86f8281-e18a-429e-88a9-a5c8ea0cf754",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
         "full_user_name": "Dr. John Doe",
         "email": "john@home.org",
@@ -237,7 +244,7 @@ async def test_create_work_order_token(
     # mock the access check for the test dataset to revoke access
     httpx_mock.add_response(
         method="GET",
-        url="http://access/users/john-doe@ghga.de/datasets/some-dataset-id",
+        url="http://access/users/a86f8281-e18a-429e-88a9-a5c8ea0cf754/datasets/some-dataset-id",
         text="false",
     )
 
@@ -253,7 +260,7 @@ async def test_create_work_order_token(
 
 async def test_get_datasets_unauthenticated(client: AsyncTestClient):
     """Test that the list of accessible datasets cannot be fetched unauthenticated."""
-    response = await client.get("/users/john-doe@ghga.de/datasets")
+    response = await client.get("/users/a86f8281-e18a-429e-88a9-a5c8ea0cf754/datasets")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -262,7 +269,7 @@ async def test_get_datasets_for_another_user(
 ):
     """Test that the list of accessible datasets for another user cannot be fetched."""
     response = await client.get(
-        "/users/john-foo@ghga.de/datasets", headers=auth_headers
+        "/users/78b1c9a5-eb59-4e49-9330-9ffdd2b161ef/datasets", headers=auth_headers
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -279,14 +286,14 @@ async def test_get_datasets_when_none_authorized(
     expires = (now_as_utc() + timedelta(days=365)).isoformat()
     httpx_mock.add_response(
         method="GET",
-        url="http://access/users/john-doe@ghga.de/datasets",
+        url="http://access/users/a86f8281-e18a-429e-88a9-a5c8ea0cf754/datasets",
         json={"some-other-dataset-id": expires},
     )
 
     # get the list of datasets
 
     response = await client.get(
-        "/users/john-doe@ghga.de/datasets", headers=auth_headers
+        "/users/a86f8281-e18a-429e-88a9-a5c8ea0cf754/datasets", headers=auth_headers
     )
     assert response.status_code == status.HTTP_200_OK
 
@@ -307,7 +314,7 @@ async def test_get_datasets(
     expires = (now_as_utc() + timedelta(days=365)).isoformat()
     httpx_mock.add_response(
         method="GET",
-        url="http://access/users/john-doe@ghga.de/datasets",
+        url="http://access/users/a86f8281-e18a-429e-88a9-a5c8ea0cf754/datasets",
         json={
             "some-dataset-id": expires,
             "some-non-existing-dataset-id": expires,
@@ -317,7 +324,7 @@ async def test_get_datasets(
     # get the list of datasets
 
     response = await client.get(
-        "/users/john-doe@ghga.de/datasets", headers=auth_headers
+        "/users/a86f8281-e18a-429e-88a9-a5c8ea0cf754/datasets", headers=auth_headers
     )
     assert response.status_code == status.HTTP_200_OK
 

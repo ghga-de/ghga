@@ -18,14 +18,15 @@
 
 import logging
 from contextlib import suppress
+from uuid import UUID
 
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import DatasetEventsConfig
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
-from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 
+from wps.constants import TRACER
 from wps.core.models import Dataset, DatasetFile, WorkType
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
@@ -60,7 +61,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         self._dataset_deletion_type = config.dataset_deletion_type
         self._repository = work_package_repository
 
-    @start_span()
+    @TRACER.start_as_current_span("EventSubTranslator._handle_upsertion")
     async def _handle_upsertion(self, payload: JsonObject):
         """Handle event for new or changed datasets."""
         validated_payload = get_validated_payload(
@@ -95,7 +96,7 @@ class EventSubTranslator(EventSubscriberProtocol):
 
         await self._repository.register_dataset(dataset)
 
-    @start_span()
+    @TRACER.start_as_current_span("EventSubTranslator._handle_deletion")
     async def _handle_deletion(self, payload: JsonObject):
         """Handle event for deleted datasets."""
         validated_payload = get_validated_payload(
@@ -105,7 +106,13 @@ class EventSubTranslator(EventSubscriberProtocol):
             await self._repository.delete_dataset(validated_payload.accession)
 
     async def _consume_validated(
-        self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
+        self,
+        *,
+        payload: JsonObject,
+        type_: Ascii,
+        topic: Ascii,
+        key: Ascii,
+        event_id: UUID,
     ) -> None:
         """
         Receive and process an event with already validated topic and type.

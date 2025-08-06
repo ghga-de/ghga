@@ -16,6 +16,8 @@
 
 """Test the Work Package Repository."""
 
+from uuid import UUID, uuid4
+
 import pytest
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
@@ -77,7 +79,7 @@ async def test_work_package_and_token_creation(
         round((expires - now_as_utc()).total_seconds() / (24 * 60 * 60)) == valid_days
     )
 
-    work_package_id = creation_response.id
+    work_package_id = UUID(creation_response.id)
     encrypted_wpat = creation_response.token
     wpat = decrypt(encrypted_wpat)
 
@@ -89,9 +91,7 @@ async def test_work_package_and_token_creation(
         )
 
     with pytest.raises(repository.WorkPackageAccessError):
-        await repository.get(
-            "invalid-id", check_valid=True, work_package_access_token=wpat
-        )
+        await repository.get(uuid4(), check_valid=True, work_package_access_token=wpat)
 
     package = await repository.get(
         work_package_id, check_valid=True, work_package_access_token=wpat
@@ -108,7 +108,7 @@ async def test_work_package_and_token_creation(
         "file-id-3": ".bam",
     }
     assert package.user_public_crypt4gh_key == user_public_crypt4gh_key
-    assert package.user_id == auth_context.id
+    assert package.user_id == UUID(auth_context.id)
     assert package.full_user_name == full_user_name
     assert package.email == auth_context.email
     assert package.token_hash == hash_token(wpat)
@@ -118,7 +118,7 @@ async def test_work_package_and_token_creation(
 
     with pytest.raises(repository.WorkPackageAccessError):
         await repository.work_order_token(
-            work_package_id="invalid-work-package-id",
+            work_package_id=uuid4(),
             file_id="file-id-1",
             work_package_access_token=wpat,
         )
@@ -152,7 +152,7 @@ async def test_work_package_and_token_creation(
     assert wot_claims == {
         "type": package.type.value,
         "file_id": "file-id-3",
-        "user_id": package.user_id,
+        "user_id": str(package.user_id),
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
         "full_user_name": package.full_user_name,
         "email": package.email,
@@ -172,7 +172,7 @@ async def test_work_package_and_token_creation(
     )
 
     assert isinstance(creation_response, WorkPackageCreationResponse)
-    work_package_id = creation_response.id
+    work_package_id = UUID(creation_response.id)
     encrypted_wpat = creation_response.token
     wpat = decrypt(encrypted_wpat)
 
@@ -207,7 +207,7 @@ async def test_work_package_and_token_creation(
     assert wot_claims == {
         "type": package.type.value,
         "file_id": "file-id-1",
-        "user_id": package.user_id,
+        "user_id": str(package.user_id),
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
         "full_user_name": package.full_user_name,
         "email": package.email,

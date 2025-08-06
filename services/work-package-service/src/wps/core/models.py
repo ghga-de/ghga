@@ -77,7 +77,7 @@ class WorkOrderToken(BaseDto):
 
     type: WorkType
     file_id: str
-    user_id: str
+    user_id: UUID4
     user_public_crypt4gh_key: str
     full_user_name: str
     email: EmailStr
@@ -141,7 +141,7 @@ class WorkPackage(WorkPackageDetails):
 
     id: UUID4 = UUID4Field(description="ID of the work package")
     dataset_id: str
-    user_id: str
+    user_id: UUID4
     full_user_name: str = Field(
         default=...,
         description="The user's full name including academic title",

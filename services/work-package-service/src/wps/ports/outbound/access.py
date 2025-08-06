@@ -17,6 +17,7 @@
 """Outbound access checks"""
 
 from abc import ABC, abstractmethod
+from uuid import UUID
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 
@@ -31,13 +32,13 @@ class AccessCheckPort(ABC):
 
     @abstractmethod
     async def check_download_access(
-        self, user_id: str, dataset_id: str
+        self, user_id: UUID, dataset_id: str
     ) -> UTCDatetime | None:
         """Check until when the given user has download access for the given dataset."""
 
     @abstractmethod
     async def get_accessible_datasets_with_expiration(
-        self, user_id: str
+        self, user_id: UUID
     ) -> dict[str, UTCDatetime]:
         """Get all datasets that the given user is allowed to download.
 

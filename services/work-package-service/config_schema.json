@@ -16,26 +16,6 @@
       "title": "Otel Trace Sampling Rate",
       "type": "number"
     },
-    "otel_exporter_protocol": {
-      "default": "http/protobuf",
-      "description": "Specifies which protocol should be used by exporters.",
-      "enum": [
-        "grpc",
-        "http/protobuf"
-      ],
-      "title": "Otel Exporter Protocol",
-      "type": "string"
-    },
-    "otel_exporter_endpoint": {
-      "description": "Base endpoint URL for the collector that receives content from the exporter.",
-      "examples": [
-        "http://localhost:4318"
-      ],
-      "format": "uri",
-      "minLength": 1,
-      "title": "Otel Exporter Endpoint",
-      "type": "string"
-    },
     "log_level": {
       "default": "INFO",
       "description": "The minimum log level to capture.",
@@ -147,6 +127,43 @@
         null
       ],
       "title": "Mongo Timeout"
+    },
+    "db_version_collection": {
+      "description": "The name of the collection containing DB version information for this service",
+      "examples": [
+        "ifrsDbVersions"
+      ],
+      "title": "Db Version Collection",
+      "type": "string"
+    },
+    "migration_wait_sec": {
+      "description": "The number of seconds to wait before checking the DB version again",
+      "examples": [
+        5,
+        30,
+        180
+      ],
+      "title": "Migration Wait Sec",
+      "type": "integer"
+    },
+    "migration_max_wait_sec": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+      "examples": [
+        null,
+        300,
+        600,
+        3600
+      ],
+      "title": "Migration Max Wait Sec"
     },
     "kafka_servers": {
       "description": "A list of connection strings to connect to Kafka bootstrap servers.",
@@ -481,18 +498,38 @@
         }
       ],
       "default": null,
-      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
+      "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests.",
       "examples": [
         []
       ],
       "title": "Cors Allowed Headers"
+    },
+    "cors_exposed_headers": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses.",
+      "examples": [
+        []
+      ],
+      "title": "Cors Exposed Headers"
     }
   },
   "required": [
-    "otel_exporter_endpoint",
     "service_instance_id",
     "work_package_signing_key",
     "mongo_dsn",
+    "db_version_collection",
+    "migration_wait_sec",
     "kafka_servers",
     "dataset_change_topic",
     "dataset_deletion_type",
