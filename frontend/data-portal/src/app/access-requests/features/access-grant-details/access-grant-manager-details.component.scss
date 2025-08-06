@@ -1,0 +1,40 @@
+mat-card {
+  width: 100%;
+  overflow-x: auto;
+
+  mat-card-header {
+    padding-bottom: 8px;
+  }
+  mat-card-title {
+    font-size: 1.1em;
+  }
+  mat-card-content {
+    padding-top: 8px;
+  }
+}
+
+:not(mat-radio-group) > table td {
+  text-align: left;
+  vertical-align: top;
+  min-width: 280px;
+  padding-bottom: 4px;
+}
+
+th {
+  width: 192px;
+  min-width: 192px;
+  text-align: left;
+  vertical-align: top;
+}
+
+p.last {
+  margin-bottom: 0;
+}
+
+a mat-icon {
+  scale: 0.6;
+  margin: 0 -5px -2px -3px;
+  transform: translateY(3px);
+  height: 16px;
+  font-size: 18px;
+}

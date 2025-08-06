@@ -131,7 +131,7 @@ export const routes: Routes = [
     title: 'Access Grant Manager',
   },
   {
-    path: 'access-grant-details/:id',
+    path: 'access-grant-manager/:id',
     canActivate: [() => inject(AuthService).guardDataSteward()],
     loadComponent: () =>
       import(

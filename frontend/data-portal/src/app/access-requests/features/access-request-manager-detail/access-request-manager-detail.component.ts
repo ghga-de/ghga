@@ -28,7 +28,7 @@ import {
   AccessRequest,
   AccessRequestStatus,
 } from '@app/access-requests/models/access-requests';
-import { AccessRequestAndGrantStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
+import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { UserSession } from '@app/auth/models/user';
 import { HasPendingEdits } from '@app/shared/features/pending-edits.guard';
@@ -58,7 +58,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
     MatRadioModule,
     MatIcon,
     DatePipe,
-    AccessRequestAndGrantStatusClassPipe,
+    AccessRequestStatusClassPipe,
     IvaTypePipe,
     IvaStatePipe,
     AccessRequestFieldEditComponent,

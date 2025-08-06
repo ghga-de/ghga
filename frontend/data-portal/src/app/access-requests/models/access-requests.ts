@@ -16,15 +16,16 @@ export enum AccessGrantStatus {
   waiting = 'waiting',
 }
 
-export type CombinedStatus = AccessRequestStatus | AccessGrantStatus;
-
-export const AccessRequestAndGrantStatusClass: Record<CombinedStatus, string> = {
+export const AccessRequestStatusClass: Record<AccessRequestStatus, string> = {
+  allowed: 'text-success',
   denied: 'text-error',
   pending: 'text-info',
-  allowed: 'text-success',
+};
+
+export const AccessGrantStatusClass: Record<AccessGrantStatus, string> = {
+  active: 'text-success',
   waiting: 'text-warning',
   expired: 'text-error',
-  active: 'text-success',
 };
 
 export interface AccessRequest {

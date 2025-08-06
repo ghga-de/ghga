@@ -27,7 +27,7 @@
       </th>
       <td
         mat-cell
-        class="{{ ag.status | AccessRequestAndGrantStatusClassPipe }} capitalize"
+        class="{{ ag.status | AccessGrantStatusClassPipe }} capitalize"
         *matCellDef="let ag"
       >
         {{ ag.status }}

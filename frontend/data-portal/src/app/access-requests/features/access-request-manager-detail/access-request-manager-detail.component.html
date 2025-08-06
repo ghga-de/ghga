@@ -51,10 +51,9 @@
                 <tr>
                   <th>Status:</th>
                   <td>
-                    <strong
-                      class="{{ ar.status | AccessRequestAndGrantStatusClassPipe }}"
-                      >{{ ar.status }}</strong
-                    >
+                    <strong class="{{ ar.status | AccessRequestStatusClassPipe }}">{{
+                      ar.status
+                    }}</strong>
                   </td>
                 </tr>
               </tbody>

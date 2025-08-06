@@ -5,16 +5,22 @@
  */
 
 import { AccessRequestStatus } from '../models/access-requests';
-import { AccessRequestAndGrantStatusClassPipe } from './access-request-status-class.pipe';
+import { AccessRequestStatusClassPipe } from './access-request-status-class.pipe';
 
-describe('AccessRequestAndGrantStatusClassPipe', () => {
+describe('AccessRequestStatusClassPipe', () => {
   it('can create an instance', () => {
-    const pipe = new AccessRequestAndGrantStatusClassPipe();
+    const pipe = new AccessRequestStatusClassPipe();
     expect(pipe).toBeTruthy();
   });
 
+  it('should return "" for undefined', () => {
+    const pipe = new AccessRequestStatusClassPipe();
+    const result = pipe.transform(undefined);
+    expect(result).toBe('');
+  });
+
   it('should return "text-error" for denied', () => {
-    const pipe = new AccessRequestAndGrantStatusClassPipe();
+    const pipe = new AccessRequestStatusClassPipe();
     const result = pipe.transform(AccessRequestStatus['denied']);
     expect(result).toBe('text-error');
   });

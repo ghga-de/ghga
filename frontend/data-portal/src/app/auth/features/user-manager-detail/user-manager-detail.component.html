@@ -174,7 +174,7 @@
               <p>
                 <span
                   class="{{
-                    ag.status! | AccessRequestAndGrantStatusClassPipe
+                    ag.status! | AccessGrantStatusClassPipe
                   }} capitalize inline-block w-21"
                 >
                   {{ ag.status }}
@@ -208,7 +208,7 @@
               <p [class.lg:mb-0]="ar.internal_note" class="mb-3">
                 <span
                   class="{{
-                    ar.status | AccessRequestAndGrantStatusClassPipe
+                    ar.status | AccessRequestStatusClassPipe
                   }} capitalize inline-block w-21"
                 >
                   {{ ar.status }}

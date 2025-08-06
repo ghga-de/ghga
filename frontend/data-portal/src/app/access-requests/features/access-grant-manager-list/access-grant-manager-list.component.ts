@@ -21,7 +21,7 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { AccessGrant } from '@app/access-requests/models/access-requests';
-import { AccessRequestAndGrantStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
+import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { DatePipe } from '@app/shared/pipes/date.pipe';
 import {
@@ -44,7 +44,7 @@ import {
     MatButtonModule,
     MatIconModule,
     DatePipe,
-    AccessRequestAndGrantStatusClassPipe,
+    AccessGrantStatusClassPipe,
     MatIconModule,
   ],
   providers: [CommonDatePipe],

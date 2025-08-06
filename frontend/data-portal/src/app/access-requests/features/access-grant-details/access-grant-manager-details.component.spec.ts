@@ -7,6 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
+import { accessGrants } from '@app/../mocks/data';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { AccessGrantManagerDetailsComponent } from './access-grant-manager-details.component';
@@ -25,7 +26,9 @@ describe('AccessGrantManagerDetailsComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccessGrantManagerDetailsComponent);
+    fixture.componentRef.setInput('id', accessGrants[0].id);
     component = fixture.componentInstance;
+
     await fixture.whenStable();
   });
 

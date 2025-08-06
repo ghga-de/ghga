@@ -59,7 +59,7 @@
         </th>
         <td
           mat-cell
-          class="{{ ar.status | AccessRequestAndGrantStatusClassPipe }} capitalize"
+          class="{{ ar.status | AccessRequestStatusClassPipe }} capitalize"
           *matCellDef="let ar"
         >
           {{ ar.status }}

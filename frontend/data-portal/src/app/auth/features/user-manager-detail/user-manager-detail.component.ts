@@ -14,7 +14,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
-import { AccessRequestAndGrantStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
+import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class.pipe';
+import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { UserStatus } from '@app/auth/models/user';
 import { DisplayUser, UserService } from '@app/auth/services/user.service';
@@ -46,7 +47,8 @@ import { DeletionConfirmationDialogComponent } from '../deletion-confirmation-di
     RouterLink,
     IvaStatePipe,
     IvaTypePipe,
-    AccessRequestAndGrantStatusClassPipe,
+    AccessGrantStatusClassPipe,
+    AccessRequestStatusClassPipe,
   ],
   providers: [UserService, CommonDatePipe],
   templateUrl: './user-manager-detail.component.html',
