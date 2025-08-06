@@ -57,9 +57,7 @@ class Config(BaseSettings):
     """Config class for the test app."""
 
     # operation modes
-    use_api_gateway: bool = Field(
-        False, description="set to True for black-box testing"
-    )
+    black_box_mode: bool = Field(False, description="set to True for black-box testing")
     keep_state_in_db: bool = Field(
         True, description="set to True for saving state permanently"
     )
@@ -129,7 +127,7 @@ class Config(BaseSettings):
     object_id: str = "testbed-event-object"
 
     # external base URL
-    external_base_url: str = ""
+    external_base_url: str = "https://local.ghga.de/api"
     external_apis: list[str] = [
         "wkvs",
         "dcs",
@@ -153,7 +151,8 @@ class Config(BaseSettings):
 
     # auth
     auth_key_file: Path = Path(__file__).parent.parent / ".devcontainer/auth.env"
-    auth_adapter_url: str = "http://auth"
+    auth_adapter_url: str = "auth"
+    api_ext_path: str = ""
     auth_basic: str = ""  # for Basic Authentication
     upload_token: str = ""  # simple token for uploading metadata
     state_management_token: str = ""  # simple token for state management service
@@ -164,7 +163,7 @@ class Config(BaseSettings):
     totp_interval: int = 30
 
     # wkvs
-    wkvs_url: str = "http://wkvs"
+    wkvs_url: str = "wkvs"
 
     # connector
     user_private_crypt4gh_key: str
@@ -174,19 +173,19 @@ class Config(BaseSettings):
     dsk_token_path: Path = Path.home() / ".ghga_data_steward_token.txt"
 
     # file ingest
-    fis_url: str = "http://fis"
+    fis_url: str = "fis"
     fis_pubkey: str
     fis_db_name: str = "fis"
     fis_ingested_files_collection: str = "ingestedFiles"
 
     # metldata
     metldata_db_name: str = "metldata"
-    metldata_url: str = "http://metldata"
+    metldata_url: str = "metldata"
 
     # ars
     ars_db_name: str = "ars"
     ars_access_requests_collection: str = "accessRequests"
-    ars_url: str = "http://ars"
+    ars_url: str = "ars"
 
     # ums
     ums_db_name: str = "auth"
@@ -194,11 +193,11 @@ class Config(BaseSettings):
     ums_claims_collection: str = "claims"
     ums_user_tokens_collection: str = "user_tokens"
     ums_user_ivas_collection: str = "ivas"
-    ums_url: str = "http://ums"
+    ums_url: str = "auth"
 
     # wps
     wps_db_name: str = "wps"
-    wps_url: str = "http://wps"
+    wps_url: str = "wps"
 
     # ifrs
     ifrs_db_name: str = "ifrs"
@@ -208,10 +207,10 @@ class Config(BaseSettings):
     # pcs
     pcs_db_name: str = "pcs"
     pcs_file_deletion_event_collection: str = "pcsPersistedEvents"
-    pcs_url: str = "http://pcs"
+    pcs_url: str = "pcs"
 
     # mass
-    mass_url: str = "http://mass"
+    mass_url: str = "mass"
 
     # notification orchestration
     nos_db_name: str = "nos"
@@ -220,14 +219,14 @@ class Config(BaseSettings):
     mail_url: str = "http://mailhog:8025"
 
     # test OP
-    op_url: str = "http://op.test"
+    op_url: str = "op.test"
     op_issuer: str = "https://test-aai.ghga.dev"
 
     # ekss
-    ekss_url: str = "http://ekss"
+    ekss_url: str = "ekss"
 
     # dcs
-    dcs_url: str = "http://dcs"
+    dcs_url: str = "dcs"
     dcs_db_name: str = "dcs"
     dcs_objects_collection: str = "drs_objects"
 
@@ -238,10 +237,10 @@ class Config(BaseSettings):
     vault_path: str = "testing"
 
     # sms
-    sms_url: str = "http://sms"
+    sms_url: str = "sms"
 
     # dins
-    dins_url: str = "http://dins"
+    dins_url: str = "dins"
     dins_db_name: str = "dins"
     dins_metadata_collection: str = "file_information"
 
@@ -249,13 +248,13 @@ class Config(BaseSettings):
     file_interrogations_topic: str = "interrogations"
 
     # dlq
-    dlq_url: str = "http://dlq"
+    dlq_url: str = "dlq"
     dlq_topic: str = "dlq"
     dlq_db_name: str = "dlqs"
     dlq_events_collection: str = "dlqEvents"
 
     # rts
-    rts_url: str = "http://rts"
+    rts_url: str = "rts"
     rts_db_name: str = "rts"
     rts_expected_files: dict = {
         "DS_A": "DS_A-downloaded.xlsx",
@@ -285,7 +284,7 @@ class Config(BaseSettings):
     @model_validator(mode="after")
     def check_operation_modes(self):
         """Check that operation modes are not conflicting."""
-        if not self.use_api_gateway and self.auth_basic:
+        if not self.black_box_mode and self.auth_basic:
             error = "Basic auth must only be used with API gateway"
             raise ValueError(f"Check operation modes: {error}")
         return self

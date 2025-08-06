@@ -83,7 +83,7 @@ class TOTPAlgorithm(str, Enum):
 class TokenGenerator:
     """Generator for auth tokens"""
 
-    use_api_gateway: bool
+    black_box_mode: bool
     key_file: Path
     auth_adapter_url: str
     op_url: str
@@ -92,13 +92,13 @@ class TokenGenerator:
     user_domain = "home.org"
 
     def __init__(self, config: Config, http: HttpClient):
-        self.use_api_gateway = config.use_api_gateway
+        self.black_box_mode = config.black_box_mode
         self.key_file = config.auth_key_file
         self.op_url = config.op_url
         self.op_issuer = config.op_issuer
-        self.auth_adapter_url = (
-            config.ums_url if self.use_api_gateway else config.auth_adapter_url
-        )
+        self.auth_adapter_url = config.ums_url
+        if config.api_ext_path:
+            self.auth_adapter_url = f"{self.auth_adapter_url}{config.api_ext_path}"
         self.http = http
         if config.totp_algorithm == TOTPAlgorithm.SHA1:
             self.digest = hashlib.sha1

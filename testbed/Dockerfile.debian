@@ -31,5 +31,9 @@ RUN pip install --upgrade -r requirements.txt
 # set environment
 ENV PYTHONUNBUFFERED=1
 
+# Copy and install custom CA certificates
+COPY ./.devcontainer/envoy/certs/ghga-local-fullchain.crt /usr/local/share/ca-certificates/ghga-local-fullchain.crt
+RUN update-ca-certificates
+
 # run the tests when the container starts
 ENTRYPOINT ["pytest", "-v"]

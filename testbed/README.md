@@ -58,7 +58,7 @@ Located in the `features` directory, the **feature files** are numerically prefi
 ### Modes of Operation
 
 - **Black Box Testing:** This mode involves accessing the application solely through the official API via the API gateway. It's suitable for testing deployments in Kubernetes clusters.
-    - Enable black box testing by setting `use_api_gateway` to `true`. Otherwise, white box testing is the default mode.
+    - Enable black box testing by setting `black_box_mode` to `true`. Otherwise, white box testing is the default mode.
 - **White Box Testing:** Here, the Test Bed also accesses foundational services (e.g., S3, Kafka, Mongo, Vault) to verify their states, including intermediate ones.
 
 ### Configuration

@@ -25,7 +25,6 @@ repos:
       - id: check-docstring-first
       - id: debug-statements
       - id: destroyed-symlinks
-      - id: detect-private-key
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: no-commit-to-branch

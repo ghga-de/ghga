@@ -233,7 +233,7 @@ def reset_state(fixtures: JointFixture):
     restore_data_stewardship(saved_data_steward, fixtures)
     fixtures.dsk.reset_work_dir()  # reset local submission registry
     empty_mail_server(fixtures)  # reset mail server
-    if not fixtures.config.use_api_gateway:
+    if not fixtures.config.black_box_mode:
         fixtures.vault.empty_secrets()  # empty secret storage
 
 
@@ -347,5 +347,5 @@ def check_email_sent_to(
 @given("no file encryption secrets exist in the vault")
 def reset_file_encryption_secrets(fixtures: JointFixture):
     """Reset the file encryption secrets in the vault."""
-    if not fixtures.config.use_api_gateway:
+    if not fixtures.config.black_box_mode:
         fixtures.vault.empty_secrets()  # empty secret storage

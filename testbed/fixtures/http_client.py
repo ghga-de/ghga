@@ -49,18 +49,16 @@ class HttpClient(Client):
 
 
 @fixture(name="http", scope="session")
-def http_fixture(config: Config) -> Generator[HttpClient, None, None]:  # noqa: C901, PLR0915
+def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
     """Pytest fixture for tests using an HTTP client."""
-    use_api_gateway = config.use_api_gateway
-    auth_adapter_url = config.auth_adapter_url
-    if use_api_gateway:
+    black_box_mode = config.black_box_mode
+    if black_box_mode:
         auth_basic = config.auth_basic
         if auth_basic:
             auth_basic = b64encode(auth_basic.encode("ascii")).decode("ascii")
             auth_basic = f"Basic {auth_basic}"
     else:
         auth_basic = None
-    ext_auth_urls = tuple(getattr(config, f"{api}_url") for api in EXT_AUTH_APIS)
     basic_auth_excluded_urls = tuple(
         getattr(config, f"{api}_url") for api in BASIC_AUTH_EXCLUDED_APIS
     )
@@ -95,25 +93,6 @@ def http_fixture(config: Config) -> Generator[HttpClient, None, None]:  # noqa: 
             auth_methods = "without"
         auth_methods += " auth"
         print(f"HTTP request: {request.method} {url} {auth_methods}")
-
-        if not use_api_gateway and url.startswith(ext_auth_urls):
-            # Mimic the behavior of the ApI Gateway following the ExtAuth protocol
-            # by calling the Auth Adapter with the same path and headers
-            url = urljoin(auth_adapter_url, urlparse(url).path)
-            auth_adapter_headers = headers.copy()
-            auth_adapter_headers["content-length"] = "0"
-            response = client.request(request.method, url, headers=auth_adapter_headers)
-            if response.status_code != 200:
-                # the request is not authenticated, return the error immediately
-                raise HTTPStatusError(response.text, request=request, response=response)
-            # the request is authenticated
-            assert not response.text
-            authorization = response.headers.get("Authorization")
-            if authorization:
-                # the response of the Auth Adapter contains an internal access token
-                assert authorization.startswith("Bearer ")
-                assert authorization.count(".") == 2
-                request.headers["Authorization"] = authorization
 
     def response_hook(response):
         """HTTPX response hook for testing.

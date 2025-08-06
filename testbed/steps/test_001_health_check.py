@@ -28,12 +28,19 @@ scenarios("../features/001_health_check.feature")
 def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901
     """Check that service API is healthy or not reachable if internal."""
     config = fixtures.config
-    is_internal = config.use_api_gateway and api in config.internal_apis
+    is_internal = api in config.internal_apis
     health_endpoint = getattr(config, f"{api}_url").rstrip("/")
     if api == "mail":
         health_endpoint += "/api/v2/messages"
     else:
         health_endpoint += "/health"
+
+    # Only in case of local testing make sure the internal service is healthy
+    if not config.black_box_mode and is_internal:
+        health_endpoint = "http://" + health_endpoint.replace(
+            config.external_base_url, ""
+        ).lstrip("/")
+
     try:
         response = fixtures.http.get(health_endpoint)
     except Exception as e:
@@ -41,7 +48,7 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901
         raise
 
     status_code = response.status_code
-    expected_status = 404 if is_internal else 200
+    expected_status = 404 if config.black_box_mode and is_internal else 200
     if status_code == 200 and response.text.startswith("<!doctype html>"):
         # count response from frontend as "not found"
         status_code = 404
@@ -125,7 +132,7 @@ def check_service_health(apis: list[str], fixtures: JointFixture):
 @then("we have a valid Data Steward account for testing")
 def check_data_steward_account(fixtures: JointFixture):
     """Check that we have a valid Data Steward account for testing."""
-    if not fixtures.config.use_api_gateway:
+    if not fixtures.config.black_box_mode:
         data_steward_claim = fixtures.mongo.wait_for_documents(
             fixtures.config.ums_db_name,
             fixtures.config.ums_claims_collection,
