@@ -22,9 +22,8 @@ from io import BytesIO
 
 from gridfs.asynchronous import AsyncGridFS
 from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient, MongoDbConfig
 from openpyxl import Workbook
-from pymongo import AsyncMongoClient
 
 from rts.models import StudyMetadata
 from rts.ports.outbound.dao import MetadataDao, ResourceNotFoundError, WorkbookDaoPort
@@ -113,17 +112,7 @@ async def get_workbook_dao(
     *, config: MongoDbConfig
 ) -> AsyncGenerator[WorkbookDaoPort, None]:
     """Constructs the WorkbookDao with the provided MongoDB configuration."""
-    timeout_ms = (
-        int(config.mongo_timeout * 1000) if config.mongo_timeout is not None else None
-    )
-    client: AsyncMongoClient = AsyncMongoClient(
-        str(config.mongo_dsn.get_secret_value()),
-        timeoutMS=timeout_ms,
-    )
-    db = client[config.db_name]
-    grid_fs = AsyncGridFS(db)
-    try:
+    async with ConfiguredMongoClient(config=config) as client:
+        db = client[config.db_name]
+        grid_fs = AsyncGridFS(db)
         yield WorkbookDao(grid_fs=grid_fs)
-    finally:
-        # Perform cleanup to avoid hanging connections/async tasks
-        await client.close()

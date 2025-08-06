@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "rts"
-version = "1.0.0"
+version = "2.0.0"
 description = "Reverse Transpiler Service - A service running a REST API that serves accessioned metadata files by study ID"
 dependencies = [
     "typer >= 0.15",
-    "ghga-service-commons[api] >= 4.1.0",
-    "ghga-event-schemas ~= 9.2",
-    "hexkit[akafka,mongodb] >= 5.3",
+    "ghga-service-commons[api] >= 5.0",
+    "ghga-event-schemas ~= 10.0",
+    "hexkit[akafka,mongodb] >= 6.0",
     "openpyxl >= 3.0.0",
 ]
 

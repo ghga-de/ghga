@@ -38,11 +38,12 @@ __all__ = [
 ]
 
 
-async def get_dao_factory(*, config: Config) -> MetadataDao:
-    """Constructs and initializes a DAO factory using config."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    dao = await get_metadata_dao(dao_factory=dao_factory)
-    return dao
+@asynccontextmanager
+async def get_dao(*, config: Config) -> AsyncGenerator[MetadataDao, None]:
+    """Constructs and initializes a MetadataDao using config."""
+    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
+        dao = await get_metadata_dao(dao_factory=dao_factory)
+        yield dao
 
 
 @asynccontextmanager
@@ -56,11 +57,13 @@ async def prepare_core(
 
     The _override parameters can be used to override the default dependencies.
     """
-    metadata_dao = metadata_dao_override or await get_dao_factory(config=config)
     async with (
         nullcontext(workbook_dao_override)
         if workbook_dao_override
-        else get_workbook_dao(config=config) as workbook_dao
+        else get_workbook_dao(config=config) as workbook_dao,
+        nullcontext(metadata_dao_override)
+        if metadata_dao_override
+        else get_dao(config=config) as metadata_dao,
     ):
         yield ReverseTranspiler(
             config=config, metadata_dao=metadata_dao, workbook_dao=workbook_dao
