@@ -71,8 +71,8 @@
                 </mat-label>
                 <mat-select [(ngModel)]="status">
                   <mat-option [value]="undefined">All grant statuses</mat-option>
-                  @for (opt of ['Active', 'Waiting', 'Expired']; track opt) {
-                    <mat-option [value]="opt">{{ opt }}</mat-option>
+                  @for (opt of ['active', 'waiting', 'expired']; track opt) {
+                    <mat-option [value]="opt">{{ opt | CapitalisePipe }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>

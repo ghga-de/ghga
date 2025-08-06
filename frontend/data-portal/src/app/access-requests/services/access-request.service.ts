@@ -66,7 +66,7 @@ export class AccessRequestService {
   };
 
   /**
-   * Resource for loading the current user's access requests
+   * Resource for loading the currently logged-in user's access requests
    */
   userAccessRequests = httpResource<AccessRequest[]>(
     () => {
@@ -339,15 +339,13 @@ export class AccessRequestService {
   );
 
   allAccessGrants = computed<AccessGrant[]>(() => {
-    const grants = this.allAccessGrantsResource.value();
-    if (grants && Array.isArray(grants)) {
-      return grants.map((grant) => {
-        const updatedGrant = { ...grant };
-        updatedGrant.status = this.computeStatusForAccessGrant(grant);
-        return updatedGrant;
-      });
-    }
-    return [];
+    return this.allAccessGrantsResource.error()
+      ? []
+      : this.allAccessGrantsResource.value().map((grant) => {
+          const updatedGrant = { ...grant };
+          updatedGrant.status = this.computeStatusForAccessGrant(grant);
+          return updatedGrant;
+        });
   });
 
   computeStatusForAccessGrant = (grant: AccessGrant): AccessGrantStatus => {
@@ -391,9 +389,9 @@ export class AccessRequestService {
           const has_started = now >= new Date(g.valid_from);
           const has_ended = now >= new Date(g.valid_until);
           return (
-            (filter.status === 'Active' && has_started && !has_ended) ||
-            (filter.status === 'Expired' && has_ended) ||
-            (filter.status === 'Waiting' && !has_started)
+            (filter.status === 'active' && has_started && !has_ended) ||
+            (filter.status === 'expired' && has_ended) ||
+            (filter.status === 'waiting' && !has_started)
           );
         });
       }

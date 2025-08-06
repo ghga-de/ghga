@@ -11,20 +11,20 @@ export enum AccessRequestStatus {
 }
 
 export enum AccessGrantStatus {
-  active = 'Active',
-  expired = 'Expired',
-  waiting = 'Waiting',
+  active = 'active',
+  expired = 'expired',
+  waiting = 'waiting',
 }
 
 export type CombinedStatus = AccessRequestStatus | AccessGrantStatus;
 
-export const AccessRequestStatusClass: Record<CombinedStatus, string> = {
+export const AccessRequestAndGrantStatusClass: Record<CombinedStatus, string> = {
   denied: 'text-error',
   pending: 'text-info',
   allowed: 'text-success',
-  Waiting: 'text-warning',
-  Expired: 'text-error',
-  Active: 'text-success',
+  waiting: 'text-warning',
+  expired: 'text-error',
+  active: 'text-success',
 };
 
 export interface AccessRequest {

@@ -4,8 +4,6 @@
  * @license Apache-2.0
  */
 
-import { user } from './auth';
-
 import {
   accessGrants,
   accessRequests,
@@ -41,7 +39,7 @@ export const responses: { [endpoint: string]: ResponseValue } = {
    */
 
   // User Data
-  'GET /api/auth/users/doe@test.dev': user,
+  'GET /api/auth/users/doe@test.dev': users[0],
   'GET /api/auth/users/roe@test.dev': users[1],
   'GET /api/auth/users/mar@test.dev': users[2],
 
@@ -159,6 +157,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // All access grants
   'GET /api/ars/access-grants': accessGrants,
+
+  // User Grants
+  'GET /api/ars/access-grants/doe@test.dev': accessGrants,
 
   // Create an access request
   'POST /api/ars/access-requests': 204,

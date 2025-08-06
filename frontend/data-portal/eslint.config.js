@@ -125,6 +125,25 @@ export default [
                 ['pipe', { context: 'verification-addresses' }],
               ],
             },
+            // auth context may import from verification addresses context
+            {
+              from: [['features', { context: 'auth' }]],
+              allow: [
+                ['service', { context: 'verification-addresses' }],
+                ['model', { context: 'verification-addresses' }],
+                ['pipe', { context: 'verification-addresses' }],
+                ['features', { context: 'verification-addresses' }],
+              ],
+            },
+            // auth context may import from access request context
+            {
+              from: [['features', { context: 'auth' }]],
+              allow: [
+                ['service', { context: 'access-requests' }],
+                ['model', { context: 'access-requests' }],
+                ['pipe', { context: 'access-requests' }],
+              ],
+            },
             // main may only import config and main app modules
             {
               from: ['main'],

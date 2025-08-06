@@ -62,6 +62,7 @@ export interface RegisteredUser extends UserRegisteredData {
   roles: UserRole[];
   status: UserStatus;
   registration_date: string; // ISO date string
+  status_change?: string; // ISO date string
 }
 
 /**

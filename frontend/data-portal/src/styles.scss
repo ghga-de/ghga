@@ -77,72 +77,73 @@ hr {
   --mat-sys-danger: #ea580c;
 }
 
-html,
-body {
-  height: 100%;
-  font-size: 16px;
-  margin: 0;
-  font-family: Lexend, 'Segoe UI', 'Helvetica Neue', sans-serif;
-}
+@layer base {
+  html,
+  body {
+    height: 100%;
+    font-size: 16px;
+    margin: 0;
+    font-family: Lexend, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  }
 
-p {
-  margin-bottom: 0.5em;
-}
+  p {
+    margin-bottom: 0.5em;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--mat-sys-primary);
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--mat-sys-primary);
+  }
 
-h1 {
-  font-weight: 550;
-  font-size: 175%;
-  margin-bottom: 0.8em;
-  line-height: 130%;
-}
+  h1 {
+    font-weight: 550;
+    font-size: 175%;
+    margin-bottom: 0.8em;
+    line-height: 130%;
+  }
 
-h2 {
-  font-weight: 550;
-  font-size: 140%;
-  margin-bottom: 0.75em;
-  line-height: 120%;
-}
+  h2 {
+    font-weight: 550;
+    font-size: 140%;
+    margin-bottom: 0.75em;
+    line-height: 120%;
+  }
 
-h3 {
-  font-weight: 550;
-  font-size: 130%;
-  margin-bottom: 0.7em;
-  line-height: 110%;
-}
+  h3 {
+    font-weight: 550;
+    font-size: 130%;
+    margin-bottom: 0.7em;
+    line-height: 110%;
+  }
 
-h4 {
-  font-weight: 550;
-  font-size: 120%;
-  margin-bottom: 0.7em;
-}
+  h4 {
+    font-weight: 550;
+    font-size: 120%;
+    margin-bottom: 0.7em;
+  }
 
-h5 {
-  font-weight: 600;
-  font-size: 110%;
-  margin-bottom: 0.7em;
-}
+  h5 {
+    font-weight: 600;
+    font-size: 110%;
+    margin-bottom: 0.7em;
+  }
 
-h6 {
-  font-weight: 650;
-  font-size: 105%;
-  margin-bottom: 0.7em;
-}
-
-main a,
-mat-dialog-content a {
-  color: var(--mat-sys-tertiary);
-  text-decoration: underline;
-  &:hover {
-    color: var(--mat-sys-quaternary);
+  h6 {
+    font-weight: 650;
+    font-size: 105%;
+    margin-bottom: 0.7em;
+  }
+  main a,
+  mat-dialog-content a {
+    color: var(--mat-sys-tertiary);
+    text-decoration: underline;
+    &:hover {
+      color: var(--mat-sys-quaternary);
+    }
   }
 }
 

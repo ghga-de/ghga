@@ -11,8 +11,16 @@
       matSort
       #sort="matSort"
     >
+      <ng-container matColumnDef="ticket">
+        <th mat-header-cell *matHeaderCellDef class="min-w-32" mat-sort-header>
+          Ticket ID
+        </th>
+        <td mat-cell *matCellDef="let ar">
+          {{ ar.ticket_id }}
+        </td>
+      </ng-container>
       <ng-container matColumnDef="dataset">
-        <th mat-header-cell *matHeaderCellDef class="w-32" mat-sort-header>
+        <th mat-header-cell *matHeaderCellDef class="min-w-32" mat-sort-header>
           Dataset ID
         </th>
         <td mat-cell *matCellDef="let ar">
@@ -25,16 +33,8 @@
         </th>
         <td mat-cell *matCellDef="let ar">{{ ar.full_user_name }} ({{ ar.email }})</td>
       </ng-container>
-      <ng-container matColumnDef="ticket">
-        <th mat-header-cell *matHeaderCellDef class="w-32" mat-sort-header>
-          Ticket ID
-        </th>
-        <td mat-cell *matCellDef="let ar">
-          {{ ar.ticket_id }}
-        </td>
-      </ng-container>
       <ng-container matColumnDef="period">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-64">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="min-w-64">
           Validity Period
         </th>
         <td mat-cell *matCellDef="let ar">
@@ -59,7 +59,7 @@
         </th>
         <td
           mat-cell
-          class="{{ ar.status | AccessRequestStatusClassPipe }} capitalize"
+          class="{{ ar.status | AccessRequestAndGrantStatusClassPipe }} capitalize"
           *matCellDef="let ar"
         >
           {{ ar.status }}

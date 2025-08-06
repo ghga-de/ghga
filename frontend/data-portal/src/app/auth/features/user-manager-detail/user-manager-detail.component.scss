@@ -15,3 +15,27 @@ mat-chip {
     )
   );
 }
+
+mat-card {
+  @include mat.card-overrides(
+    (
+      title-text-size: 18px,
+    )
+  );
+}
+
+button {
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-danger),
+    )
+  );
+}
+
+button.remove-user {
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-error),
+    )
+  );
+}

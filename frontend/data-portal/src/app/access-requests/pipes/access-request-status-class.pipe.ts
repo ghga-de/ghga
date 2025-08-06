@@ -6,23 +6,24 @@
 
 import { Pipe, PipeTransform } from '@angular/core';
 import {
+  AccessGrantStatus,
+  AccessRequestAndGrantStatusClass,
   AccessRequestStatus,
-  AccessRequestStatusClass,
 } from '../models/access-requests';
 
 /**
  * This pipe is used to provide status-specific classes for access request.
  */
 @Pipe({
-  name: 'AccessRequestStatusClassPipe',
+  name: 'AccessRequestAndGrantStatusClassPipe',
 })
-export class AccessRequestStatusClassPipe implements PipeTransform {
+export class AccessRequestAndGrantStatusClassPipe implements PipeTransform {
   /**
    * This method will return a class or set of classes based on the access request status provided
    * @param status The access request status to process
    * @returns The class based on the status of the access request status sent
    */
-  transform(status: AccessRequestStatus): string {
-    return AccessRequestStatusClass[status];
+  transform(status: AccessRequestStatus | AccessGrantStatus): string {
+    return AccessRequestAndGrantStatusClass[status];
   }
 }

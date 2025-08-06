@@ -4,9 +4,10 @@
  * @license Apache-2.0
  */
 
-import { httpResource } from '@angular/common/http';
+import { HttpClient, httpResource } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config.service';
+import { Observable, tap } from 'rxjs';
 import {
   RegisteredUser,
   RegisteredUserFilter,
@@ -30,6 +31,7 @@ export interface DisplayUser extends RegisteredUser {
 @Injectable()
 export class UserService {
   #config = inject(ConfigService);
+  #http = inject(HttpClient);
 
   #authUrl = this.#config.authUrl;
   #usersUrl = `${this.#authUrl}/users`;
@@ -198,4 +200,82 @@ export class UserService {
     }
     return users;
   });
+
+  #userId = signal<string | undefined>(undefined);
+
+  /**
+   * Load single user details
+   * @param userId ID of the user to load
+   */
+  loadUser(userId: string) {
+    this.#userId.set(userId);
+  }
+
+  user = httpResource<DisplayUser>(
+    () => (this.#userId() ? `${this.#usersUrl}/${this.#userId()}` : undefined),
+    {
+      parse: (rawUser: unknown) => this.#createDisplayUser(rawUser as RegisteredUser),
+      defaultValue: undefined,
+    },
+  );
+
+  /**
+   * Update the user locally.
+   * @param id - the ID of the updated user
+   * @param changes - the changes to the user which may be partial
+   */
+  #updateUserLocally(id: string, changes: any): void {
+    const oldUser = this.users.value().find((user) => user.id === id);
+    if (!oldUser) return;
+
+    const newUser = { ...oldUser, ...changes };
+
+    const update = (users: DisplayUser[]) =>
+      users.map((user) => (user.id === id ? newUser : user));
+
+    this.users.value.set(update(this.users.value()));
+  }
+
+  /**
+   * Update one or more properties of a user.
+   * This can only be done by a data steward.
+   * This method also updates the local state if the modification was successful.
+   * @param id - the user ID
+   * @param changes - the changes to the user which may be partial
+   * @returns An observable that emits null when the request has been processed
+   */
+  updateUser(id: string, changes: Partial<DisplayUser>): Observable<null> {
+    return this.#http
+      .patch<null>(`${this.#usersUrl}/${id}`, changes)
+      .pipe(tap(() => this.#updateUserLocally(id, changes)));
+  }
+
+  /**
+   * Remove the user locally.
+   * @param id - the ID of the user to remove
+   */
+  #removeUserLocally(id: string): void {
+    const oldUser = this.users.value().find((user) => user.id === id);
+    if (!oldUser) return;
+
+    const newUser = { ...oldUser };
+
+    const update = (users: DisplayUser[]) =>
+      users.map((user) => (user.id === id ? newUser : user));
+
+    this.users.value.set(update(this.users.value()));
+  }
+
+  /**
+   * Delete a user.
+   * This can only be done by a data steward.
+   * This method also updates the local state if the modification was successful.
+   * @param id - the user ID
+   * @returns An observable that emits null when the request has been processed
+   */
+  deleteUser(id: string): Observable<null> {
+    return this.#http
+      .delete<null>(`${this.#usersUrl}/${id}`)
+      .pipe(tap(() => this.#removeUserLocally(id)));
+  }
 }

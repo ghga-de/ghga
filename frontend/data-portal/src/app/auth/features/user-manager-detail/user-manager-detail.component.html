@@ -1,99 +1,249 @@
-@if (user(); as currentUser) {
-  <div
-    class="mx-auto max-w-[1200px] p-6"
-    [style.view-transition-name]="showTransition ? 'detail' : null"
-  >
-    <div class="clearfix mb-6">
+<div
+  class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6"
+  [style.view-transition-name]="showTransition ? 'detail' : null"
+>
+  <div class="justify-between md:flex">
+    <div class="grow">
       <button
         mat-icon-button
         (click)="goBack()"
-        aria-label="Go back to user list"
+        data-umami-event="User Manager Back Link Clicked"
+        aria-label="Go back to previous page"
         class="text-primary float-left mt-1 mr-4"
       >
         <mat-icon>chevron_left</mat-icon>
       </button>
-      <h1>User: {{ currentUser.displayName }}</h1>
+      <h1>User{{ user() ? ': ' + user()!.displayName : ' Details' }}</h1>
     </div>
-
-    <div class="rounded-lg bg-white p-6 shadow-md">
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div>
-          <h2 class="mb-4 text-xl font-semibold">Basic Information</h2>
-          <div class="space-y-3">
-            <div>
-              <span class="block text-sm font-medium text-gray-700">Name</span>
-              <p class="mt-1 text-sm text-gray-900">{{ currentUser.name }}</p>
-            </div>
-            @if (currentUser.title) {
+    @if (user(); as user) {
+      <div class="float-right space-x-3 text-end lg:col-start-2">
+        @if (user.status === 'active') {
+          <button
+            matIconButton
+            matTooltip="Deactivate User"
+            aria-label="Deactivate User"
+            (click)="safeStatusChange()"
+          >
+            <mat-icon>person_remove</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            matTooltip="Activate User"
+            aria-label="Activate User"
+            (click)="safeStatusChange(true)"
+          >
+            <mat-icon>person_check</mat-icon>
+          </button>
+        }
+        <button
+          matIconButton
+          class="remove-user"
+          matTooltip="Delete User"
+          aria-label="Delete User"
+          (click)="safeDeletion()"
+        >
+          <mat-icon>person_off</mat-icon>
+        </button>
+      </div>
+    }
+  </div>
+  @if (user(); as user) {
+    <mat-card
+      ><mat-card-content class="overflow-x-auto">
+        <div class="flex flex-col gap-6 lg:grid lg:grid-cols-2">
+          <div>
+            <h2 class="mb-4 font-semibold">Basic Information</h2>
+            <div class="space-y-3">
               <div>
-                <span class="block text-sm font-medium text-gray-700">Title</span>
-                <p class="mt-1 text-sm text-gray-900">{{ currentUser.title }}</p>
+                <strong>Name:</strong>
+                <p class="mt-1 text-gray-900">{{ user.name }}</p>
               </div>
-            }
-            <div>
-              <span class="block text-sm font-medium text-gray-700">Email</span>
-              <p class="mt-1 text-sm text-gray-900">{{ currentUser.email }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h2 class="mb-4 text-xl font-semibold">Account Details</h2>
-          <div class="space-y-3">
-            <div>
-              <span class="block text-sm font-medium text-gray-700">Status</span>
-              <p
-                class="mt-1 text-sm capitalize"
-                [class]="
-                  currentUser.status === 'active' ? 'text-green-600' : 'text-red-600'
-                "
-              >
-                {{ currentUser.status }}
-              </p>
+              @if (user.title) {
+                <div>
+                  <strong>Title:</strong>
+                  <p class="mt-1 text-gray-900">{{ user.title }}</p>
+                </div>
+              }
+              <div>
+                <strong>Email:</strong>
+                <p class="mt-1 text-gray-900">{{ user.email }}</p>
+              </div>
             </div>
             <div>
-              <span class="block text-sm font-medium text-gray-700"
-                >Registration Date</span
-              >
-              <p class="mt-1 text-sm text-gray-900">
-                {{ currentUser.registration_date | date: friendlyDateFormat }}
-              </p>
-            </div>
-            <div>
-              <span class="block text-sm font-medium text-gray-700">Roles</span>
+              <strong>Roles:</strong>
               <div class="mt-1 flex flex-wrap gap-1">
-                @for (roleName of currentUser.roleNames; track roleName) {
+                @for (roleName of user.roleNames; track roleName) {
                   <mat-chip>{{ roleName }}</mat-chip>
                 } @empty {
-                  <p class="text-sm text-gray-500">No roles assigned</p>
+                  <p class="text-gray-500">No roles assigned</p>
                 }
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- External ID in full row -->
-      <div class="mt-6 pt-6">
-        <div>
-          <span class="block text-sm font-medium text-gray-700">External ID</span>
-          <p class="mt-1 font-mono text-sm break-all text-gray-900">
-            {{ currentUser.ext_id }}
-          </p>
-        </div>
-      </div>
+          <div>
+            <h2 class="mb-4 font-semibold">Account Details</h2>
+            <div class="space-y-3">
+              <div>
+                <strong>Status:</strong>
+                <p
+                  class="mt-1 capitalize"
+                  [class]="user.status === 'active' ? 'text-green-600' : 'text-red-600'"
+                >
+                  {{ user.status }}
+                </p>
+              </div>
+              <div>
+                <strong>Registration Date:</strong>
+                <p class="mt-1 text-gray-900">
+                  {{ user.registration_date | date: friendlyDateFormat }}
+                </p>
+              </div>
+              <div>
+                <strong
+                  >{{
+                    user.status_change
+                      ? user.status === 'active'
+                        ? 'Re-activation'
+                        : 'Deactivation'
+                      : 'Status Change'
+                  }}
+                  Date:</strong
+                >
+                <p class="mt-1 text-gray-900">
+                  @if (user.status_change) {
+                    {{ user.status_change | date: friendlyDateFormat }}
+                  } @else {
+                    Not applicable
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
 
-      <!-- TODO: Detail view functionality still needs to be implemented -->
+          <!-- External ID in full row -->
+          <div class="col-span-2 pt-2">
+            <div>
+              <strong>Life Science (LS) ID:</strong>
+              <p class="mt-1 font-mono break-all text-gray-900">
+                {{ user.ext_id }}
+              </p>
+            </div>
+          </div>
+        </div></mat-card-content
+      ></mat-card
+    >
+
+    <mat-card
+      ><mat-card-header
+        ><mat-card-title><h2>IVAs</h2></mat-card-title></mat-card-header
+      >
+      <mat-card-content
+        class="divide-outline space-y-3 divide-y-1 divide-solid overflow-x-auto"
+      >
+        @if (userIvas().length) {
+          @for (iva of userIvas(); track iva.id) {
+            <div class="flex min-w-2xl items-center gap-x-4 gap-y-4 pb-3">
+              <span class="min-w-42"
+                ><strong>{{ (iva.type | IvaTypePipe).name }}:</strong></span
+              >
+              <span class="min-w-54 grow">{{ iva.value }}</span>
+
+              <span [class]="(iva.state | IvaStatePipe).class" class="min-w-54">
+                {{ (iva.state | IvaStatePipe).name }}
+              </span>
+            </div>
+          }
+        } @else {
+          <p>No contact addresses could be found for the user.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card
+      ><mat-card-header
+        ><mat-card-title><h2>Access Grants</h2></mat-card-title></mat-card-header
+      >
+      <mat-card-content
+        class="divide-outline space-y-3 divide-y-1 divide-solid overflow-x-auto"
+      >
+        @if (userGrants().length) {
+          @for (ag of userGrants(); track ag.id) {
+            <div class="min-w-xl">
+              <p>
+                <span
+                  class="{{
+                    ag.status! | AccessRequestAndGrantStatusClassPipe
+                  }} capitalize inline-block w-21"
+                >
+                  {{ ag.status }}
+                </span>
+                <a [routerLink]="`/access-grant-manager/${ag.id}`" class="text-black"
+                  >grant</a
+                >
+                for the dataset
+                <a [routerLink]="`/dataset/${ag.dataset_id}`">{{ ag.dataset_id }}</a>
+                from {{ ag.valid_from | date: friendlyDateFormat }} to
+                {{ ag.valid_until | date: friendlyDateFormat }}
+              </p>
+            </div>
+          }
+        } @else {
+          <p>No access grants could be found for the user.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card
+      ><mat-card-header
+        ><mat-card-title><h2>Access Requests</h2></mat-card-title></mat-card-header
+      >
+      <mat-card-content
+        class="divide-outline space-y-3 divide-y-1 divide-solid overflow-x-auto"
+      >
+        @if (userRequests().length) {
+          @for (ar of userRequests(); track ar.id) {
+            <div class="min-w-xl">
+              <p [class.lg:mb-0]="ar.internal_note" class="mb-3">
+                <span
+                  class="{{
+                    ar.status | AccessRequestAndGrantStatusClassPipe
+                  }} capitalize inline-block w-21"
+                >
+                  {{ ar.status }}
+                </span>
+                <a [routerLink]="`/access-request-manager/${ar.id}`" class="text-black"
+                  >request</a
+                >
+                for the dataset
+                <a [routerLink]="`/dataset/${ar.dataset_id}`">{{ ar.dataset_id }}</a>
+                from {{ ar.access_starts | date: friendlyDateFormat }} to
+                {{ ar.access_ends | date: friendlyDateFormat }}
+              </p>
+              @if (ar.internal_note) {
+                <p class="text-gray mt-2 mb-3 text-base">
+                  <strong>Internal Note:</strong> {{ ar.internal_note }}
+                </p>
+              }
+            </div>
+          }
+        } @else {
+          <p>No access requests could be found for the user.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  } @else if (loading()) {
+    <p>Loading user details...</p>
+  } @else {
+    <div class="container mx-auto p-6">
+      <p class="text-center text-red-600">
+        @if (error() === 'not found') {
+          The selected user could not be found.
+        } @else {
+          An error occurred while loading the user details. Please try again later.
+        }
+      </p>
     </div>
-  </div>
-} @else {
-  <div class="container mx-auto p-6">
-    <div class="text-center">
-      <h1 class="mb-4 text-2xl font-bold text-red-600">User Not Found</h1>
-      <p class="mb-6 text-gray-600">The requested user could not be found.</p>
-      <button mat-raised-button color="primary" (click)="goBack()">
-        Back to User List
-      </button>
-    </div>
-  </div>
-}
+  }
+</div>

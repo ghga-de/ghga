@@ -14,13 +14,14 @@ import {
   ViewChild,
   ViewChildren,
 } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { AccessGrant } from '@app/access-requests/models/access-requests';
-import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
+import { AccessRequestAndGrantStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { DatePipe } from '@app/shared/pipes/date.pipe';
 import {
@@ -40,8 +41,10 @@ import {
     MatTableModule,
     MatSortModule,
     MatPaginatorModule,
+    MatButtonModule,
+    MatIconModule,
     DatePipe,
-    AccessRequestStatusClassPipe,
+    AccessRequestAndGrantStatusClassPipe,
     MatIconModule,
   ],
   providers: [CommonDatePipe],
@@ -117,15 +120,10 @@ export class AccessGrantManagerListComponent implements AfterViewInit {
   }
 
   /**
-   * This function navigates to the details page for the selected access grant
-   * @param grant - The access grant to view details for
+   * Navigate to access grant details page
+   * @param ag - the selected access grant
    */
-  openDetails(grant: AccessGrant) {
-    if (grant && grant.id) {
-      // Navigate to the access-grant-details/:id route
-      this.#router.navigate(['access-grant-details', grant.id]);
-    } else {
-      console.error('Cannot navigate: Grant or grant ID is missing.');
-    }
+  viewDetails(ag: AccessGrant): void {
+    this.#router.navigate(['/access-grant-manager', ag.id]);
   }
 }
