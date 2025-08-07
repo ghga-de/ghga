@@ -76,17 +76,20 @@ def test_stored_event_from_dlq_event_info():
     dlq_event = utils.graph_event()
     assert dlq_event.headers["exc_class"] is not None
 
+    # extract some dlq info up here since the lines would get long otherwise
     og_topic = dlq_event.headers[HeaderNames.ORIGINAL_TOPIC]
-    service, _, partition, offset = dlq_event.headers["event_id"].split(",")
+    og_event_id = UUID(dlq_event.headers[HeaderNames.ORIGINAL_EVENT_ID])
+    service = dlq_event.headers[HeaderNames.SERVICE_NAME]
+    exc_class = dlq_event.headers[HeaderNames.EXC_CLASS]
+    exc_msg = dlq_event.headers[HeaderNames.EXC_MSG]
 
     stored_dlq_event = stored_event_from_raw_event(dlq_event)
-    assert stored_dlq_event.dlq_id is not None
+    assert stored_dlq_event.dlq_id == dlq_event.dlq_id
     assert isinstance(stored_dlq_event.dlq_id, UUID)
     assert stored_dlq_event.dlq_info.service == service
-    assert stored_dlq_event.dlq_info.partition == int(partition)
-    assert stored_dlq_event.dlq_info.offset == int(offset)
-    assert stored_dlq_event.dlq_info.exc_class == dlq_event.headers["exc_class"]
-    assert stored_dlq_event.dlq_info.exc_msg == dlq_event.headers["exc_msg"]
+    assert stored_dlq_event.dlq_info.original_event_id == og_event_id
+    assert stored_dlq_event.dlq_info.exc_class == exc_class
+    assert stored_dlq_event.dlq_info.exc_msg == exc_msg
     assert stored_dlq_event.topic == og_topic
     assert stored_dlq_event.payload == dlq_event.payload
     assert stored_dlq_event.headers == {
@@ -95,6 +98,15 @@ def test_stored_event_from_dlq_event_info():
     assert stored_dlq_event.key == dlq_event.key
     assert stored_dlq_event.timestamp == dlq_event.timestamp
     assert isinstance(stored_dlq_event, StoredDLQEvent)
+
+
+def test_stored_event_from_dlq_event_legacy():
+    """Test that we can handle events published pre-hexkit-v6 (replay, for example)"""
+    dlq_event = utils.graph_event()
+    del dlq_event.headers[HeaderNames.ORIGINAL_EVENT_ID]
+    dlq_event.headers["event_id"] = "fss,topic,0,123"
+    stored_dlq_event = stored_event_from_raw_event(dlq_event)
+    assert stored_dlq_event.dlq_info.original_event_id is None
 
 
 @pytest.mark.asyncio
@@ -357,7 +369,7 @@ async def test_discard_event(event_exists: bool, error: bool):
     - Event exists but delete fails
     - Event does not exist in the DLQ (no errors, just quietly attempts delete)
     """
-    dlq_event = utils.user_event(service="fss", offset=0)
+    dlq_event = utils.user_event(service="fss", user_no=0)
     stored_dlq_event = stored_event_from_raw_event(dlq_event)
     dlq_id = stored_dlq_event.dlq_id
 

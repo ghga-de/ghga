@@ -17,7 +17,7 @@
 
 import logging
 from contextlib import suppress
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from hexkit.correlation import set_correlation_id
 from hexkit.protocols.dao import ResourceAlreadyExistsError
@@ -39,27 +39,38 @@ log = logging.getLogger(__name__)
 
 
 def stored_event_from_raw_event(event: RawDLQEvent) -> StoredDLQEvent:
-    """Convert a RawDLQEvent object to a StoredDLQEvent object"""
-    # Create a new UUID for the DLQ event
-    dlq_id = uuid4()
+    """Convert a RawDLQEvent object to a StoredDLQEvent object
 
+    When events are published to the DLQ from the consuming service, they are given
+    a new event ID, and the old one goes into the headers as original_event_id.
+    The new event ID is used as the DLQ ID, and the old event ID is stored in DLQInfo.
+    """
     # Extract the DLQ info from the headers
-    event_id = event.headers[HeaderNames.EVENT_ID]
     og_topic = event.headers[HeaderNames.ORIGINAL_TOPIC]
-    service, _, partition, offset = event_id.split(",")
+    service = event.headers.get(HeaderNames.SERVICE_NAME, "")
+
+    og_event_id = (
+        UUID(event.headers.get(HeaderNames.ORIGINAL_EVENT_ID))
+        if HeaderNames.ORIGINAL_EVENT_ID in event.headers
+        else None
+    )
+    if not og_event_id:
+        log.info(
+            "DLQ Event %s did not arrive with an existing 'original_event_id'",
+            event.dlq_id,
+        )
     exc_class = event.headers.get(HeaderNames.EXC_CLASS, "")
     exc_msg = event.headers.get(HeaderNames.EXC_MSG, "")
     dlq_info = DLQInfo(
         service=service,
-        partition=int(partition),
-        offset=int(offset),
+        original_event_id=og_event_id,
         exc_class=exc_class,
         exc_msg=exc_msg,
     )
 
     # Create the final object to be stored in the database
     stored_event = StoredDLQEvent(
-        dlq_id=dlq_id,
+        dlq_id=event.dlq_id,
         topic=og_topic,
         type_=event.type_,
         payload=event.payload,
@@ -133,11 +144,12 @@ class DLQManager(DLQManagerPort):
         try:
             await self._dao.insert(stored_event)
         except Exception as err:
+            already_exists = isinstance(err, ResourceAlreadyExistsError)
             error = self.DLQInsertionError(
                 dlq_id=stored_event.dlq_id,
-                already_exists=isinstance(err, ResourceAlreadyExistsError),
+                already_exists=already_exists,
             )
-            log.error(error)
+            log.error(error, exc_info=not already_exists)  # log TB if misc
             raise error from err
 
     async def preview_events(
@@ -212,7 +224,7 @@ class DLQManager(DLQManagerPort):
             raise sequence_error
 
         # Get the correlation ID from the stored event
-        correlation_id = next_event.headers.pop(HeaderNames.CORRELATION_ID)
+        correlation_id = UUID(next_event.headers.pop(HeaderNames.CORRELATION_ID))
 
         # Distill the main publishable event data (we don't care about the rest)
         core_publish_data = override or EventCore(**next_event.model_dump())

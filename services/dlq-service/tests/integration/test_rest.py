@@ -70,8 +70,7 @@ async def test_msg_too_big_to_publish(
         payload={"field": "x" * (kafka_size_limit * 2)},  # 2 times the max size
         dlq_info=DLQInfo(
             service="test-service",
-            partition=0,
-            offset=0,
+            original_event_id=uuid4(),
             exc_class="TestException",
             exc_msg="Test message",
         ),

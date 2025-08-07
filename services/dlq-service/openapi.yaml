@@ -28,22 +28,19 @@ components:
           description: The exception message that was raised.
           title: Exc Msg
           type: string
-        offset:
-          description: The offset of the event.
-          title: Offset
-          type: integer
-        partition:
-          description: The partition of the event.
-          title: Partition
-          type: integer
+        original_event_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The original event_id value
+          title: Original Event Id
         service:
           description: The name of the service that failed to process the event.
           title: Service
           type: string
       required:
       - service
-      - partition
-      - offset
       title: DLQInfo
       type: object
     EventCore:
@@ -246,7 +243,7 @@ components:
       description: Model representing a DLQ event as it exists in the database
       properties:
         dlq_id:
-          description: The unique DLQS identifier for a DLQ event
+          description: The ID of the event.
           format: uuid4
           title: Dlq Id
           type: string
@@ -320,7 +317,7 @@ components:
 info:
   description: A service to manage the dead letter queue for Kafka events
   title: DLQ Service
-  version: 2.0.3
+  version: 3.0.0
 openapi: 3.1.0
 paths:
   /health:
@@ -350,11 +347,7 @@ paths:
         '204':
           description: Successful Response
         '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+          description: Validation error in submitted parameters.
         '500':
           content:
             application/json:
@@ -487,11 +480,7 @@ paths:
                 $ref: '#/components/schemas/HttpSequenceError'
           description: Conflict
         '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+          description: Validation error in submitted parameters.
         '500':
           content:
             application/json:

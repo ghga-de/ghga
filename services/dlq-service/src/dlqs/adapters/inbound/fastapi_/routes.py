@@ -116,6 +116,9 @@ async def get_events(
         status.HTTP_400_BAD_REQUEST: RESPONSES["overrideValidationError"],
         status.HTTP_404_NOT_FOUND: RESPONSES["emptyDLQError"],
         status.HTTP_409_CONFLICT: RESPONSES["dlqSequenceError"],
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Validation error in submitted parameters."
+        },
         status.HTTP_500_INTERNAL_SERVER_ERROR: RESPONSES["internalServerError"],
     },
 )
@@ -167,7 +170,12 @@ async def process_event(  # noqa: PLR0913
     "/{dlq_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Discard the event with the given DLQ ID, if it exists.",
-    responses={status.HTTP_500_INTERNAL_SERVER_ERROR: RESPONSES["internalServerError"]},
+    responses={
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Validation error in submitted parameters."
+        },
+        status.HTTP_500_INTERNAL_SERVER_ERROR: RESPONSES["internalServerError"],
+    },
 )
 async def discard_event(
     dlq_id: UUID4,

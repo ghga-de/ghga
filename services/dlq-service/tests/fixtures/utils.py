@@ -18,7 +18,7 @@ helper functions and constants for testing purposes.
 """
 
 from typing import Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from hexkit.providers.akafka.provider.eventsub import HeaderNames
 
@@ -44,18 +44,15 @@ def dlq_to_db(event: RawDLQEvent) -> StoredDLQEvent:
 
     This performs the transformation that occurs when storing a DLQ event in the DB.
     """
-    event_id = event.headers.pop(HeaderNames.EVENT_ID)
-    service, _, partition, offset = event_id.split(",")
     dlq_info = DLQInfo(
-        service=service,
-        partition=int(partition),
-        offset=int(offset),
+        service=event.headers.pop(HeaderNames.SERVICE_NAME, ""),
+        original_event_id=UUID(event.headers.pop(HeaderNames.ORIGINAL_EVENT_ID)),
         exc_class=event.headers.pop(HeaderNames.EXC_CLASS, ""),
         exc_msg=event.headers.pop(HeaderNames.EXC_MSG, ""),
     )
 
     db_event = StoredDLQEvent(
-        dlq_id=uuid4(),
+        dlq_id=event.dlq_id,
         topic=event.headers.pop(HeaderNames.ORIGINAL_TOPIC),
         type_=event.type_,
         payload=event.payload,
@@ -67,15 +64,16 @@ def dlq_to_db(event: RawDLQEvent) -> StoredDLQEvent:
     return db_event
 
 
-def user_event(*, service: Literal["ufs", "fss"], offset: int = 0) -> RawDLQEvent:
+def user_event(*, service: Literal["ufs", "fss"], user_no: int = 0) -> RawDLQEvent:
     """Generate a DLQ event for the user-events topic.
 
     Works with either the UFS (user feed service) or the FSS (friend suggestion service)
     """
-    user_id = f"user_id{offset}"
+    user_id = f"user_id{user_no}"
     headers = {
         HeaderNames.ORIGINAL_TOPIC: USER_EVENTS,
-        HeaderNames.EVENT_ID: f"{service},{USER_EVENTS},0,{offset}",
+        HeaderNames.SERVICE_NAME: service,
+        HeaderNames.ORIGINAL_EVENT_ID: str(uuid4()),
         HeaderNames.EXC_CLASS: "ResourceAlreadyExistsError",
         HeaderNames.EXC_MSG: f'The resource with the id "{user_id}" already exists.',
         HeaderNames.CORRELATION_ID: TEST_CID,
@@ -87,20 +85,22 @@ def user_event(*, service: Literal["ufs", "fss"], offset: int = 0) -> RawDLQEven
         payload={"user_id": user_id, "name": "John Doe"},
         key=user_id,
         headers=headers,
+        dlq_id=uuid4(),
     )
     return dlq_user_event
 
 
-def notifications_event(*, offset: int = 0) -> RawDLQEvent:
+def notifications_event(*, user_no: int = 0) -> RawDLQEvent:
     """Generate a DLQ event for the notifications topic.
 
     Only for the UFS (user feed service).
     """
-    user_id1 = f"user_id{offset}"
-    user_id2 = f"user_id{offset + 1}"
+    user_id1 = f"user_id{user_no}"
+    user_id2 = f"user_id{user_no + 1}"
     headers = {
         HeaderNames.ORIGINAL_TOPIC: NOTIFICATIONS,
-        HeaderNames.EVENT_ID: f"{UFS},{NOTIFICATIONS},0,{offset}",
+        HeaderNames.SERVICE_NAME: UFS,
+        HeaderNames.ORIGINAL_EVENT_ID: str(uuid4()),
         HeaderNames.EXC_CLASS: "ResourceNotFoundError",
         HeaderNames.EXC_MSG: f'The resource with the id "{user_id2}" does not exist.',
         HeaderNames.CORRELATION_ID: TEST_CID,
@@ -117,20 +117,22 @@ def notifications_event(*, offset: int = 0) -> RawDLQEvent:
         },
         key=user_id2,
         headers=headers,
+        dlq_id=uuid4(),
     )
     return notifications_event
 
 
-def graph_event(*, offset: int = 0) -> RawDLQEvent:
+def graph_event(*, user_no: int = 0) -> RawDLQEvent:
     """Generate a DLQ event for the graph-updates topic.
 
     Only for the FSS (friend suggestion service).
     """
-    user_id1 = f"user_id{offset}"
-    user_id2 = f"user_id{offset + 1}"
+    user_id1 = f"user_id{user_no}"
+    user_id2 = f"user_id{user_no + 1}"
     headers = {
         HeaderNames.ORIGINAL_TOPIC: GRAPH_UPDATES,
-        HeaderNames.EVENT_ID: f"{FSS},{GRAPH_UPDATES},0,{offset}",
+        HeaderNames.SERVICE_NAME: FSS,
+        HeaderNames.ORIGINAL_EVENT_ID: str(uuid4()),
         HeaderNames.EXC_CLASS: "ResourceNotFoundError",
         HeaderNames.EXC_MSG: f'The resource with the id "{user_id2}" does not exist.',
         HeaderNames.CORRELATION_ID: TEST_CID,
@@ -142,5 +144,6 @@ def graph_event(*, offset: int = 0) -> RawDLQEvent:
         payload={"source_id": user_id1, "dest_id": user_id2},
         key=user_id1,
         headers=headers,
+        dlq_id=uuid4(),
     )
     return graph_event

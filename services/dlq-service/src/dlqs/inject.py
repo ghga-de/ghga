@@ -32,11 +32,12 @@ from dlqs.ports.inbound.dlq_manager import DLQManagerPort
 from dlqs.ports.outbound.dao import AggregatorPort
 
 
-async def get_dao(*, config: Config) -> EventDaoPort:
+@asynccontextmanager
+async def get_dao(*, config: Config) -> AsyncGenerator[EventDaoPort, None]:
     """Constructs and initializes the DAO factory."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    dao = await get_event_dao(dao_factory=dao_factory)
-    return dao
+    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
+        dao = await get_event_dao(dao_factory=dao_factory)
+        yield dao
 
 
 @asynccontextmanager
@@ -60,13 +61,14 @@ async def prepare_core(
 
     The _override parameters can be used to override the default dependencies.
     """
-    dao = dao_override or await get_dao(config=config)
-    aggregator = aggregator_override or get_aggregator(config=config)
-
     async with (
         nullcontext(publisher_override)
         if publisher_override
-        else get_event_publisher(config=config) as publisher
+        else get_event_publisher(config=config) as publisher,
+        nullcontext(dao_override) if dao_override else get_dao(config=config) as dao,
+        nullcontext(aggregator_override)
+        if aggregator_override
+        else get_aggregator(config=config) as aggregator,
     ):
         yield DLQManager(
             config=config, publisher=publisher, dao=dao, aggregator=aggregator

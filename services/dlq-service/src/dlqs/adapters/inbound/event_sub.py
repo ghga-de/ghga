@@ -19,6 +19,7 @@ from datetime import datetime
 
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import DLQSubscriberProtocol
+from pydantic import UUID4
 
 from dlqs.models import RawDLQEvent
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
@@ -38,6 +39,7 @@ class DLQSubTranslator(DLQSubscriberProtocol):
         type_: Ascii,
         topic: Ascii,
         key: Ascii,
+        event_id: UUID4,
         timestamp: datetime,
         headers: Mapping[str, str],
     ) -> None:
@@ -47,6 +49,7 @@ class DLQSubTranslator(DLQSubscriberProtocol):
             type_=type_,
             topic=topic,
             key=key,
+            dlq_id=event_id,
             timestamp=timestamp,
             headers=headers,  # type: ignore
         )

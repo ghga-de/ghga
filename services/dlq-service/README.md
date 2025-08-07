@@ -26,13 +26,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/dlq-service):
 ```bash
-docker pull ghga/dlq-service:2.0.3
+docker pull ghga/dlq-service:3.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/dlq-service:2.0.3 .
+docker build -t ghga/dlq-service:3.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -40,7 +40,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/dlq-service:2.0.3 --help
+docker run -p 8080:8080 ghga/dlq-service:3.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -100,6 +100,67 @@ The service requires the following configuration parameters:
 
   ```json
   null
+  ```
+
+
+- <a id="properties/db_version_collection"></a>**`db_version_collection`** *(string, required)*: The name of the collection containing DB version information for this service.
+
+
+  Examples:
+
+  ```json
+  "ifrsDbVersions"
+  ```
+
+
+- <a id="properties/migration_wait_sec"></a>**`migration_wait_sec`** *(integer, required)*: The number of seconds to wait before checking the DB version again.
+
+
+  Examples:
+
+  ```json
+  5
+  ```
+
+
+  ```json
+  30
+  ```
+
+
+  ```json
+  180
+  ```
+
+
+- <a id="properties/migration_max_wait_sec"></a>**`migration_max_wait_sec`**: The maximum number of seconds to wait for migrations to complete before raising an error. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/migration_max_wait_sec/anyOf/0"></a>*integer*
+
+    - <a id="properties/migration_max_wait_sec/anyOf/1"></a>*null*
+
+
+  Examples:
+
+  ```json
+  null
+  ```
+
+
+  ```json
+  300
+  ```
+
+
+  ```json
+  600
+  ```
+
+
+  ```json
+  3600
   ```
 
 
@@ -389,7 +450,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. Default: `null`.
 
   - **Any of**
 
@@ -398,6 +459,24 @@ The service requires the following configuration parameters:
       - <a id="properties/cors_allowed_headers/anyOf/0/items"></a>**Items** *(string)*
 
     - <a id="properties/cors_allowed_headers/anyOf/1"></a>*null*
+
+
+  Examples:
+
+  ```json
+  []
+  ```
+
+
+- <a id="properties/cors_exposed_headers"></a>**`cors_exposed_headers`**: A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/cors_exposed_headers/anyOf/0"></a>*array*
+
+      - <a id="properties/cors_exposed_headers/anyOf/0/items"></a>**Items** *(string)*
+
+    - <a id="properties/cors_exposed_headers/anyOf/1"></a>*null*
 
 
   Examples:

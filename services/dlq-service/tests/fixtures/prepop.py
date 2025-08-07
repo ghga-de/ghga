@@ -20,9 +20,9 @@ from functools import partial
 from random import choice
 
 import pytest
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.mongodb.provider import dto_to_document
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.utils import now_utc_ms_prec
 
 from dlqs.adapters.outbound.dao import DLQ_EVENTS_COLLECTION
 from dlqs.models import StoredDLQEvent
@@ -53,12 +53,12 @@ def generate_db_events(n: int, service: str, topic: str) -> list[StoredDLQEvent]
 
     Event with timestamps[0] is the oldest event / first to be processed.
     """
-    now = now_as_utc()
+    now = now_utc_ms_prec()
     timestamps: list[datetime] = [now - timedelta(hours=n - i) for i in range(n)]
     event_func = get_event_func(service, topic)
     db_events = []
     for i, timestamp in enumerate(timestamps):
-        raw_event = event_func(offset=i)
+        raw_event = event_func(user_no=i)
         db_event = utils.dlq_to_db(raw_event)
         db_event.timestamp = timestamp
         db_events.append(db_event)

@@ -15,10 +15,12 @@
 """DAO and Aggregator implementation"""
 
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb.provider import document_to_dto
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient, document_to_dto
+from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.errors import OperationFailure
 
 from dlqs.config import Config
@@ -43,7 +45,7 @@ async def get_event_dao(*, dao_factory: DaoFactoryProtocol) -> EventDaoPort:
 class Aggregator(AggregatorPort):
     """Aggregator for DLQ events"""
 
-    def __init__(self, *, collection: AsyncIOMotorCollection) -> None:
+    def __init__(self, *, collection: AsyncCollection) -> None:
         """Initialize with a MongoDB collection"""
         self._collection = collection
 
@@ -89,15 +91,10 @@ class Aggregator(AggregatorPort):
             raise agg_error from err
 
 
-def get_aggregator(*, config: Config) -> Aggregator:
+@asynccontextmanager
+async def get_aggregator(*, config: Config) -> AsyncGenerator[Aggregator, None]:
     """Return an Aggregator with a collection set up"""
-    timeout_ms = (
-        int(config.mongo_timeout * 1000) if config.mongo_timeout is not None else None
-    )
-    client: AsyncIOMotorClient = AsyncIOMotorClient(
-        str(config.mongo_dsn.get_secret_value()),
-        timeoutMS=timeout_ms,
-    )
-    db = client[config.db_name]
-    collection = db[DLQ_EVENTS_COLLECTION]
-    return Aggregator(collection=collection)
+    async with ConfiguredMongoClient(config=config) as client:
+        db = client[config.db_name]
+        collection = db[DLQ_EVENTS_COLLECTION]
+        yield Aggregator(collection=collection)

@@ -19,14 +19,14 @@ from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka.config import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 from pydantic import Field
 
 SERVICE_NAME: str = "dlqs"
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, LoggingConfig, KafkaConfig, MongoDbConfig):
+class Config(ApiConfigBase, LoggingConfig, KafkaConfig, MigrationConfig):
     """Config parameters and their defaults."""
 
     service_name: str = Field(

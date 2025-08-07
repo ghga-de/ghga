@@ -4,7 +4,9 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+cors_exposed_headers: null
 db_name: dlqs
+db_version_collection: dlqsDbVersions
 docs_url: /docs
 generate_correlation_id: true
 host: 127.0.0.1
@@ -24,6 +26,8 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: 300
 openapi_url: /openapi.json

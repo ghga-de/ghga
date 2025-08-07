@@ -17,7 +17,8 @@
 
 from typing import Any
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4, BaseModel, Field
 
 
@@ -45,11 +46,15 @@ class PublishableEventData(EventCore, EventHeaders):
     """Only the data needed to publish an event -- core data and headers"""
 
 
-class RawDLQEvent(EventCore, EventHeaders):
+class RawDLQEvent(
+    EventCore,
+    EventHeaders,
+):
     """The core GHGA-internal event info + headers and timestamp, consumed from Kafka"""
 
+    dlq_id: UUID4 = Field(..., description="The ID of the event.")
     timestamp: UTCDatetime = Field(
-        default_factory=now_as_utc, description="The timestamp of the event."
+        default_factory=now_utc_ms_prec, description="The timestamp of the event."
     )
 
 
@@ -59,8 +64,9 @@ class DLQInfo(BaseModel):
     service: str = Field(
         ..., description="The name of the service that failed to process the event."
     )
-    partition: int = Field(..., description="The partition of the event.")
-    offset: int = Field(..., description="The offset of the event.")
+    original_event_id: UUID4 | None = Field(
+        None, description="The original event_id value"
+    )
     exc_class: str = Field("", description="The exception class that was raised.")
     exc_msg: str = Field("", description="The exception message that was raised.")
 
@@ -68,5 +74,4 @@ class DLQInfo(BaseModel):
 class StoredDLQEvent(RawDLQEvent):
     """Model representing a DLQ event as it exists in the database"""
 
-    dlq_id: UUID4 = Field(..., description="The unique DLQS identifier for a DLQ event")
     dlq_info: DLQInfo = Field(..., description="The DLQ information for the DLQ event")
