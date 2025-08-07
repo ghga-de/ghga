@@ -125,6 +125,7 @@ export class IvaService {
    * Signal that gets all IVAs filtered by the current filter
    */
   allIvasFiltered = computed(() => {
+    if (this.allIvas.error()) return [];
     let ivas = this.allIvas.value();
     const filter = this.#allIvasFilter();
     if (ivas.length && filter) {
@@ -179,15 +180,19 @@ export class IvaService {
       state: IvaState.Unverified,
       changed: new Date().toISOString(),
     };
-    this.userIvas.value.set([...this.userIvas.value(), iva]);
-    const user = this.#auth.user();
-    const userWithIva: UserWithIva = {
-      ...iva,
-      user_id: userId ?? user?.id ?? '',
-      user_name: user?.name ?? '',
-      user_email: user?.email ?? '',
-    };
-    this.allIvas.value.set([...this.allIvas.value(), userWithIva]);
+    if (!this.userIvas.error()) {
+      this.userIvas.value.set([...this.userIvas.value(), iva]);
+    }
+    if (!this.allIvas.error()) {
+      const user = this.#auth.user();
+      const userWithIva: UserWithIva = {
+        ...iva,
+        user_id: userId ?? user?.id ?? '',
+        user_name: user?.name ?? '',
+        user_email: user?.email ?? '',
+      };
+      this.allIvas.value.set([...this.allIvas.value(), userWithIva]);
+    }
   }
 
   /**
@@ -229,9 +234,12 @@ export class IvaService {
   #deleteIvaLocally(ivaId: string): void {
     const update = <T extends { id: string }>(ivas: T[]): T[] =>
       ivas.filter((iva) => iva.id !== ivaId);
-
-    this.userIvas.value.set(update(this.userIvas.value()));
-    this.allIvas.value.set(update(this.allIvas.value()));
+    if (!this.userIvas.error()) {
+      this.userIvas.value.set(update(this.userIvas.value()));
+    }
+    if (!this.allIvas.error()) {
+      this.allIvas.value.set(update(this.allIvas.value()));
+    }
   }
 
   /**
@@ -265,9 +273,12 @@ export class IvaService {
   #updateIvaStateLocally(ivaId: string, state: IvaState): void {
     const update = <T extends { id: string }>(ivas: T[]): T[] =>
       ivas.map((iva) => (iva.id === ivaId ? { ...iva, state } : iva));
-
-    this.userIvas.value.set(update(this.userIvas.value()));
-    this.allIvas.value.set(update(this.allIvas.value()));
+    if (!this.userIvas.error()) {
+      this.userIvas.value.set(update(this.userIvas.value()));
+    }
+    if (!this.allIvas.error()) {
+      this.allIvas.value.set(update(this.allIvas.value()));
+    }
   }
 
   /**

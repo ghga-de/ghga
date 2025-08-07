@@ -167,6 +167,7 @@ export class UserService {
    * Signal that gets all users filtered by the current filter
    */
   usersFiltered = computed(() => {
+    if (this.users.error()) return [];
     let users = this.users.value();
     const filter = this.#usersFilter();
     filter
@@ -225,15 +226,22 @@ export class UserService {
    * @param changes - the changes to the user which may be partial
    */
   #updateUserLocally(id: string, changes: any): void {
-    const oldUser = this.users.value().find((user) => user.id === id);
-    if (!oldUser) return;
-
-    const newUser = { ...oldUser, ...changes };
-
-    const update = (users: DisplayUser[]) =>
-      users.map((user) => (user.id === id ? newUser : user));
-
-    this.users.value.set(update(this.users.value()));
+    if (!this.user.error()) {
+      const oldUser = this.user.value();
+      if (oldUser && oldUser.id === id) {
+        const newUser = { ...oldUser, ...changes };
+        this.user.value.set(this.#createDisplayUser(newUser));
+      }
+    }
+    if (!this.users.error()) {
+      const oldUser = this.users.value().find((user) => user.id === id);
+      if (oldUser) {
+        const newUser = { ...oldUser, ...changes };
+        const update = (users: DisplayUser[]) =>
+          users.map((user) => (user.id === id ? newUser : user));
+        this.users.value.set(update(this.users.value()));
+      }
+    }
   }
 
   /**
@@ -255,15 +263,14 @@ export class UserService {
    * @param id - the ID of the user to remove
    */
   #removeUserLocally(id: string): void {
+    if (this.users.error()) return;
     const oldUser = this.users.value().find((user) => user.id === id);
-    if (!oldUser) return;
-
-    const newUser = { ...oldUser };
-
-    const update = (users: DisplayUser[]) =>
-      users.map((user) => (user.id === id ? newUser : user));
-
-    this.users.value.set(update(this.users.value()));
+    if (oldUser) {
+      const newUser = { ...oldUser };
+      const update = (users: DisplayUser[]) =>
+        users.map((user) => (user.id === id ? newUser : user));
+      this.users.value.set(update(this.users.value()));
+    }
   }
 
   /**

@@ -271,21 +271,39 @@ export class AccessRequestService {
    * @param changes - the changes to the access request which may be partial
    */
   #updateAccessRequestLocally(id: string, changes: any): void {
-    const oldRequest = this.allAccessRequests.value().find((ar) => ar.id === id);
-    if (!oldRequest) return;
-
-    if (changes.status != oldRequest.status) {
-      changes.status_changed = new Date().toISOString();
-      changes.changed_by = this.#auth.user()?.id || null;
+    const withStatusChange = (request: AccessRequest, changes: any) =>
+      'status' in changes && request.status !== changes.status
+        ? {
+            ...changes,
+            status_changed: new Date().toISOString(),
+            changed_by: this.#auth.user()?.id || null,
+          }
+        : changes;
+    if (!this.accessRequest.error()) {
+      const oldRequest = this.accessRequest.value();
+      if (oldRequest && oldRequest.id === id) {
+        const newRequest = { ...oldRequest, ...withStatusChange(oldRequest, changes) };
+        this.accessRequest.value.set(newRequest);
+      }
     }
-
-    const newRequest = { ...oldRequest, ...changes };
-
-    const update = (accessRequests: AccessRequest[]) =>
-      accessRequests.map((ar) => (ar.id === id ? newRequest : ar));
-
-    this.userAccessRequests.value.set(update(this.userAccessRequests.value()));
-    this.allAccessRequests.value.set(update(this.allAccessRequests.value()));
+    if (!this.userAccessRequests.error()) {
+      const oldRequest = this.userAccessRequests.value().find((ar) => ar.id === id);
+      if (oldRequest) {
+        const newRequest = { ...oldRequest, ...withStatusChange(oldRequest, changes) };
+        const update = (accessRequests: AccessRequest[]) =>
+          accessRequests.map((ar) => (ar.id === id ? newRequest : ar));
+        this.userAccessRequests.value.set(update(this.userAccessRequests.value()));
+      }
+    }
+    if (!this.allAccessRequests.error()) {
+      const oldRequest = this.allAccessRequests.value().find((ar) => ar.id === id);
+      if (oldRequest) {
+        const newRequest = { ...oldRequest, ...withStatusChange(oldRequest, changes) };
+        const update = (accessRequests: AccessRequest[]) =>
+          accessRequests.map((ar) => (ar.id === id ? newRequest : ar));
+        this.allAccessRequests.value.set(update(this.allAccessRequests.value()));
+      }
+    }
   }
 
   /**
