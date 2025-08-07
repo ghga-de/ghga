@@ -18,10 +18,11 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 import httpx
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import Field, ValidationError
+from pydantic import UUID4, Field, ValidationError
 from pydantic_settings import BaseSettings
 
 from ars.core.models import BaseAccessGrant, GrantValidity
@@ -65,8 +66,8 @@ class AccessGrantsAdapter(AccessGrantsPort):
 
     async def grant_download_access(
         self,
-        user_id: str,
-        iva_id: str,
+        user_id: UUID4,
+        iva_id: UUID4,
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
@@ -93,8 +94,8 @@ class AccessGrantsAdapter(AccessGrantsPort):
 
     async def get_download_access_grants(
         self,
-        user_id: str | None = None,
-        iva_id: str | None = None,
+        user_id: UUID4 | None = None,
+        iva_id: UUID4 | None = None,
         dataset_id: str | None = None,
         valid: bool | None = None,
     ) -> list[BaseAccessGrant]:
@@ -106,7 +107,7 @@ class AccessGrantsAdapter(AccessGrantsPort):
         May raise an `AccessGrantsError`.
         """
         url = f"{self._url}/grants"
-        params: dict[str, str] = {}
+        params: dict[str, Any] = {}
         if user_id is not None:
             params["user_id"] = user_id
         if iva_id is not None:
@@ -135,7 +136,7 @@ class AccessGrantsAdapter(AccessGrantsPort):
                 f"Invalid data in response: {error}"
             ) from error
 
-    async def revoke_download_access_grant(self, grant_id: str) -> None:
+    async def revoke_download_access_grant(self, grant_id: UUID4) -> None:
         """Revoke a download access grant.
 
         May raise an `AccessGrantNotFoundError` or a general `AccessGrantsError`.

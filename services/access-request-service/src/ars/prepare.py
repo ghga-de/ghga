@@ -17,12 +17,11 @@
 """Module hosting the dependency injection framework."""
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from typing import NamedTuple
 
 from fastapi import FastAPI
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
-from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
@@ -58,12 +57,12 @@ async def prepare_core(
     config: Config,
 ) -> AsyncGenerator[AccessRequestRepositoryPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
     async with (
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
         prepare_access_request_dao(config=config) as access_request_dao,
         AccessGrantsAdapter.construct(config=config) as access_grants,
     ):
+        dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
         yield AccessRequestRepository(
             access_request_dao=access_request_dao,
             dataset_dao=dataset_dao,
@@ -79,7 +78,7 @@ def _prepare_core_with_override(
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return (
-        asyncnullcontext(repository_override)
+        nullcontext(repository_override)
         if repository_override
         else prepare_core(config=config)
     )

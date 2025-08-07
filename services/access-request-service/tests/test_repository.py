@@ -17,15 +17,19 @@
 """Test the access request repository"""
 
 from collections.abc import AsyncIterator, Mapping
+from contextlib import suppress
 from datetime import timedelta
 from operator import attrgetter
 from typing import Any
+from uuid import UUID, uuid4
 
 import pytest
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc, utc_datetime
+from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import ResourceAlreadyExistsError
+from hexkit.utils import now_utc_ms_prec
+from pydantic import UUID4
 
 from ars.core.models import (
     AccessGrant,
@@ -51,11 +55,34 @@ pytestmark = pytest.mark.asyncio()
 ONE_HOUR = timedelta(seconds=60 * 60)
 ONE_YEAR = timedelta(days=365)
 
-IAT = now_as_utc()
+IAT = now_utc_ms_prec()
 EXP = IAT + ONE_HOUR
 
+REQUEST_IDS = [
+    UUID("154a00ee-2c0f-48b1-9c65-bc332c79a2f2"),
+    UUID("59a531b2-81d0-48b9-847d-09025372b8ab"),
+    UUID("15aee558-a6cd-4e25-827a-53d2f6010bf9"),
+    UUID("b2274c22-4215-4fcd-8ec1-a79741d873a5"),
+    UUID("2985ab03-bfa9-436f-9f72-e8b3ad9c4abb"),
+    UUID("2aa16bdf-7f23-47ff-8a71-7c49287adfd1"),
+]
+GRANT_IDS = [
+    UUID("ef8b230b-43b8-4042-a02a-c580ca03eec8"),
+    UUID("ba7d703c-a042-46c5-bca5-ca745f67db7c"),
+    UUID("421ac91b-1684-4398-a3f4-2f1578e50d06"),
+    UUID("cb24f754-c537-41ee-8d49-3115f32bdc93"),
+    UUID("2aed78c1-6390-484e-93e4-4764b1a1dcd1"),
+    UUID("2a282d2e-0cfb-4647-925e-d72e9337ca24"),
+]
+
+ID_OF_JOHN_DOE = UUID("55203503-8b51-40db-957e-d1781c7fa8ab")
+ID_OF_ROD_STEWARD = UUID("4de34d83-f07f-4a93-b3f2-2b0a2c6088ba")
+ID_OF_JANE_ROE = UUID("2ad694b8-e469-4ed3-be97-2e2ceed5645b")
+IVA_OF_JOHN = UUID("d72dac5d-9fd3-4d51-929b-deac5dde8cfb")
+SOME_IVA_ID = UUID("fc273599-cac8-4573-81e7-acfad3bf55b8")
+
 auth_context_doe = AuthContext(
-    id="id-of-john-doe@ghga.de",
+    id=str(ID_OF_JOHN_DOE),
     name="John Doe",
     email="john@home.org",
     title=AcademicTitle.DR,
@@ -66,7 +93,7 @@ auth_context_doe = AuthContext(
 
 
 auth_context_steward = AuthContext(
-    id="id-of-rod-steward@ghga.de",
+    id=str(ID_OF_ROD_STEWARD),
     name="Rod Steward",
     email="steward@ghga.de",
     title=None,
@@ -85,8 +112,8 @@ config = AccessRequestConfig(
 
 ACCESS_REQUESTS = [
     AccessRequest(
-        id="request-id-1",
-        user_id="id-of-john-doe@ghga.de",
+        id=REQUEST_IDS[0],
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS001",
         dataset_title="Dataset1",
         dac_alias="Some DAC1",
@@ -99,11 +126,11 @@ ACCESS_REQUESTS = [
         request_created=IAT,
         status=AccessRequestStatus.ALLOWED,
         status_changed=IAT + timedelta(days=1),
-        changed_by="id-of-rod-steward@ghga.de",
+        changed_by=ID_OF_ROD_STEWARD,
     ),
     AccessRequest(
-        id="request-id-2",
-        user_id="id-of-john-doe@ghga.de",
+        id=REQUEST_IDS[1],
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS002",
         dataset_title="Dataset2",
         dac_alias="Some DAC2",
@@ -116,11 +143,11 @@ ACCESS_REQUESTS = [
         request_created=IAT,
         status=AccessRequestStatus.ALLOWED,
         status_changed=IAT + timedelta(days=2),
-        changed_by="id-of-rod-steward@ghga.de",
+        changed_by=ID_OF_ROD_STEWARD,
     ),
     AccessRequest(
-        id="request-id-3",
-        user_id="id-of-john-doe@ghga.de",
+        id=REQUEST_IDS[2],
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS003",
         dataset_title="Dataset3",
         dac_alias="Some DAC3",
@@ -133,11 +160,11 @@ ACCESS_REQUESTS = [
         request_created=IAT,
         status=AccessRequestStatus.DENIED,
         status_changed=IAT + timedelta(days=3),
-        changed_by="id-of-rod-steward@ghga.de",
+        changed_by=ID_OF_ROD_STEWARD,
     ),
     AccessRequest(
-        id="request-id-4",
-        user_id="id-of-john-doe@ghga.de",
+        id=REQUEST_IDS[3],
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS007",
         dataset_title="Dataset7",
         dac_alias="Some DAC7",
@@ -153,8 +180,8 @@ ACCESS_REQUESTS = [
         changed_by=None,
     ),
     AccessRequest(
-        id="request-id-5",
-        user_id="id-of-jane-roe@ghga.de",
+        id=REQUEST_IDS[4],
+        user_id=ID_OF_JANE_ROE,
         dataset_id="DS001",
         dataset_title="Dataset1",
         dac_alias="Some DAC",
@@ -167,12 +194,12 @@ ACCESS_REQUESTS = [
         request_created=IAT,
         status=AccessRequestStatus.ALLOWED,
         status_changed=IAT + timedelta(days=4),
-        changed_by="id-of-rod-steward@ghga.de",
+        changed_by=ID_OF_ROD_STEWARD,
     ),
     AccessRequest(
-        id="request-id-6",
-        user_id="id-of-john-doe@ghga.de",
-        iva_id="iva-of-john",
+        id=REQUEST_IDS[5],
+        user_id=ID_OF_JOHN_DOE,
+        iva_id=IVA_OF_JOHN,
         dataset_id="DS003",
         dataset_title="Dataset3",
         dac_alias="Some DAC3",
@@ -272,8 +299,8 @@ class AccessGrantsDummy(AccessGrantsPort):
 
     async def grant_download_access(
         self,
-        user_id: str,
-        iva_id: str,
+        user_id: UUID4,
+        iva_id: UUID4,
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
@@ -289,8 +316,8 @@ class AccessGrantsDummy(AccessGrantsPort):
 
     async def get_download_access_grants(
         self,
-        user_id: str | None = None,
-        iva_id: str | None = None,
+        user_id: UUID4 | None = None,
+        iva_id: UUID4 | None = None,
         dataset_id: str | None = None,
         valid: bool | None = None,
     ) -> list[BaseAccessGrant]:
@@ -298,9 +325,9 @@ class AccessGrantsDummy(AccessGrantsPort):
         # The list is created based on the dummy access requests.
         return [
             BaseAccessGrant(
-                id=ar.id.replace("request", "grant"),
+                id=GRANT_IDS[i],
                 user_id=ar.user_id,
-                iva_id=ar.iva_id or "some-iva-id",
+                iva_id=ar.iva_id or SOME_IVA_ID,
                 dataset_id=ar.dataset_id,
                 created=IAT,
                 valid_from=ar.access_starts,
@@ -309,21 +336,23 @@ class AccessGrantsDummy(AccessGrantsPort):
                 user_email=ar.email,
                 user_title="Dr." if ar.full_user_name.startswith("Dr.") else None,
             )
-            for ar in ACCESS_REQUESTS
+            for i, ar in enumerate(ACCESS_REQUESTS)
             if (user_id is None or user_id == ar.user_id)
-            and (iva_id is None or iva_id == (ar.iva_id or "some-iva-id"))
+            and (iva_id is None or iva_id == (ar.iva_id or SOME_IVA_ID))
             and (dataset_id is None or dataset_id == ar.dataset_id)
             and (valid is None or valid == (ar.status is AccessRequestStatus.ALLOWED))
         ]
 
-    async def revoke_download_access_grant(self, grant_id: str) -> None:
+    async def revoke_download_access_grant(self, grant_id: UUID4) -> None:
         """Revoke a download access grant.
 
         May raise an `AccessGrantNotFoundError` or a general `AccessGrantsError`.
         """
         for ar in ACCESS_REQUESTS:
-            if ar.id.replace("request", "grant") == grant_id:
-                return
+            with suppress(ValueError):
+                idx = REQUEST_IDS.index(ar.id)
+                if GRANT_IDS[idx] == grant_id:
+                    return
         raise self.AccessGrantNotFoundError(f"Grant with ID {grant_id} not found")
 
 
@@ -350,17 +379,17 @@ repository = AccessRequestRepository(
 
 async def test_can_create_request():
     """Test that users can create an access request for themselves"""
-    access_starts = now_as_utc()
+    access_starts = now_utc_ms_prec()
     access_ends = access_starts + ONE_YEAR
     creation_data = AccessRequestCreationData(
-        user_id="id-of-john-doe@ghga.de",
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
         access_starts=access_starts,
         access_ends=access_ends,
     )
-    creation_date = now_as_utc()
+    creation_date = now_utc_ms_prec()
 
     # Seed dataset so `repository.create` doesn't fail when it retrieves the dataset
     await repository.register_dataset(
@@ -374,7 +403,7 @@ async def test_can_create_request():
     )
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
-    assert request.user_id == "id-of-john-doe@ghga.de"
+    assert request.user_id == ID_OF_JOHN_DOE
     assert request.iva_id is None
     assert request.dataset_id == "DS001"
     assert request.email == "me@john-doe.name"
@@ -393,11 +422,11 @@ async def test_can_create_request():
 
 async def test_can_create_request_with_an_iva():
     """Test that users can create an access request already specifying an IVA"""
-    access_starts = now_as_utc()
+    access_starts = now_utc_ms_prec()
     access_ends = access_starts + ONE_YEAR
     creation_data = AccessRequestCreationData(
-        user_id="id-of-john-doe@ghga.de",
-        iva_id="some-iva_id",
+        user_id=ID_OF_JOHN_DOE,
+        iva_id=SOME_IVA_ID,
         dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
@@ -417,8 +446,8 @@ async def test_can_create_request_with_an_iva():
     )
     request = await repository.create(creation_data, auth_context=auth_context_doe)
 
-    assert request.user_id == "id-of-john-doe@ghga.de"
-    assert request.iva_id == "some-iva_id"
+    assert request.user_id == ID_OF_JOHN_DOE
+    assert request.iva_id == SOME_IVA_ID
     assert request.dataset_id == "DS001"
 
     assert access_request_dao.last_upsert == request
@@ -426,10 +455,10 @@ async def test_can_create_request_with_an_iva():
 
 async def test_cannot_create_request_for_somebody_else():
     """Test that users cannot create an access request for somebody else"""
-    access_starts = now_as_utc()
+    access_starts = now_utc_ms_prec()
     access_ends = access_starts + ONE_YEAR
     creation_data = AccessRequestCreationData(
-        user_id="id-of-john-foo@ghga.de",
+        user_id=uuid4(),
         dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
@@ -442,11 +471,11 @@ async def test_cannot_create_request_for_somebody_else():
 
 async def test_silently_correct_request_that_is_too_early():
     """Test that requests that are too early are silently corrected"""
-    creation_date = now_as_utc()
+    creation_date = now_utc_ms_prec()
     access_starts = creation_date - 0.5 * ONE_YEAR
     access_ends = access_starts + 1.5 * ONE_YEAR
     creation_data = AccessRequestCreationData(
-        user_id="id-of-john-doe@ghga.de",
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
@@ -475,10 +504,10 @@ async def test_silently_correct_request_that_is_too_early():
 
 async def test_cannot_create_request_too_much_in_advance():
     """Test that users cannot create an access request too much in advance"""
-    access_starts = now_as_utc() + 1.5 * ONE_YEAR
+    access_starts = now_utc_ms_prec() + 1.5 * ONE_YEAR
     access_ends = access_starts + ONE_YEAR
     creation_data = AccessRequestCreationData(
-        user_id="id-of-john-doe@ghga.de",
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
@@ -496,10 +525,10 @@ async def test_cannot_create_request_too_much_in_advance():
 
 async def test_cannot_create_request_too_short():
     """Test that users cannot create an access request that is too short"""
-    access_starts = now_as_utc()
+    access_starts = now_utc_ms_prec()
     access_ends = access_starts + timedelta(days=29)
     creation_data = AccessRequestCreationData(
-        user_id="id-of-john-doe@ghga.de",
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
@@ -517,10 +546,10 @@ async def test_cannot_create_request_too_short():
 
 async def test_cannot_create_request_too_long():
     """Test that users cannot create an access request that is too long"""
-    access_starts = now_as_utc()
+    access_starts = now_utc_ms_prec()
     access_ends = access_starts + 2.5 * ONE_YEAR
     creation_data = AccessRequestCreationData(
-        user_id="id-of-john-doe@ghga.de",
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS001",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
@@ -538,10 +567,10 @@ async def test_cannot_create_request_too_long():
 
 async def test_cannot_create_request_nonexistent_dataset():
     """Make sure we get a DatasetNotFoundError when the requested dataset ID doesn't exist."""
-    access_starts = now_as_utc()
+    access_starts = now_utc_ms_prec()
     access_ends = access_starts + ONE_YEAR
     creation_data = AccessRequestCreationData(
-        user_id="id-of-john-doe@ghga.de",
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS404",
         email="me@john-doe.name",
         request_text="Can I access some dataset?",
@@ -556,7 +585,7 @@ async def test_cannot_create_request_nonexistent_dataset():
 async def test_can_get_own_request_as_requester():
     """Test that requesters can get their own request individually."""
     for request in ACCESS_REQUESTS:
-        if request.user_id == auth_context_doe.id:
+        if str(request.user_id) == auth_context_doe.id:
             break
     else:
         assert False, "Test request cannot be found"
@@ -571,7 +600,7 @@ async def test_can_get_own_request_as_requester():
 async def test_users_cannot_get_request_of_other_user():
     """Test that non data stewards cannot get individual requests made by others."""
     for request in ACCESS_REQUESTS:
-        if request.user_id != auth_context_doe.id:
+        if str(request.user_id) != auth_context_doe.id:
             break
     else:
         assert False, "Test request cannot be found"
@@ -586,7 +615,7 @@ async def test_users_cannot_get_request_of_other_user():
 async def test_data_steward_can_get_request_of_other_user():
     """Test that data stewards can get individual requests made by others."""
     for request in ACCESS_REQUESTS:
-        if request.user_id != auth_context_steward.id:
+        if str(request.user_id) != auth_context_steward.id:
             break
     else:
         assert False, "Test request cannot be found"
@@ -604,7 +633,7 @@ async def test_data_steward_cannot_get_non_existing_requests():
         repository.AccessRequestNotFoundError, match="Access request not found"
     ):
         await repository.get(
-            access_request_id="non-existing-id", auth_context=auth_context_steward
+            access_request_id=uuid4(), auth_context=auth_context_steward
         )
 
 
@@ -636,15 +665,13 @@ async def test_users_cannot_get_requests_of_other_users():
     with pytest.raises(
         repository.AccessRequestAuthorizationError, match="Not authorized"
     ):
-        await repository.find_all(
-            auth_context=auth_context_doe, user_id="id-of-jane-roe@ghga.de"
-        )
+        await repository.find_all(auth_context=auth_context_doe, user_id=ID_OF_JANE_ROE)
 
 
 async def test_data_steward_can_get_requests_of_specific_user():
     """Test that data stewards can get requests of specific users."""
     requests = await repository.find_all(
-        auth_context=auth_context_steward, user_id="id-of-jane-roe@ghga.de"
+        auth_context=auth_context_steward, user_id=ID_OF_JANE_ROE
     )
     assert len(requests) == 1
     assert requests == [
@@ -654,7 +681,7 @@ async def test_data_steward_can_get_requests_of_specific_user():
     ]
 
 
-async def test_data_steward_can_get_requests_for_specific_dataset():
+async def test_non_data_steward_can_get_requests_for_specific_dataset():
     """Test getting requests for a specific dataset."""
     requests = await repository.find_all(
         auth_context=auth_context_doe, dataset_id="DS002"
@@ -670,21 +697,24 @@ async def test_data_steward_can_get_requests_for_specific_dataset():
 async def test_data_steward_can_get_pending_requests():
     """Test getting only the pending requests."""
     requests = await repository.find_all(
-        auth_context=auth_context_doe, status=AccessRequestStatus.PENDING
+        auth_context=auth_context_steward, status=AccessRequestStatus.PENDING
     )
     assert len(requests) == 2
-    assert sorted(requests, key=lambda request: request.id) == [
+    requests.sort(key=lambda request: request.id)
+    expected_requests = [
         request
         for request in ACCESS_REQUESTS
         if request.status == AccessRequestStatus.PENDING
     ]
+    expected_requests.sort(key=lambda request: request.id)
+    assert requests == expected_requests
 
 
 async def test_filtering_using_multiple_criteria():
     """Test filtering using multiple criteria at the same time."""
     requests = await repository.find_all(
         auth_context=auth_context_steward,
-        user_id="id-of-john-doe@ghga.de",
+        user_id=ID_OF_JOHN_DOE,
         dataset_id="DS001",
         status=AccessRequestStatus.ALLOWED,
     )
@@ -692,7 +722,7 @@ async def test_filtering_using_multiple_criteria():
     assert requests == [
         request
         for request in ACCESS_REQUESTS
-        if request.user_id == "id-of-john-doe@ghga.de"
+        if request.user_id == ID_OF_JOHN_DOE
         and request.dataset_id == "DS001"
         and request.status == AccessRequestStatus.ALLOWED
     ]
@@ -700,17 +730,18 @@ async def test_filtering_using_multiple_criteria():
 
 async def test_set_status_to_allowed():
     """Test updating the status of a request from pending to allowed."""
-    original_request = await access_request_dao.get_by_id("request-id-4")
+    original_request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     original_dict = original_request.model_dump()
     assert original_dict.pop("iva_id") is None
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
 
+    some_iva = uuid4()
     await repository.update(
-        "request-id-4",
+        REQUEST_IDS[3],
         patch_data=AccessRequestPatchData(
-            iva_id="some-iva", status=AccessRequestStatus.ALLOWED
+            iva_id=some_iva, status=AccessRequestStatus.ALLOWED
         ),
         auth_context=auth_context_steward,
     )
@@ -719,24 +750,24 @@ async def test_set_status_to_allowed():
     assert changed_request is not None
     changed_dict = changed_request.model_dump()
     assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
-    assert changed_dict.pop("iva_id") == "some-iva"
+    assert changed_dict.pop("iva_id") == some_iva
     status_changed = changed_dict.pop("status_changed")
     assert status_changed is not None
-    assert 0 <= (now_as_utc() - status_changed).seconds < 5
-    assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
+    assert 0 <= (now_utc_ms_prec() - status_changed).seconds < 5
+    assert changed_dict.pop("changed_by") == ID_OF_ROD_STEWARD
     assert changed_dict == original_dict
 
     from_date = changed_dict["access_starts"]
     to_date = changed_dict["access_ends"]
     assert access_grants.last_grant == (
-        "to id-of-john-doe@ghga.de with some-iva for DS007"
+        f"to {ID_OF_JOHN_DOE} with {some_iva} for DS007"
         f" from {from_date} until {to_date}"
     )
 
 
 async def test_set_status_to_allowed_and_modify_duration():
     """Test allowing a request and modifying its duration at the same time."""
-    original_request = await access_request_dao.get_by_id("request-id-4")
+    original_request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     original_dict = original_request.model_dump()
     assert original_dict.pop("iva_id") is None
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
@@ -745,10 +776,11 @@ async def test_set_status_to_allowed_and_modify_duration():
     assert original_dict.pop("access_starts") == IAT + timedelta(days=50)
     assert original_dict.pop("access_ends") == IAT + timedelta(days=500)
 
+    some_iva = uuid4()
     await repository.update(
-        "request-id-4",
+        REQUEST_IDS[3],
         patch_data=AccessRequestPatchData(
-            iva_id="some-iva",
+            iva_id=some_iva,
             status=AccessRequestStatus.ALLOWED,
             access_starts=IAT + timedelta(days=60),
             access_ends=IAT + timedelta(days=360),
@@ -760,34 +792,34 @@ async def test_set_status_to_allowed_and_modify_duration():
     assert changed_request is not None
     changed_dict = changed_request.model_dump()
     assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
-    assert changed_dict.pop("iva_id") == "some-iva"
+    assert changed_dict.pop("iva_id") == some_iva
     access_starts = changed_dict.pop("access_starts")
     assert access_starts == IAT + timedelta(days=60)
     access_ends = changed_dict.pop("access_ends")
     assert access_ends == IAT + timedelta(days=360)
     status_changed = changed_dict.pop("status_changed")
     assert status_changed is not None
-    assert 0 <= (now_as_utc() - status_changed).seconds < 5
-    assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
+    assert 0 <= (now_utc_ms_prec() - status_changed).seconds < 5
+    assert changed_dict.pop("changed_by") == ID_OF_ROD_STEWARD
     assert changed_dict == original_dict
 
     assert access_grants.last_grant == (
-        "to id-of-john-doe@ghga.de with some-iva for DS007"
+        f"to {ID_OF_JOHN_DOE} with {some_iva} for DS007"
         f" from {access_starts} until {access_ends}"
     )
 
 
 async def test_set_status_to_allowed_reusing_iva():
     """Test setting the status of a request to allowed reusing the IVA."""
-    original_request = await access_request_dao.get_by_id("request-id-6")
+    original_request = await access_request_dao.get_by_id(REQUEST_IDS[5])
     original_dict = original_request.model_dump()
-    assert original_dict["iva_id"] == "iva-of-john"
+    assert original_dict["iva_id"] == IVA_OF_JOHN
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
 
     await repository.update(
-        "request-id-6",
+        REQUEST_IDS[5],
         patch_data=AccessRequestPatchData(status=AccessRequestStatus.ALLOWED),
         auth_context=auth_context_steward,
     )
@@ -798,31 +830,32 @@ async def test_set_status_to_allowed_reusing_iva():
     assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
     status_changed = changed_dict.pop("status_changed")
     assert status_changed is not None
-    assert 0 <= (now_as_utc() - status_changed).seconds < 5
-    assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
+    assert 0 <= (now_utc_ms_prec() - status_changed).seconds < 5
+    assert changed_dict.pop("changed_by") == ID_OF_ROD_STEWARD
     assert changed_dict == original_dict
 
     from_date = changed_dict["access_starts"]
     to_date = changed_dict["access_ends"]
     assert access_grants.last_grant == (
-        "to id-of-john-doe@ghga.de with iva-of-john for DS003"
+        f"to {ID_OF_JOHN_DOE} with {IVA_OF_JOHN} for DS003"
         f" from {from_date} until {to_date}"
     )
 
 
 async def test_set_status_to_allowed_overriding_iva():
     """Test setting the status of a request to allowed overriding the IVA."""
-    original_request = await access_request_dao.get_by_id("request-id-6")
+    original_request = await access_request_dao.get_by_id(REQUEST_IDS[5])
     original_dict = original_request.model_dump()
-    assert original_dict.pop("iva_id") == "iva-of-john"
+    assert original_dict.pop("iva_id") == IVA_OF_JOHN
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
     assert original_dict.pop("status_changed") is None
     assert original_dict.pop("changed_by") is None
 
+    some_other_iva = uuid4()
     await repository.update(
-        "request-id-6",
+        REQUEST_IDS[5],
         patch_data=AccessRequestPatchData(
-            iva_id="some-other-iva-of-john", status=AccessRequestStatus.ALLOWED
+            iva_id=some_other_iva, status=AccessRequestStatus.ALLOWED
         ),
         auth_context=auth_context_steward,
     )
@@ -830,25 +863,25 @@ async def test_set_status_to_allowed_overriding_iva():
     changed_request = access_request_dao.last_upsert
     assert changed_request is not None
     changed_dict = changed_request.model_dump()
-    assert changed_dict.pop("iva_id") == "some-other-iva-of-john"
+    assert changed_dict.pop("iva_id") == some_other_iva
     assert changed_dict.pop("status") == AccessRequestStatus.ALLOWED
     status_changed = changed_dict.pop("status_changed")
     assert status_changed is not None
-    assert 0 <= (now_as_utc() - status_changed).seconds < 5
-    assert changed_dict.pop("changed_by") == "id-of-rod-steward@ghga.de"
+    assert 0 <= (now_utc_ms_prec() - status_changed).seconds < 5
+    assert changed_dict.pop("changed_by") == ID_OF_ROD_STEWARD
     assert changed_dict == original_dict
 
     from_date = changed_dict["access_starts"]
     to_date = changed_dict["access_ends"]
     assert access_grants.last_grant == (
-        "to id-of-john-doe@ghga.de with some-other-iva-of-john for DS003"
+        f"to {ID_OF_JOHN_DOE} with {some_other_iva} for DS003"
         f" from {from_date} until {to_date}"
     )
 
 
 async def test_set_status_to_allowed_without_iva():
     """Test setting the status of a request from pending to allowed without any IVA."""
-    original_request = await access_request_dao.get_by_id("request-id-4")
+    original_request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     original_dict = original_request.model_dump()
     assert original_dict.pop("iva_id") is None
     assert original_dict.pop("status") == AccessRequestStatus.PENDING
@@ -859,7 +892,7 @@ async def test_set_status_to_allowed_without_iva():
         repository.AccessRequestMissingIva, match="Access request is missing an IVA"
     ):
         await repository.update(
-            "request-id-4",
+            REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(status=AccessRequestStatus.ALLOWED),
             auth_context=auth_context_steward,
         )
@@ -867,7 +900,7 @@ async def test_set_status_to_allowed_without_iva():
 
 async def test_set_status_to_allowed_with_error_when_granting_access():
     """Test setting the status of a request when granting fails."""
-    original_request = await access_request_dao.get_by_id("request-id-4")
+    original_request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     access_grants.simulate_error = True
 
     with pytest.raises(
@@ -875,14 +908,14 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
         match="Could not register the download access grant",
     ):
         await repository.update(
-            "request-id-4",
+            REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(
-                iva_id="iva-id-1", status=AccessRequestStatus.ALLOWED
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
             ),
             auth_context=auth_context_steward,
         )
 
-    assert access_grants.last_grant == "to id-of-john-doe@ghga.de for DS007 failed"
+    assert access_grants.last_grant == f"to {ID_OF_JOHN_DOE} for DS007 failed"
 
     # make sure the status is not changed in this case, and no mails are sent out
     changed_request = access_request_dao.last_upsert
@@ -892,16 +925,16 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():
     """Test setting the status of a request to the same state."""
-    request = await access_request_dao.get_by_id("request-id-1")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[0])
     assert request.status == AccessRequestStatus.ALLOWED
 
     with pytest.raises(
         repository.AccessRequestError, match="Access request has already been processed"
     ):
         await repository.update(
-            "request-id-1",
+            REQUEST_IDS[0],
             patch_data=AccessRequestPatchData(
-                iva_id="iva-id-1", status=AccessRequestStatus.ALLOWED
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
             ),
             auth_context=auth_context_steward,
         )
@@ -913,14 +946,14 @@ async def test_set_status_to_allowed_when_it_is_already_allowed():
 
 async def test_set_status_to_allowed_when_it_is_already_denied():
     """Test setting the status of a request to allowed that has already been denied."""
-    request = await access_request_dao.get_by_id("request-id-3")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[2])
     assert request.status == AccessRequestStatus.DENIED
 
     with pytest.raises(
         repository.AccessRequestError, match="Access request has already been processed"
     ):
         await repository.update(
-            "request-id-3",
+            REQUEST_IDS[2],
             patch_data=AccessRequestPatchData(status=AccessRequestStatus.ALLOWED),
             auth_context=auth_context_steward,
         )
@@ -934,7 +967,7 @@ async def test_set_status_of_non_existing_request():
         repository.AccessRequestNotFoundError, match="Access request not found"
     ):
         await repository.update(
-            "request-non-existing-id",
+            uuid4(),
             patch_data=AccessRequestPatchData(status=AccessRequestStatus.ALLOWED),
             auth_context=auth_context_steward,
         )
@@ -949,7 +982,7 @@ async def test_set_status_when_not_a_data_steward():
         repository.AccessRequestAuthorizationError, match="Not authorized"
     ):
         await repository.update(
-            "request-id-4",
+            REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(status=AccessRequestStatus.ALLOWED),
             auth_context=auth_context_doe,
         )
@@ -960,7 +993,7 @@ async def test_set_status_when_not_a_data_steward():
 
 async def test_set_access_date_when_request_is_already_allowed():
     """Test setting the access duration when request was already allowed."""
-    request = await access_request_dao.get_by_id("request-id-1")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[0])
     assert request.status == AccessRequestStatus.ALLOWED
 
     with pytest.raises(
@@ -968,7 +1001,7 @@ async def test_set_access_date_when_request_is_already_allowed():
         match="Access request has already been processed",
     ):
         await repository.update(
-            "request-id-1",
+            REQUEST_IDS[0],
             patch_data=AccessRequestPatchData(
                 access_starts=IAT + timedelta(days=7),
                 access_ends=IAT + timedelta(days=100),
@@ -981,7 +1014,7 @@ async def test_set_access_date_when_request_is_already_allowed():
 
 async def test_set_invalid_access_duration():
     """Test setting an invalid access duration."""
-    request = await access_request_dao.get_by_id("request-id-4")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     assert request.status == AccessRequestStatus.PENDING
 
     with pytest.raises(
@@ -989,7 +1022,7 @@ async def test_set_invalid_access_duration():
         match="Access end date must be later than access start date",
     ):
         await repository.update(
-            "request-id-4",
+            REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(
                 access_starts=IAT + timedelta(days=30),
                 access_ends=IAT + timedelta(days=29),
@@ -1002,7 +1035,7 @@ async def test_set_invalid_access_duration():
 
 async def test_set_invalid_access_start_date():
     """Test setting an invalid access start date."""
-    request = await access_request_dao.get_by_id("request-id-4")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     assert request.status == AccessRequestStatus.PENDING
 
     with pytest.raises(
@@ -1010,7 +1043,7 @@ async def test_set_invalid_access_start_date():
         match="Access end date must be later than access start date",
     ):
         await repository.update(
-            "request-id-4",
+            REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(
                 access_starts=IAT + timedelta(days=500),
             ),
@@ -1022,7 +1055,7 @@ async def test_set_invalid_access_start_date():
 
 async def test_set_invalid_access_end_date():
     """Test setting an invalid end date."""
-    request = await access_request_dao.get_by_id("request-id-4")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     assert request.status == AccessRequestStatus.PENDING
 
     with pytest.raises(
@@ -1030,7 +1063,7 @@ async def test_set_invalid_access_end_date():
         match="Access end date must be later than access start date",
     ):
         await repository.update(
-            "request-id-4",
+            REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(
                 access_ends=utc_datetime(2020, 12, 31, 23, 59),
             ),
@@ -1042,13 +1075,13 @@ async def test_set_invalid_access_end_date():
 
 async def test_set_past_access_start_date():
     """Test setting an invalid access start date."""
-    request = await access_request_dao.get_by_id("request-id-4")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     assert request.status == AccessRequestStatus.PENDING
 
-    now = now_as_utc()
+    now = now_utc_ms_prec()
 
     await repository.update(
-        "request-id-4",
+        REQUEST_IDS[3],
         patch_data=AccessRequestPatchData(
             access_starts=now - timedelta(days=30),
             access_ends=now + timedelta(days=180),
@@ -1056,7 +1089,7 @@ async def test_set_past_access_start_date():
         auth_context=auth_context_steward,
     )
 
-    request = await access_request_dao.get_by_id("request-id-4")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     assert request.status == AccessRequestStatus.PENDING
     assert now <= request.access_starts <= now + timedelta(seconds=5)
     assert request.access_ends == now + timedelta(days=180)
@@ -1066,17 +1099,17 @@ async def test_set_past_access_start_date():
 
 async def test_extend_access_end_too_much():
     """Test setting an invalid access end date."""
-    request = await access_request_dao.get_by_id("request-id-4")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     assert request.status == AccessRequestStatus.PENDING
 
-    now = now_as_utc()
+    now = now_utc_ms_prec()
 
     with pytest.raises(
         repository.AccessRequestInvalidDuration,
         match="Access duration is too long",
     ):
         await repository.update(
-            "request-id-4",
+            REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(
                 access_starts=now + timedelta(days=30),
                 access_ends=now + timedelta(days=9999),
@@ -1087,13 +1120,13 @@ async def test_extend_access_end_too_much():
 
 async def test_set_ticket_id_and_notes():
     """Test setting the ticket ID and notes of a request."""
-    request = await access_request_dao.get_by_id("request-id-4")
+    request = await access_request_dao.get_by_id(REQUEST_IDS[3])
     assert request.status == AccessRequestStatus.PENDING
 
     # set ticket ID and internal note
 
     await repository.update(
-        "request-id-4",
+        REQUEST_IDS[3],
         patch_data=AccessRequestPatchData(
             ticket_id="ticket-id-4", internal_note="some internal note"
         ),
@@ -1110,7 +1143,7 @@ async def test_set_ticket_id_and_notes():
     # remove internal note and set note to requester
 
     await repository.update(
-        "request-id-4",
+        REQUEST_IDS[3],
         patch_data=AccessRequestPatchData(
             internal_note="", note_to_requester="some note to requester"
         ),
@@ -1305,10 +1338,10 @@ async def test_can_get_all_access_grants():
     assert isinstance(grants, list)
     assert len(grants) < len(ACCESS_REQUESTS)
     assert all(isinstance(grant, AccessGrant) for grant in grants)
-    assert all(grant.user_id == auth_context_doe.id for grant in grants)
+    assert all(str(grant.user_id) == auth_context_doe.id for grant in grants)
     # it also works when specifying the own user ID
     assert grants == await repository.get_grants(
-        user_id=auth_context_doe.id, auth_context=auth_context_doe
+        user_id=UUID(auth_context_doe.id), auth_context=auth_context_doe
     )
 
 
@@ -1328,7 +1361,7 @@ async def test_can_get_filtered_access_grants():
     # then fetch only the first access grant using filter parameters
     grants = await repository.get_grants(
         user_id=ar.user_id,
-        iva_id="some-iva-id",
+        iva_id=SOME_IVA_ID,
         dataset_id=ar.dataset_id,
         valid=True,
         auth_context=auth_context_steward,
@@ -1338,13 +1371,13 @@ async def test_can_get_filtered_access_grants():
     grant = grants[0]
     # test that the returned info is correct and complete
     assert grant == AccessGrant(
-        id="grant-id-1",
+        id=GRANT_IDS[0],
         user_id=ar.user_id,
         user_title="Dr.",
         user_name="John Doe",
         user_email=ar.email,
         dataset_id=ar.dataset_id,
-        iva_id="some-iva-id",
+        iva_id=SOME_IVA_ID,
         created=ar.request_created,
         valid_from=ar.access_starts,
         valid_until=ar.access_ends,
@@ -1361,7 +1394,7 @@ async def test_get_access_grants_with_missing_dataset():
     with pytest.raises(repository.DatasetNotFoundError):
         await repository.get_grants(
             user_id=ar.user_id,
-            iva_id="some-iva-id",
+            iva_id=SOME_IVA_ID,
             dataset_id=ar.dataset_id,
             valid=True,
             auth_context=auth_context_steward,
@@ -1371,17 +1404,15 @@ async def test_get_access_grants_with_missing_dataset():
 async def test_get_access_grants_without_authorization():
     """Test that getting an access grant of another user needs proper authorization."""
     with pytest.raises(repository.AccessRequestAuthorizationError):
-        await repository.get_grants(
-            user_id="another-user-id", auth_context=auth_context_doe
-        )
+        await repository.get_grants(user_id=uuid4(), auth_context=auth_context_doe)
 
 
 async def test_revoke_an_existing_access_grant():
     """Test that an existing access grant can be revoked."""
-    await repository.revoke_grant("grant-id-1", auth_context=auth_context_steward)
+    await repository.revoke_grant(GRANT_IDS[0], auth_context=auth_context_steward)
 
 
 async def test_revoke_an_access_grant_without_authorization():
     """Test that revoking an access grant needs proper authorization."""
     with pytest.raises(repository.AccessRequestAuthorizationError):
-        await repository.revoke_grant("grant-id-1", auth_context=auth_context_doe)
+        await repository.revoke_grant(GRANT_IDS[0], auth_context=auth_context_doe)

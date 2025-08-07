@@ -15,12 +15,21 @@
 
 """Database migration logic for ARS"""
 
+from uuid import UUID
+
 from hexkit.correlation import new_correlation_id
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
     Reversible,
 )
+from hexkit.providers.mongodb.migrations.helpers import (
+    convert_outbox_correlation_id_v6,
+    convert_uuids_and_datetimes_v6,
+)
+
+# Collection names
+ACCESS_REQUESTS = "accessRequests"
 
 
 class V2Migration(MigrationDefinition, Reversible):
@@ -49,7 +58,7 @@ class V2Migration(MigrationDefinition, Reversible):
         async def update_access_request_doc(doc: Document) -> Document:
             """Populate the required fields for access request docs"""
             doc["__metadata__"] = {
-                "correlation_id": new_correlation_id(),
+                "correlation_id": str(new_correlation_id()),
                 "published": True,
                 "deleted": False,
             }
@@ -60,9 +69,9 @@ class V2Migration(MigrationDefinition, Reversible):
             return doc
 
         # Migrate the accessRequests collection and auto-finalize (replace old collection)
-        async with self.auto_finalize(coll_names="accessRequests", copy_indexes=False):
+        async with self.auto_finalize(coll_names=ACCESS_REQUESTS, copy_indexes=False):
             await self.migrate_docs_in_collection(
-                coll_name="accessRequests",
+                coll_name=ACCESS_REQUESTS,
                 change_function=update_access_request_doc,
             )
 
@@ -86,8 +95,75 @@ class V2Migration(MigrationDefinition, Reversible):
                 del doc[field]
             return doc
 
-        async with self.auto_finalize(coll_names="accessRequests", copy_indexes=False):
+        async with self.auto_finalize(coll_names=ACCESS_REQUESTS, copy_indexes=False):
             await self.migrate_docs_in_collection(
-                coll_name="accessRequests",
+                coll_name=ACCESS_REQUESTS,
                 change_function=remove_access_request_fields,
+            )
+
+
+class V3Migration(MigrationDefinition, Reversible):
+    """Apply field type updates for hexkit v6
+
+    Affected data:
+    - Collection: `accessRequests`:
+      - `_id`, `user_id`, `iva_id`, `changed_by`, `__metadata__.correlation_id`: str -> UUID
+        - this only affects non-null values for `changed_by` & `iva_id`
+      - `access_starts`, `access_ends`, `request_created`, `status_changed`: str -> datetime
+        - only applies to non-null values for `status_changed`
+    """
+
+    version = 3
+
+    async def apply(self):
+        """Apply the migration"""
+        _convert_required_fields = convert_uuids_and_datetimes_v6(
+            uuid_fields=["_id", "user_id"],
+            date_fields=["access_starts", "access_ends", "request_created"],
+        )
+        _convert_optional_dates = convert_uuids_and_datetimes_v6(
+            date_fields=["status_changed"]
+        )
+
+        async def _convert_doc(doc: Document) -> Document:
+            """Convert field types from string to UUID/datetime"""
+            doc = await convert_outbox_correlation_id_v6(doc)
+            doc = await _convert_required_fields(doc)
+            for field in ["iva_id", "changed_by"]:
+                if optional_uuid := doc[field]:
+                    doc[field] = UUID(optional_uuid)
+            # changed_by and status_changed are probably always populated together, but
+            #  no reason to embed that assumption here
+            if doc["status_changed"]:
+                doc = await _convert_optional_dates(doc)
+            return doc
+
+        async with self.auto_finalize(coll_names=ACCESS_REQUESTS, copy_indexes=True):
+            await self.migrate_docs_in_collection(
+                coll_name=ACCESS_REQUESTS,
+                change_function=_convert_doc,
+            )
+
+    async def unapply(self):
+        """Revert the migration"""
+
+        async def _revert_doc(doc: Document) -> Document:
+            """Convert the fields back into strings"""
+            for field in ["_id", "user_id"]:
+                doc[field] = str(doc[field])
+            for field in ["access_starts", "access_ends", "request_created"]:
+                doc[field] = doc[field].isoformat()
+            for field in ["iva_id", "changed_by"]:
+                if optional_uuid := doc[field]:
+                    doc[field] = str(optional_uuid)
+            if status_changed := doc["status_changed"]:
+                doc["status_changed"] = status_changed.isoformat()
+            cid = doc["__metadata__"]["correlation_id"]
+            doc["__metadata__"]["correlation_id"] = str(cid)
+            return doc
+
+        async with self.auto_finalize(coll_names=ACCESS_REQUESTS, copy_indexes=True):
+            await self.migrate_docs_in_collection(
+                coll_name=ACCESS_REQUESTS,
+                change_function=_revert_doc,
             )

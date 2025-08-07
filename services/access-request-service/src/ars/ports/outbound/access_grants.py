@@ -19,6 +19,7 @@
 from abc import ABC, abstractmethod
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
+from pydantic import UUID4
 
 from ars.core.models import BaseAccessGrant
 
@@ -40,8 +41,8 @@ class AccessGrantsPort(ABC):
     @abstractmethod
     async def grant_download_access(
         self,
-        user_id: str,
-        iva_id: str,
+        user_id: UUID4,
+        iva_id: UUID4,
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
@@ -55,8 +56,8 @@ class AccessGrantsPort(ABC):
     @abstractmethod
     async def get_download_access_grants(
         self,
-        user_id: str | None = None,
-        iva_id: str | None = None,
+        user_id: UUID4 | None = None,
+        iva_id: UUID4 | None = None,
         dataset_id: str | None = None,
         valid: bool | None = None,
     ) -> list[BaseAccessGrant]:
@@ -70,7 +71,7 @@ class AccessGrantsPort(ABC):
         ...
 
     @abstractmethod
-    async def revoke_download_access_grant(self, grant_id: str) -> None:
+    async def revoke_download_access_grant(self, grant_id: UUID4) -> None:
         """Revoke a download access grant.
 
         May raise an `AccessGrantNotFoundError` or a general `AccessGrantsError`.

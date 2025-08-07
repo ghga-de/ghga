@@ -23,6 +23,7 @@ from uuid import uuid4
 from ghga_event_schemas.pydantic_ import AccessRequestStatus
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
+    UUID4,
     BaseModel,
     ConfigDict,
     EmailStr,
@@ -71,8 +72,10 @@ Accession = Annotated[
 class AccessRequestCreationData(BaseDto):
     """All data necessary to create an access request."""
 
-    user_id: str = Field(default=..., description="ID of the user who requests access")
-    iva_id: str | None = Field(
+    user_id: UUID4 = Field(
+        default=..., description="ID of the user who requests access"
+    )
+    iva_id: UUID4 | None = Field(
         default=None,
         description="ID of the IVA to be used for this request,"
         " but this can also be specified later",
@@ -94,15 +97,10 @@ class AccessRequestCreationData(BaseDto):
     )
 
 
-def new_uuid4() -> str:
-    """Return a string representation of a UUID4"""
-    return str(uuid4())
-
-
 class AccessRequest(AccessRequestCreationData):
     """All data that describes an access request."""
 
-    id: str = Field(default_factory=new_uuid4, description="ID of the access request")
+    id: UUID4 = Field(default_factory=uuid4, description="ID of the access request")
     dataset_title: str = Field(default=..., description="Title of the dataset")
     dataset_description: str | None = Field(
         default=None, description="Description of the dataset"
@@ -127,7 +125,7 @@ class AccessRequest(AccessRequestCreationData):
     status_changed: UTCDatetime | None = Field(
         default=None, description="Last change date of the status of this request"
     )
-    changed_by: str | None = Field(
+    changed_by: UUID4 | None = Field(
         default=None,
         description="The ID of the data steward who made the status change",
     )
@@ -148,7 +146,7 @@ class AccessRequest(AccessRequestCreationData):
 class AccessRequestPatchData(BaseDto):
     """All data that describes an access request patch."""
 
-    iva_id: str | None = Field(
+    iva_id: UUID4 | None = Field(
         default=None,
         description="ID of the IVA to be used for this request",
     )
@@ -179,13 +177,13 @@ class AccessRequestPatchData(BaseDto):
 class BaseAccessGrant(BaseDto):
     """An access grant based on a corresponding claim with info about the user."""
 
-    id: str = Field(  # actually UUID
+    id: UUID4 = Field(  # actually UUID
         ..., description="Internal grant ID (same as claim ID)"
     )
-    user_id: str = Field(  # actually UUID
+    user_id: UUID4 = Field(  # actually UUID
         default=..., description="Internal user ID"
     )
-    iva_id: str | None = Field(  # actually UUID
+    iva_id: UUID4 | None = Field(  # actually UUID
         default=None, description="ID of an IVA associated with this grant"
     )
     dataset_id: Accession = Field(

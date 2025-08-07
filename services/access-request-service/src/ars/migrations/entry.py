@@ -21,9 +21,9 @@ from hexkit.providers.mongodb.migrations import (
     MigrationMap,
 )
 
-from ars.migrations.definitions import V2Migration
+from ars.migrations.definitions import V2Migration, V3Migration
 
-MIGRATION_MAP = {2: V2Migration}
+MIGRATION_MAP: MigrationMap = {2: V2Migration, 3: V3Migration}
 
 
 async def run_db_migrations(

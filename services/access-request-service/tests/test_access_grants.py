@@ -19,10 +19,11 @@
 import json
 from collections.abc import AsyncGenerator
 from datetime import timedelta
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.utils import now_utc_ms_prec
 from pytest_asyncio import fixture as async_fixture
 from pytest_httpx import HTTPXMock
 
@@ -34,14 +35,14 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 DOWNLOAD_ACCESS_URL = "http://test-access:1234/download-access"
 
-USER_ID = "some-user-id"
-IVA_ID = "some-iva-id"
+USER_ID = UUID("2db49f46-7c35-4883-be19-bed49528e95c")
+IVA_ID = UUID("72859ba4-ed8c-47a4-8df4-02f74c53a819")
 DATASET_ID = "DS001"
-DATE_NOW = now_as_utc()
+DATE_NOW = now_utc_ms_prec()
 VALID_FROM = DATE_NOW - timedelta(days=7)
 VALID_UNTIL = DATE_NOW + timedelta(days=30)
 
-GRANT_ID = "some-grant-id"
+GRANT_ID = UUID("49be6738-f328-49e9-a7fb-3d266e1cabe9")
 GRANT = BaseAccessGrant(
     id=GRANT_ID,
     user_id=USER_ID,
@@ -259,15 +260,15 @@ async def test_revoke_non_existing_access_grants(
 ):
     """Test deleting a non-existing download access grant"""
     revoke_grant = grants_adapter.revoke_download_access_grant
-
-    url = f"{GRANTS_URL}/non-existing-grant-id"
+    random_grant_id = uuid4()
+    url = f"{GRANTS_URL}/{random_grant_id}"
     httpx_mock.add_response(method="DELETE", url=url, status_code=404)
 
     with pytest.raises(
         grants_adapter.AccessGrantNotFoundError,
-        match="Grant with ID non-existing-grant-id not found",
+        match=f"Grant with ID {random_grant_id} not found",
     ):
-        await revoke_grant("non-existing-grant-id")
+        await revoke_grant(random_grant_id)
 
 
 async def test_revoke_access_grants_with_server_error(

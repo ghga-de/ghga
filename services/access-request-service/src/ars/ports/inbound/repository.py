@@ -19,6 +19,7 @@
 from abc import ABC, abstractmethod
 
 from ghga_service_commons.auth.ghga import AuthContext
+from pydantic import UUID4
 
 from ars.core.models import (
     AccessGrant,
@@ -115,7 +116,7 @@ class AccessRequestRepositoryPort(ABC):
     @abstractmethod
     async def get(
         self,
-        access_request_id: str,
+        access_request_id: UUID4,
         *,
         auth_context: AuthContext,
     ) -> AccessRequest:
@@ -134,7 +135,7 @@ class AccessRequestRepositoryPort(ABC):
         self,
         *,
         dataset_id: str | None = None,
-        user_id: str | None = None,
+        user_id: UUID4 | None = None,
         status: AccessRequestStatus | None = None,
         auth_context: AuthContext,
     ) -> list[AccessRequest]:
@@ -149,7 +150,7 @@ class AccessRequestRepositoryPort(ABC):
     @abstractmethod
     async def update(
         self,
-        access_request_id: str,
+        access_request_id: UUID4,
         *,
         patch_data: AccessRequestPatchData,
         auth_context: AuthContext,
@@ -198,8 +199,8 @@ class AccessRequestRepositoryPort(ABC):
     async def get_grants(
         self,
         *,
-        user_id: str | None = None,
-        iva_id: str | None = None,
+        user_id: UUID4 | None = None,
+        iva_id: UUID4 | None = None,
         dataset_id: str | None = None,
         valid: bool | None = None,
         auth_context: AuthContext,
@@ -220,7 +221,7 @@ class AccessRequestRepositoryPort(ABC):
     @abstractmethod
     async def revoke_grant(
         self,
-        grant_id: str,
+        grant_id: UUID4,
         *,
         auth_context: AuthContext,
     ) -> None:

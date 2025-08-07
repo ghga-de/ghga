@@ -24,6 +24,7 @@ from ghga_event_schemas.configs import DatasetEventsConfig
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import UUID4
 
 from ars.core.models import Dataset
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
@@ -84,7 +85,13 @@ class EventSubTranslator(EventSubscriberProtocol):
             await self._repository.delete_dataset(validated_payload.accession)
 
     async def _consume_validated(
-        self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
+        self,
+        *,
+        payload: JsonObject,
+        type_: Ascii,
+        topic: Ascii,
+        key: Ascii,
+        event_id: UUID4,
     ) -> None:
         """
         Receive and process an event with already validated topic and type.
@@ -94,6 +101,7 @@ class EventSubTranslator(EventSubscriberProtocol):
             type_ (str): The type of the event.
             topic (str): Name of the topic the event was published to.
             key: A key used for routing the event.
+            event_id: A unique identifier for the event.
         """
         if type_ == self._dataset_upsertion_type:
             await self._handle_upsertion(payload)

@@ -46,20 +46,21 @@ __all__ = [
     "rest_fixture",
 ]
 
-
+ID_OF_JOHN_DOE = "55203503-8b51-40db-957e-d1781c7fa8ab"
+ID_OF_ROD_STEWARD = "4de34d83-f07f-4a93-b3f2-2b0a2c6088ba"
 AUTH_KEY_PAIR = generate_jwk()
 
 AUTH_CLAIMS_DOE = {
     "name": "John Doe",
     "email": "john@home.org",
     "title": "Dr.",
-    "id": "id-of-john-doe@ghga.de",
+    "id": ID_OF_JOHN_DOE,
 }
 
 AUTH_CLAIMS_STEWARD = {
     "name": "Rod Steward",
     "email": "steward@ghga.de",
-    "id": "id-of-rod-steward@ghga.de",
+    "id": ID_OF_ROD_STEWARD,
     "roles": ["data_steward@ghga.de"],
 }
 

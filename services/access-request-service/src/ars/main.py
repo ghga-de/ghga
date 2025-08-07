@@ -22,7 +22,7 @@ from ars.config import Config
 from ars.migrations import run_db_migrations
 from ars.prepare import prepare_access_request_dao, prepare_consumer, prepare_rest_app
 
-DB_VERSION = 2
+DB_VERSION = 3
 
 
 async def run_rest_app():

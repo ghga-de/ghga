@@ -29,11 +29,13 @@ components:
           type: string
         id:
           description: Internal grant ID (same as claim ID)
+          format: uuid4
           title: Id
           type: string
         iva_id:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: ID of an IVA associated with this grant
           title: Iva Id
@@ -44,6 +46,7 @@ components:
           type: string
         user_id:
           description: Internal user ID
+          format: uuid4
           title: User Id
           type: string
         user_name:
@@ -96,7 +99,8 @@ components:
           type: string
         changed_by:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: The ID of the data steward who made the status change
           title: Changed By
@@ -135,6 +139,7 @@ components:
           type: string
         id:
           description: ID of the access request
+          format: uuid4
           title: Id
           type: string
         internal_note:
@@ -145,7 +150,8 @@ components:
           title: Internal Note
         iva_id:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: ID of the IVA to be used for this request, but this can also
             be specified later
@@ -184,6 +190,7 @@ components:
           title: Ticket Id
         user_id:
           description: ID of the user who requests access
+          format: uuid4
           title: User Id
           type: string
       required:
@@ -226,7 +233,8 @@ components:
           type: string
         iva_id:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: ID of the IVA to be used for this request, but this can also
             be specified later
@@ -237,6 +245,7 @@ components:
           type: string
         user_id:
           description: ID of the user who requests access
+          format: uuid4
           title: User Id
           type: string
       required:
@@ -274,7 +283,8 @@ components:
           title: Internal Note
         iva_id:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: ID of the IVA to be used for this request
           title: Iva Id
@@ -305,36 +315,6 @@ components:
       - pending
       title: AccessRequestStatus
       type: string
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
-      type: object
-    ValidationError:
-      properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          title: Location
-          type: array
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
-      type: object
   securitySchemes:
     HTTPBearer:
       scheme: bearer
@@ -342,7 +322,7 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 5.2.0
+  version: 6.0.0
 openapi: 3.1.0
 paths:
   /access-grants:
@@ -356,7 +336,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: The internal ID of the user
           title: User Id
@@ -366,7 +347,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: The ID of the IVA
           title: Iva Id
@@ -420,6 +402,7 @@ paths:
         required: true
         schema:
           description: The ID of the data access grant to revoke
+          format: uuid4
           title: Grant Id
           type: string
       responses:
@@ -430,11 +413,7 @@ paths:
         '404':
           description: The data access grant was not found.
         '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+          description: Validation error in submitted data.
       security:
       - HTTPBearer: []
       summary: Revoke a data access grant
@@ -443,7 +422,7 @@ paths:
   /access-requests:
     get:
       description: Endpoint used to get existing access requests
-      operationId: get_access_request
+      operationId: get_access_requests
       parameters:
       - description: The internal ID of the user
         in: query
@@ -451,7 +430,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: The internal ID of the user
           title: User Id
@@ -482,7 +462,7 @@ paths:
               schema:
                 items:
                   $ref: '#/components/schemas/AccessRequest'
-                title: Response 200 Get Access Request
+                title: Response 200 Get Access Requests
                 type: array
           description: Access requests have been fetched.
         '403':
@@ -533,6 +513,7 @@ paths:
         required: true
         schema:
           description: ID of the access request
+          format: uuid4
           title: Access Request Id
           type: string
       responses:
@@ -547,11 +528,7 @@ paths:
         '404':
           description: Access request does not exist.
         '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+          description: Validation error in submitted data.
       security:
       - HTTPBearer: []
       summary: Get access request
@@ -568,6 +545,7 @@ paths:
         required: true
         schema:
           description: ID of the access request
+          format: uuid4
           title: Access Request Id
           type: string
       requestBody:

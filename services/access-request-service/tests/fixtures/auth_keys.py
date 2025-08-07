@@ -21,10 +21,11 @@ from ghga_service_commons.utils.jwt_helpers import (
     sign_and_serialize_token,
 )
 
+ID_OF_ROD_STEWARD = "4de34d83-f07f-4a93-b3f2-2b0a2c6088ba"
 AUTH_CLAIMS_STEWARD = {
     "name": "Rod Steward",
     "email": "steward@ghga.de",
-    "id": "id-of-rod-steward@ghga.de",
+    "id": ID_OF_ROD_STEWARD,
     "roles": ["data_steward@ghga.de"],
 }
 

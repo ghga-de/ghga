@@ -16,14 +16,14 @@
 """Tests for the events published by the access request outbox DAO"""
 
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.correlation import set_new_correlation_id
 from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.utils import now_utc_ms_prec
 
 from ars.adapters.outbound.daos import get_access_request_dao, get_dataset_dao
 from ars.core.models import (
@@ -39,8 +39,8 @@ pytestmark = pytest.mark.asyncio()
 
 
 CREATION_DATA = AccessRequestCreationData(
-    user_id="id-of-john-doe@ghga.de",
-    iva_id="some-iva",
+    user_id=uuid4(),
+    iva_id=uuid4(),
     dataset_id="DS001",
     email="me@john-doe.name",
     request_text="Can I access some dataset?",
@@ -55,7 +55,7 @@ access_request = AccessRequest(
     dataset_description="Some Description",
     dac_alias="Some DAC",
     dac_email="dac@org.dev",
-    request_created=now_as_utc(),
+    request_created=now_utc_ms_prec(),
 )
 
 DATASET = Dataset(
@@ -88,7 +88,7 @@ async def test_upsert(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert len(recorder.recorded_events) == 1
         event = recorder.recorded_events[0]
         assert event.type_ == "upserted"
-        assert event.key == event.payload["id"] == access_request.id
+        assert event.key == event.payload["id"] == str(access_request.id)
         assert event.payload["status"] == "pending"
 
         # Perform an update to the request
@@ -102,7 +102,7 @@ async def test_upsert(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert len(recorder.recorded_events) == 1
         event = recorder.recorded_events[0]
         assert event.type_ == "upserted"
-        assert event.key == event.payload["id"] == access_request.id
+        assert event.key == event.payload["id"] == str(access_request.id)
         assert event.payload["status"] == "allowed"
 
 
@@ -128,11 +128,10 @@ async def test_delete(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert len(recorder.recorded_events) == 1
         event = recorder.recorded_events[0]
         assert event.type_ == "upserted"
-        assert event.key == event.payload["id"] == access_request.id
+        assert event.key == event.payload["id"] == str(access_request.id)
         assert event.payload["status"] == "pending"
 
-        dao_factory = MongoDbDaoFactory(config=config)
-        dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
+        dataset_dao = await get_dataset_dao(dao_factory=mongodb.dao_factory)
         await dataset_dao.insert(DATASET)
 
         # Test effect on access request if dataset is deleted
@@ -150,5 +149,5 @@ async def test_delete(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert len(recorder.recorded_events) == 1
         event = recorder.recorded_events[0]
         assert event.type_ == "upserted"
-        assert event.key == event.payload["id"] == access_request.id
+        assert event.key == event.payload["id"] == str(access_request.id)
         assert event.payload["status"] == "denied"

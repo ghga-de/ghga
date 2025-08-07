@@ -20,10 +20,11 @@ import logging
 from datetime import timedelta
 from operator import attrgetter
 from typing import Any, cast
+from uuid import UUID
 
 from ghga_service_commons.auth.ghga import AuthContext, has_role
-from ghga_service_commons.utils.utc_dates import now_as_utc
-from pydantic import Field
+from hexkit.utils import now_utc_ms_prec
+from pydantic import UUID4, Field
 from pydantic_settings import BaseSettings
 
 from ars.core.models import (
@@ -111,12 +112,12 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         - `DatasetNotFoundError` if no dataset with given ID is found.
         """
         user_id = auth_context.id
-        if not user_id or creation_data.user_id != user_id:
+        if not user_id or str(creation_data.user_id) != user_id:
             authorization_error = self.AccessRequestAuthorizationError()
             log.error(authorization_error)
             raise authorization_error
 
-        request_created = now_as_utc()
+        request_created = now_utc_ms_prec()
 
         access_starts = creation_data.access_starts
         if request_created > access_starts:
@@ -162,7 +163,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
     async def get(
         self,
-        access_request_id: str,
+        access_request_id: UUID4,
         *,
         auth_context: AuthContext,
     ) -> AccessRequest:
@@ -183,7 +184,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             request = await self._request_dao.get_by_id(access_request_id)
             if (
                 not has_role(auth_context, DATA_STEWARD_ROLE)
-                and request.user_id != auth_context.id
+                and str(request.user_id) != auth_context.id
             ):
                 # if the user does not have access, report this as not found
                 raise ResourceNotFoundError(id_=access_request_id)
@@ -198,7 +199,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self,
         *,
         dataset_id: str | None = None,
-        user_id: str | None = None,
+        user_id: UUID4 | None = None,
         status: AccessRequestStatus | None = None,
         auth_context: AuthContext,
     ) -> list[AccessRequest]:
@@ -215,8 +216,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         is_data_steward = has_role(auth_context, DATA_STEWARD_ROLE)
         if not is_data_steward:
             if user_id is None:
-                user_id = auth_context.id
-            elif user_id != auth_context.id:
+                user_id = UUID(auth_context.id)
+            elif str(user_id) != auth_context.id:
                 authorization_error = self.AccessRequestAuthorizationError()
                 log.error(authorization_error)
                 raise authorization_error
@@ -243,7 +244,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
     async def update(  # noqa: C901, PLR0915
         self,
-        access_request_id: str,
+        access_request_id: UUID4,
         *,
         patch_data: AccessRequestPatchData,
         auth_context: AuthContext,
@@ -269,7 +270,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(not_found_error, extra={"access_request_id": access_request_id})
             raise not_found_error from error
 
-        user_id = auth_context.id
+        user_id = UUID(auth_context.id)
         if not (user_id and has_role(auth_context, DATA_STEWARD_ROLE)):
             authorization_error = self.AccessRequestAuthorizationError()
             log.error(authorization_error)
@@ -289,7 +290,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         access_starts = patch_data.access_starts or request.access_starts
         # force start to be not earlier than the current date
-        access_starts = max(now_as_utc(), access_starts)
+        access_starts = max(now_utc_ms_prec(), access_starts)
         access_ends = patch_data.access_ends or request.access_ends
         if access_starts >= access_ends:
             invalid_duration_error = self.AccessRequestInvalidDuration(
@@ -312,7 +313,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         if status != AccessRequestStatus.PENDING:
             update["status"] = status
-            update["status_changed"] = now_as_utc()
+            update["status_changed"] = now_utc_ms_prec()
             update["changed_by"] = user_id
 
         if patch_data.ticket_id is not None:
@@ -329,7 +330,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             try:
                 await self._access_grants.grant_download_access(
                     user_id=request.user_id,
-                    iva_id=cast(str, iva_id),  # has already been checked above
+                    iva_id=cast(UUID4, iva_id),  # has already been checked above
                     dataset_id=request.dataset_id,
                     valid_from=access_starts,
                     valid_until=access_ends,
@@ -370,7 +371,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 await self._request_dao.update(updated_request)
             elif (
                 request.status == AccessRequestStatus.ALLOWED
-                and request.access_ends > now_as_utc()
+                and request.access_ends > now_utc_ms_prec()
             ):
                 log.warning(
                     "A valid access request with ID %s already exists for the updated dataset with ID %s.",
@@ -397,7 +398,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             if request.status == AccessRequestStatus.PENDING:
                 update = {
                     "status": AccessRequestStatus.DENIED,
-                    "status_changed": now_as_utc(),
+                    "status_changed": now_utc_ms_prec(),
                     "note_to_requester": "This dataset has been deleted",
                     "changed_by": None,
                 }
@@ -405,7 +406,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 await self._request_dao.update(updated_request)
             elif (
                 request.status == AccessRequestStatus.ALLOWED
-                and request.access_ends > now_as_utc()
+                and request.access_ends > now_utc_ms_prec()
             ):
                 log.warning(
                     "A valid access request with ID %s still exists for the deleted dataset with ID %s.",
@@ -428,8 +429,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
     async def get_grants(
         self,
         *,
-        user_id: str | None = None,
-        iva_id: str | None = None,
+        user_id: UUID4 | None = None,
+        iva_id: UUID4 | None = None,
         dataset_id: str | None = None,
         valid: bool | None = None,
         auth_context: AuthContext,
@@ -452,8 +453,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         is_data_steward = has_role(auth_context, DATA_STEWARD_ROLE)
         if not is_data_steward:
             if user_id is None:
-                user_id = auth_context.id
-            elif user_id != auth_context.id:
+                user_id = UUID(auth_context.id)
+            elif str(user_id) != auth_context.id:
                 authorization_error = self.AccessRequestAuthorizationError(
                     "Not authorized"
                 )
@@ -490,7 +491,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
     async def revoke_grant(
         self,
-        grant_id: str,
+        grant_id: UUID4,
         *,
         auth_context: AuthContext,
     ) -> None:
