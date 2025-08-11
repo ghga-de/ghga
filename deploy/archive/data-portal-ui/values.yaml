@@ -8,6 +8,8 @@ apiBasePath: /
 config:
   host: 0.0.0.0
   oidc_use_discovery: false
+
+configMap:
   mountPath: /home/appuser/data-portal.yaml
 
 containerSecurityContext:
