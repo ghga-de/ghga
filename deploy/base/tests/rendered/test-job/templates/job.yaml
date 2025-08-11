@@ -64,6 +64,8 @@ spec:
               mountPath: /home/appuser/..yaml
               subPath: ..yaml
               readOnly: true
+            - mountPath: /tmp/test
+              name: test
       volumes:
         - name: config
           configMap:
@@ -71,3 +73,6 @@ spec:
             items:
             - key: config
               path: ..yaml
+            - emptyDir:
+                sizeLimit: 5Gi
+              name: test

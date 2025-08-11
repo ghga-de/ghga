@@ -101,6 +101,8 @@ spec:
               - mountPath:  "/cluster-ca-cert/"
                 name: cluster-ca-cert
                 readOnly: true
+              - mountPath: /tmp/test
+                name: test
           volumes:
             - configMap:
                 items:
@@ -108,6 +110,9 @@ spec:
                   path: config.yaml
                 name: test-cronjob
               name: config
+            - emptyDir:
+                sizeLimit: 5Gi
+              name: test
             - name: kafka-secret
               secret:
                 secretName: test-test-cronjob

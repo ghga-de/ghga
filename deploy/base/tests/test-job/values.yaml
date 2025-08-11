@@ -25,3 +25,12 @@ vaultAgent:
       parameterName: TEST_DB
     service:
       enabled: true
+
+extraVolumes:
+  - name: test
+    emptyDir:
+      sizeLimit: 5Gi
+
+extraVolumeMounts:
+  - name: test
+    mountPath: /tmp/test

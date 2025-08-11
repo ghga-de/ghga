@@ -78,9 +78,6 @@ spec:
             name: {{ .Release.Name }}
             volumeMounts:
             {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 14 }}
-            {{- if .Values.extraVolumeMounts }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 14 }}
-            {{- end }}
             {{- if .Values.kafkaUser.enabled }}
               - mountPath: "/kafka-secrets/"
                 name: kafka-secret
@@ -89,10 +86,13 @@ spec:
                 name: cluster-ca-cert
                 readOnly: true
             {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 14 }}
+            {{- end }}
           volumes:
           {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 12 }}
           {{- if .Values.extraVolumes }}
-          {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+          {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.kafkaUser.enabled }}
             - name: kafka-secret
