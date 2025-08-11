@@ -9,13 +9,10 @@ cronjob:
 
 configPrefix: ""
 
-containers:
-- name: default
-  type: default
-  cmd: "remotebackup backup"
-  config:
-    name: config
-    fileName: .config.yaml
+cmd: "remotebackup backup"
+
+configMap:
+  mountPath: .config.yaml
 
 vaultAgent:
   annotations:
@@ -23,3 +20,12 @@ vaultAgent:
   secrets:
     mongodb:
       parameterName: DATABASE__MONGODB__SOURCE_CONNECTION_STR
+
+extraVolumes:
+  - name: backup-dir
+    emptyDir:
+      sizeLimit: 5Gi
+
+extraVolumeMounts:
+  - name: backup-dir
+    mountPath: /tmp/backups
