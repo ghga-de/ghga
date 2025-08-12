@@ -24,10 +24,9 @@ import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
-from dins.adapters.inbound.dao import get_dataset_dao, get_file_information_dao
+from dins.adapters.outbound.dao import get_dataset_dao, get_file_information_dao
 from dins.config import Config
 from dins.inject import (
     prepare_core,
@@ -67,10 +66,6 @@ async def joint_fixture(
         kafka_enable_dlq=True,
     )
 
-    dao_factory = MongoDbDaoFactory(config=config)
-    file_information_dao = await get_file_information_dao(dao_factory=dao_factory)
-    dataset_information_dao = await get_dataset_dao(dao_factory=dao_factory)
-
     # prepare everything except the outbox subscriber
     async with (
         prepare_core(config=config) as information_service,
@@ -82,6 +77,10 @@ async def joint_fixture(
         ) as event_subscriber,
         AsyncTestClient(app=app) as rest_client,
     ):
+        file_information_dao = await get_file_information_dao(
+            dao_factory=mongodb.dao_factory
+        )
+        dataset_information_dao = await get_dataset_dao(dao_factory=mongodb.dao_factory)
         yield JointFixture(
             config=config,
             information_service=information_service,

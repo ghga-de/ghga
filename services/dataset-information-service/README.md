@@ -17,13 +17,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/dataset-information-service):
 ```bash
-docker pull ghga/dataset-information-service:3.1.0
+docker pull ghga/dataset-information-service:4.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/dataset-information-service:3.1.0 .
+docker build -t ghga/dataset-information-service:4.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -31,7 +31,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/dataset-information-service:3.1.0 --help
+docker run -p 8080:8080 ghga/dataset-information-service:4.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -361,7 +361,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string, required)*: Event type used for communicating dataset deletions.
 
 
   Examples:
@@ -371,13 +371,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Type used for events announcing a new dataset overview.
+- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Event type used for communicating dataset upsertions.
 
 
   Examples:
 
   ```json
-  "dataset_created"
+  "dataset_upserted"
   ```
 
 
@@ -455,7 +455,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. Default: `null`.
+- <a id="properties/cors_allowed_headers"></a>**`cors_allowed_headers`**: A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. Default: `null`.
 
   - **Any of**
 
@@ -473,11 +473,29 @@ The service requires the following configuration parameters:
   ```
 
 
+- <a id="properties/cors_exposed_headers"></a>**`cors_exposed_headers`**: A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. Default: `null`.
+
+  - **Any of**
+
+    - <a id="properties/cors_exposed_headers/anyOf/0"></a>*array*
+
+      - <a id="properties/cors_exposed_headers/anyOf/0/items"></a>**Items** *(string)*
+
+    - <a id="properties/cors_exposed_headers/anyOf/1"></a>*null*
+
+
+  Examples:
+
+  ```json
+  []
+  ```
+
+
 
 ### Usage:
 
 A template YAML for configuring the service can be found at
-[`./example-config.yaml`](./example-config.yaml).
+[`./example_config.yaml`](./example_config.yaml).
 Please adapt it, rename it to `.dins.yaml`, and place it in one of the following locations:
 - in the current working directory where you execute the service (on Linux: `./.dins.yaml`)
 - in your home directory (on Linux: `~/.dins.yaml`)
@@ -486,7 +504,7 @@ The config yaml will be automatically parsed by the service.
 
 **Important: If you are using containers, the locations refer to paths within the container.**
 
-All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml)
+All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml)
 could also be set using environment variables or file secrets.
 
 For naming the environment variables, just prefix the parameter name with `dins_`,
@@ -534,7 +552,7 @@ It installs the service with all development dependencies, and it installs pre-c
 
 The installation is performed automatically when you build the devcontainer. However,
 if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
-[`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
+[`lock/requirements-dev.txt`](./lock/requirements-dev.txt), please run it again.
 
 ## License
 
@@ -543,5 +561,5 @@ This repository is free to use and modify according to the
 
 ## README Generation
 
-This README file is auto-generated, please see [`readme_generation.md`](./readme_generation.md)
+This README file is auto-generated, please see [.readme_generation/README.md](./.readme_generation/README.md)
 for details.

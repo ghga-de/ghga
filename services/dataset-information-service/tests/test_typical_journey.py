@@ -16,11 +16,12 @@
 """Tests typical user journeys"""
 
 import logging
+from uuid import uuid4
 
 import ghga_event_schemas.pydantic_ as event_schemas
 import pytest
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.utils import now_utc_ms_prec
 
 from dins.core import models
 from tests.fixtures.joint import JointFixture
@@ -49,6 +50,8 @@ INCOMING_DATASET_PAYLOAD = event_schemas.MetadataDatasetOverview(
     title="Dataset for testing",
     stage=event_schemas.MetadataDatasetStage.UPLOAD,
     files=[FILE_1, FILE_2],
+    dac_alias="DAC 1",
+    dac_email="test@test.com",
 )
 
 UPDATE_DATASET_PAYLOAD = INCOMING_DATASET_PAYLOAD.model_copy(
@@ -59,9 +62,9 @@ UPDATE_DATASET_PAYLOAD = INCOMING_DATASET_PAYLOAD.model_copy(
 INCOMING_FILE_PAYLOAD = event_schemas.FileInternallyRegistered(
     s3_endpoint_alias="test-node",
     file_id=FILE_ID_1,
-    object_id="test-object",
+    object_id=uuid4(),
     bucket_id="test-bucket",
-    upload_date=now_as_utc().isoformat(),
+    upload_date=now_utc_ms_prec(),
     decrypted_size=DECRYPTED_SIZE,
     decrypted_sha256=DECRYPTED_SHA256,
     encrypted_size=123456789,

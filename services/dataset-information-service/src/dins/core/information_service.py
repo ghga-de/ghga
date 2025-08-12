@@ -19,7 +19,7 @@ import logging
 import ghga_event_schemas.pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
 
-from dins.adapters.inbound.dao import DatasetDaoPort, FileInformationDaoPort
+from dins.adapters.outbound.dao import DatasetDaoPort, FileInformationDaoPort
 from dins.core.models import (
     DatasetFileAccessions,
     DatasetFileInformation,

@@ -17,17 +17,16 @@
 """Module hosting the dependency injection container."""
 
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from ghga_service_commons.utils.context import asyncnullcontext
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from dins.adapters.inbound import dao
 from dins.adapters.inbound.event_sub import EventSubTranslator
 from dins.adapters.inbound.fastapi_ import dummies
 from dins.adapters.inbound.fastapi_.configure import get_configured_app
+from dins.adapters.outbound import dao
 from dins.config import Config
 from dins.core.information_service import InformationService
 from dins.ports.inbound.information_service import InformationServicePort
@@ -38,13 +37,15 @@ async def prepare_core(
     *, config: Config
 ) -> AsyncGenerator[InformationServicePort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    dataset_dao = await dao.get_dataset_dao(dao_factory=dao_factory)
-    file_information_dao = await dao.get_file_information_dao(dao_factory=dao_factory)
+    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
+        dataset_dao = await dao.get_dataset_dao(dao_factory=dao_factory)
+        file_information_dao = await dao.get_file_information_dao(
+            dao_factory=dao_factory
+        )
 
-    yield InformationService(
-        dataset_dao=dataset_dao, file_information_dao=file_information_dao
-    )
+        yield InformationService(
+            dataset_dao=dataset_dao, file_information_dao=file_information_dao
+        )
 
 
 def prepare_core_with_override(
@@ -54,7 +55,7 @@ def prepare_core_with_override(
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return (
-        asyncnullcontext(information_service_override)
+        nullcontext(information_service_override)
         if information_service_override
         else prepare_core(config=config)
     )
