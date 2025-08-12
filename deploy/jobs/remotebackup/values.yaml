@@ -12,7 +12,7 @@ configPrefix: ""
 cmd: "remotebackup backup"
 
 configMap:
-  mountPath: .config.yaml
+  mountPath: /home/appuser/.config.yaml
   envVar:
     enabled: false
 
