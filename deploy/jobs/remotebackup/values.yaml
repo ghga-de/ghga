@@ -12,7 +12,9 @@ configPrefix: ""
 cmd: "remotebackup backup"
 
 configMap:
-  mountPath: .config.yaml
+  mountPath: config.yaml
+  envVar:
+    enabled: false
 
 vaultAgent:
   annotations:
