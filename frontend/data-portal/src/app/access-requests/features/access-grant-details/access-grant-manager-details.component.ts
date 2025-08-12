@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe } from '@angular/common';
+import { DatePipe, Location } from '@angular/common';
 import { Component, computed, inject, input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,10 +14,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
-import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
+import {
+  DEFAULT_DATE_OUTPUT_FORMAT,
+  DEFAULT_TIME_ZONE,
+  FRIENDLY_DATE_FORMAT,
+} from '@app/shared/utils/date-formats';
 
 /**
  * Access Grant Manager Details component.
@@ -44,11 +48,18 @@ import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 })
 export class AccessGrantManagerDetailsComponent implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+  readonly periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
+  readonly periodTimeZone = DEFAULT_TIME_ZONE;
+
+  showTransition = false;
+
+  #location = inject(Location);
+
   id = input.required<string>();
   #ars = inject(AccessRequestService);
-  showTransition = false;
-  #router = inject(Router);
+
   isLoading = this.#ars.allAccessGrantsResource.isLoading;
+
   error = computed(() => {
     const ags = this.#ars.allAccessGrants()?.filter((ag) => ag.id === this.id());
     if (ags.length !== 1) {
@@ -65,6 +76,7 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
       return ags[0];
     }
   });
+
   hasStarted = computed(() => {
     const grant = this.grant();
     if (grant) {
@@ -107,6 +119,9 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
    * Navigate back to the Access Grant Manager.
    */
   goBack(): void {
-    this.#router.navigate(['access-grant-manager']);
+    this.showTransition = true;
+    setTimeout(() => {
+      this.#location.back();
+    });
   }
 }

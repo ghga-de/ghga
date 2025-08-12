@@ -15,7 +15,7 @@
 <aside [class.hidden]="!displayFilters" class="mt-4 lg:block">
   <mat-card
     appearance="outlined"
-    class="lg:max-w-auto w-full overflow-x-auto lg:w-auto lg:max-w-[1440px]"
+    class="lg:max-w-auto w-full overflow-x-auto lg:w-auto lg:max-w-[1800px]"
   >
     <mat-card-content class="min-w-sm">
       <div class="flex gap-4">
@@ -23,7 +23,7 @@
           <mat-icon aria-label="Filter" class="large-icon">filter_alt</mat-icon>
         </div>
         <div
-          class="flex grow flex-col justify-center gap-x-10 gap-y-2 lg:flex-row lg:max-xl:flex-wrap"
+          class="grid grow gap-x-10 gap-y-2 lg:grid-cols-2 lg:flex-row lg:max-xl:flex-wrap xl:flex"
         >
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
@@ -69,7 +69,7 @@
               <mat-icon>cancel</mat-icon>
             </button>
           </div>
-          <div class="flex items-center gap-2 pe-12 pb-2.5 lg:pe-0 xl:grow">
+          <div class="flex min-w-96 grow items-center gap-2 pe-12 pb-2.5 xl:pe-0">
             <mat-button-toggle-group class="grow" [(ngModel)]="status" value="all">
               <mat-button-toggle value="all" class="grow"
                 >All accounts</mat-button-toggle

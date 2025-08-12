@@ -1,173 +1,162 @@
 <div
-  class="mx-auto max-w-[1440px] p-6"
+  class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6"
   [style.view-transition-name]="showTransition ? 'detail' : null"
 >
-  <div>
-    <button
-      mat-icon-button
-      (click)="goBack()"
-      data-umami-event="Access Request Manager Back Link Clicked"
-      aria-label="Go back to previous page"
-      class="text-primary float-left mt-1 mr-4"
-    >
-      <mat-icon>chevron_left</mat-icon>
-    </button>
-    <h1>Access Request Details</h1>
+  <div class="justify-between md:flex">
+    <div class="grow">
+      <button
+        mat-icon-button
+        (click)="goBack()"
+        data-umami-event="Access Request Manager Back Link Clicked"
+        aria-label="Go back to previous page"
+        class="text-primary float-left mt-1 mr-4"
+      >
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <h1>Access Request Details</h1>
+    </div>
   </div>
   @if (request(); as ar) {
-    <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
-      <div class="my-2 flex flex-col items-start gap-3">
-        <mat-card>
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div class="my-2 flex flex-col items-start gap-4">
+        <mat-card class="w-full overflow-x-auto">
           <mat-card-header>
-            <mat-card-title>Request & Dataset</mat-card-title>
+            <mat-card-title><h2>Request & Dataset</h2></mat-card-title>
           </mat-card-header>
-          <mat-card-content>
-            <table class="w-full">
-              <tbody>
-                <app-access-request-field-edit
-                  [request]="ar"
-                  name="ticket_id"
-                  label="Ticket ID"
-                  (saved)="saved($event)"
-                  (edited)="edited($event)"
-                  class="contents"
-                ></app-access-request-field-edit>
-                <tr>
-                  <th>Dataset ID:</th>
-                  <td>
-                    <a
-                      [href]="'/dataset/' + ar.dataset_id"
-                      target="_blank"
-                      tabindex="-1"
-                      >{{ ar.dataset_id
-                      }}<mat-icon aria-hidden="true">open_in_new</mat-icon>
-                    </a>
-                  </td>
-                </tr>
-                <tr>
-                  <th>Dataset title:</th>
-                  <td>{{ ar.dataset_title }}</td>
-                </tr>
-                <tr>
-                  <th>Status:</th>
-                  <td>
-                    <strong class="{{ ar.status | AccessRequestStatusClassPipe }}">{{
-                      ar.status
-                    }}</strong>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <mat-card-content class="min-w-xl">
+            <app-access-request-field-edit
+              [request]="ar"
+              name="ticket_id"
+              label="Ticket ID"
+              (saved)="saved($event)"
+              (edited)="edited($event)"
+              class="contents"
+            ></app-access-request-field-edit>
+            <p>
+              <strong class="inline-block w-48">Dataset ID:</strong>
+              <span
+                ><a [href]="'/dataset/' + ar.dataset_id" target="_blank" tabindex="-1"
+                  >{{ ar.dataset_id
+                  }}<mat-icon aria-hidden="true">open_in_new</mat-icon></a
+                ></span
+              >
+            </p>
+            <p>
+              <strong class="inline-block w-48">Dataset title:</strong>
+              <span>{{ ar.dataset_title }}</span>
+            </p>
+            <p>
+              <strong class="inline-block w-48">Status:</strong>
+              <span
+                ><strong
+                  class="{{ ar.status | AccessRequestStatusClassPipe }} capitalize"
+                  >{{ ar.status }}</strong
+                ></span
+              >
+            </p>
           </mat-card-content>
         </mat-card>
-        <mat-card>
+        <mat-card class="w-full overflow-x-auto">
           <mat-card-header>
-            <mat-card-title>Access Timeline & Details</mat-card-title>
+            <mat-card-title><h2>Access Timeline & Details</h2></mat-card-title>
           </mat-card-header>
-          <mat-card-content>
-            <table class="w-full">
-              <tbody>
-                <app-access-request-duration-edit
-                  [request]="ar"
-                  (saved)="saved($event)"
-                  (edited)="edited($event)"
-                  class="contents"
-                ></app-access-request-duration-edit>
-                <tr>
-                  <th>Request details:</th>
-                  <td class="max-h-38 overflow-y-auto">
-                    @for (
-                      line of ar.request_text | splitLines;
-                      track line;
-                      let last = $last
-                    ) {
-                      <p [class.last]="last">{{ line }}</p>
-                    }
-                  </td>
-                </tr>
-                <tr>
-                  <th>Requested:</th>
-                  <td>
-                    {{ ar.request_created | date }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <mat-card-content class="min-w-xl">
+            <app-access-request-duration-edit
+              [request]="ar"
+              (saved)="saved($event)"
+              (edited)="edited($event)"
+              class="contents"
+            ></app-access-request-duration-edit>
+            <div class="mb-2 flex">
+              <strong class="inline-block min-w-48">Request details:</strong>
+              <div class="max-h-38 overflow-y-auto">
+                @for (
+                  line of ar.request_text | splitLines;
+                  track line;
+                  let last = $last
+                ) {
+                  <p [class.mb-0]="last">{{ line }}</p>
+                }
+              </div>
+            </div>
+            <p>
+              <strong class="inline-block w-48">Requested:</strong>
+              <span>{{ ar.request_created | date }}</span>
+            </p>
           </mat-card-content>
         </mat-card>
-        <mat-card>
+        <mat-card class="w-full overflow-x-auto">
           <mat-card-header>
-            <mat-card-title>DAC & Requester</mat-card-title>
+            <mat-card-title><h2>DAC & Requester</h2></mat-card-title>
           </mat-card-header>
-          <mat-card-content>
-            <table class="w-full">
-              <tbody>
-                <tr>
-                  <th>DAC:</th>
-                  <td>
-                    <span class="italic">{{ ar.dac_alias }}</span> -
-                    <a [href]="'mailto:' + ar.dac_email" tabindex="-1">{{
-                      ar.dac_email
-                    }}</a>
-                  </td>
-                </tr>
-                <tr>
-                  <th>Requester:</th>
-                  <td>
-                    <span class="italic">{{ ar.full_user_name }}</span> -
-                    <a [href]="'mailto:' + ar.email" tabindex="-1">{{ ar.email }}</a>
-                  </td>
-                </tr>
-                <tr>
-                  <th>LS ID:</th>
-                  <td>
-                    @if (userExtId.isLoading()) {
-                      <em class="text-gray-400">Loading...</em>
-                    } @else if (userExtId.error() || !userExtId.value()) {
-                      <em class="text-red-600">could not be retrieved</em>
-                    } @else {
-                      <code class="text-base"
-                        >{{ userExtId.value()!.split('@', 2).join('\u200B@') }}
-                      </code>
-                    }
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <mat-card-content class="min-w-xl">
+            <p class="flex">
+              <strong class="inline-block min-w-48">DAC:</strong>
+              <span>
+                <span class="italic">{{ ar.dac_alias }}</span> -
+                <a [href]="'mailto:' + ar.dac_email" tabindex="-1">{{
+                  ar.dac_email
+                }}</a>
+              </span>
+            </p>
+            <p class="flex">
+              <strong class="inline-block min-w-48">Requester:</strong>
+              <span>
+                <span class="italic"
+                  ><a [routerLink]="`/user-manager/${ar.user_id}`">{{
+                    ar.full_user_name
+                  }}</a></span
+                >
+                -
+                <a [href]="'mailto:' + ar.email" tabindex="-1">{{ ar.email }}</a>
+              </span>
+            </p>
+            <p class="flex">
+              <strong class="inline-block min-w-48">LS ID:</strong>
+              <span>
+                @if (userExtId.isLoading()) {
+                  <em class="text-gray-400">Loading...</em>
+                } @else if (userExtId.error() || !userExtId.value()) {
+                  <em class="text-red-600">could not be retrieved</em>
+                } @else {
+                  <code class="text-base"
+                    >{{ userExtId.value()!.split('@', 2).join('\u200B@') }}
+                  </code>
+                }
+              </span>
+            </p>
           </mat-card-content>
         </mat-card>
       </div>
-      <div class="my-2 flex flex-col items-start gap-3">
-        <mat-card>
-          <mat-card-header> <mat-card-title>Notes</mat-card-title> </mat-card-header>
-          <mat-card-content>
-            <table class="w-full">
-              <tbody>
-                <app-access-request-field-edit
-                  [request]="ar"
-                  name="note_to_requester"
-                  label="Note to requester"
-                  (saved)="saved($event)"
-                  (edited)="edited($event)"
-                  class="contents"
-                ></app-access-request-field-edit>
-                <app-access-request-field-edit
-                  [request]="ar"
-                  name="internal_note"
-                  label="Internal note"
-                  (saved)="saved($event)"
-                  (edited)="edited($event)"
-                  class="contents"
-                ></app-access-request-field-edit>
-              </tbody>
-            </table>
+      <div class="my-2 flex flex-col items-start gap-4">
+        <mat-card class="w-full overflow-x-auto">
+          <mat-card-header>
+            <mat-card-title><h2>Notes</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-xl">
+            <app-access-request-field-edit
+              [request]="ar"
+              name="note_to_requester"
+              label="Note to requester"
+              (saved)="saved($event)"
+              (edited)="edited($event)"
+              class="contents"
+            ></app-access-request-field-edit>
+            <app-access-request-field-edit
+              [request]="ar"
+              name="internal_note"
+              label="Internal note"
+              (saved)="saved($event)"
+              (edited)="edited($event)"
+              class="contents"
+            ></app-access-request-field-edit>
           </mat-card-content>
         </mat-card>
-        <mat-card>
+        <mat-card class="w-full overflow-x-auto">
           <mat-card-header>
-            <mat-card-title>Verification Address</mat-card-title>
+            <mat-card-title><h2>Verification Address</h2></mat-card-title>
           </mat-card-header>
-          <mat-card-content>
+          <mat-card-content class="min-w-xl">
             @if (ivasAreLoading()) {
               <p>Loading verification addresses...</p>
             } @else if (ivasError() || !ivas().length) {
@@ -253,7 +242,7 @@
       </div>
     </div>
 
-    <div class="mt-8 flex">
+    <div class="mt-8 flex flex-col gap-8 sm:flex-row sm:gap-0">
       @if (ivasAreLoading() || !changeable()) {
         <button
           mat-stroked-button
@@ -263,7 +252,7 @@
           Back
         </button>
       } @else {
-        <div class="w-full sm:w-auto">
+        <div class="w-full grow sm:w-auto">
           <button
             autoFocus
             mat-stroked-button
@@ -274,8 +263,7 @@
             Back
           </button>
         </div>
-        <div class="flex-grow"></div>
-        <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
+        <div class="flex w-full flex-wrap gap-4 sm:w-auto sm:flex-nowrap">
           <div class="w-full sm:w-auto">
             <button
               mat-raised-button

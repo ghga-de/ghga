@@ -49,8 +49,8 @@
     }
   </div>
   @if (user(); as user) {
-    <mat-card
-      ><mat-card-content class="overflow-x-auto">
+    <mat-card class="w-full overflow-x-auto">
+      <mat-card-content class="min-w-2xl">
         <div class="flex flex-col gap-6 lg:grid lg:grid-cols-2">
           <div>
             <h2 class="mb-4 font-semibold">Basic Information</h2>
@@ -113,7 +113,7 @@
                 >
                 <p class="mt-1 text-gray-900">
                   @if (user.status_change) {
-                    {{ user.status_change | date: friendlyDateFormat }}
+                    {{ user.status_change | date: friendlyDateFormat : periodTimeZone }}
                   } @else {
                     Not applicable
                   }
@@ -135,16 +135,16 @@
       ></mat-card
     >
 
-    <mat-card
-      ><mat-card-header
+    <mat-card class="w-full overflow-x-auto">
+      <mat-card-header
         ><mat-card-title><h2>IVAs</h2></mat-card-title></mat-card-header
       >
       <mat-card-content
-        class="divide-outline space-y-3 divide-y-1 divide-solid overflow-x-auto"
+        class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
       >
         @if (userIvas().length) {
           @for (iva of userIvas(); track iva.id) {
-            <div class="flex min-w-2xl items-center gap-x-4 gap-y-4 pb-3">
+            <div class="flex items-center gap-x-4 gap-y-4 pb-3">
               <span class="min-w-42"
                 ><strong>{{ (iva.type | IvaTypePipe).name }}:</strong></span
               >
@@ -161,31 +161,33 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card
-      ><mat-card-header
+    <mat-card class="w-full overflow-x-auto">
+      <mat-card-header
         ><mat-card-title><h2>Access Grants</h2></mat-card-title></mat-card-header
       >
       <mat-card-content
-        class="divide-outline space-y-3 divide-y-1 divide-solid overflow-x-auto"
+        class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
       >
         @if (userGrants().length) {
           @for (ag of userGrants(); track ag.id) {
             <div class="min-w-xl">
               <p>
-                <span
+                <strong
                   class="{{
                     ag.status! | AccessGrantStatusClassPipe
-                  }} capitalize inline-block w-21"
+                  }} capitalize inline-block w-22"
                 >
                   {{ ag.status }}
-                </span>
-                <a [routerLink]="`/access-grant-manager/${ag.id}`" class="text-black"
+                </strong>
+                <a
+                  [routerLink]="`/access-grant-manager/${ag.id}`"
+                  class="hover:text-primary focus:text-primary text-black"
                   >grant</a
                 >
                 for the dataset
                 <a [routerLink]="`/dataset/${ag.dataset_id}`">{{ ag.dataset_id }}</a>
-                from {{ ag.valid_from | date: friendlyDateFormat }} to
-                {{ ag.valid_until | date: friendlyDateFormat }}
+                from {{ ag.valid_from | date: friendlyDateFormat : periodTimeZone }} to
+                {{ ag.valid_until | date: friendlyDateFormat : periodTimeZone }}
               </p>
             </div>
           }
@@ -195,31 +197,34 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card
-      ><mat-card-header
+    <mat-card class="w-full overflow-x-auto">
+      <mat-card-header
         ><mat-card-title><h2>Access Requests</h2></mat-card-title></mat-card-header
       >
       <mat-card-content
-        class="divide-outline space-y-3 divide-y-1 divide-solid overflow-x-auto"
+        class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
       >
         @if (userRequests().length) {
           @for (ar of userRequests(); track ar.id) {
             <div class="min-w-xl">
               <p [class.lg:mb-0]="ar.internal_note" class="mb-3">
-                <span
+                <strong
                   class="{{
                     ar.status | AccessRequestStatusClassPipe
-                  }} capitalize inline-block w-21"
+                  }} capitalize inline-block w-22"
                 >
                   {{ ar.status }}
-                </span>
-                <a [routerLink]="`/access-request-manager/${ar.id}`" class="text-black"
+                </strong>
+                <a
+                  [routerLink]="`/access-request-manager/${ar.id}`"
+                  class="hover:text-primary focus:text-primary text-black"
                   >request</a
                 >
                 for the dataset
                 <a [routerLink]="`/dataset/${ar.dataset_id}`">{{ ar.dataset_id }}</a>
-                from {{ ar.access_starts | date: friendlyDateFormat }} to
-                {{ ar.access_ends | date: friendlyDateFormat }}
+                from
+                {{ ar.access_starts | date: friendlyDateFormat : periodTimeZone }} to
+                {{ ar.access_ends | date: friendlyDateFormat : periodTimeZone }}
               </p>
               @if (ar.internal_note) {
                 <p class="text-gray mt-2 mb-3 text-base">

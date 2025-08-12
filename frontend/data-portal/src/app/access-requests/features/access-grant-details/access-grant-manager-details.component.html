@@ -1,223 +1,219 @@
 <div
-  class="mx-auto max-w-[1440px] p-6"
+  class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6"
   [style.view-transition-name]="showTransition ? 'detail' : null"
 >
-  <div class="clearfix mb-6">
-    <button
-      mat-icon-button
-      (click)="goBack()"
-      data-umami-event="Access Grant Manager Back Link Clicked"
-      aria-label="Go back to access grant list"
-      class="text-primary float-left mt-1 mr-4"
-    >
-      <mat-icon>chevron_left</mat-icon>
-    </button>
-    <h1>Access Grant Detail</h1>
-
-    @if (grant(); as ag) {
-      <div class="my-6">
-        <div class="mb-2">
-          <span class="font-bold">Status:</span>
-          <span class="{{ ag?.status | AccessGrantStatusClassPipe }} capitalize w-24">
-            {{ ag.status }}
-          </span>
-        </div>
-        <div>
-          <span class="font-bold">Dataset:</span>
-          <span class="w-24 capitalize"
-            >&nbsp;
-            <a
-              routerLink="/dataset/{{ ag?.dataset_id }}"
-              data-umami-event="Access Grant Details Dataset Clicked"
-              >{{ ag?.dataset_id }}</a
-            >
-          </span>
-        </div>
-      </div>
-      <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <div class="my-2 flex flex-col items-start gap-3">
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>Requester</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <table class="w-full">
-                <tbody>
-                  <tr>
-                    <th>Email:</th>
-                    <td>
-                      <a
-                        [href]="'mailto:' + ag.user_email"
-                        target="_blank"
-                        tabindex="-1"
-                        >{{ ag.user_email
-                        }}<mat-icon aria-hidden="true">open_in_new</mat-icon>
-                      </a>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Name:</th>
-                    <td>{{ ag.user_title }} {{ ag.user_name }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </mat-card-content>
-          </mat-card>
-
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>DAC and Access Request</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <table class="w-full">
-                <tbody>
-                  <tr>
-                    <th>DAC:</th>
-                    <td>
-                      {{ ag.dac_alias }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>DAC Email:</th>
-                    <td>
-                      <a [href]="'mailto:' + ag.dac_email" target="_blank" tabindex="-1"
-                        >{{ ag.dac_email
-                        }}<mat-icon aria-hidden="true">open_in_new</mat-icon>
-                      </a>
-                    </td>
-                  </tr>
-
-                  @switch (ar().length) {
-                    @case (0) {
-                      <tr>
-                        <td colspan="2">
-                          <span class="warn"
-                            >No Access Request was matched for this Grant!</span
-                          >
-                        </td>
-                      </tr>
-                    }
-                    @case (1) {
-                      @let request = ar()[0];
-                      <tr>
-                        <th>Access Request:</th>
-                        <td>
-                          for the dataset
-                          <a
-                            class="text-quaternary hover:text-secondary focus:text-secondary"
-                            routerLink="/dataset/{{ request.dataset_id }}"
-                            data-umami-event="Access Grant Details Access Requests List Dataset Clicked"
-                            >{{ request.dataset_id }}</a
-                          ><br />
-                          from {{ request.access_starts | date: friendlyDateFormat }} to
-                          {{ request.access_ends | date: friendlyDateFormat }}
-                        </td>
-                      </tr>
-                    }
-                    @default {
-                      <tr>
-                        <td colspan="2">
-                          <span class="warn"
-                            >Warning: Found multiple requests by this user for this
-                            dataset!</span
-                          >
-                        </td>
-                      </tr>
-
-                      @for (request of ar(); track request.id) {
-                        <tr>
-                          <th>Access Request:</th>
-                          <td>
-                            For the dataset
-                            <a
-                              class="text-quaternary hover:text-secondary focus:text-secondary"
-                              routerLink="/dataset/{{ request.dataset_id }}"
-                              data-umami-event="Granted Access Requests List Dataset Clicked"
-                              >{{ request.dataset_id }}</a
-                            ><br />
-                            from
-                            {{ request.access_starts | date: friendlyDateFormat }} to
-                            {{ request.access_ends | date: friendlyDateFormat }}.
-                          </td>
-                        </tr>
-                      }
-                    }
-                  }
-                </tbody>
-              </table>
-            </mat-card-content>
-          </mat-card>
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>IVA & Status</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <table class="w-full">
-                <tbody>
-                  <tr>
-                    <th>IVA ID:</th>
-                    <td>
-                      {{ ag.iva_id }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </mat-card-content>
-          </mat-card>
-        </div>
-        <div class="my-2 flex flex-col items-start gap-3">
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>Audit Log</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <table class="w-full">
-                <tbody>
-                  @if (ar().length === 1) {
-                    <tr>
-                      <th>{{ ar()[0].request_created | date: friendlyDateFormat }}</th>
-                      <td>Access Requested</td>
-                    </tr>
-                    @if (ar()[0].status_changed) {
-                      <tr>
-                        <th>{{ ar()[0].status_changed | date: friendlyDateFormat }}</th>
-                        <td>Access Granted</td>
-                      </tr>
-                    }
-                  }
-                  <tr>
-                    <th>{{ ag.created | date: friendlyDateFormat }}</th>
-                    <td>Grant created</td>
-                  </tr>
-                  @if (hasStarted()) {
-                    <tr>
-                      <th>{{ ag.valid_from | date: friendlyDateFormat }}</th>
-                      <td>Grant started</td>
-                    </tr>
-                  }
-                  @if (hasEnded()) {
-                    <tr>
-                      <th>{{ ag.valid_until | date: friendlyDateFormat }}</th>
-                      <td>Grant expired</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </mat-card-content>
-          </mat-card>
-        </div>
-      </div>
-    } @else {
-      <div class="container mx-auto p-6">
-        <p class="text-center text-red-600">
-          @if (!grant()) {
-            The selected access grant could not be found.
-          } @else {
-            An error occurred while loading the access grant details. Please try again
-            later.
-          }
-        </p>
-      </div>
-    }
+  <div class="justify-between md:flex">
+    <div class="grow">
+      <button
+        mat-icon-button
+        (click)="goBack()"
+        data-umami-event="Access Grant Manager Back Link Clicked"
+        aria-label="Go back to access grant list"
+        class="text-primary float-left mt-1 mr-4"
+      >
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <h1>Access Grant Detail</h1>
+    </div>
   </div>
+
+  @if (grant(); as ag) {
+    <div>
+      <p>
+        <strong>Status:</strong>&nbsp;
+        <span class="{{ ag?.status | AccessGrantStatusClassPipe }} capitalize w-24">{{
+          ag.status
+        }}</span>
+      </p>
+      <p>
+        <strong>Dataset:</strong>&nbsp;
+        <span class="w-24 capitalize"
+          ><a
+            routerLink="/dataset/{{ ag?.dataset_id }}"
+            data-umami-event="Access Grant Details Dataset Clicked"
+            >{{ ag?.dataset_id }}</a
+          ></span
+        >
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div class="my-2 flex flex-col items-start gap-4">
+        <mat-card class="w-full overflow-x-auto">
+          <mat-card-header>
+            <mat-card-title><h2>Requester</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-2xl md:min-w-xl">
+            <p>
+              <strong class="inline-block w-44">Email:</strong>
+              <a [href]="'mailto:' + ag.user_email" target="_blank" tabindex="-1"
+                >{{ ag.user_email }}<mat-icon aria-hidden="true">open_in_new</mat-icon>
+              </a>
+            </p>
+            <p>
+              <strong class="inline-block w-44">Name:</strong>
+              <a [routerLink]="'/user-manager/' + ag.user_id"
+                >{{ ag.user_title }} {{ ag.user_name }}</a
+              >
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="w-full overflow-x-auto">
+          <mat-card-header>
+            <mat-card-title><h2>DAC and Access Request</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-2xl md:min-w-xl">
+            <p>
+              <strong class="inline-block w-44">DAC:</strong>
+              <span>{{ ag.dac_alias }}</span>
+            </p>
+            <p>
+              <strong class="inline-block w-44">DAC Email:</strong>
+              <span
+                ><a [href]="'mailto:' + ag.dac_email" target="_blank" tabindex="-1"
+                  >{{ ag.dac_email }}<mat-icon aria-hidden="true">open_in_new</mat-icon>
+                </a></span
+              >
+            </p>
+
+            @switch (ar().length) {
+              @case (0) {
+                <p>
+                  <span
+                    ><span class="warn"
+                      >No Access Request was matched for this Grant!</span
+                    ></span
+                  >
+                </p>
+              }
+              @case (1) {
+                @let request = ar()[0];
+                <p class="flex">
+                  <strong class="inline-block min-w-44">Access Request:</strong>
+                  <span
+                    >for the dataset
+                    <a
+                      routerLink="/dataset/{{ request.dataset_id }}"
+                      data-umami-event="Access Grant Details Access Requests List Dataset Clicked"
+                      >{{ request.dataset_id }}</a
+                    ><br />
+                    from
+                    {{
+                      request.access_starts | date: friendlyDateFormat : periodTimeZone
+                    }}
+                    to
+                    {{
+                      request.access_ends | date: friendlyDateFormat : periodTimeZone
+                    }}</span
+                  >
+                </p>
+              }
+              @default {
+                <p>
+                  <span
+                    ><span class="warn"
+                      >Warning: Found multiple requests by this user for this
+                      dataset!</span
+                    ></span
+                  >
+                </p>
+
+                @for (request of ar(); track request.id) {
+                  <p class="flex">
+                    <strong class="inline-block w-44">Access Request:</strong>
+                    <span
+                      >For the dataset
+                      <a
+                        class="text-quaternary hover:text-secondary focus:text-secondary"
+                        routerLink="/dataset/{{ request.dataset_id }}"
+                        data-umami-event="Granted Access Requests List Dataset Clicked"
+                        >{{ request.dataset_id }}</a
+                      ><br />
+                      from
+                      {{
+                        request.access_starts
+                          | date: friendlyDateFormat : periodTimeZone
+                      }}
+                      to
+                      {{
+                        request.access_ends | date: friendlyDateFormat : periodTimeZone
+                      }}.</span
+                    >
+                  </p>
+                }
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+        <mat-card class="w-full overflow-x-auto">
+          <mat-card-header>
+            <mat-card-title><h2>IVA & Status</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-2xl md:min-w-xl">
+            <div class="mb-2 flex">
+              <strong class="inline-block min-w-44">IVA ID:</strong>
+              <span>{{ ag.iva_id }}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <div class="my-2 flex flex-col items-start gap-4">
+        <mat-card class="w-full overflow-x-auto">
+          <mat-card-header>
+            <mat-card-title><h2>Audit Log</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="divide-outline divide-y">
+            @if (ar().length === 1) {
+              <p class="mb-2 pb-2">
+                <strong class="inline-block w-44 xl:w-32">{{
+                  ar()[0].request_created | date
+                }}</strong>
+                <span>Access Requested</span>
+              </p>
+              @if (ar()[0].status_changed) {
+                <p class="mb-2 pb-2">
+                  <strong class="inline-block w-44 xl:w-32">{{
+                    ar()[0].status_changed | date
+                  }}</strong>
+                  <span>Access Granted</span>
+                </p>
+              }
+            }
+            <p class="mb-2 pb-2">
+              <strong class="inline-block w-44 xl:w-32">{{ ag.created | date }}</strong>
+              <span>Grant created</span>
+            </p>
+            @if (hasStarted()) {
+              <p class="mb-2 pb-2">
+                <strong class="inline-block w-44 xl:w-32">{{
+                  ag.valid_from | date
+                }}</strong>
+                <span>Grant started</span>
+              </p>
+            }
+            @if (hasEnded()) {
+              <p class="mb-2 pb-2">
+                <strong class="inline-block w-44 xl:w-32">{{
+                  ag.valid_until | date
+                }}</strong>
+                <span>Grant expired</span>
+              </p>
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  } @else {
+    <div class="container mx-auto p-6">
+      <p class="text-center text-red-600">
+        @if (!grant()) {
+          The selected access grant could not be found.
+        } @else {
+          An error occurred while loading the access grant details. Please try again
+          later.
+        }
+      </p>
+    </div>
+  }
 </div>

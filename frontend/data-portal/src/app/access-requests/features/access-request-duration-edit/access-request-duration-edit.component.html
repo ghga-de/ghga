@@ -1,11 +1,11 @@
 @if (!locked()) {
   @if (isOpen()) {
-    <tr>
-      <th class="w-48 min-w-48 pb-5 text-start">Access duration:</th>
-      <td class="min-w-60 pb-1">
+    <div class="mb-2 flex items-center">
+      <strong class="w-48 min-w-48 pb-1 text-start">Access duration:</strong>
+      <div class="min-w-60 grow">
         <div class="flex items-center">
-          <div class="flex gap-x-1.5">
-            <mat-form-field class="w-39.5" hideRequiredMarker>
+          <div class="flex grow gap-x-2">
+            <mat-form-field class="w-40" hideRequiredMarker>
               <mat-label>Start date</mat-label>
               <mat-datepicker-toggle
                 matIconSuffix
@@ -26,7 +26,7 @@
               }
               <mat-datepicker #datepickerFrom></mat-datepicker>
             </mat-form-field>
-            <mat-form-field class="w-39.5" hideRequiredMarker>
+            <mat-form-field class="w-40" hideRequiredMarker>
               <mat-label>End date</mat-label>
               <mat-datepicker-toggle
                 matIconSuffix
@@ -48,27 +48,26 @@
               <mat-datepicker #datepickerUntil></mat-datepicker>
             </mat-form-field>
           </div>
-          <span class="grow"></span>
           <mat-chip
-            class="smaller-chip interactive-chip cancel-edit-button mx-2"
+            class="smaller-chip interactive-chip cancel-edit-button mx-2 mb-1"
             (click)="cancel()"
             ><mat-icon>close</mat-icon></mat-chip
           >
           <mat-chip
-            class="smaller-chip interactive-chip save-edit-button"
+            class="smaller-chip interactive-chip save-edit-button mb-1"
             (click)="save()"
             [disabled]="saveDisabled()"
             ><mat-icon>check</mat-icon></mat-chip
           >
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
   } @else {
-    <tr>
-      <th class="w-48 min-w-48 pe-1 text-start align-middle">Access duration:</th>
-      <td class="flex min-w-60 items-center pb-1">
+    <p class="flex items-start">
+      <strong class="min-w-48 pe-1 text-start align-middle">Access duration:</strong>
+      <span class="flex min-w-60 grow items-center pb-1">
         <span class="grow">
-          {{ fromField() | date: periodFormat : periodTimeZone }} to
+          {{ fromField() | date: periodFormat : periodTimeZone }} until
           {{ untilField() | date: periodFormat : periodTimeZone }}
         </span>
         <mat-chip
@@ -76,7 +75,7 @@
           class="smaller-chip interactive-chip edit-button ms-2"
           ><mat-icon class="scale-[0.75]">edit</mat-icon>
         </mat-chip>
-      </td>
-    </tr>
+      </span>
+    </p>
   }
 }

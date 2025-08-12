@@ -8,6 +8,7 @@ import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   AfterViewInit,
   Component,
+  computed,
   effect,
   inject,
   QueryList,
@@ -15,15 +16,17 @@ import {
   ViewChildren,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { DatePipe } from '@app/shared/pipes/date.pipe';
+import { ConfigService } from '@app/shared/services/config.service';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
@@ -42,15 +45,20 @@ import {
     MatSortModule,
     MatPaginatorModule,
     MatButtonModule,
+    MatRippleModule,
     DatePipe,
     AccessRequestStatusClassPipe,
     MatIconModule,
+    RouterLink,
   ],
   providers: [CommonDatePipe],
   templateUrl: './access-request-manager-list.component.html',
   styleUrl: './access-request-manager-list.component.scss',
 })
 export class AccessRequestManagerListComponent implements AfterViewInit {
+  #config = inject(ConfigService);
+  #baseTicketUrl = this.#config.helpdeskTicketUrl;
+
   #router = inject(Router);
   #ars = inject(AccessRequestService);
 
@@ -66,6 +74,16 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
 
   periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
   periodTimeZone = DEFAULT_TIME_ZONE;
+
+  ticketUrl = computed<Map<string, string | null>>(
+    () =>
+      new Map(
+        this.accessRequests().map((ar) => [
+          ar.id,
+          ar.ticket_id ? this.#baseTicketUrl + ar.ticket_id : null,
+        ]),
+      ),
+  );
 
   #updateSourceEffect = effect(() => (this.source.data = this.accessRequests()));
 
@@ -128,9 +146,11 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
 
   /**
    * Navigate to access request details page
+   * @param event - the PointerEvent object to check if there is an anchor inside
    * @param ar - the selected access request
    */
-  viewDetails(ar: AccessRequest): void {
+  viewDetails(event: MouseEvent, ar: AccessRequest): void {
+    if ((event.target as HTMLElement | null)?.closest('a')) return;
     this.#router.navigate(['/access-request-manager', ar.id]);
   }
 }

@@ -13,18 +13,23 @@
   </button>
 </div>
 <aside [class.hidden]="!displayFilters" class="mt-4 lg:block">
-  <mat-card appearance="outlined" class="w-full overflow-x-auto lg:w-auto lg:max-w-lg">
+  <mat-card
+    appearance="outlined"
+    class="w-full overflow-x-auto lg:w-auto lg:max-w-[1800px]"
+  >
     <mat-card-content class="min-w-sm">
       <div class="flex gap-4">
         <div class="hidden sm:block">
           <mat-icon aria-label="Filter" class="large-icon">filter_alt</mat-icon>
         </div>
-        <div class="flex grow flex-col gap-2">
-          <div class="flex items-baseline gap-2">
+        <div
+          class="grid flex-grow grid-cols-1 gap-2 gap-x-8 lg:grid-cols-2 2xl:grid-cols-4"
+        >
+          <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Name or email of user</mat-label>
               <input matInput [(ngModel)]="name" />
-              <mat-hint>You can also filter with partial names or emails</mat-hint>
+              <mat-hint>You can also use partial names or emails</mat-hint>
             </mat-form-field>
             <button
               mat-icon-button
@@ -36,7 +41,7 @@
               <mat-icon>cancel</mat-icon>
             </button>
           </div>
-          <div class="flex items-baseline gap-2">
+          <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Last modified from</mat-label>
               <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
@@ -57,7 +62,7 @@
               <mat-icon>cancel</mat-icon>
             </button>
           </div>
-          <div class="flex items-baseline gap-2">
+          <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Last modified until</mat-label>
               <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
@@ -78,7 +83,7 @@
               <mat-icon>cancel</mat-icon>
             </button>
           </div>
-          <div class="flex items-baseline gap-2">
+          <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>
                 @if (state()) {

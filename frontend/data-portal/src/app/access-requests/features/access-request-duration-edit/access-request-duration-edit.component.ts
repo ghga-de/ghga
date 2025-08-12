@@ -63,8 +63,8 @@ export class AccessRequestDurationEditComponent implements OnInit {
   maxExtend = this.#config.accessGrantMaxExtend;
   defaultDuration = this.#config.defaultAccessDurationDays;
 
-  periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
-  periodTimeZone = DEFAULT_TIME_ZONE;
+  readonly periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
+  readonly periodTimeZone = DEFAULT_TIME_ZONE;
 
   request = input.required<AccessRequest>();
 

@@ -1,7 +1,7 @@
 @if (usersAreLoading()) {
   <p class="text-base">Loading users...</p>
 } @else {
-  @let columns = ['email', 'name', 'roles', 'status', 'registration_date', 'details'];
+  @let columns = ['name', 'email', 'roles', 'status', 'registration_date', 'details'];
   <div class="overflow-auto">
     <table
       mat-table
@@ -10,21 +10,21 @@
       matSort
       #sort="matSort"
     >
-      <ng-container matColumnDef="email">
-        <th mat-header-cell *matHeaderCellDef class="min-w-48" mat-sort-header>
-          Email
-        </th>
-        <td mat-cell *matCellDef="let user">
-          {{ user.email }}
-        </td>
-      </ng-container>
-
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef class="min-w-48" mat-sort-header>
           User Name
         </th>
         <td mat-cell *matCellDef="let user">
           {{ user.displayName }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef class="min-w-48" mat-sort-header>
+          Email
+        </th>
+        <td mat-cell *matCellDef="let user">
+          {{ user.email }}
         </td>
       </ng-container>
 
@@ -86,7 +86,7 @@
       <tr
         mat-row
         *matRowDef="let row; columns: columns"
-        class="duration-200 hover:cursor-pointer hover:bg-black/[0.05] hover:transition"
+        class="hover:cursor-pointer"
         (click)="viewDetails(row)"
       ></tr>
 

@@ -22,7 +22,10 @@ import { DisplayUser, UserService } from '@app/auth/services/user.service';
 import { DatePipe } from '@app/shared/pipes/date.pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
+import {
+  DEFAULT_TIME_ZONE,
+  FRIENDLY_DATE_FORMAT,
+} from '@app/shared/utils/date-formats';
 import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
 import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type.pipe';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
@@ -56,6 +59,7 @@ import { DeletionConfirmationDialogComponent } from '../deletion-confirmation-di
 })
 export class UserManagerDetailComponent implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+  readonly periodTimeZone = DEFAULT_TIME_ZONE;
 
   showTransition = false;
 

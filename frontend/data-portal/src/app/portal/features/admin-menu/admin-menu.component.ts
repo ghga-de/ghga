@@ -38,6 +38,8 @@ export class AdminMenuComponent {
     () =>
       this.isUserManagerRoute() ||
       this.isIvaManagerRoute() ||
+      this.isAccessRequestsManagerRoute() ||
+      this.isAccessGrantManagerRoute() ||
       this.isAccessRequestsManagerRoute(),
   );
 }

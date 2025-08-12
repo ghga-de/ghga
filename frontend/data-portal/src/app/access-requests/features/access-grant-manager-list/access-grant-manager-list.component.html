@@ -12,14 +12,18 @@
         Dataset ID
       </th>
       <td mat-cell *matCellDef="let ag">
-        {{ ag.dataset_id }}
+        <a [routerLink]="'/dataset/' + ag.dataset_id">{{ ag.dataset_id }}</a>
       </td>
     </ng-container>
     <ng-container matColumnDef="user">
       <th mat-header-cell *matHeaderCellDef class="min-w-32" mat-sort-header>
         Grantee
       </th>
-      <td mat-cell *matCellDef="let ag">{{ ag.user_name }} ({{ ag.user_email }})</td>
+      <td mat-cell *matCellDef="let ag">
+        <a [routerLink]="'/user-manager/' + ag.user_id"
+          >{{ ag.user_name }} ({{ ag.user_email }})</a
+        >
+      </td>
     </ng-container>
     <ng-container matColumnDef="status">
       <th mat-header-cell *matHeaderCellDef class="min-w-32 capitalize" mat-sort-header>
@@ -47,7 +51,7 @@
       <td mat-cell *matCellDef="let ag">
         <button
           mat-icon-button
-          (click)="viewDetails(ag); $event.stopPropagation()"
+          (click)="viewDetails($event, ag); $event.stopPropagation()"
           aria-label="View user details"
           class="text-primary"
         >
@@ -60,8 +64,8 @@
     <tr
       mat-row
       *matRowDef="let row; columns: columns"
-      class="duration-200 hover:cursor-pointer hover:bg-black/[0.05] hover:transition"
-      (click)="viewDetails(row)"
+      class="hover:cursor-pointer"
+      (click)="viewDetails($event, row)"
     ></tr>
 
     <tr class="mat-row" *matNoDataRow>

@@ -16,6 +16,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { ActivatedRoute } from '@angular/router';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { ConfigService } from '@app/shared/services/config.service';
@@ -54,6 +55,7 @@ describe('AccessRequestManagerDetailComponent', () => {
         { provide: IvaService, useClass: MockIvaService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ConfigService, useClass: MockConfigService },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } },
         provideHttpClient(),
         provideHttpClientTesting(),
         provideNoopAnimations(),
@@ -81,31 +83,32 @@ describe('AccessRequestManagerDetailComponent', () => {
 
   it('should show the proper heading', () => {
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent('Access Request Detail');
+    expect(heading).toHaveTextContent('Access Request Details');
   });
 
-  it('should show the dataset ID in a table row', () => {
-    const row = screen.getByRole('row', { name: 'Dataset ID: GHGAD12345678901235' });
-    expect(row).toBeVisible();
+  it('should show the dataset ID in a link', () => {
+    const a = screen.getByRole('link', { name: 'GHGAD12345678901235' });
+    expect(a).toBeVisible();
   });
 
-  it('should show the requester with email in a table row', () => {
-    const row = screen.getByRole('row', {
-      name: 'Requester: Dr. John Doe - doe@home.org',
-    });
-    expect(row).toBeVisible();
+  it('should show the requester with email in two links', () => {
+    const a = screen.getByRole('link', { name: 'Dr. John Doe' });
+    expect(a).toBeVisible();
+    const email = screen.getByRole('link', { name: 'doe@home.org' });
+    expect(email).toBeVisible();
   });
 
-  it('should load the LD ID and show it in a table row', () => {
-    let row = screen.getByRole('row', { name: 'LS ID: ls-id-of-joe​@ls-aai.dev' });
-    expect(row).toBeVisible();
+  it('should load the LD ID and show it in a code', () => {
+    let code = screen.getByText('ls-id-of-joe​@ls-aai.dev', { selector: 'code' });
+    expect(code).toBeVisible();
   });
 
-  it('should show the request details in a table row', () => {
-    const row = screen.getByRole('row', {
-      name: 'Request details: This is a test request for dataset GHGAD12345678901236.',
-    });
-    expect(row).toBeVisible();
+  it('should show the request details in a paragraph', () => {
+    const p = screen.getByText(
+      'This is a test request for dataset GHGAD12345678901236.',
+      { selector: 'p' },
+    );
+    expect(p).toBeVisible();
   });
 
   it('should show the first IVA as a radio button and preselected', () => {

@@ -18,3 +18,12 @@ mat-chip {
     )
   );
 }
+
+tr.cdk-row:hover,
+tr.cdk-row:active {
+  background-color: color-mix(in srgb, #fff 0%, #000 8%);
+}
+
+tr.cdk-row:focus {
+  background-color: color-mix(in srgb, #fff 0%, #000 12%);
+}

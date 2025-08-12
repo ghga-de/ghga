@@ -15,11 +15,12 @@ import {
   ViewChildren,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AccessGrant } from '@app/access-requests/models/access-requests';
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
@@ -43,9 +44,11 @@ import {
     MatPaginatorModule,
     MatButtonModule,
     MatIconModule,
+    MatRippleModule,
     DatePipe,
     AccessGrantStatusClassPipe,
     MatIconModule,
+    RouterLink,
   ],
   providers: [CommonDatePipe],
   templateUrl: './access-grant-manager-list.component.html',
@@ -121,9 +124,11 @@ export class AccessGrantManagerListComponent implements AfterViewInit {
 
   /**
    * Navigate to access grant details page
+   * @param event - the PointerEvent object to check if there is an anchor inside
    * @param ag - the selected access grant
    */
-  viewDetails(ag: AccessGrant): void {
+  viewDetails(event: MouseEvent, ag: AccessGrant): void {
+    if ((event.target as HTMLElement | null)?.closest('a')) return;
     this.#router.navigate(['/access-grant-manager', ag.id]);
   }
 }

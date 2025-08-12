@@ -25,7 +25,7 @@ import { ConfigService } from '@app/shared/services/config.service';
 
 // we assume that ticket IDs are integers with up to 9 digits
 const PATTERN_TICKET_ID = '^[0-9]{0,9}$';
-const ERROR_TICKET_ID = 'must be a number with up to 9 digits';
+const ERROR_TICKET_ID = 'ID must be a number with up to 9 digits';
 
 /**
  * Editor for one of the fields of AccessRequest.
