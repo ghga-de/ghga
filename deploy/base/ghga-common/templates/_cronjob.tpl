@@ -44,6 +44,7 @@ spec:
             {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 12 }}
             {{- end }}
         spec:
+          securityContext: {{- include "common.tplvalues.render" (dict "value" .Values.podSecurityContext "context" $) | nindent 12 }}
           restartPolicy: "OnFailure"
           serviceAccountName: {{ include "common.names.fullname" . }}
           shareProcessNamespace: {{ .Values.shareProcessNamespace }}

@@ -49,6 +49,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
+      securityContext: {{- include "common.tplvalues.render" (dict "value" .Values.podSecurityContext "context" $) | nindent 8 }}
       serviceAccountName: {{ include "common.names.fullname" . }}
       {{/* allows Vault Agent to send (term) signals to the application process (namespace) */}}
       shareProcessNamespace: {{ ternary true .Values.shareProcessNamespace .Values.vaultAgent.enabled }}

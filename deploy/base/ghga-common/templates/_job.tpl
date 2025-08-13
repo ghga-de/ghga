@@ -37,6 +37,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
         {{- end }}
     spec:
+      securityContext: {{- include "common.tplvalues.render" (dict "value" .Values.podSecurityContext "context" $) | nindent 8 }}
       shareProcessNamespace: {{ .Values.shareProcessNamespace }}
       restartPolicy: {{ .Values.job.restartPolicy | default "Never" }}
       {{- if .Values.backoffLimit }}
