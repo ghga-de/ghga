@@ -21,6 +21,7 @@ from collections.abc import Callable
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
+from pydantic import UUID4
 
 from auth_service.user_registry.deps import IvaDao, UserDao
 from auth_service.user_registry.models.ivas import IvaState
@@ -40,7 +41,7 @@ __all__ = [
 ]
 
 
-async def user_exists(user_id: str, *, user_dao: UserDao) -> bool:
+async def user_exists(user_id: UUID4, *, user_dao: UserDao) -> bool:
     """Check whether the user with the given ID exists."""
     if not user_id:
         return False
@@ -51,7 +52,7 @@ async def user_exists(user_id: str, *, user_dao: UserDao) -> bool:
     return True
 
 
-async def user_is_active(user_id: str, *, user_dao: UserDao) -> bool:
+async def user_is_active(user_id: UUID4, *, user_dao: UserDao) -> bool:
     """Check whether the user with the given ID exists and is active."""
     if not user_id:
         return False
@@ -63,7 +64,7 @@ async def user_is_active(user_id: str, *, user_dao: UserDao) -> bool:
 
 
 async def user_with_iva_exists(
-    user_id: str, iva_id: str, *, user_dao: UserDao, iva_dao: IvaDao
+    user_id: UUID4, iva_id: UUID4, *, user_dao: UserDao, iva_dao: IvaDao
 ) -> bool:
     """Check whether the specified user exists and has the specified IVA.
 
@@ -79,7 +80,9 @@ async def user_with_iva_exists(
     return iva.user_id == user_id
 
 
-async def iva_is_verified(user_id: str, iva_id: str | None, *, iva_dao: IvaDao) -> bool:
+async def iva_is_verified(
+    user_id: UUID4, iva_id: UUID4 | None, *, iva_dao: IvaDao
+) -> bool:
     """Check that the specified IVA exists, belongs to the given user and is verified."""
     if not user_id or not iva_id:
         return False
@@ -91,7 +94,7 @@ async def iva_is_verified(user_id: str, iva_id: str | None, *, iva_dao: IvaDao) 
 
 
 async def get_active_roles(
-    user_id: str,
+    user_id: UUID4,
     *,
     claim_dao: ClaimDao,
     iva_dao: IvaDao | None = None,
@@ -130,8 +133,8 @@ async def with_added_roles(
     now: Callable[[], UTCDatetime] = now_as_utc,
 ) -> list[UserWithRoles]:
     """Return the given list of users with their roles added."""
-    user_ids: list[str] = [user.id for user in users]
-    roles: dict[str, set] = defaultdict(set)
+    user_ids: list[UUID4] = [user.id for user in users]
+    roles: dict[UUID4, set] = defaultdict(set)
     # Note: Here we rely on "$in" being supported by the DAO.
     async for claim in claim_dao.find_all(
         mapping={"user_id": {"$in": user_ids}, "visa_type": VisaType.GHGA_ROLE}

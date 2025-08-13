@@ -22,7 +22,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi import HTTPException, status
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.utils import now_utc_ms_prec
 from pydantic import SecretStr
 
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
@@ -33,6 +33,7 @@ from auth_service.auth_adapter.ports.dao import UserToken, UserTokenDao
 from auth_service.config import Config
 from auth_service.user_registry.models.ivas import IvaState
 from auth_service.user_registry.models.users import UserStatus
+from tests.fixtures.constants import ID_OF_JOHN
 
 from ...fixtures.utils import (
     DummyUserDao,
@@ -44,7 +45,7 @@ SESSION_ARGS = {
     "ext_id": "john@aai.org",
     "user_name": "John Doe",
     "user_email": "john@home.org",
-    "user_id": "john@ghga.de",
+    "user_id": str(ID_OF_JOHN),
 }
 
 config = Config(
@@ -153,7 +154,7 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         assert status_change.by == user_id
         assert status_change.context == "Too many failed TOTP login attempts"
         assert status_change.change_date
-        assert 0 <= (now_as_utc() - status_change.change_date).total_seconds() < 3
+        assert 0 <= (now_utc_ms_prec() - status_change.change_date).total_seconds() < 3
         assert totp_token
         assert not totp_handler.is_invalid(totp_token)
     else:

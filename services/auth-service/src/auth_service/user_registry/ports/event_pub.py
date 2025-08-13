@@ -17,6 +17,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 from ..models.ivas import Iva
 
 
@@ -24,7 +26,7 @@ class EventPublisherPort(ABC):
     """An interface for an adapter that publishes events happening to this service."""
 
     @abstractmethod
-    async def publish_2fa_recreated(self, *, user_id: str) -> None:
+    async def publish_2fa_recreated(self, *, user_id: UUID4) -> None:
         """Publish an event relaying that the 2nd factor of a user was recreated."""
 
     @abstractmethod
@@ -32,5 +34,5 @@ class EventPublisherPort(ABC):
         """Publish an event relaying that the state of a user IVA has been changed."""
 
     @abstractmethod
-    async def publish_ivas_reset(self, *, user_id: str) -> None:
+    async def publish_ivas_reset(self, *, user_id: UUID4) -> None:
         """Publish an event relaying that all IVAs of the user have been reset."""

@@ -36,7 +36,7 @@ class DatasetDeletionHandler(DatasetDeletionPort):
         """Delete all access rights for datasets with the given id."""
         claims_filter = create_controlled_access_filter(dataset_id=dataset_id)
         count_deleted = 0
-        async for dataset in self.claim_dao.find_all(mapping=claims_filter):
-            await self.claim_dao.delete(dataset.id)
+        async for claim in self.claim_dao.find_all(mapping=claims_filter):
+            await self.claim_dao.delete(claim.id)
             count_deleted += 1
         log.info("Deleted %d claims for dataset %s", count_deleted, dataset_id)

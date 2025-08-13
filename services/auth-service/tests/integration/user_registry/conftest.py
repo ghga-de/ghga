@@ -19,6 +19,8 @@ from typing import Any
 
 import pytest
 
+from tests.fixtures.constants import ID_OF_MAX, ID_OF_STEVE
+
 from ...fixtures import auth_keys
 from ...fixtures.utils import get_headers_for
 
@@ -41,7 +43,7 @@ def new_user_headers() -> dict[str, str]:
 def user_headers() -> dict[str, str]:
     """Get headers with authorization for an existing (registered) user."""
     return get_headers_for(
-        id="max-internal", name="Max Headroom", email="max@example.org"
+        id=str(ID_OF_MAX), name="Max Headroom", email="max@example.org"
     )
 
 
@@ -49,7 +51,7 @@ def user_headers() -> dict[str, str]:
 def steward_headers() -> dict[str, Any]:
     """Get headers with authorization for a user with data steward role."""
     return get_headers_for(
-        id="steve-internal",
+        id=str(ID_OF_STEVE),
         name="Steve Steward",
         email="steve@archive.org",
         roles=["data_steward"],

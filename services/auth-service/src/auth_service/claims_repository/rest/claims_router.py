@@ -22,9 +22,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Response, status
 from fastapi.exceptions import HTTPException
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.utils import now_utc_ms_prec
+from pydantic import UUID4
 
 from auth_service.user_registry.deps import UserDaoDependency
 
@@ -68,7 +69,7 @@ TAGS: list[str | Enum] = ["claims"]
 async def post_claim(
     claim_creation: ClaimCreation,
     user_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="user_id",
@@ -82,7 +83,7 @@ async def post_claim(
     if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
-    current_date = now_as_utc()
+    current_date = now_utc_ms_prec()
     full_claim = Claim(
         **claim_creation.model_dump(),
         user_id=user_id,
@@ -117,7 +118,7 @@ async def post_claim(
 )
 async def get_claims(
     user_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="user_id",
@@ -151,7 +152,7 @@ async def get_claims(
 async def patch_claim(
     claim_update: ClaimUpdate,
     user_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="user_id",
@@ -159,7 +160,7 @@ async def patch_claim(
         ),
     ],
     claim_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="claim_id",
@@ -210,7 +211,7 @@ async def patch_claim(
 )
 async def delete_claim(
     user_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="user_id",
@@ -218,7 +219,7 @@ async def delete_claim(
         ),
     ],
     claim_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="claim_id",

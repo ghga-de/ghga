@@ -24,6 +24,7 @@ from ghga_event_schemas.configs import (
 from hexkit.custom_types import JsonObject
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventpub import EventPublisherProtocol
+from pydantic import UUID4
 
 from ..models.ivas import Iva
 from ..ports.event_pub import EventPublisherPort
@@ -52,7 +53,7 @@ class EventPubTranslator(EventPublisherPort):
         self._event_publisher = event_publisher
 
     @start_span()
-    async def publish_2fa_recreated(self, *, user_id: str) -> None:
+    async def publish_2fa_recreated(self, *, user_id: UUID4) -> None:
         """Publish an event relaying that the 2nd factor of a user was recreated."""
         payload = event_schemas.UserID(
             user_id=user_id,
@@ -60,7 +61,7 @@ class EventPubTranslator(EventPublisherPort):
         await self._event_publisher.publish(
             payload=payload,
             type_=self._config.second_factor_recreated_type,
-            key=user_id,
+            key=str(user_id),
             topic=self._config.auth_topic,
         )
 
@@ -81,7 +82,7 @@ class EventPubTranslator(EventPublisherPort):
         )
 
     @start_span()
-    async def publish_ivas_reset(self, *, user_id: str) -> None:
+    async def publish_ivas_reset(self, *, user_id: UUID4) -> None:
         """Publish an event relaying that all IVAs of the user have been reset."""
         payload = event_schemas.UserIvaState(
             user_id=user_id,

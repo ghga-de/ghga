@@ -33,6 +33,7 @@ from auth_service.user_registry.models.users import (
     User,
     UserStatus,
 )
+from tests.fixtures.constants import EXT_ID_OF_JOHN, SOME_USER_ID
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
@@ -89,7 +90,7 @@ async def test_create_session():
     csrf_tokens = []
     for _ in range(100):
         session = create_session(
-            ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
+            ext_id=EXT_ID_OF_JOHN, user_name="John Doe", user_email="john@home.org"
         )
         assert isinstance(session, Session)
         session_id = session.session_id
@@ -103,7 +104,7 @@ async def test_create_session():
         assert csrf_token.replace("-", "").replace("_", "").isalnum()
         session_ids.append(session_id)
         csrf_tokens.append(csrf_token)
-        assert session.ext_id == "john@aai.org"
+        assert session.ext_id == EXT_ID_OF_JOHN
         assert session.user_name == "John Doe"
         assert session.user_email == "john@home.org"
         assert session.user_id is None
@@ -128,7 +129,7 @@ async def test_validate_session():
     validate = store._validate_session
     create_session = store._create_session
     session = create_session(
-        ext_id="john@aai.lorg", user_name="John Doe", user_email="john@home.org"
+        ext_id=EXT_ID_OF_JOHN, user_name="John Doe", user_email="john@home.org"
     )
 
     now = store._now()
@@ -165,7 +166,7 @@ async def test_update_session_last_used_without_user(original_state: SessionStat
     session = Session(
         session_id="test",
         state=original_state,
-        ext_id="john@aai.org",
+        ext_id=EXT_ID_OF_JOHN,
         user_name="John Doe",
         user_email="john@home.org",
         csrf_token="some-csrf-token",
@@ -188,7 +189,7 @@ async def test_update_session_with_user_to_needs_re_registration(changed_field: 
     before = now - timedelta(seconds=10)
     session = Session(
         session_id="test",
-        ext_id="john@aai.org",
+        ext_id=EXT_ID_OF_JOHN,
         user_name="John Doe",
         user_email="john@home.org",
         csrf_token="some-csrf-token",
@@ -198,8 +199,8 @@ async def test_update_session_with_user_to_needs_re_registration(changed_field: 
     assert session.user_id is None
     assert session.state is SessionState.NEEDS_REGISTRATION
     user = User(
-        id="some-user-id",
-        ext_id="john@aai.org",
+        id=SOME_USER_ID,
+        ext_id=EXT_ID_OF_JOHN,
         name="John Doe",
         email="john@home.org",
         status=UserStatus.ACTIVE,
@@ -211,7 +212,7 @@ async def test_update_session_with_user_to_needs_re_registration(changed_field: 
     assert store.saved_session is session
     assert session.created == before
     assert session.last_used == now
-    assert session.user_id == "some-user-id"
+    assert session.user_id == SOME_USER_ID
     assert session.state is SessionState.NEEDS_RE_REGISTRATION
 
 
@@ -235,7 +236,7 @@ async def test_update_session_with_user_to_registered(original_state: SessionSta
         ext_id="some-ext-id@home.org",
         user_id=None
         if original_state is SessionState.NEEDS_REGISTRATION
-        else "some-user-id",
+        else SOME_USER_ID,
         user_name="John Doe",
         user_email="john@home.org",
         csrf_token="some-csrf-token",
@@ -243,7 +244,7 @@ async def test_update_session_with_user_to_registered(original_state: SessionSta
         last_used=before,
     )
     user = User(
-        id="some-user-id",
+        id=SOME_USER_ID,
         ext_id="some-ext-id@home.org",
         name="John Doe",
         email="john@home.org",
@@ -254,7 +255,7 @@ async def test_update_session_with_user_to_registered(original_state: SessionSta
     assert store.saved_session is session
     assert session.created == before
     assert session.last_used == now
-    assert session.user_id == "some-user-id"
+    assert session.user_id == SOME_USER_ID
     assert session.user_name == "John Doe"
     assert session.user_title is None
     assert session.roles == []
@@ -283,7 +284,7 @@ async def test_update_session_with_data_steward_to_registered(
         ext_id="some-ext-id@home.org",
         user_id=None
         if original_state is SessionState.NEEDS_REGISTRATION
-        else "some-user-id",
+        else SOME_USER_ID,
         user_name="John Doe",
         user_email="john@home.org",
         csrf_token="some-csrf-token",
@@ -291,7 +292,7 @@ async def test_update_session_with_data_steward_to_registered(
         last_used=before,
     )
     user = User(
-        id="some-user-id",
+        id=SOME_USER_ID,
         ext_id="some-ext-id@home.org",
         name="John Doe",
         title=AcademicTitle.DR,
@@ -307,7 +308,7 @@ async def test_update_session_with_data_steward_to_registered(
     assert store.saved_session is session
     assert session.created == before
     assert session.last_used == now
-    assert session.user_id == "some-user-id"
+    assert session.user_id == SOME_USER_ID
     assert session.user_name == "John Doe"
     if original_state is not SessionState.REGISTERED:
         assert session.user_title == "Dr."
@@ -336,7 +337,7 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
         ext_id="some-ext-id@home.org",
         user_id=None
         if original_state is SessionState.NEEDS_REGISTRATION
-        else "some-user-id",
+        else SOME_USER_ID,
         user_name="John Doe",
         user_email="john@home.org",
         csrf_token="some-csrf-token",
@@ -344,7 +345,7 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
         last_used=before,
     )
     user = User(
-        id="some-user-id",
+        id=SOME_USER_ID,
         ext_id="some-ext-id@home.org",
         name="John Doe",
         email="john@home.org",
@@ -359,7 +360,7 @@ async def test_update_session_with_user_to_has_totp_token(original_state: Sessio
     assert store.saved_session is session
     assert session.created == before
     assert session.last_used == now
-    assert session.user_id == "some-user-id"
+    assert session.user_id == SOME_USER_ID
     assert session.state is SessionState.HAS_TOTP_TOKEN
 
 
@@ -370,7 +371,7 @@ async def test_timeouts():
     now = store._now()
     session = Session(
         session_id="test",
-        ext_id="john@aai.org",
+        ext_id=EXT_ID_OF_JOHN,
         user_name="John Doe",
         user_email="john@home.org",
         csrf_token="some-csrf-token",

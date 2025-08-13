@@ -19,7 +19,7 @@ from enum import StrEnum
 from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import EmailStr, Field
+from pydantic import UUID4, EmailStr, Field
 
 from . import BaseDto
 
@@ -46,7 +46,7 @@ class StatusChange(BaseDto):
     previous: UserStatus | None = Field(
         default=None, description="Previous user status"
     )
-    by: str | None = Field(
+    by: UUID4 | None = Field(
         default=None,
         title="Changed by",
         description="ID of the user who changed the status",
@@ -129,9 +129,7 @@ class UserData(UserRegisteredData, UserAutomaticData):
 class User(UserData):
     """Complete user model with ID"""
 
-    id: str = Field(
-        default_factory=lambda: str(uuid4()), description="Internal user ID"
-    )
+    id: UUID4 = Field(default_factory=lambda: uuid4(), description="Internal user ID")
 
 
 class UserWithRoles(User):

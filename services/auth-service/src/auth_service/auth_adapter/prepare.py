@@ -54,9 +54,8 @@ async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
     session_store = MemorySessionStore(config=config)
     totp_handler = TOTPHandler(config=config)
 
-    dao_factory = MongoDbDaoFactory(config=config)
-
     async with (
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
         KafkaEventPublisher.construct(config=config) as event_publisher,
         MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
     ):

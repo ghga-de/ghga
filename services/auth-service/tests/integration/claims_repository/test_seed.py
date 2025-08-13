@@ -17,37 +17,27 @@
 """Test seeding the database with data stewards."""
 
 import logging
-from datetime import datetime
 from typing import Any
 
 import pytest
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.utils import now_utc_ms_prec
 
-from auth_service.claims_repository.core.seed import (
-    seed_data_steward_claims,
-)
-from auth_service.claims_repository.models.config import (
-    IvaType,
-    UserWithIVA,
-)
-from auth_service.claims_repository.translators.dao import (
-    ClaimDaoFactory,
-)
+from auth_service.claims_repository.core.seed import seed_data_steward_claims
+from auth_service.claims_repository.models.config import IvaType, UserWithIVA
+from auth_service.claims_repository.translators.dao import ClaimDaoFactory
 from auth_service.config import Config
-from auth_service.user_registry.translators.dao import (
-    UserDaoPublisherFactory,
-)
+from auth_service.user_registry.translators.dao import UserDaoPublisherFactory
 
 
 async def fut(config: Config):
     """Run seed_data_steward_claims (the function under test here)."""
     # prepare the infrastructure
-    dao_factory = MongoDbDaoFactory(config=config)
     async with (
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
         MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
     ):
         # create DAOs
@@ -85,6 +75,8 @@ async def test_add_data_steward(
                 iva_value="Some address",
             )
         ],
+        migration_wait_sec=2,
+        db_version_collection="authDbVersions",
     )
 
     # add non-existing data steward
@@ -130,7 +122,7 @@ async def test_add_data_steward(
     assert iva["verification_attempts"] == 0
     assert iva["verification_code_hash"] is None
     creation_date = iva["created"]
-    time_diff = now_as_utc() - datetime.fromisoformat(creation_date)
+    time_diff = now_utc_ms_prec() - creation_date
     assert -1 < time_diff.total_seconds() < 5
     assert iva["changed"] == iva["created"]
 
@@ -147,14 +139,11 @@ async def test_add_data_steward(
     assert claim["sub_source"] is None
     assert claim["conditions"] is None
     creation_date = claim["creation_date"]
-    time_diff = now_as_utc() - datetime.fromisoformat(creation_date)
+    time_diff = now_utc_ms_prec() - creation_date
     assert -1 < time_diff.total_seconds() < 5
     assert claim["assertion_date"] == creation_date
     assert claim["valid_from"] == creation_date
-    assert (
-        datetime.fromisoformat(claim["valid_until"])
-        - datetime.fromisoformat(claim["valid_from"])
-    ).days == 365
+    assert (claim["valid_until"] - claim["valid_from"]).days == 365
     assert claim["revocation_date"] is None
     assert claim["iva_id"] == iva["_id"]
 
@@ -188,9 +177,7 @@ async def test_add_data_steward(
         "valid_from",
         "valid_until",
     ]:
-        time_diff = datetime.fromisoformat(
-            new_claim.pop(date_field)
-        ) - datetime.fromisoformat(claim.pop(date_field))
+        time_diff = new_claim.pop(date_field) - claim.pop(date_field)
         assert -1 < time_diff.total_seconds() < 5
     assert new_claim == claim
 

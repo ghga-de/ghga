@@ -20,13 +20,15 @@ from __future__ import annotations
 import logging
 from contextlib import suppress
 from typing import Any
+from uuid import UUID
 
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import (
     Dao,
     NoHitsFoundError,
     ResourceNotFoundError,
 )
+from hexkit.utils import now_utc_ms_prec
+from pydantic import UUID4
 
 from ...claims_repository.core.utils import get_active_roles, with_added_roles
 from ...claims_repository.ports.dao import ClaimDto
@@ -79,14 +81,17 @@ class UserRegistry(UserRegistryPort):
     @staticmethod
     def is_internal_user_id(id_: str) -> bool:
         """Check if the passed ID is an internal user id."""
-        if not id_ or not isinstance(id_, str):
+        try:
+            converted_id = UUID(id_)
+        except Exception:
             return False
-        return len(id_) == 36 and id_.count("-") == 4 and "@" not in id_
+        # We only generate UUID4s for user IDs -- e.g. UUID1 would not be from us
+        return converted_id.version == 4
 
     @staticmethod
     def is_external_user_id(id_: str) -> bool:
         """Check if the passed ID is an external user id."""
-        if not id_ or not isinstance(id_, str):
+        if not (id_ and isinstance(id_, str)):
             return False
         return len(id_) > 8 and id_.count("@") == 1
 
@@ -113,7 +118,7 @@ class UserRegistry(UserRegistryPort):
         user = User(
             **user_data.model_dump(),
             status=INITIAL_USER_STATUS,
-            registration_date=now_as_utc(),
+            registration_date=now_utc_ms_prec(),
         )
         try:
             await self._user_dao.insert(user)
@@ -122,14 +127,12 @@ class UserRegistry(UserRegistryPort):
             raise self.UserCreationError(ext_id=ext_id) from error
         return UserWithRoles(**user.model_dump(), roles=[])
 
-    async def get_user(self, user_id: str) -> User:
+    async def get_user(self, user_id: UUID4) -> User:
         """Get user data.
 
         May raise a UserDoesNotExistError or a UserRetrievalError.
         """
         try:
-            if not self.is_internal_user_id(user_id):
-                raise ResourceNotFoundError(id_=user_id)
             user = await self._user_dao.get_by_id(user_id)
         except ResourceNotFoundError as error:
             raise self.UserDoesNotExistError(user_id=user_id) from error
@@ -138,7 +141,7 @@ class UserRegistry(UserRegistryPort):
             raise self.UserRetrievalError(user_id=user_id) from error
         return user
 
-    async def get_user_with_roles(self, user_id: str) -> UserWithRoles:
+    async def get_user_with_roles(self, user_id: UUID4) -> UserWithRoles:
         """Get user data including all roles.
 
         The roles are returned even if the user is inactive or has no IVAs.
@@ -191,10 +194,10 @@ class UserRegistry(UserRegistryPort):
 
     async def update_user(
         self,
-        user_id: str,
+        user_id: UUID4,
         user_data: UserBasicData | UserModifiableData,
         *,
-        changed_by: str | None = None,
+        changed_by: UUID4 | None = None,
         context: str | None = None,
     ) -> None:
         """Update user data.
@@ -211,9 +214,9 @@ class UserRegistry(UserRegistryPort):
         if "status" in update_data and user.status != update_data["status"]:
             update_data["status_change"] = StatusChange(
                 previous=user.status,
-                by=(changed_by or "").strip() or None,
+                by=changed_by or None,
                 context=(context or "").strip() or None,
-                change_date=now_as_utc(),
+                change_date=now_utc_ms_prec(),
             )
         try:
             user = user.model_copy(update=update_data)
@@ -225,7 +228,7 @@ class UserRegistry(UserRegistryPort):
             log.error("Could not update user: %s", error)
             raise self.UserUpdateError(user_id=user_id) from error
 
-    async def delete_user(self, user_id: str) -> None:
+    async def delete_user(self, user_id: UUID4) -> None:
         """Delete a user.
 
         This also deletes all IVAs and claims belonging to the user.
@@ -233,8 +236,6 @@ class UserRegistry(UserRegistryPort):
         May raise a UserDoesNotExistError or a UserDeletionError.
         """
         try:
-            if not self.is_internal_user_id(user_id):
-                raise ResourceNotFoundError(id_=user_id)
             await self._user_dao.delete(user_id)
         except ResourceNotFoundError as error:
             raise self.UserDoesNotExistError(user_id=user_id) from error
@@ -256,7 +257,7 @@ class UserRegistry(UserRegistryPort):
             log.error("Could not delete claims of user: %s", error)
             raise self.UserDeletionError(user_id=user_id) from error
 
-    async def create_iva(self, user_id: str, data: IvaBasicData) -> str:
+    async def create_iva(self, user_id: UUID4, data: IvaBasicData) -> UUID4:
         """Create an IVA for the given user with the given basic data.
 
         Returns the internal ID of the newly createdIVA.
@@ -267,7 +268,7 @@ class UserRegistry(UserRegistryPort):
             await self.get_user(user_id)
         except self.UserRetrievalError as error:
             raise self.IvaCreationError(user_id=user_id) from error
-        created = changed = now_as_utc()
+        created = changed = now_utc_ms_prec()
         iva = Iva(
             **data.model_dump(), user_id=user_id, created=created, changed=changed
         )
@@ -278,7 +279,7 @@ class UserRegistry(UserRegistryPort):
             raise self.IvaCreationError(user_id=user_id) from error
         return iva.id
 
-    async def get_iva(self, iva_id: str, *, user_id: str | None = None) -> Iva:
+    async def get_iva(self, iva_id: UUID4, *, user_id: UUID4 | None = None) -> Iva:
         """Get the IVA with the given ID.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
@@ -293,7 +294,7 @@ class UserRegistry(UserRegistryPort):
         return iva
 
     async def _get_ivas(
-        self, *, user_id: str | None = None, state: IvaState | None = None
+        self, *, user_id: UUID4 | None = None, state: IvaState | None = None
     ) -> list[Iva]:
         """Get all IVAs filtered by a given user or state.
 
@@ -311,7 +312,7 @@ class UserRegistry(UserRegistryPort):
             raise self.IvaRetrievalError(user_id=user_id, state=state) from error
 
     async def get_ivas(
-        self, user_id: str, *, state: IvaState | None = None
+        self, user_id: UUID4, *, state: IvaState | None = None
     ) -> list[IvaData]:
         """Get all IVAs for a given user with a given state.
 
@@ -324,7 +325,7 @@ class UserRegistry(UserRegistryPort):
         return [IvaData(**iva.model_dump(include=external_fields)) for iva in ivas]
 
     async def get_ivas_with_users(
-        self, *, user_id: str | None = None, state: IvaState | None = None
+        self, *, user_id: UUID4 | None = None, state: IvaState | None = None
     ) -> list[IvaAndUserData]:
         """Get all IVAs with user information filtered by the given parameters.
 
@@ -332,7 +333,7 @@ class UserRegistry(UserRegistryPort):
         """
         ivas = await self._get_ivas(user_id=user_id, state=state)
         user_ids = list({iva.user_id for iva in ivas})
-        users: dict[str, User] = {}
+        users: dict[UUID4, User] = {}
         try:
             # Note: Here we rely on "$in" being supported by the DAO.
             users = {
@@ -370,7 +371,7 @@ class UserRegistry(UserRegistryPort):
         or an IvaModificationError.
         """
         if "changed" not in update:
-            update["changed"] = now_as_utc()
+            update["changed"] = now_utc_ms_prec()
         iva = iva.model_copy(update=update)
         try:
             await self._iva_dao.update(iva)
@@ -382,7 +383,7 @@ class UserRegistry(UserRegistryPort):
             raise self.IvaModificationError(iva_id=iva.id) from error
         return iva
 
-    async def delete_iva(self, iva_id: str, *, user_id: str | None = None) -> None:
+    async def delete_iva(self, iva_id: UUID4, *, user_id: UUID4 | None = None) -> None:
         """Delete the IVA with the ID.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError
@@ -401,7 +402,7 @@ class UserRegistry(UserRegistryPort):
             log.error("Could not delete IVA: %s", error)
             raise self.IvaDeletionError(iva_id=iva_id) from error
 
-    async def unverify_iva(self, iva_id: str, *, notify: bool = True):
+    async def unverify_iva(self, iva_id: UUID4, *, notify: bool = True):
         """Reset an IVA as being unverified.
 
         Also notifies the user if not specified otherwise.
@@ -421,7 +422,7 @@ class UserRegistry(UserRegistryPort):
             await self._event_pub.publish_iva_state_changed(iva=iva)
 
     async def request_iva_verification_code(
-        self, iva_id: str, *, user_id: str | None = None, notify: bool = True
+        self, iva_id: UUID4, *, user_id: UUID4 | None = None, notify: bool = True
     ):
         """Request a verification code for the IVA with the given ID.
 
@@ -441,7 +442,7 @@ class UserRegistry(UserRegistryPort):
             # send a notification to the user and a data steward
             await self._event_pub.publish_iva_state_changed(iva=iva)
 
-    async def create_iva_verification_code(self, iva_id: str) -> str:
+    async def create_iva_verification_code(self, iva_id: UUID4) -> str:
         """Create a verification code for the IVA with the given ID.
 
         The code is returned as a string and its hash is stored in the database.
@@ -462,7 +463,7 @@ class UserRegistry(UserRegistryPort):
         return code
 
     async def confirm_iva_code_transmission(
-        self, iva_id: str, *, notify: bool = True
+        self, iva_id: UUID4, *, notify: bool = True
     ) -> None:
         """Confirm the transmission of the verification code for the given IVA.
 
@@ -484,10 +485,10 @@ class UserRegistry(UserRegistryPort):
 
     async def validate_iva_verification_code(
         self,
-        iva_id: str,
+        iva_id: UUID4,
         code: str,
         *,
-        user_id: str | None = None,
+        user_id: UUID4 | None = None,
         notify: bool = True,
     ) -> bool:
         """Validate a verification code for the given IVA.
@@ -528,7 +529,7 @@ class UserRegistry(UserRegistryPort):
             raise self.IvaTooManyVerificationAttemptsError(iva_id=iva_id)
         return validated
 
-    async def reset_verified_ivas(self, user_id: str, *, notify: bool = True) -> None:
+    async def reset_verified_ivas(self, user_id: UUID4, *, notify: bool = True) -> None:
         """Reset all verified IVAs of the given user to the unverified state.
 
         Also notifies the user if needed and not specified otherwise.
@@ -546,6 +547,6 @@ class UserRegistry(UserRegistryPort):
             # send a notification to the user
             await self._event_pub.publish_ivas_reset(user_id=user_id)
 
-    async def notify_2fa_recreation(self, user_id: str) -> None:
+    async def notify_2fa_recreation(self, user_id: UUID4) -> None:
         """Notify the user that the 2nd factor for authentication was recreated."""
         await self._event_pub.publish_2fa_recreated(user_id=user_id)

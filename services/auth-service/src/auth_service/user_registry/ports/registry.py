@@ -20,6 +20,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
+from pydantic import UUID4
+
 from ..models.ivas import Iva, IvaAndUserData, IvaBasicData, IvaData, IvaState
 from ..models.users import (
     User,
@@ -55,7 +57,7 @@ class UserRegistryPort(ABC):
     class UserRetrievalError(UserRegistryError):
         """Raised when users cannot be retrieved from the database."""
 
-        def __init__(self, *, user_id: str | None = None):
+        def __init__(self, *, user_id: UUID4 | None = None):
             message = (
                 f"Could not retrieve user with ID {user_id}"
                 if user_id
@@ -66,21 +68,21 @@ class UserRegistryPort(ABC):
     class UserDoesNotExistError(UserRegistryError):
         """Raised when trying to access a non-existing user."""
 
-        def __init__(self, *, user_id: str):
+        def __init__(self, *, user_id: UUID4):
             message = f"User with ID {user_id} does not exist"
             super().__init__(message)
 
     class UserUpdateError(UserRegistryError):
         """Raised when a user cannot be updated in the database."""
 
-        def __init__(self, *, user_id: str):
+        def __init__(self, *, user_id: UUID4):
             message = f"Could not update user with ID {user_id}"
             super().__init__(message)
 
     class UserDeletionError(UserRegistryError):
         """Raised when a user cannot be deleted in the database."""
 
-        def __init__(self, *, user_id: str):
+        def __init__(self, *, user_id: UUID4):
             message = f"Could not delete user with ID {user_id}"
             super().__init__(message)
 
@@ -90,7 +92,7 @@ class UserRegistryPort(ABC):
     class IvaCreationError(UserRegistryIvaError):
         """Raised when an IVA cannot be created in the database."""
 
-        def __init__(self, *, user_id: str):
+        def __init__(self, *, user_id: UUID4):
             message = f"Could not create IVA for user with ID {user_id}"
             super().__init__(message)
 
@@ -100,8 +102,8 @@ class UserRegistryPort(ABC):
         def __init__(
             self,
             *,
-            iva_id: str | None = None,
-            user_id: str | None = None,
+            iva_id: UUID4 | None = None,
+            user_id: UUID4 | None = None,
             state: IvaState | None = None,
         ):
             message = "Could not retrieve IVA"
@@ -116,7 +118,7 @@ class UserRegistryPort(ABC):
     class IvaDoesNotExistError(UserRegistryIvaError):
         """Raised when trying to access a non-existing IVA."""
 
-        def __init__(self, *, iva_id: str, user_id: str | None = None):
+        def __init__(self, *, iva_id: UUID4, user_id: UUID4 | None = None):
             message = (
                 f"User with ID {user_id} does not have an IVA with ID {iva_id}"
                 if user_id
@@ -127,28 +129,28 @@ class UserRegistryPort(ABC):
     class IvaModificationError(UserRegistryIvaError):
         """Raised when IVAs cannot be modified in the database."""
 
-        def __init__(self, *, iva_id: str):
+        def __init__(self, *, iva_id: UUID4):
             message = f"Could not modify IVA with ID {iva_id}"
             super().__init__(message)
 
     class IvaDeletionError(UserRegistryIvaError):
         """Raised when IVAs cannot be deleted from the database."""
 
-        def __init__(self, *, iva_id: str):
+        def __init__(self, *, iva_id: UUID4):
             message = f"Could not delete IVA with ID {iva_id}"
             super().__init__(message)
 
     class IvaUnexpectedStateError(UserRegistryIvaError):
         """Raised when an IVA is in an unexpected state."""
 
-        def __init__(self, *, iva_id: str, state: IvaState):
+        def __init__(self, *, iva_id: UUID4, state: IvaState):
             message = f"IVA with ID {iva_id} has an unexpected state {state.name}"
             super().__init__(message)
 
     class IvaTooManyVerificationAttemptsError(UserRegistryIvaError):
         """Raised when a verification code is verified too often."""
 
-        def __init__(self, *, iva_id: str):
+        def __init__(self, *, iva_id: UUID4):
             message = f"Too many verification attempts for IVA with ID {iva_id}"
             super().__init__(message)
 
@@ -176,7 +178,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def get_user(self, user_id: str) -> User:
+    async def get_user(self, user_id: UUID4) -> User:
         """Get user data.
 
         May raise a UserDoesNotExistError or a UserRetrievalError.
@@ -184,7 +186,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def get_user_with_roles(self, user_id: str) -> UserWithRoles:
+    async def get_user_with_roles(self, user_id: UUID4) -> UserWithRoles:
         """Get user data including all roles, independent of IVAs.
 
         The roles are returned even if the user is inactive or has no IVAs.
@@ -220,10 +222,10 @@ class UserRegistryPort(ABC):
     @abstractmethod
     async def update_user(
         self,
-        user_id: str,
+        user_id: UUID4,
         user_data: UserBasicData | UserModifiableData,
         *,
-        changed_by: str | None = None,
+        changed_by: UUID4 | None = None,
         context: str | None = None,
     ) -> None:
         """Update user data.
@@ -235,7 +237,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def delete_user(self, user_id: str) -> None:
+    async def delete_user(self, user_id: UUID4) -> None:
         """Delete a user.
 
         This also deletes all IVAs and claims belonging to the user.
@@ -245,7 +247,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def create_iva(self, user_id: str, data: IvaBasicData) -> str:
+    async def create_iva(self, user_id: UUID4, data: IvaBasicData) -> UUID4:
         """Create an IVA for the given user with the given basic data.
 
         Returns the internal ID of the newly createdIVA.
@@ -255,7 +257,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def get_iva(self, iva_id: str) -> Iva:
+    async def get_iva(self, iva_id: UUID4) -> Iva:
         """Get the IVA with the given ID.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
@@ -265,7 +267,7 @@ class UserRegistryPort(ABC):
 
     @abstractmethod
     async def get_ivas(
-        self, user_id: str, *, state: IvaState | None = None
+        self, user_id: UUID4, *, state: IvaState | None = None
     ) -> list[IvaData]:
         """Get all IVAs for a given user with a given state.
 
@@ -277,7 +279,7 @@ class UserRegistryPort(ABC):
 
     @abstractmethod
     async def get_ivas_with_users(
-        self, *, user_id: str | None = None, state: IvaState | None = None
+        self, *, user_id: UUID4 | None = None, state: IvaState | None = None
     ) -> list[IvaAndUserData]:
         """Get all IVAs with user information filtered by the given parameters.
 
@@ -295,7 +297,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def delete_iva(self, iva_id: str, *, user_id: str | None = None) -> None:
+    async def delete_iva(self, iva_id: UUID4, *, user_id: UUID4 | None = None) -> None:
         """Delete the IVA with the ID.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError
@@ -307,7 +309,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def unverify_iva(self, iva_id: str, *, notify: bool = True):
+    async def unverify_iva(self, iva_id: UUID4, *, notify: bool = True):
         """Reset an IVA as being unverified.
 
         Also notifies the user if not specified otherwise.
@@ -319,7 +321,7 @@ class UserRegistryPort(ABC):
 
     @abstractmethod
     async def request_iva_verification_code(
-        self, iva_id: str, *, user_id: str | None = None, notify: bool = True
+        self, iva_id: UUID4, *, user_id: UUID4 | None = None, notify: bool = True
     ):
         """Request a verification code for the IVA with the given ID.
 
@@ -334,7 +336,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def create_iva_verification_code(self, iva_id: str) -> str:
+    async def create_iva_verification_code(self, iva_id: UUID4) -> str:
         """Create a verification code for the IVA with the given ID.
 
         The code is returned as a string and its hash is stored in the database.
@@ -346,7 +348,7 @@ class UserRegistryPort(ABC):
 
     @abstractmethod
     async def confirm_iva_code_transmission(
-        self, iva_id: str, *, notify: bool = True
+        self, iva_id: UUID4, *, notify: bool = True
     ) -> None:
         """Confirm the transmission of the verification code for the given IVA.
 
@@ -360,10 +362,10 @@ class UserRegistryPort(ABC):
     @abstractmethod
     async def validate_iva_verification_code(
         self,
-        iva_id: str,
+        iva_id: UUID4,
         code: str,
         *,
-        user_id: str | None = None,
+        user_id: UUID4 | None = None,
         notify: bool = True,
     ) -> bool:
         """Validate a verification code for the given IVA.
@@ -382,7 +384,7 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def reset_verified_ivas(self, user_id: str, *, notify: bool = True) -> None:
+    async def reset_verified_ivas(self, user_id: UUID4, *, notify: bool = True) -> None:
         """Reset all verified IVAs of the given user to the unverified state.
 
         Also notifies the user if needed and not specified otherwise.
@@ -392,6 +394,6 @@ class UserRegistryPort(ABC):
         ...
 
     @abstractmethod
-    async def notify_2fa_recreation(self, user_id: str) -> None:
+    async def notify_2fa_recreation(self, user_id: UUID4) -> None:
         """Notify the user that the 2nd factor for authentication was recreated."""
         ...

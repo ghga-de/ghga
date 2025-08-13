@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from typing import TypeAlias
 
 from hexkit.protocols.dao import Dao
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import UUID4, BaseModel, ConfigDict, Field
 
 from ..core.totp import TOTPToken
 
@@ -33,7 +33,7 @@ class UserToken(BaseModel):
     For security reasons, we store the TOTP tokens in a separate collection.
     """
 
-    user_id: str = Field(
+    user_id: UUID4 = Field(
         default=..., description="The user ID of the user who owns the TOTP token"
     )
     totp_token: TOTPToken = Field(default=..., description="The TOTP token of the user")

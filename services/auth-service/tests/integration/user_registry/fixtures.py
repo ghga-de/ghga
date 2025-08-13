@@ -34,6 +34,8 @@ async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient,
         service_name=kafka.config.service_name,
         service_instance_id=kafka.config.service_instance_id,
         provide_apis=["users"],
+        migration_wait_sec=2,
+        db_version_collection="authDbVersions",
     )  # type: ignore
     async with prepare_rest_app(config) as app, BareClient(app) as client:
         yield client
@@ -59,6 +61,8 @@ async def fixture_full_client(
         service_name=kafka.config.service_name,
         service_instance_id=kafka.config.service_instance_id,
         provide_apis=["users"],
+        migration_wait_sec=2,
+        db_version_collection="authDbVersions",
     )
     async with prepare_rest_app(config) as app, FullClient(app) as client:
         client.config = config

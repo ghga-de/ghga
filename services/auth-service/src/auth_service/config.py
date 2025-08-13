@@ -23,7 +23,7 @@ from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb import MongoDbConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 from pydantic import AnyUrl, Field, HttpUrl, field_validator
 
@@ -54,7 +54,7 @@ class Config(
     UserRegistryConfig,
     LoggingConfig,
     MongoKafkaConfig,
-    MongoDbConfig,
+    MigrationConfig,
     KafkaConfig,
     UserDaoConfig,
     ClaimDaoConfig,

@@ -26,6 +26,7 @@ from auth_service.auth_adapter.rest.headers import (
     pass_auth_response,
     session_to_header,
 )
+from tests.fixtures.constants import SOME_USER_ID
 
 NOW = now_as_utc()
 
@@ -64,7 +65,7 @@ def test_session_to_header_ascii():
     session = Session(
         session_id="some-session-id",
         ext_id="john@aai.org",
-        user_id="some-user-id",
+        user_id=SOME_USER_ID,
         user_name="John Doe",
         user_email="john@home.org",
         csrf_token="some-csrf-token",
@@ -74,7 +75,8 @@ def test_session_to_header_ascii():
     assert session_to_header(session) == (
         '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
         '"state":"NeedsRegistration","csrf":"some-csrf-token",'
-        '"id":"some-user-id","roles":[]}'
+        f'"id":"{SOME_USER_ID}","roles":[]'
+        "}"
     )
 
 
@@ -83,7 +85,7 @@ def test_session_to_header_non_ascii():
     session = Session(
         session_id="a-session-id",
         ext_id="john@aai.org",
-        user_id="a-user-id",
+        user_id=SOME_USER_ID,
         user_name="Svante Pääbo",
         user_email="svante@home.se",
         csrf_token="a-csrf-token",
@@ -93,7 +95,8 @@ def test_session_to_header_non_ascii():
     assert session_to_header(session) == (
         '{"ext_id":"john@aai.org","name":"Svante Pääbo","email":"svante@home.se",'
         '"state":"NeedsRegistration","csrf":"a-csrf-token",'
-        '"id":"a-user-id","roles":[]}'
+        f'"id":"{SOME_USER_ID}","roles":[]'
+        "}"
     )
 
 
@@ -119,7 +122,7 @@ def test_session_to_header_with_optional_properties():
     session = Session(
         session_id="some-session-id",
         ext_id="john@aai.org",
-        user_id="some-user-id",
+        user_id=SOME_USER_ID,
         user_name="John Doe",
         user_email="john@home.org",
         user_title="Dr.",
@@ -131,7 +134,7 @@ def test_session_to_header_with_optional_properties():
     assert session_to_header(session, lambda _session: (42, 144)) == (
         '{"ext_id":"john@aai.org","name":"John Doe","email":"john@home.org",'
         '"state":"NeedsRegistration","csrf":"some-csrf-token",'
-        '"id":"some-user-id","title":"Dr.","roles":["data_steward@ghga.de"],'
+        f'"id":"{SOME_USER_ID}","title":"Dr.","roles":["data_steward@ghga.de"],'
         '"timeout":42,"extends":144}'
     )
 

@@ -24,9 +24,13 @@ from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 
+from auth_service.migrations.entry import run_db_migrations
+
 from .config import CONFIG, Config
 
 log = logging.getLogger(__name__)
+
+DB_VERSION = 2
 
 
 def import_prepare_module(auth_adapter: bool):
@@ -57,6 +61,7 @@ async def run_parallel(
 
     When no API is specified, only the health endpoint will be available.
     """
+    await run_db_migrations(config=config, target_version=DB_VERSION)
     prepare_rest_app = import_prepare_module(auth_adapter).prepare_rest_app
 
     async with prepare_rest_app(config=config) as app:

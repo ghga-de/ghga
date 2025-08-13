@@ -16,11 +16,13 @@
 """Test the core claims REST API"""
 
 from operator import itemgetter
+from uuid import uuid4
 
 import pytest
 from fastapi import status
 
 from auth_service.user_registry.deps import get_user_dao
+from tests.fixtures.constants import ID_OF_JOHN, ID_OF_ROD_STEWARD, SOME_USER_ID
 
 from ...fixtures.utils import DummyUserDao
 from .fixtures import FullClient, fixture_full_client  # noqa: F401
@@ -67,7 +69,7 @@ async def test_post_claim(full_client: FullClient):
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     response = await full_client.post(
-        "/users/john@ghga.de/claims", json=ROLE_CLAIM_DATA
+        f"/users/{ID_OF_JOHN}/claims", json=ROLE_CLAIM_DATA
     )
 
     claim = response.json()
@@ -77,7 +79,7 @@ async def test_post_claim(full_client: FullClient):
     assert claim_id is not None
     assert len(claim_id) == 36
     assert claim_id.count("-") == 4
-    assert claim.pop("user_id") == "john@ghga.de"
+    assert claim.pop("user_id") == str(ID_OF_JOHN)
     assert claim.pop("iva_id") is None
     assert claim.pop("sub_source") is None
 
@@ -89,7 +91,7 @@ async def test_post_claim(full_client: FullClient):
 
     # test with non-existing user
     response = await full_client.post(
-        "/users/john@haag.de/claims", json=ROLE_CLAIM_DATA
+        f"/users/{SOME_USER_ID}/claims", json=ROLE_CLAIM_DATA
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
@@ -99,8 +101,6 @@ async def test_get_claims(full_client: FullClient):
     """Test that getting all claims of a user works."""
     user_dao = DummyUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-
-    user_id = "john@ghga.de"
 
     # post two different claims
     claim1 = ROLE_CLAIM_DATA
@@ -112,25 +112,25 @@ async def test_get_claims(full_client: FullClient):
     }
     posted_claims = []
     for claim in (claim1, claim2):
-        response = await full_client.post(f"/users/{user_id}/claims", json=claim)
+        response = await full_client.post(f"/users/{ID_OF_JOHN}/claims", json=claim)
         assert response.status_code == status.HTTP_201_CREATED
         posted_claims.append(response.json())
 
-    response = await full_client.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
     assert response.status_code == status.HTTP_200_OK
     requested_claims = response.json()
     requested_claims.sort(key=itemgetter("assertion_date"))
 
     assert requested_claims == posted_claims
 
-    assert requested_claims[0]["user_id"] == user_id
-    assert requested_claims[1]["user_id"] == user_id
+    assert requested_claims[0]["user_id"] == str(ID_OF_JOHN)
+    assert requested_claims[1]["user_id"] == str(ID_OF_JOHN)
     assert requested_claims[0]["visa_type"] == ROLE_CLAIM_DATA["visa_type"]
     assert requested_claims[1]["visa_type"] == "ResearcherStatus"
     assert requested_claims[0]["visa_value"] != requested_claims[1]["visa_value"]
 
     # test with non-existing user
-    response = await full_client.get("/users/john@haag.de/claims")
+    response = await full_client.get(f"/users/{SOME_USER_ID}/claims")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
 
@@ -140,10 +140,10 @@ async def test_patch_claim(full_client: FullClient):
     user_dao = DummyUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
-    user_id = "john@ghga.de"
-
     # post test claim
-    response = await full_client.post(f"/users/{user_id}/claims", json=ROLE_CLAIM_DATA)
+    response = await full_client.post(
+        f"/users/{ID_OF_JOHN}/claims", json=ROLE_CLAIM_DATA
+    )
     posted_claim = response.json()
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -155,12 +155,12 @@ async def test_patch_claim(full_client: FullClient):
     revocation_date = "2022-10-15T12:00:00Z"
     patch_data = {"revocation_date": revocation_date}
     response = await full_client.patch(
-        f"/users/{user_id}/claims/{claim_id}", json=patch_data
+        f"/users/{ID_OF_JOHN}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been revoked
-    response = await full_client.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -171,14 +171,14 @@ async def test_patch_claim(full_client: FullClient):
     # test without revocation date
     patch_data = {"revocation_date": None}  # type: ignore
     response = await full_client.patch(
-        f"/users/{user_id}/claims/{claim_id}", json=patch_data
+        f"/users/{ID_OF_JOHN}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     # test with later revocation date
     patch_data = {"revocation_date": "2022-10-15T13:00:00Z"}
     response = await full_client.patch(
-        f"/users/{user_id}/claims/{claim_id}", json=patch_data
+        f"/users/{ID_OF_JOHN}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     assert response.json()["detail"] == "Already revoked earlier."
@@ -187,12 +187,12 @@ async def test_patch_claim(full_client: FullClient):
     revocation_date = "2022-10-15T11:00:00Z"
     patch_data = {"revocation_date": revocation_date}
     response = await full_client.patch(
-        f"/users/{user_id}/claims/{claim_id}", json=patch_data
+        f"/users/{ID_OF_JOHN}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that revocation was advanced
-    response = await full_client.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -202,13 +202,13 @@ async def test_patch_claim(full_client: FullClient):
 
     # test with non-existing user
     response = await full_client.patch(
-        f"/users/john@haag.de/claims/{claim_id}", json=patch_data
+        f"/users/{SOME_USER_ID}/claims/{claim_id}", json=patch_data
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user was not found."
     # test with non-existing claim
     response = await full_client.patch(
-        f"/users/{user_id}/claims/invalid-claim-id", json=patch_data
+        f"/users/{ID_OF_JOHN}/claims/{uuid4()}", json=patch_data
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "The user claim was not found."
@@ -219,14 +219,12 @@ async def test_delete_claim(full_client: FullClient):
     user_dao = DummyUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
-    user_id = "john@ghga.de"
-
     # post two different claims
     claim1 = ROLE_CLAIM_DATA.copy()
     claim2 = ROLE_CLAIM_DATA.copy()
     claim2["visa_type"] = "ResearcherStatus"
     for claim in (claim1, claim2):
-        response = await full_client.post(f"/users/{user_id}/claims", json=claim)
+        response = await full_client.post(f"/users/{ID_OF_JOHN}/claims", json=claim)
         assert response.status_code == status.HTTP_201_CREATED
         claim_id = response.json()["id"]
         assert claim_id
@@ -234,21 +232,21 @@ async def test_delete_claim(full_client: FullClient):
 
     # test deletion of first claim with non-existing user
     claim_id = claim1["id"]
-    response = await full_client.delete(f"/users/john@haag.de/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{SOME_USER_ID}/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
     # test that claims have been posted
-    response = await full_client.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 2
 
     # delete first claim properly
-    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{ID_OF_JOHN}/claims/{claim_id}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been deleted
-    response = await full_client.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -257,28 +255,28 @@ async def test_delete_claim(full_client: FullClient):
     assert claim["visa_type"] == "ResearcherStatus"
 
     # delete again
-    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{ID_OF_JOHN}/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
     # delete second claim
     claim_id = claim2["id"]
-    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{ID_OF_JOHN}/claims/{claim_id}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # test that claim has been deleted
-    response = await full_client.get(f"/users/{user_id}/claims")
+    response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 0
 
     # delete again
-    response = await full_client.delete(f"/users/{user_id}/claims/{claim_id}")
+    response = await full_client.delete(f"/users/{ID_OF_JOHN}/claims/{claim_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_get_claims_for_seeded_data_steward(full_client: FullClient):
     """Test that the database is seeded with the configured data steward."""
-    response = await full_client.get("/users/the-id-of-rod-steward/claims")
+    response = await full_client.get(f"/users/{ID_OF_ROD_STEWARD}/claims")
     assert response.status_code == status.HTTP_200_OK
     claims = response.json()
     assert len(claims) == 1
@@ -294,7 +292,7 @@ async def test_get_claims_for_seeded_data_steward(full_client: FullClient):
         "asserted_by": "system",
         "conditions": None,
         "revocation_date": None,
-        "user_id": "the-id-of-rod-steward",
+        "user_id": str(ID_OF_ROD_STEWARD),
         "source": "https://ghga.de",
         "sub_source": None,
         "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",

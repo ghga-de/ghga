@@ -22,6 +22,7 @@ from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import UUID4
 
 from ..ports.deletion import DatasetDeletionPort
 
@@ -48,7 +49,13 @@ class EventSubTranslator(EventSubscriberProtocol):
 
     @start_span()
     async def _consume_validated(
-        self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
+        self,
+        *,
+        payload: JsonObject,
+        type_: Ascii,
+        topic: Ascii,
+        key: Ascii,
+        event_id: UUID4,
     ) -> None:
         """Consume an event which concerns the deletion of a dataset."""
         dataset = get_validated_payload(payload=payload, schema=MetadataDatasetID)

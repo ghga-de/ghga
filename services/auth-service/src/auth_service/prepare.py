@@ -72,10 +72,10 @@ async def prepare_event_handler(
     config: Config,
 ) -> AsyncGenerator[DatasetDeletionPort, None]:
     """Get an event handler for dataset deletion events."""
-    dao_factory = MongoDbDaoFactory(config=config)
-    claim_dao_factory = ClaimDaoFactory(config=config, dao_factory=dao_factory)
-    claim_dao = await claim_dao_factory.get_claim_dao()
-    yield DatasetDeletionHandler(claim_dao=claim_dao)
+    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
+        claim_dao_factory = ClaimDaoFactory(config=config, dao_factory=dao_factory)
+        claim_dao = await claim_dao_factory.get_claim_dao()
+        yield DatasetDeletionHandler(claim_dao=claim_dao)
 
 
 @asynccontextmanager
@@ -115,14 +115,13 @@ async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
     if with_access_api:
         app.include_router(access_router)
 
-    dao_factory = MongoDbDaoFactory(config=config)
-
     async with (
         (
             KafkaEventPublisher.construct(config=config)
             if with_users_api
             else nullcontext()
         ) as event_publisher,
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
         MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
     ):
         user_dao_publisher_factory = UserDaoPublisherFactory(

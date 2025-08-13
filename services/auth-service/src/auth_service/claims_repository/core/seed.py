@@ -18,9 +18,10 @@
 
 import logging
 
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.correlation import set_new_correlation_id
 from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
+from hexkit.utils import now_utc_ms_prec
+from pydantic import UUID4
 
 from auth_service.claims_repository.deps import ClaimDao
 from auth_service.config import Config
@@ -57,7 +58,7 @@ async def _add_user_with_ext_id(*, info: UserWithIVA, user_dao: UserDao) -> User
         email=info.email,
         title=None,
         status=UserStatus.ACTIVE,
-        registration_date=now_as_utc(),
+        registration_date=now_utc_ms_prec(),
     )
     await user_dao.insert(user_dto)
     return user_dto
@@ -81,10 +82,10 @@ def _check_data_steward_info(*, info: UserWithIVA, user: User) -> None:
 
 
 async def _add_iva_for_user(
-    *, user_id: str, data: IvaBasicData, iva_dao: IvaDao
+    *, user_id: UUID4, data: IvaBasicData, iva_dao: IvaDao
 ) -> Iva:
     """Add a new IVA for the given user with the given basic data."""
-    now = now_as_utc()
+    now = now_utc_ms_prec()
     iva_dto = Iva(user_id=user_id, created=now, changed=now, **data.model_dump())
     await iva_dao.insert(iva_dto)
     return iva_dto

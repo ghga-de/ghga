@@ -34,7 +34,7 @@ from fastapi import (
 )
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
-from pydantic import SecretStr
+from pydantic import UUID4, SecretStr
 
 from auth_service.claims_repository.core.utils import get_active_roles
 from auth_service.claims_repository.deps import ClaimDaoDependency
@@ -281,7 +281,7 @@ async def post_user(
 )
 async def put_user(
     id_: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="id",

@@ -15,14 +15,14 @@
 
 """IVA model classes used as DTOs and core entities.
 
-An IVA is an "indendent verification address" used to verify a user's identity.
+An IVA is an "independent verification address" used to verify a user's identity.
 """
 
 from enum import StrEnum
 from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import ConfigDict, Field
+from pydantic import UUID4, ConfigDict, Field
 
 from . import BaseDto
 
@@ -85,7 +85,7 @@ class IvaVerificationCode(BaseDto):
 class IvaInternalData(BaseDto):
     """Internal data of an IVA (not exposed via the API)"""
 
-    user_id: str = Field(default=..., description="Internal user ID")
+    user_id: UUID4 = Field(default=..., description="Internal user ID")
     verification_code_hash: str | None = Field(
         default=None, description="Salted hash of the verification code for the IVA"
     )
@@ -109,7 +109,7 @@ class IvaAutomaticData(BaseDto):
 class IvaId(BaseDto):
     """The ID of an IVA"""
 
-    id: str = Field(default_factory=lambda: str(uuid4()), description="Internal IVA ID")
+    id: UUID4 = Field(default_factory=lambda: uuid4(), description="Internal IVA ID")
 
 
 class IvaData(IvaId, IvaWithState, IvaAutomaticData):
@@ -128,7 +128,7 @@ class IvaData(IvaId, IvaWithState, IvaAutomaticData):
 class IvaAndUserData(IvaData):
     """IVA with all external data and user information."""
 
-    user_id: str = Field(
+    user_id: UUID4 = Field(
         default=..., description="The internal ID of the associated user"
     )
     user_name: str = Field(default=..., description="The full name of the user")

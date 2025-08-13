@@ -19,11 +19,13 @@
 from contextlib import suppress
 from enum import Enum
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Header, Path, Query, Response
 from fastapi.exceptions import HTTPException
 from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
+from pydantic import UUID4
 
 from auth_service.auth_adapter.deps import UserTokenDaoDependency
 
@@ -166,7 +168,7 @@ async def post_user(
 async def put_user(
     user_data: UserBasicData,
     id_: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="id",
@@ -177,11 +179,10 @@ async def put_user(
     auth_context: UserAuthContext,
 ) -> Response:
     """Update a user."""
-    if id_ != auth_context.id:  # users can only update themselves
+    if str(id_) != auth_context.id:  # users can only update themselves
         raise HTTPException(status_code=403, detail="Not authorized to update user.")
     if not (
-        user_registry.is_internal_user_id(id_)
-        and user_data.name == auth_context.name  # specified name must match token
+        user_data.name == auth_context.name  # specified name must match token
         and user_data.email == auth_context.email  # specified email must match token
     ):
         raise HTTPException(status_code=422, detail="User cannot be updated.")
@@ -215,7 +216,7 @@ async def put_user(
 )
 async def get_user(
     id_: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="id",
@@ -227,7 +228,7 @@ async def get_user(
 ) -> UserWithRoles:
     """Get user data including their roles."""
     # only data stewards can request other user accounts
-    if not (is_steward(auth_context) or id_ == auth_context.id):
+    if not (is_steward(auth_context) or str(id_) == auth_context.id):
         raise HTTPException(status_code=403, detail="Not authorized to request user.")
     try:
         user = await user_registry.get_user_with_roles(id_)
@@ -265,7 +266,7 @@ async def get_user(
 async def patch_user(
     user_data: UserModifiableData,
     id_: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="id",
@@ -280,7 +281,7 @@ async def patch_user(
     # but only data stewards are allowed to modify other accounts
     allowed = (
         "status" not in user_data.model_fields_set
-        if id_ == auth_context.id
+        if str(id_) == auth_context.id
         else is_steward(auth_context)
     )
     if not allowed:
@@ -291,7 +292,7 @@ async def patch_user(
         await user_registry.update_user(
             id_,
             user_data,
-            changed_by=auth_context.id,
+            changed_by=UUID(auth_context.id),
             context="manual change",
         )
     except user_registry.UserDoesNotExistError as error:
@@ -324,7 +325,7 @@ async def patch_user(
 )
 async def delete_user(
     id_: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="id",
@@ -336,7 +337,7 @@ async def delete_user(
     auth_context: StewardAuthContext,
 ) -> Response:
     """Delete user."""
-    if id_ == auth_context.id:
+    if str(id_) == auth_context.id:
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this user."
         )
@@ -378,7 +379,7 @@ async def delete_user(
 )
 async def get_user_ivas(
     user_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="user_id",
@@ -390,7 +391,7 @@ async def get_user_ivas(
 ) -> list[IvaData]:
     """Get all IVAs of a user."""
     # only data stewards can request IVAs of other user accounts
-    if not (is_steward(auth_context) or user_id == auth_context.id):
+    if not (is_steward(auth_context) or str(user_id) == auth_context.id):
         raise HTTPException(
             status_code=403, detail="Not authorized to request these IVAs."
         )
@@ -418,7 +419,7 @@ async def get_user_ivas(
 )
 async def post_user_iva(
     user_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="user_id",
@@ -431,7 +432,7 @@ async def post_user_iva(
 ) -> IvaId:
     """Create new IVA for a given user."""
     # only data stewards can create IVAs for other user accounts
-    if not (is_steward(auth_context) or user_id == auth_context.id):
+    if not (is_steward(auth_context) or str(user_id) == auth_context.id):
         raise HTTPException(
             status_code=403, detail="Not authorized to create this IVA."
         )
@@ -465,7 +466,7 @@ async def post_user_iva(
 )
 async def delete_user_iva(
     user_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="user_id",
@@ -473,7 +474,7 @@ async def delete_user_iva(
         ),
     ],
     iva_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="iva_id",
@@ -485,7 +486,7 @@ async def delete_user_iva(
 ) -> Response:
     """Delete an IVA of the given user."""
     # only data stewards can delete IVAs for other user accounts
-    if not (is_steward(auth_context) or user_id == auth_context.id):
+    if not (is_steward(auth_context) or str(user_id) == auth_context.id):
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this IVA."
         )
@@ -515,7 +516,7 @@ async def delete_user_iva(
 )
 async def unverify_iva(
     iva_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="iva_id",
@@ -554,7 +555,7 @@ async def unverify_iva(
 )
 async def request_code_for_iva(
     iva_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="iva_id",
@@ -567,7 +568,7 @@ async def request_code_for_iva(
     """Request verification code for the specified IVA."""
     try:
         await user_registry.request_iva_verification_code(
-            iva_id, user_id=auth_context.id
+            iva_id, user_id=UUID(auth_context.id)
         )
     except user_registry.IvaDoesNotExistError as error:
         raise HTTPException(status_code=404, detail="The IVA was not found.") from error
@@ -600,7 +601,7 @@ async def request_code_for_iva(
 )
 async def create_code_for_iva(
     iva_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="iva_id",
@@ -651,7 +652,7 @@ async def create_code_for_iva(
 )
 async def confirm_code_for_iva_transmitted(
     iva_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="iva_id",
@@ -698,7 +699,7 @@ async def confirm_code_for_iva_transmitted(
 )
 async def validate_code_for_iva(
     iva_id: Annotated[
-        str,
+        UUID4,
         Path(
             ...,
             alias="iva_id",
@@ -712,7 +713,7 @@ async def validate_code_for_iva(
     """Validate a verification code for the specified IVA."""
     try:
         verified = await user_registry.validate_iva_verification_code(
-            iva_id, code=data.verification_code, user_id=auth_context.id
+            iva_id, code=data.verification_code, user_id=UUID(auth_context.id)
         )
     except user_registry.IvaDoesNotExistError as error:
         raise HTTPException(status_code=404, detail="The IVA was not found.") from error
@@ -758,7 +759,7 @@ async def get_all_ivas(
     user_registry: UserRegistryDependency,
     _auth_context: StewardAuthContext,
     user_id: Annotated[
-        str | None,
+        UUID4 | None,
         Query(
             description="Filter for the internal user ID",
         ),

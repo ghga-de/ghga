@@ -23,7 +23,7 @@ import pytest_asyncio
 from ghga_service_commons.utils.utc_dates import utc_datetime
 from hexkit.correlation import set_new_correlation_id
 from hexkit.protocols.dao import ResourceNotFoundError
-from hexkit.providers.akafka.testutils import KafkaFixture, RecordedEvent
+from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
@@ -41,6 +41,7 @@ from auth_service.user_registry.ports.dao import (
 from auth_service.user_registry.translators.dao import (
     UserDaoPublisherFactory,
 )
+from tests.fixtures.constants import SOME_USER_ID
 
 
 @pytest_asyncio.fixture(name="user_dao_publisher_factory")
@@ -54,6 +55,8 @@ async def fixture_user_dao(
         kafka_servers=kafka.config.kafka_servers,
         service_name=kafka.config.service_name,
         service_instance_id=kafka.config.service_instance_id,
+        migration_wait_sec=2,
+        db_version_collection="authDbVersions",
     )
     async with (
         MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
@@ -99,33 +102,28 @@ async def test_user_crud(
             await user_dao.get_by_id(user.id)
 
     # changes should be automatically published
-    assert recorder.recorded_events == [
-        RecordedEvent(
-            payload={
-                "user_id": user.id,
-                "name": user.name,
-                "email": user.email,
-                "title": user.title,
-            },
-            type_="upserted",
-            key=user.id,
-        ),
-        RecordedEvent(
-            payload={
-                "user_id": user.id,
-                "name": user.name,
-                "email": changed_user.email,
-                "title": user.title,
-            },
-            type_="upserted",
-            key=user.id,
-        ),
-        RecordedEvent(
-            payload={},
-            type_="deleted",
-            key=user.id,
-        ),
-    ]
+    assert len(recorder.recorded_events) == 3
+    event1, event2, event3 = recorder.recorded_events
+    assert event1.payload == {
+        "user_id": str(user.id),
+        "name": user.name,
+        "email": user.email,
+        "title": user.title,
+    }
+    assert event1.type_ == "upserted"
+    assert event1.key == str(user.id)
+
+    assert event2.payload == {
+        "user_id": str(user.id),
+        "name": user.name,
+        "email": changed_user.email,
+        "title": user.title,
+    }
+    assert event2.type_ == "upserted"
+    assert event2.key == str(user.id)
+    assert event3.payload == {}
+    assert event3.type_ == "deleted"
+    assert event3.key == str(user.id)
 
 
 @pytest.mark.asyncio()
@@ -135,7 +133,7 @@ async def test_iva_crud(
     """Test creating, updating and deleting via the user DAO"""
     iva_dao = await user_dao_publisher_factory.get_iva_dao()
     iva = Iva(
-        user_id="some-user-id",
+        user_id=SOME_USER_ID,
         created=utc_datetime(2022, 9, 1, 12, 0),
         changed=utc_datetime(2023, 4, 1, 12, 0),
         type=IvaType.PHONE,

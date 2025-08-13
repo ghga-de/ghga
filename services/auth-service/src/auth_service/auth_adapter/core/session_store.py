@@ -21,7 +21,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
-from pydantic import EmailStr, Field
+from pydantic import UUID4, EmailStr, Field
 from pydantic_settings import BaseSettings
 
 from auth_service.user_registry.models.users import User
@@ -48,7 +48,7 @@ class Session(BaseSession):
         default=...,
         description="External ID of the associated user",
     )
-    user_id: str | None = Field(
+    user_id: UUID4 | None = Field(
         default=None,
         description="Internal ID of the associated user, if registered",
     )
@@ -141,7 +141,7 @@ class SessionStore(SessionStorePort[Session]):
         ext_id: str,
         user_name: str,
         user_email: str,
-        user_id: str | None = None,
+        user_id: UUID4 | None = None,
         user_title: str | None = None,
         roles: list[str] | None = None,
     ) -> Session:

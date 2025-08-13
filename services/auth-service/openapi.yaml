@@ -54,11 +54,13 @@ components:
           type: string
         id:
           description: Internal claim ID
+          format: uuid4
           title: Id
           type: string
         iva_id:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: ID of an IVA associated with this claim
           title: Iva Id
@@ -88,6 +90,7 @@ components:
           title: Sub Source
         user_id:
           description: Internal user ID
+          format: uuid4
           title: User Id
           type: string
         valid_from:
@@ -159,7 +162,8 @@ components:
           title: Conditions
         iva_id:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: ID of an IVA associated with this claim
           title: Iva Id
@@ -326,11 +330,13 @@ components:
           type: string
         id:
           description: Internal grant ID (same as claim ID)
+          format: uuid4
           title: Id
           type: string
         iva_id:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: ID of an IVA associated with this grant
           title: Iva Id
@@ -341,6 +347,7 @@ components:
           type: string
         user_id:
           description: Internal user ID
+          format: uuid4
           title: User Id
           type: string
         user_name:
@@ -419,6 +426,7 @@ components:
           type: string
         id:
           description: Internal IVA ID
+          format: uuid4
           title: Id
           type: string
         state:
@@ -434,6 +442,7 @@ components:
           type: string
         user_id:
           description: The internal ID of the associated user
+          format: uuid4
           title: User Id
           type: string
         user_name:
@@ -492,6 +501,7 @@ components:
           type: string
         id:
           description: Internal IVA ID
+          format: uuid4
           title: Id
           type: string
         state:
@@ -518,6 +528,7 @@ components:
       properties:
         id:
           description: Internal IVA ID
+          format: uuid4
           title: Id
           type: string
       title: IvaId
@@ -576,7 +587,8 @@ components:
       properties:
         by:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: ID of the user who changed the status
           title: Changed by
@@ -648,6 +660,7 @@ components:
           type: string
         id:
           description: Internal user ID
+          format: uuid4
           title: Id
           type: string
         name:
@@ -806,6 +819,7 @@ components:
           type: string
         id:
           description: Internal user ID
+          format: uuid4
           title: Id
           type: string
         name:
@@ -910,7 +924,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: The internal ID of the user
           title: User Id
@@ -920,7 +935,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: The ID of the IVA
           title: Iva Id
@@ -974,6 +990,7 @@ paths:
         required: true
         schema:
           description: The ID of the grant to revoke
+          format: uuid4
           title: Grant Id
           type: string
       responses:
@@ -1003,6 +1020,7 @@ paths:
         required: true
         schema:
           description: Internal ID of the user
+          format: uuid4
           title: User Id
           type: string
       responses:
@@ -1035,6 +1053,7 @@ paths:
         required: true
         schema:
           description: Internal ID of the user
+          format: uuid4
           title: User Id
           type: string
       - description: Internal ID of the dataset
@@ -1077,6 +1096,7 @@ paths:
         required: true
         schema:
           description: The internal ID of the user
+          format: uuid4
           title: User Id
           type: string
       - description: The ID of the IVA
@@ -1085,6 +1105,7 @@ paths:
         required: true
         schema:
           description: The ID of the IVA
+          format: uuid4
           title: Iva Id
           type: string
       - description: The ID of the dataset
@@ -1137,7 +1158,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - format: uuid4
+            type: string
           - type: 'null'
           description: Filter for the internal user ID
           title: User Id
@@ -1186,6 +1208,7 @@ paths:
         required: true
         schema:
           description: IVA ID
+          format: uuid4
           title: Iva Id
           type: string
       responses:
@@ -1222,6 +1245,7 @@ paths:
         required: true
         schema:
           description: IVA ID
+          format: uuid4
           title: Iva Id
           type: string
       responses:
@@ -1261,6 +1285,7 @@ paths:
         required: true
         schema:
           description: IVA ID
+          format: uuid4
           title: Iva Id
           type: string
       responses:
@@ -1294,6 +1319,7 @@ paths:
         required: true
         schema:
           description: IVA ID
+          format: uuid4
           title: Iva Id
           type: string
       responses:
@@ -1327,6 +1353,7 @@ paths:
         required: true
         schema:
           description: IVA ID
+          format: uuid4
           title: Iva Id
           type: string
       requestBody:
@@ -1534,6 +1561,7 @@ paths:
         required: true
         schema:
           description: Internal ID
+          format: uuid4
           title: Id
           type: string
       responses:
@@ -1568,6 +1596,7 @@ paths:
         required: true
         schema:
           description: Internal User ID
+          format: uuid4
           title: Id
           type: string
       responses:
@@ -1601,6 +1630,7 @@ paths:
         required: true
         schema:
           description: Internal ID
+          format: uuid4
           title: Id
           type: string
       requestBody:
@@ -1642,6 +1672,7 @@ paths:
         required: true
         schema:
           description: Internal ID
+          format: uuid4
           title: Id
           type: string
       requestBody:
@@ -1677,6 +1708,7 @@ paths:
         required: true
         schema:
           description: Internal ID of the user
+          format: uuid4
           title: User Id
           type: string
       responses:
@@ -1708,6 +1740,7 @@ paths:
         required: true
         schema:
           description: Internal ID of the user
+          format: uuid4
           title: User Id
           type: string
       requestBody:
@@ -1745,6 +1778,7 @@ paths:
         required: true
         schema:
           description: Internal user ID
+          format: uuid4
           title: User Id
           type: string
       - description: Internal claim ID
@@ -1753,6 +1787,7 @@ paths:
         required: true
         schema:
           description: Internal claim ID
+          format: uuid4
           title: Claim Id
           type: string
       responses:
@@ -1780,6 +1815,7 @@ paths:
         required: true
         schema:
           description: Internal user ID
+          format: uuid4
           title: User Id
           type: string
       - description: Internal claim ID
@@ -1788,6 +1824,7 @@ paths:
         required: true
         schema:
           description: Internal claim ID
+          format: uuid4
           title: Claim Id
           type: string
       requestBody:
@@ -1823,6 +1860,7 @@ paths:
         required: true
         schema:
           description: Internal User ID
+          format: uuid4
           title: User Id
           type: string
       responses:
@@ -1856,6 +1894,7 @@ paths:
         required: true
         schema:
           description: Internal User ID
+          format: uuid4
           title: User Id
           type: string
       requestBody:
@@ -1895,6 +1934,7 @@ paths:
         required: true
         schema:
           description: Internal User ID
+          format: uuid4
           title: User Id
           type: string
       - description: IVA ID
@@ -1903,6 +1943,7 @@ paths:
         required: true
         schema:
           description: IVA ID
+          format: uuid4
           title: Iva Id
           type: string
       responses:

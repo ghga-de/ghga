@@ -19,11 +19,11 @@ from collections.abc import AsyncGenerator
 
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient as BareClient
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.utils import now_utc_ms_prec
 
 from auth_service.claims_repository.models.config import (
     IvaType,
@@ -32,14 +32,15 @@ from auth_service.claims_repository.models.config import (
 from auth_service.config import Config
 from auth_service.prepare import prepare_rest_app
 from auth_service.user_registry.models.users import User, UserStatus
+from tests.fixtures.constants import ID_OF_ROD_STEWARD
 
 data_steward = User(
-    id="the-id-of-rod-steward",
+    id=ID_OF_ROD_STEWARD,
     ext_id="rod@ls.org",
     name="Rod Steward",
     email="rod@example.org",
     status=UserStatus.ACTIVE,
-    registration_date=now_as_utc(),
+    registration_date=now_utc_ms_prec(),
 )
 
 add_as_data_stewards = [
@@ -55,15 +56,14 @@ add_as_data_stewards = [
 
 async def seed_database(config: Config) -> None:
     """Seed the database with a dummy user that will become a data steward."""
-    dao_factory = MongoDbDaoFactory(config=config)
-
-    user_dao = await dao_factory.get_dao(
-        name=config.users_collection, dto_model=User, id_field="id"
-    )
-    try:
-        await user_dao.get_by_id(data_steward.id)
-    except ResourceNotFoundError:
-        await user_dao.insert(data_steward)
+    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
+        user_dao = await dao_factory.get_dao(
+            name=config.users_collection, dto_model=User, id_field="id"
+        )
+        try:
+            await user_dao.get_by_id(data_steward.id)
+        except ResourceNotFoundError:
+            await user_dao.insert(data_steward)
 
 
 class FullClient(BareClient):
@@ -85,6 +85,8 @@ async def fixture_full_client(
         service_instance_id=kafka.config.service_instance_id,
         provide_apis=["claims", "access"],
         add_as_data_stewards=add_as_data_stewards,
+        migration_wait_sec=2,
+        db_version_collection="authDbVersions",
     )
     await seed_database(config)
     async with prepare_rest_app(config=config) as app, FullClient(app) as client:

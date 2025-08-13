@@ -52,7 +52,7 @@ def session_to_header(
         "csrf": session.csrf_token,
     }
     if session.user_id:
-        session_dict["id"] = session.user_id
+        session_dict["id"] = str(session.user_id)
     if session.user_title:
         session_dict["title"] = session.user_title
     session_dict["roles"] = session.roles

@@ -37,6 +37,7 @@ from auth_service.claims_repository.models.claims import (
     VisaType,
 )
 from auth_service.config import CONFIG
+from tests.fixtures.constants import SOME_CLAIM_ID, SOME_IVA_ID, SOME_USER_ID
 
 ORG_URL = str(CONFIG.organization_url).rstrip("/")
 
@@ -44,8 +45,8 @@ ORG_URL = str(CONFIG.organization_url).rstrip("/")
 def test_is_valid_claim():
     """Test that claims can be checked for validity regarding expiry."""
     claim = Claim(
-        id="claim-id",
-        user_id="user-id",
+        id=SOME_CLAIM_ID,
+        user_id=SOME_USER_ID,
         visa_type=VisaType.RESEARCHER_STATUS,
         visa_value="https://home.org",
         source="https://home.org",  # type: ignore
@@ -68,8 +69,8 @@ def test_is_valid_claim():
 def test_is_internal_claim():
     """Test that the validity check for internal claims works."""
     good_claim = Claim(
-        id="claim-id",
-        user_id="user-id",
+        id=SOME_CLAIM_ID,
+        user_id=SOME_USER_ID,
         visa_type=VisaType.GHGA_ROLE,
         visa_value="data_steward@some.org",
         source=CONFIG.organization_url,
@@ -94,10 +95,10 @@ def test_is_internal_claim():
 def test_create_internal_role_claim():
     """Test that an internal role claim can be created for all roles."""
     created_claim = create_internal_role_claim(
-        user_id="some-user-id", role=Role.DATA_STEWARD, iva_id="some-claim_id"
+        user_id=SOME_USER_ID, role=Role.DATA_STEWARD, iva_id=SOME_IVA_ID
     )
-    assert created_claim.user_id == "some-user-id"
-    assert created_claim.iva_id == "some-claim_id"
+    assert created_claim.user_id == SOME_USER_ID
+    assert created_claim.iva_id == SOME_IVA_ID
     assert is_valid_claim(created_claim)
     assert get_role_from_claim(created_claim) is Role.DATA_STEWARD
     assert not has_download_access_for_dataset(created_claim, "DS0815")
@@ -106,8 +107,8 @@ def test_create_internal_role_claim():
 def test_get_role_from_role_claim():
     """Test that a role can be derived from a claim."""
     good_claim = Claim(
-        id="claim-id",
-        user_id="user-id",
+        id=SOME_CLAIM_ID,
+        user_id=SOME_USER_ID,
         visa_type=VisaType.GHGA_ROLE,
         visa_value="data_steward@some.org",
         source=CONFIG.organization_url,
@@ -137,14 +138,14 @@ def test_create_controlled_access_claim():
     """Test that a controlled access claim can be created."""
     current_year = now_as_utc().year
     created_claim = create_controlled_access_claim(
-        user_id="some-user-id",
-        iva_id="some-iva-id",
+        user_id=SOME_USER_ID,
+        iva_id=SOME_IVA_ID,
         dataset_id="DS0815",
         valid_from=utc_datetime(current_year - 1, 7, 1),
         valid_until=utc_datetime(current_year + 1, 6, 30),
     )
-    assert created_claim.user_id == "some-user-id"
-    assert created_claim.iva_id == "some-iva-id"
+    assert created_claim.user_id == SOME_USER_ID
+    assert created_claim.iva_id == SOME_IVA_ID
     assert get_dataset_for_value(str(created_claim.visa_value)) == "DS0815"
     assert is_valid_claim(created_claim)
     assert get_role_from_claim(created_claim) is None
@@ -160,8 +161,8 @@ def test_get_dataset_for_value():
 def test_has_download_access_for_dataset():
     """Test that the dataset access permission can be derived from a claim."""
     good_claim = Claim(
-        id="claim-id",
-        user_id="user-id",
+        id=SOME_CLAIM_ID,
+        user_id=SOME_USER_ID,
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value=f"{ORG_URL}/datasets/DS0815",  # pyright: ignore
         source=ORG_URL,  # type: ignore[arg-type]
@@ -193,8 +194,8 @@ def test_has_download_access_for_dataset():
 def test_dateset_id_when_download_access():
     """Test that the dataset ID for access can be derived from a claim."""
     good_claim = Claim(
-        id="claim-id",
-        user_id="user-id",
+        id=SOME_CLAIM_ID,
+        user_id=SOME_USER_ID,
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value=f"{ORG_URL}/datasets/DS0815",  # pyright: ignore
         source=ORG_URL,  # type: ignore[arg-type]

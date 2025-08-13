@@ -357,7 +357,7 @@ def internal_token_from_session(session: Session) -> str:
         "email": session.user_email,
         "title": session.user_title,
         "roles": session.roles,
-        "id": session.user_id or session.ext_id,
+        "id": str(session.user_id) if session.user_id else session.ext_id,
         "iat": iat,
         "exp": exp,
     }
@@ -375,7 +375,7 @@ def log_auth_info(request: Request, session: Session) -> None:
         extra={
             "method": request.method,
             "path": request.url.path,
-            "user": session.user_id,
+            "user": str(session.user_id),
             "roles": session.roles,
         },
     )

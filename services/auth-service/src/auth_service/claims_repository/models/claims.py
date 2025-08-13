@@ -21,6 +21,7 @@ from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
+    UUID4,
     EmailStr,
     Field,
     HttpUrl,
@@ -147,7 +148,7 @@ class ClaimValidity(BaseDto):
 class ClaimCreation(ClaimValidity):
     """A claim made about a user with a user ID"""
 
-    iva_id: str | None = Field(  # actually UUID
+    iva_id: UUID4 | None = Field(  # actually UUID
         default=None, description="ID of an IVA associated with this claim"
     )
 
@@ -199,13 +200,9 @@ class ClaimUpdate(BaseDto):
 class Claim(ClaimCreation):
     """A claim about a user with a user ID and all data"""
 
-    id: str = Field(  # actually UUID
-        default_factory=lambda: str(uuid4()), description="Internal claim ID"
-    )
+    id: UUID4 = Field(default_factory=lambda: uuid4(), description="Internal claim ID")
 
-    user_id: str = Field(  # actually UUID
-        default=..., description="Internal user ID"
-    )
+    user_id: UUID4 = Field(default=..., description="Internal user ID")
 
     creation_date: UTCDatetime = Field(
         default=..., description="Date of creation of this claim"
@@ -218,13 +215,9 @@ class Claim(ClaimCreation):
 class Grant(BaseDto):
     """An access grant based on a corresponding claim."""
 
-    id: str = Field(  # actually UUID
-        ..., description="Internal grant ID (same as claim ID)"
-    )
-    user_id: str = Field(  # actually UUID
-        default=..., description="Internal user ID"
-    )
-    iva_id: str | None = Field(  # actually UUID
+    id: UUID4 = Field(..., description="Internal grant ID (same as claim ID)")
+    user_id: UUID4 = Field(default=..., description="Internal user ID")
+    iva_id: UUID4 | None = Field(
         default=None, description="ID of an IVA associated with this grant"
     )
     dataset_id: Accession = Field(

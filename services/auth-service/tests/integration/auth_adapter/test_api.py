@@ -20,11 +20,11 @@ import re
 from base64 import b64encode
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+from uuid import UUID
 
 import pytest
 from fastapi import status
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.correlation import validate_correlation_id
 from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.core.session_store import SessionState
@@ -32,6 +32,7 @@ from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.auth_adapter.rest.headers import get_bearer_token
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.deps import get_user_dao
+from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
 
 from ...fixtures.utils import (
     DummyClaimDao,
@@ -95,7 +96,10 @@ def assert_has_authorization_header(response, session):
 
     correlation_id = headers.get("X-Request-Id")
     assert correlation_id
-    validate_correlation_id(correlation_id)
+    try:
+        assert str(UUID(correlation_id)) == correlation_id
+    except Exception:
+        assert False, "Invalid correlation ID"
 
     authorization = headers.get("Authorization")
     assert authorization
@@ -106,7 +110,7 @@ def assert_has_authorization_header(response, session):
     expected_claims = {"id", "name", "email", "title", "roles", "exp", "iat"}
 
     assert set(claims) == expected_claims
-    assert claims["id"] == session.user_id
+    assert claims["id"] == str(session.user_id)
     assert claims["name"] == session.user_name
     assert claims["email"] == session.user_email
     assert claims["title"] == session.user_title
@@ -284,7 +288,7 @@ async def test_post_user_without_session_and_basic_auth(
     # invalid basic auth, no session
     auth = "Basic invalid"
     response = await client.put(
-        AUTH_PATH + "/users/some-internal-id", headers={"Authorization": auth}
+        AUTH_PATH + f"/users/{SOME_USER_ID}", headers={"Authorization": auth}
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
@@ -354,7 +358,7 @@ async def test_post_user_with_session(bare_client: BareClient, httpx_mock: HTTPX
 
 async def test_put_user_without_session(bare_client: BareClient):
     """Test authentication for user update without a session."""
-    response = await bare_client.put(AUTH_PATH + "/users/some-internal-id")
+    response = await bare_client.put(AUTH_PATH + f"/users/{SOME_USER_ID}")
     assert_is_unauthorized_error(response, "Not logged in")
 
 
@@ -364,7 +368,7 @@ async def test_put_user_with_session_and_wrong_user_id(
     """Test user update with session and wrong user ID."""
     client, session = client_with_session[:2]
     response = await client.put(
-        AUTH_PATH + "/users/jane@ghga.de", headers=headers_for_session(session)
+        AUTH_PATH + f"/users/{SOME_USER_ID}", headers=headers_for_session(session)
     )
     assert_is_unauthorized_error(response, "Not registered")
 
@@ -376,7 +380,7 @@ async def test_put_user_with_session_and_invalid_csrf(
     client, session = client_with_session[:2]
     session.csrf_token = "invalid"
     response = await client.put(
-        AUTH_PATH + "/users/john@ghga.de", headers=headers_for_session(session)
+        AUTH_PATH + f"/users/{ID_OF_JOHN}", headers=headers_for_session(session)
     )
     assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
 
@@ -396,7 +400,7 @@ async def test_put_unregistered_user_with_session(
     assert not session.user_id
 
     response = await bare_client.put(
-        AUTH_PATH + "/users/john@ghga.de", headers=headers_for_session(session)
+        AUTH_PATH + f"/users/{ID_OF_JOHN}", headers=headers_for_session(session)
     )
     assert_is_unauthorized_error(response, "Not registered")
 
@@ -416,10 +420,10 @@ async def test_put_registered_user_with_session(
     app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
     session = await query_new_session(bare_client)
-    assert session.user_id == "john@ghga.de"
+    assert session.user_id == ID_OF_JOHN
 
     response = await bare_client.put(
-        AUTH_PATH + "/users/john@ghga.de", headers=headers_for_session(session)
+        AUTH_PATH + f"/users/{ID_OF_JOHN}", headers=headers_for_session(session)
     )
 
     assert response.status_code == status.HTTP_200_OK
@@ -435,7 +439,7 @@ async def test_put_registered_user_with_session(
     expected_claims = {"id", "name", "email", "title", "exp", "iat", "roles"}
 
     assert set(claims) == expected_claims
-    assert claims["id"] == "john@ghga.de"
+    assert claims["id"] == str(ID_OF_JOHN)
     assert claims["name"] == "John Doe"
     assert claims["email"] == "john@home.org"
     assert claims["title"] is None
@@ -485,7 +489,7 @@ async def test_random_url_authenticated(client_with_session: ClientWithSession):
     # create second factor and authenticate with that
     response = await client.post(
         AUTH_PATH + "/totp-token",
-        json={"user_id": session.user_id, "force": False},
+        json={"user_id": str(session.user_id), "force": False},
         headers=headers,
     )
     assert response.status_code == status.HTTP_201_CREATED
@@ -548,7 +552,7 @@ async def test_log_auth_info(
     headers = headers_for_session(session)
     response = await client.post(
         AUTH_PATH + "/totp-token",
-        json={"user_id": session.user_id, "force": False},
+        json={"user_id": str(session.user_id), "force": False},
         headers=headers,
     )
     assert response.status_code == status.HTTP_201_CREATED
@@ -573,5 +577,5 @@ async def test_log_auth_info(
     assert record.message == "User authorized"
     assert record.method == "PUT"
     assert record.path == "/api/some/path"
-    assert record.user == session.user_id
+    assert record.user == str(session.user_id)
     assert record.roles == session.roles

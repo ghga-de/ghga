@@ -20,7 +20,9 @@ from collections.abc import Callable
 from datetime import timedelta
 from enum import StrEnum
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.utils import now_utc_ms_prec
+from pydantic import UUID4
 
 from ...config import CONFIG
 from ..models.claims import AuthorityLevel, Claim, VisaType
@@ -53,7 +55,9 @@ class Role(StrEnum):
 DATASET_PREFIX = str(INTERNAL_SOURCE).rstrip("/") + "/datasets/"
 
 
-def is_valid_claim(claim: Claim, now: Callable[[], UTCDatetime] = now_as_utc) -> bool:
+def is_valid_claim(
+    claim: Claim, now: Callable[[], UTCDatetime] = now_utc_ms_prec
+) -> bool:
     """Check whether the given claim is currently valid.
 
     This function does not check the existence and status of an associated IVA.
@@ -77,11 +81,11 @@ def is_internal_claim(claim: Claim, visa_type: VisaType) -> bool:
 
 
 def create_internal_role_claim(
-    user_id: str, role: Role, iva_id: str | None = None, valid_days=365
+    user_id: UUID4, role: Role, iva_id: UUID4 | None = None, valid_days=365
 ) -> Claim:
     """Create a claim for a data steward with the given IVA."""
-    valid_from = now_as_utc()
-    valid_until = now_as_utc() + timedelta(days=valid_days)
+    valid_from = now_utc_ms_prec()
+    valid_until = now_utc_ms_prec() + timedelta(days=valid_days)
     return Claim(
         visa_type=VisaType.GHGA_ROLE,
         visa_value=f"{role}@{INTERNAL_DOMAIN}",
@@ -122,14 +126,14 @@ def get_role_from_claim(claim: Claim) -> Role | None:
 
 
 def create_controlled_access_claim(
-    user_id: str,
-    iva_id: str,
+    user_id: UUID4,
+    iva_id: UUID4,
     dataset_id: str,
     valid_from: UTCDatetime,
     valid_until: UTCDatetime,
 ) -> Claim:
     """Create a claim for a controlled access grant."""
-    creation_date = now_as_utc()
+    creation_date = now_utc_ms_prec()
     return Claim(
         visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
         visa_value=DATASET_PREFIX + dataset_id,
@@ -149,15 +153,15 @@ def create_controlled_access_claim(
 
 def create_controlled_access_filter(
     *,
-    user_id: str | None = None,
-    iva_id: str | None = None,
+    user_id: UUID4 | None = None,
+    iva_id: UUID4 | None = None,
     dataset_id: str | None = None,
-) -> dict[str, str]:
+) -> dict[str, UUID4 | str]:
     """Create a mapping for filtering controlled access grants.
 
     If a user, IVA or dataset ID is given, filter values will be set accordingly.
     """
-    mapping = {
+    mapping: dict[str, UUID4 | str] = {
         "visa_type": VisaType.CONTROLLED_ACCESS_GRANTS.value,
         "source": str(INTERNAL_SOURCE).rstrip("/"),
     }

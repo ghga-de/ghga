@@ -36,6 +36,7 @@ dataset_change_topic: metadata_datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
 db_name: dev-db
+db_version_collection: authDbVersions
 docs_url: /docs
 enable_opentelemetry: false
 generate_correlation_id: true
@@ -60,6 +61,8 @@ log_format: null
 log_level: DEBUG
 log_traceback: true
 max_iva_verification_attempts: 10
+migration_max_wait_sec: null
+migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 oidc_authority_url: https://login.aai.lifescience-ri.eu/oidc/

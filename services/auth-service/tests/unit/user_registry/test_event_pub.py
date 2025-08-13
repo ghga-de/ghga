@@ -18,17 +18,15 @@
 
 from collections.abc import Mapping
 from typing import Any
+from uuid import uuid4
 
 import pytest
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
+from hexkit.utils import now_utc_ms_prec
+from pydantic import UUID4
 
-from auth_service.user_registry.models.ivas import (
-    Iva,
-    IvaState,
-    IvaType,
-)
+from auth_service.user_registry.models.ivas import Iva, IvaState, IvaType
 from auth_service.user_registry.translators.event_pub import (
     EventPubTranslator,
     EventPubTranslatorConfig,
@@ -78,6 +76,7 @@ class DummyEventPublisher(EventPublisherProtocol):
         type_: Ascii,
         key: Ascii,
         topic: Ascii,
+        event_id: UUID4,
         headers: Mapping[str, Any],
     ) -> None:
         """Record a published event and test expectations."""
@@ -100,9 +99,9 @@ async def test_publish_2fa_recreated(config: EventPubTranslatorConfig):
     """Test publishing a 2FA setup recreation event for a user."""
     publisher = AuthEventPublisher(config)
     translator = EventPubTranslator(config=config, event_publisher=publisher)
-    user_id = "some-user-id"
+    user_id = uuid4()
     await translator.publish_2fa_recreated(user_id=user_id)
-    assert publisher.published_key == "some-user-id"
+    assert publisher.published_key == str(user_id)
     assert publisher.published_payload == {
         "user_id": user_id,
     }
@@ -119,10 +118,11 @@ async def test_publish_iva_state_changed(config: EventPubTranslatorConfig):
     """Test publishing an IVA state change."""
     publisher = IvaEventPublisher(config)
     translator = EventPubTranslator(config=config, event_publisher=publisher)
-    now = now_as_utc()
+    now = now_utc_ms_prec()
+    iva_id = uuid4()
     iva = Iva(
-        id="some-iva-id",
-        user_id="some-user_id",
+        id=iva_id,
+        user_id=uuid4(),
         value="123/456",
         type=IvaType.PHONE,
         state=IvaState.VERIFIED,
@@ -130,7 +130,7 @@ async def test_publish_iva_state_changed(config: EventPubTranslatorConfig):
         changed=now,
     )
     await translator.publish_iva_state_changed(iva=iva)
-    assert publisher.published_key == "iva-some-iva-id"
+    assert publisher.published_key == f"iva-{iva_id}"
     assert publisher.published_payload == {
         "state": iva.state,
         "type": iva.type,
@@ -143,9 +143,9 @@ async def test_publish_ivas_reset(config: EventPubTranslatorConfig):
     """Test publishing an IVA reset event for a user."""
     publisher = IvaEventPublisher(config)
     translator = EventPubTranslator(config=config, event_publisher=publisher)
-    user_id = "some-user-id"
+    user_id = uuid4()
     await translator.publish_ivas_reset(user_id=user_id)
-    assert publisher.published_key == "all-some-user-id"
+    assert publisher.published_key == f"all-{user_id}"
     assert publisher.published_payload == {
         "state": IvaState.UNVERIFIED,
         "type": None,
