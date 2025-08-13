@@ -28,6 +28,8 @@ spec:
         app.kubernetes.io/version: "0.0.0"
         app: test-job
     spec:
+      securityContext:
+        fsGroup: 1000
       shareProcessNamespace: false
       restartPolicy: Never
       serviceAccountName: test-job

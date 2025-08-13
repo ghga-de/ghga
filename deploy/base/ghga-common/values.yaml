@@ -52,8 +52,7 @@ exports:
     shareProcessNamespace: false
 
     podSecurityContext:
-      enabled: false
-      fsGroup: 0
+      fsGroup: 1000
 
     initContainers: []
 

@@ -83,6 +83,8 @@ spec:
         app.kubernetes.io/version: "0.0.0"
         app: test-service
     spec:
+      securityContext:
+        fsGroup: 1000
       serviceAccountName: test-service
       
       shareProcessNamespace: true

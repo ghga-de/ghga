@@ -61,6 +61,8 @@ spec:
             app.kubernetes.io/version: "0.0.0"
             app: test-cronjob
         spec:
+          securityContext:
+            fsGroup: 1000
           restartPolicy: "OnFailure"
           serviceAccountName: test-cronjob
           shareProcessNamespace: false
