@@ -20,9 +20,10 @@ from ghga_event_schemas.configs import DatasetEventsConfig
 from ghga_event_schemas.pydantic_ import MetadataDatasetID
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
-from hexkit.opentelemetry import start_span
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import UUID4
+
+from auth_service.constants import TRACER
 
 from ..ports.deletion import DatasetDeletionPort
 
@@ -47,7 +48,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         self._config = config
         self._handler = handler
 
-    @start_span()
+    @TRACER.start_as_current_span("EventSubTranslator._consume_validated")
     async def _consume_validated(
         self,
         *,

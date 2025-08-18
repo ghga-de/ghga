@@ -22,11 +22,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Response, status
 from fastapi.exceptions import HTTPException
-from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
+from auth_service.constants import TRACER
 from auth_service.user_registry.deps import UserDaoDependency
 
 from ..core.utils import user_exists
@@ -50,7 +50,6 @@ claim_not_found_error = HTTPException(
 TAGS: list[str | Enum] = ["claims"]
 
 
-@start_span()
 @router.post(
     "/users/{user_id}/claims",
     operation_id="post_claim",
@@ -66,6 +65,7 @@ TAGS: list[str | Enum] = ["claims"]
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("claims_router.post_claim")
 async def post_claim(
     claim_creation: ClaimCreation,
     user_id: Annotated[
@@ -101,7 +101,6 @@ async def post_claim(
     return full_claim
 
 
-@start_span()
 @router.get(
     "/users/{user_id}/claims",
     operation_id="get_claims",
@@ -116,6 +115,7 @@ async def post_claim(
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("claims_router.get_claims")
 async def get_claims(
     user_id: Annotated[
         UUID4,
@@ -135,7 +135,6 @@ async def get_claims(
     return [claim async for claim in claim_dao.find_all(mapping={"user_id": user_id})]
 
 
-@start_span()
 @router.patch(
     "/users/{user_id}/claims/{claim_id}",
     operation_id="patch_claim",
@@ -149,6 +148,7 @@ async def get_claims(
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("claims_router.patch_claim")
 async def patch_claim(
     claim_update: ClaimUpdate,
     user_id: Annotated[
@@ -195,7 +195,6 @@ async def patch_claim(
     return Response(status_code=204)
 
 
-@start_span()
 @router.delete(
     "/users/{user_id}/claims/{claim_id}",
     operation_id="delete_claim",
@@ -209,6 +208,7 @@ async def patch_claim(
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("claims_router.delete_claim")
 async def delete_claim(
     user_id: Annotated[
         UUID4,

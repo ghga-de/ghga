@@ -32,13 +32,13 @@ from fastapi import (
     Response,
     status,
 )
-from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import UUID4, SecretStr
 
 from auth_service.claims_repository.core.utils import get_active_roles
 from auth_service.claims_repository.deps import ClaimDaoDependency
 from auth_service.config import CONFIG
+from auth_service.constants import TRACER
 from auth_service.user_registry.deps import (
     IvaDaoDependency,
     UserDaoDependency,
@@ -116,7 +116,6 @@ def add_allowed_routes():
 add_allowed_routes()
 
 
-@start_span()
 @router.post(
     AUTH_PATH + "/rpc/login",
     operation_id="login",
@@ -126,6 +125,7 @@ add_allowed_routes()
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@TRACER.start_as_current_span("router.login")
 async def login(  # noqa: C901, PLR0913
     request: Request,
     session_store: SessionStoreDependency,
@@ -215,7 +215,6 @@ async def login(  # noqa: C901, PLR0913
     return response
 
 
-@start_span()
 @router.post(
     AUTH_PATH + "/rpc/logout",
     operation_id="logout",
@@ -225,6 +224,7 @@ async def login(  # noqa: C901, PLR0913
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@TRACER.start_as_current_span("router.logout")
 async def logout(
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -243,7 +243,6 @@ async def logout(
     return response
 
 
-@start_span()
 @router.post(
     AUTH_PATH + "/users",
     operation_id="post_user",
@@ -253,6 +252,7 @@ async def logout(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
+@TRACER.start_as_current_span("router.post_user")
 async def post_user(
     request: Request,
     session_store: SessionStoreDependency,
@@ -269,7 +269,6 @@ async def post_user(
     return pass_auth_response(request, f"Bearer {internal_token}")
 
 
-@start_span()
 @router.put(
     AUTH_PATH + "/users/{id}",
     operation_id="put_user",
@@ -279,6 +278,7 @@ async def post_user(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
+@TRACER.start_as_current_span("router.put_user")
 async def put_user(
     id_: Annotated[
         UUID4,
@@ -307,7 +307,6 @@ async def put_user(
     return pass_auth_response(request, f"Bearer {internal_token}")
 
 
-@start_span()
 @router.post(
     AUTH_PATH + "/totp-token",
     operation_id="create_new_totp_token",
@@ -317,6 +316,7 @@ async def put_user(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_201_CREATED,
 )
+@TRACER.start_as_current_span("router.create_new_totp_token")
 async def create_new_totp_token(
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -356,7 +356,6 @@ async def create_new_totp_token(
     return TOTPTokenResponse(uri=SecretStr(uri))
 
 
-@start_span()
 @router.post(
     AUTH_PATH + "/rpc/verify-totp",
     operation_id="verify_totp",
@@ -366,6 +365,7 @@ async def create_new_totp_token(
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@TRACER.start_as_current_span("router.rpc_verify_totp")
 async def rpc_verify_totp(  # noqa: PLR0913
     session_store: SessionStoreDependency,
     session: SessionDependency,
@@ -409,13 +409,13 @@ async def rpc_verify_totp(  # noqa: PLR0913
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@start_span()
 @router.api_route(
     "/{path:path}",
     methods=ALL_METHODS,
     dependencies=basic_auth_dependencies,
     status_code=status.HTTP_200_OK,
 )
+@TRACER.start_as_current_span("router.ext_auth")
 async def ext_auth(
     request: Request,
     session_store: SessionStoreDependency,

@@ -25,11 +25,11 @@ from uuid import UUID
 from fastapi import APIRouter, Path, Query, Response, status
 from fastapi.exceptions import HTTPException
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
+from auth_service.constants import TRACER
 from auth_service.user_registry.deps import (
     IvaDaoDependency,
     UserDaoDependency,
@@ -68,7 +68,6 @@ iva_not_found_error = HTTPException(
 TAGS: list[str | Enum] = ["access"]
 
 
-@start_span()
 @router.get(
     "/download-access/grants",
     operation_id="get_download_access_grants",
@@ -83,6 +82,7 @@ TAGS: list[str | Enum] = ["access"]
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("access_router.get_download_access_grants")
 async def get_download_access_grants(  # noqa: PLR0913
     claim_dao: ClaimDaoDependency,
     user_dao: UserDaoDependency,
@@ -170,7 +170,6 @@ async def get_download_access_grants(  # noqa: PLR0913
     return sorted(grants, key=attrgetter("id"))
 
 
-@start_span()
 @router.delete(
     "/download-access/grants/{grant_id}",
     operation_id="revoke_download_access_grant",
@@ -185,6 +184,7 @@ async def get_download_access_grants(  # noqa: PLR0913
     },
     status_code=204,
 )
+@TRACER.start_as_current_span("access_router.revoke_download_access_grant")
 async def revoke_download_access_grant(
     grant_id: Annotated[
         UUID4,
@@ -214,7 +214,6 @@ async def revoke_download_access_grant(
     return Response(status_code=204)
 
 
-@start_span()
 @router.post(
     "/download-access/users/{user_id}/ivas/{iva_id}/datasets/{dataset_id}",
     operation_id="grant_download_access",
@@ -230,6 +229,7 @@ async def revoke_download_access_grant(
     },
     status_code=204,
 )
+@TRACER.start_as_current_span("access_router.grant_download_access")
 async def grant_download_access(  # noqa: PLR0913
     validity: ClaimValidity,
     user_id: Annotated[
@@ -285,7 +285,6 @@ async def grant_download_access(  # noqa: PLR0913
     return Response(status_code=204)
 
 
-@start_span()
 @router.get(
     "/download-access/users/{user_id}/datasets/{dataset_id}",
     operation_id="check_download_access",
@@ -300,6 +299,7 @@ async def grant_download_access(  # noqa: PLR0913
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("access_router.check_download_access")
 async def check_download_access(
     user_id: Annotated[
         UUID4,
@@ -356,7 +356,6 @@ async def check_download_access(
     return valid_until
 
 
-@start_span()
 @router.get(
     "/download-access/users/{user_id}/datasets",
     operation_id="get_download_access_list",
@@ -374,6 +373,7 @@ async def check_download_access(
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("access_router.get_datasets_with_download_access")
 async def get_datasets_with_download_access(
     user_id: Annotated[
         UUID4,

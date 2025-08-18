@@ -23,11 +23,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, Path, Query, Response
 from fastapi.exceptions import HTTPException
-from hexkit.opentelemetry import start_span
 from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import UUID4
 
 from auth_service.auth_adapter.deps import UserTokenDaoDependency
+from auth_service.constants import TRACER
 
 from ...auth_adapter.rest.dto import TOTPTokenResponse
 from ...rest.auth import (
@@ -62,7 +62,6 @@ TAGS_SESSION: list[str | Enum] = ["session"]
 TAGS_TOTP: list[str | Enum] = ["totp"]
 
 
-@start_span()
 @router.get(
     "/users",
     operation_id="get_users",
@@ -80,6 +79,7 @@ TAGS_TOTP: list[str | Enum] = ["totp"]
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("router.get_users")
 async def get_users(
     user_registry: UserRegistryDependency,
     _auth_context: StewardAuthContext,
@@ -97,7 +97,6 @@ async def get_users(
         raise HTTPException(status_code=500, detail="Cannot retrieve users.") from error
 
 
-@start_span()
 @router.post(
     "/users",
     operation_id="post_user",
@@ -118,6 +117,7 @@ async def get_users(
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("router.post_user")
 async def post_user(
     user_data: UserRegisteredData,
     user_registry: UserRegistryDependency,
@@ -146,7 +146,6 @@ async def post_user(
         ) from error
 
 
-@start_span()
 @router.put(
     "/users/{id}",
     operation_id="put_user",
@@ -165,6 +164,7 @@ async def post_user(
     },
     status_code=204,
 )
+@TRACER.start_as_current_span("router.put_user")
 async def put_user(
     user_data: UserBasicData,
     id_: Annotated[
@@ -197,7 +197,6 @@ async def put_user(
     return Response(status_code=204)
 
 
-@start_span()
 @router.get(
     "/users/{id}",
     operation_id="get_user",
@@ -214,6 +213,7 @@ async def put_user(
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("router.get_user")
 async def get_user(
     id_: Annotated[
         UUID4,
@@ -246,7 +246,6 @@ async def get_user(
     return user
 
 
-@start_span()
 @router.patch(
     "/users/{id}",
     operation_id="patch_user",
@@ -263,6 +262,7 @@ async def get_user(
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("router.patch_user")
 async def patch_user(
     user_data: UserModifiableData,
     id_: Annotated[
@@ -306,7 +306,6 @@ async def patch_user(
     return Response(status_code=204)
 
 
-@start_span()
 @router.delete(
     "/users/{id}",
     operation_id="delete_user",
@@ -323,6 +322,7 @@ async def patch_user(
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("router.delete_user")
 async def delete_user(
     id_: Annotated[
         UUID4,
@@ -358,7 +358,6 @@ async def delete_user(
     return Response(status_code=204)
 
 
-@start_span()
 @router.get(
     "/users/{user_id}/ivas",
     operation_id="get_user_ivas",
@@ -377,6 +376,7 @@ async def delete_user(
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("router.get_user_ivas")
 async def get_user_ivas(
     user_id: Annotated[
         UUID4,
@@ -401,7 +401,6 @@ async def get_user_ivas(
         raise HTTPException(status_code=500, detail="Cannot retrieve IVAs.") from error
 
 
-@start_span()
 @router.post(
     "/users/{user_id}/ivas",
     operation_id="post_user_iva",
@@ -417,6 +416,7 @@ async def get_user_ivas(
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("router.post_user_iva")
 async def post_user_iva(
     user_id: Annotated[
         UUID4,
@@ -448,7 +448,6 @@ async def post_user_iva(
     return IvaId(id=id_)
 
 
-@start_span()
 @router.delete(
     "/users/{user_id}/ivas/{iva_id}",
     operation_id="delete_user_iva",
@@ -464,6 +463,7 @@ async def post_user_iva(
     },
     status_code=204,
 )
+@TRACER.start_as_current_span("router.delete_user_iva")
 async def delete_user_iva(
     user_id: Annotated[
         UUID4,
@@ -499,7 +499,6 @@ async def delete_user_iva(
     return Response(status_code=204)
 
 
-@start_span()
 @router.post(
     "/rpc/ivas/{iva_id}/unverify",
     operation_id="unverify_iva",
@@ -514,6 +513,7 @@ async def delete_user_iva(
     },
     status_code=204,
 )
+@TRACER.start_as_current_span("router.unverify_iva")
 async def unverify_iva(
     iva_id: Annotated[
         UUID4,
@@ -538,7 +538,6 @@ async def unverify_iva(
     return Response(status_code=204)
 
 
-@start_span()
 @router.post(
     "/rpc/ivas/{iva_id}/request-code",
     operation_id="request_code_for_iva",
@@ -553,6 +552,7 @@ async def unverify_iva(
     },
     status_code=204,
 )
+@TRACER.start_as_current_span("router.request_code_for_iva")
 async def request_code_for_iva(
     iva_id: Annotated[
         UUID4,
@@ -583,7 +583,6 @@ async def request_code_for_iva(
     return Response(status_code=204)
 
 
-@start_span()
 @router.post(
     "/rpc/ivas/{iva_id}/create-code",
     operation_id="create_code_for_iva",
@@ -599,6 +598,7 @@ async def request_code_for_iva(
     },
     status_code=201,
 )
+@TRACER.start_as_current_span("router.create_code_for_iva")
 async def create_code_for_iva(
     iva_id: Annotated[
         UUID4,
@@ -627,7 +627,6 @@ async def create_code_for_iva(
     return IvaVerificationCode(verification_code=code)
 
 
-@start_span()
 @router.post(
     "/rpc/ivas/{iva_id}/code-transmitted",
     operation_id="code_transmitted_for_iva",
@@ -650,6 +649,7 @@ async def create_code_for_iva(
     },
     status_code=204,
 )
+@TRACER.start_as_current_span("router.confirm_code_for_iva_transmitted")
 async def confirm_code_for_iva_transmitted(
     iva_id: Annotated[
         UUID4,
@@ -679,7 +679,6 @@ async def confirm_code_for_iva_transmitted(
     return Response(status_code=204)
 
 
-@start_span()
 @router.post(
     "/rpc/ivas/{iva_id}/validate-code",
     operation_id="validate_code_for_iva",
@@ -697,6 +696,7 @@ async def confirm_code_for_iva_transmitted(
     },
     status_code=204,
 )
+@TRACER.start_as_current_span("router.validate_code_for_iva")
 async def validate_code_for_iva(
     iva_id: Annotated[
         UUID4,
@@ -738,7 +738,6 @@ async def validate_code_for_iva(
     return Response(status_code=204)
 
 
-@start_span()
 @router.get(
     "/ivas",
     operation_id="get_all_ivas",
@@ -755,6 +754,7 @@ async def validate_code_for_iva(
     },
     status_code=200,
 )
+@TRACER.start_as_current_span("router.get_all_ivas")
 async def get_all_ivas(
     user_registry: UserRegistryDependency,
     _auth_context: StewardAuthContext,

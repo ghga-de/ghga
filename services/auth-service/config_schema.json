@@ -78,26 +78,6 @@
       "title": "Otel Trace Sampling Rate",
       "type": "number"
     },
-    "otel_exporter_protocol": {
-      "default": "http/protobuf",
-      "description": "Specifies which protocol should be used by exporters.",
-      "enum": [
-        "grpc",
-        "http/protobuf"
-      ],
-      "title": "Otel Exporter Protocol",
-      "type": "string"
-    },
-    "otel_exporter_endpoint": {
-      "description": "Base endpoint URL for the collector that receives content from the exporter.",
-      "examples": [
-        "http://localhost:4318"
-      ],
-      "format": "uri",
-      "minLength": 1,
-      "title": "Otel Exporter Endpoint",
-      "type": "string"
-    },
     "auth_topic": {
       "description": "The name of the topic containing auth-related events.",
       "examples": [
@@ -927,7 +907,6 @@
     }
   },
   "required": [
-    "otel_exporter_endpoint",
     "auth_topic",
     "second_factor_recreated_type",
     "iva_state_changed_topic",
