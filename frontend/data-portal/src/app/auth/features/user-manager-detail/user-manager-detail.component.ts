@@ -207,7 +207,7 @@ export class UserManagerDetailComponent implements OnInit {
       callback: (statusChangeConfirmed) => {
         if (statusChangeConfirmed)
           this.#update({
-            status: isDeactivated ? UserStatus.active : UserStatus.active,
+            status: isDeactivated ? UserStatus.active : UserStatus.inactive,
           });
       },
     });
