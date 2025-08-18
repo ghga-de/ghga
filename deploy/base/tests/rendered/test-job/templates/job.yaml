@@ -69,12 +69,12 @@ spec:
             - mountPath: /tmp/test
               name: test
       volumes:
-        - name: config
-          configMap:
-            name: test-job
-            items:
-            - key: config
-              path: ..yaml
+            - configMap:
+                items:
+                - key: config
+                  path: config.yaml
+                name: test-job
+              name: config
             - emptyDir:
                 sizeLimit: 5Gi
               name: test

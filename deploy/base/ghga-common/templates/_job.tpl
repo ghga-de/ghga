@@ -77,12 +77,7 @@ spec:
               readOnly: true
             {{- end }}
       volumes:
-        - name: config
-          configMap:
-            name: {{ include "common.names.fullname" $ }}
-            items:
-            - key: config
-              path: .{{ .Values.configPrefix }}.yaml
+        {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 12 }}
         {{- if .Values.kafkaUser.enabled }}
         - name: kafka-secret
           secret:
