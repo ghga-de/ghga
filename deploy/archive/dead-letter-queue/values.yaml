@@ -22,6 +22,8 @@ config:
   service_instance_id: 'dlqs_1'
   service_name: dlqs
   kafka_enable_dlq: false
+  db_version_collection: "dlqsDbVersions"
+  migration_wait_sec: 10
 
 cmd: dlqs run-rest
 # cmd: dlqs consume-events

@@ -25,8 +25,8 @@ config:
   work_package_signing_key: '{}'
   kafka_enable_dlq: true
   enable_opentelemetry: false
-  otel_exporter_endpoint: "http://localhost:4318/"
-  otel_exporter_protocol: "http/protobuf"
+  db_version_collection: "wpsDbVersions"
+  migration_wait_sec: 10
 
 
 cmd: wps run-rest

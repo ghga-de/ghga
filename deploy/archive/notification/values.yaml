@@ -38,6 +38,8 @@ config:
   smtp_port: 587
   use_starttls: false
   kafka_enable_dlq: true
+  db_version_collection: "nsDbVersions"
+  migration_wait_sec: 10
 
 cmd: ns
 

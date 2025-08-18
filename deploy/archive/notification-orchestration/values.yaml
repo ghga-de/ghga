@@ -16,6 +16,8 @@ config:
   central_data_stewardship_email: helpdesk@ghga.de
   helpdesk_email: helpdesk@ghga.de
   kafka_enable_dlq: true
+  db_version_collection: "nosDbVersions"
+  migration_wait_sec: 10
 
 
 cmd: nos
