@@ -19,12 +19,18 @@ import logging
 from contextlib import suppress
 from typing import Literal, NamedTuple
 
+from bson import BSON, CodecOptions, UuidRepresentation, json_util
+
 from sms.config import Config
 from sms.models import Criteria, DocumentType, UpsertionDetails
 from sms.ports.inbound.docs_handler import DocsHandlerPort
 from sms.ports.outbound.docs_dao import DocsDaoPort
 
 log = logging.getLogger(__name__)
+
+CODEC_OPTS: CodecOptions = CodecOptions(
+    uuid_representation=UuidRepresentation.STANDARD, tz_aware=True
+)
 
 
 def log_and_raise_permissions_error(
@@ -41,6 +47,25 @@ def log_and_raise_permissions_error(
         extra={"db_name": db_name, "collection": collection, "operation": operation},
     )
     raise error
+
+
+def resolve_extended_json(doc: DocumentType) -> DocumentType:
+    """Parse any extended JSON in the document (such as dates or uuids)
+
+    Example:
+    ```
+    before = {
+        "_id": {"$uuid": "8da92256-335e-4050-84c8-cf8ade02d488"},
+        "created": {"date": "2025-07-01T00:00:00.451000+00:00"},
+    }
+    after = {
+        "_id": UUID("8da92256-335e-4050-84c8-cf8ade02d488"),
+        "created": datetime(2025, 7, 1, 0, 0, 0, 451000, tzinfo=UTC),
+    }
+    """
+    _doc = json_util.loads(json.dumps(doc))
+    _bytes = BSON.encode(_doc)
+    return BSON(_bytes).decode(codec_options=CODEC_OPTS)
 
 
 class Permission(NamedTuple):
@@ -112,7 +137,8 @@ class DocsHandler(DocsHandlerPort):
                         extra={"key": key, "value": value},
                     )
                     raise error from err
-        return parsed_criteria
+        resolved_parsed_criteria = resolve_extended_json(parsed_criteria)
+        return resolved_parsed_criteria
 
     async def get(
         self, db_name: str, collection: str, criteria: Criteria
@@ -176,7 +202,6 @@ class DocsHandler(DocsHandlerPort):
         """
         # Get permissions for collection
         can_write = self._permissions.can_write(db_name, collection)
-
         if not can_write:
             log_and_raise_permissions_error(db_name, collection, "write")
 
@@ -186,17 +211,20 @@ class DocsHandler(DocsHandlerPort):
             documents = [documents]
 
         # Make sure each doc has the specified id_field
+        resolved_docs = []
         for doc in documents:
             if id_field not in doc:
                 raise self.MissingIdFieldError(id_field=id_field)
+            resolved_docs.append(resolve_extended_json(doc))
 
         full_db_name = f"{self._prefix}{db_name}"
+
         try:
             await self._docs_dao.upsert(
                 db_name=full_db_name,
                 collection=collection,
                 id_field=id_field,
-                documents=documents,
+                documents=resolved_docs,
             )
         except Exception as err:
             error = self.UpsertionError(id_field=id_field)

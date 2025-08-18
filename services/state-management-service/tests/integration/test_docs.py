@@ -15,7 +15,9 @@
 
 """Integration tests for the database"""
 
-from typing import Any
+from copy import deepcopy
+from datetime import UTC, datetime
+from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
@@ -32,36 +34,74 @@ pytestmark = pytest.mark.asyncio
 
 ALLOPS = "testdb.allops"
 
-SALLY: DocumentType = {"_id": 1, "name": "sally", "age": 23}
-EZEKIEL: DocumentType = {"_id": 2, "name": "ezekiel", "age": 53}
-DAVE: DocumentType = {"_id": 3, "name": "dave", "age": 17}
-RAQUEL: DocumentType = {"_id": 4, "name": "raquel", "age": 37}
-
-ALL_TEST_DOCS: list[DocumentType] = [
-    SALLY,
-    EZEKIEL,
-    DAVE,
-    RAQUEL,
+IDS = [
+    "8da92256-335e-4050-84c8-cf8ade02d488",
+    "4fd199e1-78af-4c3e-9d7b-e38cea205bde",
+    "95482e93-01ec-4f2c-9f5f-c2a9a8d8ac57",
+    "24d9c9b5-f524-47f8-bbd0-50092bc5d35e",
 ]
+
+DATES = [
+    datetime(2025, 6, 1, 0, 0, 0, 451000, tzinfo=UTC),
+    datetime(2025, 7, 1, 0, 0, 0, 451000, tzinfo=UTC),
+    datetime(2025, 8, 1, 0, 0, 0, 451000, tzinfo=UTC),
+    datetime(2025, 9, 1, 0, 0, 0, 451000, tzinfo=UTC),
+]
+
+SALLY: DocumentType = {
+    "_id": IDS[0],
+    "name": "sally",
+    "age": 23,
+    "created": DATES[0].isoformat(),
+}
+EZEKIEL: DocumentType = {
+    "_id": IDS[1],
+    "name": "ezekiel",
+    "age": 53,
+    "created": DATES[1].isoformat(),
+}
+DAVE: DocumentType = {
+    "_id": IDS[2],
+    "name": "dave",
+    "age": 17,
+    "created": DATES[2].isoformat(),
+}
+RAQUEL: DocumentType = {
+    "_id": IDS[3],
+    "name": "raquel",
+    "age": 37,
+    "created": DATES[3].isoformat(),
+}
+
+ALL_TEST_DOCS: list[DocumentType] = [SALLY, EZEKIEL, DAVE, RAQUEL]
 
 
 @pytest.mark.parametrize(
-    "query_params, expected_results",
+    "query_params, body, expected_results",
     [
-        ("", ALL_TEST_DOCS),
-        ("?name=sally", [SALLY]),
-        ('?age={"$gt":30}', [EZEKIEL, RAQUEL]),
-        ('?_id={"$ne":1}', [EZEKIEL, DAVE, RAQUEL]),
+        ("", {}, ALL_TEST_DOCS),
+        ("?name=sally", {}, [SALLY]),
+        ('?age={"$gt":30}', {}, [EZEKIEL, RAQUEL]),
+        ("", {"_id": {"$ne": {"$uuid": IDS[0]}}}, [EZEKIEL, DAVE, RAQUEL]),
     ],
-    ids=["all", "name_is_sally", "age_over_30", "ids_over_1"],
+    ids=["GetAllDocs", "NameIsSally", "AgeOver30", "AllIdsExceptFirstOne"],
 )
 async def test_get_docs(
     mongodb: MongoDbFixture,
     query_params: str,
+    body: dict[str, Any],
     expected_results: list[DocumentType],
 ):
     """Test problem-free reading documents from the database."""
     config = get_config(sources=[mongodb.config])
+
+    # Use extended json to specify type info for UUIDs and dates
+    docs_to_insert = deepcopy(ALL_TEST_DOCS)
+    for i in range(len(docs_to_insert)):
+        doc = cast(dict, docs_to_insert[i])
+        doc["_id"] = {"$uuid": doc["_id"]}
+        doc["created"] = {"$date": doc["created"]}
+        docs_to_insert[i] = doc
 
     async with (
         prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
@@ -70,17 +110,22 @@ async def test_get_docs(
         await client.put(
             f"/documents/{ALLOPS}",
             headers={"Authorization": VALID_BEARER_TOKEN},
-            json={"documents": ALL_TEST_DOCS},
+            json={"documents": docs_to_insert},
         )
 
-        response = await client.get(
-            f"/documents/{ALLOPS}{query_params}",
+        response = await client.request(
+            method="GET",
+            url=f"/documents/{ALLOPS}{query_params}",
             headers={"Authorization": VALID_BEARER_TOKEN},
+            json=body,
         )
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
+        assert len(data) == len(expected_results)
         data.sort(key=lambda x: x["_id"])
+        for i, doc in enumerate(data):
+            data[i]["created"] = doc["created"].replace("Z", "+00:00")
         expected_results.sort(key=lambda x: x["_id"])
         assert data == expected_results
 
@@ -157,13 +202,6 @@ async def test_deletion_on_nonexistent_resources(mongodb: MongoDbFixture):
         prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
         AsyncTestClient(app=app) as client,
     ):
-        # Insert documents into testdb.allops
-        await client.put(
-            f"/documents/{ALLOPS}",
-            headers={"Authorization": VALID_BEARER_TOKEN},
-            json={"documents": ALL_TEST_DOCS},
-        )
-
         # Delete nonexistent db contents with fully specified namespace
         response = await client.delete(
             "/documents/nonexistent.nonexistent",

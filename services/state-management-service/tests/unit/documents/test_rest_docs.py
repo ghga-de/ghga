@@ -198,6 +198,55 @@ async def test_calls_with_query_params(
 
 
 @pytest.mark.parametrize(
+    "http_method, expected_status_code",
+    [("get", 200), ("delete", 204)],
+    ids=["GET", "DELETE"],
+)
+@pytest.mark.parametrize(
+    "body, query_string",
+    [
+        ({"_id": {"$uuid": "ef96d46a-5244-4f98-9a55-8001d5236dbc"}}, ""),
+        (
+            {"_id": {"$uuid": "ef96d46a-5244-4f98-9a55-8001d5236dbc"}},
+            '"name=Alice&age=34"',
+        ),
+    ],
+    ids=["BodyOnly", "BodyAndQueryParams"],
+)
+async def test_calls_with_complex_criteria(
+    http_method: str,
+    expected_status_code: int,
+    body: dict[str, Any],
+    query_string: str,
+):
+    """Verify that GET and DELETE accept JSON criteria in the body and also raise an
+    error if both JSON and query parameters are utilized.
+    """
+    # Create dummy docs handler populated with the db/collection we'll query to avoid errors
+    dummy_docs_handler = DummyDocsHandler(state={"testdb": {"testcollection": {}}})
+    async with get_rest_client_with_mocks(
+        DEFAULT_TEST_CONFIG, docs_handler_override=dummy_docs_handler
+    ) as client:
+        # Use `.request()` in order to supply `json`
+        response = await client.request(
+            method=http_method,
+            url=f"{TEST_URL}?{query_string}",
+            headers={"Authorization": VALID_BEARER_TOKEN},
+            json=body,
+        )
+
+    # Verify status code and DAO method calls
+    assert response.status_code == (422 if query_string else expected_status_code)
+    call = DocsApiCallArgs(
+        method=http_method,
+        db_name="testdb",
+        collection="testcollection",
+        criteria=body,
+    )
+    assert dummy_docs_handler.calls == [] if query_string else [call]
+
+
+@pytest.mark.parametrize(
     "http_method",
     ["get", "put", "delete"],
     ids=["GET", "PUT", "DELETE"],

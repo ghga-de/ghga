@@ -15,6 +15,7 @@
 
 """FastAPI routes for MongoDB state management."""
 
+from json import JSONDecodeError
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Path, Request, status
@@ -113,11 +114,26 @@ async def get_docs(
     _check_for_multiple_query_params(query_params)
 
     db_name, collection = namespace.split(".", 1)
+    query_param_dict = dict(query_params)
+
+    try:
+        request_json = await request.json()
+    except JSONDecodeError:
+        request_json = {}
+
+    if query_param_dict and request_json:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot supply search criteria through both request body and query params.",
+        )
+
+    criteria = request_json or query_param_dict
+
     try:
         results = await docs_handler.get(
             db_name=db_name,
             collection=collection,
-            criteria=dict(query_params),
+            criteria=criteria,
         )
         return results
     except PermissionError as err:
@@ -202,11 +218,27 @@ async def delete_docs(
     _check_for_multiple_query_params(query_params)
 
     db_name, collection = namespace.split(".", 1)
+
+    query_param_dict = dict(query_params)
+
+    try:
+        request_json = await request.json()
+    except JSONDecodeError:
+        request_json = {}
+
+    if query_param_dict and request_json:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot supply search criteria through both request body and query params.",
+        )
+
+    criteria = request_json or query_param_dict
+
     try:
         await docs_handler.delete(
             db_name=db_name,
             collection=collection,
-            criteria=dict(query_params),
+            criteria=criteria,
         )
     except PermissionError as err:
         raise HTTPException(
