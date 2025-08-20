@@ -140,6 +140,21 @@ def produce_iva_docs_for_v2_mig() -> dict[str, list[dict[str, Any]]]:
     reverted_doc1["changed"] = reverted_date2
 
     doc2: dict[str, Any] = {
+        "_id": "c589bf1d-150a-49a0-adb7-599525249ff0",
+        "__metadata__": {
+            "deleted": True,
+            "published": False,
+            "correlation_id": "83f074de-05a9-45e8-b025-c0cefe369ec9",
+        },
+    }
+    migrated_doc2 = deepcopy(doc2)
+    migrated_doc2["_id"] = UUID("c589bf1d-150a-49a0-adb7-599525249ff0")
+    migrated_doc2["__metadata__"]["correlation_id"] = UUID(
+        "83f074de-05a9-45e8-b025-c0cefe369ec9"
+    )
+    reverted_doc2 = deepcopy(doc2)
+
+    doc3: dict[str, Any] = {
         "_id": "f4969771-630d-4c9b-b80d-a7ad69570e9b",
         "created": old_date1,
         "changed": old_date2,
@@ -155,22 +170,22 @@ def produce_iva_docs_for_v2_mig() -> dict[str, list[dict[str, Any]]]:
             "correlation_id": "3b4113a0-975a-486c-a37e-8cc0d7cc48a3",
         },
     }
-    migrated_doc2 = deepcopy(doc2)
-    migrated_doc2["_id"] = UUID("f4969771-630d-4c9b-b80d-a7ad69570e9b")
-    migrated_doc2["created"] = migrated_date1
-    migrated_doc2["changed"] = migrated_date2
-    migrated_doc2["user_id"] = UUID("587d7f49-b6ae-42d4-a163-58899b38915b")
-    migrated_doc2["__metadata__"]["correlation_id"] = UUID(
+    migrated_doc3 = deepcopy(doc3)
+    migrated_doc3["_id"] = UUID("f4969771-630d-4c9b-b80d-a7ad69570e9b")
+    migrated_doc3["created"] = migrated_date1
+    migrated_doc3["changed"] = migrated_date2
+    migrated_doc3["user_id"] = UUID("587d7f49-b6ae-42d4-a163-58899b38915b")
+    migrated_doc3["__metadata__"]["correlation_id"] = UUID(
         "3b4113a0-975a-486c-a37e-8cc0d7cc48a3"
     )
-    reverted_doc2 = deepcopy(doc2)
-    reverted_doc2["created"] = reverted_date1
-    reverted_doc2["changed"] = reverted_date2
+    reverted_doc3 = deepcopy(doc3)
+    reverted_doc3["created"] = reverted_date1
+    reverted_doc3["changed"] = reverted_date2
 
     return {
-        "old": [doc1, doc2],
-        "expected_migrated": [migrated_doc1, migrated_doc2],
-        "expected_reverted": [reverted_doc1, reverted_doc2],
+        "old": [doc1, doc2, doc3],
+        "expected_migrated": [migrated_doc1, migrated_doc2, migrated_doc3],
+        "expected_reverted": [reverted_doc1, reverted_doc2, reverted_doc3],
     }
 
 
@@ -271,10 +286,26 @@ def produce_user_docs_for_v2_mig() -> dict[str, list[dict[str, Any]]]:
     reverted_doc2["registration_date"] = reverted_date1
     reverted_doc2["status_change"]["change_date"] = reverted_date2
 
+    doc3: dict[str, Any] = {
+        "_id": "9abe34c3-3ee5-4e06-a87a-45001460c667",
+        "__metadata__": {
+            "deleted": True,
+            "published": True,
+            "correlation_id": "7ee3a091-1db1-44a8-aebe-a4552b173dfd",
+        },
+    }
+
+    migrated_doc3 = deepcopy(doc3)
+    migrated_doc3["_id"] = UUID("9abe34c3-3ee5-4e06-a87a-45001460c667")
+    migrated_doc3["__metadata__"]["correlation_id"] = UUID(
+        "7ee3a091-1db1-44a8-aebe-a4552b173dfd"
+    )
+    reverted_doc3 = deepcopy(doc3)
+
     return {
-        "old": [doc1, doc2],
-        "expected_migrated": [migrated_doc1, migrated_doc2],
-        "expected_reverted": [reverted_doc1, reverted_doc2],
+        "old": [doc1, doc2, doc3],
+        "expected_migrated": [migrated_doc1, migrated_doc2, migrated_doc3],
+        "expected_reverted": [reverted_doc1, reverted_doc2, reverted_doc3],
     }
 
 

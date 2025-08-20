@@ -29,7 +29,6 @@ from hexkit.utils import round_datetime_to_ms
 from auth_service.config import Config
 
 
-# TODO: update list of summarized changes
 class V2Migration(MigrationDefinition, Reversible):
     """Update the stored data to have native-typed UUIDs and datetimes and switch
     to new event structure:
@@ -112,30 +111,42 @@ class V2Migration(MigrationDefinition, Reversible):
             return doc
 
         _convert_core_iva_fields = convert_uuids_and_datetimes_v6(
-            uuid_fields=["_id", "user_id"],
+            uuid_fields=["user_id"],
             date_fields=["created", "changed"],
         )
 
         async def _convert_iva(doc: Document) -> Document:
             """Convert an IVA doc"""
-            doc = await _convert_core_iva_fields(doc)
-            if cid := doc.get("__metadata__", {}).get("correlation_id"):
+            doc["_id"] = UUID(doc["_id"])
+
+            metadata = doc.get("__metadata__", {})
+            if cid := metadata.get("correlation_id"):
                 doc["__metadata__"]["correlation_id"] = UUID(cid)
+            if not metadata["deleted"]:
+                # deleted outbox docs only have the _id field and metadata
+                doc = await _convert_core_iva_fields(doc)
             return doc
 
-        _convert_required_user_fields = convert_uuids_and_datetimes_v6(
-            uuid_fields=["_id"], date_fields=["registration_date"]
+        _convert_user_reg_date = convert_uuids_and_datetimes_v6(
+            date_fields=["registration_date"]
         )
 
         async def _convert_user(doc: Document) -> Document:
             """Convert a user doc"""
-            doc = await _convert_required_user_fields(doc)
-            if status_change := doc.get("status_change"):
-                doc["status_change"] = _convert_fields(
-                    doc=status_change, uuid_fields=["by"], date_fields=["change_date"]
-                )
-            if cid := doc.get("__metadata__", {}).get("correlation_id"):
+            doc["_id"] = UUID(doc["_id"])
+
+            metadata = doc.get("__metadata__", {})
+            if cid := metadata.get("correlation_id"):
                 doc["__metadata__"]["correlation_id"] = UUID(cid)
+            if not metadata["deleted"]:
+                # deleted outbox docs only have the _id field and metadata
+                doc = await _convert_user_reg_date(doc)
+                if status_change := doc.get("status_change"):
+                    doc["status_change"] = _convert_fields(
+                        doc=status_change,
+                        uuid_fields=["by"],
+                        date_fields=["change_date"],
+                    )
             return doc
 
         async with self.auto_finalize(coll_names=all_collections, copy_indexes=True):
