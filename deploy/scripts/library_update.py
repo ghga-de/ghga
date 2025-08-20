@@ -172,7 +172,7 @@ if __name__ == "__main__":
         if dep.get("name") == "ghga-common"
     ).get("version"))
 
-    if latest_ghga_common > current_ghga_common:
+    if latest_ghga_common > current_ghga_common or dev:
         print(
             f"Library version {current_ghga_common} is older than latest published {latest_ghga_common} for {chart['name']}"
         )
