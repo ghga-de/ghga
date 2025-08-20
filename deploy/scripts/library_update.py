@@ -241,8 +241,12 @@ if __name__ == "__main__":
                     / "charts"
                     / f"ghga-common-{latest_ghga_common}.tgz",
                 )
-                (
-                    Path(chart_file.parent)
-                    / "charts"
-                    / f"ghga-common-{current_ghga_common}.tgz"
-                ).unlink(missing_ok=False)
+                if current_ghga_common != latest_ghga_common:
+                    print(
+                        f"Removing old ghga-common {current_ghga_common} from {chart_file.parent}"
+                    )
+                    (
+                        Path(chart_file.parent)
+                        / "charts"
+                        / f"ghga-common-{current_ghga_common}.tgz"
+                    ).unlink(missing_ok=False)
