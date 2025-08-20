@@ -118,7 +118,7 @@ class V3Migration(MigrationDefinition, Reversible):
     async def apply(self):
         """Apply the migration"""
         _convert_required_fields = convert_uuids_and_datetimes_v6(
-            uuid_fields=["_id", "user_id"],
+            uuid_fields=["user_id"],
             date_fields=["access_starts", "access_ends", "request_created"],
         )
         _convert_optional_dates = convert_uuids_and_datetimes_v6(
@@ -128,6 +128,12 @@ class V3Migration(MigrationDefinition, Reversible):
         async def _convert_doc(doc: Document) -> Document:
             """Convert field types from string to UUID/datetime"""
             doc = await convert_outbox_correlation_id_v6(doc)
+            doc["_id"] = UUID(doc["_id"])
+
+            if doc.get("__metadata__", {}).get("deleted"):
+                # If outbox doc is marked 'deleted', no payload fields to convert
+                return doc
+
             doc = await _convert_required_fields(doc)
             for field in ["iva_id", "changed_by"]:
                 if optional_uuid := doc[field]:
@@ -149,8 +155,16 @@ class V3Migration(MigrationDefinition, Reversible):
 
         async def _revert_doc(doc: Document) -> Document:
             """Convert the fields back into strings"""
-            for field in ["_id", "user_id"]:
-                doc[field] = str(doc[field])
+            metadata = doc.get("__metadata__", {})
+            cid = metadata["correlation_id"]
+            metadata["correlation_id"] = str(cid)
+            doc["_id"] = str(doc["_id"])
+            doc["__metadata__"] = metadata
+            if metadata["deleted"]:
+                return doc
+
+            # Only go on to revert payload fields if the doc is not 'deleted'
+            doc["user_id"] = str(doc["user_id"])
             for field in ["access_starts", "access_ends", "request_created"]:
                 doc[field] = doc[field].isoformat()
             for field in ["iva_id", "changed_by"]:
@@ -158,8 +172,6 @@ class V3Migration(MigrationDefinition, Reversible):
                     doc[field] = str(optional_uuid)
             if status_changed := doc["status_changed"]:
                 doc["status_changed"] = status_changed.isoformat()
-            cid = doc["__metadata__"]["correlation_id"]
-            doc["__metadata__"]["correlation_id"] = str(cid)
             return doc
 
         async with self.auto_finalize(coll_names=ACCESS_REQUESTS, copy_indexes=True):
