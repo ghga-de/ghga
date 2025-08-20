@@ -235,6 +235,7 @@ if __name__ == "__main__":
                 print(lock_file, ghga_common_tgz)
             else:
                 shutil.copy(lock_file, Path(chart_file.parent) / "Chart.lock")
+                Path(chart_file.parent / "charts").mkdir(parents=True, exist_ok=True)
                 shutil.copy(
                     ghga_common_tgz,
                     Path(chart_file.parent)
