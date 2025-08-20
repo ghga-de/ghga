@@ -122,7 +122,8 @@ def bump_version(base_version: VersionInfo, version_diff: VersionInfo) -> Versio
             return new_version
         else:
             new_version = new_version.replace(**{part: getattr(base_version, part)})
-
+    # Nothing changed
+    return base_version
 
 if __name__ == "__main__":
     # Create the parser
@@ -198,7 +199,7 @@ if __name__ == "__main__":
             for i, dep in enumerate(chart.get("dependencies"))
             if dep.get("name") == "ghga-common"
         )
-        if ghga_common and ghga_common["version"] != str(latest_ghga_common):
+        if (ghga_common and ghga_common["version"] != str(latest_ghga_common)) or dev:
             print(
                 f"Bumping {str(chart_file.parent)} deps ghga-common from {ghga_common['version']} to {latest_ghga_common}"
             )
