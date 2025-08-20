@@ -76,10 +76,10 @@ def get_latest_published_version(
     app_versions = []
     for entry in helm_index["entries"][chart_name]:
         app_version = entry.get("appVersion")
-        if app_version and VersionInfo.isvalid(app_version):
+        if app_version and VersionInfo.is_valid(app_version):
             app_versions.append(VersionInfo.parse(app_version))
         version = entry.get("version")
-        if app_version and VersionInfo.isvalid(version):
+        if app_version and VersionInfo.is_valid(version):
             versions.append(VersionInfo.parse(version))
 
     return {
