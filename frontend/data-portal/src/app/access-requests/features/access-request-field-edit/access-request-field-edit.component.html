@@ -1,68 +1,66 @@
-@if (!locked()) {
-  <div class="mb-2 flex" [class.items-center]="isOpen()">
-    <strong
-      class="min-w-48 pe-1 text-start"
-      [class.mb-4]="isOpen() && !validationError()"
-      [class.mb-8]="isOpen() && validationError()"
-    >
-      {{ label() ? label() + ':' : '' }}
-    </strong>
-    <div class="min-w-60 grow">
-      @if (isOpen()) {
-        <div class="flex items-center">
-          <mat-form-field class="grow">
-            @if (rows() > 1) {
-              <textarea
-                matInput
-                [(ngModel)]="field"
-                (ngModelChange)="changed()"
-                [rows]="rows()"
-              ></textarea>
-            } @else {
-              <input
-                matInput
-                [(ngModel)]="field"
-                (ngModelChange)="changed(formControl.control)"
-                #formControl="ngModel"
-                [pattern]="pattern()"
-              />
-            }
-          </mat-form-field>
-          <mat-chip
-            class="smaller-chip interactive-chip cancel-edit-button mx-2 mb-4"
-            (click)="cancel()"
-            ><mat-icon>close</mat-icon></mat-chip
-          >
-          <mat-chip
-            class="smaller-chip interactive-chip save-edit-button mb-4"
-            (click)="save()"
-            [disabled]="!!validationError()"
-            ><mat-icon>check</mat-icon></mat-chip
-          >
-        </div>
-        @if (validationError()) {
-          <mat-error class="mt-[-20px] mb-2 w-full">{{ validationError() }}</mat-error>
-        }
-      } @else {
-        <div class="flex items-center">
-          <span class="grow">
-            @if (ticketUrl()) {
-              <a [href]="ticketUrl()" target="_blank" tabindex="-1"
-                >{{ field() }}<mat-icon aria-hidden="true">open_in_new</mat-icon></a
-              >
-            } @else {
-              {{ field() }}
-            }
-          </span>
-          @if (!locked()) {
-            <mat-chip
-              (click)="edit()"
-              class="smaller-chip interactive-chip edit-button ms-2"
-              ><mat-icon class="scale-[0.75]">edit</mat-icon>
-            </mat-chip>
+<div class="mb-2 flex" [class.items-center]="isOpen()">
+  <strong
+    class="min-w-48 pe-1 text-start"
+    [class.mb-4]="isOpen() && !validationError()"
+    [class.mb-8]="isOpen() && validationError()"
+  >
+    {{ label() ? label() + ':' : '' }}
+  </strong>
+  <div class="min-w-60 grow">
+    @if (isOpen()) {
+      <div class="flex items-center">
+        <mat-form-field class="grow">
+          @if (rows() > 1) {
+            <textarea
+              matInput
+              [(ngModel)]="field"
+              (ngModelChange)="changed()"
+              [rows]="rows()"
+            ></textarea>
+          } @else {
+            <input
+              matInput
+              [(ngModel)]="field"
+              (ngModelChange)="changed(formControl.control)"
+              #formControl="ngModel"
+              [pattern]="pattern()"
+            />
           }
-        </div>
+        </mat-form-field>
+        <mat-chip
+          class="smaller-chip interactive-chip cancel-edit-button mx-2 mb-4"
+          (click)="cancel()"
+          ><mat-icon>close</mat-icon></mat-chip
+        >
+        <mat-chip
+          class="smaller-chip interactive-chip save-edit-button mb-4"
+          (click)="save()"
+          [disabled]="!!validationError()"
+          ><mat-icon>check</mat-icon></mat-chip
+        >
+      </div>
+      @if (validationError()) {
+        <mat-error class="mt-[-20px] mb-2 w-full">{{ validationError() }}</mat-error>
       }
-    </div>
+    } @else {
+      <div class="flex items-center">
+        <span class="grow">
+          @if (ticketUrl()) {
+            <a [href]="ticketUrl()" target="_blank" tabindex="-1"
+              >{{ field() }}<mat-icon aria-hidden="true">open_in_new</mat-icon></a
+            >
+          } @else {
+            {{ field() }}
+          }
+        </span>
+        @if (!locked()) {
+          <mat-chip
+            (click)="edit()"
+            class="smaller-chip interactive-chip edit-button ms-2"
+            ><mat-icon class="scale-[0.75]">edit</mat-icon>
+          </mat-chip>
+        }
+      </div>
+    }
   </div>
-}
+</div>
