@@ -14,6 +14,7 @@
 # limitations under the License.
 """Verify the functionality of the migrations module."""
 
+from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -99,7 +100,7 @@ async def test_v2_migration(mongodb: MongoDbFixture):
 
 
 @pytest.mark.skipif(DB_VERSION != 3, reason="Don't run tests for old migrations")
-async def test_v3_migration(mongodb: MongoDbFixture):
+async def test_v3_migration(mongodb: MongoDbFixture, monkeypatch):
     """Test the v3 migration, which should update the persistent event collection
     so the fields use actual UUID and datetime field types.
     """
@@ -113,7 +114,12 @@ async def test_v3_migration(mongodb: MongoDbFixture):
     reverted_date = migrated_date.isoformat()
 
     old_uuid = "794fa7ab-fa80-493b-a08d-a6be41a07cde"
+    bad_uuid = "d6d0d438-9318-9bf6-b036-d89385cdaa7a"  # version appears as 9
+    new_cid = "b5ccecc3-956a-46b0-ba92-3a0f547a0071"
     migrated_uuid = UUID(old_uuid)
+    cids = [old_uuid, bad_uuid, old_uuid]
+    migrated_cids = [UUID(old_uuid), UUID(new_cid), UUID(old_uuid)]
+    reverted_cids = [old_uuid, new_cid, old_uuid]
 
     # Prepare the old, migrated, and reverted data ahead of time
     old_events: list[dict[str, Any]] = []
@@ -137,11 +143,11 @@ async def test_v3_migration(mongodb: MongoDbFixture):
             "upload_date": date.isoformat(),
         }
 
-        migrated_payload = old_payload.copy()
+        migrated_payload = deepcopy(old_payload)
         migrated_payload.update(
             {"object_id": migrated_uuid, "upload_date": migrated_date}
         )
-        reverted_payload = old_payload.copy()
+        reverted_payload = deepcopy(old_payload)
         reverted_payload.update({"upload_date": reverted_date})
 
         # Now form the top-level document data and inject the payloads
@@ -152,21 +158,28 @@ async def test_v3_migration(mongodb: MongoDbFixture):
             "key": f"key{i}",
             "type_": "some-type",
             "headers": {},
-            "correlation_id": old_uuid,
+            "correlation_id": cids[i],
             "created": date.isoformat(),
             "published": True,
         }
 
-        migrated_event = old_event.copy()
+        migrated_event = deepcopy(old_event)
+
         migrated_event.update(
             {
                 "payload": migrated_payload,
-                "correlation_id": migrated_uuid,
+                "correlation_id": migrated_cids[i],
                 "created": migrated_date,
             }
         )
-        reverted_event = old_event.copy()
-        reverted_event.update({"payload": reverted_payload, "created": reverted_date})
+        reverted_event = deepcopy(old_event)
+        reverted_event.update(
+            {
+                "payload": reverted_payload,
+                "created": reverted_date,
+                "correlation_id": reverted_cids[i],
+            }
+        )
 
         old_events.append(old_event)
         expected_migrated_events.append(migrated_event)
@@ -177,6 +190,7 @@ async def test_v3_migration(mongodb: MongoDbFixture):
     collection.insert_many(old_events)
 
     # Run the migration
+    monkeypatch.setattr("fis.migrations.definitions.uuid4", lambda: UUID(new_cid))
     await run_db_migrations(config=config, target_version=3)
 
     # Compare migrated data against expected migrated data

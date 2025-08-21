@@ -15,6 +15,9 @@
 
 """Database migration logic for FIS"""
 
+import logging
+from uuid import uuid4
+
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
@@ -28,6 +31,8 @@ from hexkit.providers.mongodb.migrations.helpers import (
 from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
 
 from fis.config import Config
+
+log = logging.getLogger(__name__)
 
 # Collection names defined as constants
 FIS_PERSISTED_EVENTS = "fisPersistedEvents"
@@ -108,6 +113,14 @@ class V3Migration(MigrationDefinition, Reversible):
         async def convert_persisted_event(doc: Document) -> Document:
             # Convert the common event fields with hexkit's utility function
             doc = await convert_persistent_event_v6(doc)
+            if doc["correlation_id"].version != 4:
+                new_cid = uuid4()
+                log.info(
+                    "Replaced bad correlation ID %s with new one: %s",
+                    doc["correlation_id"],
+                    new_cid,
+                )
+                doc["correlation_id"] = new_cid
 
             # convert the remaining fields inside the payload, treat payload as subdoc
             payload = doc["payload"]  # the field should always exist, raise if not
