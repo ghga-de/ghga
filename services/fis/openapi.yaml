@@ -109,7 +109,7 @@ info:
   description: A service to ingest s3 file upload metadata produced by the data-steward-kit
     upload command
   title: File Ingest Service
-  version: 9.0.1
+  version: 9.0.2
 openapi: 3.1.0
 paths:
   /federated/ingest_metadata:

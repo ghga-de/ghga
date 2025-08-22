@@ -136,6 +136,7 @@ class V3Migration(MigrationDefinition, Reversible):
                 change_function=convert_persisted_event,
                 validation_model=PersistentKafkaEvent,
                 id_field="compaction_key",
+                batch_size=25,
             )
 
     async def unapply(self):
@@ -160,4 +161,5 @@ class V3Migration(MigrationDefinition, Reversible):
             await self.migrate_docs_in_collection(
                 coll_name=FIS_PERSISTED_EVENTS,
                 change_function=revert_persistent_event,
+                batch_size=25,
             )
