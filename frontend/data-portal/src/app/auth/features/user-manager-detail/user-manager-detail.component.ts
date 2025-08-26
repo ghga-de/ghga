@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe as CommonDatePipe, Location } from '@angular/common';
+import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,6 +21,7 @@ import { UserStatus } from '@app/auth/models/user';
 import { DisplayUser, UserService } from '@app/auth/services/user.service';
 import { DatePipe } from '@app/shared/pipes/date.pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
+import { NavigationTrackingService } from '@app/shared/services/navigation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import {
   DEFAULT_TIME_ZONE,
@@ -65,7 +66,8 @@ export class UserManagerDetailComponent implements OnInit {
 
   #userService = inject(UserService);
 
-  #location = inject(Location);
+  #location = inject(NavigationTrackingService);
+  #dialog = inject(MatDialog);
 
   id = input.required<string>();
   #user = this.#userService.user;
@@ -150,7 +152,7 @@ export class UserManagerDetailComponent implements OnInit {
   goBack(): void {
     this.showTransition = true;
     setTimeout(() => {
-      this.#location.back();
+      this.#location.back(['/user-manager']);
     });
   }
 
@@ -212,8 +214,6 @@ export class UserManagerDetailComponent implements OnInit {
       },
     });
   }
-
-  #dialog = inject(MatDialog);
 
   /**
    * Delete the user after confirmation.

@@ -5,7 +5,6 @@
  */
 
 import { ClipboardModule } from '@angular/cdk/clipboard';
-import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   AfterViewInit,
@@ -41,6 +40,7 @@ import { AddPluralS } from '@app/shared/pipes/add-plural-s.pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes.pipe';
 import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
 import { ConfigService } from '@app/shared/services/config.service';
+import { NavigationTrackingService } from '@app/shared/services/navigation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { ParagraphsComponent } from '../../../shared/ui/paragraphs/paragraphs.component';
 
@@ -82,7 +82,7 @@ const COLUMNS = {
 export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   id = input.required<string>();
   #config = inject(ConfigService);
-  #location = inject(Location);
+  #location = inject(NavigationTrackingService);
   #title = inject(Title);
   #notify = inject(NotificationService);
   #metadata = inject(MetadataService);
@@ -299,7 +299,7 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
    * Function to go back to previous page
    */
   goBack() {
-    this.#location.back();
+    this.#location.back(['browse']);
   }
 
   /**

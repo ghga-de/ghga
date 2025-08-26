@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe, Location } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import {
   Component,
@@ -36,6 +36,7 @@ import { HasPendingEdits } from '@app/shared/features/pending-edits.guard';
 import { SplitLinesPipe } from '@app/shared/pipes/split-lines.pipe';
 import { ConfigService } from '@app/shared/services/config.service';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
+import { NavigationTrackingService } from '@app/shared/services/navigation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { Iva, IvaState } from '@app/verification-addresses/models/iva';
@@ -85,7 +86,7 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   #authUrl = this.#config.authUrl;
   #usersUrl = `${this.#authUrl}/users`;
 
-  #location = inject(Location);
+  #location = inject(NavigationTrackingService);
 
   id = input.required<string>();
   #request = this.#accessRequestService.accessRequest;
@@ -233,7 +234,7 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   goBack(): void {
     this.showTransition = true;
     setTimeout(() => {
-      this.#location.back();
+      this.#location.back(['/access-request-manager']);
     });
   }
 

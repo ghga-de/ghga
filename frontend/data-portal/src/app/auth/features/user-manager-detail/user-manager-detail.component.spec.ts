@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe as CommonDatePipe, Location } from '@angular/common';
+import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -13,7 +13,9 @@ import { allIvasOfDoe } from '@app/../mocks/data';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
 import { UserService } from '@app/auth/services/user.service';
+import { NavigationTrackingService } from '@app/shared/services/navigation.service';
 import { IvaService } from '@app/verification-addresses/services/iva.service';
+import { UserManagerComponent } from '../user-manager/user-manager.component';
 import { UserManagerDetailComponent } from './user-manager-detail.component';
 
 /**
@@ -92,7 +94,7 @@ class MockUserService {
 describe('UserManagerDetailComponent', () => {
   let component: UserManagerDetailComponent;
   let fixture: ComponentFixture<UserManagerDetailComponent>;
-  let location: Location;
+  let navigation: NavigationTrackingService;
   let mockUserService = new MockUserService();
 
   beforeEach(async () => {
@@ -102,6 +104,7 @@ describe('UserManagerDetailComponent', () => {
         provideNoopAnimations(),
         provideRouter([
           { path: 'user-manager/doe@test.dev', component: UserManagerDetailComponent },
+          { path: 'user-manager', component: UserManagerComponent },
         ]),
         CommonDatePipe,
         { provide: IvaService, useClass: MockIvaService },
@@ -114,7 +117,7 @@ describe('UserManagerDetailComponent', () => {
       },
     });
     await testBed.compileComponents();
-    location = testBed.inject(Location);
+    navigation = testBed.inject(NavigationTrackingService);
 
     fixture = TestBed.createComponent(UserManagerDetailComponent);
     component = fixture.componentInstance;
@@ -137,10 +140,10 @@ describe('UserManagerDetailComponent', () => {
   });
 
   it('should navigate back when goBack is called', async () => {
-    jest.spyOn(location, 'back');
+    jest.spyOn(navigation, 'back');
     component.goBack();
     await new Promise((resolve) => setTimeout(resolve));
-    expect(location.back).toHaveBeenCalled();
+    expect(navigation.back).toHaveBeenCalled();
   });
 
   it('should render user details when user is found', () => {

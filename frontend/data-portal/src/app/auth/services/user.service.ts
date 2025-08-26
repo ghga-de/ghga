@@ -107,6 +107,7 @@ export class UserService {
    * Load all users
    */
   loadUsers(): void {
+    console.log('Loading all users');
     this.#loadAll.set(true);
   }
 
@@ -157,8 +158,11 @@ export class UserService {
   users = httpResource<DisplayUser[]>(
     () => (this.#loadAll() ? this.#usersUrl : undefined),
     {
-      parse: (rawUsers: unknown) =>
-        (rawUsers as RegisteredUser[]).map((user) => this.#createDisplayUser(user)),
+      parse: (rawUsers: unknown) => {
+        return (rawUsers as RegisteredUser[]).map((user) =>
+          this.#createDisplayUser(user),
+        );
+      },
       defaultValue: [],
     },
   );

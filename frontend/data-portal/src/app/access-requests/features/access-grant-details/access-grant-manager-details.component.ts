@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe, Location } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +17,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class.pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request.service';
+import { NavigationTrackingService } from '@app/shared/services/navigation.service';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
@@ -53,7 +54,7 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
 
   showTransition = false;
 
-  #location = inject(Location);
+  #location = inject(NavigationTrackingService);
 
   id = input.required<string>();
   #ars = inject(AccessRequestService);
@@ -121,7 +122,7 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
   goBack(): void {
     this.showTransition = true;
     setTimeout(() => {
-      this.#location.back();
+      this.#location.back(['/access-grant-manager']);
     });
   }
 }
