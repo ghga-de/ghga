@@ -33,7 +33,7 @@
               class="contents"
             ></app-access-request-field-edit>
             <p>
-              <strong class="inline-block w-48">Dataset ID:</strong>
+              <strong class="inline-block w-50">Dataset ID:</strong>
               <span
                 ><a [href]="'/dataset/' + ar.dataset_id" target="_blank" tabindex="-1"
                   >{{ ar.dataset_id
@@ -42,11 +42,11 @@
               >
             </p>
             <p>
-              <strong class="inline-block w-48">Dataset title:</strong>
+              <strong class="inline-block w-50">Dataset Title:</strong>
               <span>{{ ar.dataset_title }}</span>
             </p>
             <p>
-              <strong class="inline-block w-48">Status:</strong>
+              <strong class="inline-block w-50">Status:</strong>
               <span
                 ><strong
                   class="{{ ar.status | AccessRequestStatusClassPipe }} capitalize"
@@ -68,7 +68,7 @@
               class="contents"
             ></app-access-request-duration-edit>
             <div class="mb-2 flex">
-              <strong class="inline-block min-w-48">Request details:</strong>
+              <strong class="inline-block min-w-50">Request details:</strong>
               <div class="max-h-38 overflow-y-auto">
                 @for (
                   line of ar.request_text | splitLines;
@@ -80,7 +80,7 @@
               </div>
             </div>
             <p>
-              <strong class="inline-block w-48">Requested:</strong>
+              <strong class="inline-block w-50">Requested:</strong>
               <span>{{ ar.request_created | date }}</span>
             </p>
           </mat-card-content>
@@ -91,7 +91,7 @@
           </mat-card-header>
           <mat-card-content class="min-w-xl">
             <p class="flex">
-              <strong class="inline-block min-w-48">DAC:</strong>
+              <strong class="inline-block min-w-50">DAC:</strong>
               <span>
                 <span class="italic">{{ ar.dac_alias }}</span> -
                 <a [href]="'mailto:' + ar.dac_email" tabindex="-1">{{
@@ -100,7 +100,7 @@
               </span>
             </p>
             <p class="flex">
-              <strong class="inline-block min-w-48">Requester:</strong>
+              <strong class="inline-block min-w-50">Requester:</strong>
               <span>
                 <span class="italic"
                   ><a [routerLink]="`/user-manager/${ar.user_id}`">{{
@@ -112,7 +112,7 @@
               </span>
             </p>
             <p class="flex">
-              <strong class="inline-block min-w-48">LS ID:</strong>
+              <strong class="inline-block min-w-50">LS ID:</strong>
               <span>
                 @if (userExtId.isLoading()) {
                   <em class="text-gray-400">Loading...</em>
@@ -137,7 +137,7 @@
             <app-access-request-field-edit
               [request]="ar"
               name="note_to_requester"
-              label="Note to requester"
+              label="Note to Requester"
               (saved)="saved($event)"
               (edited)="edited($event)"
               class="contents"
@@ -145,7 +145,7 @@
             <app-access-request-field-edit
               [request]="ar"
               name="internal_note"
-              label="Internal note"
+              label="Internal Note"
               (saved)="saved($event)"
               (edited)="edited($event)"
               class="contents"
@@ -191,7 +191,7 @@
                   </div>
                   <div
                     [class]="(iva.state | IvaStatePipe).class"
-                    class="w-48 flex-shrink-0 py-2 ps-4 align-middle"
+                    class="w-50 flex-shrink-0 py-2 ps-4 align-middle"
                   >
                     {{ (iva.state | IvaStatePipe).name }}
                   </div>
@@ -228,7 +228,7 @@
                       </div>
                       <div
                         [class]="(iva.state | IvaStatePipe).class"
-                        class="w-48 flex-shrink-0 py-2 ps-4 align-middle"
+                        class="w-50 flex-shrink-0 py-2 ps-4 align-middle"
                       >
                         {{ (iva.state | IvaStatePipe).name }}
                       </div>

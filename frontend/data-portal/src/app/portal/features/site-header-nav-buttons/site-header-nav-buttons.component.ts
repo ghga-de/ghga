@@ -11,7 +11,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
 import { BaseRouteService } from '@app/shared/services/base-route.service';
 import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
-import { ToolsMenuComponent } from '../tools-menu/tools-menu.component';
 
 /**
  * Component for the navigation button components
@@ -24,7 +23,6 @@ import { ToolsMenuComponent } from '../tools-menu/tools-menu.component';
     RouterLink,
     AdminMenuComponent,
     MatMenuModule,
-    ToolsMenuComponent,
   ],
   templateUrl: './site-header-nav-buttons.component.html',
   styleUrl: './site-header-nav-buttons.component.scss',

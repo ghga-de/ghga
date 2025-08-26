@@ -9,7 +9,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth.service';
 import { ConfigService } from '@app/shared/services/config.service';
 import { NotificationService } from '@app/shared/services/notification.service';
-import { Observable, tap } from 'rxjs';
+import { catchError, lastValueFrom, map, Observable, of, tap } from 'rxjs';
 import {
   AccessGrant,
   AccessGrantFilter,
@@ -33,8 +33,10 @@ export class AccessRequestService {
   #config = inject(ConfigService);
 
   #arsBaseUrl = this.#config.arsUrl;
+  #authBaseUrl = this.#config.authUrl;
   #arsEndpointUrl = `${this.#arsBaseUrl}/access-requests`;
   #arsManagementUrl = `${this.#arsBaseUrl}/access-grants`;
+  #grantRevocationUrl = `${this.#authBaseUrl}/download-access/grants`;
 
   #userAccessRequestsUrl = (userId: string) =>
     `${this.#arsEndpointUrl}?user_id=${userId}`;
@@ -325,9 +327,13 @@ export class AccessRequestService {
 
   /**
    * Load all users' access grants
+   * @param force - whether to force reload the grants
    */
-  loadAllAccessGrants(): void {
+  loadAllAccessGrants(force?: boolean): void {
     this.#loadAllAccessGrants.set(true);
+    if (force) {
+      this.allAccessGrantsResource.reload();
+    }
   }
 
   // Similar structure to what we do for access requests but for access grants
@@ -416,4 +422,22 @@ export class AccessRequestService {
     }
     return grants;
   });
+
+  /**
+   * This function attempts to revoke an access grant in the backend.
+   * @param grantID the ID of the grant to revoke.
+   * @returns a Promise that evaluates to true if successful, false otherwise.
+   */
+  revokeAccessGrant(grantID: string): Promise<boolean> {
+    if (!grantID || grantID === '') {
+      return Promise.resolve(false);
+    }
+
+    const request$ = this.#http.delete(`${this.#grantRevocationUrl}/${grantID}`).pipe(
+      map(() => true),
+      catchError(() => of(false)),
+    );
+
+    return lastValueFrom(request$);
+  }
 }

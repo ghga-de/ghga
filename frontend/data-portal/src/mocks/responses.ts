@@ -56,6 +56,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Delete IVA
   'DELETE /api/auth/users/*/ivas/*': 204,
 
+  // Revoke Access Grant
+  'DELETE /api/auth/download-access/grants/*': 204,
+
   // Request IVA verification
   'POST /api/auth/rpc/ivas/*/request-code': 204,
 

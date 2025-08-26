@@ -18,25 +18,39 @@
   </div>
 
   @if (grant(); as ag) {
-    <div>
-      <p>
-        <strong>Status:</strong>&nbsp;
-        <span class="{{ ag?.status | AccessGrantStatusClassPipe }} capitalize w-24">{{
-          ag.status
-        }}</span>
-      </p>
-      <p>
-        <strong>Dataset:</strong>&nbsp;
-        <span class="w-24 capitalize"
-          ><a
-            routerLink="/dataset/{{ ag?.dataset_id }}"
-            data-umami-event="Access Grant Details Dataset Clicked"
-            >{{ ag?.dataset_id }}</a
-          ></span
-        >
-      </p>
-    </div>
+    <div class="flex w-full items-center justify-between">
+      <div>
+        <p>
+          <strong>Status:</strong>&nbsp;<span
+            class="{{ ag?.status | AccessGrantStatusClassPipe }} capitalize w-24"
+            >{{ ag.status }}</span
+          >
+        </p>
 
+        <p>
+          <strong>Dataset:</strong>&nbsp;<span class="w-24 capitalize"
+            ><a
+              routerLink="/dataset/{{ ag?.dataset_id }}"
+              data-umami-event="Access Grant Details Dataset Clicked"
+              >{{ ag?.dataset_id }}</a
+            ></span
+          >
+        </p>
+      </div>
+      @if (ag.status === 'active') {
+        <div class="w-64">
+          <button
+            mat-raised-button
+            matTooltip="Revoke Access Grant"
+            aria-label="Revoke Access Grant"
+            (click)="openRevokeDialog()"
+          >
+            Revoke Access Grant
+            <mat-icon>block</mat-icon>
+          </button>
+        </div>
+      }
+    </div>
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <div class="my-2 flex flex-col items-start gap-4">
         <mat-card class="w-full overflow-x-auto">
@@ -82,7 +96,7 @@
                 <p>
                   <span
                     ><span class="warn"
-                      >No Access Request was matched for this Grant!</span
+                      >No access request was matched for this grant!</span
                     ></span
                   >
                 </p>
@@ -169,14 +183,14 @@
                 <strong class="inline-block w-44 xl:w-32">{{
                   ar()[0].request_created | date
                 }}</strong>
-                <span>Access Requested</span>
+                <span>Access requested</span>
               </p>
               @if (ar()[0].status_changed) {
                 <p class="mb-2 pb-2">
                   <strong class="inline-block w-44 xl:w-32">{{
                     ar()[0].status_changed | date
                   }}</strong>
-                  <span>Access Granted</span>
+                  <span>Access granted</span>
                 </p>
               }
             }
