@@ -8,11 +8,11 @@
   --color-quinary: var(--mat-sys-quinary);
   --color-outline: var(--mat-sys-outline);
   --color-error: var(--mat-sys-error);
-  --color-warning: var(--color-amber-500);
-  --color-success: var(--color-green-500);
-  --color-info: var(--color-indigo-500);
-  --color-outline: var(--color-gray-300);
-  --color-outline-material: var(--mat-sys-outline);
+  --color-warning: var(--mat-sys-warning);
+  --color-success: var(--mat-sys-success);
+  --color-info: var(--mat-sys-info);
+  --color-outline: var(--mat-sys-outline-variant);
+  --color-outline-dark: var(--mat-sys-outline);
   --font-mono:
     Illinois, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'Courier New', monospace;

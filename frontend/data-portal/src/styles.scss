@@ -10,14 +10,6 @@
 // Add Tailwind CSS
 @use 'tailwind';
 
-hr {
-  border-color: var(--color-outline, --mat-sys-outline);
-}
-
-.border {
-  border-color: var(--color-outline, --mat-sys-outline-variant);
-}
-
 // Add Lexend font
 @font-face {
   font-family: 'Lexend';
@@ -40,9 +32,9 @@ hr {
   @include mat.theme(
     (
       color: (
-        theme-type: light,
         primary: ghga-colors.$primary-palette,
         tertiary: ghga-colors.$tertiary-palette,
+        theme-type: light,
       ),
       typography: (
         plain-family: Lexend,
@@ -60,23 +52,60 @@ hr {
       outlined-label-text-color: var(--mat-sys-quaternary),
       protected-label-text-size: medium,
       protected-container-color: var(--mat-sys-tertiary),
-      protected-label-text-color: var(--mat-sys-on-primary),
+      protected-label-text-color: var(--mat-sys-on-tertiary),
     )
   );
+  @media (prefers-contrast: more) {
+    @include ghga-colors.high-contrast-overrides('light');
+  }
+  // Overrides for default contrast theme
+  @media not (prefers-contrast: more) {
+    --mat-sys-primary: #00393f;
+    --mat-sys-secondary: #005a5a;
+    --mat-sys-tertiary: #e84614;
+    --mat-sys-quaternary: #007e8c;
+    --mat-sys-quinary: #cfe7cd;
+    --mat-sys-success: #16a34a;
+    --mat-sys-info: #4f46e5;
+    --mat-sys-warning: #d97706;
+    --mat-sys-danger: #ea580c;
+
+    // These overrides come from the high contrast light theme
+    --mat-sys-on-quaternary: #ffffff;
+    --mat-sys-quaternary-container: #00515b;
+    --mat-sys-on-quaternary-container: #ffffff;
+    --mat-sys-quaternary-fixed: #00515b;
+    --mat-sys-quaternary-fixed-dim: #003940;
+    --mat-sys-on-quaternary-fixed: #ffffff;
+    --mat-sys-on-quaternary-fixed-variant: #ffffff;
+
+    --mat-sys-on-quinary: #000000;
+    --mat-sys-quinary-container: #b1c9b0;
+    --mat-sys-on-quinary-container: #000f03;
+    --mat-sys-quinary-fixed: #d1e9cf;
+    --mat-sys-quinary-fixed-dim: #b5cdb4;
+    --mat-sys-on-quinary-fixed: #000000;
+    --mat-sys-on-quinary-fixed-variant: #031506;
+
+    --mat-sys-on-info: #ffffff;
+    --mat-sys-info-container: #3627ce;
+    --mat-sys-on-info-container: #ffffff;
+
+    --mat-sys-on-success: #ffffff;
+    --mat-sys-success-container: #005522;
+    --mat-sys-on-success-container: #ffffff;
+
+    --mat-sys-on-warning: #ffffff;
+    --mat-sys-warning-container: #713b00;
+    --mat-sys-on-warning-container: #ffffff;
+
+    --mat-sys-on-danger: #ffffff;
+    --mat-sys-danger-container: #832c00;
+    --mat-sys-on-danger-container: #ffffff;
+  }
 }
 
-:root {
-  --mat-sys-primary: #00393f;
-  --mat-sys-secondary: #005a5a;
-  --mat-sys-tertiary: #e84614;
-  --mat-sys-quaternary: #007e8c;
-  --mat-sys-quinary: #cfe7cd;
-  --mat-sys-success: #16a34a;
-  --mat-sys-info: #4f46e5;
-  --mat-sys-warning: #d97706;
-  --mat-sys-danger: #ea580c;
-}
-
+// Scoping default styles so that tailwind classes can override them
 @layer base {
   html,
   body {
@@ -145,6 +174,14 @@ hr {
       color: var(--mat-sys-quaternary);
     }
   }
+
+  hr {
+    border-color: var(--mat-sys-outline-variant);
+  }
+}
+
+.border {
+  border-color: var(--mat-sys-outline-variant);
 }
 
 .mat-mdc-snack-bar-container {
@@ -203,8 +240,8 @@ hr {
 button.success {
   @include mat.button-overrides(
     (
-      filled-container-color: #16a34a,
-      protected-container-color: #16a34a,
+      filled-container-color: var(--mat-sys-success),
+      protected-container-color: var(--mat-sys-success),
       filled-label-text-color: var(--mat-sys-on-secondary),
     )
   );
