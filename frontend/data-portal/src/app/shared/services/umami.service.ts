@@ -76,7 +76,7 @@ export class UmamiService {
    * We need to do this manually since we switched off auto-tracking in the script tag.
    */
   #trackEvents() {
-    document.addEventListener('click', (event): event is MouseEvent => {
+    document.addEventListener('click', (event: MouseEvent) => {
       const umami = window.umami;
       if (!umami) return true;
       const target = (event.target as Element)?.closest('[data-umami-event]');
