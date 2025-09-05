@@ -26,6 +26,7 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorages,
     S3ObjectStoragesConfig,
 )
+from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
 from pydantic import Field, PositiveInt, field_validator
@@ -39,7 +40,7 @@ from dcs.adapters.outbound.http.api_calls import (
 from dcs.constants import TRACER
 from dcs.core import models
 from dcs.ports.inbound.data_repository import DataRepositoryPort
-from dcs.ports.outbound.dao import DrsObjectDaoPort, ResourceNotFoundError
+from dcs.ports.outbound.dao import DrsObjectDaoPort
 from dcs.ports.outbound.event_pub import EventPublisherPort
 
 log = logging.getLogger(__name__)
@@ -299,7 +300,7 @@ class DataRepository(DataRepositoryPort):
                 drs_object = await self._drs_object_dao.find_one(
                     mapping={"object_id": object_id}
                 )
-            except ResourceNotFoundError as error:
+            except NoHitsFoundError as error:
                 cleanup_error = self.CleanupError(object_id=object_id, from_error=error)
                 log.critical(cleanup_error)
                 log.warning(
