@@ -1,6 +1,6 @@
 dependencies:
 - name: ghga-common
   repository: https://ghga-de.github.io/charts
-  version: 2.5.9
-digest: sha256:72f2e61910d82a5f2703165f5359856db71fd7932a0125fa9e5ecf920b74369c
-generated: "2025-08-19T07:49:41.847622304Z"
+  version: 2.5.10
+digest: sha256:e3f981527aad6ee99280f09d95d3313a4d5d46fa41d400b408ac40df4440f298
+generated: "2025-09-05T12:10:51.166161054Z"
