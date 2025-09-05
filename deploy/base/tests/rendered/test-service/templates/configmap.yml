@@ -7,18 +7,17 @@ metadata:
   namespace: "test"
 data:
   config: |
+    api_root_path: /path/v1/test
+    db_name: test
     foo: bar
-    service_instance_id: test-id
-  
     kafka_dlq_topic: prefix-dlq
-    test_event_topic: prefix-my-topic
-    test_event_type: searchable_resource_deleted
-    resource_upsertion_event_type: searchable_resource_upserted
-    kafka_ssl_password: ""
+    kafka_security_protocol: SSL
     kafka_ssl_cafile: /cluster-ca-cert/ca.crt
     kafka_ssl_certfile: /kafka-secrets/user.crt
     kafka_ssl_keyfile: /kafka-secrets/user.key
-    kafka_security_protocol: SSL
-    api_root_path: /path/v1/test
-    db_name: test
+    kafka_ssl_password: ""
+    resource_upsertion_event_type: searchable_resource_upserted
+    service_instance_id: test-id
     service_name: test-service-name
+    test_event_topic: prefix-my-topic
+    test_event_type: searchable_resource_deleted
