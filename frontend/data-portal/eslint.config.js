@@ -3,6 +3,7 @@ import { default as angular, default as pkg } from '@angular-eslint/eslint-plugi
 import angularTemplate from '@angular-eslint/eslint-plugin-template';
 import { default as angularTemplateParser } from '@angular-eslint/template-parser';
 import markdown from '@eslint/markdown';
+import angularEslint from 'angular-eslint';
 import boundaries from 'eslint-plugin-boundaries';
 import header from 'eslint-plugin-header';
 import jsdoc from 'eslint-plugin-jsdoc';
@@ -25,6 +26,7 @@ export default [
         project: './tsconfig.json',
       },
     },
+    processor: angularEslint.processInlineTemplates,
     plugins: {
       '@angular-eslint': angular,
       tseslint,
@@ -351,6 +353,7 @@ export default [
     rules: {
       ...angularTemplate.configs.recommended.rules,
       ...angularTemplate.configs.accessibility.rules,
+      '@angular-eslint/template/no-positive-tabindex': 'error',
       'prettier/prettier': 'warn',
     },
   },
