@@ -108,7 +108,7 @@ describe('DatasetDetailsComponent', () => {
   });
 
   it('should show heading', () => {
-    const heading = screen.getByRole('heading', { level: 3 });
+    const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toHaveTextContent('Test dataset');
   });
 

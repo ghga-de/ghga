@@ -3,7 +3,7 @@
   [style.view-transition-name]="showTransition ? 'detail' : null"
 >
   <div class="justify-between md:flex">
-    <div class="grow">
+    <header class="grow">
       <button
         mat-icon-button
         (click)="goBack()"
@@ -14,7 +14,7 @@
         <mat-icon>chevron_left</mat-icon>
       </button>
       <h1>User{{ user() ? ': ' + user()!.displayName : ' Details' }}</h1>
-    </div>
+    </header>
     @if (user(); as user) {
       <div class="float-right space-x-3 text-end lg:col-start-2">
         @if (user.status === 'active') {

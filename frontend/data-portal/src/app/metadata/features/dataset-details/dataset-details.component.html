@@ -18,7 +18,7 @@
             </div>
           </div>
           <div>
-            <h3>{{ datasetDetails().title }}</h3>
+            <h1 class="mb-2 text-3xl">{{ datasetDetails().title }}</h1>
             <p class="mb-0 text-base">Dataset ID | {{ id() }}</p>
             @if (datasetDetails().ega_accession !== '') {
               <p class="text-base">EGA ID | {{ datasetDetails().ega_accession }}</p>
@@ -530,6 +530,7 @@
     }
   </div>
 } @else {
+  <h1>Error loading dataset</h1>
   <div>
     <p class="text-error text-2xl">
       {{ errorMessage() }}

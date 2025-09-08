@@ -3,7 +3,7 @@
   [style.view-transition-name]="showTransition ? 'detail' : null"
 >
   <div class="justify-between md:flex">
-    <div class="grow">
+    <header class="grow">
       <button
         mat-icon-button
         (click)="goBack()"
@@ -14,7 +14,7 @@
         <mat-icon>chevron_left</mat-icon>
       </button>
       <h1>Access Request Details</h1>
-    </div>
+    </header>
   </div>
   @if (request(); as ar) {
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">

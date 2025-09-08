@@ -3,18 +3,18 @@
   [style.view-transition-name]="showTransition ? 'detail' : null"
 >
   <div class="justify-between md:flex">
-    <div class="grow">
+    <header class="grow">
       <button
         mat-icon-button
         (click)="goBack()"
         data-umami-event="Access Grant Manager Back Link Clicked"
-        aria-label="Go back to access grant list"
+        aria-label="Go back to previous page"
         class="text-primary float-left mt-1 mr-4"
       >
         <mat-icon>chevron_left</mat-icon>
       </button>
       <h1>Access Grant Detail</h1>
-    </div>
+    </header>
   </div>
 
   @if (grant(); as ag) {
