@@ -63,14 +63,17 @@ describe('GlobalStatsComponent', () => {
   });
 
   it('should properly show experiments', () => {
-    expectCardText(1, 'Experiments: 1,400 700 Ilumina test 700 HiSeq test');
+    expectCardText(
+      1,
+      'Experiments: 1,400 CountPlatform 700 Ilumina test 700 HiSeq test',
+    );
   });
 
   it('should properly show individuals', () => {
-    expectCardText(2, 'Individuals: 5,432 1,935 Female 2,358 Male');
+    expectCardText(2, 'Individuals: 5,432 CountSex 1,935 Female 2,358 Male');
   });
 
   it('should properly aggregate file types', () => {
-    expectCardText(3, 'Files: 703 462 bam 212 fastq 12 txt 17 zip');
+    expectCardText(3, 'Files: 703 CountFile Type 462 bam 212 fastq 12 txt 17 zip');
   });
 });
