@@ -404,13 +404,6 @@ export class AuthService {
       if (!(user.ext_id && user.name && user.email)) {
         throw new Error('Missing properties in user session');
       }
-      if ('role' in user || !user.roles) {
-        // backward compatibility with auth service < 3
-        const oldUser = user as { role?: string | null; roles?: string[] };
-        const role = oldUser['role'];
-        if (!oldUser.roles) oldUser.roles = role ? [role] : [];
-        delete oldUser.role;
-      }
       // remove unsupported role names
       user.roles = user.roles.filter((role) => role in RoleNames);
     } catch (error) {
