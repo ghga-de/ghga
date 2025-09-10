@@ -28,7 +28,7 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Name or email of user</mat-label>
-              <input matInput [(ngModel)]="name" />
+              <input matInput type="text" [(ngModel)]="name" />
               <mat-hint>You can also use partial names or emails</mat-hint>
             </mat-form-field>
             <button
@@ -44,7 +44,12 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Last modified from</mat-label>
-              <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
+              <input
+                matInput
+                type="text"
+                [matDatepicker]="fromPicker"
+                [(ngModel)]="fromDate"
+              />
               <mat-hint>{{ dateInputFormatHint }}</mat-hint>
               <mat-datepicker-toggle
                 matIconSuffix
@@ -65,7 +70,12 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Last modified until</mat-label>
-              <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
+              <input
+                matInput
+                type="text"
+                [matDatepicker]="toPicker"
+                [(ngModel)]="toDate"
+              />
               <mat-hint>{{ dateInputFormatHint }}</mat-hint>
               <mat-datepicker-toggle
                 matIconSuffix

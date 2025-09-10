@@ -20,6 +20,7 @@
           } @else {
             <input
               matInput
+              type="text"
               [(ngModel)]="field"
               (ngModelChange)="changed(formControl.control)"
               #formControl="ngModel"

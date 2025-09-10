@@ -14,12 +14,22 @@
     </li>
     @if (count > maxItems) {
       @if (idx === maxItems - 2) {
-        <input type="checkbox" id="show_more" class="show_more hidden" />
-        <label for="show_more" class="text-secondary underline"
-          >Show {{ count - (maxItems - 1) }} more…</label
-        >
+        <li [class.h-0]="checked()">
+          <input
+            type="checkbox"
+            id="show_more"
+            class="show_more w-0"
+            (click)="toggleChecked()"
+            [class.checked]="checked()"
+          />
+          @if (!checked()) {
+            <label for="show_more" class="text-secondary underline"
+              >Show {{ count - (maxItems - 1) }} more…</label
+            >
+          }
+        </li>
       }
-      @if (last) {
+      @if (last && checked()) {
         <li>
           <label for="show_more" class="text-secondary underline">Show less…</label>
         </li>

@@ -18,6 +18,8 @@
       [formControl]="codeControl"
       (input)="onInput()"
       maxlength="6"
+      autocomplete="one-time-code"
+      aria-required="true"
     />
   </mat-form-field>
   <div class="mb-4 w-full sm:w-auto">

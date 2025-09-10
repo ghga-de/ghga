@@ -78,6 +78,8 @@
           readonly
           [value]="getSecret(uri)"
           class="mr-2 mb-2 h-10 text-center font-mono"
+          aria-label="TOTP setup key"
+          aria-readonly="true"
         />
         <button
           mat-icon-button
@@ -87,6 +89,7 @@
           matTooltipPosition="right"
           matTooltipHideDelay="100000"
           data-umami-event="Setup TOTP Copy Secret Clicked"
+          aria-label="Copy TOTP setup key"
         >
           <mat-icon>content_copy</mat-icon>
         </button>

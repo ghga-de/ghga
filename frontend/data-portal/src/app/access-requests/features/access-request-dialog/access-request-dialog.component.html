@@ -12,6 +12,7 @@
         [formControl]="descriptionFormControl"
         (blur)="updateDescriptionErrorMessage()"
         #details
+        required
       ></textarea>
       @if (descriptionErrorMessage()) {
         <mat-error>
@@ -23,12 +24,14 @@
       <mat-label>Access requested from</mat-label>
       <input
         matInput
+        type="text"
         [formControl]="fromFormControl"
         [matDatepicker]="from_picker"
         [min]="minFromDate"
         [max]="maxFromDate"
         [(ngModel)]="fromDate"
         (dateInput)="fromDateChanged($event)"
+        required
       />
       @if (fromDateErrorMessage()) {
         <mat-error>
@@ -44,11 +47,13 @@
       <mat-label>Access requested until</mat-label>
       <input
         matInput
+        type="text"
         [formControl]="untilFormControl"
         [matDatepicker]="until_picker"
         [min]="minUntilDate"
         [max]="maxUntilDate"
         [(ngModel)]="untilDate"
+        required
       />
       @if (untilDateErrorMessage()) {
         <mat-error>
@@ -69,6 +74,8 @@
         #emailField
         [formControl]="emailFormControl"
         (blur)="updateEmailErrorMessage()"
+        autocomplete="email"
+        required
       />
       @if (emailFormControl.invalid) {
         <mat-error>{{ emailErrorMessage() }}</mat-error>

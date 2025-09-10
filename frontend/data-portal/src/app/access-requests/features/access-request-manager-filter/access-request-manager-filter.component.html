@@ -26,7 +26,7 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Ticket ID</mat-label>
-                <input matInput [(ngModel)]="ticketId" />
+                <input matInput type="text" [(ngModel)]="ticketId" />
               </mat-form-field>
               <button
                 mat-icon-button
@@ -41,7 +41,7 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Dataset title or ID</mat-label>
-                <input matInput [(ngModel)]="dataset" />
+                <input matInput type="text" [(ngModel)]="dataset" />
               </mat-form-field>
               <button
                 mat-icon-button
@@ -58,7 +58,7 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Name or email of requester</mat-label>
-                <input matInput [(ngModel)]="name" />
+                <input matInput type="text" [(ngModel)]="name" />
                 <mat-hint>You can also filter with partial names</mat-hint>
               </mat-form-field>
               <button
@@ -74,7 +74,7 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Name or email of DAC</mat-label>
-                <input matInput [(ngModel)]="dac" />
+                <input matInput type="text" [(ngModel)]="dac" />
               </mat-form-field>
               <button
                 mat-icon-button
@@ -119,7 +119,12 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Request creation date from</mat-label>
-                <input matInput [matDatepicker]="fromPicker" [(ngModel)]="fromDate" />
+                <input
+                  matInput
+                  type="text"
+                  [matDatepicker]="fromPicker"
+                  [(ngModel)]="fromDate"
+                />
                 <mat-hint>{{ dateInputFormatHint }}</mat-hint>
                 <mat-datepicker-toggle
                   matIconSuffix
@@ -140,7 +145,12 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Request creation date until</mat-label>
-                <input matInput [matDatepicker]="toPicker" [(ngModel)]="toDate" />
+                <input
+                  matInput
+                  type="text"
+                  [matDatepicker]="toPicker"
+                  [(ngModel)]="toDate"
+                />
                 <mat-hint>{{ dateInputFormatHint }}</mat-hint>
                 <mat-datepicker-toggle
                   matIconSuffix
@@ -163,7 +173,7 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Request details</mat-label>
-                <input matInput [(ngModel)]="requestText" />
+                <input matInput type="text" [(ngModel)]="requestText" />
               </mat-form-field>
               <button
                 mat-icon-button
@@ -178,7 +188,7 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Note to requester</mat-label>
-                <input matInput [(ngModel)]="noteToRequester" />
+                <input matInput type="text" [(ngModel)]="noteToRequester" />
               </mat-form-field>
               <button
                 mat-icon-button
@@ -193,7 +203,7 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Internal note</mat-label>
-                <input matInput [(ngModel)]="internalNote" />
+                <input matInput type="text" [(ngModel)]="internalNote" />
               </mat-form-field>
               <button
                 mat-icon-button

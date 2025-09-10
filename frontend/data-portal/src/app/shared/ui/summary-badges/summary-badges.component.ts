@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, input } from '@angular/core';
+import { Component, input, model } from '@angular/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
 
@@ -27,4 +27,10 @@ export class SummaryBadgesComponent {
       count: number;
     }[]
   >();
+
+  checked = model(false);
+
+  toggleChecked() {
+    this.checked.set(!this.checked());
+  }
 }

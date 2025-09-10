@@ -39,9 +39,15 @@
       <span class="break-all">{{ u.ext_id }}</span>
     </p>
     <p class="mb-0">
-      <span class="me-2 inline-block font-bold md:min-w-44">Academic title:</span>
+      <span id="academic-title" class="me-2 inline-block font-bold md:min-w-44"
+        >Academic title:</span
+      >
       <mat-form-field>
-        <mat-select [formControl]="titleControl">
+        <mat-select
+          [formControl]="titleControl"
+          aria-labelledby="academic-title"
+          autocomplete="honorific-prefix"
+        >
           @for (title of allTitles; track title) {
             <mat-option [value]="title || ''">{{ title || '–' }}</mat-option>
           }
@@ -88,6 +94,7 @@
           class="w-full sm:w-auto"
           (click)="register()"
           [disabled]="!accepted"
+          [aria-disabled]="!accepted"
           data-umami-event="Registration Submit Clicked"
         >
           {{ u?.id ? 'Confirm' : 'Register' }}

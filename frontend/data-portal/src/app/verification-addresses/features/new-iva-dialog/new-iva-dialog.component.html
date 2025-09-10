@@ -21,6 +21,10 @@
       <mat-form-field class="w-full">
         <input
           matInput
+          [type]="type === 'Phone' || type === 'Fax' ? 'tel' : 'text'"
+          [autocomplete]="
+            type === 'Phone' ? 'mobile tel' : type === 'Fax' ? 'fax' : 'street-address'
+          "
           [(ngModel)]="value"
           name="value"
           cdkFocusInitial

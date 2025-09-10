@@ -47,7 +47,7 @@ describe('SummaryBadgesComponent', () => {
   it('should show "Show 2 More" when there are four items', () => {
     const compiled = fixtureFourItems.nativeElement as HTMLElement;
     const text = compiled.textContent;
-    expect(text).toContain('test 1 1test 2 1Show 2 more…test 3 1test 4 1Show less…');
+    expect(text).toContain('test 1 1test 2 1Show 2 more…test 3 1test 4 1');
   });
 
   it('should show all three data points when there are only three', () => {

@@ -118,7 +118,7 @@
 
       <mat-form-field class="container max-w-5xl">
         <mat-label>Your public Crypt4GH key</mat-label>
-        <input matInput [(ngModel)]="pubKey" (input)="checkPubKey()" />
+        <input matInput type="text" [(ngModel)]="pubKey" (input)="checkPubKey()" />
         <mat-hint class="-mt-2 mb-4">
           <p>
             Please enter your public Crypt4GH key (in Base64 encoded format) above, so
