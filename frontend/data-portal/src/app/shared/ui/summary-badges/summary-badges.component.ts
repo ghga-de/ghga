@@ -20,17 +20,20 @@ const MAX_ITEMS = 3;
   styleUrl: './summary-badges.component.scss',
 })
 export class SummaryBadgesComponent {
-  protected maxItems = MAX_ITEMS;
-  data = input.required<
+  protected readonly maxItems = MAX_ITEMS;
+  readonly data = input.required<
     {
       value: string;
       count: number;
     }[]
   >();
 
-  checked = model(false);
+  protected readonly showMore = model(false);
 
-  toggleChecked() {
-    this.checked.set(!this.checked());
+  /**
+   * Toggle the show more/less state
+   */
+  toggleMoreOrLess() {
+    this.showMore.set(!this.showMore());
   }
 }

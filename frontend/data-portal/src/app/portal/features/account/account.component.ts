@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { GrantedAccessRequestsListComponent } from '@app/access-requests/features/granted-access-requests-list/granted-access-requests-list.component';
 import { PendingAccessRequestsListComponent } from '@app/access-requests/features/pending-access-requests-list/pending-access-requests-list.component';
 import { AuthService } from '@app/auth/services/auth.service';
+import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link.directive';
 import { UserIvaListComponent } from '@app/verification-addresses/features/user-iva-list/user-iva-list.component';
 
 /**
@@ -25,6 +26,7 @@ import { UserIvaListComponent } from '@app/verification-addresses/features/user-
     PendingAccessRequestsListComponent,
     GrantedAccessRequestsListComponent,
     UserIvaListComponent,
+    ExternalLinkDirective,
   ],
   templateUrl: './account.component.html',
   styleUrl: './account.component.scss',

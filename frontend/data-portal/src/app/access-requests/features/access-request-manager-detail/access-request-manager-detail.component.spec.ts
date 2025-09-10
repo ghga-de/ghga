@@ -87,7 +87,7 @@ describe('AccessRequestManagerDetailComponent', () => {
   });
 
   it('should show the dataset ID in a link', () => {
-    const a = screen.getByRole('link', { name: 'GHGAD12345678901235' });
+    const a = screen.getByRole('link', { name: 'GHGAD12345678901235 (new tab)' });
     expect(a).toBeVisible();
   });
 

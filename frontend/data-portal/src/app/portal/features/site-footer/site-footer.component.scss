@@ -15,7 +15,7 @@ nav a:focus {
   background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
 }
 
-nav a > mat-icon {
+nav a[appExtLink]:not(.mdc-button)::after {
   scale: 0.6;
   transform: translateY(10px);
   margin: 0 -10px 0 -2px;

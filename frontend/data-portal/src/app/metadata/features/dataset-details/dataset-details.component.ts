@@ -42,6 +42,7 @@ import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space.pipe';
 import { ConfigService } from '@app/shared/services/config.service';
 import { NavigationTrackingService } from '@app/shared/services/navigation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
+import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link.directive';
 import { ParagraphsComponent } from '../../../shared/ui/paragraphs/paragraphs.component';
 
 const COLUMNS = {
@@ -74,6 +75,7 @@ const COLUMNS = {
     MatTooltipModule,
     ValidateDOI,
     ParagraphsComponent,
+    ExternalLinkDirective,
   ],
   providers: [MetadataService],
   templateUrl: './dataset-details.component.html',

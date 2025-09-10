@@ -1,4 +1,4 @@
-p a mat-icon {
+p a[appExtLink]:not(.mdc-button)::after {
   scale: 0.6;
   margin: 0 -5px 0 -3px;
   transform: translateY(10px);

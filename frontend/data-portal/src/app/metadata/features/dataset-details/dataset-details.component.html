@@ -72,14 +72,13 @@
             <div class="min-w-72">
               @if (study().ega_accession) {
                 <a
+                  appExtLink
                   mat-stroked-button
                   class="mb-4 ml-2 w-64 sm:float-right sm:mb-0"
                   [href]="'https://ega-archive.org/studies/' + study().ega_accession"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-umami-event="Dataset Details Visit EGA Study Page Clicked"
-                  ><mat-icon>open_in_new</mat-icon>Visit EGA Study Page</a
                 >
+                  Visit EGA Study Page
+                </a>
               }
               @if (study().accession) {
                 <a
@@ -144,13 +143,12 @@
                   <div>
                     @if (pub.doi && pub.doi !== '') {
                       <a
+                        appExtLink
                         mat-stroked-button
                         class="mb-4 w-full sm:float-right sm:mb-0 sm:w-auto"
                         [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
-                        target="_blank"
-                        rel="noopener noreferrer"
                         data-umami-event="Dataset Details Publication DOI Clicked"
-                        ><mat-icon>open_in_new</mat-icon>View Publication</a
+                        >View Publication</a
                       >
                     }
                     <h4 class="flex items-center sm:inline-flex">
@@ -208,13 +206,12 @@
             <div class="min-w-72">
               @if (dap().policy_url !== '') {
                 <a
+                  appExtLink
                   mat-stroked-button
                   class="mb-4 w-64 md:float-right md:mb-0 md:w-auto"
                   [href]="dap().policy_url"
-                  target="_blank"
-                  rel="noopener noreferrer"
                   data-umami-event="Dataset Details Visit DAP Policy Clicked"
-                  ><mat-icon>open_in_new</mat-icon>Data Access Info Form</a
+                  >Data Access Info Form</a
                 >
               }
               <h4

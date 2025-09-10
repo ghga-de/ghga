@@ -10,13 +10,21 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatRipple } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
+import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link.directive';
 
 /**
  * This is the site footer component
  */
 @Component({
   selector: 'app-site-footer',
-  imports: [RouterLink, MatIconModule, MatButtonModule, MatRipple, DatePipe],
+  imports: [
+    RouterLink,
+    MatIconModule,
+    MatButtonModule,
+    MatRipple,
+    DatePipe,
+    ExternalLinkDirective,
+  ],
   templateUrl: './site-footer.component.html',
   styleUrl: './site-footer.component.scss',
 })

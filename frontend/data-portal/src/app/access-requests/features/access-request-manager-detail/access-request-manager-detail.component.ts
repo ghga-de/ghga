@@ -38,6 +38,7 @@ import { ConfigService } from '@app/shared/services/config.service';
 import { ConfirmationService } from '@app/shared/services/confirmation.service';
 import { NavigationTrackingService } from '@app/shared/services/navigation.service';
 import { NotificationService } from '@app/shared/services/notification.service';
+import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link.directive';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { Iva, IvaState } from '@app/verification-addresses/models/iva';
 import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state.pipe';
@@ -67,6 +68,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
     MatChipsModule,
     MatInputModule,
     SplitLinesPipe,
+    ExternalLinkDirective,
     RouterLink,
     AccessRequestDurationEditComponent,
   ],

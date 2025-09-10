@@ -47,9 +47,7 @@
       <div class="flex items-center">
         <span class="grow">
           @if (ticketUrl()) {
-            <a [href]="ticketUrl()" target="_blank" tabindex="-1"
-              >{{ field() }}<mat-icon aria-hidden="true">open_in_new</mat-icon></a
-            >
+            <a appExtLink [href]="ticketUrl()" tabindex="-1">{{ field() }}</a>
           } @else {
             {{ field() }}
           }

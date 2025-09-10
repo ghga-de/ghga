@@ -90,6 +90,6 @@ export class AccountButtonComponent {
    * Open the (external) LS login page
    */
   manageLsLogin(): void {
-    window.open(this.#config.oidcAccountUrl, '_blank');
+    window.open(this.#config.oidcAccountUrl, '_blank', 'noreferrer,noopener');
   }
 }

@@ -265,6 +265,44 @@ button.error {
   );
 }
 
+// Add an icon after all external links
+a[appExtLink]:not(.mdc-button)::after,
+a[appExtLink].mdc-button::before {
+  content: 'open_in_new';
+  font-family: 'material-symbols-outlined';
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1;
+  display: inline-block;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  user-select: none;
+  overflow: hidden;
+  overflow-wrap: normal;
+}
+
+a[appExtLink]:not(.mdc-button)::after {
+  font-size: 24px;
+}
+a[appExtLink].mdc-button::before {
+  font-size: 1.125rem;
+}
+
+a[appExtLink].mat-mdc-outlined-button::before {
+  margin-right: var(--mat-button-outlined-icon-spacing, 8px);
+  margin-left: var(--mat-button-outlined-icon-offset, -8px);
+}
+
+a[appExtLink]:not(.mdc-button).inline-ext-link::after {
+  font-size: inherit;
+  height: inherit;
+  width: inherit;
+  line-height: inherit;
+  vertical-align: middle;
+}
+
 // Class for visually hiding elements while keeping them visible in screen readers
 .visually-hidden {
   font-size: 0px;

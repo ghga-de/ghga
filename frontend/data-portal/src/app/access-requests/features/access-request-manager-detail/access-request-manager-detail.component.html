@@ -35,10 +35,9 @@
             <p>
               <strong class="inline-block w-50">Dataset ID:</strong>
               <span
-                ><a [href]="'/dataset/' + ar.dataset_id" target="_blank" tabindex="-1"
-                  >{{ ar.dataset_id
-                  }}<mat-icon aria-hidden="true">open_in_new</mat-icon></a
-                ></span
+                ><a appExtLink [href]="'/dataset/' + ar.dataset_id" tabindex="-1">{{
+                  ar.dataset_id
+                }}</a></span
               >
             </p>
             <p>

@@ -8,6 +8,7 @@ import { Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link.directive';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil.component';
 
 /**
@@ -15,7 +16,13 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil.compone
  */
 @Component({
   selector: 'app-dataset-summary-stencil',
-  imports: [MatIconModule, MatButtonModule, MatChipsModule, StencilComponent],
+  imports: [
+    MatIconModule,
+    MatButtonModule,
+    MatChipsModule,
+    StencilComponent,
+    ExternalLinkDirective,
+  ],
   templateUrl: './dataset-summary.stencil.component.html',
 })
 export class DatasetSummaryStencilComponent {}

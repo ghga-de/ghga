@@ -3,12 +3,11 @@
     <div class="mb-4 flex flex-col gap-y-2 sm:float-right sm:w-52 md:ms-6 md:mb-4">
       @if (hitContent().ega_accession !== '') {
         <a
+          appExtLink
           mat-stroked-button
           [href]="'https://ega-archive.org/datasets/' + hitContent().ega_accession"
-          target="_blank"
-          rel="noopener noreferrer"
           data-umami-event="Dataset Summary EGA Dataset Clicked"
-          ><mat-icon>open_in_new</mat-icon>EGA Dataset</a
+          >EGA Dataset</a
         >
       }
       <app-dynamic-access-request-button datasetID="{{ hit().id_ }}" />
