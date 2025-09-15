@@ -46,3 +46,7 @@ These styles can be applied with either native CSS (using [`prefers-contrast`](h
 Tools to check for colour contrast ratios can be found in the links above.
 
 See also [links in Epic Spec 79](https://github.com/ghga-de/epic-docs/blob/main/79-miniature-horse/technical_specification.md#list-of-online-resources).
+
+## Specific Implementation Details
+
+- **Material Icons**: We exclusively use the `fontIcon` syntax (`<mat-icon fontIcon="icon"></mat-icon>`) syntax, instead of the ligature syntax (`<mat-icon>icon</mat-icon>`) as the latter encounters issues in some screen readers where the icon code name is read out even though the `mat-icon` element has `aria-hidden` set. Although this has only been experienced with the screen reader in the SilkTide Plugin (see above), it is best to be cautious and assume this issue is present elsewhere. The `fontIcon` syntax uses the `:before` CSS selector to provide the icon content, which can also be an issue with screen readers that parse this data, but we have tested that it works as intended (with the icon invisible to the screen reader) at least with [NVDA](https://www.nvaccess.org/about-nvda/) (admittedly, it has no problem with the ligature syntax itself), which can parse CSS content data.

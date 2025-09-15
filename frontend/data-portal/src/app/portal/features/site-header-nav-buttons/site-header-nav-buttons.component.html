@@ -1,31 +1,49 @@
-<a
-  [id]="route() === '' ? 'activePage' : ''"
-  mat-button
-  routerLink="/"
-  class="homeLink mx-1"
-  data-umami-event="Site Header Home Clicked"
-  >Home</a
-><a
-  [id]="browseActive() ? 'activePage' : ''"
-  mat-button
-  routerLink="/browse"
-  class="mx-1"
-  data-umami-event="Site Header Browse Clicked"
-  >Browse Data</a
->
-<a
-  appExtLink
-  mat-button
-  href="https://docs.ghga.de/faq/"
-  class="mx-1 flex-row-reverse"
-  data-umami-event="Site Header Open FAQ Clicked"
-  >FAQ</a
->
-<a
-  appExtLink
-  mat-button
-  href="https://docs.ghga.de/"
-  class="mx-1 flex-row-reverse"
-  data-umami-event="Site Header Open Documentation Clicked"
-  >Docs</a
-><app-admin-menu></app-admin-menu>
+<ul class="block *:inline">
+  <li>
+    <a
+      [class.activePage]="route() === ''"
+      mat-button
+      routerLink="/"
+      class="homeLink mx-1"
+      data-umami-event="Site Header Home Clicked"
+      >Home</a
+    >
+  </li>
+  <li>
+    <a
+      [class.activePage]="browseActive()"
+      mat-button
+      routerLink="/browse"
+      class="mx-1"
+      data-umami-event="Site Header Browse Clicked"
+      >Browse Data</a
+    >
+  </li>
+  <li>
+    <a
+      mat-button
+      appExtLink
+      href="https://docs.ghga.de/faq/"
+      target="_blank"
+      rel="noreferrer noopener"
+      class="mx-1 flex-row-reverse"
+      data-umami-event="Site Header Open FAQ Clicked"
+      >FAQ</a
+    >
+  </li>
+  <li>
+    <a
+      mat-button
+      appExtLink
+      href="https://docs.ghga.de/"
+      target="_blank"
+      rel="noreferrer noopener"
+      class="mx-1 flex-row-reverse"
+      data-umami-event="Site Header Open Documentation Clicked"
+      >Docs</a
+    >
+  </li>
+  @if (isDataSteward()) {
+    <li><app-admin-menu class="contents"></app-admin-menu></li>
+  }
+</ul>

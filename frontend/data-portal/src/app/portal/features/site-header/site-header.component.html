@@ -10,6 +10,7 @@
           src="assets/images/ghga-logo-clean.png"
           class="max-h-12 w-2/3 sm:w-auto"
           alt="GHGA Logo"
+          role="presentation"
         />
         <div class="ms-2 w-1/2 border-l ps-2 pt-1 uppercase">
           <span
@@ -24,7 +25,7 @@
     </div>
 
     <div class="hidden lg:block xl:basis-1/2">
-      <mat-nav-list class="my-8 text-center">
+      <mat-nav-list class="my-8 text-center" aria-label="Header Navigation">
         <app-site-header-nav-buttons />
       </mat-nav-list>
     </div>
@@ -34,7 +35,10 @@
     </div>
 
     <div class="lg:hidden">
-      <mat-sidenav-container class="relative z-2 flex-[1_0_auto]">
+      <mat-sidenav-container
+        class="relative z-2 flex-[1_0_auto]"
+        aria-label="Header Navigation"
+      >
         <mat-sidenav
           #sidenav
           fixedInViewport="true"
@@ -49,14 +53,13 @@
               aria-label="Open navigation Menu"
               (click)="sidenav.toggle()"
             >
-              <mat-icon class="text-white">menu</mat-icon>
+              <mat-icon class="text-white" fontIcon="menu"></mat-icon>
             </button>
           </div>
           <mat-nav-list>
             <app-site-header-nav-buttons
               class="mb-4 grid grid-cols-1 gap-y-2 px-4" /><app-account-button /></mat-nav-list
         ></mat-sidenav>
-        <mat-sidenav-container></mat-sidenav-container>
       </mat-sidenav-container>
     </div>
 
@@ -66,8 +69,7 @@
         aria-label="Open navigation Menu"
         (click)="sidenav.toggle()"
       >
-        <mat-icon class="text-white">menu</mat-icon>
-      </button>
-    </div></mat-toolbar-row
-  >
+        <mat-icon class="text-white" fontIcon="menu"></mat-icon>
+      </button></div
+  ></mat-toolbar-row>
 </mat-toolbar>

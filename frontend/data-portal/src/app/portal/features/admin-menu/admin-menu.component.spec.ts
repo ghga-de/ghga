@@ -7,15 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
-import { AuthService } from '@app/auth/services/auth.service';
 import { AdminMenuComponent } from './admin-menu.component';
-
-/**
- * Mock the auth service as needed for the admin menu
- */
-class MockAuthService {
-  roles = () => ['data_steward'];
-}
 
 const fakeActivatedRoute = {
   snapshot: { data: {}, url: [{ path: 'iva-manager' }] },
@@ -29,7 +21,6 @@ describe('AdminMenuComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AdminMenuComponent],
       providers: [
-        { provide: AuthService, useClass: MockAuthService },
         {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,

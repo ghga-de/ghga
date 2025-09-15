@@ -54,7 +54,7 @@
               mat-flat-button
               data-umami-event="IVA Manager List Create Code Clicked"
             >
-              <mat-icon>pin</mat-icon>
+              <mat-icon fontIcon="pin"></mat-icon>
               @if (iva.state === 'CodeCreated') {
                 Recreate
               } @else {
@@ -70,8 +70,7 @@
               mat-flat-button
               data-umami-event="IVA Manager List Confirm Transmission Clicked"
             >
-              <mat-icon>mark_email_read</mat-icon>
-              Confirm transmission
+              <mat-icon fontIcon="mark_email_read"></mat-icon> Confirm transmission
             </button>
           }
           @if (iva.state !== 'Unverified') {
@@ -81,8 +80,7 @@
               mat-stroked-button
               data-umami-event="IVA Manager List Invalidate Clicked"
             >
-              <mat-icon>cancel_presentation</mat-icon>
-              Invalidate
+              <mat-icon fontIcon="cancel_presentation"></mat-icon> Invalidate
             </button>
           }
         </td>

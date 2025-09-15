@@ -27,7 +27,7 @@
         title="Copy token to clipboard"
         data-umami-event="Work Package Copy Token Clicked"
       >
-        <mat-icon>content_copy</mat-icon>
+        <mat-icon fontIcon="content_copy"></mat-icon>
       </button>
       <p>Please use the following token to {{ tokenAction() }} the selected dataset:</p>
       <pre
@@ -47,7 +47,7 @@
     (click)="reset()"
     data-umami-event="Work Package Reset Clicked"
   >
-    <mat-icon>add</mat-icon> Generate another access token
+    <mat-icon fontIcon="add"></mat-icon> Generate another access token
   </button>
 } @else {
   <p>

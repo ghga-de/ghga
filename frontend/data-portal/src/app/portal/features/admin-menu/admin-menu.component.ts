@@ -9,7 +9,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
-import { AuthService } from '@app/auth/services/auth.service';
 import { BaseRouteService } from '@app/shared/services/base-route.service';
 
 /**
@@ -22,10 +21,8 @@ import { BaseRouteService } from '@app/shared/services/base-route.service';
   styleUrl: './admin-menu.component.scss',
 })
 export class AdminMenuComponent {
-  #auth = inject(AuthService);
   #baseRoute = inject(BaseRouteService);
   #route = this.#baseRoute.route;
-  isDataSteward = computed(() => this.#auth.roles().includes('data_steward'));
   isUserManagerRoute = computed<boolean>(() => this.#route() === 'user-manager');
   isIvaManagerRoute = computed<boolean>(() => this.#route() === 'iva-manager');
   isAccessGrantManagerRoute = computed<boolean>(

@@ -303,16 +303,6 @@ a[appExtLink]:not(.mdc-button).inline-ext-link::after {
   vertical-align: middle;
 }
 
-// Class for visually hiding elements while keeping them visible in screen readers
-.visually-hidden {
-  font-size: 0px;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
 mat-sidenav-container > div.mat-drawer-backdrop.mat-drawer-shown {
   position: fixed;
 }

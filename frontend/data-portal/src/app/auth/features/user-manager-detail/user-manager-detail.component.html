@@ -11,7 +11,7 @@
         aria-label="Go back to previous page"
         class="text-primary float-left mt-1 mr-4"
       >
-        <mat-icon>chevron_left</mat-icon>
+        <mat-icon fontIcon="chevron_left"></mat-icon>
       </button>
       <h1>User{{ user() ? ': ' + user()!.displayName : ' Details' }}</h1>
     </header>
@@ -24,7 +24,7 @@
             aria-label="Deactivate User"
             (click)="safeStatusChange()"
           >
-            <mat-icon>person_remove</mat-icon>
+            <mat-icon fontIcon="person_remove"></mat-icon>
           </button>
         } @else {
           <button
@@ -33,7 +33,7 @@
             aria-label="Activate User"
             (click)="safeStatusChange(true)"
           >
-            <mat-icon>person_check</mat-icon>
+            <mat-icon fontIcon="person_check"></mat-icon>
           </button>
         }
         <button
@@ -43,7 +43,7 @@
           aria-label="Delete User"
           (click)="safeDeletion()"
         >
-          <mat-icon>person_off</mat-icon>
+          <mat-icon fontIcon="person_off"></mat-icon>
         </button>
       </div>
     }

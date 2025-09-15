@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '@app/auth/services/auth.service';
 import { BaseRouteService } from '@app/shared/services/base-route.service';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link.directive';
 import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
@@ -31,6 +32,9 @@ import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
 })
 export class SiteHeaderNavButtonsComponent {
   #baseRoute = inject(BaseRouteService);
+
+  #auth = inject(AuthService);
+  isDataSteward = computed(() => this.#auth.roles().includes('data_steward'));
 
   route = this.#baseRoute.route;
   /**

@@ -52,14 +52,14 @@
         <mat-chip
           class="smaller-chip interactive-chip cancel-edit-button mx-2 mb-1"
           (click)="cancel()"
-          ><mat-icon>close</mat-icon></mat-chip
-        >
+          ><mat-icon fontIcon="close"></mat-icon
+        ></mat-chip>
         <mat-chip
           class="smaller-chip interactive-chip save-edit-button mb-1"
           (click)="save()"
           [disabled]="saveDisabled()"
-          ><mat-icon>check</mat-icon></mat-chip
-        >
+          ><mat-icon fontIcon="check"></mat-icon
+        ></mat-chip>
       </div>
     </div>
   </div>
@@ -75,7 +75,7 @@
         <mat-chip
           (click)="open()"
           class="smaller-chip interactive-chip edit-button ms-2"
-          ><mat-icon class="scale-[0.75]">edit</mat-icon>
+          ><mat-icon class="scale-[0.75]" fontIcon="edit"></mat-icon>
         </mat-chip>
       }
     </span>

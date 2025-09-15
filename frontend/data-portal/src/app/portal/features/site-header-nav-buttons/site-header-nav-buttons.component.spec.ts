@@ -8,9 +8,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
+import { AuthService } from '@app/auth/services/auth.service';
 import { AccountButtonComponent } from '../account-button/account-button.component';
 import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
 import { SiteHeaderNavButtonsComponent } from './site-header-nav-buttons.component';
+
+/**
+ * Mock the auth service as needed for the admin menu
+ */
+class MockAuthService {
+  roles = () => ['data_steward'];
+}
 
 describe('SiteHeaderNavButtonsComponent', () => {
   let component: SiteHeaderNavButtonsComponent;
@@ -20,6 +28,7 @@ describe('SiteHeaderNavButtonsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SiteHeaderNavButtonsComponent],
       providers: [
+        { provide: AuthService, useClass: MockAuthService },
         {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,

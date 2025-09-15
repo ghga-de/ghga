@@ -8,7 +8,11 @@ a#activePage {
   }
 }
 
-a.mat-mdc-menu-item#activePage {
+button.activePage mat-icon {
+  margin-right: -4px;
+}
+
+a.activeSubPage {
   background-color: var(--mat-sys-tertiary-fixed-dim);
   color: var(--mat-sys-on-tertiary-fixed);
   mat-icon {

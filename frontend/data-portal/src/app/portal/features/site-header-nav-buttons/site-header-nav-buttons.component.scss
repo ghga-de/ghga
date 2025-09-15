@@ -13,6 +13,6 @@ a[appExtLink].mdc-button::before {
   margin: 0;
 }
 
-a#activePage {
+a.activePage {
   background-color: var(--mat-sys-tertiary);
 }

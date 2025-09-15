@@ -11,16 +11,16 @@
     >
       @switch (step.status) {
         @case ('ongoing') {
-          <mat-icon class="animate-spin text-current">sync</mat-icon>
+          <mat-icon class="animate-spin text-current" fontIcon="sync"></mat-icon>
         }
         @case ('succeeded') {
-          <mat-icon class="text-green-600">check_circle</mat-icon>
+          <mat-icon class="text-green-600" fontIcon="check_circle"></mat-icon>
         }
         @case ('failed') {
-          <mat-icon class="text-red-600">error</mat-icon>
+          <mat-icon class="text-red-600" fontIcon="error"></mat-icon>
         }
         @default {
-          <mat-icon class="text-gray-400">circle</mat-icon>
+          <mat-icon class="text-gray-400" fontIcon="circle"></mat-icon>
         }
       }
     </div>

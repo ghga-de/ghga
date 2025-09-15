@@ -4,7 +4,7 @@
     class="toggle-filters w-full font-bold"
     (click)="displayFilters = !displayFilters"
   >
-    <mat-icon>filter_alt</mat-icon>
+    <mat-icon fontIcon="filter_alt"></mat-icon>
     @if (displayFilters) {
       Close filters
     } @else {
@@ -20,7 +20,11 @@
     <mat-card-content class="min-w-sm">
       <div class="flex gap-4">
         <div class="hidden sm:block">
-          <mat-icon aria-label="Filter" class="large-icon">filter_alt</mat-icon>
+          <mat-icon
+            aria-label="Filter"
+            class="large-icon"
+            fontIcon="filter_alt"
+          ></mat-icon>
         </div>
         <div
           class="grid flex-grow grid-cols-1 gap-2 gap-x-8 lg:grid-cols-2 2xl:grid-cols-3"
@@ -37,7 +41,7 @@
               (click)="this.user.set('')"
               data-umami-event="Access Grant Filters User Clear Clicked"
             >
-              <mat-icon>cancel</mat-icon>
+              <mat-icon fontIcon="cancel"></mat-icon>
             </button>
           </div>
           <div class="flex min-w-96 grow items-baseline gap-2">
@@ -52,7 +56,7 @@
               (click)="this.datasetId.set('')"
               data-umami-event="Access Grant Filters Dataset ID Clear Clicked"
             >
-              <mat-icon>cancel</mat-icon>
+              <mat-icon fontIcon="cancel"></mat-icon>
             </button>
           </div>
           <div class="flex min-w-96 grow items-baseline gap-2">
@@ -78,7 +82,7 @@
               (click)="this.status.set(undefined)"
               data-umami-event="Access Grant Filters Status Clear Clicked"
             >
-              <mat-icon>cancel</mat-icon>
+              <mat-icon fontIcon="cancel"></mat-icon>
             </button>
           </div>
         </div>

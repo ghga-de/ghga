@@ -9,7 +9,7 @@
               (click)="goBack()"
               data-umami-event="Dataset Details Back Clicked"
             >
-              <mat-icon>keyboard_return</mat-icon>
+              <mat-icon fontIcon="keyboard_return"></mat-icon>
             </button>
             <div class="min-w-48">
               <app-dynamic-access-request-button
@@ -53,7 +53,8 @@
         </div>
         <div class="my-4 min-w-72">
           <p class="text-primary flex w-full items-center text-sm">
-            <mat-icon>description</mat-icon><strong>&nbsp;Description</strong>
+            <mat-icon fontIcon="description"></mat-icon
+            ><strong>&nbsp;Description</strong>
           </p>
           <div class="border-primary w-full border-y pt-2">
             <app-paragraphs [text]="datasetDetails().description" pClasses="text-sm" />
@@ -64,8 +65,7 @@
         <mat-tab
           ><ng-template mat-tab-label
             ><span class="text-primary flex items-center">
-              <mat-icon>book_2</mat-icon>
-              &nbsp;Study
+              <mat-icon fontIcon="book_2"></mat-icon> &nbsp;Study
             </span>
           </ng-template>
           <div class="overflow-x-auto p-4">
@@ -88,13 +88,13 @@
                   download
                   title="Download the study metadata as an Excel file"
                   data-umami-event="Study Metadata Download Clicked"
-                  ><mat-icon>download</mat-icon>Download Metadata</a
+                  ><mat-icon fontIcon="download"></mat-icon>Download Metadata</a
                 >
               }
               <h4 class="flex items-center sm:inline-flex">
                 <span
                   class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                  ><mat-icon inline>book_2</mat-icon></span
+                  ><mat-icon inline fontIcon="book_2"></mat-icon></span
                 >&nbsp;Study
               </h4>
               <p class="text-base"><strong>ID:</strong> {{ study().accession }}</p>
@@ -127,8 +127,7 @@
         <mat-tab
           ><ng-template mat-tab-label
             ><span class="text-primary flex items-center">
-              <mat-icon>article</mat-icon>
-              &nbsp;Publications
+              <mat-icon fontIcon="article"></mat-icon> &nbsp;Publications
             </span>
           </ng-template>
           <div class="overflow-x-auto p-4">
@@ -154,7 +153,7 @@
                     <h4 class="flex items-center sm:inline-flex">
                       <span
                         class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                        ><mat-icon inline>article</mat-icon></span
+                        ><mat-icon inline fontIcon="article"></mat-icon></span
                       >&nbsp;{{ pub.title ?? 'Unknown publication title' }}
                     </h4>
                     <p class="text-base">
@@ -187,7 +186,7 @@
                 <h4 class="inline-flex items-center">
                   <span
                     class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                    ><mat-icon inline>article</mat-icon></span
+                    ><mat-icon inline fontIcon="article"></mat-icon></span
                   >&nbsp;Publications
                 </h4>
                 <p>No publications available.</p>
@@ -198,8 +197,7 @@
         <mat-tab
           ><ng-template mat-tab-label
             ><span class="text-primary flex items-center">
-              <mat-icon>data_loss_prevention</mat-icon>
-              &nbsp;DAP/DAC
+              <mat-icon fontIcon="data_loss_prevention"></mat-icon> &nbsp;DAP/DAC
             </span>
           </ng-template>
           <div class="overflow-x-auto p-4">
@@ -219,7 +217,7 @@
               >
                 <span
                   class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
-                  ><mat-icon inline>data_loss_prevention</mat-icon></span
+                  ><mat-icon inline fontIcon="data_loss_prevention"></mat-icon></span
                 >&nbsp;<span>Policy and Data Access Committee</span>
               </h4>
               <p class="text-base">
@@ -499,7 +497,10 @@
                         (click)="notifyCopied()"
                         data-umami-event="Dataset Details File Hash Copied"
                       >
-                        <mat-icon class="text-[20px]/[24px]">content_copy</mat-icon>
+                        <mat-icon
+                          class="text-[20px]/[24px]"
+                          fontIcon="content_copy"
+                        ></mat-icon>
                       </button>
                     } @else {
                       N/A

@@ -11,9 +11,8 @@
                 matChipRemove
                 data-umami-event="Metadata Browser Search Query Clear Clicked"
               >
-                <mat-icon>cancel</mat-icon>
-              </button></mat-chip
-            >
+                <mat-icon fontIcon="cancel"></mat-icon></button
+            ></mat-chip>
           }
           @for (facet of facets(); track facet.key) {
             @if (lastSearchFilterFacets()[facet.key]) {
@@ -25,7 +24,7 @@
                       matChipRemove
                       data-umami-event="Metadata Browser Facet Clear Clicked"
                     >
-                      <mat-icon>cancel</mat-icon>
+                      <mat-icon fontIcon="cancel"></mat-icon>
                     </button>
                   </mat-chip>
                 }
@@ -58,7 +57,8 @@
         class="toggle-filters w-full font-bold"
         (click)="displayFilters = !displayFilters"
       >
-        <mat-icon>search</mat-icon><mat-icon>filter_alt</mat-icon>
+        <mat-icon fontIcon="search"></mat-icon
+        ><mat-icon fontIcon="filter_alt"></mat-icon>
         @if (displayFilters) {
           Close search and filters
         } @else {
@@ -82,7 +82,7 @@
               [formControl]="searchFormControl"
               (keyup.enter)="submit($event)"
             />
-            <mat-icon matSuffix>search</mat-icon>
+            <mat-icon matSuffix fontIcon="search"></mat-icon>
           </mat-form-field>
           @if (loading()) {
             @for (i of [1, 2]; track i) {

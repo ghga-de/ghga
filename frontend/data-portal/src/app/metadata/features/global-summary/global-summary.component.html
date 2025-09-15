@@ -9,9 +9,11 @@
     <mat-card appearance="outlined" class="card-primary text-white"
       ><mat-card-title class="text-center"
         ><span class="text-3xl"
-          ><mat-icon inline class="rounded-full border-4 border-white px-1"
-            >database</mat-icon
-          ></span
+          ><mat-icon
+            inline
+            class="rounded-full border-4 border-white px-1"
+            fontIcon="database"
+          ></mat-icon></span
         ><br />Total datasets:</mat-card-title
       ><mat-card-content class="mt-4 text-2xl"
         ><div class="text-center">
@@ -26,9 +28,11 @@
     <mat-card appearance="outlined" class="text-primary"
       ><mat-card-title class="text-tertiary text-center"
         ><span class="text-3xl"
-          ><mat-icon inline class="border-tertiary rounded-full border-4 px-1"
-            >genetics</mat-icon
-          ></span
+          ><mat-icon
+            inline
+            class="border-tertiary rounded-full border-4 px-1"
+            fontIcon="genetics"
+          ></mat-icon></span
         ><br />Experiments:
         @if (isLoading()) {
           <app-stencil class="inline-flex w-10" />
@@ -38,7 +42,7 @@
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
           <thead>
-            <tr class="visually-hidden italic">
+            <tr class="cdk-visually-hidden italic">
               <th scope="col" class="pe-3 text-end">Count</th>
               <th scope="col" class="text-start">Platform</th>
             </tr>
@@ -76,11 +80,13 @@
     >
     <mat-card appearance="outlined" class="card-primary text-white"
       ><mat-card-title class="text-center"
-        ><span class="text-3xl"
-          ><mat-icon inline class="rounded-full border-4 border-white px-1"
-            >person</mat-icon
-          ></span
-        ><br />Individuals:
+        ><span class="block text-3xl"
+          ><mat-icon
+            inline
+            class="rounded-full border-4 border-white px-1"
+            fontIcon="person"
+          ></mat-icon></span
+        >Individuals:
         @if (isLoading()) {
           <app-stencil class="inline-flex w-10" />
         } @else {
@@ -89,7 +95,7 @@
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
           <thead>
-            <tr class="visually-hidden italic">
+            <tr class="cdk-visually-hidden italic">
               <th scope="col" class="pe-3 text-end">Count</th>
               <th scope="col" class="text-start">Sex</th>
             </tr>
@@ -125,9 +131,11 @@
     <mat-card appearance="outlined" class="text-primary"
       ><mat-card-title class="text-tertiary text-center"
         ><span class="text-3xl"
-          ><mat-icon inline class="border-tertiary rounded-full border-4 px-1"
-            >description</mat-icon
-          ></span
+          ><mat-icon
+            inline
+            class="border-tertiary rounded-full border-4 px-1"
+            fontIcon="description"
+          ></mat-icon></span
         ><br />Files:
         @if (isLoading()) {
           <app-stencil class="inline-flex w-10" />
@@ -137,7 +145,7 @@
       ><mat-card-content class="mt-4 text-sm">
         <table class="mx-auto w-auto">
           <thead>
-            <tr class="visually-hidden italic">
+            <tr class="cdk-visually-hidden italic">
               <th scope="col" class="pe-3 text-end">Count</th>
               <th scope="col" class="text-start">File Type</th>
             </tr>

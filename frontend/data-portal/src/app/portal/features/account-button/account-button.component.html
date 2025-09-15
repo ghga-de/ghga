@@ -8,9 +8,9 @@
     matTooltip="Your GHGA account"
   >
     @if (initials) {
-      {{ initials }}
+      <span aria-hidden="true">{{ initials }}</span>
     } @else {
-      <mat-icon>account_circle</mat-icon>
+      <mat-icon fontIcon="account_circle"></mat-icon>
     }
   </button>
   <mat-menu #menu="matMenu" class="p-3">
@@ -23,7 +23,7 @@
       mat-menu-item
       data-umami-event="Account Button Menu Account Clicked"
     >
-      <mat-icon class="text-secondary">account_circle</mat-icon>
+      <mat-icon class="text-secondary" fontIcon="account_circle"></mat-icon>
       <span class="text-secondary">Your GHGA account page</span>
     </button>
     <button
@@ -32,7 +32,7 @@
       arial-label="Manage LS Login account (in new tab)"
       data-umami-event="Account Button Menu LS Login Clicked"
     >
-      <mat-icon class="text-quaternary">open_in_new</mat-icon>
+      <mat-icon class="text-quaternary" fontIcon="open_in_new"></mat-icon>
       <span class="text-quaternary">Manage LS Login account</span>
     </button>
     <button
@@ -40,7 +40,7 @@
       mat-menu-item
       data-umami-event="Account Button Menu Logout Clicked"
     >
-      <mat-icon class="text-tertiary">logout</mat-icon>
+      <mat-icon class="text-tertiary" fontIcon="logout"></mat-icon>
       <span class="text-tertiary">Log out</span>
     </button>
   </mat-menu>
@@ -52,7 +52,7 @@
     matTooltip="Log out from the GHGA portal"
     data-umami-event="Account Button Log Out Clicked"
   >
-    <mat-icon>logout</mat-icon>
+    <mat-icon fontIcon="logout"></mat-icon>
   </button>
   <mat-menu #menu="matMenu" class="p-3">
     <h2>Logout</h2>
@@ -65,7 +65,7 @@
       mat-menu-item
       data-umami-event="Account Button Menu Continue Clicked"
     >
-      <mat-icon class="text-quaternary">arrow_forward</mat-icon>
+      <mat-icon class="text-quaternary" fontIcon="arrow_forward"></mat-icon>
       <span class="text-quaternary">Complete {{ ongoingProcess() }} </span>
     </button>
     <button
@@ -73,7 +73,7 @@
       mat-menu-item
       data-umami-event="Account Button Menu Cancel Clicked"
     >
-      <mat-icon class="text-quaternary">logout</mat-icon>
+      <mat-icon class="text-quaternary" fontIcon="logout"></mat-icon>
       <span class="text-quaternary">Cancel and log out</span>
     </button>
   </mat-menu>
@@ -84,7 +84,7 @@
     aria-label="Log in"
     matTooltip="Log in to the GHGA portal"
   >
-    <mat-icon>login</mat-icon>
+    <mat-icon fontIcon="login"></mat-icon>
   </button>
   <mat-menu #menu="matMenu" class="px-3 py-1">
     <h2>Login</h2>
@@ -103,7 +103,7 @@
       matTooltip="Log in via LS Login"
       data-umami-event="Account Button Menu LS Login Clicked"
     >
-      <mat-icon class="text-quaternary">login</mat-icon>
+      <mat-icon class="text-quaternary" fontIcon="login"></mat-icon>
       <img src="assets/images/ls-login.png" alt="LS Login" class="my-2" />
     </button>
   </mat-menu>

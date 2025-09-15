@@ -33,6 +33,9 @@ export class AppComponent implements OnInit {
    * Run on App component initialization
    */
   ngOnInit(): void {
-    this.#matIconReg.setDefaultFontSetClass('material-symbols-outlined');
+    this.#matIconReg.setDefaultFontSetClass(
+      'material-symbols-outlined',
+      'mat-ligature-font',
+    );
   }
 }

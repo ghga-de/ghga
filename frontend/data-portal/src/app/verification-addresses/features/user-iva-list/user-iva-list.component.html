@@ -39,25 +39,25 @@
                 @case ('Verified') {
                   <div class="text-bold text-success text-base">
                     Address has been verified
-                    <mat-icon class="align-bottom">verified_user</mat-icon>
+                    <mat-icon class="align-bottom" fontIcon="verified_user"></mat-icon>
                   </div>
                 }
                 @case ('Unverified') {
                   <div class="text-bold text-error text-base">
                     Needs verification
-                    <mat-icon class="align-bottom">gpp_bad</mat-icon>
+                    <mat-icon class="align-bottom" fontIcon="gpp_bad"></mat-icon>
                   </div>
                 }
                 @case ('CodeTransmitted') {
                   <div class="text-bold text-warning text-base">
                     Code has been sent
-                    <mat-icon class="align-bottom">pin</mat-icon>
+                    <mat-icon class="align-bottom" fontIcon="pin"></mat-icon>
                   </div>
                 }
                 @default {
                   <div class="text-bold text-info text-base">
                     Waiting for verification
-                    <mat-icon class="align-bottom">pending</mat-icon>
+                    <mat-icon class="align-bottom" fontIcon="pending"></mat-icon>
                   </div>
                 }
               }
@@ -75,8 +75,7 @@
                 mat-stroked-button
                 data-umami-event="User IVA list Request Verification Clicked"
               >
-                <mat-icon>pin</mat-icon>
-                Request verification
+                <mat-icon fontIcon="pin"></mat-icon> Request verification
               </button>
             } @else if (iva.state !== 'Verified') {
               <button
@@ -86,8 +85,7 @@
                 mat-stroked-button
                 data-umami-event="User IVA list Enter Verification Code Clicked"
               >
-                <mat-icon>dialpad</mat-icon>
-                Enter verification code
+                <mat-icon fontIcon="dialpad"></mat-icon> Enter verification code
               </button>
             }
           </div>
@@ -102,7 +100,7 @@
               aria-label="Delete"
               data-umami-event="User IVA list Delete Clicked"
             >
-              <mat-icon>delete</mat-icon>
+              <mat-icon fontIcon="delete"></mat-icon>
             </button>
           </div>
         </div>
@@ -115,6 +113,6 @@
     class="raised-button-quaternary mt-4"
     data-umami-event="User IVA list Add Contact Clicked"
   >
-    <mat-icon>add</mat-icon>Add contact address
+    <mat-icon fontIcon="add"></mat-icon>Add contact address
   </button>
 }

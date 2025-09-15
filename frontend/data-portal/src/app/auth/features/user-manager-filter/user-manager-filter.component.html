@@ -4,7 +4,7 @@
     class="toggle-filters w-full font-bold"
     (click)="displayFilters = !displayFilters"
   >
-    <mat-icon>filter_alt</mat-icon>
+    <mat-icon fontIcon="filter_alt"></mat-icon>
     @if (displayFilters) {
       Close filters
     } @else {
@@ -20,7 +20,11 @@
     <mat-card-content class="min-w-sm">
       <div class="flex gap-4">
         <div class="hidden sm:block">
-          <mat-icon aria-label="Filter" class="large-icon">filter_alt</mat-icon>
+          <mat-icon
+            aria-label="Filter"
+            class="large-icon"
+            fontIcon="filter_alt"
+          ></mat-icon>
         </div>
         <div
           class="grid grow gap-x-10 gap-y-2 lg:grid-cols-2 lg:flex-row lg:max-xl:flex-wrap xl:flex"
@@ -37,7 +41,7 @@
               (click)="this.idStrings.set('')"
               data-umami-event="User Manager Filters User Name Email LSID Clear Clicked"
             >
-              <mat-icon>cancel</mat-icon>
+              <mat-icon fontIcon="cancel"></mat-icon>
             </button>
           </div>
           <div class="flex min-w-96 grow items-baseline gap-2">
@@ -66,7 +70,7 @@
               (click)="this.roles.set(undefined)"
               data-umami-event="User Manager Filters User Role Clear Clicked"
             >
-              <mat-icon>cancel</mat-icon>
+              <mat-icon fontIcon="cancel"></mat-icon>
             </button>
           </div>
           <div class="flex min-w-96 grow items-center gap-2 pe-12 pb-2.5 xl:pe-0">

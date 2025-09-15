@@ -1,144 +1,207 @@
-<nav class="bg-primary mt-2 w-full text-white" color="primary">
-  <div
+<nav
+  class="bg-primary mt-2 w-full text-white"
+  color="primary"
+  aria-label="Footer navigation"
+>
+  <ul
     class="flex flex-col-reverse flex-wrap justify-around pb-5 no-underline xl:flex-row xl:divide-x xl:pt-2"
   >
-    <a
-      mat-ripple
-      routerLink="/"
-      class="grow basis-full content-center py-8 xl:mt-0 xl:basis-auto xl:py-0"
-      data-umami-event="Site Footer Home Clicked"
-      ><div class="flex w-full justify-center">
-        <img src="assets/images/ghga-logo.png" alt="GHGA Logo" class="max-h-12" />
-      </div>
-      <div class="flex w-full justify-center">
-        <div
-          class="border-quinary text-quinary mt-3 w-fit border-t pt-1.5 text-center text-4xl uppercase"
-        >
-          Data Portal
-        </div>
-      </div></a
-    >
-    <div
-      class="grid basis-full grid-cols-1 divide-y sm:grid-cols-2 md:grid-cols-4 md:divide-x md:divide-y-0 xl:basis-3/4"
-    >
+    <li class="flex grow">
       <a
-        appExtLink
         mat-ripple
-        href="https://ghga.de"
-        class="grow basis-0 content-start py-8 text-center sm:border-r-1 sm:py-6 md:py-4"
-        data-umami-event="Site Footer Open GHGA Clicked"
-        ><span class="block text-7xl"><mat-icon inline="true">globe</mat-icon></span
-        >GHGA Website</a
-      ><a
-        mat-ripple
-        routerLink="/browse"
-        class="grow basis-0 content-start py-8 text-center sm:py-6 md:py-4"
-        data-umami-event="Site Footer Browse Clicked"
-        ><span class="block text-7xl"><mat-icon inline="true">database</mat-icon></span
-        ><span class="mt-1.5 block">Browse Data</span></a
-      ><a
-        appExtLink
-        mat-ripple
-        href="https://docs.ghga.de/faq/"
-        class="grow basis-0 content-start py-8 text-center sm:border-r-1 sm:py-6 md:py-4"
-        data-umami-event="Site Footer Open FAQ Clicked"
-        ><span class="block text-7xl"><mat-icon inline="true">help</mat-icon></span
-        >FAQ</a
-      ><a
-        appExtLink
-        mat-ripple
-        href="https://docs.ghga.de/"
-        class="grow basis-0 content-start border-b-1 py-8 text-center sm:py-4 md:border-b-0"
-        data-umami-event="Site Footer Open Documentation Clicked"
-        ><span class="block text-7xl"><mat-icon inline="true">docs</mat-icon></span
-        >GHGA User<br />Documentation</a
+        routerLink="/"
+        class="grow basis-full content-center py-8 xl:mt-0 xl:basis-auto xl:py-0"
+        data-umami-event="Site Footer Home Clicked"
+        aria-label="Data Portal Home Page"
+        ><div class="flex w-full justify-center">
+          <img
+            src="assets/images/ghga-logo.png"
+            alt="GHGA Logo"
+            class="max-h-12"
+            role="presentation"
+          />
+        </div>
+        <div class="flex w-full justify-center">
+          <div
+            class="border-quinary text-quinary mt-3 w-fit border-t pt-1.5 text-center text-4xl uppercase"
+          >
+            Data Portal
+          </div>
+        </div></a
       >
-    </div>
-  </div>
+    </li>
+    <li class="contents" aria-label="Additional links">
+      <ul
+        class="grid basis-full grid-cols-1 divide-y *:flex *:grow sm:grid-cols-2 md:grid-cols-4 md:divide-x md:divide-y-0 xl:basis-3/4"
+        aria-label="List of additional links"
+      >
+        <li>
+          <a
+            mat-ripple
+            appExtLink
+            target="_blank"
+            rel="noreferrer noopener"
+            href="https://ghga.de"
+            class="grow basis-0 content-start py-8 text-center sm:py-6 sm:max-md:border-r-1 md:py-4"
+            data-umami-event="Site Footer Open GHGA Clicked"
+            ><span class="block text-7xl"
+              ><mat-icon inline="true" fontIcon="globe"></mat-icon></span
+            >GHGA Website</a
+          >
+        </li>
+        <li>
+          <a
+            mat-ripple
+            routerLink="/browse"
+            class="grow basis-0 content-start py-8 text-center sm:py-6 md:py-4"
+            data-umami-event="Site Footer Browse Clicked"
+            ><span class="block text-7xl"
+              ><mat-icon inline="true" fontIcon="database"></mat-icon></span
+            ><span class="mt-1.5 block">Browse Data</span></a
+          >
+        </li>
+        <li>
+          <a
+            mat-ripple
+            appExtLink
+            target="_blank"
+            rel="noreferrer noopener"
+            href="https://docs.ghga.de/faq/"
+            class="grow basis-0 content-start py-8 text-center sm:py-6 sm:max-md:border-r-1 md:py-4"
+            data-umami-event="Site Footer Open FAQ Clicked"
+            ><span class="block text-7xl"
+              ><mat-icon inline="true" fontIcon="help"></mat-icon></span
+            >FAQ</a
+          >
+        </li>
+        <li>
+          <a
+            mat-ripple
+            appExtLink
+            target="_blank"
+            rel="noreferrer noopener"
+            href="https://docs.ghga.de/"
+            class="grow basis-0 content-start border-b-1 py-8 text-center sm:py-4 md:border-b-0"
+            data-umami-event="Site Footer Open Documentation Clicked"
+            ><span class="block text-7xl"
+              ><mat-icon inline="true" fontIcon="docs"></mat-icon></span
+            >GHGA User<br />Documentation</a
+          >
+        </li>
+      </ul>
+    </li>
+  </ul>
   <div class="swirl"></div>
 </nav>
-<div
-  class="icons-div mb-2 flex w-full flex-wrap justify-center text-center text-4xl no-underline"
+<ul
+  class="icons-div mb-2 flex w-full flex-wrap justify-center gap-3.5 text-center text-4xl no-underline"
+  aria-label="Links to social media and contact form"
 >
-  <a
-    class="text-outline-dark ms-2 me-1.5"
-    target="_blank"
-    rel="noreferrer noopener"
-    href="https://genomic.social/@ghga"
-    data-umami-event="Site Footer Mastodon Clicked"
-    ><mat-icon inline="true" fontSet="fab" fontIcon="fa-mastodon"></mat-icon
-  ></a>
-  <a
-    class="text-outline-dark ms-2 me-1.5"
-    target="_blank"
-    rel="noreferrer noopener"
-    href="https://www.linkedin.com/company/the-german-human-genome-phenome-archive/"
-    data-umami-event="Site Footer LinkedIn Clicked"
-    ><mat-icon inline="true" fontSet="fab" fontIcon="fa-linkedin"></mat-icon
-  ></a>
-  <a
-    class="text-outline-dark ms-2 me-1.5"
-    target="_blank"
-    rel="noreferrer noopener"
-    href="https://bsky.app/profile/ghga.bsky.social"
-    data-umami-event="Site Footer Bluesky Clicked"
-  >
-    <mat-icon inline="true" fontSet="fab" fontIcon="fa-bluesky"></mat-icon
-  ></a>
-  <a
-    class="text-outline-dark ms-2 me-1.5"
-    target="_blank"
-    rel="noreferrer noopener"
-    href="https://github.com/ghga-de"
-    data-umami-event="Site Footer GitHub Clicked"
-    ><mat-icon inline="true" fontSet="fab" fontIcon="fa-github"></mat-icon
-  ></a>
-  <a
-    class="text-outline-dark ms-2 me-1.5"
-    target="_blank"
-    rel="noreferrer noopener"
-    href="https://www.youtube.com/channel/UC7Yqi4gBl86drcUxwwEe6EA"
-    data-umami-event="Site Footer YouTube Clicked"
-    ><mat-icon inline="true" fontSet="fab" fontIcon="fa-youtube"></mat-icon
-  ></a>
-  <a
-    class="text-outline-dark ms-2 me-1.5"
-    target="_blank"
-    rel="noreferrer noopener"
-    href="https://www.ghga.de/about-us/contact"
-    data-umami-event="Site Footer Contact Clicked"
-    ><mat-icon inline="true">email</mat-icon></a
-  >
-</div>
+  <li>
+    <a
+      class="text-outline-dark"
+      target="_blank"
+      rel="noreferrer noopener"
+      href="https://genomic.social/@ghga"
+      data-umami-event="Site Footer Mastodon Clicked"
+      aria-label="Mastodon"
+      ><mat-icon inline="true" fontSet="fab" fontIcon="fa-mastodon"></mat-icon
+    ></a>
+  </li>
+  <li>
+    <a
+      class="text-outline-dark"
+      target="_blank"
+      rel="noreferrer noopener"
+      href="https://www.linkedin.com/company/the-german-human-genome-phenome-archive/"
+      data-umami-event="Site Footer LinkedIn Clicked"
+      aria-label="LinkedIn"
+      ><mat-icon inline="true" fontSet="fab" fontIcon="fa-linkedin"></mat-icon
+    ></a>
+  </li>
+  <li>
+    <a
+      class="text-outline-dark"
+      target="_blank"
+      rel="noreferrer noopener"
+      href="https://bsky.app/profile/ghga.bsky.social"
+      data-umami-event="Site Footer Bluesky Clicked"
+      aria-label="Bluesky"
+    >
+      <mat-icon inline="true" fontSet="fab" fontIcon="fa-bluesky"></mat-icon
+    ></a>
+  </li>
+  <li>
+    <a
+      class="text-outline-dark"
+      target="_blank"
+      rel="noreferrer noopener"
+      href="https://github.com/ghga-de"
+      data-umami-event="Site Footer GitHub Clicked"
+      aria-label="GitHub"
+      ><mat-icon inline="true" fontSet="fab" fontIcon="fa-github"></mat-icon
+    ></a>
+  </li>
+  <li>
+    <a
+      class="text-outline-dark"
+      target="_blank"
+      rel="noreferrer noopener"
+      href="https://www.youtube.com/channel/UC7Yqi4gBl86drcUxwwEe6EA"
+      data-umami-event="Site Footer YouTube Clicked"
+      aria-label="YouTube"
+      ><mat-icon inline="true" fontSet="fab" fontIcon="fa-youtube"></mat-icon
+    ></a>
+  </li>
+  <li>
+    <a
+      class="text-outline-dark"
+      target="_blank"
+      rel="noreferrer noopener"
+      href="https://www.ghga.de/about-us/contact"
+      data-umami-event="Site Footer Contact Clicked"
+      aria-label="Contact form"
+      ><mat-icon inline="true" fontIcon="email"></mat-icon
+    ></a>
+  </li>
+</ul>
 <div class="w-full pb-4 text-sm">
   <p class="text-center">©{{ date | date: 'yyyy' }} GHGA. All Rights Reserved.</p>
-  <p class="text-center">
-    <a
-      href="https://www.ghga.de/imprint"
-      class="underline"
-      data-umami-event="Site Footer Imprint Clicked"
-      >Imprint</a
-    >
-    |
-    <a
-      href="https://www.ghga.de/data-protection"
-      class="underline"
-      data-umami-event="Site Footer Data Protection Clicked"
-      >Data Protection</a
-    >
-    |
-    <a
-      href="https://zenodo.org/records/11146387"
-      class="underline"
-      data-umami-event="Site Footer Terms of Use Clicked"
-      >Terms of Use</a
-    >
-    |
-    <a
-      href="https://www.ghga.de/accessibility"
-      class="underline"
-      data-umami-event="Site Footer Accessibility Statement Clicked"
-      >Accessibility Statement</a
-    >
-  </p>
+  <ul
+    class="flex items-center justify-center divide-x-1 text-center *:inline *:px-1"
+    aria-label="Links to legal documents"
+  >
+    <li>
+      <a
+        href="https://www.ghga.de/imprint"
+        class="underline"
+        data-umami-event="Site Footer Imprint Clicked"
+        >Imprint</a
+      >
+    </li>
+    <li>
+      <a
+        href="https://www.ghga.de/data-protection"
+        class="underline"
+        data-umami-event="Site Footer Data Protection Clicked"
+        >Data Protection</a
+      >
+    </li>
+    <li>
+      <a
+        href="https://zenodo.org/records/11146387"
+        class="underline"
+        data-umami-event="Site Footer Terms of Use Clicked"
+        >Terms of Use</a
+      >
+    </li>
+    <li>
+      <a
+        href="https://www.ghga.de/accessibility"
+        class="underline"
+        data-umami-event="Site Footer Accessibility Statement Clicked"
+        >Accessibility Statement</a
+      >
+    </li>
+  </ul>
 </div>

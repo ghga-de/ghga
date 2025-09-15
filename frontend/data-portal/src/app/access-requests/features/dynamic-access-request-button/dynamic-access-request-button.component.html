@@ -1,7 +1,7 @@
 @switch (status()) {
   @case ('pending') {
     <button mat-raised-button class="raised-button-quaternary w-full" [disabled]="true">
-      <mat-icon>key</mat-icon> Pending Request …
+      <mat-icon fontIcon="key"></mat-icon> Pending Request …
     </button>
   }
   @case ('allowed') {
@@ -11,7 +11,7 @@
       routerLink="/work-package"
       data-umami-event="Dynamic Access Request Button Download Clicked"
     >
-      <mat-icon>download</mat-icon>Download the Data
+      <mat-icon fontIcon="download"></mat-icon>Download the Data
     </button>
   }
   @default {
@@ -21,7 +21,7 @@
       (click)="showNewAccessRequestDialog()"
       data-umami-event="Dynamic Access Request Button Request Access Clicked"
     >
-      <mat-icon>key</mat-icon>Request Access
+      <mat-icon fontIcon="key"></mat-icon>Request Access
     </button>
   }
 }
