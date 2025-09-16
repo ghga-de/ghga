@@ -314,9 +314,10 @@ components:
       - matches
       title: Condition
       type: object
-    Grant:
+    DownloadGrant:
       additionalProperties: false
-      description: An access grant based on a corresponding claim.
+      description: A download access grant for a dataset based on a corresponding
+        claim.
       properties:
         created:
           description: Date of creation of this grant
@@ -373,13 +374,13 @@ components:
       required:
       - id
       - user_id
-      - dataset_id
       - created
       - valid_from
       - valid_until
       - user_name
       - user_email
-      title: Grant
+      - dataset_id
+      title: DownloadGrant
       type: object
     HTTPValidationError:
       properties:
@@ -624,6 +625,74 @@ components:
       required:
       - uri
       title: TOTPTokenResponse
+      type: object
+    UploadGrant:
+      additionalProperties: false
+      description: An upload access grant for research data based on a corresponding
+        claim.
+      properties:
+        box_id:
+          description: ID of the research data upload box this grant is for
+          format: uuid4
+          title: Box Id
+          type: string
+        created:
+          description: Date of creation of this grant
+          format: date-time
+          title: Created
+          type: string
+        id:
+          description: Internal grant ID (same as claim ID)
+          format: uuid4
+          title: Id
+          type: string
+        iva_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of an IVA associated with this grant
+          title: Iva Id
+        user_email:
+          description: The email address of the user
+          format: email
+          title: User Email
+          type: string
+        user_id:
+          description: Internal user ID
+          format: uuid4
+          title: User Id
+          type: string
+        user_name:
+          description: Full name of the user
+          title: User Name
+          type: string
+        user_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Academic title of the user
+          title: User Title
+        valid_from:
+          description: Start date of validity
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - id
+      - user_id
+      - created
+      - valid_from
+      - valid_until
+      - user_name
+      - user_email
+      - box_id
+      title: UploadGrant
       type: object
     User:
       additionalProperties: false
@@ -895,6 +964,7 @@ components:
       - ControlledAccessGrants
       - LinkedIdentities
       - https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0
+      - https://www.ghga.de/GA4GH/VisaTypes/Upload/v1.0
       title: VisaType
       type: string
   securitySchemes:
@@ -909,7 +979,7 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 8.0.1
+  version: 8.1.0
 openapi: 3.1.0
 paths:
   /download-access/grants:
@@ -966,7 +1036,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/Grant'
+                  $ref: '#/components/schemas/DownloadGrant'
                 title: Response 200 Get Download Access Grants
                 type: array
           description: Access grants have been fetched.
@@ -1478,6 +1548,230 @@ paths:
       summary: Create a new TOTP token
       tags:
       - totp
+  /upload-access/grants:
+    get:
+      description: Endpoint to get the list of all upload access grants. Can be filtered
+        by user ID, IVA ID, and box ID.
+      operationId: get_upload_access_grants
+      parameters:
+      - description: The internal ID of the user
+        in: query
+        name: user_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The internal ID of the user
+          title: User Id
+      - description: The ID of the IVA
+        in: query
+        name: iva_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The ID of the IVA
+          title: Iva Id
+      - description: The ID of the research data upload box
+        in: query
+        name: box_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The ID of the research data upload box
+          title: Box Id
+      - description: Whether the grant is currently valid
+        in: query
+        name: valid
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Whether the grant is currently valid
+          title: Valid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/UploadGrant'
+                title: Response 200 Get Upload Access Grants
+                type: array
+          description: Upload access grants have been fetched.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get upload access grants
+      tags:
+      - access
+  /upload-access/grants/{grant_id}:
+    delete:
+      description: Endpoint to revoke an existing upload access grant.
+      operationId: revoke_upload_access_grant
+      parameters:
+      - description: The ID of the grant to revoke
+        in: path
+        name: grant_id
+        required: true
+        schema:
+          description: The ID of the grant to revoke
+          format: uuid4
+          title: Grant Id
+          type: string
+      responses:
+        '204':
+          description: Upload access grant has been revoked.
+        '404':
+          description: The upload access grant was not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Revoke an upload access grant
+      tags:
+      - access
+  /upload-access/users/{user_id}/boxes:
+    get:
+      description: Endpoint to get the IDs of all upload boxes that can be used for
+        upload by the given user mapped to until when the box can be accessed. For
+        internal use only.
+      operationId: get_upload_access_list
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  format: date-time
+                  type: string
+                propertyNames:
+                  format: uuid4
+                title: Response Get Upload Access List
+                type: object
+          description: Upload box IDs with upload access have been retrieved.
+        '404':
+          description: The user was not found or is inactive.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Get list of all upload box IDs with upload access permission
+      tags:
+      - access
+  /upload-access/users/{user_id}/boxes/{box_id}:
+    get:
+      description: Endpoint to check whether the given upload box can be used for
+        upload by the given user. For internal use only.
+      operationId: check_upload_access
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      - description: Internal ID of the research data upload box
+        in: path
+        name: box_id
+        required: true
+        schema:
+          description: Internal ID of the research data upload box
+          format: uuid4
+          title: Box Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - format: date-time
+                  type: string
+                - type: 'null'
+                title: Response Check Upload Access
+          description: Upload access has been checked.
+        '404':
+          description: The user was not found or is inactive.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Check upload access permission for a box
+      tags:
+      - access
+  /upload-access/users/{user_id}/ivas/{iva_id}/boxes/{box_id}:
+    post:
+      description: Endpoint to add an upload access grant for a given box so that
+        it can be used for upload by the given user with the given IVA. For internal
+        use only.
+      operationId: grant_upload_access
+      parameters:
+      - description: The internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: The internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      - description: The ID of the IVA
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: The ID of the IVA
+          format: uuid4
+          title: Iva Id
+          type: string
+      - description: The ID of the research data upload box
+        in: path
+        name: box_id
+        required: true
+        schema:
+          description: The ID of the research data upload box
+          format: uuid4
+          title: Box Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimValidity'
+        required: true
+      responses:
+        '204':
+          description: Upload access has been granted.
+        '404':
+          description: The user or the IVA was not found.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Grant upload access permission for a box
+      tags:
+      - access
   /users:
     get:
       description: Endpoint used to retrieve user data for all users including all

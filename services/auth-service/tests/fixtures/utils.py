@@ -486,7 +486,6 @@ class DummyClaimDao:
         """Find all dummy user claims."""
         for claim in self.claims:
             data = claim.model_dump()
-            data["id_"] = data.pop("id")
             for key, value in mapping.items():
                 if isinstance(value, dict) and "$in" in value:
                     # mock the MongoDB "$in" operator

@@ -42,9 +42,11 @@ __all__ = [
     "ClaimUpdate",
     "ClaimValidity",
     "Condition",
+    "DownloadGrant",
     "Identity",
     "MatchClaim",
     "MatchType",
+    "UploadGrant",
     "VisaType",
 ]
 
@@ -66,6 +68,7 @@ class VisaType(StrEnum):
     LINKED_IDENTITIES = "LinkedIdentities"
     # Custom Visa Types
     GHGA_ROLE = "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0"
+    GHGA_UPLOAD = "https://www.ghga.de/GA4GH/VisaTypes/Upload/v1.0"
 
 
 class AuthorityLevel(StrEnum):
@@ -212,16 +215,13 @@ class Claim(ClaimCreation):
     )
 
 
-class Grant(BaseDto):
-    """An access grant based on a corresponding claim."""
+class BaseGrant(BaseDto):
+    """Fields common to both upload and download grants"""
 
     id: UUID4 = Field(..., description="Internal grant ID (same as claim ID)")
     user_id: UUID4 = Field(default=..., description="Internal user ID")
     iva_id: UUID4 | None = Field(
         default=None, description="ID of an IVA associated with this grant"
-    )
-    dataset_id: Accession = Field(
-        default=..., description="ID of the dataset this grant is for"
     )
 
     created: UTCDatetime = Field(
@@ -237,4 +237,20 @@ class Grant(BaseDto):
     )
     user_title: str | None = Field(
         default=None, description="Academic title of the user"
+    )
+
+
+class DownloadGrant(BaseGrant):
+    """A download access grant for a dataset based on a corresponding claim."""
+
+    dataset_id: Accession = Field(
+        default=..., description="ID of the dataset this grant is for"
+    )
+
+
+class UploadGrant(BaseGrant):
+    """An upload access grant for research data based on a corresponding claim."""
+
+    box_id: UUID4 = Field(
+        default=..., description="ID of the research data upload box this grant is for"
     )

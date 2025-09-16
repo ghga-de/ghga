@@ -19,6 +19,7 @@
 from collections.abc import Callable
 from datetime import timedelta
 from enum import StrEnum
+from uuid import UUID
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
@@ -29,13 +30,18 @@ from ..models.claims import AuthorityLevel, Claim, VisaType
 
 __all__ = [
     "Role",
+    "box_id_for_upload_access",
     "create_controlled_access_claim",
     "create_controlled_access_filter",
     "create_internal_role_claim",
+    "create_upload_access_claim",
+    "create_upload_access_filter",
     "dataset_id_for_download_access",
+    "get_box_for_value",
     "get_dataset_for_value",
     "get_role_from_claim",
     "has_download_access_for_dataset",
+    "has_upload_access_for_box",
     "is_internal_claim",
     "is_valid_claim",
 ]
@@ -53,6 +59,7 @@ class Role(StrEnum):
 
 
 DATASET_PREFIX = str(INTERNAL_SOURCE).rstrip("/") + "/datasets/"
+UPLOAD_PREFIX = str(INTERNAL_SOURCE).rstrip("/") + "/uploads/"
 
 
 def is_valid_claim(
@@ -195,3 +202,78 @@ def dataset_id_for_download_access(claim: Claim) -> str | None:
         return None
     visa_value = claim.visa_value
     return get_dataset_for_value(str(visa_value))
+
+
+# Upload Access Claims
+
+
+def create_upload_access_claim(
+    user_id: UUID4,
+    iva_id: UUID4,
+    box_id: UUID4,
+    valid_from: UTCDatetime,
+    valid_until: UTCDatetime,
+) -> Claim:
+    """Create a claim for an upload access grant."""
+    creation_date = now_utc_ms_prec()
+    return Claim(
+        visa_type=VisaType.GHGA_UPLOAD,
+        visa_value=UPLOAD_PREFIX + str(box_id),
+        assertion_date=creation_date,
+        valid_from=valid_from,
+        valid_until=valid_until,
+        source=INTERNAL_SOURCE,
+        sub_source=None,
+        asserted_by=AuthorityLevel.SYSTEM,
+        conditions=None,
+        user_id=user_id,
+        iva_id=iva_id,
+        creation_date=creation_date,
+        revocation_date=None,
+    )
+
+
+def create_upload_access_filter(
+    *,
+    user_id: UUID4 | None = None,
+    iva_id: UUID4 | None = None,
+    box_id: UUID4 | None = None,
+) -> dict[str, UUID4 | str]:
+    """Create a mapping for filtering upload access grants.
+
+    If a user, IVA or box ID is given, filter values will be set accordingly.
+    """
+    mapping: dict[str, UUID4 | str] = {
+        "visa_type": VisaType.GHGA_UPLOAD.value,
+        "source": str(INTERNAL_SOURCE).rstrip("/"),
+    }
+    if user_id:
+        mapping["user_id"] = user_id
+    if iva_id:
+        mapping["iva_id"] = iva_id
+    if box_id:
+        mapping["visa_value"] = UPLOAD_PREFIX + str(box_id)
+    return mapping
+
+
+def get_box_for_value(value: str) -> UUID4 | None:
+    """Return the box ID if the given value is a Visa URL Claim for an upload box."""
+    if not value.startswith(UPLOAD_PREFIX):
+        return None
+    return UUID(value.removeprefix(UPLOAD_PREFIX))
+
+
+def has_upload_access_for_box(claim: Claim, box_id: UUID4) -> bool:
+    """Check whether the given claim gives upload access to the given box."""
+    if not is_internal_claim(claim, VisaType.GHGA_UPLOAD):
+        return False
+    visa_value = claim.visa_value
+    return get_box_for_value(str(visa_value)) == box_id
+
+
+def box_id_for_upload_access(claim: Claim) -> UUID4 | None:
+    """Return box ID if the given claim gives upload access to a box."""
+    if not is_internal_claim(claim, VisaType.GHGA_UPLOAD):
+        return None
+    visa_value = claim.visa_value
+    return get_box_for_value(str(visa_value))
