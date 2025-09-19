@@ -26,11 +26,15 @@ from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
     sign_and_serialize_token,
 )
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.utils import now_utc_ms_prec
 
-from wps.adapters.outbound.dao import get_dataset_dao, get_work_package_dao
+from wps.adapters.outbound.dao import (
+    get_dataset_dao,
+    get_upload_box_dao,
+    get_work_package_dao,
+)
 from wps.config import Config
 from wps.core.repository import WorkPackageRepository
 from wps.prepare import Consumer, prepare_rest_app
@@ -63,6 +67,10 @@ AUTH_CLAIMS = {
     "id": "a86f8281-e18a-429e-88a9-a5c8ea0cf754",
 }
 
+USER_ID = AUTH_CLAIMS["id"]
+RDU_BOX_ID = "91ba4d24-0bb6-4dd4-b80d-b0cf2421fb79"
+FILE_BOX_ID = "2d1b33e4-8942-447a-934f-f7a93d95f7e3"
+
 
 def headers_for_token(token: str) -> dict[str, str]:
     """Get the Authorization headers for the given token."""
@@ -88,7 +96,9 @@ def fixture_bad_auth_headers() -> dict[str, str]:
 @pytest.fixture(name="auth_context")
 def fixture_auth_context() -> AuthContext:
     """Fixture for getting an auth context"""
-    iat = now_as_utc() - timedelta(1)  # validity is actually assumed by the repository
+    iat = now_utc_ms_prec() - timedelta(
+        1
+    )  # validity is actually assumed by the repository
     return AuthContext(**AUTH_CLAIMS, iat=iat, exp=iat)  # type: ignore
 
 
@@ -97,7 +107,7 @@ def fixture_config(kafka: KafkaFixture, mongodb: MongoDbFixture) -> Config:
     """Fixture for creating a test configuration."""
     return Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
-        download_access_url="http://access",
+        access_url="http://access",  # type: ignore
         work_package_signing_key=SIGNING_KEY_PAIR.export_private(),  # pyright: ignore
         **kafka.config.model_dump(exclude={"kafka_enable_dlq"}),
         **mongodb.config.model_dump(),
@@ -113,11 +123,13 @@ async def fixture_repository(
     work_package_dao = await get_work_package_dao(
         config=config, dao_factory=dao_factory
     )
+    upload_box_dao = await get_upload_box_dao(config=config, dao_factory=dao_factory)
     dataset_dao = await get_dataset_dao(config=config, dao_factory=dao_factory)
     return WorkPackageRepository(
         config=config,
         access_check=AccessCheckMock(),
         dataset_dao=dataset_dao,
+        upload_box_dao=upload_box_dao,
         work_package_dao=work_package_dao,
     )
 

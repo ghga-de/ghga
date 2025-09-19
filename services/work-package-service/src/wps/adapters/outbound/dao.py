@@ -19,9 +19,9 @@ from hexkit.protocols.dao import DaoFactoryProtocol
 
 from wps.core import models
 from wps.core.repository import WorkPackageConfig
-from wps.ports.outbound.dao import DatasetDaoPort, WorkPackageDaoPort
+from wps.ports.outbound.dao import DatasetDaoPort, UploadBoxDaoPort, WorkPackageDaoPort
 
-__all__ = ["get_dataset_dao", "get_work_package_dao"]
+__all__ = ["get_dataset_dao", "get_upload_box_dao", "get_work_package_dao"]
 
 
 async def get_dataset_dao(
@@ -42,5 +42,18 @@ async def get_work_package_dao(
     return await dao_factory.get_dao(
         name=config.work_packages_collection,
         dto_model=models.WorkPackage,
+        id_field="id",
+    )
+
+
+async def get_upload_box_dao(
+    *,
+    config: WorkPackageConfig,
+    dao_factory: DaoFactoryProtocol,
+) -> UploadBoxDaoPort:
+    """Get an UploadBox DAO."""
+    return await dao_factory.get_dao(
+        name=config.upload_boxes_collection,
+        dto_model=models.ResearchDataUploadBox,
         id_field="id",
     )

@@ -72,6 +72,12 @@
       "title": "Datasets Collection",
       "type": "string"
     },
+    "upload_boxes_collection": {
+      "default": "uploadBoxes",
+      "description": "The name of the database collection for upload boxes",
+      "title": "Upload Boxes Collection",
+      "type": "string"
+    },
     "work_packages_collection": {
       "default": "workPackages",
       "description": "The name of the database collection for work packages",
@@ -308,6 +314,14 @@
       "title": "Kafka Retry Backoff",
       "type": "integer"
     },
+    "upload_box_topic": {
+      "description": "Name of the event topic containing upload box events",
+      "examples": [
+        "upload-boxes"
+      ],
+      "title": "Upload Box Topic",
+      "type": "string"
+    },
     "dataset_change_topic": {
       "description": "Name of the topic announcing, among other things, the list of files included in a new dataset.",
       "examples": [
@@ -332,12 +346,15 @@
       "title": "Dataset Upsertion Type",
       "type": "string"
     },
-    "download_access_url": {
-      "description": "URL pointing to the internal download access API.",
+    "access_url": {
+      "description": "Base URL of the internal access API for download and upload",
       "examples": [
-        "http://127.0.0.1/download-access"
+        "http://127.0.0.1/"
       ],
-      "title": "Download Access Url",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Access Url",
       "type": "string"
     },
     "auth_key": {
@@ -531,10 +548,11 @@
     "db_version_collection",
     "migration_wait_sec",
     "kafka_servers",
+    "upload_box_topic",
     "dataset_change_topic",
     "dataset_deletion_type",
     "dataset_upsertion_type",
-    "download_access_url",
+    "access_url",
     "auth_key"
   ],
   "title": "ModSettings",

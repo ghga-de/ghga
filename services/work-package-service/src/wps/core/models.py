@@ -17,19 +17,37 @@
 in the API.
 """
 
-from enum import Enum
+from enum import StrEnum
+from typing import Literal
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import UUID4Field
-from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from wps.core.crypt import validate_public_key
 
 __all__ = [
-    "WorkOrderToken",
+    "BaseWorkOrderToken",
+    "BoxWithExpiration",
+    "CloseFileWorkOrder",
+    "CreateFileWorkOrder",
+    "DeleteFileWorkOrder",
+    "ResearchDataUploadBox",
+    "UploadFileWorkOrder",
+    "UploadPathType",
+    "UploadWorkOrderTokenRequest",
     "WorkPackage",
     "WorkPackageCreationData",
     "WorkPackageCreationResponse",
+    "WorkPackageType",
     "WorkType",
 ]
 
@@ -40,7 +58,7 @@ class BaseDto(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
-class WorkType(str, Enum):
+class WorkPackageType(StrEnum):
     """The type of work that a work package describes."""
 
     DOWNLOAD = "download"
@@ -58,7 +76,9 @@ class Dataset(BaseDto):
     """A model describing a dataset."""
 
     id: str = Field(default=..., description="ID of the dataset")
-    stage: WorkType = Field(default=..., description="Current stage of this dataset.")
+    stage: WorkPackageType = Field(
+        default=..., description="Current stage of this dataset."
+    )
     title: str = Field(default=..., description="The title of the dataset.")
     description: str | None = Field(..., description="The description of the dataset.")
     files: list[DatasetFile] = Field(..., description="Files contained in the dataset.")
@@ -72,22 +92,147 @@ class DatasetWithExpiration(Dataset):
     )
 
 
-class WorkOrderToken(BaseDto):
-    """A model describing the payload of a work order token."""
+DownloadPathType = Literal["download"]
+CreateType = Literal["create"]
+UploadType = Literal["upload"]
+CloseType = Literal["close"]
+DeleteType = Literal["delete"]
+UploadPathType = CreateType | UploadType | CloseType | DeleteType
+WorkType = UploadPathType | DownloadPathType
 
-    type: WorkType
-    file_id: str
-    user_id: UUID4
+
+class BaseWorkOrderToken(BaseModel):
+    """Base model for work order tokens."""
+
     user_public_crypt4gh_key: str
-    full_user_name: str
-    email: EmailStr
+    model_config = ConfigDict(frozen=True)
+
+
+class DownloadWorkOrder(BaseWorkOrderToken):
+    """WOT schema authorizing a user to download a file from a dataset"""
+
+    work_type: DownloadPathType = "download"
+    file_id: str  # should be the file accession, as opposed to UUID4 used for uploads
+
+
+class CreateFileWorkOrder(BaseWorkOrderToken):
+    """WOT schema authorizing a user to create a new FileUpload"""
+
+    work_type: CreateType = "create"
+    alias: str
+    box_id: UUID4
+
+
+class _FileUploadToken(BaseModel):
+    """Partial schema for WOTs authorizing a user to work with existing file uploads.
+
+    This is for existing file uploads only, not for the initiation of new file uploads.
+    """
+
+    file_id: UUID4
+    box_id: UUID4
+
+
+class UploadFileWorkOrder(BaseWorkOrderToken, _FileUploadToken):
+    """WOT schema authorizing a user to get a file part upload URL"""
+
+    work_type: UploadType = "upload"
+
+
+class CloseFileWorkOrder(BaseWorkOrderToken, _FileUploadToken):
+    """WOT schema authorizing a user to complete a file upload"""
+
+    work_type: CloseType = "close"
+
+
+class DeleteFileWorkOrder(BaseWorkOrderToken, _FileUploadToken):
+    """WOT schema authorizing a user to delete a file upload"""
+
+    work_type: DeleteType = "delete"
+
+
+# TODO: reference the event schema once this is moved there. for now, mark with '_'
+class _ResearchDataUploadBoxState(StrEnum):
+    """The allowed states for an ResearchDataUploadBox instance"""
+
+    OPEN = "open"
+    LOCKED = "locked"
+    CLOSED = "closed"
+
+
+class _ResearchDataUploadBox(BaseModel):
+    """A class representing a ResearchDataUploadBox.
+
+    Contains all fields from the FileUploadBox and shares IDs.
+    """
+
+    id: UUID4  # unique identifier for the instance
+    file_upload_box_id: UUID4  # ID of the FileUploadBox in the UCS
+    locked: bool = False  # Whether or not changes to the files in the box are allowed
+    file_count: int = 0  # The number of files in the box
+    size: int = 0  # The total size of all files in the box
+    storage_alias: str  # Storage alias assigned to the FileUploadBox
+    state: _ResearchDataUploadBoxState  # one of OPEN, LOCKED, CLOSED
+    title: str  # short meaningful name for the box
+    description: str  # describes the upload box in more detail
+    last_changed: UTCDatetime
+    changed_by: UUID4  # ID of the user who performed the latest change
+
+
+class ResearchDataUploadBox(BaseDto):
+    """A model describing an upload box that groups file uploads."""
+
+    id: UUID4 = Field(
+        ...,
+        description="The ID of the full research data upload box."
+        + " This is the ID tied to upload claims.",
+    )
+    file_upload_box_id: UUID4 = Field(
+        ...,
+        description="The ID of the file upload box. This is the ID referenced by the Connector.",
+    )
+    title: str = Field(..., description="The title of the upload box.")
+    description: str | None = Field(
+        None, description="The description of the upload box."
+    )
+
+
+class BoxWithExpiration(ResearchDataUploadBox):
+    """A model describing a research data upload box with an expiration date."""
+
+    expires: UTCDatetime = Field(
+        default=...,
+        description="The expiration date of access to the research data upload box.",
+    )
+
+
+def validate_work_package_data(data):
+    """Ensure exactly one of dataset_id or box_id is provided based on work type."""
+    errors: list[str] = []
+    if data.type == WorkPackageType.DOWNLOAD:
+        if not data.dataset_id:
+            errors.append("dataset_id is required for download work packages")
+        if data.box_id:
+            errors.append("box_id shouldn't be provided for download work packages")
+    elif data.type == WorkPackageType.UPLOAD:
+        if not data.box_id:
+            errors.append("box_id is required for upload work packages")
+        if data.dataset_id:
+            errors.append("dataset_id shouldn't be provided for upload work packages")
+    if errors:
+        raise ValueError("; ".join(errors))
 
 
 class WorkPackageCreationData(BaseDto):
     """All data necessary to create a work package."""
 
-    dataset_id: str
-    type: WorkType
+    dataset_id: str | None = Field(
+        default=None, description="ID of the dataset (for download work packages)"
+    )
+    box_id: UUID4 | None = Field(
+        default=None, description="ID of the upload box (for upload work packages)"
+    )
+    type: WorkPackageType
     file_ids: list[str] | None = Field(
         default=None,
         description="IDs of all included files."
@@ -103,6 +248,12 @@ class WorkPackageCreationData(BaseDto):
     def user_public_crypt4gh_key_valid(cls, key: str):
         """Validate the user's public Crypt4GH key."""
         return validate_public_key(key)
+
+    @model_validator(mode="after")
+    def validate_ids(self):
+        """Ensure exactly one of dataset_id or box_id is provided based on work type."""
+        validate_work_package_data(self)
+        return self
 
 
 class WorkPackageCreationResponse(BaseModel):
@@ -122,7 +273,7 @@ class WorkPackageCreationResponse(BaseModel):
 class WorkPackageDetails(BaseModel):
     """Details about the work package that can be requested."""
 
-    type: WorkType
+    type: WorkPackageType
     files: dict[str, str] = Field(
         default=...,
         description="IDs of all included files mapped to their file extensions",
@@ -140,7 +291,12 @@ class WorkPackage(WorkPackageDetails):
     """All data that describes a work package."""
 
     id: UUID4 = UUID4Field(description="ID of the work package")
-    dataset_id: str
+    dataset_id: str | None = Field(
+        default=None, description="ID of the dataset (for download work packages)"
+    )
+    box_id: UUID4 | None = Field(
+        default=None, description="ID of the upload box (for upload work packages)"
+    )
     user_id: UUID4
     full_user_name: str = Field(
         default=...,
@@ -155,3 +311,34 @@ class WorkPackage(WorkPackageDetails):
         default=...,
         description="Hash of the work package access token",
     )
+
+    @model_validator(mode="after")
+    def validate_ids(self):
+        """Ensure exactly one of dataset_id or box_id is provided based on work type."""
+        validate_work_package_data(self)
+        return self
+
+
+class UploadWorkOrderTokenRequest(BaseModel):
+    """Request model for creating upload-path work order tokens."""
+
+    work_type: UploadPathType = Field(
+        ..., description="The type of work order token to create"
+    )
+    alias: str | None = Field(
+        None, description="File alias (required for CREATE work type)"
+    )
+    file_id: UUID4 | None = Field(
+        None, description="File ID (required for UPLOAD, CLOSE, DELETE work types)"
+    )
+
+    @model_validator(mode="after")
+    def validate_parameters_and_work_type(self):
+        """Ensure proper params are supplied given work type."""
+        if self.work_type == "create" and not self.alias:
+            raise ValueError("File alias is required for CREATE work type")
+        elif self.work_type != "create" and not self.file_id:
+            raise ValueError(
+                "File alias is required for UPLOAD, CLOSE, DELETE work types"
+            )
+        return self

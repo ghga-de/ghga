@@ -21,13 +21,21 @@ from typing import NamedTuple
 
 from fastapi import FastAPI
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.akafka import (
+    ComboTranslator,
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+)
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from wps.adapters.inbound.event_sub import EventSubTranslator
+from wps.adapters.inbound.event_sub import EventSubTranslator, OutboxSubTranslator
 from wps.adapters.inbound.fastapi_ import dummies
 from wps.adapters.inbound.fastapi_.configure import get_configured_app
-from wps.adapters.outbound.dao import get_dataset_dao, get_work_package_dao
+from wps.adapters.outbound.dao import (
+    get_dataset_dao,
+    get_upload_box_dao,
+    get_work_package_dao,
+)
 from wps.adapters.outbound.http import AccessCheckAdapter
 from wps.config import Config
 from wps.core.repository import WorkPackageRepository
@@ -50,10 +58,14 @@ async def prepare_core(
             config=config, dao_factory=dao_factory
         )
         dataset_dao = await get_dataset_dao(config=config, dao_factory=dao_factory)
+        upload_box_dao = await get_upload_box_dao(
+            config=config, dao_factory=dao_factory
+        )
         yield WorkPackageRepository(
             config=config,
             access_check=download_access_checks,
             dataset_dao=dataset_dao,
+            upload_box_dao=upload_box_dao,
             work_package_dao=work_package_dao,
         )
 
@@ -124,12 +136,18 @@ async def prepare_consumer(
             work_package_repository=work_package_repository,
             config=config,
         )
+        outbox_sub_translator = OutboxSubTranslator(
+            config=config, work_package_repository=work_package_repository
+        )
+        translator = ComboTranslator(
+            translators=[event_sub_translator, outbox_sub_translator]
+        )
 
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,
             KafkaEventSubscriber.construct(
                 config=config,
-                translator=event_sub_translator,
+                translator=translator,
                 dlq_publisher=dlq_publisher,
             ) as event_subscriber,
         ):

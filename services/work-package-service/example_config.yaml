@@ -1,3 +1,4 @@
+access_url: http://127.0.0.1:8080/
 api_root_path: ''
 auth_algs:
 - ES256
@@ -15,14 +16,13 @@ cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
 cors_exposed_headers: null
-dataset_change_topic: metadata_datasets
+dataset_change_topic: metadata-datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
 datasets_collection: datasets
 db_name: dev-db
 db_version_collection: wpsDbVersions
 docs_url: /docs
-download_access_url: http://127.0.0.1:8080/download-access
 enable_opentelemetry: false
 generate_correlation_id: true
 host: 127.0.0.1
@@ -51,6 +51,8 @@ otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: wps_1
 service_name: wps
+upload_box_topic: upload-boxes
+upload_boxes_collection: uploadBoxes
 work_package_signing_key: '**********'
 work_package_valid_days: 30
 work_packages_collection: workPackages

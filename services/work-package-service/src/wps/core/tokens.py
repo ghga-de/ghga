@@ -24,7 +24,7 @@ from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto import jwk
 
 from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
-from wps.core.models import WorkOrderToken
+from wps.core.models import BaseWorkOrderToken
 
 __all__ = [
     "generate_work_package_access_token",
@@ -50,7 +50,7 @@ def hash_token(token: str) -> str:
 
 
 def sign_work_order_token(
-    work_order_token: WorkOrderToken,
+    work_order_token: BaseWorkOrderToken,
     key: jwk.JWK,
     valid_seconds: int = WORK_ORDER_TOKEN_VALID_SECONDS,
 ):

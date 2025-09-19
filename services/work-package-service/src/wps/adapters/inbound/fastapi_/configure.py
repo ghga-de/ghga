@@ -35,7 +35,13 @@ def get_openapi_schema(app: FastAPI, config: ApiConfigBase) -> dict[str, Any]:
         version=__version__,
         description="A service managing work packages for the GHGA CLI",
         servers=[{"url": config.api_root_path}],
-        tags=[{"name": "WorkPackages"}, {"name": "Datasets"}],
+        tags=[
+            {"name": "WorkPackages"},
+            {"name": "Datasets"},
+            {"name": "UploadBoxes"},
+            {"name": "download"},
+            {"name": "upload"},
+        ],
         routes=app.routes,
     )
 

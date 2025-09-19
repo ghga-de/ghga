@@ -23,7 +23,10 @@ from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 
-from wps.adapters.inbound.event_sub import EventSubTranslatorConfig
+from wps.adapters.inbound.event_sub import (
+    EventSubTranslatorConfig,
+    OutboxSubTranslatorConfig,
+)
 from wps.adapters.outbound.http import AccessCheckConfig
 from wps.constants import SERVICE_NAME
 from wps.core.repository import WorkPackageConfig
@@ -35,6 +38,7 @@ class Config(
     AuthConfig,
     AccessCheckConfig,
     EventSubTranslatorConfig,
+    OutboxSubTranslatorConfig,
     KafkaConfig,
     MigrationConfig,
     WorkPackageConfig,

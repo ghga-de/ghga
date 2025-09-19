@@ -23,7 +23,7 @@ from ghga_event_schemas.pydantic_ import (
     MetadataDatasetStage,
 )
 
-from wps.core.models import Dataset, DatasetFile, WorkType
+from wps.core.models import Dataset, DatasetFile, WorkPackageType
 
 __all__ = ["DATASET", "DATASET_DELETION_EVENT", "DATASET_UPSERTION_EVENT"]
 
@@ -31,7 +31,7 @@ __all__ = ["DATASET", "DATASET_DELETION_EVENT", "DATASET_UPSERTION_EVENT"]
 DATASET = Dataset(
     id="some-dataset-id",
     title="Test dataset 1",
-    stage=WorkType.DOWNLOAD,
+    stage=WorkPackageType.DOWNLOAD,
     description="The first test dataset",
     files=[
         DatasetFile(id="file-id-1", extension=".json"),

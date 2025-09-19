@@ -20,8 +20,14 @@ from hexkit.protocols.dao import Dao, ResourceNotFoundError
 
 from wps.core import models
 
-__all__ = ["DatasetDaoPort", "ResourceNotFoundError", "WorkPackageDaoPort"]
+__all__ = [
+    "DatasetDaoPort",
+    "ResourceNotFoundError",
+    "UploadBoxDaoPort",
+    "WorkPackageDaoPort",
+]
 
 # ports described by type aliases:
 DatasetDaoPort = Dao[models.Dataset]
+UploadBoxDaoPort = Dao[models.ResearchDataUploadBox]
 WorkPackageDaoPort = Dao[models.WorkPackage]

@@ -17,17 +17,19 @@
 """Interface for the work package repository."""
 
 from abc import ABC, abstractmethod
-from uuid import UUID
 
 from ghga_service_commons.auth.ghga import AuthContext
+from pydantic import UUID4
 
 from wps.core.models import (
+    BoxWithExpiration,
     Dataset,
     DatasetWithExpiration,
+    ResearchDataUploadBox,
+    UploadPathType,
     WorkPackage,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
-    WorkType,
 )
 
 
@@ -40,6 +42,9 @@ class WorkPackageRepositoryPort(ABC):
     class DatasetNotFoundError(RuntimeError):
         """Error that is raised when a dataset does not exist."""
 
+    class UploadBoxNotFoundError(RuntimeError):
+        """Error that is raised when an upload box does not exist."""
+
     @abstractmethod
     async def create(
         self, *, creation_data: WorkPackageCreationData, auth_context: AuthContext
@@ -49,7 +54,7 @@ class WorkPackageRepositoryPort(ABC):
     @abstractmethod
     async def get(
         self,
-        work_package_id: UUID,
+        work_package_id: UUID4,
         *,
         check_valid: bool = True,
         work_package_access_token: str | None = None,
@@ -64,10 +69,10 @@ class WorkPackageRepositoryPort(ABC):
         """
 
     @abstractmethod
-    async def work_order_token(
+    async def get_download_wot(
         self,
         *,
-        work_package_id: UUID,
+        work_package_id: UUID4,
         file_id: str,
         check_valid: bool = True,
         work_package_access_token: str | None = None,
@@ -78,8 +83,33 @@ class WorkPackageRepositoryPort(ABC):
         - if a work package with the given work_package_id does not exist
         - if the file_id is not contained in the work package
         - if check_valid is set and the work package has expired
+        - if the work package type is not DOWNLOAD
         - if a work_package_access_token is specified and it does not match
           the token hash that is stored in the work package
+        """
+
+    @abstractmethod
+    async def get_upload_wot(  # noqa: PLR0913
+        self,
+        *,
+        work_package_id: UUID4,
+        work_type: UploadPathType,
+        box_id: UUID4,
+        alias: str | None = None,
+        file_id: UUID4 | None = None,
+        check_valid: bool = True,
+        work_package_access_token: str | None = None,
+    ) -> str:
+        """Create a work order token for a given work package and file.
+
+        In the following cases, a WorkPackageAccessError is raised:
+        - if a work package with the given work_package_id does not exist
+        - if the work type is not valid, i.e. one of create, upload, close, or delete
+        - if the work_type requires parameters that are not provided (alias or file ID)
+        - if check_valid is set and the work package has expired
+        - if a work_package_access_token is specified and it does not match
+          the token hash that is stored in the work package
+        - if an upload box is not found in the database
         """
 
     @abstractmethod
@@ -99,14 +129,30 @@ class WorkPackageRepositoryPort(ABC):
 
     @abstractmethod
     async def get_datasets(
-        self, *, auth_context: AuthContext, work_type: WorkType | None = None
+        self, *, auth_context: AuthContext
     ) -> list[DatasetWithExpiration]:
         """Get the list of all datasets accessible to the authenticated user.
 
         The returned datasets also have an expiration date until when access is granted.
+        """
 
-        A work type can be specified for filtering the datasets. If no work type is
-        specified, the datasets for all work types (upload and download) are returned.
+    @abstractmethod
+    async def register_upload_box(self, upload_box: ResearchDataUploadBox) -> None:
+        """Register an upload box."""
 
-        Note that currently only downloadable datasets are supported.
+    @abstractmethod
+    async def delete_upload_box(self, box_id: UUID4) -> None:
+        """Delete an upload box with the given ID."""
+
+    @abstractmethod
+    async def get_upload_box(self, box_id: UUID4) -> ResearchDataUploadBox:
+        """Get a registered upload box using the given ID.
+
+        Raises an `UploadBoxNotFoundError` if no doc with the box_id exists.
+        """
+
+    @abstractmethod
+    async def get_upload_boxes(self, *, user_id: UUID4) -> list[BoxWithExpiration]:
+        """Get the list of all upload boxes accessible to the authenticated user
+        along with access expiry.
         """

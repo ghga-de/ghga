@@ -52,13 +52,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/work-package-service):
 ```bash
-docker pull ghga/work-package-service:6.0.0
+docker pull ghga/work-package-service:7.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/work-package-service:6.0.0 .
+docker build -t ghga/work-package-service:7.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -66,7 +66,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/work-package-service:6.0.0 --help
+docker run -p 8080:8080 ghga/work-package-service:7.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -125,6 +125,8 @@ The service requires the following configuration parameters:
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
 - <a id="properties/datasets_collection"></a>**`datasets_collection`** *(string)*: The name of the database collection for datasets. Default: `"datasets"`.
+
+- <a id="properties/upload_boxes_collection"></a>**`upload_boxes_collection`** *(string)*: The name of the database collection for upload boxes. Default: `"uploadBoxes"`.
 
 - <a id="properties/work_packages_collection"></a>**`work_packages_collection`** *(string)*: The name of the database collection for work packages. Default: `"workPackages"`.
 
@@ -414,6 +416,16 @@ The service requires the following configuration parameters:
   ```
 
 
+- <a id="properties/upload_box_topic"></a>**`upload_box_topic`** *(string, required)*: Name of the event topic containing upload box events.
+
+
+  Examples:
+
+  ```json
+  "upload-boxes"
+  ```
+
+
 - <a id="properties/dataset_change_topic"></a>**`dataset_change_topic`** *(string, required)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
 
 
@@ -444,13 +456,13 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/download_access_url"></a>**`download_access_url`** *(string, required)*: URL pointing to the internal download access API.
+- <a id="properties/access_url"></a>**`access_url`** *(string, format: uri, required)*: Base URL of the internal access API for download and upload. Length must be between 1 and 2083 (inclusive).
 
 
   Examples:
 
   ```json
-  "http://127.0.0.1/download-access"
+  "http://127.0.0.1/"
   ```
 
 
