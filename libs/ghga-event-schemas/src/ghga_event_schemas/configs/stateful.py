@@ -20,7 +20,11 @@ from pydantic_settings import BaseSettings
 
 __all__ = [
     "AccessRequestEventsConfig",
+    "ArtifactEventsConfig",
     "DatasetEventsConfig",
+    "FileUploadBoxEventsConfig",
+    "FileUploadEventsConfig",
+    "ResearchDataUploadBoxEventsConfig",
     "ResourceEventsConfig",
     "UserEventsConfig",
 ]
@@ -104,4 +108,43 @@ class ArtifactEventsConfig(BaseSettings):
         default=...,
         description="Name of the event topic containing artifact events",
         examples=["artifacts"],
+    )
+
+
+class FileUploadBoxEventsConfig(BaseSettings):
+    """Config for events communicating changes in FileUploadBoxes.
+
+    The event types are hardcoded by `hexkit`.
+    """
+
+    file_upload_box_topic: str = Field(
+        ...,
+        description="Topic containing published FileUploadBox outbox events",
+        examples=["file-upload-boxes", "file-upload-box-topic"],
+    )
+
+
+class FileUploadEventsConfig(BaseSettings):
+    """Config for events communicating changes in FileUploads.
+
+    The event types are hardcoded by `hexkit`.
+    """
+
+    file_upload_topic: str = Field(
+        ...,
+        description="Topic containing published FileUpload outbox events",
+        examples=["file-uploads", "file-upload-topic"],
+    )
+
+
+class ResearchDataUploadBoxEventsConfig(BaseSettings):
+    """Config for events communicating changes in ResearchDataUploadBoxes.
+
+    The event types are hardcoded by `hexkit`.
+    """
+
+    research_data_upload_box_topic: str = Field(
+        ...,
+        description="Name of the event topic containing research data upload box events",
+        examples=["research-data-upload-boxes"],
     )

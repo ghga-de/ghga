@@ -17,11 +17,16 @@
 
 from .stateful import (  # noqa: F401
     AccessRequestEventsConfig,
+    ArtifactEventsConfig,
     DatasetEventsConfig,
+    FileUploadBoxEventsConfig,
+    FileUploadEventsConfig,
+    ResearchDataUploadBoxEventsConfig,
     ResourceEventsConfig,
     UserEventsConfig,
 )
 from .stateless import (  # noqa: F401
+    AuditEventsConfig,
     DownloadServedEventsConfig,
     FileDeletedEventsConfig,
     FileDeletionRequestEventsConfig,
@@ -33,6 +38,7 @@ from .stateless import (  # noqa: F401
     FileStagedEventsConfig,
     FileStagingRequestedEventsConfig,
     FileUploadReceivedEventsConfig,
+    FileUploadReportEventsConfig,
     IvaChangeEventsConfig,
     NotificationEventsConfig,
     SecondFactorRecreatedEventsConfig,

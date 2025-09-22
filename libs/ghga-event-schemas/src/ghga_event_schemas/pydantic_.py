@@ -20,7 +20,8 @@ schema representations such as json-schema.
 """
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
+from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field
@@ -511,6 +512,122 @@ class UserIvaState(UserID):
     state: IvaState = Field(..., description="The new state of the IVA")
 
     model_config = ConfigDict(title="iva_state_change")
+
+
+class ResearchDataUploadBoxState(StrEnum):
+    """The allowed states for a ResearchDataUploadBox instance."""
+
+    OPEN = "open"
+    LOCKED = "locked"
+    CLOSED = "closed"
+
+
+class ResearchDataUploadBox(BaseModel):
+    """A class representing a ResearchDataUploadBox.
+
+    Contains all fields from the FileUploadBox.
+    """
+
+    id: UUID4 = Field(
+        default_factory=uuid4,
+        description="Unique identifier for the research data upload box",
+    )
+    state: ResearchDataUploadBoxState = Field(
+        ..., description="Current state of the upload box"
+    )
+    title: str = Field(..., description="Short meaningful name for the box")
+    description: str = Field(..., description="Describes the upload box in more detail")
+    last_changed: UTCDatetime = Field(..., description="Timestamp of the latest change")
+    changed_by: UUID4 = Field(
+        ..., description="ID of the user who performed the latest change"
+    )
+    file_upload_box_id: UUID4 = Field(..., description="The ID of the file upload box.")
+    locked: bool = Field(
+        default=False,
+        description="Whether or not changes to the files in the file upload box are allowed",
+    )
+    file_count: int = Field(default=0, description="The number of files in the box")
+    size: int = Field(default=0, description="The total size of all files in the box")
+    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
+
+
+class FileUploadState(StrEnum):
+    """The allowed states for a ResearchDataUploadBox instance.
+
+    init: file upload initiated, but not yet finished
+    inbox: file upload complete, file in inbox
+    archived: file moved out of inbox after completion
+    """
+
+    INIT = "init"
+    INBOX = "inbox"
+    ARCHIVED = "archived"
+
+
+class FileUpload(BaseModel):
+    """A File Upload."""
+
+    upload_id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    completed: bool = Field(
+        default=False, description="Whether or not the file upload has finished"
+    )
+    state: FileUploadState = Field(
+        FileUploadState.INIT, description="The state of the FileUpload"
+    )
+    alias: str = Field(
+        ..., description="The submitted alias from the metadata (unique within the box)"
+    )
+    checksum: str = Field(..., description="Unencrypted checksum")
+    size: int = Field(..., description="File size in bytes")
+
+
+class FileUploadBox(BaseModel):
+    """A class representing a box that bundles files belonging to the same upload."""
+
+    id: UUID4 = Field(..., description="Unique identifier for the instance")
+    locked: bool = Field(
+        default=False,
+        description="Whether or not changes to the files in the box are allowed",
+    )
+    file_count: int = Field(default=0, description="The number of files in the box")
+    size: int = Field(default=0, description="The total size of all files in the box")
+    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
+
+
+class AuditRecord(BaseModel):
+    """A generic record for audit purposes."""
+
+    id: UUID4 = Field(
+        default_factory=uuid4, description="A unique identifier for the record"
+    )
+    created: UTCDatetime = Field(
+        ..., description="Timestamp when the record was created"
+    )
+    service: str = Field(
+        ..., description="Name of the service that generated the record"
+    )
+    label: str = Field(..., description="Short label describing the action")
+    description: str = Field(..., description="Detailed description of the action")
+    user_id: UUID4 | None = Field(
+        default=None, description="ID of the user who performed the action"
+    )
+    correlation_id: UUID4 = Field(
+        ..., description="Correlation ID for tracing requests"
+    )
+    action: Literal["C", "R", "U", "D"] | None = Field(
+        default=None, description="CRUD operation type"
+    )
+    entity: str | None = Field(default=None, description="Type of entity affected")
+    entity_id: str | None = Field(default=None, description="ID of the entity affected")
+
+
+class FileUploadReport(BaseModel):
+    """A report that models the result of the Data Hub-side file inspection"""
+
+    # Note, this model is subject to change; consider this a rough sketch for now
+    file_id: UUID4
+    secret_id: str
+    passed_inspection: bool
 
 
 # Lists event schemas (values) by event types (key):
