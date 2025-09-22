@@ -15,85 +15,63 @@
 
 """Defines dataclasses for holding business-logic data"""
 
-from enum import Enum
+from typing import Literal
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import UUID4, BaseModel, model_validator
 
 
-class UploadStatus(str, Enum):
-    """
-    The current upload state. Can be one of:
-        - PENDING (the user has requested an upload url)
-        - CANCELLED (the user has canceled the upload)
-        - UPLOADED (the user has confirmed the upload)
-        - FAILED (the upload has failed for a technical reason)
-        - ACCEPTED (the upload was accepted by a downstream service)
-        - REJECTED (the upload was rejected by a downstream service)
-    """
+class FileUploadBox(BaseModel):
+    """A class representing a box that bundles files belonging to the same upload"""
 
-    PENDING = "pending"
-    CANCELLED = "cancelled"
-    UPLOADED = "uploaded"
-    FAILED = "failed"
-    ACCEPTED = "accepted"
-    REJECTED = "rejected"
+    id: UUID4  # unique identifier for the instance
+    locked: bool = False  # Whether or not changes to the files in the box are allowed
+    file_count: int = 0  # The number of files in the box
+    size: int = 0  # The total size of all files in the box
+    storage_alias: str
 
 
-class UploadAttempt(BaseModel):
-    """A model containing details on an upload attempt for a specific File."""
-
-    upload_id: str
-    file_id: str = Field(
-        default=..., description="The ID of the file corresponding to this upload."
-    )
-    object_id: str = Field(
-        default=...,
-        description="The bucket-specific ID used within the S3 object storage.",
-    )
-    status: UploadStatus
-    part_size: int = Field(
-        default=..., description="Part size to be used for upload. Specified in bytes."
-    )
-    creation_date: UTCDatetime = Field(
-        default=..., description="Datetime when the upload attempt was created."
-    )
-    completion_date: UTCDatetime | None = Field(
-        default=None,
-        description=(
-            "Datetime when the upload attempt was declared as completed by the client."
-            + " `None` if the upload is ongoing."
-        ),
-    )
-    submitter_public_key: str = Field(
-        default=...,
-        description="The public key used by the submittter to encrypt the file.",
-    )
-    model_config = ConfigDict(from_attributes=True, title="Multi-Part Upload Details")
-    storage_alias: str = Field(
-        default=...,
-        description="Alias for the object storage location where the given object is stored.",
-    )
+FileUploadState = Literal["init", "inbox", "archived"]
+# init = file upload initiated, but not yet finished
+# inbox = file upload complete, file in inbox
+# archived = file moved out of inbox after completion
 
 
-class FileMetadataUpsert(BaseModel):
-    """A model for creating new or updating existing file metadata entries."""
+class FileUpload(BaseModel):
+    """A File Upload"""
 
-    file_id: str
-    file_name: str
-    decrypted_sha256: str
-    decrypted_size: int
-    model_config = ConfigDict(from_attributes=True, title="File Metadata Creation")
+    id: UUID4  # unique identifier for the instance
+    completed: bool = False  # whether or not the file upload has finished
+    state: FileUploadState = "init"
+    alias: str  # the submitted alias from the metadata (unique within the box)
+    box_id: UUID4
+    checksum: str
+    size: int
+
+    @model_validator(mode="after")
+    def validate_completed(self):
+        """Make sure `completed` and `state` are in sync."""
+        if self.completed != (self.state in ["inbox", "archived"]):
+            raise ValueError(
+                "Completed must be False if state is 'init' and True otherwise."
+            )
+        return self
 
 
-class FileMetadata(FileMetadataUpsert):
-    """A model containing the full metadata on a file."""
+class S3UploadDetails(BaseModel):
+    """Class for linking a multipart upload to its FileUpload object"""
 
-    latest_upload_id: str | None = Field(
-        default=None,
-        description=(
-            "ID of the latest upload (attempt). `Null/None`"
-            + " if no update has been initiated, yet."
-        ),
-    )
-    model_config = ConfigDict(from_attributes=True, title="File Metadata")
+    file_id: UUID4  # the id of the corresponding FileUpload
+    storage_alias: str
+    s3_upload_id: str
+    initiated: UTCDatetime
+    completed: UTCDatetime | None = None
+
+
+class FileUploadReport(BaseModel):
+    """A report that models the result of the Data Hub-side file inspection"""
+
+    # Note, this model is subject to change; consider this a rough sketch for now
+    file_id: UUID4
+    secret_id: str
+    passed_inspection: bool

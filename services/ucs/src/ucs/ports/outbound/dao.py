@@ -15,21 +15,38 @@
 
 """DAO translators for accessing the database."""
 
-from dataclasses import dataclass
-
 # for convenience: forward errors that may be thrown by DAO instances:
-from hexkit.protocols.dao import (
-    Dao,
-    ResourceAlreadyExistsError,  # noqa: F401
-    ResourceNotFoundError,  # noqa: F401
-)
+from abc import ABC, abstractmethod
+
+from hexkit.protocols.dao import Dao, ResourceAlreadyExistsError, ResourceNotFoundError
+from hexkit.protocols.daopub import DaoPublisher
 
 from ucs.core import models
 
+__all__ = [
+    "FileUploadBoxDao",
+    "FileUploadDao",
+    "ResourceAlreadyExistsError",
+    "ResourceNotFoundError",
+    "S3UploadDetailsDao",
+    "UploadDaoPublisherFactoryPort",
+]
 
-@dataclass
-class DaoCollectionPort:
-    """A collection of DAOs for interacting with the database."""
+S3UploadDetailsDao = Dao[models.S3UploadDetails]
+FileUploadBoxDao = DaoPublisher[models.FileUploadBox]
+FileUploadDao = DaoPublisher[models.FileUpload]
 
-    file_metadata: Dao[models.FileMetadata]
-    upload_attempts: Dao[models.UploadAttempt]
+
+class UploadDaoPublisherFactoryPort(ABC):
+    """Port that provides a factory for file upload-related data access objects.
+
+    These objects will also publish changes according to the outbox pattern.
+    """
+
+    @abstractmethod
+    async def get_file_upload_box_dao(self) -> DaoPublisher[models.FileUploadBox]:
+        """Construct an outbox DAO for FileUploadBox objects"""
+
+    @abstractmethod
+    async def get_file_upload_dao(self) -> DaoPublisher[models.FileUpload]:
+        """Construct an outbox DAO for FileUpload objects"""

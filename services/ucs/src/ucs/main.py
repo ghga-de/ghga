@@ -18,17 +18,18 @@
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 
 from ucs.config import Config
+from ucs.constants import FILE_UPLOADS_COLLECTION
 from ucs.inject import (
-    get_persistent_publisher,
     prepare_event_subscriber,
+    prepare_outbox_publisher,
     prepare_rest_app,
-    prepare_storage_inspector,
 )
 
 
-async def run_rest_app():
+async def run_rest_app() -> None:
     """Run the HTTP REST API."""
     config = Config()
     configure_logging(config=config)
@@ -38,8 +39,25 @@ async def run_rest_app():
         await run_server(app=app, config=config)
 
 
+async def publish_events(*, all: bool = False) -> None:
+    """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
+    config = Config()
+    configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
+
+    async with prepare_outbox_publisher(config=config) as persistent_publisher:
+        file_upload_box_dao = await persistent_publisher.get_file_upload_box_dao()
+        file_upload_dao = await persistent_publisher.get_file_upload_dao()
+        if all:
+            await file_upload_box_dao.republish()
+            await file_upload_dao.republish()
+        else:
+            await file_upload_box_dao.publish_pending()
+            await file_upload_dao.publish_pending()
+
+
 async def consume_events(run_forever: bool = True):
-    """Run an event consumer listening to the specified topic."""
+    """Run an event consumer listening to the specified topics."""
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
@@ -48,28 +66,13 @@ async def consume_events(run_forever: bool = True):
         await event_subscriber.run(forever=run_forever)
 
 
-async def check_inbox_buckets():
-    """Run a job to inspect all configured storage buckets for stale objects.
-
-    For now this only logs objects that should no longer remain in their respective bucket,
-    but have not been removed by the mechanisms in place.
-    """
+async def initialize() -> None:
+    """Operations to be run in an init container before service startup."""
     config = Config()
+
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
-
-    async with prepare_storage_inspector(config=config) as inbox_inspector:
-        await inbox_inspector.check_buckets()
-
-
-async def publish_events(*, all: bool = False):
-    """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
-    config = Config()
-    configure_logging(config=config)
-    configure_opentelemetry(service_name=config.service_name, config=config)
-
-    async with get_persistent_publisher(config=config) as persistent_publisher:
-        if all:
-            await persistent_publisher.republish()
-        else:
-            await persistent_publisher.publish_pending()
+    async with ConfiguredMongoClient(config=config) as client:
+        db = client.get_database(config.db_name)
+        file_uploads_collection = db.get_collection(FILE_UPLOADS_COLLECTION)
+        await file_uploads_collection.create_index(["box_id", "alias"], unique=True)

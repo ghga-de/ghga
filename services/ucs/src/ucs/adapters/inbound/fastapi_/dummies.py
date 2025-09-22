@@ -23,13 +23,9 @@ from typing import Annotated
 from fastapi import Depends
 from ghga_service_commons.api.di import DependencyDummy
 
-from ucs.ports.inbound.file_service import FileMetadataServicePort
-from ucs.ports.inbound.upload_service import UploadServicePort
+from ucs.ports.inbound.controller import UploadControllerPort
 
-upload_service_port = DependencyDummy("upload_service_port")
-file_metadata_service_port = DependencyDummy("file_metadata_service_port")
+auth_provider_bundle = DependencyDummy("auth_provider_bundle")
+upload_controller_port = DependencyDummy("upload_controller_port")
 
-UploadServiceDummy = Annotated[UploadServicePort, Depends(upload_service_port)]
-FileMetadataServiceDummy = Annotated[
-    FileMetadataServicePort, Depends(file_metadata_service_port)
-]
+UploadControllerDummy = Annotated[UploadControllerPort, Depends(upload_controller_port)]

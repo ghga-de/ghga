@@ -16,30 +16,38 @@
 """Config Parameter Modeling and Parsing"""
 
 from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.auth.ghga import AuthConfig
 from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
-from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
+from pydantic_settings import BaseSettings
 
-from ucs.adapters.inbound.event_sub import EventSubTranslatorConfig
-from ucs.adapters.outbound.event_pub import EventPubTranslatorConfig
+from ucs.adapters.inbound.event_sub import EventSubConfig
+from ucs.adapters.outbound.dao import UploadDaoConfig
 from ucs.constants import SERVICE_NAME
+
+
+class PublicKeyConfig(BaseSettings):
+    """Auth config for WPS and UOS keys"""
+
+    wps_auth_config: AuthConfig
+    uos_auth_config: AuthConfig
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     ApiConfigBase,
+    PublicKeyConfig,
+    UploadDaoConfig,
     MongoKafkaConfig,
     MigrationConfig,
     S3ObjectStoragesConfig,
-    KafkaConfig,
     LoggingConfig,
-    EventSubTranslatorConfig,
-    EventPubTranslatorConfig,
     OpenTelemetryConfig,
+    EventSubConfig,
 ):
     """Config parameters and their defaults."""
 

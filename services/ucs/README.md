@@ -15,13 +15,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/upload-controller-service):
 ```bash
-docker pull ghga/upload-controller-service:7.0.0
+docker pull ghga/upload-controller-service:8.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/upload-controller-service:7.0.0 .
+docker build -t ghga/upload-controller-service:8.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -29,7 +29,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/upload-controller-service:7.0.0 --help
+docker run -p 8080:8080 ghga/upload-controller-service:8.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -46,134 +46,34 @@ ucs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- <a id="properties/file_upload_reports_topic"></a>**`file_upload_reports_topic`** *(string, required)*: Name of the topic used for events indicating that a Data Hub has completed re-encryption and inspection of a file.
+
+
+  Examples:
+
+  ```json
+  "file-upload-reports"
+  ```
+
+
+- <a id="properties/file_upload_reports_type"></a>**`file_upload_reports_type`** *(string, required)*: The type used for events indicating that a Data Hub has completed re-encryption and inspection of a file.
+
+
+  Examples:
+
+  ```json
+  "file_upload_report_generated"
+  ```
+
+
+  ```json
+  "file_upload_report"
+  ```
+
+
 - <a id="properties/enable_opentelemetry"></a>**`enable_opentelemetry`** *(boolean)*: If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation. Default: `false`.
 
 - <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. Minimum: `0`. Maximum: `1`. Default: `1.0`.
-
-- <a id="properties/file_upload_received_topic"></a>**`file_upload_received_topic`** *(string, required)*: The name of the topic used for FileUploadReceived events.
-
-
-  Examples:
-
-  ```json
-  "received-file-uploads"
-  ```
-
-
-- <a id="properties/file_upload_received_type"></a>**`file_upload_received_type`** *(string, required)*: The name of the type used for FileUploadReceived events.
-
-
-  Examples:
-
-  ```json
-  "file_upload_received"
-  ```
-
-
-- <a id="properties/file_deleted_topic"></a>**`file_deleted_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been deleted.
-
-
-  Examples:
-
-  ```json
-  "file-deletions"
-  ```
-
-
-- <a id="properties/file_deleted_type"></a>**`file_deleted_type`** *(string, required)*: The type used for events indicating that a file has been deleted.
-
-
-  Examples:
-
-  ```json
-  "file_deleted"
-  ```
-
-
-- <a id="properties/file_deletion_request_topic"></a>**`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
-
-
-  Examples:
-
-  ```json
-  "file-deletion-requests"
-  ```
-
-
-- <a id="properties/file_deletion_request_type"></a>**`file_deletion_request_type`** *(string, required)*: The type used for events indicating that a request to delete a file has been received.
-
-
-  Examples:
-
-  ```json
-  "file_deletion_requested"
-  ```
-
-
-- <a id="properties/file_internally_registered_topic"></a>**`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
-
-
-  Examples:
-
-  ```json
-  "file-registrations"
-  ```
-
-
-  ```json
-  "file-registrations-internal"
-  ```
-
-
-- <a id="properties/file_internally_registered_type"></a>**`file_internally_registered_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
-
-
-  Examples:
-
-  ```json
-  "file_internally_registered"
-  ```
-
-
-- <a id="properties/file_interrogations_topic"></a>**`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
-
-
-  Examples:
-
-  ```json
-  "file-interrogations"
-  ```
-
-
-- <a id="properties/interrogation_failure_type"></a>**`interrogation_failure_type`** *(string, required)*: The type used for events informing about failed file validations.
-
-
-  Examples:
-
-  ```json
-  "file_interrogation_failed"
-  ```
-
-
-- <a id="properties/file_metadata_topic"></a>**`file_metadata_topic`** *(string, required)*: Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.
-
-
-  Examples:
-
-  ```json
-  "metadata"
-  ```
-
-
-- <a id="properties/file_metadata_type"></a>**`file_metadata_type`** *(string, required)*: The type used for events to receive new or changed metadata on files that are expected to be uploaded.
-
-
-  Examples:
-
-  ```json
-  "file_metadata_upserted"
-  ```
-
 
 - <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
 
@@ -211,6 +111,10 @@ The service requires the following configuration parameters:
 
 
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+
+- <a id="properties/object_storages"></a>**`object_storages`** *(object, required)*: Can contain additional properties.
+
+  - <a id="properties/object_storages/additionalProperties"></a>**Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
 
 - <a id="properties/kafka_servers"></a>**`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
 
@@ -387,10 +291,6 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/object_storages"></a>**`object_storages`** *(object, required)*: Can contain additional properties.
-
-  - <a id="properties/object_storages/additionalProperties"></a>**Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
-
 - <a id="properties/mongo_dsn"></a>**`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/. Length must be at least 1.
 
 
@@ -497,6 +397,40 @@ The service requires the following configuration parameters:
   3600
   ```
 
+
+- <a id="properties/file_upload_box_topic"></a>**`file_upload_box_topic`** *(string, required)*: Topic containing published FileUploadBox outbox events.
+
+
+  Examples:
+
+  ```json
+  "file-upload-boxes"
+  ```
+
+
+  ```json
+  "file-upload-box-topic"
+  ```
+
+
+- <a id="properties/file_upload_topic"></a>**`file_upload_topic`** *(string, required)*: Topic containing published FileUpload outbox events.
+
+
+  Examples:
+
+  ```json
+  "file-uploads"
+  ```
+
+
+  ```json
+  "file-upload-topic"
+  ```
+
+
+- <a id="properties/wps_auth_config"></a>**`wps_auth_config`** *(required)*: Refer to *[#/$defs/AuthConfig](#%24defs/AuthConfig)*.
+
+- <a id="properties/uos_auth_config"></a>**`uos_auth_config`** *(required)*: Refer to *[#/$defs/AuthConfig](#%24defs/AuthConfig)*.
 
 - <a id="properties/host"></a>**`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 
@@ -610,6 +544,28 @@ The service requires the following configuration parameters:
 
 ## Definitions
 
+
+- <a id="%24defs/AuthConfig"></a>**`AuthConfig`** *(object)*: Config parameters and their defaults for the example auth context. Cannot contain additional properties.
+
+  - <a id="%24defs/AuthConfig/properties/auth_key"></a>**`auth_key`** *(string, required)*: The GHGA internal public key for validating the token signature.
+
+
+    Examples:
+
+    ```json
+    "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+    ```
+
+
+  - <a id="%24defs/AuthConfig/properties/auth_algs"></a>**`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens. Default: `["ES256"]`.
+
+    - <a id="%24defs/AuthConfig/properties/auth_algs/items"></a>**Items** *(string)*
+
+  - <a id="%24defs/AuthConfig/properties/auth_check_claims"></a>**`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Can contain additional properties. Default: `{"id": null, "name": null, "email": null, "iat": null, "exp": null}`.
+
+  - <a id="%24defs/AuthConfig/properties/auth_map_claims"></a>**`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
+
+    - <a id="%24defs/AuthConfig/properties/auth_map_claims/additionalProperties"></a>**Additional properties** *(string)*
 
 - <a id="%24defs/S3Config"></a>**`S3Config`** *(object)*: S3-specific config params.
 Inherit your config class from this class if you need

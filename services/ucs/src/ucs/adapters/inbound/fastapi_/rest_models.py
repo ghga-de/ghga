@@ -15,43 +15,101 @@
 
 """REST API-specific data models (not used by core package)"""
 
-from typing import Literal
+from typing import Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
-
-from ucs.core.models import FileMetadata, UploadAttempt, UploadStatus  # noqa: F401
+from pydantic import UUID4, BaseModel, ConfigDict, Field
 
 
-class UploadAttemptCreation(BaseModel):
-    """Properties required to create a new upload."""
+class BoxCreationRequest(BaseModel):
+    """Request body for creating a new FileUploadBox."""
 
-    file_id: str = Field(
-        ..., description="The ID of the file corresponding to this upload."
-    )
-    submitter_public_key: str = Field(
-        ..., description="The public key used by the submittter to encrypt the file."
-    )
     storage_alias: str = Field(
-        ...,
-        description="Alias identifying the object storage location to use for this upload",
+        ..., description="The storage alias to use for this upload box"
     )
-    model_config = ConfigDict(title="Properties required to create a new upload")
+    model_config = ConfigDict(title="Box Creation Request")
 
 
-class UploadAttemptUpdate(BaseModel):
-    """Request body to update an existing mutli-part upload."""
+class BoxUpdateRequest(BaseModel):
+    """Request body for updating a FileUploadBox."""
 
-    status: Literal["uploaded", "cancelled"]
-    model_config = ConfigDict(title="Multi-Part Upload Update")
-
-
-class PartUploadDetails(BaseModel):
-    """Contains details for uploading the bytes of one file part."""
-
-    url: str = Field(
-        ...,
-        description=(
-            "A fully resolvable URL that can be used to upload the actual"
-            + " object bytes for one upload part."
-        ),
+    lock: bool = Field(
+        ..., description="Whether the box should be locked (true) or unlocked (false)"
     )
+    model_config = ConfigDict(title="Box Update Request")
+
+
+class BoxUploadsResponse(BaseModel):
+    """Response body for listing file IDs in a FileUploadBox."""
+
+    file_ids: list[UUID4] = Field(
+        ..., description="List of file IDs for completed uploads in the box"
+    )
+    model_config = ConfigDict(title="Box Uploads Response")
+
+
+class FileUploadCreationRequest(BaseModel):
+    """Request body for creating a new FileUpload."""
+
+    alias: str = Field(
+        ...,
+        description="The alias for the file within the box (must be unique within the box)",
+    )
+    checksum: str = Field(..., description="The checksum of the file")
+    size: int = Field(..., description="The size of the file in bytes", ge=1)
+    model_config = ConfigDict(title="File Upload Creation Request")
+
+
+WorkType = Literal["create", "lock", "unlock", "view", "upload", "close", "delete"]
+
+T = TypeVar("T", bound=WorkType)
+
+
+class BaseWorkOrderToken[T: WorkType](BaseModel):
+    """Base model pre-configured for use as Dto."""
+
+    work_type: T
+    model_config = ConfigDict(frozen=True)
+
+
+CreateFileBoxWorkOrder = BaseWorkOrderToken[Literal["create"]]
+
+
+class ChangeFileBoxWorkOrder(BaseWorkOrderToken[Literal["lock", "unlock"]]):
+    """WOT schema authorizing a user to lock or unlock an existing FileUploadBox"""
+
+    box_id: UUID4
+
+
+class ViewFileBoxWorkOrder(BaseWorkOrderToken[Literal["view"]]):
+    """WOT schema authorizing a user to view a FileUploadBox and its FileUploads"""
+
+    box_id: UUID4
+
+
+class CreateFileWorkOrder(BaseWorkOrderToken[Literal["create"]]):
+    """WOT schema authorizing a user to create a new FileUpload"""
+
+    alias: str
+    box_id: UUID4
+
+
+class _FileUploadToken(BaseModel):
+    """Partial schema for WOTs authorizing a user to work with existing file uploads.
+
+    This is for existing file uploads only, not for the initiation of new file uploads.
+    """
+
+    file_id: UUID4
+    box_id: UUID4
+
+
+class UploadFileWorkOrder(BaseWorkOrderToken[Literal["upload"]], _FileUploadToken):
+    """WOT schema authorizing a user to get a file part upload URL"""
+
+
+class CloseFileWorkOrder(BaseWorkOrderToken[Literal["close"]], _FileUploadToken):
+    """WOT schema authorizing a user to complete a file upload"""
+
+
+class DeleteFileWorkOrder(BaseWorkOrderToken[Literal["delete"]], _FileUploadToken):
+    """WOT schema authorizing a user to delete a file upload"""

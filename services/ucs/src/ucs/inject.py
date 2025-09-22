@@ -22,74 +22,69 @@ from fastapi import FastAPI
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import PersistentKafkaPublisher
+from hexkit.providers.mongokafka.provider import MongoKafkaDaoPublisherFactory
 
 from ucs.adapters.inbound.event_sub import EventSubTranslator
 from ucs.adapters.inbound.fastapi_ import dummies
 from ucs.adapters.inbound.fastapi_.configure import get_configured_app
-from ucs.adapters.outbound.dao import DaoCollectionTranslator
-from ucs.adapters.outbound.event_pub import EventPubTranslator
+from ucs.adapters.inbound.fastapi_.http_authorization import (
+    JWTAuthContextProviderBundle,
+)
+from ucs.adapters.outbound.dao import (
+    UploadDaoPublisherFactory,
+    get_s3_upload_details_dao,
+)
 from ucs.config import Config
-from ucs.core.file_service import FileMetadataServive
-from ucs.core.storage_inspector import InboxInspector
-from ucs.core.upload_service import UploadService
-from ucs.ports.inbound.file_service import FileMetadataServicePort
-from ucs.ports.inbound.upload_service import UploadServicePort
+from ucs.core.controller import UploadController
+from ucs.ports.inbound.controller import UploadControllerPort
 
 
 @asynccontextmanager
-async def get_persistent_publisher(
-    config: Config, dao_factory: MongoDbDaoFactory | None = None
-) -> AsyncGenerator[PersistentKafkaPublisher, None]:
-    """Construct and return a PersistentKafkaPublisher."""
-    async with (
-        (
-            nullcontext(dao_factory)
-            if dao_factory
-            else MongoDbDaoFactory.construct(config=config)
-        ) as _dao_factory,
-        PersistentKafkaPublisher.construct(
-            config=config,
-            dao_factory=_dao_factory,
-            compacted_topics={
-                config.file_deleted_topic,
-                config.file_upload_received_topic,
-            },
-            collection_name="ucsPersistedEvents",
-        ) as persistent_publisher,
-    ):
-        yield persistent_publisher
+async def prepare_outbox_publisher(
+    *, config: Config
+) -> AsyncGenerator[UploadDaoPublisherFactory]:
+    """Prepare an outbox publisher (to be used by main module)"""
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=config
+    ) as dao_pub_factory:
+        yield UploadDaoPublisherFactory(
+            config=config, dao_publisher_factory=dao_pub_factory
+        )
 
 
 @asynccontextmanager
 async def prepare_core(
     *,
     config: Config,
-) -> AsyncGenerator[tuple[UploadServicePort, FileMetadataServicePort], None]:
+) -> AsyncGenerator[UploadControllerPort, None]:
     """Constructs and initializes all core components and their outbound dependencies."""
     object_storages = S3ObjectStorages(config=config)
 
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
-        get_persistent_publisher(config=config) as persistent_publisher,
+        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_pub_factory,
     ):
-        dao_collection = await DaoCollectionTranslator.construct(provider=dao_factory)
-        event_pub_translator = EventPubTranslator(
-            config=config, provider=persistent_publisher
+        upload_dao_factory = UploadDaoPublisherFactory(
+            config=config, dao_publisher_factory=dao_pub_factory
         )
-        upload_service = UploadService(
-            daos=dao_collection,
+        file_upload_box_dao = await upload_dao_factory.get_file_upload_box_dao()
+        file_upload_dao = await upload_dao_factory.get_file_upload_dao()
+        s3_upload_details_dao = await get_s3_upload_details_dao(dao_factory=dao_factory)
+
+        controller = UploadController(
+            config=config,
+            file_upload_box_dao=file_upload_box_dao,
+            file_upload_dao=file_upload_dao,
+            s3_upload_details_dao=s3_upload_details_dao,
             object_storages=object_storages,
-            event_publisher=event_pub_translator,
         )
-        file_metadata_service = FileMetadataServive(daos=dao_collection)
-        yield upload_service, file_metadata_service
+        yield controller
 
 
 def prepare_core_with_override(
     *,
     config: Config,
-    core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
+    core_override: UploadControllerPort | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return nullcontext(core_override) if core_override else prepare_core(config=config)
@@ -99,7 +94,7 @@ def prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
+    core_override: UploadControllerPort | None = None,
 ) -> AsyncGenerator[FastAPI, None]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -107,16 +102,18 @@ async def prepare_rest_app(
     """
     app = get_configured_app(config=config)
 
-    async with prepare_core_with_override(
-        config=config, core_override=core_override
-    ) as (
-        upload_service,
-        file_metadata_service,
+    async with (
+        prepare_core_with_override(
+            config=config, core_override=core_override
+        ) as upload_controller,
     ):
-        app.dependency_overrides[dummies.file_metadata_service_port] = (
-            lambda: file_metadata_service
+        auth_provider_bundle = JWTAuthContextProviderBundle(config=config)
+        app.dependency_overrides[dummies.auth_provider_bundle] = (
+            lambda: auth_provider_bundle
         )
-        app.dependency_overrides[dummies.upload_service_port] = lambda: upload_service
+        app.dependency_overrides[dummies.upload_controller_port] = (
+            lambda: upload_controller
+        )
         yield app
 
 
@@ -124,7 +121,7 @@ async def prepare_rest_app(
 async def prepare_event_subscriber(
     *,
     config: Config,
-    core_override: tuple[UploadServicePort, FileMetadataServicePort] | None = None,
+    core_override: UploadControllerPort | None = None,
 ) -> AsyncGenerator[KafkaEventSubscriber, None]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -132,11 +129,10 @@ async def prepare_event_subscriber(
     """
     async with prepare_core_with_override(
         config=config, core_override=core_override
-    ) as (upload_service, file_metadata_service):
+    ) as controller:
         event_sub_translator = EventSubTranslator(
-            file_metadata_service=file_metadata_service,
-            upload_service=upload_service,
             config=config,
+            upload_controller=controller,
         )
 
         async with (
@@ -145,18 +141,6 @@ async def prepare_event_subscriber(
                 config=config,
                 translator=event_sub_translator,
                 dlq_publisher=dlq_publisher,
-            ) as kafka_event_subscriber,
+            ) as event_subscriber,
         ):
-            yield kafka_event_subscriber
-
-
-@asynccontextmanager
-async def prepare_storage_inspector(*, config: Config):
-    """Alternative to prepare_core for storage inspection CLI command without Kafka."""
-    object_storages = S3ObjectStorages(config=config)
-
-    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
-        dao_collection = await DaoCollectionTranslator.construct(provider=dao_factory)
-        yield InboxInspector(
-            config=config, daos=dao_collection, object_storages=object_storages
-        )
+            yield event_subscriber

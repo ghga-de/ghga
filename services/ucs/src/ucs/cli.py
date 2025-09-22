@@ -20,7 +20,7 @@ from typing import Annotated
 
 import typer
 
-from ucs.main import check_inbox_buckets, consume_events, publish_events, run_rest_app
+from ucs.main import consume_events, initialize, publish_events, run_rest_app
 
 cli = typer.Typer()
 
@@ -29,18 +29,6 @@ cli = typer.Typer()
 def sync_run_api():
     """Run the HTTP REST API."""
     asyncio.run(run_rest_app())
-
-
-@cli.command(name="consume-events")
-def sync_consume_events(run_forever: bool = True):
-    """Run an event consumer listening to the specified topic."""
-    asyncio.run(consume_events(run_forever=run_forever))
-
-
-@cli.command(name="check-inbox-buckets")
-def sync_check_inbox_buckets():
-    """Run a job to check all objects no longer needed have been deleted"""
-    asyncio.run(check_inbox_buckets())
 
 
 @cli.command(name="publish-events")
@@ -52,3 +40,15 @@ def sync_run_publish_events(
 ):
     """Publish pending events."""
     asyncio.run(publish_events(all=all))
+
+
+@cli.command(name="consume-events")
+def sync_consume_events(run_forever: bool = True):
+    """Run an event consumer listening to the specified topic."""
+    asyncio.run(consume_events(run_forever=run_forever))
+
+
+@cli.command(name="initialize")
+def sync_initialize():
+    """Run the init container functionality"""
+    asyncio.run(initialize())

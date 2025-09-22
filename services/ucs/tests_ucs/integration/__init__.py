@@ -12,15 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-"""Interfaces for periodic storage maintenance."""
 
-from abc import ABC, abstractmethod
-
-
-class StorageInspectorPort(ABC):
-    """Interface for periodically checking storage buckets for stale files."""
-
-    @abstractmethod
-    async def check_buckets(self):
-        """Check objects in all buckets configured for the service."""
+"""Integration tests"""

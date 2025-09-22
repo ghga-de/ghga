@@ -9,20 +9,12 @@ db_name: dev
 db_version_collection: ucsDbVersions
 docs_url: /docs
 enable_opentelemetry: false
-file_deleted_topic: file-downloads
-file_deleted_type: file_deleted
-file_deletion_request_topic: file-deletion-requests
-file_deletion_request_type: file_deletion_requested
-file_internally_registered_topic: internal-file-registry
-file_internally_registered_type: file_registered
-file_interrogations_topic: file-interrogation
-file_metadata_topic: metadata
-file_metadata_type: metadata_upserted
-file_upload_received_topic: file-uploads
-file_upload_received_type: file_uploaded
+file_upload_box_topic: file-upload-boxes
+file_upload_reports_topic: file-upload-reports
+file_upload_reports_type: file_upload_report
+file_upload_topic: file-uploads
 generate_correlation_id: true
 host: 127.0.0.1
-interrogation_failure_type: file_validation_failed
 kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: true
@@ -57,4 +49,16 @@ otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '001'
 service_name: ucs
+uos_auth_config:
+  auth_algs:
+  - ES256
+  auth_check_claims: {}
+  auth_key: '{}'
+  auth_map_claims: {}
 workers: 1
+wps_auth_config:
+  auth_algs:
+  - ES256
+  auth_check_claims: {}
+  auth_key: '{}'
+  auth_map_claims: {}

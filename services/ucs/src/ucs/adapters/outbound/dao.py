@@ -15,32 +15,78 @@
 
 """DAO translators for accessing the database."""
 
-from dataclasses import dataclass
-
 from hexkit.protocols.dao import DaoFactoryProtocol
+from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
+from ucs.constants import (
+    FILE_UPLOAD_BOXES_COLLECTION,
+    FILE_UPLOADS_COLLECTION,
+    S3_UPLOAD_DETAILS_COLLECTION,
+)
 from ucs.core import models
-from ucs.ports.outbound.dao import DaoCollectionPort
+from ucs.ports.outbound.dao import S3UploadDetailsDao, UploadDaoPublisherFactoryPort
 
 
-@dataclass
-class DaoCollectionTranslator:
-    """Constructor compatible with the hexkit.inject.AsyncConstructable type. Used to
-    construct a collection of DAOs for interacting with the database.
-    """
+async def get_s3_upload_details_dao(
+    *, dao_factory: DaoFactoryProtocol
+) -> S3UploadDetailsDao:
+    """Produce as S3UploadDetailsDao"""
+    return await dao_factory.get_dao(
+        name=S3_UPLOAD_DETAILS_COLLECTION,
+        dto_model=models.S3UploadDetails,
+        id_field="file_id",
+    )
 
-    @staticmethod
-    async def construct(*, provider: DaoFactoryProtocol) -> DaoCollectionPort:
-        """Setup a collection of DAOs using the specified provider of the
-        DaoFactoryProtocol.
-        """
-        file_metadata = await provider.get_dao(
-            name="file_metadata", dto_model=models.FileMetadata, id_field="file_id"
+
+class UploadDaoConfig(BaseSettings):
+    """Topic configuration for the published DTOs"""
+
+    # TODO: Split this out and move to ghga-event-schemas.configs.stateful later on
+    file_upload_box_topic: str = Field(
+        ...,
+        description="Topic containing published FileUploadBox outbox events",
+        examples=["file-upload-boxes", "file-upload-box-topic"],
+    )
+    file_upload_topic: str = Field(
+        ...,
+        description="Topic containing published FileUpload outbox events",
+        examples=["file-uploads", "file-upload-topic"],
+    )
+
+
+class UploadDaoPublisherFactory(UploadDaoPublisherFactoryPort):
+    """Translation between UploadDaoPublisherFactoryPort and DaoPublisherFactoryProtocol."""
+
+    def __init__(
+        self,
+        *,
+        config: UploadDaoConfig,
+        dao_publisher_factory: DaoPublisherFactoryProtocol,
+    ):
+        self._file_upload_box_topic = config.file_upload_box_topic
+        self._file_upload_topic = config.file_upload_topic
+        self._dao_publisher_factory = dao_publisher_factory
+
+    async def get_file_upload_box_dao(self) -> DaoPublisher[models.FileUploadBox]:
+        """Construct an outbox DAO for FileUploadBox objects"""
+        return await self._dao_publisher_factory.get_dao(
+            name=FILE_UPLOAD_BOXES_COLLECTION,
+            id_field="id",
+            dto_model=models.FileUploadBox,
+            dto_to_event=lambda x: x.model_dump(),
+            event_topic=self._file_upload_box_topic,
+            autopublish=True,
         )
-        upload_attempts = await provider.get_dao(
-            name="upload_attempts", dto_model=models.UploadAttempt, id_field="upload_id"
-        )
 
-        return DaoCollectionPort(
-            file_metadata=file_metadata, upload_attempts=upload_attempts
+    async def get_file_upload_dao(self) -> DaoPublisher[models.FileUpload]:
+        """Construct an outbox DAO for FileUpload objects"""
+        return await self._dao_publisher_factory.get_dao(
+            name=FILE_UPLOADS_COLLECTION,
+            id_field="id",
+            dto_model=models.FileUpload,
+            dto_to_event=lambda x: x.model_dump(),
+            event_topic=self._file_upload_topic,
+            autopublish=True,
         )

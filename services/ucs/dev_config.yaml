@@ -7,20 +7,19 @@ object_storages:
       s3_endpoint_url: http://ucs:4566
       s3_access_key_id: test
       s3_secret_access_key: test
-file_deletion_request_topic: file-deletion-requests
-file_deletion_request_type: file_deletion_requested
-file_deleted_topic: file-downloads
-file_deleted_type: file_deleted
-file_metadata_topic: metadata
-file_metadata_type: metadata_upserted
-file_internally_registered_topic: internal-file-registry
-file_internally_registered_type: file_registered
-file_interrogations_topic: file-interrogation
-interrogation_failure_type: file_validation_failed
-file_upload_received_topic: file-uploads
-file_upload_received_type: file_uploaded
+
+file_upload_box_topic: file-upload-boxes
+file_upload_topic: file-uploads
 service_instance_id: "001"
 kafka_servers: ["kafka:9092"]
 kafka_enable_dlq: True
 migration_wait_sec: 10
 db_version_collection: ucsDbVersions
+wps_auth_config:
+  auth_key: "{}"
+  auth_check_claims: {}
+uos_auth_config:
+  auth_key: "{}"
+  auth_check_claims: {}
+file_upload_reports_topic: file-upload-reports
+file_upload_reports_type: file_upload_report

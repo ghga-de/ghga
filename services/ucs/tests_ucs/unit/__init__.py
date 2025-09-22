@@ -12,12 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Service specific constants."""
 
-from opentelemetry import trace
-
-SERVICE_NAME = "ucs"
-TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
-S3_UPLOAD_DETAILS_COLLECTION = "s3UploadDetails"
-FILE_UPLOAD_BOXES_COLLECTION = "fileUploadBoxes"
-FILE_UPLOADS_COLLECTION = "fileUploads"
+"""Unit tests"""

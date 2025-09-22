@@ -1,5 +1,57 @@
 {
   "$defs": {
+    "AuthConfig": {
+      "additionalProperties": false,
+      "description": "Config parameters and their defaults for the example auth context.",
+      "properties": {
+        "auth_key": {
+          "description": "The GHGA internal public key for validating the token signature.",
+          "examples": [
+            "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+          ],
+          "title": "Internal public key",
+          "type": "string"
+        },
+        "auth_algs": {
+          "default": [
+            "ES256"
+          ],
+          "description": "A list of all algorithms used for signing GHGA internal tokens.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Auth Algs",
+          "type": "array"
+        },
+        "auth_check_claims": {
+          "additionalProperties": true,
+          "default": {
+            "id": null,
+            "name": null,
+            "email": null,
+            "iat": null,
+            "exp": null
+          },
+          "description": "A dict of all GHGA internal claims that shall be verified.",
+          "title": "Auth Check Claims",
+          "type": "object"
+        },
+        "auth_map_claims": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "A mapping of claims to attributes in the GHGA auth context.",
+          "title": "Auth Map Claims",
+          "type": "object"
+        }
+      },
+      "required": [
+        "auth_key"
+      ],
+      "title": "AuthConfig",
+      "type": "object"
+    },
     "S3Config": {
       "additionalProperties": false,
       "description": "S3-specific config params.\nInherit your config class from this class if you need\nto talk to an S3 service in the backend.\n\nArgs:\n    s3_endpoint_url (str): The URL to the S3 endpoint.\n    s3_access_key_id (str):\n        Part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    s3_secret_access_key (str):\n        Part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    s3_session_token (Optional[str]):\n        Optional part of credentials for login into the S3 service. See:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html\n    aws_config_ini (Optional[Path]):\n        Path to a config file for specifying more advanced S3 parameters.\n        This should follow the format described here:\n        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file\n        Defaults to None.",
@@ -97,6 +149,23 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "file_upload_reports_topic": {
+      "description": "Name of the topic used for events indicating that a Data Hub has completed re-encryption and inspection of a file.",
+      "examples": [
+        "file-upload-reports"
+      ],
+      "title": "File Upload Reports Topic",
+      "type": "string"
+    },
+    "file_upload_reports_type": {
+      "description": "The type used for events indicating that a Data Hub has completed re-encryption and inspection of a file.",
+      "examples": [
+        "file_upload_report_generated",
+        "file_upload_report"
+      ],
+      "title": "File Upload Reports Type",
+      "type": "string"
+    },
     "enable_opentelemetry": {
       "default": false,
       "description": "If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation.",
@@ -110,103 +179,6 @@
       "minimum": 0,
       "title": "Otel Trace Sampling Rate",
       "type": "number"
-    },
-    "file_upload_received_topic": {
-      "description": "The name of the topic used for FileUploadReceived events.",
-      "examples": [
-        "received-file-uploads"
-      ],
-      "title": "File Upload Received Topic",
-      "type": "string"
-    },
-    "file_upload_received_type": {
-      "description": "The name of the type used for FileUploadReceived events.",
-      "examples": [
-        "file_upload_received"
-      ],
-      "title": "File Upload Received Type",
-      "type": "string"
-    },
-    "file_deleted_topic": {
-      "description": "Name of the topic used for events indicating that a file has been deleted.",
-      "examples": [
-        "file-deletions"
-      ],
-      "title": "File Deleted Topic",
-      "type": "string"
-    },
-    "file_deleted_type": {
-      "description": "The type used for events indicating that a file has been deleted.",
-      "examples": [
-        "file_deleted"
-      ],
-      "title": "File Deleted Type",
-      "type": "string"
-    },
-    "file_deletion_request_topic": {
-      "description": "The name of the topic to receive events informing about files to delete.",
-      "examples": [
-        "file-deletion-requests"
-      ],
-      "title": "File Deletion Request Topic",
-      "type": "string"
-    },
-    "file_deletion_request_type": {
-      "description": "The type used for events indicating that a request to delete a file has been received.",
-      "examples": [
-        "file_deletion_requested"
-      ],
-      "title": "File Deletion Request Type",
-      "type": "string"
-    },
-    "file_internally_registered_topic": {
-      "description": "Name of the topic used for events indicating that a file has been registered for download.",
-      "examples": [
-        "file-registrations",
-        "file-registrations-internal"
-      ],
-      "title": "File Internally Registered Topic",
-      "type": "string"
-    },
-    "file_internally_registered_type": {
-      "description": "The type used for event indicating that that a file has been registered for download.",
-      "examples": [
-        "file_internally_registered"
-      ],
-      "title": "File Internally Registered Type",
-      "type": "string"
-    },
-    "file_interrogations_topic": {
-      "description": "The name of the topic use to publish file interrogation outcome events.",
-      "examples": [
-        "file-interrogations"
-      ],
-      "title": "File Interrogations Topic",
-      "type": "string"
-    },
-    "interrogation_failure_type": {
-      "description": "The type used for events informing about failed file validations.",
-      "examples": [
-        "file_interrogation_failed"
-      ],
-      "title": "Interrogation Failure Type",
-      "type": "string"
-    },
-    "file_metadata_topic": {
-      "description": "Name of the topic to receive new or changed metadata on files that shall be registered for uploaded.",
-      "examples": [
-        "metadata"
-      ],
-      "title": "File Metadata Topic",
-      "type": "string"
-    },
-    "file_metadata_type": {
-      "description": "The type used for events to receive new or changed metadata on files that are expected to be uploaded.",
-      "examples": [
-        "file_metadata_upserted"
-      ],
-      "title": "File Metadata Type",
-      "type": "string"
     },
     "log_level": {
       "default": "INFO",
@@ -257,6 +229,13 @@
       "description": "Whether to include exception tracebacks in log messages.",
       "title": "Log Traceback",
       "type": "boolean"
+    },
+    "object_storages": {
+      "additionalProperties": {
+        "$ref": "#/$defs/S3ObjectStorageNodeConfig"
+      },
+      "title": "Object Storages",
+      "type": "object"
     },
     "kafka_servers": {
       "description": "A list of connection strings to connect to Kafka bootstrap servers.",
@@ -401,13 +380,6 @@
       "title": "Kafka Retry Backoff",
       "type": "integer"
     },
-    "object_storages": {
-      "additionalProperties": {
-        "$ref": "#/$defs/S3ObjectStorageNodeConfig"
-      },
-      "title": "Object Storages",
-      "type": "object"
-    },
     "mongo_dsn": {
       "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
       "examples": [
@@ -481,6 +453,30 @@
         3600
       ],
       "title": "Migration Max Wait Sec"
+    },
+    "file_upload_box_topic": {
+      "description": "Topic containing published FileUploadBox outbox events",
+      "examples": [
+        "file-upload-boxes",
+        "file-upload-box-topic"
+      ],
+      "title": "File Upload Box Topic",
+      "type": "string"
+    },
+    "file_upload_topic": {
+      "description": "Topic containing published FileUpload outbox events",
+      "examples": [
+        "file-uploads",
+        "file-upload-topic"
+      ],
+      "title": "File Upload Topic",
+      "type": "string"
+    },
+    "wps_auth_config": {
+      "$ref": "#/$defs/AuthConfig"
+    },
+    "uos_auth_config": {
+      "$ref": "#/$defs/AuthConfig"
     },
     "host": {
       "default": "127.0.0.1",
@@ -626,25 +622,19 @@
     }
   },
   "required": [
-    "file_upload_received_topic",
-    "file_upload_received_type",
-    "file_deleted_topic",
-    "file_deleted_type",
-    "file_deletion_request_topic",
-    "file_deletion_request_type",
-    "file_internally_registered_topic",
-    "file_internally_registered_type",
-    "file_interrogations_topic",
-    "interrogation_failure_type",
-    "file_metadata_topic",
-    "file_metadata_type",
+    "file_upload_reports_topic",
+    "file_upload_reports_type",
     "service_instance_id",
-    "kafka_servers",
     "object_storages",
+    "kafka_servers",
     "mongo_dsn",
     "db_name",
     "db_version_collection",
-    "migration_wait_sec"
+    "migration_wait_sec",
+    "file_upload_box_topic",
+    "file_upload_topic",
+    "wps_auth_config",
+    "uos_auth_config"
   ],
   "title": "ModSettings",
   "type": "object"
