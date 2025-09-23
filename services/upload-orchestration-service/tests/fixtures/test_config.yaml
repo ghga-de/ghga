@@ -1,0 +1,13 @@
+service_instance_id: "1"
+kafka_servers: ["kafka:9092"]
+mongo_dsn: mongodb://localhost:27017
+db_name: uos
+mongo_timeout: 300
+auth_key: "{}"
+ucs_url: http://127.0.0.1/upload
+access_url: http://127.0.0.1/access
+audit_record_topic: audit-records
+audit_record_type: audit_record_logged
+file_upload_box_topic: file-upload-boxes
+work_order_signing_key: "{}"
+research_data_upload_box_topic: research-data-upload-boxes

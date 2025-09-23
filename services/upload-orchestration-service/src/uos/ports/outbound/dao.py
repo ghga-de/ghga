@@ -13,4 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Subpackage defining a RESTful API."""
+"""DAO Port definition"""
+
+from ghga_event_schemas.pydantic_ import ResearchDataUploadBox
+from hexkit.protocols.dao import Dao
+
+__all__ = ["BoxDao"]
+
+BoxDao = Dao[ResearchDataUploadBox]

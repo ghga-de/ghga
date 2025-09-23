@@ -13,11 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""FastAPI dependencies (used with the `Depends` feature)."""
+"""Entrypoint of the package"""
 
-from ..config import CONFIG
+import asyncio
+
+import typer
+
+from uos.main import consume_events, run_rest_app
+
+cli = typer.Typer()
 
 
-def get_config():
-    """Get runtime configuration."""
-    return CONFIG
+@cli.command(name="run-rest")
+def sync_run_api():
+    """Run the HTTP REST API."""
+    asyncio.run(run_rest_app())
+
+
+@cli.command(name="consume-events")
+def sync_consume_events(run_forever: bool = True):
+    """Run an event consumer listening to the specified topic."""
+    asyncio.run(consume_events(run_forever=run_forever))

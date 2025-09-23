@@ -16,27 +16,37 @@
 """Config Parameter Modeling and Parsing."""
 
 from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from pydantic import Field
+from hexkit.opentelemetry import OpenTelemetryConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 
-from .models import SupportedLanguages
+from uos.adapters.inbound.event_sub import OutboxSubConfig
+from uos.adapters.outbound.dao import OutboxPubConfig
+from uos.adapters.outbound.event_pub import EventPubConfig
+from uos.adapters.outbound.http import AccessApiConfig, FileBoxClientConfig
+from uos.constants import SERVICE_NAME
 
-SERVICE_NAME: str = "my_microservice"  # Please adapt
+__all__ = ["Config"]
 
 
-# Please adapt config prefix and remove unnecessary config bases:
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, LoggingConfig):
+class Config(
+    ApiConfigBase,
+    AuthConfig,
+    LoggingConfig,
+    OpenTelemetryConfig,
+    MongoKafkaConfig,
+    AccessApiConfig,
+    FileBoxClientConfig,
+    EventPubConfig,
+    OutboxSubConfig,
+    OutboxPubConfig,
+):
     """Config parameters and their defaults."""
 
-    service_name: str = Field(
-        default=SERVICE_NAME, description="Short name of this service"
-    )
-
-    language: SupportedLanguages = Field(
-        default="Croatian", description="The language."
-    )
+    service_name: str = SERVICE_NAME
 
 
 CONFIG = Config()  # type: ignore

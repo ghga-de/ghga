@@ -12,27 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Event publisher port definition"""
+
+from abc import ABC, abstractmethod
+
+from ghga_event_schemas.pydantic_ import AuditRecord
+
+__all__ = ["EventPublisherPort"]
 
 
-"""Fixture definitions to aid in testing"""
+class EventPublisherPort(ABC):
+    """Port for publishing events."""
 
-from jwcrypto.jwk import JWK
-
-from uos.config import Config
-
-__all__ = ["ConfigFixture"]
-
-
-class ConfigFixture:
-    config: Config
-    jwk: JWK
-
-    def __init__(self, *, config: Config, jwk: JWK):
-        self.config = config
-        self.jwk = jwk
-
-    def update(self, **kwargs) -> Config:
-        """Override specified values"""
-        new_config = self.config.model_copy(update=kwargs)
-        self.config = new_config
-        return self.config
+    @abstractmethod
+    async def publish_audit_record(self, audit_record: AuditRecord) -> None:
+        """Publish an audit record event"""

@@ -13,8 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Short description of package."""  # Please adapt to package
-
-from importlib.metadata import version
-
-__version__ = version(__package__)
+"""Adapter implementations"""

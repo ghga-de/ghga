@@ -13,26 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Service-wide constants"""
 
-"""Fixture definitions to aid in testing"""
+from opentelemetry import trace
 
-from jwcrypto.jwk import JWK
-
-from uos.config import Config
-
-__all__ = ["ConfigFixture"]
-
-
-class ConfigFixture:
-    config: Config
-    jwk: JWK
-
-    def __init__(self, *, config: Config, jwk: JWK):
-        self.config = config
-        self.jwk = jwk
-
-    def update(self, **kwargs) -> Config:
-        """Override specified values"""
-        new_config = self.config.model_copy(update=kwargs)
-        self.config = new_config
-        return self.config
+SERVICE_NAME = "uos"
+TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
+BOX_COLLECTION = "boxes"
+AUDIT_COLLECTION = "auditLogs"
+WORK_ORDER_TOKEN_VALID_SECONDS = 30

@@ -13,26 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-"""Fixture definitions to aid in testing"""
-
-from jwcrypto.jwk import JWK
-
-from uos.config import Config
-
-__all__ = ["ConfigFixture"]
-
-
-class ConfigFixture:
-    config: Config
-    jwk: JWK
-
-    def __init__(self, *, config: Config, jwk: JWK):
-        self.config = config
-        self.jwk = jwk
-
-    def update(self, **kwargs) -> Config:
-        """Override specified values"""
-        new_config = self.config.model_copy(update=kwargs)
-        self.config = new_config
-        return self.config
+"""Unit tests that don't need testcontainers to run."""

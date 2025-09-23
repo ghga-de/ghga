@@ -13,26 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test config"""
 
-"""Fixture definitions to aid in testing"""
+from pathlib import Path
 
-from jwcrypto.jwk import JWK
+from pydantic_settings import BaseSettings
 
+from tests.fixtures.utils import BASE_DIR
 from uos.config import Config
 
-__all__ = ["ConfigFixture"]
+TEST_CONFIG_YAML = BASE_DIR / "test_config.yaml"
 
 
-class ConfigFixture:
-    config: Config
-    jwk: JWK
+def get_config(
+    sources: list[BaseSettings] | None = None,
+    default_config_yaml: Path = TEST_CONFIG_YAML,
+    **kwargs,
+) -> Config:
+    """Merges parameters from the default TEST_CONFIG_YAML with params inferred
+    from testcontainers.
+    """
+    sources_dict: dict[str, object] = {}
 
-    def __init__(self, *, config: Config, jwk: JWK):
-        self.config = config
-        self.jwk = jwk
+    if sources is not None:
+        for source in sources:
+            sources_dict.update(**source.model_dump())
+    sources_dict.update(**kwargs)
 
-    def update(self, **kwargs) -> Config:
-        """Override specified values"""
-        new_config = self.config.model_copy(update=kwargs)
-        self.config = new_config
-        return self.config
+    return Config(config_yaml=default_config_yaml, **sources_dict)  # type: ignore
