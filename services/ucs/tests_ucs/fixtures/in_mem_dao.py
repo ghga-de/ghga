@@ -21,6 +21,7 @@ from copy import deepcopy
 from typing import Any, TypeVar
 from unittest.mock import AsyncMock, Mock
 
+from ghga_event_schemas.pydantic_ import FileUpload, FileUploadBox
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
     MultipleHitsFoundError,
@@ -30,7 +31,7 @@ from hexkit.protocols.dao import (
 )
 from pydantic import BaseModel
 
-from ucs.core.models import FileUpload, FileUploadBox, S3UploadDetails
+from ucs.core.models import S3UploadDetails
 
 DTO = TypeVar("DTO", bound=BaseModel)
 

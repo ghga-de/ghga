@@ -398,21 +398,6 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/file_upload_box_topic"></a>**`file_upload_box_topic`** *(string, required)*: Topic containing published FileUploadBox outbox events.
-
-
-  Examples:
-
-  ```json
-  "file-upload-boxes"
-  ```
-
-
-  ```json
-  "file-upload-box-topic"
-  ```
-
-
 - <a id="properties/file_upload_topic"></a>**`file_upload_topic`** *(string, required)*: Topic containing published FileUpload outbox events.
 
 
@@ -425,6 +410,21 @@ The service requires the following configuration parameters:
 
   ```json
   "file-upload-topic"
+  ```
+
+
+- <a id="properties/file_upload_box_topic"></a>**`file_upload_box_topic`** *(string, required)*: Topic containing published FileUploadBox outbox events.
+
+
+  Examples:
+
+  ```json
+  "file-upload-boxes"
+  ```
+
+
+  ```json
+  "file-upload-box-topic"
   ```
 
 

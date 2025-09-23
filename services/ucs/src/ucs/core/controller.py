@@ -19,6 +19,7 @@ import logging
 from typing import Any
 from uuid import uuid4
 
+from ghga_event_schemas.pydantic_ import FileUpload, FileUploadBox, FileUploadReport
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
 from hexkit.protocols.dao import ResourceAlreadyExistsError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
@@ -26,7 +27,7 @@ from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from ucs.config import Config
-from ucs.core.models import FileUpload, FileUploadBox, FileUploadReport, S3UploadDetails
+from ucs.core.models import S3UploadDetails
 from ucs.ports.inbound.controller import UploadControllerPort
 from ucs.ports.outbound.dao import (
     FileUploadBoxDao,
@@ -91,7 +92,12 @@ class UploadController(UploadControllerPort):
 
         try:
             file_upload = FileUpload(
-                id=file_id, box_id=box_id, alias=alias, size=size, checksum=checksum
+                id=file_id,
+                state="init",
+                box_id=box_id,
+                alias=alias,
+                size=size,
+                checksum=checksum,
             )
 
             await self._file_upload_dao.insert(file_upload)

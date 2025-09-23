@@ -15,47 +15,8 @@
 
 """Defines dataclasses for holding business-logic data"""
 
-from typing import Literal
-
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, BaseModel, model_validator
-
-
-class FileUploadBox(BaseModel):
-    """A class representing a box that bundles files belonging to the same upload"""
-
-    id: UUID4  # unique identifier for the instance
-    locked: bool = False  # Whether or not changes to the files in the box are allowed
-    file_count: int = 0  # The number of files in the box
-    size: int = 0  # The total size of all files in the box
-    storage_alias: str
-
-
-FileUploadState = Literal["init", "inbox", "archived"]
-# init = file upload initiated, but not yet finished
-# inbox = file upload complete, file in inbox
-# archived = file moved out of inbox after completion
-
-
-class FileUpload(BaseModel):
-    """A File Upload"""
-
-    id: UUID4  # unique identifier for the instance
-    completed: bool = False  # whether or not the file upload has finished
-    state: FileUploadState = "init"
-    alias: str  # the submitted alias from the metadata (unique within the box)
-    box_id: UUID4
-    checksum: str
-    size: int
-
-    @model_validator(mode="after")
-    def validate_completed(self):
-        """Make sure `completed` and `state` are in sync."""
-        if self.completed != (self.state in ["inbox", "archived"]):
-            raise ValueError(
-                "Completed must be False if state is 'init' and True otherwise."
-            )
-        return self
+from pydantic import UUID4, BaseModel
 
 
 class S3UploadDetails(BaseModel):
@@ -66,12 +27,3 @@ class S3UploadDetails(BaseModel):
     s3_upload_id: str
     initiated: UTCDatetime
     completed: UTCDatetime | None = None
-
-
-class FileUploadReport(BaseModel):
-    """A report that models the result of the Data Hub-side file inspection"""
-
-    # Note, this model is subject to change; consider this a rough sketch for now
-    file_id: UUID4
-    secret_id: str
-    passed_inspection: bool

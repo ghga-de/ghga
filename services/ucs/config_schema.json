@@ -454,15 +454,6 @@
       ],
       "title": "Migration Max Wait Sec"
     },
-    "file_upload_box_topic": {
-      "description": "Topic containing published FileUploadBox outbox events",
-      "examples": [
-        "file-upload-boxes",
-        "file-upload-box-topic"
-      ],
-      "title": "File Upload Box Topic",
-      "type": "string"
-    },
     "file_upload_topic": {
       "description": "Topic containing published FileUpload outbox events",
       "examples": [
@@ -470,6 +461,15 @@
         "file-upload-topic"
       ],
       "title": "File Upload Topic",
+      "type": "string"
+    },
+    "file_upload_box_topic": {
+      "description": "Topic containing published FileUploadBox outbox events",
+      "examples": [
+        "file-upload-boxes",
+        "file-upload-box-topic"
+      ],
+      "title": "File Upload Box Topic",
       "type": "string"
     },
     "wps_auth_config": {
@@ -631,8 +631,8 @@
     "db_name",
     "db_version_collection",
     "migration_wait_sec",
-    "file_upload_box_topic",
     "file_upload_topic",
+    "file_upload_box_topic",
     "wps_auth_config",
     "uos_auth_config"
   ],

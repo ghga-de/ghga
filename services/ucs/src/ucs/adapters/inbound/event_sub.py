@@ -16,32 +16,13 @@
 
 from uuid import UUID
 
+from ghga_event_schemas.configs import FileUploadReportEventsConfig
+from ghga_event_schemas.pydantic_ import FileUploadReport
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
-from ucs.core.models import FileUploadReport
 from ucs.ports.inbound.controller import UploadControllerPort
-
-
-class FileUploadReportEventsConfig(BaseSettings):
-    """For events indicating that Data Hub file inspection is complete"""
-
-    # TODO: Move this to ghga-event-schemas
-    file_upload_reports_topic: str = Field(
-        ...,
-        description="Name of the topic used for events indicating that a Data Hub"
-        + " has completed re-encryption and inspection of a file.",
-        examples=["file-upload-reports"],
-    )
-    file_upload_reports_type: str = Field(
-        ...,
-        description="The type used for events indicating that a Data Hub has completed"
-        + " re-encryption and inspection of a file.",
-        examples=["file_upload_report_generated", "file_upload_report"],
-    )
 
 
 class EventSubConfig(FileUploadReportEventsConfig):

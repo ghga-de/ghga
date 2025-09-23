@@ -15,10 +15,10 @@
 
 """DAO translators for accessing the database."""
 
+from ghga_event_schemas.configs import FileUploadBoxEventsConfig, FileUploadEventsConfig
+from ghga_event_schemas.pydantic_ import FileUpload, FileUploadBox
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from ucs.constants import (
     FILE_UPLOAD_BOXES_COLLECTION,
@@ -40,20 +40,8 @@ async def get_s3_upload_details_dao(
     )
 
 
-class UploadDaoConfig(BaseSettings):
+class UploadDaoConfig(FileUploadBoxEventsConfig, FileUploadEventsConfig):
     """Topic configuration for the published DTOs"""
-
-    # TODO: Split this out and move to ghga-event-schemas.configs.stateful later on
-    file_upload_box_topic: str = Field(
-        ...,
-        description="Topic containing published FileUploadBox outbox events",
-        examples=["file-upload-boxes", "file-upload-box-topic"],
-    )
-    file_upload_topic: str = Field(
-        ...,
-        description="Topic containing published FileUpload outbox events",
-        examples=["file-uploads", "file-upload-topic"],
-    )
 
 
 class UploadDaoPublisherFactory(UploadDaoPublisherFactoryPort):
@@ -69,23 +57,23 @@ class UploadDaoPublisherFactory(UploadDaoPublisherFactoryPort):
         self._file_upload_topic = config.file_upload_topic
         self._dao_publisher_factory = dao_publisher_factory
 
-    async def get_file_upload_box_dao(self) -> DaoPublisher[models.FileUploadBox]:
+    async def get_file_upload_box_dao(self) -> DaoPublisher[FileUploadBox]:
         """Construct an outbox DAO for FileUploadBox objects"""
         return await self._dao_publisher_factory.get_dao(
             name=FILE_UPLOAD_BOXES_COLLECTION,
             id_field="id",
-            dto_model=models.FileUploadBox,
+            dto_model=FileUploadBox,
             dto_to_event=lambda x: x.model_dump(),
             event_topic=self._file_upload_box_topic,
             autopublish=True,
         )
 
-    async def get_file_upload_dao(self) -> DaoPublisher[models.FileUpload]:
+    async def get_file_upload_dao(self) -> DaoPublisher[FileUpload]:
         """Construct an outbox DAO for FileUpload objects"""
         return await self._dao_publisher_factory.get_dao(
             name=FILE_UPLOADS_COLLECTION,
             id_field="id",
-            dto_model=models.FileUpload,
+            dto_model=FileUpload,
             dto_to_event=lambda x: x.model_dump(),
             event_topic=self._file_upload_topic,
             autopublish=True,

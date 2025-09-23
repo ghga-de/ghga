@@ -21,6 +21,12 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
+from ghga_event_schemas.pydantic_ import (
+    FileUpload,
+    FileUploadBox,
+    FileUploadReport,
+    FileUploadState,
+)
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
 from hexkit.utils import now_utc_ms_prec
 
@@ -57,8 +63,8 @@ class JointRig:
     """Test fixture containing all components needed for controller testing."""
 
     config: Config
-    file_upload_box_dao: BaseInMemDao[models.FileUploadBox]
-    file_upload_dao: BaseInMemDao[models.FileUpload]
+    file_upload_box_dao: BaseInMemDao[FileUploadBox]
+    file_upload_dao: BaseInMemDao[FileUpload]
     s3_upload_details_dao: BaseInMemDao[models.S3UploadDetails]
     object_storages: ObjectStorages
     controller: UploadController
@@ -817,7 +823,7 @@ async def test_get_file_ids_for_non_existent_box(rig: JointRig):
 async def test_file_upload_report_no_file_upload(rig: JointRig):
     """Test the alt case where the file upload doesn't exist."""
     non_existent_file_id = uuid4()
-    file_upload_report = models.FileUploadReport(
+    file_upload_report = FileUploadReport(
         file_id=non_existent_file_id,
         secret_id="test-secret-456",
         passed_inspection=True,
@@ -837,10 +843,10 @@ async def test_file_upload_report_no_file_upload(rig: JointRig):
         (True, "init"),
     ],
 )
-async def test_file_upload_validator(completed: bool, state: models.FileUploadState):
+async def test_file_upload_validator(completed: bool, state: FileUploadState):
     """Make sure the FileUpload model validator works."""
     with pytest.raises(ValueError):
-        _ = models.FileUpload(
+        _ = FileUpload(
             id=uuid4(),
             completed=completed,
             state=state,

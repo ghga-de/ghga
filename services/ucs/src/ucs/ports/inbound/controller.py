@@ -17,9 +17,8 @@
 
 from abc import ABC, abstractmethod
 
+from ghga_event_schemas.pydantic_ import FileUploadReport
 from pydantic import UUID4
-
-from ucs.core.models import FileUploadReport
 
 
 class UploadControllerPort(ABC):
