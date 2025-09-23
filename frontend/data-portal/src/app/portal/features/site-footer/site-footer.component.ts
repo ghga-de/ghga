@@ -7,7 +7,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, HostBinding } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatRipple } from '@angular/material/core';
+import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link.directive';
@@ -21,7 +21,7 @@ import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-lin
     RouterLink,
     MatIconModule,
     MatButtonModule,
-    MatRipple,
+    MatRippleModule,
     DatePipe,
     ExternalLinkDirective,
   ],

@@ -37,7 +37,6 @@ import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summar
     ExternalLinkDirective,
   ],
   templateUrl: './dataset-summary.component.html',
-  styleUrl: './dataset-summary.component.scss',
 })
 export class DatasetSummaryComponent {
   hit = input.required<Hit>();

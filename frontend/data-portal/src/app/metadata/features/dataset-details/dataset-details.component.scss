@@ -1,22 +1,7 @@
 @use '@angular/material' as mat;
 
-mat-chip {
-  @include mat.chips-overrides(
-    (
-      label-text-size: var(--mat-sys-label-medium-size),
-      container-height: 75%,
-    )
-  );
-}
-
 mat-expansion-panel {
   margin-bottom: 0.5em;
-
-  @include mat.expansion-overrides(
-    (
-      header-hover-state-layer-color: var(--mat-sys-surface-variant),
-    )
-  );
 }
 
 mat-expansion-panel .mat-expansion-panel-header {
@@ -27,16 +12,6 @@ div {
   @include mat.sort-overrides(
     (
       arrow-color: var(--mat-sys-tertiary),
-    )
-  );
-}
-
-table.mat-mdc-table {
-  min-width: 1280px;
-  width: 100%;
-  @include mat.table-overrides(
-    (
-      header-headline-weight: var(--mat-sys-label-large-weight-prominent),
     )
   );
 }

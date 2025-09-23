@@ -48,7 +48,6 @@ const DEFAULT_SKIP_VALUE = 0;
     MatCardModule,
   ],
   templateUrl: './metadata-browser.component.html',
-  styleUrl: './metadata-browser.component.scss',
 })
 export class MetadataBrowserComponent implements OnInit {
   #config = inject(ConfigService);

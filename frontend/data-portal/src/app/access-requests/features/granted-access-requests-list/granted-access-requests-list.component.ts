@@ -27,7 +27,6 @@ import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.com
     RouterModule,
   ],
   templateUrl: './granted-access-requests-list.component.html',
-  styleUrl: './granted-access-requests-list.component.scss',
 })
 export class GrantedAccessRequestsListComponent {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;

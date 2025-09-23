@@ -37,7 +37,6 @@ import { Capitalise } from '@app/shared/pipes/capitalise.pipe';
     Capitalise,
   ],
   templateUrl: './access-grant-manager-filter.component.html',
-  styleUrl: './access-grant-manager-filter.component.scss',
 })
 export class AccessGrantManagerFilterComponent {
   displayFilters = true;

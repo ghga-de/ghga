@@ -31,7 +31,6 @@ import { VerificationDialogComponent } from '../verification-dialog/verification
   ],
   providers: [IvaTypePipe],
   templateUrl: './user-iva-list.component.html',
-  styleUrl: './user-iva-list.component.scss',
 })
 export class UserIvaListComponent implements OnInit {
   #dialog = inject(MatDialog);

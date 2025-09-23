@@ -40,7 +40,6 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
   ],
   providers: [Capitalise],
   templateUrl: './user-manager-filter.component.html',
-  styleUrl: './user-manager-filter.component.scss',
 })
 export class UserManagerFilterComponent {
   #userService = inject(UserService);

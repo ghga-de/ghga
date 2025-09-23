@@ -1,9 +1,9 @@
 <header><h1 class="mt-2 mb-0 text-center text-2xl">Browse Data</h1></header>
 @if (!errorMessage()) {
-  <div class="grid grid-cols-12 grid-rows-none gap-x-5">
-    <div class="col-span-12 lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
+  <div class="grid grid-cols-12 grid-rows-none gap-x-5 *:col-span-12">
+    <div class="lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
       <div class="flex w-full justify-between pb-4">
-        <mat-chip-set class="filter-chips">
+        <mat-chip-set class="chip-set-tertiary">
           @if (lastSearchQuery() !== '') {
             <mat-chip (removed)="clearSearchQuery()">
               Keyword: {{ lastSearchQuery() }}
@@ -51,10 +51,10 @@
         </mat-chip-set>
       </div>
     </div>
-    <div class="toggle-filters col-span-12 mb-3 lg:hidden">
+    <div class="mb-3 lg:hidden">
       <button
         mat-stroked-button
-        class="toggle-filters w-full font-bold"
+        class="button-primary w-full font-bold"
         (click)="displayFilters = !displayFilters"
       >
         <mat-icon fontIcon="search"></mat-icon
@@ -68,7 +68,7 @@
     </div>
     <aside
       [class.hidden]="!displayFilters"
-      class="col-span-12 mb-4 lg:col-span-4 lg:mb-0 lg:block xl:col-span-3"
+      class="mb-4 lg:col-span-4 lg:mb-0 lg:block xl:col-span-3"
     >
       <mat-card appearance="outlined" class="p-3">
         <form [formGroup]="searchFormGroup" (keydown.enter)="$event.preventDefault()">
@@ -138,7 +138,7 @@
         <div class="mt-6 lg:hidden">
           <button
             mat-stroked-button
-            class="toggle-filters w-full"
+            class="button-primary w-full"
             (click)="displayFilters = !displayFilters"
           >
             Close filters
@@ -146,7 +146,7 @@
         </div>
       </mat-card>
     </aside>
-    <div class="col-span-12 lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
+    <div class="lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
       <app-search-result-list (paginate)="paginate($event)"></app-search-result-list>
     </div>
   </div>

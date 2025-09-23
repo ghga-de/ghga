@@ -3,7 +3,14 @@
 } @else {
   @let columns = ['user', 'type', 'value', 'changed', 'state', 'actions'];
   <div class="overflow-auto">
-    <table mat-table [dataSource]="source" class="text-base" matSort #sort="matSort">
+    <table
+      mat-table
+      [dataSource]="source"
+      class="text-base"
+      matSort
+      #sort="matSort"
+      class="larger-mat-table-text"
+    >
       <ng-container matColumnDef="user">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>User</th>
         <td mat-cell *matCellDef="let iva" class="min-w-48">
@@ -50,7 +57,7 @@
           @if (iva.state === 'CodeRequested' || iva.state === 'CodeCreated') {
             <button
               (click)="createCode(iva)"
-              class="create-code-button w-44"
+              class="button-quaternary w-44"
               mat-flat-button
               data-umami-event="IVA Manager List Create Code Clicked"
             >
@@ -76,7 +83,7 @@
           @if (iva.state !== 'Unverified') {
             <button
               (click)="invalidateWhenConfirmed(iva)"
-              class="w-36"
+              class="button-error w-36"
               mat-stroked-button
               data-umami-event="IVA Manager List Invalidate Clicked"
             >

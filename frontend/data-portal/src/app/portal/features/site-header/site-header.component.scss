@@ -13,43 +13,15 @@ mat-sidenav {
   @include mat.sidenav-overrides(
     (
       container-width: 100%,
+      container-background-color: var(--mat-sys-primary),
     )
   );
-}
-mat-sidenav {
-  max-width: 400px;
 }
 
 // Tailwind classes do not override the Material classes, so we have to do it here
 mat-toolbar-row {
   padding-left: 0;
   height: fit-content;
-}
-
-mat-toolbar-row div a:hover,
-mat-toolbar-row div a:active {
-  background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 8%);
-}
-
-mat-toolbar-row div a:focus {
-  background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
-}
-
-button {
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-on-primary),
-      state-layer-color: var(--mat-sys-on-primary),
-    )
-  );
-}
-
-div {
-  @include mat.sidenav-overrides(
-    (
-      container-background-color: var(--mat-sys-primary),
-    )
-  );
 }
 
 .mat-drawer-backdrop.mat-drawer-shown {

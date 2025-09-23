@@ -40,7 +40,6 @@ import { MatInputModule } from '@angular/material/input';
     MatDialogActions,
   ],
   templateUrl: './verification-dialog.component.html',
-  styleUrl: './verification-dialog.component.scss',
 })
 export class VerificationDialogComponent {
   #dialogRef = inject(MatDialogRef<VerificationDialogComponent, string>);

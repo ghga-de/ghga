@@ -1,6 +1,6 @@
 <div class="mb-2 flex" [class.items-center]="isOpen()">
   <strong
-    class="min-w-48 pe-1 text-start"
+    class="min-w-50 pe-1 text-start"
     [class.mb-4]="isOpen() && !validationError()"
     [class.mb-8]="isOpen() && validationError()"
   >
@@ -29,33 +29,36 @@
           }
         </mat-form-field>
         <mat-chip
-          class="smaller-chip interactive-chip cancel-edit-button mx-2 mb-4"
+          class="edit-field-chip smaller-chip interactive-chip cancel-edit-button mx-2 mb-4"
           (click)="cancel()"
+          role="button"
           ><mat-icon fontIcon="close"></mat-icon
         ></mat-chip>
         <mat-chip
-          class="smaller-chip interactive-chip save-edit-button mb-4"
+          class="edit-field-chip smaller-chip interactive-chip save-edit-button mb-4"
           (click)="save()"
+          role="button"
           [disabled]="!!validationError()"
           ><mat-icon fontIcon="check"></mat-icon
         ></mat-chip>
       </div>
       @if (validationError()) {
-        <mat-error class="mt-[-20px] mb-2 w-full">{{ validationError() }}</mat-error>
+        <mat-error class="-mt-5 mb-2 w-full">{{ validationError() }}</mat-error>
       }
     } @else {
       <div class="flex items-center">
-        <span class="grow">
+        <p class="mb-0 grow">
           @if (ticketUrl()) {
             <a appExtLink [href]="ticketUrl()" tabindex="-1">{{ field() }}</a>
           } @else {
             {{ field() }}
           }
-        </span>
+        </p>
         @if (!locked()) {
           <mat-chip
+            class="edit-field-chip smaller-chip interactive-chip edit-button ms-2"
             (click)="edit()"
-            class="smaller-chip interactive-chip edit-button ms-2"
+            role="button"
             ><mat-icon class="scale-[0.75]" fontIcon="edit"></mat-icon>
           </mat-chip>
         }

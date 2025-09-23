@@ -29,7 +29,6 @@ import { UserIvaListComponent } from '@app/verification-addresses/features/user-
     ExternalLinkDirective,
   ],
   templateUrl: './account.component.html',
-  styleUrl: './account.component.scss',
 })
 export class AccountComponent {
   #auth = inject(AuthService);

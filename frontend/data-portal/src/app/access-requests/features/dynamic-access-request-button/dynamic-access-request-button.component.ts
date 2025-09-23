@@ -27,7 +27,6 @@ import { AccessRequestDialogComponent } from '../access-request-dialog/access-re
   selector: 'app-dynamic-access-request-button',
   imports: [MatIconModule, MatButtonModule, RouterModule],
   templateUrl: './dynamic-access-request-button.component.html',
-  styleUrl: './dynamic-access-request-button.component.scss',
 })
 export class DynamicAccessRequestButtonComponent {
   datasetID = input.required<string>();

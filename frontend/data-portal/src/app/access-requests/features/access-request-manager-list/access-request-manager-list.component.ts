@@ -53,7 +53,6 @@ import {
   ],
   providers: [CommonDatePipe],
   templateUrl: './access-request-manager-list.component.html',
-  styleUrl: './access-request-manager-list.component.scss',
 })
 export class AccessRequestManagerListComponent implements AfterViewInit {
   #config = inject(ConfigService);

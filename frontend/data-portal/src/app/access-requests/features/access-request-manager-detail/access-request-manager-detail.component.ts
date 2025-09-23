@@ -53,7 +53,6 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
  */
 @Component({
   selector: 'app-access-request-manager-dialog',
-  styleUrl: './access-request-manager-detail.component.scss',
   imports: [
     FormsModule,
     MatCardModule,

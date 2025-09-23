@@ -1,6 +1,6 @@
 @if (isOpen()) {
   <div class="mb-2 flex items-center">
-    <strong class="w-48 min-w-48 pb-1 text-start">Access duration:</strong>
+    <strong class="w-50 min-w-50 pb-1 text-start">Access duration:</strong>
     <div class="min-w-60 grow">
       <div class="flex items-center">
         <div class="flex grow gap-x-2">
@@ -50,13 +50,15 @@
           </mat-form-field>
         </div>
         <mat-chip
-          class="smaller-chip interactive-chip cancel-edit-button mx-2 mb-1"
+          class="edit-field-chip smaller-chip interactive-chip cancel-edit-button mx-2 mb-1"
           (click)="cancel()"
+          role="button"
           ><mat-icon fontIcon="close"></mat-icon
         ></mat-chip>
         <mat-chip
-          class="smaller-chip interactive-chip save-edit-button mb-1"
+          class="edit-field-chip smaller-chip interactive-chip save-edit-button mb-1"
           (click)="save()"
+          role="button"
           [disabled]="saveDisabled()"
           ><mat-icon fontIcon="check"></mat-icon
         ></mat-chip>
@@ -65,7 +67,7 @@
   </div>
 } @else {
   <p class="flex items-start">
-    <strong class="min-w-48 pe-1 text-start align-middle">Access duration:</strong>
+    <strong class="min-w-50 pe-1 text-start align-middle">Access duration:</strong>
     <span class="flex min-w-60 grow items-center pb-1">
       <span class="grow">
         {{ fromField() | date: periodFormat : periodTimeZone }} until
@@ -73,8 +75,9 @@
       </span>
       @if (!locked()) {
         <mat-chip
+          class="edit-field-chip smaller-chip interactive-chip edit-button ms-2"
           (click)="open()"
-          class="smaller-chip interactive-chip edit-button ms-2"
+          role="button"
           ><mat-icon class="scale-[0.75]" fontIcon="edit"></mat-icon>
         </mat-chip>
       }

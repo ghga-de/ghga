@@ -6,6 +6,7 @@
 
 import { Component, inject, ViewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatNavList } from '@angular/material/list';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
@@ -30,6 +31,7 @@ import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-h
     AccountButtonComponent,
     MatSidenavModule,
     SiteHeaderNavButtonsComponent,
+    MatRippleModule,
   ],
   styleUrl: './site-header.component.scss',
 })

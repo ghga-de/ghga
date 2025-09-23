@@ -10,9 +10,8 @@
   <div id="statusArea" class="mb-6 rounded-md p-4 text-center">
     <div id="statusIndicator" class="flex items-center justify-center">
       <span
-        id="statusSpinner"
         [class.hidden]="!showSpinner()"
-        class="spinner mr-2"
+        class="border-s-quaternary mr-2 h-6 w-6 animate-spin rounded-[50%] border-4 border-black/10"
       ></span>
       <span
         id="statusText"
@@ -28,13 +27,16 @@
   <app-stepper [steps]="stepDetails()" />
 
   <button
-    id="dropArea"
-    class="drop-area mb-6 cursor-pointer bg-white hover:bg-slate-50"
+    [class]="
+      `mb-6 block w-full border-collapse cursor-pointer` +
+      ` rounded-lg border-2 border-dashed border-neutral-300` +
+      ` p-10 text-center transition-colors duration-200 ease-in-out` +
+      ` ${!isDragOver() ? 'hover:bg-neutral-50' : 'border-neutral-400 bg-neutral-200'}`
+    "
     (click)="xlsxFileInput.click()"
     (dragover)="onDragOver($event)"
     (dragleave)="onDragLeave($event)"
     (drop)="onDrop($event)"
-    [class.dragover]="isDragOver()"
   >
     <input
       type="file"
@@ -46,7 +48,7 @@
       (focus)="isDragOver.set(true)"
       (blur)="isDragOver.set(false)"
     />
-    <p id="dropAreaText" [class.hidden]="fileName()" class="text-slate-500">
+    <p [class.hidden]="fileName()" class="text-slate-500">
       Drag & drop your XLSX file here, or click to select.
     </p>
     <p id="fileName" class="mt-2 font-semibold text-slate-700">
@@ -57,8 +59,11 @@
   <div class="mb-8 flex flex-col justify-center gap-4 sm:flex-row">
     <button
       mat-raised-button
-      id="processButton"
-      class="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-md transition duration-150 ease-in-out hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+      [class]="
+        `rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-md` +
+        ` transition duration-150 ease-in-out` +
+        ` hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50`
+      "
       [disabled]="!processButtonEnabled()"
       (click)="transpileFile()"
     >
@@ -99,8 +104,12 @@
           Generated JSON Output
         </h2>
         <pre
-          id="jsonOutput"
-          class="max-h-[400px] min-h-[200px] overflow-y-auto rounded-lg border bg-slate-800 bg-white p-4 font-mono text-sm break-words whitespace-pre-wrap text-slate-200 shadow-inner shadow-md"
+          [class]="
+            `max-h-[400px] min-h-[200px] overflow-y-auto` +
+            ` rounded-lg border bg-slate-800 bg-white` +
+            ` p-4 font-mono text-sm break-words whitespace-pre-wrap` +
+            ` text-slate-200 shadow-inner shadow-md`
+          "
           >{{ jsonOutput() }}</pre
         >
       </div>
@@ -144,8 +153,7 @@
       <div>
         <h2 class="mb-3 text-2xl font-semibold text-red-700">Validation Errors</h2>
         <pre
-          id="validationErrorOutput"
-          class="min-h-[100px] overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 text-left font-mono text-sm shadow-md"
+          class="border-warning text-error min-h-[100px] overflow-y-auto rounded-lg border-1 bg-neutral-50 bg-white p-4 text-left font-mono text-sm shadow-md"
           >{{ validationOutputDetails() | formatSchemapackError }}</pre
         >
       </div>

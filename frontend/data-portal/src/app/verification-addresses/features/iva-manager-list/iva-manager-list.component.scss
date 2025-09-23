@@ -5,26 +5,6 @@ button {
     (
       filled-label-text-size: 90%,
       outlined-label-text-size: 90%,
-      outlined-outline-color: var(--mat-sys-error),
-      outlined-label-text-color: var(--mat-sys-error),
-    )
-  );
-}
-
-button.create-code-button {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-quaternary),
-    )
-  );
-}
-
-table {
-  width: 100%;
-  @include mat.table-overrides(
-    (
-      header-headline-size: var(--mat-sys-title-medium-size),
-      row-item-label-text-size: var(--mat-sys-body-large-size),
     )
   );
 }

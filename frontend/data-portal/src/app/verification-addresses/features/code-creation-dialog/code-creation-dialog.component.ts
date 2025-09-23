@@ -44,7 +44,6 @@ type IvaWithCode = UserWithIva & { code: string };
     IvaTypePipe,
   ],
   templateUrl: './code-creation-dialog.component.html',
-  styleUrl: './code-creation-dialog.component.scss',
 })
 export class CodeCreationDialogComponent {
   #clipboard = inject(Clipboard);

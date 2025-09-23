@@ -25,7 +25,6 @@ import { StepperComponent } from '../stepper/stepper.component';
 @Component({
   selector: 'app-metadata-validator',
   templateUrl: './metadata-validator.component.html',
-  styleUrls: ['./metadata-validator.component.scss'],
   imports: [
     CommonModule,
     MatButtonModule,

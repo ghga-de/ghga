@@ -55,7 +55,6 @@ import {
   ],
   providers: [CommonDatePipe],
   templateUrl: './access-request-duration-edit.component.html',
-  styleUrl: './access-request-duration-edit.component.scss',
 })
 export class AccessRequestDurationEditComponent implements OnInit {
   #config = inject(ConfigService);

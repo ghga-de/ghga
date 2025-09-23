@@ -1,7 +1,7 @@
-<ul class="block *:inline">
+<ul class="block *:block *:lg:inline">
   <li>
     <a
-      [class.activePage]="route() === ''"
+      [class.active-page]="homeActive()"
       mat-button
       routerLink="/"
       class="homeLink mx-1"
@@ -11,7 +11,7 @@
   </li>
   <li>
     <a
-      [class.activePage]="browseActive()"
+      [class.active-page]="browseActive()"
       mat-button
       routerLink="/browse"
       class="mx-1"

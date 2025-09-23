@@ -28,17 +28,26 @@ import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
     ExternalLinkDirective,
   ],
   templateUrl: './site-header-nav-buttons.component.html',
-  styleUrl: './site-header-nav-buttons.component.scss',
 })
 export class SiteHeaderNavButtonsComponent {
   #baseRoute = inject(BaseRouteService);
-
+  #route = this.#baseRoute.route;
   #auth = inject(AuthService);
-  isDataSteward = computed(() => this.#auth.roles().includes('data_steward'));
 
-  route = this.#baseRoute.route;
+  /**
+   * Whether the user is a data steward
+   */
+  protected isDataSteward = computed(() => this.#auth.roles().includes('data_steward'));
+
+  /**
+   * Whether the "Home" navigation button should be highlighted as being active
+   */
+  protected homeActive = computed(() => this.#route() === '');
+
   /**
    * Whether the "Browse" navigation button should be highlighted as being active
    */
-  browseActive = computed(() => ['browse', 'dataset'].includes(this.route()));
+  protected browseActive = computed(() =>
+    ['browse', 'dataset'].some((prefix) => this.#route().startsWith(prefix)),
+  );
 }

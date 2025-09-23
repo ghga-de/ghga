@@ -45,7 +45,6 @@ import { DatePipe } from '@app/shared/pipes/date.pipe';
   ],
   providers: [CommonDatePipe],
   templateUrl: './user-manager-list.component.html',
-  styleUrl: './user-manager-list.component.scss',
 })
 export class UserManagerListComponent implements AfterViewInit {
   #router = inject(Router);

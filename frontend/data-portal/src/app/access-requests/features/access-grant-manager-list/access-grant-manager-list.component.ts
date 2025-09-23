@@ -52,7 +52,6 @@ import {
   ],
   providers: [CommonDatePipe],
   templateUrl: './access-grant-manager-list.component.html',
-  styleUrl: './access-grant-manager-list.component.scss',
 })
 export class AccessGrantManagerListComponent implements AfterViewInit {
   #ars = inject(AccessRequestService);

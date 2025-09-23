@@ -12,7 +12,7 @@
           inline="true"
           fontSet="fab"
           fontIcon="fa-github"
-          class="ms-0.5 me-[-4px]"
+          class="ms-0.5 -me-1.5"
         ></mat-icon
         ><span>Schemapack</span>
       </a>
@@ -20,12 +20,11 @@
     </p>
   </header>
 
-  <div id="statusArea" class="mb-6 rounded-md p-4 text-center">
-    <div id="statusIndicator" class="flex items-center justify-center">
+  <div class="mb-6 rounded-md p-4 text-center">
+    <div class="flex items-center justify-center">
       <span
-        id="statusSpinner"
         [class.hidden]="!showSpinner()"
-        class="spinner mr-2"
+        class="border-s-quaternary mr-2 h-6 w-6 animate-spin rounded-[50%] border-4 border-black/10"
       ></span>
       <app-status-text-box [status]="status()" [statusText]="statusText()" />
     </div>
@@ -72,8 +71,7 @@
       <div class="mt-8">
         <h2 class="mb-3 text-2xl font-semibold text-red-700">Validation Details</h2>
         <pre
-          id="validationErrorOutput"
-          class="min-h-[100px] overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 text-left font-mono text-sm shadow-md"
+          class="border-warning text-error min-h-[100px] overflow-y-auto rounded-lg border-1 bg-neutral-50 bg-white p-4 text-left font-mono text-sm shadow-md"
           >{{ validationDetails() | formatSchemapackError }}</pre
         >
       </div>

@@ -58,7 +58,7 @@ describe('AppComponent', () => {
 
   it('should have a version ribbon', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const ribbon = compiled.querySelector('.version-ribbon');
+    const ribbon = compiled.querySelector('app-version-ribbon');
     expect(ribbon).not.toBeNull();
     expect(ribbon!.textContent).toContain('Test ribbon');
   });

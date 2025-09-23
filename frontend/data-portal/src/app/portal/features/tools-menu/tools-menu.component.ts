@@ -18,7 +18,6 @@ import { BaseRouteService } from '@app/shared/services/base-route.service';
   selector: 'app-tools-menu',
   imports: [MatIconModule, MatButtonModule, MatMenuModule, RouterLink],
   templateUrl: './tools-menu.component.html',
-  styleUrl: './tools-menu.component.scss',
 })
 export class ToolsMenuComponent {
   #baseRoute = inject(BaseRouteService);

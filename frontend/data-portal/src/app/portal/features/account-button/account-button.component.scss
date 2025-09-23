@@ -1,24 +1,5 @@
 @use '@angular/material' as mat;
 
-button {
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-on-primary),
-      state-layer-color: var(--mat-sys-on-primary),
-    )
-  );
-}
-
-.mat-mdc-menu-item .mat-icon-no-color.text-secondary {
-  color: var(--mat-sys-secondary);
-}
-.mat-mdc-menu-item .mat-icon-no-color.text-quaternary {
-  color: var(--mat-sys-quaternary);
-}
-.mat-mdc-menu-item .mat-icon-no-color.text-tertiary {
-  color: var(--mat-sys-tertiary);
-}
-
 .with-initials {
   border: 2px solid var(--mat-sys-quinary);
   background-color: var(--mat-sys-quaternary);

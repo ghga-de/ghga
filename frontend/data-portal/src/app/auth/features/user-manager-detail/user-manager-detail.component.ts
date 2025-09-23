@@ -56,7 +56,6 @@ import { DeletionConfirmationDialogComponent } from '../deletion-confirmation-di
   ],
   providers: [UserService, CommonDatePipe],
   templateUrl: './user-manager-detail.component.html',
-  styleUrl: './user-manager-detail.component.scss',
 })
 export class UserManagerDetailComponent implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;

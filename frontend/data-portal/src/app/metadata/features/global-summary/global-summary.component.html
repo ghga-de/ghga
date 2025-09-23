@@ -2,9 +2,16 @@
   @if (isLoading()) {
     <mat-spinner class="float-right" [diameter]="24"> </mat-spinner>
   }
-  <h2>Statistics</h2>
+  <h2 class="text-white">Statistics</h2>
   <div
-    class="flex grid grid-cols-1 justify-center gap-4 *:min-h-56 *:p-4 sm:grid-cols-2 md:gap-x-[6%] md:gap-y-8 md:px-4 lg:grid-cols-4 lg:gap-x-[2%] lg:gap-y-0 lg:px-1 xl:gap-x-[4%] xl:px-8 2xl:gap-x-[8%] 2xl:px-16"
+    [class]="
+      `flex grid grid-cols-1 justify-center gap-4` +
+      ` *:min-h-56 *:p-4` +
+      ` sm:grid-cols-2` +
+      ` md:gap-x-[6%] md:gap-y-8 md:px-4` +
+      ` lg:grid-cols-4 lg:gap-x-[2%] lg:gap-y-0 lg:px-1` +
+      ` xl:gap-x-[4%] xl:px-8 2xl:gap-x-[8%] 2xl:px-16`
+    "
   >
     <mat-card appearance="outlined" class="card-primary text-white"
       ><mat-card-title class="text-center"

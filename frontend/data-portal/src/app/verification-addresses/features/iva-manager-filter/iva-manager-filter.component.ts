@@ -38,7 +38,6 @@ import { IvaService } from '@app/verification-addresses/services/iva.service';
   ],
   providers: [IvaStatePipe],
   templateUrl: './iva-manager-filter.component.html',
-  styleUrl: './iva-manager-filter.component.scss',
 })
 export class IvaManagerFilterComponent {
   #ivaService = inject(IvaService);

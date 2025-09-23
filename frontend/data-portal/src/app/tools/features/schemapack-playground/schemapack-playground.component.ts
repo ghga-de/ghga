@@ -30,7 +30,6 @@ const PLAYGROUND_DEMO_JSON_VALUE =
 @Component({
   selector: 'app-schemapack-playground',
   templateUrl: './schemapack-playground.component.html',
-  styleUrls: ['./schemapack-playground.component.scss'],
   imports: [
     CommonModule,
     MatButtonModule,

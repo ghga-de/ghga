@@ -44,7 +44,6 @@ const ERROR_TICKET_ID = 'ID must be a number with up to 9 digits';
     ReactiveFormsModule,
   ],
   templateUrl: './access-request-field-edit.component.html',
-  styleUrl: './access-request-field-edit.component.scss',
 })
 export class AccessRequestFieldEditComponent implements OnInit {
   #config = inject(ConfigService);

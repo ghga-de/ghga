@@ -3,7 +3,7 @@
   [matMenuTriggerFor]="menu"
   aria-label="Tools"
   class="mx-1 flex-row-reverse"
-  [class.activePage]="isToolsRoute()"
+  [class.active-page]="isToolsRoute()"
 >
   Tools <mat-icon fontIcon="arrow_drop_down"></mat-icon>
 </button>
@@ -11,7 +11,7 @@
   <ul>
     <li>
       <a
-        [class.activeSubPage]="isMetadataRoute()"
+        [class.active-sub-page]="isMetadataRoute()"
         mat-menu-item
         routerLink="/metadata-validator"
         class="mx-1"
@@ -21,7 +21,7 @@
     </li>
     <li>
       <a
-        [class.activeSubPage]="isPlaygroundRoute()"
+        [class.active-sub-page]="isPlaygroundRoute()"
         mat-menu-item
         routerLink="/schemapack-playground"
         class="mx-1"

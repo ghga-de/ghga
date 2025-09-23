@@ -1,5 +1,5 @@
 <div
-  class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6"
+  class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6 [&_mat-card]:w-full [&_mat-card]:overflow-x-auto"
   [style.view-transition-name]="showTransition ? 'detail' : null"
 >
   <div class="justify-between md:flex">
@@ -20,6 +20,7 @@
         @if (user.status === 'active') {
           <button
             matIconButton
+            class="button-danger"
             matTooltip="Deactivate User"
             aria-label="Deactivate User"
             (click)="safeStatusChange()"
@@ -29,6 +30,7 @@
         } @else {
           <button
             matIconButton
+            class="button-danger"
             matTooltip="Activate User"
             aria-label="Activate User"
             (click)="safeStatusChange(true)"
@@ -38,7 +40,7 @@
         }
         <button
           matIconButton
-          class="remove-user"
+          class="button-error"
           matTooltip="Delete User"
           aria-label="Delete User"
           (click)="safeDeletion()"
@@ -49,7 +51,7 @@
     }
   </div>
   @if (user(); as user) {
-    <mat-card class="w-full overflow-x-auto">
+    <mat-card>
       <mat-card-content class="min-w-2xl">
         <div class="flex flex-col gap-6 lg:grid lg:grid-cols-2">
           <div>
@@ -74,7 +76,7 @@
               <strong>Roles:</strong>
               <div class="mt-1 flex flex-wrap gap-1">
                 @for (roleName of user.roleNames; track roleName) {
-                  <mat-chip>{{ roleName }}</mat-chip>
+                  <mat-chip class="chip-tertiary">{{ roleName }}</mat-chip>
                 } @empty {
                   <p class="text-gray-500">No roles assigned</p>
                 }
@@ -135,7 +137,7 @@
       ></mat-card
     >
 
-    <mat-card class="w-full overflow-x-auto">
+    <mat-card>
       <mat-card-header
         ><mat-card-title><h2>IVAs</h2></mat-card-title></mat-card-header
       >
@@ -161,7 +163,7 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card class="w-full overflow-x-auto">
+    <mat-card>
       <mat-card-header
         ><mat-card-title><h2>Access Grants</h2></mat-card-title></mat-card-header
       >
@@ -197,7 +199,7 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card class="w-full overflow-x-auto">
+    <mat-card>
       <mat-card-header
         ><mat-card-title><h2>Access Requests</h2></mat-card-title></mat-card-header
       >

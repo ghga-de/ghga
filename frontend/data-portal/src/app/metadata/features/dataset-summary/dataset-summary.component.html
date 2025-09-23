@@ -5,6 +5,7 @@
         <a
           appExtLink
           mat-stroked-button
+          class="larger-button-text"
           [href]="'https://ega-archive.org/datasets/' + hitContent().ega_accession"
           data-umami-event="Dataset Summary EGA Dataset Clicked"
           >EGA Dataset</a
@@ -13,21 +14,21 @@
       <app-dynamic-access-request-button datasetID="{{ hit().id_ }}" />
       <a
         mat-raised-button
-        class="raised-button-quaternary"
+        class="button-quaternary larger-button-text"
         routerLink="/dataset/{{ hit().id_ }}"
         data-umami-event="Dataset Summary Dataset Details Clicked"
         ><mat-icon fontIcon="database_search"></mat-icon>Dataset Details</a
       >
     </div>
-    <p><strong>Dataset ID:</strong> {{ summary().accession }}</p>
+    <p class="*:mb-0.5"><strong>Dataset ID:</strong> {{ summary().accession }}</p>
     @if (hitContent().ega_accession) {
       <p><strong>EGA ID:</strong> {{ hitContent().ega_accession }}</p>
     }
-    <p><strong>Full title:</strong> {{ summary().title }}</p>
+    <p class="*:mb-0.5"><strong>Full title:</strong> {{ summary().title }}</p>
     <app-paragraphs
       [text]="summary().description"
       label="Description"
-      pClasses="text-sm"
+      pClasses="text-sm mb-0.5"
     />
     @if (summary().types.length) {
       <div class="flex flex-wrap items-baseline">
@@ -39,15 +40,15 @@
         </mat-chip-set>
       </div>
     }
-    <div class="mt-8 mb-4 sm:flex lg:pe-[15%]">
-      <div
-        class="mb-8 flex grow flex-col gap-y-8 sm:mb-0 sm:max-w-[50%] sm:overflow-x-auto"
-      >
-        <div class="flex">
+    <div
+      class="mt-8 mb-4 *:flex *:grow *:flex-col *:gap-y-8 sm:flex *:sm:mb-0 *:sm:max-w-[50%] *:sm:overflow-x-auto lg:pe-[15%]"
+    >
+      <div class="mb-8 *:flex">
+        <div>
           <div class="me-3 pt-4 text-5xl text-neutral-700">
             <mat-icon inline fontIcon="book_2"></mat-icon>
           </div>
-          <div>
+          <div class="*:mb-0.5">
             <p>
               <strong>Part of study: </strong>
             </p>
@@ -63,11 +64,11 @@
           </div>
         </div>
 
-        <div class="flex">
+        <div>
           <div class="me-3 pt-4 text-5xl text-neutral-700">
             <mat-icon inline fontIcon="genetics"></mat-icon>
           </div>
-          <div>
+          <div class="*:mb-0.5">
             <p><strong>Sample info:</strong></p>
             <p>
               <strong>{{ samplesSummary().count }}</strong> Sample{{
@@ -97,12 +98,12 @@
           </div>
         </div>
       </div>
-      <div class="flex grow flex-col gap-y-8 sm:max-w-[50%] sm:overflow-x-auto">
-        <div class="flex">
+      <div class="*:flex">
+        <div>
           <div class="me-3 pt-4 text-5xl text-neutral-700">
             <mat-icon inline fontIcon="description"></mat-icon>
           </div>
-          <div>
+          <div class="*:mb-0.5">
             <p><strong>File Summary:</strong></p>
             <p>
               <strong>{{ filesSummary().count }}</strong> File{{
@@ -115,11 +116,11 @@
           </div>
         </div>
 
-        <div class="flex">
+        <div>
           <div class="me-3 pt-4 text-5xl text-neutral-700">
             <mat-icon inline fontIcon="experiment"></mat-icon>
           </div>
-          <div>
+          <div class="*:mb-0.5">
             <p><strong>Experiments Summary:</strong></p>
             <p>
               <strong>{{ experimentsSummary().count }}</strong> Experiment{{

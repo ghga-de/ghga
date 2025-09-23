@@ -14,7 +14,6 @@ import { ConfigService } from '@app/shared/services/config.service';
   selector: 'app-version-ribbon',
   imports: [],
   templateUrl: './version-ribbon.component.html',
-  styleUrl: './version-ribbon.component.scss',
 })
 export class VersionRibbonComponent implements OnInit {
   #config = inject(ConfigService);

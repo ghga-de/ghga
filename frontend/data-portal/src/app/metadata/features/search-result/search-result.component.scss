@@ -6,7 +6,6 @@ mat-expansion-panel {
   @include mat.expansion-overrides(
     (
       header-collapsed-state-height: 72px,
-      header-hover-state-layer-color: var(--mat-sys-surface-variant),
     )
   );
 }

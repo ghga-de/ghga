@@ -28,7 +28,6 @@ import {
 })
 export class ExternalLinkDirective implements AfterViewInit {
   inline = input<boolean>(false);
-  iconClasses = input<string>('');
   #el = inject(ElementRef);
   #renderer = inject(Renderer2);
 

@@ -17,6 +17,5 @@ import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-lin
   selector: 'app-home-page',
   imports: [MatButtonModule, RouterLink, GlobalSummaryComponent, ExternalLinkDirective],
   templateUrl: './home-page.component.html',
-  styleUrl: './home-page.component.scss',
 })
 export class HomePageComponent {}

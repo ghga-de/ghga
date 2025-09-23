@@ -49,7 +49,6 @@ import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation
     DatePipe,
   ],
   templateUrl: './access-grant-manager-details.component.html',
-  styleUrl: './access-grant-manager-details.component.scss',
 })
 export class AccessGrantManagerDetailsComponent implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;

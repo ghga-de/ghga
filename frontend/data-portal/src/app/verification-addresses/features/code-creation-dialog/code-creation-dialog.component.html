@@ -1,33 +1,33 @@
-<div>
+<div class="larger-mat-dialog-text">
   <h1 mat-dialog-title>Verification code created</h1>
   <div mat-dialog-content class="mb-6">
     <p>Please send the following verification code to:</p>
-    <table>
+    <table class="[&_th]:pe-1 [&_th]:text-right">
       <tr class="text-base">
-        <th class="pe-1 pl-10 text-right">Name:</th>
+        <th class="pl-10">Name:</th>
         <td>{{ iva.user_name }}</td>
       </tr>
       <tr>
-        <th class="pe-1 text-right">E-Mail:</th>
+        <th>E-Mail:</th>
         <td>{{ iva.user_email }}</td>
       </tr>
       <tr>
-        <th class="pe-1 text-right">Via:</th>
+        <th>Via:</th>
         <td>{{ (iva.type | IvaTypePipe).name }}</td>
       </tr>
       <tr>
-        <th class="pe-1 text-right">Address:</th>
+        <th>Address:</th>
         <td>{{ iva.value }}</td>
       </tr>
       <tr>
-        <th class="pe-1 text-right align-text-bottom">Code:</th>
+        <th class="align-text-bottom">Code:</th>
         <td class="pt-6 align-text-bottom">
           <div class="flex">
-            <mat-form-field>
+            <mat-form-field class="w-40">
               <input
                 matInput
                 type="text"
-                class="text-center"
+                class="totp-input-style text-center"
                 [value]="iva.code"
                 readonly
                 aria-readonly="true"

@@ -18,7 +18,6 @@ import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil.com
   selector: 'app-pending-access-requests-list',
   imports: [RouterLink, StencilComponent, DatePipe],
   templateUrl: './pending-access-requests-list.component.html',
-  styleUrl: './pending-access-requests-list.component.scss',
 })
 export class PendingAccessRequestsListComponent {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;

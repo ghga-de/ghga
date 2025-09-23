@@ -38,7 +38,6 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
     Capitalise,
   ],
   templateUrl: './access-request-manager-filter.component.html',
-  styleUrl: './access-request-manager-filter.component.scss',
 })
 export class AccessRequestManagerFilterComponent {
   #ars = inject(AccessRequestService);

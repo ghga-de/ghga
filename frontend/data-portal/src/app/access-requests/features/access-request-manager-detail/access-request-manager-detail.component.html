@@ -18,8 +18,10 @@
   </div>
   @if (request(); as ar) {
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <div class="my-2 flex flex-col items-start gap-4">
-        <mat-card class="w-full overflow-x-auto">
+      <div
+        class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
+      >
+        <mat-card>
           <mat-card-header>
             <mat-card-title><h2>Request & Dataset</h2></mat-card-title>
           </mat-card-header>
@@ -55,7 +57,7 @@
             </p>
           </mat-card-content>
         </mat-card>
-        <mat-card class="w-full overflow-x-auto">
+        <mat-card>
           <mat-card-header>
             <mat-card-title><h2>Access Timeline & Details</h2></mat-card-title>
           </mat-card-header>
@@ -84,7 +86,7 @@
             </p>
           </mat-card-content>
         </mat-card>
-        <mat-card class="w-full overflow-x-auto">
+        <mat-card>
           <mat-card-header>
             <mat-card-title><h2>DAC & Requester</h2></mat-card-title>
           </mat-card-header>
@@ -127,8 +129,10 @@
           </mat-card-content>
         </mat-card>
       </div>
-      <div class="my-2 flex flex-col items-start gap-4">
-        <mat-card class="w-full overflow-x-auto">
+      <div
+        class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
+      >
+        <mat-card>
           <mat-card-header>
             <mat-card-title><h2>Notes</h2></mat-card-title>
           </mat-card-header>
@@ -151,7 +155,7 @@
             ></app-access-request-field-edit>
           </mat-card-content>
         </mat-card>
-        <mat-card class="w-full overflow-x-auto">
+        <mat-card>
           <mat-card-header>
             <mat-card-title><h2>Verification Address</h2></mat-card-title>
           </mat-card-header>
@@ -266,7 +270,7 @@
           <div class="w-full sm:w-auto">
             <button
               mat-raised-button
-              class="error w-full sm:w-auto"
+              class="button-error w-full sm:w-auto"
               (click)="saveBeforeStatusChange('deny')"
               data-umami-event="Access Request Manager Deny Clicked"
               [disabled]="ar.status === 'denied'"
@@ -277,7 +281,7 @@
           <div class="w-full sm:w-auto">
             <button
               mat-raised-button
-              class="success w-full sm:w-auto"
+              class="button-success w-full sm:w-auto"
               (click)="saveBeforeStatusChange('allow')"
               data-umami-event="Access Request Manager Allow Clicked"
               [disabled]="ar.status === 'allowed' || ivasError() || !ivas().length"

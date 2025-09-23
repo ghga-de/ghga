@@ -178,10 +178,73 @@
   hr {
     border-color: var(--mat-sys-outline-variant);
   }
+
+  .border {
+    border-color: var(--mat-sys-outline-variant);
+  }
+
+  .smaller-mat-card-title,
+  :is(.\*\:smaller-mat-card-title > *) {
+    @include mat.card-overrides(
+      (
+        title-text-size: 18px,
+      )
+    );
+  }
+
+  .edit-button mat-icon {
+    @include mat.icon-overrides(
+      (
+        color: var(--mat-sys-primary),
+      )
+    );
+  }
+  .cancel-edit-button mat-icon {
+    @include mat.icon-overrides(
+      (
+        color: var(--mat-sys-danger),
+      )
+    );
+  }
+  .save-edit-button:not(.mat-mdc-chip-disabled) mat-icon {
+    @include mat.icon-overrides(
+      (
+        color: var(--mat-sys-success),
+      )
+    );
+  }
 }
 
-.border {
-  border-color: var(--mat-sys-outline-variant);
+mat-icon.large-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}
+
+.small-chip {
+  span .mat-mdc-chip-action {
+    padding: 0 6px;
+  }
+  @include mat.chips-overrides(
+    (
+      label-text-size: var(--mat-sys-label-medium-size),
+      container-height: 75%,
+    )
+  );
+}
+
+.smaller-chip span .mat-mdc-chip-action {
+  padding: 0px;
+}
+
+.edit-field-chip {
+  @include mat.chips-overrides(
+    (
+      label-text-size: var(--mat-sys-label-small-size),
+      label-text-line-height: 0px,
+      container-height: 50%,
+    )
+  );
 }
 
 .mat-mdc-snack-bar-container {
@@ -219,14 +282,6 @@
   }
 }
 
-.small-chip span .mat-mdc-chip-action {
-  padding: 0 6px;
-}
-
-.smaller-chip span .mat-mdc-chip-action {
-  padding: 0px;
-}
-
 .interactive-chip span .mat-mdc-chip-action-label {
   cursor: pointer;
 }
@@ -237,32 +292,267 @@
   border-color: var(--mat-sys-error);
 }
 
-button.success {
+.larger-mat-dialog-text {
+  @include mat.dialog-overrides(
+    (
+      supporting-text-size: var(--mat-sys-body-large-size),
+    )
+  );
+}
+
+.larger-mat-table-text {
+  @include mat.table-overrides(
+    (
+      header-headline-size: var(--mat-sys-title-medium-size),
+      row-item-label-text-size: var(--mat-sys-body-large-size),
+    )
+  );
+}
+
+table.table-row-hover-highlight {
+  tr.cdk-row:hover,
+  tr.cdk-row:active {
+    background-color: color-mix(in srgb, #fff 0%, #000 8%);
+  }
+
+  tr.cdk-row:focus {
+    background-color: color-mix(in srgb, #fff 0%, #000 12%);
+  }
+}
+
+button.button-success,
+a.button-success {
   @include mat.button-overrides(
     (
       filled-container-color: var(--mat-sys-success),
+      filled-label-text-color: var(--mat-sys-on-success),
       protected-container-color: var(--mat-sys-success),
-      filled-label-text-color: var(--mat-sys-on-secondary),
+      protected-label-text-color: var(--mat-sys-on-success),
+      outlined-outline-color: var(--mat-sys-success),
+      outlined-label-text-color: var(--mat-sys-success),
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-success),
+      state-layer-color: var(--mat-sys-success),
     )
   );
 }
 
-button.error {
+button.button-danger,
+a.button-danger {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-danger),
+      filled-label-text-color: var(--mat-sys-on-danger),
+      protected-container-color: var(--mat-sys-danger),
+      protected-label-text-color: var(--mat-sys-on-danger),
+      outlined-outline-color: var(--mat-sys-danger),
+      outlined-label-text-color: var(--mat-sys-danger),
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-danger),
+      state-layer-color: var(--mat-sys-danger),
+    )
+  );
+}
+
+button.button-error,
+a.button-error {
   @include mat.button-overrides(
     (
       filled-container-color: var(--mat-sys-error),
+      filled-label-text-color: var(--mat-sys-on-error),
       protected-container-color: var(--mat-sys-error),
-      filled-label-text-color: var(--mat-sys-on-secondary),
+      protected-label-text-color: var(--mat-sys-on-error),
+      outlined-outline-color: var(--mat-sys-error),
+      outlined-label-text-color: var(--mat-sys-error),
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-error),
+      state-layer-color: var(--mat-sys-error),
     )
   );
 }
 
-.raised-button-quaternary {
+button.button-primary,
+a.button-primary {
   @include mat.button-overrides(
     (
-      protected-container-color: var(--mat-sys-quaternary),
+      filled-container-color: var(--mat-sys-primary),
+      filled-label-text-color: var(--mat-sys-on-primary),
+      protected-container-color: var(--mat-sys-primary),
+      protected-label-text-color: var(--mat-sys-on-primary),
+      outlined-outline-color: var(--mat-sys-primary),
+      outlined-label-text-color: var(--mat-sys-primary),
     )
   );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-primary),
+      state-layer-color: var(--mat-sys-primary),
+    )
+  );
+}
+
+button.button-on-primary,
+a.button-on-primary {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-on-primary),
+      filled-label-text-color: var(--mat-sys-on-primary),
+      protected-container-color: var(--mat-sys-on-primary),
+      protected-label-text-color: var(--mat-sys-on-primary),
+      outlined-outline-color: var(--mat-sys-on-primary),
+      outlined-label-text-color: var(--mat-sys-primary),
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-on-primary),
+      state-layer-color: var(--mat-sys-on-primary),
+    )
+  );
+}
+
+button.button-secondary,
+a.button-secondary {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-secondary),
+      filled-label-text-color: var(--mat-sys-on-secondary),
+      protected-container-color: var(--mat-sys-secondary),
+      protected-label-text-color: var(--mat-sys-on-secondary),
+      outlined-outline-color: var(--mat-sys-secondary),
+      outlined-label-text-color: var(--mat-sys-secondary),
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-secondary),
+      state-layer-color: var(--mat-sys-secondary),
+    )
+  );
+}
+
+button.button-tertiary,
+a.button-tertiary {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-tertiary),
+      filled-label-text-color: var(--mat-sys-on-tertiary),
+      protected-container-color: var(--mat-sys-tertiary),
+      protected-label-text-color: var(--mat-sys-on-tertiary),
+      outlined-outline-color: var(--mat-sys-tertiary),
+      outlined-label-text-color: var(--mat-sys-tertiary),
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-tertiary),
+      state-layer-color: var(--mat-sys-tertiary),
+    )
+  );
+}
+
+button.button-quaternary,
+a.button-quaternary {
+  @include mat.button-overrides(
+    (
+      filled-container-color: var(--mat-sys-quaternary),
+      filled-label-text-color: var(--mat-sys-on-quaternary),
+      protected-container-color: var(--mat-sys-quaternary),
+      protected-label-text-color: var(--mat-sys-on-quaternary),
+      outlined-outline-color: var(--mat-sys-quaternary),
+      outlined-label-text-color: var(--mat-sys-quaternary),
+    )
+  );
+  @include mat.icon-button-overrides(
+    (
+      icon-color: var(--mat-sys-quaternary),
+      state-layer-color: var(--mat-sys-quaternary),
+    )
+  );
+}
+
+button.larger-button-text,
+a.larger-button-text {
+  @include mat.button-overrides(
+    (
+      outlined-label-text-size: var(--mat-sys-label-large-size),
+      protected-label-text-size: var(--mat-sys-label-large-size),
+    )
+  );
+}
+
+button.active-page,
+a.active-page {
+  background-color: var(--mat-sys-tertiary);
+  color: var(--mat-sys-on-tertiary);
+  mat-icon {
+    color: var(--mat-sys-on-tertiary);
+  }
+}
+
+button.active-sub-page,
+a.active-sub-page {
+  background-color: var(--mat-sys-tertiary-fixed-dim);
+  color: var(--mat-sys-on-tertiary-fixed);
+  mat-icon {
+    color: var(--mat-sys-on-tertiary-fixed);
+  }
+}
+
+nav a:hover,
+nav a:active,
+mat-toolbar a:not(.active-page):hover,
+mat-toolbar a:not(.active-page):active,
+mat-toolbar button:not(.active-page):hover,
+mat-toolbar button:not(.active-page):active {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 8%);
+}
+
+nav a:focus,
+mat-toolbar a:not(.active-page):focus,
+mat-toolbar button:not(.active-page):focus {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
+}
+
+mat-chip.chip-tertiary,
+mat-chip-set.chip-set-tertiary mat-chip {
+  @include mat.chips-overrides(
+    (
+      outline-color: var(--mat-sys-tertiary),
+      label-text-color: var(--mat-sys-tertiary),
+      with-trailing-icon-trailing-icon-color: var(--mat-sys-tertiary),
+    )
+  );
+}
+
+mat-expansion-panel {
+  @include mat.expansion-overrides(
+    (
+      header-hover-state-layer-color: var(--mat-sys-surface-variant),
+    )
+  );
+}
+
+table[mat-table].bold-table-headers {
+  @include mat.table-overrides(
+    (
+      header-headline-weight: var(--mat-sys-label-large-weight-prominent),
+    )
+  );
+}
+
+.totp-input-style.mat-mdc-form-field-input-control.mat-mdc-form-field-input-control {
+  font-size: 1.5rem;
+  font-family: var(--font-mono);
 }
 
 // Add an icon after all external links
@@ -301,6 +591,18 @@ a[appExtLink]:not(.mdc-button).inline-ext-link::after {
   width: inherit;
   line-height: inherit;
   vertical-align: middle;
+}
+
+p a[appExtLink]:not(.mdc-button)::after {
+  scale: 0.6;
+  margin: 0 -5px 0 -3px;
+  transform: translateY(10px);
+}
+
+mat-nav-list a[appExtLink].mdc-button::before,
+mat-nav-list app-admin-menu button.mdc-button > .mat-icon {
+  scale: 0.8;
+  margin: 0;
 }
 
 mat-sidenav-container > div.mat-drawer-backdrop.mat-drawer-shown {

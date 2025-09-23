@@ -15,45 +15,47 @@
   }
   @default {
     <h2>Welcome, {{ u.full_name }}!</h2>
-    <p>
-      @if (u.id) {
-        @if (u.state === 'NeedsReRegistration') {
-          Your contact information has changed since you last registered.
-        }
-        Please confirm that the information given below is correct.
-      } @else {
-        Since you haven't used our data portal before, we ask you to confirm your user
-        data and register with us.
-      }
-    </p>
-    <p>
-      <span class="me-2 inline-block font-bold md:min-w-44">Name:</span>
-      <span>{{ u.name }}</span>
-    </p>
-    <p>
-      <span class="me-2 inline-block font-bold md:min-w-44">E-Mail:</span>
-      <span>{{ u.email }}</span>
-    </p>
-    <p>
-      <span class="me-2 inline-block font-bold md:min-w-44">Life Science ID:</span>
-      <span class="break-all">{{ u.ext_id }}</span>
-    </p>
-    <p class="mb-0">
-      <span id="academic-title" class="me-2 inline-block font-bold md:min-w-44"
-        >Academic title:</span
-      >
-      <mat-form-field>
-        <mat-select
-          [formControl]="titleControl"
-          aria-labelledby="academic-title"
-          autocomplete="honorific-prefix"
-        >
-          @for (title of allTitles; track title) {
-            <mat-option [value]="title || ''">{{ title || '–' }}</mat-option>
+    <div
+      class="[&_span]inline-block [&_span]font-bold [&_span]md:min-w-44 [&_span]:me-2"
+    >
+      <p>
+        @if (u.id) {
+          @if (u.state === 'NeedsReRegistration') {
+            Your contact information has changed since you last registered.
           }
-        </mat-select>
-      </mat-form-field>
-    </p>
+          Please confirm that the information given below is correct.
+        } @else {
+          Since you haven't used our data portal before, we ask you to confirm your user
+          data and register with us.
+        }
+      </p>
+      <p>
+        <span>Name:</span>
+        <span>{{ u.name }}</span>
+      </p>
+      <p>
+        <span>E-Mail:</span>
+        <span>{{ u.email }}</span>
+      </p>
+      <p>
+        <span>Life Science ID:</span>
+        <span class="break-all">{{ u.ext_id }}</span>
+      </p>
+      <p class="mb-0">
+        <span id="academic-title">Academic title:</span>
+        <mat-form-field>
+          <mat-select
+            [formControl]="titleControl"
+            aria-labelledby="academic-title"
+            autocomplete="honorific-prefix"
+          >
+            @for (title of allTitles; track title) {
+              <mat-option [value]="title || ''">{{ title || '–' }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </p>
+    </div>
     <p class="mb-4">
       <mat-checkbox [(ngModel)]="accepted">
         I accept the
@@ -77,8 +79,8 @@
         >.
       </mat-checkbox>
     </p>
-    <div class="flex flex-wrap gap-2">
-      <div class="basis-full sm:basis-auto">
+    <div class="flex flex-wrap gap-2 *:basis-full *:sm:basis-auto">
+      <div>
         <button
           mat-stroked-button
           class="w-full sm:w-auto"
@@ -88,7 +90,7 @@
           Cancel and log out
         </button>
       </div>
-      <div class="basis-full sm:basis-auto">
+      <div>
         <button
           mat-raised-button
           class="w-full sm:w-auto"

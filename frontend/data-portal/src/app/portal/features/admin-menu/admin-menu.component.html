@@ -2,7 +2,7 @@
   mat-button
   [matMenuTriggerFor]="menu"
   aria-label="Administration menu"
-  [class.activePage]="isAdminRoute()"
+  [class.active-page]="isAdminRoute()"
   class="mx-1 flex-row-reverse"
 >
   Admin <mat-icon fontIcon="arrow_drop_down"></mat-icon>
@@ -11,7 +11,7 @@
   <ul>
     <li>
       <a
-        [class.activeSubPage]="isAccessRequestsManagerRoute()"
+        [class.active-sub-page]="isAccessRequestsManagerRoute()"
         mat-menu-item
         routerLink="/access-request-manager"
         class="mx-1"
@@ -21,7 +21,7 @@
     </li>
     <li>
       <a
-        [class.activeSubPage]="isAccessGrantManagerRoute()"
+        [class.active-sub-page]="isAccessGrantManagerRoute()"
         mat-menu-item
         routerLink="/access-grant-manager"
         class="mx-1"
@@ -31,7 +31,7 @@
     </li>
     <li>
       <a
-        [class.activeSubPage]="isIvaManagerRoute()"
+        [class.active-sub-page]="isIvaManagerRoute()"
         mat-menu-item
         routerLink="/iva-manager"
         class="mx-1"
@@ -41,7 +41,7 @@
     </li>
     <li>
       <a
-        [class.activeSubPage]="isUserManagerRoute()"
+        [class.active-sub-page]="isUserManagerRoute()"
         mat-menu-item
         routerLink="/user-manager"
         class="mx-1"

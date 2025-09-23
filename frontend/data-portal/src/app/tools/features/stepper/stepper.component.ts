@@ -20,7 +20,6 @@ import { StepDetails } from '@app/tools/models/stepper';
 @Component({
   selector: 'app-stepper',
   templateUrl: './stepper.component.html',
-  styleUrls: ['./stepper.component.scss'],
   imports: [CommonModule, MatButtonModule, MatIconModule],
 })
 export class StepperComponent {

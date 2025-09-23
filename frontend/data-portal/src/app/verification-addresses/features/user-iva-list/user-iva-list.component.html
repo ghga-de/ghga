@@ -19,7 +19,9 @@
     linked to that address.
   </p>
   @if (ivas().length) {
-    <div class="border-outline-dark mb-4 grid grid-cols-1 border-t">
+    <div
+      class="border-outline-dark mb-4 grid grid-cols-1 border-t [&_button>mat-icon]:-translate-y-0.75"
+    >
       @for (iva of ivas(); track iva.id) {
         <div
           class="border-outline-dark grid grid-cols-12 items-center gap-2 border-b py-2 text-black"
@@ -110,7 +112,7 @@
   <button
     (click)="enterNew()"
     mat-raised-button
-    class="raised-button-quaternary mt-4"
+    class="button-quaternary mt-4"
     data-umami-event="User IVA list Add Contact Clicked"
   >
     <mat-icon fontIcon="add"></mat-icon>Add contact address

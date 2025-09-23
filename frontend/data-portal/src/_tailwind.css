@@ -8,6 +8,7 @@
   --color-quinary: var(--mat-sys-quinary);
   --color-outline: var(--mat-sys-outline);
   --color-error: var(--mat-sys-error);
+  --color-danger: var(--mat-sys-danger);
   --color-warning: var(--mat-sys-warning);
   --color-success: var(--mat-sys-success);
   --color-info: var(--mat-sys-info);

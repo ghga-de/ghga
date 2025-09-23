@@ -6,7 +6,7 @@
     <table
       mat-table
       [dataSource]="source"
-      class="mat-elevation-z8"
+      class="mat-elevation-z8 larger-mat-table-text table-row-hover-highlight"
       matSort
       #sort="matSort"
     >
@@ -35,7 +35,7 @@
         <td mat-cell *matCellDef="let user">
           <span class="flex flex-wrap gap-1">
             @for (roleName of user.roleNames; track roleName) {
-              <mat-chip>{{ roleName }}</mat-chip>
+              <mat-chip class="chip-tertiary">{{ roleName }}</mat-chip>
             }
           </span>
         </td>
