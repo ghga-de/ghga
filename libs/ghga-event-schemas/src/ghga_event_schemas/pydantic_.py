@@ -24,7 +24,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field
+from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
 class MetadataDatasetStage(StrEnum):
@@ -567,7 +567,7 @@ class FileUploadState(StrEnum):
 class FileUpload(BaseModel):
     """A File Upload."""
 
-    upload_id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    id: UUID4 = Field(..., description="Unique identifier for the file upload")
     completed: bool = Field(
         default=False, description="Whether or not the file upload has finished"
     )
@@ -579,6 +579,15 @@ class FileUpload(BaseModel):
     )
     checksum: str = Field(..., description="Unencrypted checksum")
     size: int = Field(..., description="File size in bytes")
+
+    @model_validator(mode="after")
+    def validate_completed(self):
+        """Make sure `completed` and `state` are in sync."""
+        if self.completed != (self.state in ["inbox", "archived"]):
+            raise ValueError(
+                "Completed must be False if state is 'init' and True otherwise."
+            )
+        return self
 
 
 class FileUploadBox(BaseModel):
