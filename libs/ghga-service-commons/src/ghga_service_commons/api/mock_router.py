@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,9 +18,10 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from functools import partial
 from inspect import signature
-from typing import Any, Callable, Generic, TypeVar, cast, get_type_hints
+from typing import Any, Generic, TypeVar, cast, get_type_hints
 
 import httpx
 import pytest

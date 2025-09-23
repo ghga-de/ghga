@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -164,11 +164,11 @@ def test_path_and_function_mismatch():
 
     with pytest.raises(
         TypeError,
-        match="Path variables for path '/dummy/{pram1}' do not match the function it decorates",
+        match=r"Path variables for path '/dummy/{p2}' do not match the function it decorates",
     ):
 
-        @throwaway.get("/dummy/{pram1}")
-        def dummy(parameter1: int) -> None:
+        @throwaway.get("/dummy/{p2}")
+        def dummy(p1: int) -> None:
             """Define a dummy function with parameter mismatch."""
 
 

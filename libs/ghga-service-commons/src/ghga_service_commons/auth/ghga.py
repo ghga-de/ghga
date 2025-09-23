@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 """GHGA specific authentication and authorization context."""
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -55,7 +55,7 @@ class AuthContext(BaseModel):
         description="The preferred e-mail address of the user",
         examples=["user@home.org"],
     )
-    title: Optional[AcademicTitle] = Field(
+    title: AcademicTitle | None = Field(
         default=None,
         title="Title",
         description="The academic title of the user",

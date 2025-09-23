@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,9 @@ from ghga_service_commons.utils.crypt4gh import (
 FILE_SIZES = [1024**2, 64 * 1024**2, 1000**2, 64 * 1000**2]
 
 
-@pytest.mark.parametrize("file_size, use_path", zip(FILE_SIZES[:2], [True, False]))
+@pytest.mark.parametrize(
+    "file_size, use_path", zip(FILE_SIZES[:2], [True, False], strict=True)
+)
 def test_crypt4gh_utilities_bytes(file_size: int, use_path: bool):
     """Test Crypt4GH functionality wrappers in sequence with bytes type arguments."""
     keypair = generate_keypair()
@@ -80,7 +82,9 @@ def test_crypt4gh_utilities_bytes(file_size: int, use_path: bool):
         assert os.stat(out_file.name).st_size == test_data.decrypted_size
 
 
-@pytest.mark.parametrize("file_size, use_path", zip(FILE_SIZES[2:], [True, False]))
+@pytest.mark.parametrize(
+    "file_size, use_path", zip(FILE_SIZES[2:], [True, False], strict=True)
+)
 def test_crypt4gh_utilities_str(file_size: int, use_path: bool):
     """Test Crypt4GH functionality wrappers in sequence with str type arguments."""
     keypair = generate_keypair()

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,6 @@ import http
 import logging
 import time
 from collections.abc import Sequence
-from typing import Optional, Union
 
 import uvicorn
 from fastapi import FastAPI, Request, status
@@ -104,7 +103,7 @@ class ApiConfigBase(BaseSettings):
 
     # Starlette's defaults will only be overwritten if a
     # non-None value is specified:
-    cors_allowed_origins: Optional[Sequence[str]] = Field(
+    cors_allowed_origins: Sequence[str] | None = Field(
         default=None,
         examples=[["https://example.org", "https://www.example.org"]],
         description=(
@@ -113,7 +112,7 @@ class ApiConfigBase(BaseSettings):
             + " You can use ['*'] to allow any origin."
         ),
     )
-    cors_allow_credentials: Optional[bool] = Field(
+    cors_allow_credentials: bool | None = Field(
         default=None,
         examples=[["https://example.org", "https://www.example.org"]],
         description=(
@@ -123,7 +122,7 @@ class ApiConfigBase(BaseSettings):
             + " allowed. The origins must be explicitly specified."
         ),
     )
-    cors_allowed_methods: Optional[Sequence[str]] = Field(
+    cors_allowed_methods: Sequence[str] | None = Field(
         default=None,
         examples=[["*"]],
         description=(
@@ -131,7 +130,7 @@ class ApiConfigBase(BaseSettings):
             + " Defaults to ['GET']. You can use ['*'] to allow all standard methods."
         ),
     )
-    cors_allowed_headers: Optional[Sequence[str]] = Field(
+    cors_allowed_headers: Sequence[str] | None = Field(
         default=None,
         examples=[[]],
         description=(
@@ -142,7 +141,7 @@ class ApiConfigBase(BaseSettings):
             + " are always allowed for CORS requests."
         ),
     )
-    cors_exposed_headers: Optional[Sequence[str]] = Field(
+    cors_exposed_headers: Sequence[str] | None = Field(
         default=None,
         examples=[[]],
         description=(
@@ -351,7 +350,7 @@ def configure_app(app: FastAPI, config: ApiConfigBase):
     app.docs_url = config.docs_url
 
     # configure CORS:
-    kwargs: dict[str, Optional[Union[Sequence[str], bool]]] = {}
+    kwargs: dict[str, Sequence[str] | bool | None] = {}
     if config.cors_allowed_origins is not None:
         kwargs["allow_origins"] = config.cors_allowed_origins
     if config.cors_allowed_headers is not None:
@@ -371,7 +370,7 @@ def configure_app(app: FastAPI, config: ApiConfigBase):
     configure_exception_handler(app)
 
 
-async def run_server(app: Union[FastAPI, str], config: ApiConfigBase):
+async def run_server(app: FastAPI | str, config: ApiConfigBase):
     """Start backend server.
 
     In contrast to the behavior of `uvicorn.run`, it does not create a new asyncio event
@@ -395,6 +394,7 @@ async def run_server(app: Union[FastAPI, str], config: ApiConfigBase):
         log_config=None,
         reload=config.auto_reload,
         workers=config.workers,
+        ws="websockets-sansio",
     )
 
     server = uvicorn.Server(uv_config)

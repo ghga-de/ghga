@@ -1,4 +1,4 @@
-# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,10 +20,11 @@ from __future__ import annotations
 import base64
 import io
 import os
+from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
 from tempfile import mkstemp
-from typing import Callable, NamedTuple, cast
+from typing import NamedTuple, cast
 
 import crypt4gh.header
 import crypt4gh.lib
