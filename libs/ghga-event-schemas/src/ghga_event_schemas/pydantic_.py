@@ -568,6 +568,9 @@ class FileUpload(BaseModel):
     """A File Upload."""
 
     id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    box_id: UUID4 = Field(
+        ..., description="The ID of the FileUploadBox this FileUpload belongs to"
+    )
     completed: bool = Field(
         default=False, description="Whether or not the file upload has finished"
     )
