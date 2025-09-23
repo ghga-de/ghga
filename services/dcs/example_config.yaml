@@ -3,13 +3,10 @@ api_route: /ga4gh/drs/v1
 auth_algs:
 - ES256
 auth_check_claims:
-  email: null
   exp: null
   file_id: null
-  full_user_name: null
   iat: null
   type: null
-  user_id: null
   user_public_crypt4gh_key: null
 auth_key: '{}'
 auth_map_claims: {}

@@ -22,7 +22,7 @@ import httpx
 import pytest
 import pytest_asyncio
 from fastapi import status
-from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from dcs.core import models
@@ -179,7 +179,7 @@ async def test_register_file_twice(populated_fixture: PopulatedFixture, caplog):
         decryption_secret_id=example_file.decryption_secret_id,
         decrypted_sha256=example_file.decrypted_sha256,
         decrypted_size=example_file.decrypted_size,
-        creation_date=now_as_utc().isoformat(),
+        creation_date=now_utc_ms_prec(),
         encrypted_size=example_file.encrypted_size,
         s3_endpoint_alias=example_file.s3_endpoint_alias,
     )

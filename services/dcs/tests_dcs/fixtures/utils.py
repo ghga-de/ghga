@@ -43,10 +43,7 @@ def generate_work_order_token(
     wot = auth_policies.WorkOrderContext(
         type="download",
         file_id=file_id,
-        user_id="007",
         user_public_crypt4gh_key=user_pubkey,
-        full_user_name="John Doe",
-        email="john.doe@test.com",
     )
     claims = wot.model_dump()
 

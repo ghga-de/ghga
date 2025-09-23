@@ -585,10 +585,7 @@
       "default": {
         "type": null,
         "file_id": null,
-        "user_id": null,
         "user_public_crypt4gh_key": null,
-        "full_user_name": null,
-        "email": null,
         "iat": null,
         "exp": null
       },
