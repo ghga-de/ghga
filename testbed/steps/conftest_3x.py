@@ -106,3 +106,76 @@ def keys_are_made_available(connector: ConnectorFixture, config: Config):
 @then(parse('the response error message is "{expected_reason}"'))
 def check_reason(expected_reason: str, response: Response):
     assert expected_reason in response.json()["detail"]
+
+
+@given(parse('the user "{full_name}" is not yet registered'))
+def user_not_yet_registered(full_name: str, fixtures: JointFixture):
+    registered_users = fixtures.state.get_state("registered users") or {}
+    sub = fixtures.auth.get_sub(full_name)
+    fixtures.mongo.remove_documents(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_users_collection,
+        {"ext_id": sub},
+    )
+    if sub in registered_users:
+        del registered_users[sub]
+        fixtures.state.set_state("registered users", registered_users)
+    assert sub not in registered_users
+    changed_user_data = fixtures.state.get_state("changed user data") or {}
+    if sub in changed_user_data:
+        del changed_user_data[sub]
+        fixtures.state.set_state("changed user data", changed_user_data)
+
+
+@when(parse('"{full_name}" registers as a new user'), target_fixture="response")
+def user_registers(full_name: str, fixtures: JointFixture):
+    auth = fixtures.auth
+    title, name = auth.split_title(full_name)
+    email = auth.get_email(name)
+    sub = auth.get_sub(name)
+    user_data = {
+        "name": name,
+        "title": title,
+        "email": email,
+        "ext_id": sub,
+    }
+    url = f"{fixtures.config.ums_url}/users"
+    session = auth.get_saved_session(name=full_name, state_store=fixtures.state)
+    headers = auth.headers(session=session)
+    return fixtures.http.post(url, json=user_data, headers=headers)
+
+
+@then(
+    parse('"{authorized_user_name}" changes the status of "{user_name}" to "{status}"'),
+)
+def user_account_inactivation(
+    authorized_user_name: str,
+    user_name: str,
+    status: str,
+    fixtures: JointFixture,
+):
+    auth = fixtures.auth
+
+    user_session = fixtures.auth.get_saved_session(
+        name=user_name, state_store=fixtures.state
+    )  # Get existing session of active in user
+    assert user_session
+
+    user_id = user_session.user_id
+    assert user_id
+
+    authorized_user_session = fixtures.auth.get_saved_session(
+        name=authorized_user_name, state_store=fixtures.state
+    )
+
+    # Change user account status
+    assert status in ["active", "inactive"]
+    user_data = {
+        "status": status,
+    }
+    url = f"{fixtures.config.ums_url}/users/{user_id}"
+    headers = auth.headers(session=authorized_user_session)
+    response = fixtures.http.patch(url, json=user_data, headers=headers)
+    assert response.status_code == 204, f"Unable to update user status: {response.text}"
+    sub = fixtures.auth.get_sub(user_name)
+    fixtures.state.set_state(f"status-{sub}", status)

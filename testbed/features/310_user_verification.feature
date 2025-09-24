@@ -1,4 +1,4 @@
-@download @auth
+@auth @users
 Feature: 31 User Verification
   Users can verify their identity using independent verification addresses (IVAs).
 

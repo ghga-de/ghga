@@ -35,6 +35,7 @@ __all__ = [
 
 TIMEOUT = 10  # timeout for database operations in seconds
 INTERVAL = 0.1  # interval for retrying database operations in seconds
+EXTENDED_ID_FIELDS = ["_id", "user_id", "iva_id"]
 
 
 class MongoFixture(StateManager):
@@ -45,6 +46,14 @@ class MongoFixture(StateManager):
         self.http = http
 
     config: Config
+
+    def extended_mapping(self, document: dict[str, Any]) -> dict[str, Any]:
+        """Convert *_id fields to MongoDB extended JSON format"""
+        doc_copy = document.copy()
+        for k, v in document.items():
+            if k in EXTENDED_ID_FIELDS and isinstance(v, str):
+                doc_copy[k] = {"$uuid": v}
+        return doc_copy
 
     @property
     def service_db_names(self) -> list[str]:
@@ -94,6 +103,8 @@ class MongoFixture(StateManager):
         """Return one document from the given collection matching the given filter."""
         url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
         if query:
+            if db_name != "tb":
+                query = self.extended_mapping(query)  # type: ignore
             query = self.stringify_query_params(query)
         response = self.http.get(url, headers=self.auth_headers, params=query)
         status_code = response.status_code
@@ -148,9 +159,11 @@ class MongoFixture(StateManager):
         return None
 
     def upsert_document(
-        self, db_name: str, collection_name: str, document: Mapping[str, Any]
+        self, db_name: str, collection_name: str, document: dict[str, Any]
     ):
         """Replace one document in the given collection."""
+        if db_name != "tb":
+            document = self.extended_mapping(document)
         url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
         data = {"documents": document, "id_field": "_id"}
         response = self.http.put(url, headers=self.auth_headers, json=data)

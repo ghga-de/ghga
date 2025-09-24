@@ -149,6 +149,13 @@ def empty_totp_token_store(fixtures: JointFixture):
     fixtures.state.unset_state("totp-token-")
 
 
+@given(parse('the user "{full_name}" has no TOTP token'))
+def empty_totp_token_store_for_user(full_name: str, fixtures: JointFixture):
+    """Remove states with "totp-token" for the user"""
+    sub = fixtures.auth.get_sub(full_name)
+    fixtures.state.unset_state(f"totp-token-{sub}")
+
+
 # Global test bed state memory
 
 
@@ -292,6 +299,12 @@ def check_number_of_search_results_on_the_page(
 @then(parse('the expected item count is "{count:d}"'))
 def check_item_count_in_list(count: int, results: list):
     assert len(results) == count
+
+
+@then(parse('the expected item count in response is "{count:d}"'))
+def check_item_count_in_response(count: int, response: Response):
+    results = response.json()
+    check_item_count_in_list(count=count, results=results)
 
 
 @then(parse('"{notification_type}" email was sent to "{full_name}"'))

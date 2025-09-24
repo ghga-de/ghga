@@ -1,4 +1,4 @@
-@download @auth
+@auth @users
 Feature: 300 User Registration
   Users can register themselves and then authenticate.
 

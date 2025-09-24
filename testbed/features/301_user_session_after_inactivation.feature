@@ -1,4 +1,4 @@
-@unhappy
+@unhappy @auth @users
 Feature: 301 User Account Inactivation
   User session must be inactivated immediately after account inactivation.
 

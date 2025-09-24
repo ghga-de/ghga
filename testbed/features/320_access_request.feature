@@ -2,12 +2,13 @@
 Feature: 320 Access Request
   As a user, I can ask for access request to a given dataset.
 
-  Scenario: Requesting access to the dataset A
-
+  Scenario: Starting access request tests
     Given we have the state "metadata has been loaded into the system"
+    And the session store is empty
     And the claims repository is empty
     And no access requests have been made yet
-    And I am registered as "Dr. John Doe"
+
+  Scenario: Requesting access to the dataset A
 
     Given I am logged in as "Dr. John Doe"
     And I am authenticated as "Dr. John Doe"

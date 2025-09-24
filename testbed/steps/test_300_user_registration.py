@@ -34,43 +34,6 @@ from .conftest import (
 scenarios("../features/300_user_registration.feature")
 
 
-@given(parse('the user "{full_name}" is not yet registered'))
-def user_not_yet_registered(full_name: str, fixtures: JointFixture):
-    registered_users = fixtures.state.get_state("registered users") or {}
-    sub = fixtures.auth.get_sub(full_name)
-    fixtures.mongo.remove_documents(
-        fixtures.config.ums_db_name,
-        fixtures.config.ums_users_collection,
-        {"ext_id": sub},
-    )
-    if sub in registered_users:
-        del registered_users[sub]
-        fixtures.state.set_state("registered users", registered_users)
-    assert sub not in registered_users
-    changed_user_data = fixtures.state.get_state("changed user data") or {}
-    if sub in changed_user_data:
-        del changed_user_data[sub]
-        fixtures.state.set_state("changed user data", changed_user_data)
-
-
-@when(parse('"{full_name}" registers as a new user'), target_fixture="response")
-def user_registers(full_name: str, fixtures: JointFixture):
-    auth = fixtures.auth
-    title, name = auth.split_title(full_name)
-    email = auth.get_email(name)
-    sub = auth.get_sub(name)
-    user_data = {
-        "name": name,
-        "title": title,
-        "email": email,
-        "ext_id": sub,
-    }
-    url = f"{fixtures.config.ums_url}/users"
-    session = auth.get_saved_session(name=full_name, state_store=fixtures.state)
-    headers = auth.headers(session=session)
-    return fixtures.http.post(url, json=user_data, headers=headers)
-
-
 @given(parse('I lost my TOTP token as "{full_name}"'))
 def totp_token_is_lost(full_name: str, fixtures: JointFixture):
     sub = fixtures.auth.get_sub(full_name)

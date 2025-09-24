@@ -79,10 +79,12 @@ SEARCH_ALL_DATASETS = {
         {
             "ega_accession": "EGADATASET000A",
             "title": "The complete-A dataset",
+            "alias": "DS_A",
         },
         {
             "ega_accession": "EGADATASET000B",
             "title": "The complete-B dataset",
+            "alias": "DS_B",
         },
     ],
 }
