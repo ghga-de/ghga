@@ -42,6 +42,8 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/auth/users/doe@test.dev': users[0],
   'GET /api/auth/users/roe@test.dev': users[1],
   'GET /api/auth/users/mar@test.dev': users[2],
+  'GET /api/auth/users/jekyll@test.dev': users[3],
+  'GET /api/auth/users/hyde@test.dev': users[4],
 
   'GET /api/auth/users': users,
 

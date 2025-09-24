@@ -2,6 +2,7 @@
   <p>Loading contact addresses..</p>
 } @else {
   @let columns = ['user', 'type', 'value', 'changed', 'state', 'actions'];
+  @let warnUserIds = ambiguousUserIds();
   <div class="overflow-auto">
     <table
       mat-table
@@ -14,11 +15,19 @@
       <ng-container matColumnDef="user">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>User</th>
         <td mat-cell *matCellDef="let iva" class="min-w-48">
+          @if (warnUserIds.has(iva.user_id)) {
+            <mat-icon
+              class="float-right mt-2 !text-yellow-500"
+              title="There are multiple user accounts with this name and email address."
+              >warning</mat-icon
+            >
+          }
           <a
             routerLink="/user-manager/{{ iva.user_id }}"
             data-umami-event="IVA Manager User Name Clicked"
             >{{ iva.user_name }}</a
-          >
+          ><br />
+          <span class="text-sm text-gray-600">({{ iva.user_email }})</span>
         </td>
       </ng-container>
       <ng-container matColumnDef="type">

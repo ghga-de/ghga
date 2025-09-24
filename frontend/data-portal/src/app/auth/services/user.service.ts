@@ -107,7 +107,6 @@ export class UserService {
    * Load all users
    */
   loadUsers(): void {
-    console.log('Loading all users');
     this.#loadAll.set(true);
   }
 
@@ -166,6 +165,34 @@ export class UserService {
       defaultValue: [],
     },
   );
+
+  /**
+   * Check for ambiguous users in the list of all users
+   * (users with same name and email but different user ID).
+   * This should normally not happen, but want if it does.
+   * In that case, the LS ID should be checked for disambiguation.
+   */
+  ambiguousUserIds = computed(() => {
+    const ambiguousUserIds = new Set<string>();
+    const allUsers = this.users;
+    if (!allUsers.isLoading() && !allUsers.error()) {
+      const users = allUsers.value();
+      const nameAndEmailMap = new Map<string, string>();
+      for (const { id, name, email } of users) {
+        const userNameAndEmail = `${name} <${email}>`;
+        const userId = nameAndEmailMap.get(userNameAndEmail);
+        if (userId) {
+          if (userId != id) {
+            ambiguousUserIds.add(userId);
+            ambiguousUserIds.add(id);
+          }
+        } else {
+          nameAndEmailMap.set(userNameAndEmail, id);
+        }
+      }
+    }
+    return ambiguousUserIds;
+  });
 
   /**
    * Signal that gets all users filtered by the current filter

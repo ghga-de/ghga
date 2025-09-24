@@ -61,6 +61,8 @@ export class IvaManagerListComponent implements AfterViewInit {
   #ivaTypePipe = inject(IvaTypePipe);
 
   #ivas = this.#ivaService.allIvas;
+  ambiguousUserIds = this.#ivaService.ambiguousUserIds;
+
   ivas = this.#ivaService.allIvasFiltered;
   ivasAreLoading = this.#ivas.isLoading;
   ivasError = this.#ivas.error;
@@ -69,6 +71,8 @@ export class IvaManagerListComponent implements AfterViewInit {
 
   defaultTablePageSize = 10;
   tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
+
+  #duplicateUsers = new Set<string>(); // user IDs where name and email are ambiguous
 
   #updateSourceEffect = effect(() => (this.source.data = this.ivas()));
 

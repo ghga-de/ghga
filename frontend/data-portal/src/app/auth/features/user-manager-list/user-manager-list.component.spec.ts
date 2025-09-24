@@ -7,7 +7,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { Router } from '@angular/router';
 import { UserService } from '@app/auth/services/user.service';
 import { ConfigService } from '@app/shared/services/config.service';
@@ -30,6 +29,7 @@ class MockUserService {
     error: jest.fn(() => null),
   };
   usersFiltered = () => this.users.value();
+  ambiguousUserIds = jest.fn(() => new Set<string>());
 }
 
 /**
@@ -50,7 +50,7 @@ describe('UserManagerListComponent', () => {
     mockRouter = new MockRouter();
 
     await TestBed.configureTestingModule({
-      imports: [UserManagerListComponent, NoopAnimationsModule],
+      imports: [UserManagerListComponent],
       providers: [
         { provide: UserService, useValue: mockUserService },
         { provide: ConfigService, useClass: MockConfigService },
@@ -82,8 +82,8 @@ describe('UserManagerListComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('No users found');
 
-    // Check that the colspan is correct for 6 columns
-    const noDataCell = compiled.querySelector('[colspan="6"]');
+    // Check that the colspan is correct for 7 columns
+    const noDataCell = compiled.querySelector('[colspan="7"]');
     expect(noDataCell).toBeTruthy();
   });
 

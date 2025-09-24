@@ -21,7 +21,6 @@ import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-h
 @Component({
   selector: 'app-site-header',
   templateUrl: './site-header.component.html',
-  standalone: true,
   imports: [
     MatToolbarModule,
     MatNavList,

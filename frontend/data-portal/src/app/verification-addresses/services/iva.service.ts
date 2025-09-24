@@ -122,6 +122,34 @@ export class IvaService {
   );
 
   /**
+   * Check for ambiguous users in the list of all IVAs
+   * (users with same name and email but different user ID).
+   * This should normally not happen, but want if it does.
+   * In that case, the LS ID should be checked for disambiguation.
+   */
+  ambiguousUserIds = computed(() => {
+    const ambiguousUserIds = new Set<string>();
+    const allIvas = this.allIvas;
+    if (!allIvas.isLoading() && !allIvas.error()) {
+      const ivas = allIvas.value();
+      const userNameAndEmailMap = new Map<string, string>();
+      for (const { user_id, user_name, user_email } of ivas) {
+        const userNameAndEmail = `${user_name} <${user_email}>`;
+        const userId = userNameAndEmailMap.get(userNameAndEmail);
+        if (userId) {
+          if (userId != user_id) {
+            ambiguousUserIds.add(userId);
+            ambiguousUserIds.add(user_id);
+          }
+        } else {
+          userNameAndEmailMap.set(userNameAndEmail, user_id);
+        }
+      }
+    }
+    return ambiguousUserIds;
+  });
+
+  /**
    * Signal that gets all IVAs filtered by the current filter
    */
   allIvasFiltered = computed(() => {

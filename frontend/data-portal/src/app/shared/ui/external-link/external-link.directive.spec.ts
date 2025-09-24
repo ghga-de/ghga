@@ -13,7 +13,6 @@ import { ExternalLinkDirective } from './external-link.directive';
  */
 @Component({
   template: `<a appExtLink>Test Link</a>`,
-  standalone: true,
   imports: [ExternalLinkDirective],
 })
 class TestComponent {}

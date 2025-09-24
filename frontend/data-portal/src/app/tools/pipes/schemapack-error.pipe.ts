@@ -9,10 +9,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 /**
  * A pipe to transform Schemapack errors into more readable messages
  */
-@Pipe({
-  name: 'formatSchemapackError',
-  standalone: true,
-})
+@Pipe({ name: 'formatSchemapackError' })
 export class FormatSchemapackErrorPipe implements PipeTransform {
   /**
    * Transforms a raw error string by cleaning up box-drawing characters and whitespace.

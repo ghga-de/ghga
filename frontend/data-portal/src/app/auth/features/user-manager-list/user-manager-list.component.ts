@@ -21,9 +21,12 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
+import { UserExtIdPipe } from '@app/auth/pipes/user-ext-id.pipe';
 import { UserStatusClassPipe } from '@app/auth/pipes/user-status-class.pipe';
 import { DisplayUser, UserService } from '@app/auth/services/user.service';
 import { DatePipe } from '@app/shared/pipes/date.pipe';
+
+const DEFAULT_EXT_ID_SUFFIX = '@lifescience-ri.eu';
 
 /**
  * User Manager List component.
@@ -42,6 +45,7 @@ import { DatePipe } from '@app/shared/pipes/date.pipe';
     MatIconModule,
     MatChipsModule,
     UserStatusClassPipe,
+    UserExtIdPipe,
   ],
   providers: [CommonDatePipe],
   templateUrl: './user-manager-list.component.html',
@@ -51,6 +55,7 @@ export class UserManagerListComponent implements AfterViewInit {
   #userService = inject(UserService);
 
   #users = this.#userService.users;
+  ambiguousUserIds = this.#userService.ambiguousUserIds;
   users = this.#userService.usersFiltered;
   usersAreLoading = this.#users.isLoading;
   usersError = this.#users.error;
@@ -68,6 +73,8 @@ export class UserManagerListComponent implements AfterViewInit {
         return user.email;
       case 'name':
         return user.sortName;
+      case 'ext_id':
+        return user.ext_id;
       case 'roles':
         return user.roleNames.join(', ');
       case 'status':

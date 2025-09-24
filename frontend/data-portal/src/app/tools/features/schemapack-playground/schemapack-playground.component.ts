@@ -74,7 +74,6 @@ export class SchemapackPlaygroundComponent {
   async validate(): Promise<void> {
     try {
       const ret = JSON.parse(this.jsonData());
-      console.log('JSON data:', ret);
     } catch (error) {
       this.statusText.set('Invalid JSON data. Please check your input.');
       this.isStatusError.set(true);

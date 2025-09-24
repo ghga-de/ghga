@@ -20,9 +20,7 @@ export const UserStatusClass: {
 /**
  * This pipe is used to provide status-specific classes for users.
  */
-@Pipe({
-  name: 'UserStatusClassPipe',
-})
+@Pipe({ name: 'UserStatusClassPipe' })
 export class UserStatusClassPipe implements PipeTransform {
   /**
    * This method will return a class based on the user status provided
