@@ -15,7 +15,6 @@
 """Handling session initialization for httpx"""
 
 from contextlib import asynccontextmanager
-from typing import Union
 
 import hishel
 import httpx
@@ -58,7 +57,7 @@ class RetryHandler:
 
 
 def get_cache_transport(
-    wrapped_transport: Union[httpx.AsyncBaseTransport, None] = None,
+    wrapped_transport: httpx.AsyncBaseTransport | None = None,
 ) -> hishel.AsyncCacheTransport:
     """Construct an async cache transport with `hishel`.
 

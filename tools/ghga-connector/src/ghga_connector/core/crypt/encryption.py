@@ -20,7 +20,6 @@ import os
 from collections.abc import Generator
 from io import BufferedReader
 from pathlib import Path
-from typing import Optional, Union
 
 import crypt4gh.header
 import crypt4gh.keys
@@ -41,9 +40,9 @@ class Crypt4GHEncryptor(Encryptor):
         part_size: int,
         private_key_path: Path,
         server_public_key: str,
-        passphrase: Optional[str],
+        passphrase: str | None,
         checksums: Checksums = Checksums(),
-        file_secret: Union[bytes, None] = None,
+        file_secret: bytes | None = None,
     ):
         self._encrypted_file_size = 0
         self._checksums = checksums

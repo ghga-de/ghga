@@ -155,7 +155,7 @@ def set_presigned_url_update_endpoint(
         (6 * 1024 * 1024, 5 * 1024 * 1024),
         (12 * 1024 * 1024, 5 * 1024 * 1024),
         (20 * 1024 * 1024, 1 * 1024 * 1024),
-        (20 * 1024 * 1024, 64 * 1024),
+        (20 * 1024 * 1024, 32 * 1024),
         (1 * 1024 * 1024, DEFAULT_PART_SIZE),
         (75 * 1024 * 1024, 10 * 1024 * 1024),
     ],
@@ -322,7 +322,7 @@ async def test_file_not_downloadable(
         ),
         pytest.raises(
             exceptions.UnauthorizedAPICallError,
-            match="This is not the token you're looking for.",
+            match=r"This is not the token you're looking for\.",
         ),
     ):
         await async_download(

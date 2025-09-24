@@ -16,7 +16,6 @@
 """This module contains Crypt4GH based decryption functionality"""
 
 from pathlib import Path
-from typing import Optional
 
 import crypt4gh.keys
 import crypt4gh.lib
@@ -27,7 +26,7 @@ from .abstract_bases import Decryptor
 class Crypt4GHDecryptor(Decryptor):
     """Convenience class to deal with Crypt4GH decryption"""
 
-    def __init__(self, decryption_key_path: Path, passphrase: Optional[str]):
+    def __init__(self, decryption_key_path: Path, passphrase: str | None):
         if passphrase:
             self._decryption_key = crypt4gh.keys.get_private_key(
                 filepath=decryption_key_path, callback=lambda: passphrase

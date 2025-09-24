@@ -17,7 +17,6 @@
 """Main domain logic."""
 
 from pathlib import Path
-from typing import Optional
 
 import httpx
 
@@ -43,7 +42,7 @@ async def upload_file(  # noqa: PLR0913
     my_public_key_path: Path,
     my_private_key_path: Path,
     part_size: int,
-    passphrase: Optional[str] = None,
+    passphrase: str | None = None,
 ) -> None:
     """Core command to upload a file. Can be called by CLI, GUI, etc."""
     if not my_public_key_path.is_file():
@@ -196,7 +195,7 @@ def decrypt_file(
     input_file: Path,
     output_file: Path,
     decryption_private_key_path: Path,
-    passphrase: Optional[str],
+    passphrase: str | None,
 ):
     """Delegate decryption of a file Crypt4GH"""
     decryptor = Crypt4GHDecryptor(

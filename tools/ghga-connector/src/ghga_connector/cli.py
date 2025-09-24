@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from types import TracebackType
-from typing import Optional, Union
 
 import crypt4gh.keys
 import httpx
@@ -100,7 +99,7 @@ def strtobool(value: str) -> bool:
 def exception_hook(
     type_: BaseException,
     value: BaseException,
-    traceback: Union[TracebackType, None],
+    traceback: TracebackType | None,
     message_display: CLIMessageDisplay,
 ):
     """When debug mode is NOT enabled, gets called to perform final error handling
@@ -196,7 +195,7 @@ def upload(  # noqa: PLR0913
         help="The path to a private key from the key pair that will be used to encrypt the "
         + "crypt4gh envelope. Defaults to key.sec in the current folder.",
     ),
-    passphrase: Optional[str] = typer.Option(
+    passphrase: str | None = typer.Option(
         None,
         help="Passphrase for the encrypted private key. "
         + "Only needs to be provided if the key is actually encrypted.",
@@ -223,7 +222,7 @@ async def async_upload(  # noqa: PLR0913
     file_path: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: Optional[str] = None,
+    passphrase: str | None = None,
     debug: bool = False,
 ):
     """Upload a file asynchronously"""
@@ -266,7 +265,7 @@ def download(  # noqa: PLR0913
         + "that was announced when the download token was created. "
         + "Defaults to key.sec in the current folder.",
     ),
-    passphrase: Optional[str] = typer.Option(
+    passphrase: str | None = typer.Option(
         None,
         help="Passphrase for the encrypted private key. "
         + "Only needs to be provided if the key is actually encrypted.",
@@ -297,7 +296,7 @@ async def async_download(  # noqa: PLR0913
     output_dir: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: Optional[str] = None,
+    passphrase: str | None = None,
     debug: bool = False,
     overwrite: bool = False,
 ):
@@ -376,7 +375,7 @@ def decrypt(  # noqa: PLR0912, C901
         help="Path to the directory containing files that should be decrypted using a "
         + "common decryption key.",
     ),
-    output_dir: Optional[Path] = typer.Option(
+    output_dir: Path | None = typer.Option(
         None,
         help="Optional path to a directory that the decrypted file should be written to. "
         + "Defaults to input dir.",
@@ -387,7 +386,7 @@ def decrypt(  # noqa: PLR0912, C901
         + "that was announced when the download token was created. "
         + "Defaults to key.sec in the current folder.",
     ),
-    passphrase: Optional[str] = typer.Option(
+    passphrase: str | None = typer.Option(
         None,
         help="Passphrase for the encrypted private key. "
         + "Only needs to be provided if the key is actually encrypted.",

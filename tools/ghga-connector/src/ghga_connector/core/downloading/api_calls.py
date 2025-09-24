@@ -15,8 +15,6 @@
 
 """This module provides all API calls related to downloading files."""
 
-from typing import Union
-
 import httpx
 from tenacity import RetryError
 
@@ -94,7 +92,7 @@ async def get_download_url(  # noqa: C901, PLR0912
     client: httpx.AsyncClient,
     url_and_headers: UrlAndHeaders,
     bust_cache: bool = False,
-) -> Union[RetryResponse, URLResponse]:
+) -> RetryResponse | URLResponse:
     """
     Perform a RESTful API call to retrieve a presigned download URL.
     Returns:

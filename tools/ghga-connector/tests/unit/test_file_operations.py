@@ -20,7 +20,6 @@ import base64
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Union
 
 import crypt4gh.keys
 import pytest
@@ -31,7 +30,7 @@ from ghga_connector.core.crypt import Crypt4GHDecryptor, Crypt4GHEncryptor
 
 
 @pytest.mark.parametrize("from_part", (None, 3))
-def test_read_file_parts(from_part: Union[int, None]):
+def test_read_file_parts(from_part: int | None):
     """Test reading a full file with the `read_file_parts` function."""
     file_size = 20 * 1024 * 1024
     part_size = 5 * 1024 * 1024
