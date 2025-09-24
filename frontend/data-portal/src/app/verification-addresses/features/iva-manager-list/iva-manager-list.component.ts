@@ -55,8 +55,8 @@ import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creati
 })
 export class IvaManagerListComponent implements AfterViewInit {
   #dialog = inject(MatDialog);
-  #confirmationService = inject(ConfirmationService);
-  #notificationService = inject(NotificationService);
+  #confirm = inject(ConfirmationService);
+  #notify = inject(NotificationService);
   #ivaService = inject(IvaService);
   #ivaTypePipe = inject(IvaTypePipe);
 
@@ -136,10 +136,10 @@ export class IvaManagerListComponent implements AfterViewInit {
    */
   #invalidate(iva: UserWithIva): void {
     this.#ivaService.unverifyIva(iva.id).subscribe({
-      next: () => this.#notificationService.showSuccess('IVA has been invalidated'),
+      next: () => this.#notify.showSuccess('IVA has been invalidated'),
       error: (err) => {
         console.debug(err);
-        this.#notificationService.showError('IVA could not be invalidated');
+        this.#notify.showError('IVA could not be invalidated');
       },
     });
   }
@@ -150,7 +150,7 @@ export class IvaManagerListComponent implements AfterViewInit {
    */
   invalidateWhenConfirmed(iva: UserWithIva) {
     const ivaType = this.#ivaTypeName(iva);
-    this.#confirmationService.confirm({
+    this.#confirm.confirm({
       title: 'Confirm invalidation of IVA',
       message:
         `<p>Do you really wish to <strong>invalidate</strong> the ${ivaType} IVA of` +
@@ -171,13 +171,11 @@ export class IvaManagerListComponent implements AfterViewInit {
   #markAsTransmitted(iva: UserWithIva): void {
     this.#ivaService.confirmTransmissionForIva(iva.id).subscribe({
       next: () => {
-        this.#notificationService.showSuccess(
-          'Transmission of verification code confirmed',
-        );
+        this.#notify.showSuccess('Transmission of verification code confirmed');
       },
       error: (err) => {
         console.debug(err);
-        this.#notificationService.showError(
+        this.#notify.showError(
           'Transmission of verification code could not be confirmed',
         );
       },
@@ -190,7 +188,7 @@ export class IvaManagerListComponent implements AfterViewInit {
    */
   markAsTransmittedWhenConfirmed(iva: UserWithIva) {
     const ivaType = this.#ivaTypeName(iva);
-    this.#confirmationService.confirm({
+    this.#confirm.confirm({
       title: 'Confirm code transmission',
       message:
         'Please confirm the transmission of the verification code' +
@@ -210,7 +208,7 @@ export class IvaManagerListComponent implements AfterViewInit {
   createCode(iva: UserWithIva) {
     this.#ivaService.createCodeForIva(iva.id).subscribe({
       next: (code) => {
-        this.#notificationService.showSuccess('Verification code has been created');
+        this.#notify.showSuccess('Verification code has been created');
         const dialogRef = this.#dialog.open(CodeCreationDialogComponent, {
           data: { ...iva, code },
         });
@@ -222,7 +220,42 @@ export class IvaManagerListComponent implements AfterViewInit {
       },
       error: (err) => {
         console.debug(err);
-        this.#notificationService.showError('Verification code could not be created');
+        this.#notify.showError('Verification code could not be created');
+      },
+    });
+  }
+
+  /**
+   * Delete the given IVA
+   * @param iva - the IVA to be deleted
+   */
+  #delete(iva: UserWithIva): void {
+    this.#ivaService.deleteIva({ ivaId: iva.id, userId: iva.user_id }).subscribe({
+      next: () => this.#notify.showSuccess('IVA has been deleted'),
+      error: (err) => {
+        console.debug(err);
+        this.#notify.showError('IVA could not be deleted');
+      },
+    });
+  }
+
+  /**
+   * Delete the given IVA after confirmation
+   * @param iva - the IVA to delete
+   */
+  deleteWhenConfirmed(iva: UserWithIva): void {
+    const ivaType = this.#ivaTypeName(iva);
+    this.#confirm.confirm({
+      title: 'Confirm deletion of the IVA',
+      message:
+        `<p>Do you really wish to completely <strong>delete</strong> the ${ivaType} IVA of` +
+        ` ${iva.user_name} with address "${iva.value}"?` +
+        '</p><p>This is not reversible.</p>' +
+        '<p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
+      cancelText: 'Cancel',
+      confirmText: 'Confirm deletion',
+      callback: (confirmed) => {
+        if (confirmed) this.#delete(iva);
       },
     });
   }
