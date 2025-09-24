@@ -25,7 +25,7 @@ from .api_calls import is_service_healthy
 from .crypt import Crypt4GHDecryptor
 from .downloading.downloader import Downloader
 from .file_operations import is_file_encrypted
-from .message_display import AbstractMessageDisplay
+from .message_display import CLIMessageDisplay
 from .uploading.main import run_upload
 from .uploading.uploader import Uploader
 from .work_package import WorkPackageAccessor
@@ -37,7 +37,7 @@ async def upload_file(  # noqa: PLR0913
     client: httpx.AsyncClient,
     file_id: str,
     file_path: Path,
-    message_display: AbstractMessageDisplay,
+    message_display: CLIMessageDisplay,
     server_public_key: str,
     my_public_key_path: Path,
     my_private_key_path: Path,
@@ -102,7 +102,7 @@ async def download_file(  # noqa: PLR0913
     output_dir: Path,
     part_size: int,
     max_concurrent_downloads: int,
-    message_display: AbstractMessageDisplay,
+    message_display: CLIMessageDisplay,
     max_wait_time: int,
     work_package_accessor: WorkPackageAccessor,
     file_id: str,
@@ -165,7 +165,7 @@ async def download_file(  # noqa: PLR0913
     )
 
 
-def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> list[str]:
+def get_wps_token(max_tries: int, message_display: CLIMessageDisplay) -> list[str]:
     """
     Expect the work package id and access token as a colon separated string
     The user will have to input this manually to avoid it becoming part of the

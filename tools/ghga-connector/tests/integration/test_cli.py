@@ -353,7 +353,7 @@ async def test_file_not_downloadable(
     #  user inputs 'no' instead of 'yes' when prompted if they want to continue anyway)
     with (
         patch(
-            "ghga_connector.core.downloading.batch_processing.CliInputHandler.get_input",
+            "ghga_connector.core.downloading.batch_processing.CliIoHandler.get_input",
             return_value="no",
         ),
         pytest.raises(exceptions.AbortBatchProcessError),

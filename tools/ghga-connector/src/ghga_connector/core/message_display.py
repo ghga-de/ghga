@@ -17,23 +17,8 @@
 """Contains abstract message display base class"""
 
 import enum
-from abc import ABC, abstractmethod
 
-
-class AbstractMessageDisplay(ABC):
-    """Simple message display base class"""
-
-    @abstractmethod
-    def display(self, message: str):
-        """Display a message with standard formatting"""
-
-    @abstractmethod
-    def success(self, message: str):
-        """Display a message representing information about a successful operation"""
-
-    @abstractmethod
-    def failure(self, message: str):
-        """Display a message representing information about a failed operation"""
+import typer
 
 
 class MessageColors(str, enum.Enum):
@@ -46,3 +31,22 @@ class MessageColors(str, enum.Enum):
     DEFAULT = "white"
     SUCCESS = "green"
     FAILURE = "red"
+
+
+class CLIMessageDisplay:
+    """
+    Command line writer message display implementation,
+    using different color based on information type
+    """
+
+    def display(self, message: str):
+        """Write message with default color to stdout"""
+        typer.secho(message, fg=MessageColors.DEFAULT)
+
+    def success(self, message: str):
+        """Write message to stdout representing information about a successful operation"""
+        typer.secho(message, fg=MessageColors.SUCCESS)
+
+    def failure(self, message: str):
+        """Write message to stderr representing information about a failed operation"""
+        typer.secho(message, fg=MessageColors.FAILURE, err=True)

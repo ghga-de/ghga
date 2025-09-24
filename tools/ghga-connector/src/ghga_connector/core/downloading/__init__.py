@@ -15,5 +15,5 @@
 #
 """This subpackage contains functionality needed to download files from GHGA"""
 
-from .progress_bar import ProgressBar  # noqa: F401
+from ..progress_bar import DownloadProgressBar  # noqa: F401
 from .structs import RetryResponse, UrlAndHeaders, URLResponse  # noqa: F401

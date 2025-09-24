@@ -14,7 +14,6 @@
 # limitations under the License.
 """Module for batch processing related code"""
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from time import perf_counter, sleep
@@ -23,7 +22,7 @@ import httpx
 
 from ghga_connector.config import Config
 from ghga_connector.core import (
-    AbstractMessageDisplay,
+    CLIMessageDisplay,
     WorkPackageAccessor,
     exceptions,
 )
@@ -36,62 +35,9 @@ from .api_calls import (
 from .structs import RetryResponse, URLResponse
 
 
-class InputHandler(ABC):
-    """Abstract base for dealing with user input in batch processing"""
-
-    @abstractmethod
-    def get_input(self, *, message: str) -> str:
-        """Handle user input."""
-
-    @abstractmethod
-    def handle_response(self, *, response: str):
-        """Handle response from get_input."""
-
-
-class OutputHandler(ABC):
-    """Abstract base for checking existing content in a provided output location."""
-
-    @abstractmethod
-    def check_output(self, *, location: Path) -> list[str]:
-        """Check for and return existing files in output location."""
-
-
 @dataclass
-class BatchIoHandler(ABC):
+class CliIoHandler:
     """Convenience class to hold both input and output handlers"""
-
-    input_handler: InputHandler
-    output_handler: OutputHandler
-
-    @abstractmethod
-    def check_output(self, *, location: Path) -> list[str]:
-        """Check for and return existing files in output location."""
-
-    @abstractmethod
-    def get_input(self, *, message: str) -> str:
-        """User input handling."""
-
-    @abstractmethod
-    def handle_response(self, *, response: str):
-        """Handle response from get_input."""
-
-
-class CliInputHandler(InputHandler):
-    """CLI relevant input handling"""
-
-    def get_input(self, *, message: str) -> str:
-        """Simple user input handling."""
-        return input(message)
-
-    def handle_response(self, *, response: str):
-        """Handle response from get_input."""
-        if not (response.lower() == "yes" or response.lower() == "y"):
-            raise exceptions.AbortBatchProcessError()
-
-
-@dataclass
-class LocalOutputHandler(OutputHandler):
-    """Implements checks for an output directory on the local file system."""
 
     file_ids_with_extension: dict[str, str] = field(default_factory=dict, init=False)
 
@@ -111,27 +57,14 @@ class LocalOutputHandler(OutputHandler):
 
         return existing_files
 
-
-@dataclass
-class CliIoHandler(BatchIoHandler):
-    """Convenience class to hold both input and output handlers"""
-
-    input_handler: CliInputHandler = field(default_factory=CliInputHandler, init=False)
-    output_handler: LocalOutputHandler = field(
-        default_factory=LocalOutputHandler, init=False
-    )
-
-    def check_output(self, *, location: Path) -> list[str]:
-        """Check for and return existing files that would in output directory."""
-        return self.output_handler.check_output(location=location)
-
     def get_input(self, *, message: str) -> str:
         """Simple user input handling."""
-        return self.input_handler.get_input(message=message)
+        return input(message)
 
     def handle_response(self, *, response: str):
         """Handle response from get_input."""
-        return self.input_handler.handle_response(response=response)
+        if not (response.lower() == "yes" or response.lower() == "y"):
+            raise exceptions.AbortBatchProcessError()
 
 
 class FileStager:
@@ -143,7 +76,7 @@ class FileStager:
         wanted_file_ids: list[str],
         dcs_api_url: str,
         output_dir: Path,
-        message_display: AbstractMessageDisplay,
+        message_display: CLIMessageDisplay,
         work_package_accessor: WorkPackageAccessor,
         client: httpx.AsyncClient,
         config: Config,

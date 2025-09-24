@@ -29,9 +29,9 @@ from ghga_connector.core import (
     calc_part_ranges,
 )
 from ghga_connector.core.downloading.downloader import Downloader, TaskHandler
-from ghga_connector.core.downloading.progress_bar import ProgressBar
 from ghga_connector.core.downloading.structs import URLResponse
 from ghga_connector.core.exceptions import DownloadError
+from ghga_connector.core.progress_bar import DownloadProgressBar
 from tests.fixtures.s3 import (  # noqa: F401
     S3Fixture,
     get_big_s3_object,
@@ -134,7 +134,9 @@ async def test_download_file_parts(
         file_path = tmp_path / "test.file"
         with (
             file_path.open("wb") as file,
-            ProgressBar(file_name=file.name, file_size=total_file_size) as progress_bar,
+            DownloadProgressBar(
+                file_name=file.name, file_size=total_file_size
+            ) as progress_bar,
         ):
             dl_task = create_task(
                 downloader.drain_queue_to_file(
@@ -175,7 +177,9 @@ async def test_download_file_parts(
         file_path = tmp_path / "test2.file"
         with (
             file_path.open("wb") as file,
-            ProgressBar(file_name=file.name, file_size=total_file_size) as progress_bar,
+            DownloadProgressBar(
+                file_name=file.name, file_size=total_file_size
+            ) as progress_bar,
         ):
             dl_task = create_task(
                 downloader.drain_queue_to_file(
@@ -222,7 +226,9 @@ async def test_download_file_parts(
         file_path = tmp_path / "test3.file"
         with (
             file_path.open("wb") as file,
-            ProgressBar(file_name=file.name, file_size=total_file_size) as progress_bar,
+            DownloadProgressBar(
+                file_name=file.name, file_size=total_file_size
+            ) as progress_bar,
         ):
             dl_task = create_task(
                 downloader.drain_queue_to_file(

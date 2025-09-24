@@ -31,8 +31,7 @@ from ghga_service_commons.utils import crypt
 
 from ghga_connector.config import CONFIG
 from ghga_connector.core import (
-    AbstractMessageDisplay,
-    MessageColors,
+    CLIMessageDisplay,
     WorkPackageAccessor,
     async_client,
     exceptions,
@@ -45,25 +44,6 @@ from ghga_connector.core.main import (
     get_wps_token,
     upload_file,
 )
-
-
-class CLIMessageDisplay(AbstractMessageDisplay):
-    """
-    Command line writer message display implementation,
-    using different color based on information type
-    """
-
-    def display(self, message: str):
-        """Write message with default color to stdout"""
-        typer.secho(message, fg=MessageColors.DEFAULT)
-
-    def success(self, message: str):
-        """Write message to stdout representing information about a successful operation"""
-        typer.secho(message, fg=MessageColors.SUCCESS)
-
-    def failure(self, message: str):
-        """Write message to stderr representing information about a failed operation"""
-        typer.secho(message, fg=MessageColors.FAILURE, err=True)
 
 
 @dataclass
@@ -165,7 +145,7 @@ async def retrieve_download_parameters(
 
 
 def get_work_package_information(
-    my_private_key: bytes, message_display: AbstractMessageDisplay
+    my_private_key: bytes, message_display: CLIMessageDisplay
 ):
     """Fetch a work package id and work package token and decrypt the token"""
     # get work package access token and id from user input

@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from ghga_connector.core import PartRange
-from ghga_connector.core.downloading.progress_bar import ProgressBar
+from ghga_connector.core.progress_bar import DownloadProgressBar
 
 from .structs import URLResponse
 
@@ -75,7 +75,7 @@ class DownloaderBase(ABC):
         file: BufferedWriter,
         file_size: int,
         offset: int,
-        progress_bar: ProgressBar,
+        progress_bar: DownloadProgressBar,
     ) -> None:
         """Write downloaded file bytes from queue.
         This should be started as asyncio.Task and awaited after the download_to_queue
