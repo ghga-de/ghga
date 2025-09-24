@@ -44,8 +44,8 @@
   );
   @include mat.button-overrides(
     (
-      filled-container-color: var(--mat-sys-tertiary),
       text-label-text-size: medium,
+      filled-container-color: var(--mat-sys-tertiary),
       filled-label-text-size: medium,
       outlined-label-text-size: medium,
       outlined-outline-color: var(--mat-sys-quaternary),
@@ -320,164 +320,57 @@ table.table-row-hover-highlight {
   }
 }
 
-button.button-success,
-a.button-success {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-success),
-      filled-label-text-color: var(--mat-sys-on-success),
-      protected-container-color: var(--mat-sys-success),
-      protected-label-text-color: var(--mat-sys-on-success),
-      outlined-outline-color: var(--mat-sys-success),
-      outlined-label-text-color: var(--mat-sys-success),
-    )
-  );
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-success),
-      state-layer-color: var(--mat-sys-success),
-    )
-  );
-}
+// Since Tailwind @utility is incompatible with SCSS (and Angular Material)'s @include
+// we have to create this small workaround to generate our button-{$colour} classes
+$colour-suffixes: (
+  primary,
+  secondary,
+  tertiary,
+  quaternary,
+  quinary,
+  info,
+  warning,
+  danger,
+  error
+);
 
-button.button-danger,
-a.button-danger {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-danger),
-      filled-label-text-color: var(--mat-sys-on-danger),
-      protected-container-color: var(--mat-sys-danger),
-      protected-label-text-color: var(--mat-sys-on-danger),
-      outlined-outline-color: var(--mat-sys-danger),
-      outlined-label-text-color: var(--mat-sys-danger),
-    )
-  );
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-danger),
-      state-layer-color: var(--mat-sys-danger),
-    )
-  );
-}
-
-button.button-error,
-a.button-error {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-error),
-      filled-label-text-color: var(--mat-sys-on-error),
-      protected-container-color: var(--mat-sys-error),
-      protected-label-text-color: var(--mat-sys-on-error),
-      outlined-outline-color: var(--mat-sys-error),
-      outlined-label-text-color: var(--mat-sys-error),
-    )
-  );
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-error),
-      state-layer-color: var(--mat-sys-error),
-    )
-  );
-}
-
-button.button-primary,
-a.button-primary {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-primary),
-      filled-label-text-color: var(--mat-sys-on-primary),
-      protected-container-color: var(--mat-sys-primary),
-      protected-label-text-color: var(--mat-sys-on-primary),
-      outlined-outline-color: var(--mat-sys-primary),
-      outlined-label-text-color: var(--mat-sys-primary),
-    )
-  );
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-primary),
-      state-layer-color: var(--mat-sys-primary),
-    )
-  );
-}
-
-button.button-on-primary,
-a.button-on-primary {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-on-primary),
-      filled-label-text-color: var(--mat-sys-on-primary),
-      protected-container-color: var(--mat-sys-on-primary),
-      protected-label-text-color: var(--mat-sys-on-primary),
-      outlined-outline-color: var(--mat-sys-on-primary),
-      outlined-label-text-color: var(--mat-sys-primary),
-    )
-  );
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-on-primary),
-      state-layer-color: var(--mat-sys-on-primary),
-    )
-  );
-}
-
-button.button-secondary,
-a.button-secondary {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-secondary),
-      filled-label-text-color: var(--mat-sys-on-secondary),
-      protected-container-color: var(--mat-sys-secondary),
-      protected-label-text-color: var(--mat-sys-on-secondary),
-      outlined-outline-color: var(--mat-sys-secondary),
-      outlined-label-text-color: var(--mat-sys-secondary),
-    )
-  );
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-secondary),
-      state-layer-color: var(--mat-sys-secondary),
-    )
-  );
-}
-
-button.button-tertiary,
-a.button-tertiary {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-tertiary),
-      filled-label-text-color: var(--mat-sys-on-tertiary),
-      protected-container-color: var(--mat-sys-tertiary),
-      protected-label-text-color: var(--mat-sys-on-tertiary),
-      outlined-outline-color: var(--mat-sys-tertiary),
-      outlined-label-text-color: var(--mat-sys-tertiary),
-    )
-  );
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-tertiary),
-      state-layer-color: var(--mat-sys-tertiary),
-    )
-  );
-}
-
-button.button-quaternary,
-a.button-quaternary {
-  @include mat.button-overrides(
-    (
-      filled-container-color: var(--mat-sys-quaternary),
-      filled-label-text-color: var(--mat-sys-on-quaternary),
-      protected-container-color: var(--mat-sys-quaternary),
-      protected-label-text-color: var(--mat-sys-on-quaternary),
-      outlined-outline-color: var(--mat-sys-quaternary),
-      outlined-label-text-color: var(--mat-sys-quaternary),
-    )
-  );
-  @include mat.icon-button-overrides(
-    (
-      icon-color: var(--mat-sys-quaternary),
-      state-layer-color: var(--mat-sys-quaternary),
-    )
-  );
+@each $suffix in $colour-suffixes {
+  .button-#{$suffix} {
+    @include mat.button-overrides(
+      (
+        filled-container-color: var(--mat-sys-#{$suffix}),
+        filled-label-text-color: var(--mat-sys-on-#{$suffix}),
+        protected-container-color: var(--mat-sys-#{$suffix}),
+        protected-label-text-color: var(--mat-sys-on-#{$suffix}),
+        outlined-outline-color: var(--mat-sys-#{$suffix}),
+        outlined-label-text-color: var(--mat-sys-#{$suffix}),
+      )
+    );
+    @include mat.icon-button-overrides(
+      (
+        icon-color: var(--mat-sys-#{$suffix}),
+        state-layer-color: var(--mat-sys-#{$suffix}),
+      )
+    );
+  }
+  .button-on-#{$suffix} {
+    @include mat.button-overrides(
+      (
+        filled-container-color: var(--mat-sys-on-#{$suffix}),
+        filled-label-text-color: var(--mat-sys-#{$suffix}),
+        protected-container-color: var(--mat-sys-on-#{$suffix}),
+        protected-label-text-color: var(--mat-sys-#{$suffix}),
+        outlined-outline-color: var(--mat-sys-on-#{$suffix}),
+        outlined-label-text-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
+    @include mat.icon-button-overrides(
+      (
+        icon-color: var(--mat-sys-on-#{$suffix}),
+        state-layer-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
+  }
 }
 
 button.larger-button-text,
