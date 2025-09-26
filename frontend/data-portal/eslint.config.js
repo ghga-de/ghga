@@ -274,12 +274,12 @@ export default [
         {
           type: 'main-app',
           mode: 'full',
-          pattern: 'src/app/app.component.ts',
+          pattern: 'src/app/app.ts',
         },
         {
           type: 'routes',
           mode: 'full',
-          pattern: 'src/app/**/*.routes.ts',
+          pattern: 'src/app/**/*-routes.ts',
         },
         {
           type: 'features',
@@ -342,19 +342,17 @@ export default [
   },
   // Configuration for HTML template files
   {
-    files: ['**/*.component.html'],
+    files: ['src/app/**/*.html'],
     languageOptions: {
       parser: angularTemplateParser,
     },
     plugins: {
       '@angular-eslint/template': angularTemplate,
-      prettier,
     },
     rules: {
       ...angularTemplate.configs.recommended.rules,
       ...angularTemplate.configs.accessibility.rules,
       '@angular-eslint/template/no-positive-tabindex': 'error',
-      'prettier/prettier': 'warn',
     },
   },
   // Configuration for Markdown files

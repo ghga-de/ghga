@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { InitialsPipe } from './initials.pipe';
+import { InitialsPipe } from './initials-pipe';
 
 describe('InitialsPipe', () => {
   it('can create an instance', () => {

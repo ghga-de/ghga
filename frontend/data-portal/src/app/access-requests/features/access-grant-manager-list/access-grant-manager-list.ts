@@ -1,0 +1,133 @@
+/**
+ * Component that lists all the access grants.
+ * @copyright The GHGA Authors
+ * @license Apache-2.0
+ */
+
+import { DatePipe as CommonDatePipe } from '@angular/common';
+import {
+  AfterViewInit,
+  Component,
+  effect,
+  inject,
+  QueryList,
+  ViewChild,
+  ViewChildren,
+} from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatRippleModule } from '@angular/material/core';
+import { MatIconModule } from '@angular/material/icon';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { Router, RouterLink } from '@angular/router';
+import { AccessGrant } from '@app/access-requests/models/access-requests';
+import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
+import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { DatePipe } from '@app/shared/pipes/date-pipe';
+import {
+  DEFAULT_DATE_OUTPUT_FORMAT,
+  DEFAULT_TIME_ZONE,
+} from '@app/shared/utils/date-formats';
+
+/**
+ * Access Grant Manager List component.
+ *
+ * This component lists all the access grants of all users
+ * in the Access Grant Manager. Filter conditions can be applied to the list and there is a details view.
+ */
+@Component({
+  selector: 'app-access-grant-manager-list',
+  imports: [
+    MatTableModule,
+    MatSortModule,
+    MatPaginatorModule,
+    MatButtonModule,
+    MatIconModule,
+    MatRippleModule,
+    DatePipe,
+    AccessGrantStatusClassPipe,
+    MatIconModule,
+    RouterLink,
+  ],
+  providers: [CommonDatePipe],
+  templateUrl: './access-grant-manager-list.html',
+})
+export class AccessGrantManagerListComponent implements AfterViewInit {
+  #ars = inject(AccessRequestService);
+  #router = inject(Router);
+
+  accessGrants = this.#ars.allAccessGrantsFiltered;
+  source = new MatTableDataSource<AccessGrant>([]);
+
+  defaultTablePageSize = 10;
+  tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
+
+  periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
+  periodTimeZone = DEFAULT_TIME_ZONE;
+
+  #updateSourceEffect = effect(() => (this.source.data = this.accessGrants()));
+
+  #accessGrantsSortingAccessor = (ag: AccessGrant, key: string) => {
+    switch (key) {
+      case 'dataset':
+        return ag.dataset_id;
+      case 'status':
+        const rank = { Active: 0, Waiting: 1, Expired: 2 }[ag.status as string] ?? 3;
+        return `${rank}:${ag.valid_from}-${ag.valid_until})`;
+      case 'user':
+        const parts = ag.user_name.split(' ');
+        parts.push(ag.user_email);
+        return parts.reverse().join(',');
+      case 'period':
+        return `${ag.valid_from}-${ag.valid_until})`;
+      default:
+        const value = ag[key as keyof AccessGrant];
+        if (typeof value === 'string' || typeof value === 'number') {
+          return value;
+        }
+        return '';
+    }
+  };
+
+  @ViewChildren(MatSort) matSorts!: QueryList<MatSort>;
+  @ViewChildren(MatPaginator) matPaginators!: QueryList<MatPaginator>;
+  @ViewChild('paginator') paginator!: MatPaginator;
+  @ViewChild('sort') sort!: MatSort;
+
+  /**
+   * Assign sorting
+   */
+  #addSorting() {
+    if (this.sort) this.source.sort = this.sort;
+  }
+
+  /**
+   * Assign pagination
+   */
+  #addPagination() {
+    if (this.paginator) this.source.paginator = this.paginator;
+  }
+
+  /**
+   * After the view has been initialised
+   * assign the sorting of the table to the data source
+   */
+  ngAfterViewInit() {
+    this.source.sortingDataAccessor = this.#accessGrantsSortingAccessor;
+    this.#addSorting();
+    this.#addPagination();
+    this.matSorts.changes.subscribe(() => this.#addSorting());
+    this.matPaginators.changes.subscribe(() => this.#addPagination());
+  }
+
+  /**
+   * Navigate to access grant details page
+   * @param event - the PointerEvent object to check if there is an anchor inside
+   * @param ag - the selected access grant
+   */
+  viewDetails(event: MouseEvent, ag: AccessGrant): void {
+    if ((event.target as HTMLElement | null)?.closest('a')) return;
+    this.#router.navigate(['/access-grant-manager', ag.id]);
+  }
+}

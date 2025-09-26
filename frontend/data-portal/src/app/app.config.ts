@@ -19,8 +19,8 @@ import { DATE_PIPE_DEFAULT_OPTIONS } from '@angular/common';
 import { withFetch } from '@angular/common/http';
 import { provideDateFnsAdapter } from '@angular/material-date-fns-adapter';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
-import { csrfInterceptor } from '@app/auth/services/csrf.service';
-import { routes, TemplatePageTitleStrategy } from './app.routes';
+import { csrfInterceptor } from '@app/auth/services/csrf';
+import { routes, TemplatePageTitleStrategy } from './app-routes';
 
 import {
   DEFAULT_DATE_FORMATS,
