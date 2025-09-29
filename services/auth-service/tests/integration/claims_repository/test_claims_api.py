@@ -24,7 +24,7 @@ from fastapi import status
 from auth_service.user_registry.deps import get_user_dao
 from tests.fixtures.constants import ID_OF_JOHN, ID_OF_ROD_STEWARD, SOME_USER_ID
 
-from ...fixtures.utils import DummyUserDao
+from ...fixtures.utils import MockUserDao
 from .fixtures import FullClient, fixture_full_client  # noqa: F401
 
 pytestmark = pytest.mark.asyncio()
@@ -65,7 +65,7 @@ async def test_get_from_a_random_path(full_client: FullClient):
 
 async def test_post_claim(full_client: FullClient):
     """Test that creating a user claim works."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     response = await full_client.post(
@@ -99,7 +99,7 @@ async def test_post_claim(full_client: FullClient):
 
 async def test_get_claims(full_client: FullClient):
     """Test that getting all claims of a user works."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     # post two different claims
@@ -137,7 +137,7 @@ async def test_get_claims(full_client: FullClient):
 
 async def test_patch_claim(full_client: FullClient):
     """Test that revoking a user claim works."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     # post test claim
@@ -173,14 +173,14 @@ async def test_patch_claim(full_client: FullClient):
     response = await full_client.patch(
         f"/users/{ID_OF_JOHN}/claims/{claim_id}", json=patch_data
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # test with later revocation date
     patch_data = {"revocation_date": "2022-10-15T13:00:00Z"}
     response = await full_client.patch(
         f"/users/{ID_OF_JOHN}/claims/{claim_id}", json=patch_data
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert response.json()["detail"] == "Already revoked earlier."
 
     # test with earlier revocation date
@@ -216,7 +216,7 @@ async def test_patch_claim(full_client: FullClient):
 
 async def test_delete_claim(full_client: FullClient):
     """Test that deleting a user claim works."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     # post two different claims

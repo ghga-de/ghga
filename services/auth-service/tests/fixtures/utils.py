@@ -239,7 +239,7 @@ def request_with_authorization(token: str = "") -> Request:
     return Request({"type": "http", "headers": [(b"authorization", authorization)]})
 
 
-class DummyUserDao:
+class MockUserDao:
     """UserDao that can retrieve one dummy user."""
 
     users: list[User]
@@ -253,7 +253,7 @@ class DummyUserDao:
         ext_id=EXT_ID_OF_JOHN,
         status="active",
     ):
-        """Initialize the DummyUserDao."""
+        """Initialize the mock UserDao."""
         self.users = [
             User(
                 id=id_,
@@ -328,13 +328,13 @@ class DummyUserDao:
             raise ResourceNotFoundError(id_=id_)
 
 
-class DummyIvaDao:
-    """UserDao that can retrieve one dummy IVA."""
+class MockIvaDao:
+    """IvaDao that can retrieve one dummy IVA."""
 
     ivas: list[Iva]
 
     def __init__(self, ivas: list[Iva] | None = None, state=IvaState.VERIFIED):
-        """Initialize the DummyIvaDao."""
+        """Initialize the mock IvaDao."""
         if ivas is None:
             now = now_utc_ms_prec()
             ivas = [
@@ -401,13 +401,13 @@ class DummyIvaDao:
         self.ivas.remove(iva)
 
 
-class DummyUserTokenDao:
-    """Dummy UserTokenDao for testing."""
+class MockUserTokenDao:
+    """Mock UserTokenDao for testing."""
 
     user_tokens: dict[UUID4, UserToken]
 
     def __init__(self):
-        """Initialize the dummy UserTokenDao"""
+        """Initialize the mock UserTokenDao"""
         self.user_tokens = {}
 
     async def get_by_id(self, id_: UUID4) -> UserToken:
@@ -426,13 +426,13 @@ class DummyUserTokenDao:
         self.user_tokens[dto.user_id] = dto
 
 
-class DummyClaimDao:
+class MockClaimDao:
     """ClaimDao that can retrieve a dummy data steward claim."""
 
     claims: list[Claim]
 
     def __init__(self, valid_date=now_utc_ms_prec()):
-        """Initialize the DummyClaimDao."""
+        """Initialize the mock ClaimDao."""
         self.valid_date = valid_date
         self.invalid_date = valid_date + timedelta(14)
         self.claims = [
@@ -517,11 +517,11 @@ class DummyClaimDao:
         self.claims.remove(claim)
 
 
-class DummyEventPublisher(EventPublisherPort):
+class MockEventPublisher(EventPublisherPort):
     """User registry event publisher for testing."""
 
     def __init__(self):
-        """Initialize the dummy event publisher."""
+        """Initialize the mock event publisher."""
         self.published_events = []
 
     async def publish_2fa_recreated(self, *, user_id: UUID4) -> None:
@@ -537,25 +537,25 @@ class DummyEventPublisher(EventPublisherPort):
         self.published_events.append(("ivas_reset", user_id))
 
 
-class DummyUserRegistry(UserRegistry):
+class MockUserRegistry(UserRegistry):
     """A modified user registry for testing with the dummy DAOs."""
 
     published_events: list[tuple[str, Any]]
 
     def __init__(self, *, config: UserRegistryConfig = CONFIG):
-        """Initialize the DummyUserRegistry."""
-        self.dummy_user_dao = DummyUserDao()
-        self.dummy_iva_dao = DummyIvaDao([])
-        self._dummy_claim_dao = DummyClaimDao()
-        event_publisher = DummyEventPublisher()
+        """Initialize the mock UserRegistry."""
+        self.mock_user_dao = MockUserDao()
+        self.mock_iva_dao = MockIvaDao([])
+        self.mock_claim_dao = MockClaimDao()
+        mock_event_publisher = MockEventPublisher()
         super().__init__(
             config=config,
-            user_dao=cast(DaoPublisher[UserDto], self.dummy_user_dao),
-            iva_dao=cast(DaoPublisher[IvaDto], self.dummy_iva_dao),
-            claim_dao=cast(Dao[ClaimDto], self._dummy_claim_dao),
-            event_pub=event_publisher,
+            user_dao=cast(DaoPublisher[UserDto], self.mock_user_dao),
+            iva_dao=cast(DaoPublisher[IvaDto], self.mock_iva_dao),
+            claim_dao=cast(Dao[ClaimDto], self.mock_claim_dao),
+            event_pub=mock_event_publisher,
         )
-        self.published_events = event_publisher.published_events
+        self.published_events = mock_event_publisher.published_events
 
     @staticmethod
     def is_internal_user_id(id_: str) -> bool:
@@ -573,17 +573,17 @@ class DummyUserRegistry(UserRegistry):
     @property
     def dummy_user(self) -> User:
         """Get the dummy user."""
-        return self.dummy_user_dao.user
+        return self.mock_user_dao.user
 
     @property
     def dummy_users(self) -> list[User]:
         """Get the dummy users."""
-        return self.dummy_user_dao.users
+        return self.mock_user_dao.users
 
     @property
     def dummy_ivas(self) -> list[Iva]:
         """Get the dummy IVAs."""
-        return self.dummy_iva_dao.ivas
+        return self.mock_iva_dao.ivas
 
     def add_dummy_iva(
         self,

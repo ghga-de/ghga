@@ -47,7 +47,7 @@ from tests.fixtures.constants import SOME_USER_ID
 @pytest_asyncio.fixture(name="user_dao_publisher_factory")
 async def fixture_user_dao(
     mongodb: MongoDbFixture, kafka: KafkaFixture
-) -> AsyncGenerator[UserDaoPublisherFactoryPort, None]:
+) -> AsyncGenerator[UserDaoPublisherFactoryPort]:
     """Create a user DAO factory for testing and set a random correlation ID."""
     config = Config(
         mongo_dsn=mongodb.config.mongo_dsn,

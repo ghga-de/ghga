@@ -167,7 +167,7 @@ def test_does_not_validate_token_with_invalid_payload():
             "bKt6NQoZGLOLqqqB-XT99ENnsmv-hxLId08FxR4LUOw"
         )
         with pytest.raises(
-            auth.TokenValidationError, match="Not a valid token: .* not a json dict"
+            auth.TokenValidationError, match=r"Not a valid token: .* not a json dict"
         ):
             auth.decode_and_validate_token(token_with_text_as_payload, key=key)
         token_with_bad_encoding = (

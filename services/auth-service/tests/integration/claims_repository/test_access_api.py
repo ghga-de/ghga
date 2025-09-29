@@ -41,7 +41,7 @@ from tests.fixtures.constants import (
     SOME_USER_ID,
 )
 
-from ...fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
+from ...fixtures.utils import MockClaimDao, MockIvaDao, MockUserDao
 from .fixtures import FullClient, fixture_full_client  # noqa: F401
 from .test_claims_api import DATASET_CLAIM_DATA
 
@@ -50,7 +50,7 @@ pytestmark = pytest.mark.asyncio()
 
 async def test_grant_download_access(full_client: FullClient):
     """Test that granting access to a dataset works."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_utc_ms_prec()
     iva = Iva(
@@ -62,7 +62,7 @@ async def test_grant_download_access(full_client: FullClient):
         created=now,
         changed=now,
     )
-    iva_dao = DummyIvaDao([iva])
+    iva_dao = MockIvaDao([iva])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     validity = {
@@ -75,7 +75,7 @@ async def test_grant_download_access(full_client: FullClient):
         f"/download-access/users/{ID_OF_JOHN}/ivas/{SOME_IVA_ID}/datasets/not-a-dataset-id",
         json=validity,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # now try again with a valid dataset accession
     response = await full_client.post(
@@ -125,7 +125,7 @@ async def test_grant_download_access(full_client: FullClient):
 
 async def test_grant_download_access_with_unverified_iva(full_client: FullClient):
     """Test granting access to a dataset when the IVA is not yet verified."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_utc_ms_prec()
     iva = Iva(
@@ -136,7 +136,7 @@ async def test_grant_download_access_with_unverified_iva(full_client: FullClient
         created=now,
         changed=now,
     )
-    iva_dao = DummyIvaDao([iva])
+    iva_dao = MockIvaDao([iva])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     validity = {
@@ -172,9 +172,9 @@ async def test_grant_download_access_with_unverified_iva(full_client: FullClient
 
 async def test_grant_download_access_without_iva(full_client: FullClient):
     """Test granting access to a dataset when the IVA does not exist."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao()
+    iva_dao = MockIvaDao()
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     year = now_utc_ms_prec().year
@@ -207,7 +207,7 @@ async def test_grant_download_access_without_iva(full_client: FullClient):
 
 async def test_check_download_access(full_client: FullClient):
     """Test that checking download access for a single dataset works."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_utc_ms_prec()
     iva = Iva(
@@ -219,7 +219,7 @@ async def test_check_download_access(full_client: FullClient):
         created=now,
         changed=now,
     )
-    iva_dao = DummyIvaDao([iva])
+    iva_dao = MockIvaDao([iva])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # post valid access permission for SOME_IVA_ID and DS0815
@@ -301,7 +301,7 @@ async def test_check_download_access(full_client: FullClient):
     response = await full_client.get(
         f"/download-access/users/{ID_OF_JOHN}/datasets/not-a-dataset-id"
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # check access when permission exists but is not valid any more
 
@@ -333,7 +333,7 @@ async def test_check_download_access(full_client: FullClient):
 
 async def test_check_download_access_with_unverified_iva(full_client: FullClient):
     """Test checking download access for a single dataset with an unverified IVA."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_utc_ms_prec()
     iva = Iva(
@@ -344,7 +344,7 @@ async def test_check_download_access_with_unverified_iva(full_client: FullClient
         created=now,
         changed=now,
     )
-    iva_dao = DummyIvaDao([iva])
+    iva_dao = MockIvaDao([iva])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # post valid access permission for SOME_IVA_ID and DS0815
@@ -377,7 +377,7 @@ async def test_check_download_access_with_unverified_iva(full_client: FullClient
 
 async def test_get_datasets_with_download_access(full_client: FullClient):
     """Test that getting all datasets with download access works."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
     now = now_utc_ms_prec()
     unverified_iva_id_str = "58885d5a-420a-4fd7-9815-3fe79840ca58"
@@ -393,7 +393,7 @@ async def test_get_datasets_with_download_access(full_client: FullClient):
     verified_iva = unverified_iva.model_copy(
         update={"id": UUID(verified_iva_id_str), "state": IvaState.VERIFIED}
     )
-    iva_dao = DummyIvaDao([unverified_iva, verified_iva])
+    iva_dao = MockIvaDao([unverified_iva, verified_iva])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # should not have downloadable datasets in the beginning
@@ -572,9 +572,9 @@ async def test_get_datasets_with_download_access(full_client: FullClient):
 
 async def test_fetch_access_grants(full_client: FullClient):
     """Test that access grants can be fetched and filters can be used."""
-    user_dao = DummyUserDao(title="Prof.", name="John Doe Sr.")
+    user_dao = MockUserDao(title="Prof.", name="John Doe Sr.")
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    claim_dao = DummyClaimDao()
+    claim_dao = MockClaimDao()
     full_client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
     user = user_dao.users[0]
     assert user.name == "John Doe Sr."
@@ -607,7 +607,7 @@ async def test_fetch_access_grants(full_client: FullClient):
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
     response = await full_client.get("/download-access/grants?user_id=invalid-id")
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert "should be a valid UUID" in response.json()["detail"][0]["msg"]
     response = await full_client.get(f"/download-access/grants?user_id={ID_OF_JOHN}")
     assert response.status_code == status.HTTP_200_OK
@@ -649,7 +649,7 @@ async def test_fetch_access_grants(full_client: FullClient):
 
 async def test_delete_access_grants(full_client: FullClient):
     """Test that access grants can be revoked."""
-    claim_dao = DummyClaimDao()
+    claim_dao = MockClaimDao()
     full_client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
     claim = claim_dao.claims[1]
     assert claim.visa_type == "ControlledAccessGrants"

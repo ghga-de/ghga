@@ -197,7 +197,7 @@ async def test_post_user_with_status(
         "/users", json=user_data, headers=new_user_headers
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_post_user_with_different_name(
@@ -210,7 +210,7 @@ async def test_post_user_with_different_name(
         "/users", json=user_data, headers=new_user_headers
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert error["detail"] == "User cannot be registered."
 
@@ -224,7 +224,7 @@ async def test_post_user_with_different_email(
         "/users", json=user_data, headers=new_user_headers
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert error["detail"] == "User cannot be registered."
 
@@ -238,7 +238,7 @@ async def test_post_user_with_invalid_email(
         "/users", json=user_data, headers=new_user_headers
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert "not a valid email address" in error["detail"][0]["msg"]
 
@@ -264,7 +264,7 @@ async def test_post_user_with_existing_user(
     user_data = {**MAX_USER_DATA, "ext_id": str(ID_OF_MAX)}
     response = await bare_client.post("/users", json=user_data, headers=user_headers)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert "not a valid email address" in error["detail"][0]["msg"]
 
@@ -336,7 +336,7 @@ async def test_put_non_existing_user_with_invalid_id(full_client: FullClient):
     headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
 
     response = await full_client.put(f"/users/{id_}", json=user_data, headers=headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert "should be a valid UUID" in error["detail"][0]["msg"]
 
@@ -363,7 +363,7 @@ async def test_put_user_with_too_much_data(bare_client: BareClient):
     headers = get_headers_for(id=id_, name=user_data["name"], email=user_data["email"])
 
     response = await bare_client.put(f"/users/{id_}", json=user_data, headers=headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert "Extra inputs are not permitted" in error["detail"][0]["msg"]
 
@@ -378,7 +378,7 @@ async def test_put_user_with_invalid_data(bare_client: BareClient):
     user_data["email"] = "invalid"
 
     response = await bare_client.put(f"/users/{id_}", json=user_data, headers=headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert "not a valid email address" in error["detail"][0]["msg"]
 
@@ -470,14 +470,14 @@ async def test_get_user_via_ext_id(
     id_ = expected_user["ext_id"]
     response = await full_client.get(f"/users/{id_}", headers=new_user_headers)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert "Input should be a valid UUID" in error["detail"][0]["msg"]
 
     id_ = expected_user["ext_id"]
     response = await full_client.get(f"/users/{id_}", headers=user_headers)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error = response.json()
     assert "Input should be a valid UUID" in error["detail"][0]["msg"]
 
@@ -577,7 +577,7 @@ async def test_get_users_with_invalid_status(
 ):
     """Test that we get an error when fetching users with invalid status filter."""
     response = await bare_client.get("/users?status=foo", headers=steward_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_get_users_unauthenticated(bare_client: BareClient):

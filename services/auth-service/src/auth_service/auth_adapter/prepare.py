@@ -44,7 +44,7 @@ __all__ = ["prepare_rest_app"]
 
 
 @asynccontextmanager
-async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
+async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI]:
     """Construct and initialize the REST API app along with all its dependencies."""
     app = FastAPI(title=TITLE, description=DESCRIPTION, version=VERSION)
     configure_app(app, config=config)

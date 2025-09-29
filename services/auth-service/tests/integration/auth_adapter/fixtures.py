@@ -48,9 +48,9 @@ from auth_service.user_registry.deps import (
 from ...fixtures.utils import (
     RE_USER_INFO_URL,
     USER_INFO,
-    DummyClaimDao,
-    DummyUserRegistry,
-    DummyUserTokenDao,
+    MockClaimDao,
+    MockUserRegistry,
+    MockUserTokenDao,
     create_access_token,
     headers_for_session,
 )
@@ -63,7 +63,7 @@ totp_encryption_key = TOTPHandler.random_encryption_key()
 
 
 @pytest_asyncio.fixture(name="bare_client")
-async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient, None]:
+async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient]:
     """Get a test client for the auth adapter without database."""
     config = Config(
         kafka_servers=kafka.config.kafka_servers,
@@ -88,8 +88,8 @@ class ClientWithSession(NamedTuple):
 
     bare_client: BareClient
     session: Session
-    user_registry: DummyUserRegistry
-    user_token_dao: DummyUserTokenDao
+    user_registry: MockUserRegistry
+    user_token_dao: MockUserTokenDao
 
 
 _map_session_dict_to_object = {
@@ -158,15 +158,15 @@ async def query_new_session(
 @pytest_asyncio.fixture(name="client_with_session")
 async def fixture_bare_client_with_session(
     bare_client: BareClient, httpx_mock: HTTPXMock
-) -> AsyncGenerator[ClientWithSession, None]:
+) -> AsyncGenerator[ClientWithSession]:
     """Get test client for the auth adapter with a logged in user"""
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
-    user_registry = DummyUserRegistry()
-    user_dao = user_registry.dummy_user_dao
-    iva_dao = user_registry.dummy_iva_dao
-    user_token_dao = DummyUserTokenDao()
-    claim_dao = DummyClaimDao()
+    user_registry = MockUserRegistry()
+    user_dao = user_registry.mock_user_dao
+    iva_dao = user_registry.mock_iva_dao
+    user_token_dao = MockUserTokenDao()
+    claim_dao = MockClaimDao()
 
     overrides = bare_client.app.dependency_overrides
     overrides[get_user_dao] = lambda: user_dao
@@ -183,7 +183,7 @@ async def fixture_bare_client_with_session(
 @pytest_asyncio.fixture(name="client_with_basic_auth")
 async def fixture_bare_client_with_basic_auth(
     kafka: KafkaFixture,
-) -> AsyncGenerator[ClientWithBasicAuth, None]:
+) -> AsyncGenerator[ClientWithBasicAuth]:
     """Get a test client for the user registry with Basic auth."""
     # create a config with Basic auth credentials
     credentials = "testuser:testpwd"

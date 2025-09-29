@@ -58,8 +58,8 @@ pytestmark = [
 ]
 
 
-class DummyEventPublisher(EventPublisherProtocol):
-    """A dummy event publisher for testing."""
+class MockEventPublisher(EventPublisherProtocol):
+    """A event publisher mock for testing."""
 
     def __init__(
         self, expected_topic: str = "dummy_topic", expected_type: str = "dummy_event"
@@ -88,7 +88,7 @@ class DummyEventPublisher(EventPublisherProtocol):
         self.published_payload = payload
 
 
-class AuthEventPublisher(DummyEventPublisher):
+class AuthEventPublisher(MockEventPublisher):
     """A event publisher for testing auth related notifications."""
 
     def __init__(self, config: EventPubTranslatorConfig):
@@ -107,7 +107,7 @@ async def test_publish_2fa_recreated(config: EventPubTranslatorConfig):
     }
 
 
-class IvaEventPublisher(DummyEventPublisher):
+class IvaEventPublisher(MockEventPublisher):
     """A event publisher for testing IVA related notifications."""
 
     def __init__(self, config: EventPubTranslatorConfig):

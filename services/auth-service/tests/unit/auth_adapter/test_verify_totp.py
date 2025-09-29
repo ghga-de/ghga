@@ -36,9 +36,9 @@ from auth_service.user_registry.models.users import UserStatus
 from tests.fixtures.constants import ID_OF_JOHN
 
 from ...fixtures.utils import (
-    DummyUserDao,
-    DummyUserRegistry,
-    DummyUserTokenDao,
+    MockUserDao,
+    MockUserRegistry,
+    MockUserTokenDao,
 )
 
 SESSION_ARGS = {
@@ -92,12 +92,12 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         limit_reached = False
     session.totp_token = totp_token
 
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
 
-    user_registry = DummyUserRegistry(config=config)
-    user_dao = user_registry.dummy_user_dao
-    iva_dao = user_registry.dummy_iva_dao
-    user_token_dao = DummyUserTokenDao()
+    user_registry = MockUserRegistry(config=config)
+    user_dao = user_registry.mock_user_dao
+    iva_dao = user_registry.mock_iva_dao
+    user_token_dao = MockUserTokenDao()
 
     user_id = user_dao.user.id
     assert user_id == session.user_id

@@ -75,7 +75,7 @@ class FullClient(BareClient):
 @pytest_asyncio.fixture(name="full_client")
 async def fixture_full_client(
     mongodb: MongoDbFixture, kafka: KafkaFixture
-) -> AsyncGenerator[FullClient, None]:
+) -> AsyncGenerator[FullClient]:
     """Get a test client for the user registry with a test database."""
     config = Config(
         mongo_dsn=mongodb.config.mongo_dsn,

@@ -70,7 +70,7 @@ __all__ = [
 @asynccontextmanager
 async def prepare_event_handler(
     config: Config,
-) -> AsyncGenerator[DatasetDeletionPort, None]:
+) -> AsyncGenerator[DatasetDeletionPort]:
     """Get an event handler for dataset deletion events."""
     async with MongoDbDaoFactory.construct(config=config) as dao_factory:
         claim_dao_factory = ClaimDaoFactory(config=config, dao_factory=dao_factory)
@@ -81,7 +81,7 @@ async def prepare_event_handler(
 @asynccontextmanager
 async def prepare_event_subscriber(
     config: Config,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Get an event subscriber for dataset deletion events."""
     async with prepare_event_handler(config) as handler:
         translator = EventSubTranslator(config=config, handler=handler)
@@ -92,7 +92,7 @@ async def prepare_event_subscriber(
 
 
 @asynccontextmanager
-async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI, None]:
+async def prepare_rest_app(config: Config) -> AsyncGenerator[FastAPI]:
     """Construct and initialize the REST API app along with all its dependencies."""
     app = FastAPI(
         title=TITLE,

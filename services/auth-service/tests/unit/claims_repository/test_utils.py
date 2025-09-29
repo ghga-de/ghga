@@ -48,7 +48,7 @@ from tests.fixtures.constants import (
     SOME_USER_ID,
 )
 
-from ...fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
+from ...fixtures.utils import MockClaimDao, MockIvaDao, MockUserDao
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
@@ -56,7 +56,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="module")
 @pytest.mark.parametrize("status", [UserStatus.ACTIVE, UserStatus.INACTIVE])
 async def test_user_exists(status: UserStatus):
     """Test that existence of users can be checked."""
-    user_dao = cast(UserDao, DummyUserDao(id_=SOME_USER_ID, status=status))
+    user_dao = cast(UserDao, MockUserDao(id_=SOME_USER_ID, status=status))
     assert not await user_exists(None, user_dao=user_dao)  # type: ignore
     assert await user_exists(SOME_USER_ID, user_dao=user_dao)
     assert not await user_exists(uuid4(), user_dao=user_dao)
@@ -65,7 +65,7 @@ async def test_user_exists(status: UserStatus):
 @pytest.mark.parametrize("status", [UserStatus.ACTIVE, UserStatus.INACTIVE])
 async def test_active_user_exists(status: UserStatus):
     """Test that existence of active users can be checked."""
-    user_dao = cast(UserDao, DummyUserDao(id_=SOME_USER_ID, status=status))
+    user_dao = cast(UserDao, MockUserDao(id_=SOME_USER_ID, status=status))
     assert not await user_is_active(None, user_dao=user_dao)  # type: ignore
     assert await user_is_active(SOME_USER_ID, user_dao=user_dao) is (
         status == UserStatus.ACTIVE
@@ -85,8 +85,8 @@ async def test_iva_exists():
         changed=now,
     )
     kwargs = {
-        "user_dao": DummyUserDao(id_=SOME_USER_ID),
-        "iva_dao": DummyIvaDao([iva]),
+        "user_dao": MockUserDao(id_=SOME_USER_ID),
+        "iva_dao": MockIvaDao([iva]),
     }
 
     assert not await user_with_iva_exists(None, None, **kwargs)  # type: ignore
@@ -110,8 +110,8 @@ async def test_iva_exists_when_it_belongs_to_a_different_user():
         changed=now,
     )
     kwargs: Any = {
-        "user_dao": DummyUserDao(id_=SOME_USER_ID),
-        "iva_dao": DummyIvaDao([iva]),
+        "user_dao": MockUserDao(id_=SOME_USER_ID),
+        "iva_dao": MockIvaDao([iva]),
     }
 
     assert not await user_with_iva_exists(SOME_USER_ID, SOME_IVA_ID, **kwargs)
@@ -132,7 +132,7 @@ async def test_iva_is_verified(state: IvaState):
         changed=now,
     )
     kwargs = {
-        "iva_dao": cast(IvaDao, DummyIvaDao([iva])),
+        "iva_dao": cast(IvaDao, MockIvaDao([iva])),
     }
 
     assert not await iva_is_verified(None, None, **kwargs)  # type: ignore
@@ -148,8 +148,8 @@ async def test_iva_is_verified(state: IvaState):
 
 async def test_get_active_roles_without_iva():
     """Internal role claims without IVA can be requested."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
     expected_roles = ["data_steward"]
     assert (
         await get_active_roles(ID_OF_JAMES, user_dao=user_dao, claim_dao=claim_dao)
@@ -160,8 +160,8 @@ async def test_get_active_roles_without_iva():
 @pytest.mark.parametrize("state", IvaState)
 async def test_get_active_roles_with_iva(state: IvaState):
     """Internal role claims must have an IVA that is in the verified state."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
     now = now_utc_ms_prec()
     iva = Iva(
         id=DATA_STEWARD_IVA_ID,
@@ -172,7 +172,7 @@ async def test_get_active_roles_with_iva(state: IvaState):
         created=now,
         changed=now,
     )
-    iva_dao = cast(IvaDao, DummyIvaDao([iva]))
+    iva_dao = cast(IvaDao, MockIvaDao([iva]))
     expected_roles = ["data_steward"] if state == IvaState.VERIFIED else []
     assert (
         await get_active_roles(
@@ -185,8 +185,8 @@ async def test_get_active_roles_with_iva(state: IvaState):
 async def test_get_active_roles_deduplicates_roles():
     """Internal role claims are deduplicated."""
     iva_id = SOME_IVA_ID
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
 
     now = now_utc_ms_prec()
     iva = Iva(
@@ -198,7 +198,7 @@ async def test_get_active_roles_deduplicates_roles():
         created=now,
         changed=now,
     )
-    iva_dao = cast(IvaDao, DummyIvaDao([iva]))
+    iva_dao = cast(IvaDao, MockIvaDao([iva]))
 
     # add claims with 3 different roles (one unsupported) each 3 times
     claim = await claim_dao.get_by_id(DATA_STEWARD_CLAIM_ID)
@@ -224,14 +224,14 @@ async def test_get_active_roles_deduplicates_roles():
 
 async def test_get_active_roles_without_iva_id():
     """Active internal role claims must have an associated IVA ID."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
     claim = await claim_dao.get_by_id(DATA_STEWARD_CLAIM_ID)
     assert claim.iva_id == DATA_STEWARD_IVA_ID
     await claim_dao.update(claim.model_copy(update={"iva_id": None}))
     claim = await claim_dao.get_by_id(DATA_STEWARD_CLAIM_ID)
     assert not claim.iva_id
-    iva_dao = cast(IvaDao, DummyIvaDao())
+    iva_dao = cast(IvaDao, MockIvaDao())
     active_roles = await get_active_roles(
         ID_OF_JAMES, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
     )
@@ -240,9 +240,9 @@ async def test_get_active_roles_without_iva_id():
 
 async def test_get_active_roles_with_non_existing_iva():
     """Active internal role claims must have an existing IVA."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
-    iva_dao = cast(IvaDao, DummyIvaDao([]))
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
+    iva_dao = cast(IvaDao, MockIvaDao([]))
     active_roles = await get_active_roles(
         ID_OF_JAMES, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
     )
@@ -251,9 +251,9 @@ async def test_get_active_roles_with_non_existing_iva():
 
 async def test_get_active_roles_with_wrong_claim():
     """Active internal role claims must have the proper type."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JOHN))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
-    iva_dao = cast(IvaDao, DummyIvaDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JOHN))
+    claim_dao = cast(ClaimDao, MockClaimDao())
+    iva_dao = cast(IvaDao, MockIvaDao())
     active_roles = await get_active_roles(
         ID_OF_JOHN, user_dao=user_dao, iva_dao=iva_dao, claim_dao=claim_dao
     )
@@ -262,9 +262,9 @@ async def test_get_active_roles_with_wrong_claim():
 
 async def test_get_active_roles_with_expired_claim():
     """Active internal role claims must not be expired."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
-    iva_dao = cast(IvaDao, DummyIvaDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
+    iva_dao = cast(IvaDao, MockIvaDao())
     claim = await claim_dao.get_by_id(DATA_STEWARD_CLAIM_ID)
     now = now_utc_ms_prec()
     assert claim.valid_from <= now <= claim.valid_until
@@ -299,9 +299,9 @@ async def test_get_active_roles_with_expired_claim():
 
 async def test_get_active_roles_with_revoked_claim():
     """Active internal role claims must not have been revoked."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
-    iva_dao = cast(IvaDao, DummyIvaDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
+    iva_dao = cast(IvaDao, MockIvaDao())
 
     assert await get_active_roles(
         ID_OF_JAMES,
@@ -331,9 +331,9 @@ async def test_get_active_roles_with_revoked_claim():
 
 async def test_get_active_roles_with_non_existing_user():
     """Active internal role claims must have an associated user."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
-    iva_dao = cast(IvaDao, DummyIvaDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
+    iva_dao = cast(IvaDao, MockIvaDao())
 
     assert await get_active_roles(
         ID_OF_JAMES,
@@ -342,7 +342,7 @@ async def test_get_active_roles_with_non_existing_user():
         claim_dao=claim_dao,
     ) == ["data_steward"]
 
-    user_dao = cast(UserDao, DummyUserDao(id_=SOME_USER_ID))
+    user_dao = cast(UserDao, MockUserDao(id_=SOME_USER_ID))
     assert (
         await get_active_roles(
             ID_OF_JAMES,
@@ -357,11 +357,11 @@ async def test_get_active_roles_with_non_existing_user():
 @pytest.mark.parametrize("status", UserStatus)
 async def test_get_active_role_with_inactive_user(status: UserStatus):
     """Active internal roles must have an active user status."""
-    claim_dao = cast(ClaimDao, DummyClaimDao())
-    iva_dao = cast(IvaDao, DummyIvaDao())
+    claim_dao = cast(ClaimDao, MockClaimDao())
+    iva_dao = cast(IvaDao, MockIvaDao())
 
     for status in UserStatus:
-        user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES, status=status))
+        user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES, status=status))
         expected_roles = ["data_steward"] if status == UserStatus.ACTIVE else []
         assert (
             await get_active_roles(
@@ -376,14 +376,14 @@ async def test_get_active_role_with_inactive_user(status: UserStatus):
 
 async def test_empty_user_list_with_added_roles():
     """Adding roles works with an empty list of users."""
-    claim_dao = cast(ClaimDao, DummyClaimDao())
+    claim_dao = cast(ClaimDao, MockClaimDao())
     assert await with_added_roles([], claim_dao=claim_dao) == []
 
 
 async def test_non_empty_user_list_with_added_roles():
     """The proper roles are added to a non-empty list of users."""
-    user_dao = cast(UserDao, DummyUserDao(id_=ID_OF_JAMES))
-    claim_dao = cast(ClaimDao, DummyClaimDao())
+    user_dao = cast(UserDao, MockUserDao(id_=ID_OF_JAMES))
+    claim_dao = cast(ClaimDao, MockClaimDao())
     user = await user_dao.get_by_id(ID_OF_JAMES)
     user_with_roles = UserWithRoles(
         **user.model_dump(),

@@ -27,7 +27,7 @@ from auth_service.prepare import prepare_rest_app
 
 
 @pytest_asyncio.fixture(name="bare_client")
-async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient, None]:
+async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient]:
     """Get a test client for the user registry without database."""
     config = Config(
         kafka_servers=kafka.config.kafka_servers,
@@ -52,7 +52,7 @@ class FullClient(BareClient):
 @pytest_asyncio.fixture(name="full_client")
 async def fixture_full_client(
     mongodb: MongoDbFixture, kafka: KafkaFixture
-) -> AsyncGenerator[FullClient, None]:
+) -> AsyncGenerator[FullClient]:
     """Get a test client for the user registry with a test database and event store."""
     config = Config(
         mongo_dsn=mongodb.config.mongo_dsn,

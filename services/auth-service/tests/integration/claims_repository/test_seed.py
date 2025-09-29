@@ -187,8 +187,8 @@ async def test_add_data_steward(
 
     with pytest.raises(
         ValueError,
-        match="Configured data steward with external ID id-of-john-doe@ls.org"
-        " has the name 'Jane Roe', expected was 'John Doe'",
+        match=r"Configured data steward with external ID id-of-john-doe@ls\.org"
+        r" has the name 'Jane Roe', expected was 'John Doe'",
     ):
         await fut(config)
 
@@ -201,7 +201,7 @@ async def test_add_data_steward(
 
     with pytest.raises(
         ValueError,
-        match="Configured data steward with external ID id-of-john-doe@ls.org"
-        " has the email address <jane@home.org>, expected was <john@home.org>",
+        match=r"Configured data steward with external ID id-of-john-doe@ls\.org"
+        r" has the email address <jane@home\.org>, expected was <john@home\.org>",
     ):
         await fut(config)

@@ -35,9 +35,9 @@ from auth_service.user_registry.deps import get_user_dao
 from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
 
 from ...fixtures.utils import (
-    DummyClaimDao,
-    DummyUserDao,
-    DummyUserTokenDao,
+    MockClaimDao,
+    MockUserDao,
+    MockUserTokenDao,
     get_claims_from_token,
     headers_for_session,
 )
@@ -319,7 +319,7 @@ async def test_post_user_with_session(bare_client: BareClient, httpx_mock: HTTPX
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     app = bare_client.app
-    user_dao = DummyUserDao(ext_id="not.john@aai.org")
+    user_dao = MockUserDao(ext_id="not.john@aai.org")
     app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     session = await query_new_session(bare_client)
@@ -393,7 +393,7 @@ async def test_put_unregistered_user_with_session(
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     app = bare_client.app
-    user_dao = DummyUserDao(ext_id="not.john@aai.org")
+    user_dao = MockUserDao(ext_id="not.john@aai.org")
     app.dependency_overrides[get_user_dao] = lambda: user_dao
 
     session = await query_new_session(bare_client)
@@ -412,11 +412,11 @@ async def test_put_registered_user_with_session(
     httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
 
     app = bare_client.app
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     app.dependency_overrides[get_user_dao] = lambda: user_dao
-    user_token_dao = DummyUserTokenDao()
+    user_token_dao = MockUserTokenDao()
     app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
-    claim_dao = DummyClaimDao()
+    claim_dao = MockClaimDao()
     app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
     session = await query_new_session(bare_client)

@@ -24,7 +24,7 @@ from auth_service.claims_repository.core.deletion import (
     DatasetDeletionHandler,
 )
 
-from ...fixtures.utils import DummyClaimDao
+from ...fixtures.utils import MockClaimDao
 
 
 @pytest.mark.asyncio()
@@ -32,7 +32,7 @@ async def test_deletion_handler(caplog: pytest.LogCaptureFixture):
     """Test the dataset deletion handler"""
     caplog.set_level(logging.INFO)
     records = caplog.records
-    claim_dao = DummyClaimDao()
+    claim_dao = MockClaimDao()
     handler = DatasetDeletionHandler(claim_dao=claim_dao)  # type: ignore
     await handler.handle_dataset_deletion(dataset_id="DS0819")
     assert len(records) == 1

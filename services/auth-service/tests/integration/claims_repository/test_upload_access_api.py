@@ -29,7 +29,7 @@ from auth_service.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_registry.models.ivas import Iva, IvaState, IvaType
 from tests.fixtures.constants import ID_OF_JOHN
 
-from ...fixtures.utils import DummyClaimDao, DummyIvaDao, DummyUserDao
+from ...fixtures.utils import MockClaimDao, MockIvaDao, MockUserDao
 from .fixtures import FullClient, fixture_full_client  # noqa: F401
 
 pytestmark = pytest.mark.asyncio()
@@ -113,16 +113,16 @@ async def test_invalid_params_for_upload_access_endpoints(
 ):
     """Test calling various upload access endpoints with invalid path parameters"""
     response = await full_client.request(http_method, url, json=VALIDITY)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_grant_upload_access(full_client: FullClient):
     """Test granting upload access to a box."""
-    claim_dao = DummyClaimDao()
+    claim_dao = MockClaimDao()
     full_client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao([VERIFIED_IVA])
+    iva_dao = MockIvaDao([VERIFIED_IVA])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     box_id = uuid4()
@@ -140,9 +140,9 @@ async def test_grant_upload_access(full_client: FullClient):
 
 async def test_check_upload_access(full_client: FullClient):
     """Test checking upload access for a single box."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao([VERIFIED_IVA])
+    iva_dao = MockIvaDao([VERIFIED_IVA])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # First grant upload access
@@ -167,9 +167,9 @@ async def test_check_upload_access(full_client: FullClient):
 
 async def test_get_boxes_with_upload_access(full_client: FullClient):
     """Test getting all boxes with upload access for a user."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao([VERIFIED_IVA])
+    iva_dao = MockIvaDao([VERIFIED_IVA])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # Grant upload access to multiple boxes
@@ -191,9 +191,9 @@ async def test_get_boxes_with_upload_access(full_client: FullClient):
 
 async def test_get_upload_access_grants(full_client: FullClient):
     """Test getting upload access grants."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao([VERIFIED_IVA])
+    iva_dao = MockIvaDao([VERIFIED_IVA])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # Create an upload access claim
@@ -218,9 +218,9 @@ async def test_get_upload_access_grants(full_client: FullClient):
 
 async def test_grant_upload_access_with_unverified_iva(full_client: FullClient):
     """Test granting upload access to a box when the IVA is not yet verified."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao([UNVERIFIED_IVA])
+    iva_dao = MockIvaDao([UNVERIFIED_IVA])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # Grant access with an unverified IVA
@@ -252,9 +252,9 @@ async def test_grant_upload_access_with_unverified_iva(full_client: FullClient):
 
 async def test_grant_upload_access_without_iva(full_client: FullClient):
     """Test granting upload access to a box when the IVA does not exist."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao()
+    iva_dao = MockIvaDao()
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     response = await full_client.post(
@@ -279,9 +279,9 @@ async def test_grant_upload_access_without_iva(full_client: FullClient):
 
 async def test_check_upload_access_with_unverified_iva(full_client: FullClient):
     """Test checking upload access for a single box with an unverified IVA."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao([UNVERIFIED_IVA])
+    iva_dao = MockIvaDao([UNVERIFIED_IVA])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # post valid upload access permission for UNVERIFIED_IVA_ID and TEST_BOX_ID
@@ -301,11 +301,11 @@ async def test_revoke_grant(full_client: FullClient):
     This test also checks behavior for revoking an already-revoked grant, because
     the test setup is identical.
     """
-    claim_dao = DummyClaimDao()
+    claim_dao = MockClaimDao()
     full_client.app.dependency_overrides[get_claim_dao] = lambda: claim_dao
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao([VERIFIED_IVA])
+    iva_dao = MockIvaDao([VERIFIED_IVA])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     url = f"{URL_JOHN}/ivas/{VERIFIED_IVA_ID}/boxes/{TEST_BOX_ID}"
@@ -353,7 +353,7 @@ async def test_grant_access_for_invalid_dates(full_client: FullClient):
         "valid_until": (now - timedelta(hours=1)).isoformat(),
     }
     response = await full_client.post(url, json=validity)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.parametrize(
@@ -368,9 +368,9 @@ async def test_with_past_or_future_validity(
     valid_from: datetime, valid_until: datetime, full_client: FullClient
 ):
     """Test query endpoints when access hasn't begun yet."""
-    user_dao = DummyUserDao()
+    user_dao = MockUserDao()
     full_client.app.dependency_overrides[get_user_dao] = lambda: user_dao
-    iva_dao = DummyIvaDao([VERIFIED_IVA])
+    iva_dao = MockIvaDao([VERIFIED_IVA])
     full_client.app.dependency_overrides[get_iva_dao] = lambda: iva_dao
 
     # Create a validity period that starts in the future

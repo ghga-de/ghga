@@ -39,11 +39,11 @@ from tests.fixtures.constants import ID_OF_JAMES, ID_OF_JOHN
 from ...fixtures.utils import (
     RE_USER_INFO_URL,
     USER_INFO,
-    DummyClaimDao,
-    DummyIvaDao,
-    DummyUserDao,
-    DummyUserTokenDao,
     IvaState,
+    MockClaimDao,
+    MockIvaDao,
+    MockUserDao,
+    MockUserTokenDao,
     create_access_token,
     headers_for_session,
 )
@@ -73,13 +73,13 @@ def setup_daos(
     **user_args: Any,
 ) -> None:
     """Setup the dummy DAOs for the tests."""
-    user_dao = DummyUserDao(**user_args)
+    user_dao = MockUserDao(**user_args)
     app.dependency_overrides[get_user_dao] = lambda: user_dao
-    user_token_dao = DummyUserTokenDao()
+    user_token_dao = MockUserTokenDao()
     app.dependency_overrides[get_user_token_dao] = lambda: user_token_dao
-    iva_dao = DummyIvaDao(state=iva_state)
+    iva_dao = MockIvaDao(state=iva_state)
     app.dependency_overrides[get_iva_dao] = lambda: iva_dao
-    claim_dao = DummyClaimDao()
+    claim_dao = MockClaimDao()
     app.dependency_overrides[get_claim_dao] = lambda: claim_dao
 
 

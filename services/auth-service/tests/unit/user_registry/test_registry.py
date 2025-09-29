@@ -46,7 +46,7 @@ from auth_service.user_registry.models.users import (
 )
 from tests.fixtures.constants import ID_OF_JANE, ID_OF_JOHN, ID_OF_ROD_STEWARD, IVA_IDS
 
-from ...fixtures.utils import DummyUserRegistry
+from ...fixtures.utils import MockUserRegistry
 
 pytestmark = pytest.mark.asyncio()
 
@@ -80,8 +80,8 @@ async def test_is_external_user_id():
 
 async def test_create_existing_user():
     """Test creating a user account that already exists."""
-    registry = DummyUserRegistry()
-    user = registry.dummy_user_dao.user
+    registry = MockUserRegistry()
+    user = registry.mock_user_dao.user
     user_data = UserRegisteredData(
         ext_id=user.ext_id, name="John Foo", email="foo@home.org"
     )
@@ -95,7 +95,7 @@ async def test_create_existing_user():
 
 async def test_create_new_user():
     """Test creating a user account that does not yet exist."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     user_data = UserRegisteredData(
         ext_id="jane@aai.org",
         name="Jane Roe",
@@ -113,7 +113,7 @@ async def test_create_new_user():
 
 async def test_get_existing_user():
     """Test getting an existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     dummy_user = registry.dummy_user
     user = await registry.get_user(dummy_user.id)
     assert user is dummy_user
@@ -121,7 +121,7 @@ async def test_get_existing_user():
 
 async def test_get_non_existing_user():
     """Test trying to get a non-existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     with pytest.raises(
         registry.UserDoesNotExistError,
         match=f"User with ID {ID_OF_JANE} does not exist",
@@ -131,7 +131,7 @@ async def test_get_non_existing_user():
 
 async def test_update_basic_data():
     """Test updating the basic data of an existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     dummy_user = registry.dummy_user
     basic_data = UserBasicData(
         name="John Doe Jr.", email="john@new.home.org", title=AcademicTitle.PROF
@@ -147,7 +147,7 @@ async def test_update_basic_data():
 
 async def test_update_modifiable_data_only_title():
     """Test updating just the title of an existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     dummy_user = registry.dummy_user
     basic_data = UserModifiableData(title=AcademicTitle.PROF)
     await registry.update_user(dummy_user.id, basic_data)
@@ -162,7 +162,7 @@ async def test_update_modifiable_data_only_title():
 
 async def test_update_modifiable_data_only_status():
     """Test updating just the status of an existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     dummy_user = registry.dummy_user
     basic_data = UserModifiableData(status=UserStatus.INACTIVE)
     await registry.update_user(
@@ -189,7 +189,7 @@ async def test_update_modifiable_data_only_status():
 
 async def test_update_modifiable_data_title_and_status():
     """Test updating the title and the status of an existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     dummy_user = registry.dummy_user
     basic_data = UserModifiableData(
         status=UserStatus.INACTIVE, title=AcademicTitle.PROF
@@ -216,7 +216,7 @@ async def test_update_modifiable_data_title_and_status():
 
 async def test_update_non_existing_user():
     """Test updating the basic data of a non-existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     basic_data = UserBasicData(name="John Doe", email="john@home.org")
     with pytest.raises(
         registry.UserDoesNotExistError,
@@ -227,7 +227,7 @@ async def test_update_non_existing_user():
 
 async def test_delete_existing_user():
     """Test deleting an existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     assert registry.dummy_users
     await registry.delete_user(ID_OF_JOHN)
     assert not registry.dummy_users
@@ -235,7 +235,7 @@ async def test_delete_existing_user():
 
 async def test_delete_non_existing_user():
     """Test deleting a non-existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     with pytest.raises(
         registry.UserDoesNotExistError,
         match=f"User with ID {ID_OF_JANE} does not exist",
@@ -245,7 +245,7 @@ async def test_delete_non_existing_user():
 
 async def test_delete_existing_user_with_ivas():
     """Test deleting an existing user who has IVAs."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(value="123")
     registry.add_dummy_iva(user_id=ID_OF_JANE, value="456")
     registry.add_dummy_iva(value="789")
@@ -259,7 +259,7 @@ async def test_delete_existing_user_with_ivas():
 
 async def test_create_new_iva():
     """Test creating a new IVA."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     iva_data = IvaBasicData(type=IvaType.PHONE, value="123456")
     iva_id = await registry.create_iva(ID_OF_JOHN, iva_data)
     assert iva_id
@@ -280,7 +280,7 @@ async def test_create_new_iva():
 
 async def test_create_iva_for_non_existing_user():
     """Test creating an IVA for a non-existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     iva_data = IvaBasicData(type=IvaType.PHONE, value="123456")
     with pytest.raises(
         registry.UserDoesNotExistError,
@@ -292,7 +292,7 @@ async def test_create_iva_for_non_existing_user():
 
 async def test_get_ivas_of_non_existing_user():
     """Test trying to get all IVAs of a non-existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     ivas = await registry.get_ivas(ID_OF_JANE)
     assert isinstance(ivas, list)
     assert not ivas
@@ -300,7 +300,7 @@ async def test_get_ivas_of_non_existing_user():
 
 async def test_get_ivas_of_an_existing_user_without_ivas():
     """Test getting all IVAs of an existing user without IVAS."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     ivas = await registry.get_ivas(ID_OF_JOHN)
     assert isinstance(ivas, list)
     assert not ivas
@@ -308,7 +308,7 @@ async def test_get_ivas_of_an_existing_user_without_ivas():
 
 async def test_get_ivas_of_an_existing_user_with_ivas():
     """Test getting all IVAs of an existing user without IVAS."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(value="123")
     registry.add_dummy_iva(value="456", user_id=ID_OF_JANE)
     registry.add_dummy_iva(value="789")
@@ -327,7 +327,7 @@ async def test_get_ivas_of_an_existing_user_with_ivas():
 
 async def test_get_ivas_of_an_existing_user_filtering_by_state():
     """Test getting all IVAs of an existing user without IVAS."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(value="123")
     registry.add_dummy_iva(value="456", state=IvaState.VERIFIED)
     ivas = await registry.get_ivas(ID_OF_JOHN)
@@ -345,7 +345,7 @@ async def test_get_ivas_of_an_existing_user_filtering_by_state():
 
 async def test_get_all_ivas_with_user():
     """Test getting all IVAs with user data."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     john = registry.dummy_user
     jane = john.model_copy(
         update={
@@ -381,7 +381,7 @@ async def test_get_all_ivas_with_user():
 
 async def test_get_selected_ivas_with_user():
     """Test getting a selection of IVAs with user data."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     john = registry.dummy_user
     jane = john.model_copy(update={"id": ID_OF_JANE})
     registry.dummy_users.append(jane)
@@ -404,7 +404,7 @@ async def test_get_selected_ivas_with_user():
 
 async def test_delete_existing_iva():
     """Test deleting an existing IVA."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(value="123")
     registry.add_dummy_iva(value="456", user_id=ID_OF_JANE)
     ivas = registry.dummy_ivas
@@ -419,7 +419,7 @@ async def test_delete_existing_iva():
 
 async def test_delete_non_existing_iva():
     """Test deleting a non-existing IVA."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     ivas = registry.dummy_ivas
     registry.add_dummy_iva()
     assert len(ivas) == 1
@@ -432,7 +432,7 @@ async def test_delete_non_existing_iva():
 
 async def test_delete_iva_for_a_user():
     """Test deleting an IVA for a given user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     ivas = registry.dummy_ivas
     registry.add_dummy_iva()
     assert len(ivas) == 1
@@ -443,7 +443,7 @@ async def test_delete_iva_for_a_user():
 
 async def test_delete_iva_for_nonexisting_user():
     """Test deleting an IVA for a non-existing user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     ivas = registry.dummy_ivas
     registry.add_dummy_iva()
     assert len(ivas) == 1
@@ -458,7 +458,7 @@ async def test_delete_iva_for_nonexisting_user():
 
 async def test_delete_iva_for_wrong_user():
     """Test deleting an IVA for the wrong user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     ivas = registry.dummy_ivas
     registry.add_dummy_iva()
     assert len(ivas) == 1
@@ -485,7 +485,7 @@ async def test_unverify_iva(from_state: IvaState):
     """Test that an IVA can be reset to the unverified state."""
     now = now_utc_ms_prec()
     before = now - timedelta(hours=3)
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(
         state=from_state,
         verification_code_hash="some-hash",
@@ -514,7 +514,7 @@ async def test_unverify_iva(from_state: IvaState):
 
 async def test_unverify_non_existing_iva():
     """Test trying to unverify a non-existing IVA."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     random_iva_id = uuid4()
     with pytest.raises(
         registry.IvaDoesNotExistError,
@@ -528,7 +528,7 @@ async def test_request_iva_verification_code():
     """Test that a verification code for an IVA can be requested."""
     now = now_utc_ms_prec()
     before = now - timedelta(hours=3)
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(state=IvaState.UNVERIFIED, created=before, changed=before)
     ivas = registry.dummy_ivas
     assert len(ivas) == 1
@@ -550,7 +550,7 @@ async def test_request_iva_verification_code():
 
 async def test_request_verification_code_for_non_existing_iva():
     """Test requesting a verification code for a non-existing IVA."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     random_iva_id = uuid4()
     with pytest.raises(
         registry.IvaDoesNotExistError,
@@ -562,7 +562,7 @@ async def test_request_verification_code_for_non_existing_iva():
 
 async def test_request_verification_code_for_different_user():
     """Test requesting a verification code for a different user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(state=IvaState.UNVERIFIED)
     assert len(registry.dummy_ivas) == 1
     # first test with a different user ID
@@ -590,7 +590,7 @@ async def test_request_verification_code_for_different_user():
 )
 async def test_request_iva_verification_code_with_invalid_state(from_state: IvaState):
     """Test requesting a verification code for an IVA in an invalid state."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(state=from_state)
     with pytest.raises(
         registry.IvaUnexpectedStateError,
@@ -611,7 +611,7 @@ async def test_create_iva_verification_code(from_state: IvaState):
     """Test the creation of an IVA verification code."""
     now = now_utc_ms_prec()
     before = now - timedelta(hours=3)
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(state=from_state, created=before, changed=before)
     ivas = registry.dummy_ivas
     assert len(ivas) == 1
@@ -643,7 +643,7 @@ async def test_create_iva_verification_code(from_state: IvaState):
 
 async def test_create_verification_code_for_non_existing_iva():
     """Test creating a verification code for a non-existing IVA."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     random_iva_id = uuid4()
     with pytest.raises(
         registry.IvaDoesNotExistError,
@@ -662,7 +662,7 @@ async def test_create_verification_code_for_non_existing_iva():
 )
 async def test_create_iva_verification_code_with_invalid_state(from_state: IvaState):
     """Test creating a verification code for an IVA in an invalid state."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(state=from_state)
     with pytest.raises(
         registry.IvaUnexpectedStateError,
@@ -675,7 +675,7 @@ async def test_confirm_iva_transmission():
     """Test confirming the transmission of an IVA verification code."""
     now = now_utc_ms_prec()
     before = now - timedelta(hours=3)
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(state=IvaState.CODE_CREATED, created=before, changed=before)
     ivas = registry.dummy_ivas
     assert len(ivas) == 1
@@ -697,7 +697,7 @@ async def test_confirm_iva_transmission():
 
 async def test_confirm_verification_code_transmission_for_non_existing_iva():
     """Test confirming transmission of a verification code for a non-existing IVA."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     random_iva_id = uuid4()
     with pytest.raises(
         registry.IvaDoesNotExistError,
@@ -717,7 +717,7 @@ async def test_confirm_verification_code_transmission_for_non_existing_iva():
 )
 async def test_confirm_code_transmission_with_invalid_state(from_state: IvaState):
     """Test confirming transmission of a code for an IVA in an invalid state."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(state=from_state)
     with pytest.raises(
         registry.IvaUnexpectedStateError,
@@ -738,7 +738,7 @@ async def test_validate_iva_verification_code(from_state: IvaState, attempts: in
     """Test validating a verification code for an IVA."""
     now = now_utc_ms_prec()
     before = now - timedelta(hours=3)
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     code = generate_code()
     verification_code_hash = hash_code(code)
     registry.add_dummy_iva(
@@ -785,7 +785,7 @@ async def test_validate_iva_with_invalid_verification_code(
     """Test validating an IVA with an invalid verification code."""
     now = now_utc_ms_prec()
     before = now - timedelta(hours=3)
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     code = generate_code()
     verification_code_hash = hash_code(code)
     registry.add_dummy_iva(
@@ -832,7 +832,7 @@ async def test_validate_iva_verification_code_too_often(
     """Test validating a verification code for an IVA too often."""
     now = now_utc_ms_prec()
     before = now - timedelta(hours=3)
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     code = generate_code()
     verification_code_hash = hash_code(code)
     registry.add_dummy_iva(
@@ -870,7 +870,7 @@ async def test_validate_iva_verification_code_too_often(
 
 async def test_validate_verification_code_for_non_existing_iva():
     """Test validating a verification code for a non-existing IVA."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     random_iva_id = uuid4()
     with pytest.raises(
         registry.IvaDoesNotExistError,
@@ -882,10 +882,10 @@ async def test_validate_verification_code_for_non_existing_iva():
 
 async def test_validate_verification_code_for_different_user():
     """Test validating a verification code for a different user."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     now = now_utc_ms_prec()
     before = now - timedelta(hours=3)
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     code = generate_code()
     verification_code_hash = hash_code(code)
     registry.add_dummy_iva(
@@ -922,7 +922,7 @@ async def test_validate_verification_code_for_different_user():
 )
 async def test_validate_verification_code_with_invalid_state(from_state: IvaState):
     """Test validating a verification code for an IVA in an invalid state."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     code = generate_code()
     verification_code_hash = hash_code(code)
     registry.add_dummy_iva(
@@ -948,7 +948,7 @@ async def test_validate_verification_code_with_invalid_state(from_state: IvaStat
 )
 async def test_validate_verification_code_without_hash(from_state: IvaState):
     """Test validating a verification code for an IVA without hash of the code."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     registry.add_dummy_iva(state=from_state)
     with pytest.raises(
         registry.IvaUnexpectedStateError,
@@ -960,7 +960,7 @@ async def test_validate_verification_code_without_hash(from_state: IvaState):
 
 async def test_reset_verified_ivas():
     """Test resetting all verified IVAs."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     for user_id in (ID_OF_JOHN, ID_OF_JANE):
         for type_ in IvaType.PHONE, IvaType.FAX:
             for state in IvaState.__members__.values():
@@ -982,7 +982,7 @@ async def test_reset_verified_ivas():
 
 async def test_iva_verification_happy_path():
     """Test happy path of a complete IVA verification."""
-    registry = DummyUserRegistry()
+    registry = MockUserRegistry()
     iva_data = IvaBasicData(type=IvaType.PHONE, value="123456")
     user_id = ID_OF_JOHN
     iva_id = await registry.create_iva(user_id, iva_data)

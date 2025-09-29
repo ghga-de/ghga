@@ -110,7 +110,7 @@ async def test_create_totp_token_with_invalid_force_flag(
     response = await client.post(
         TOTP_TOKEN_PATH + "?force=invalid", headers=headers_for_session(session)
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_create_totp_token_without_user_id(
@@ -296,7 +296,7 @@ async def test_rate_limiting_totp(
     client_with_session: ClientWithSession,
 ):
     """Test that the rate limiting for code verification works."""
-    client, session, user_registry, user_token_dao = client_with_session
+    client, session, _user_registry, user_token_dao = client_with_session
     headers = headers_for_session(session)
     assert session.state is SessionState.REGISTERED
     # create a new TOTP token on the backend
