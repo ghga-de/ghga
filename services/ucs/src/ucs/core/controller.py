@@ -19,7 +19,12 @@ import logging
 from typing import Any
 from uuid import uuid4
 
-from ghga_event_schemas.pydantic_ import FileUpload, FileUploadBox, FileUploadReport
+from ghga_event_schemas.pydantic_ import (
+    FileUpload,
+    FileUploadBox,
+    FileUploadReport,
+    FileUploadState,
+)
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
 from hexkit.protocols.dao import ResourceAlreadyExistsError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
@@ -93,7 +98,7 @@ class UploadController(UploadControllerPort):
         try:
             file_upload = FileUpload(
                 id=file_id,
-                state="init",
+                state=FileUploadState.INIT,
                 box_id=box_id,
                 alias=alias,
                 size=size,
@@ -475,7 +480,7 @@ class UploadController(UploadControllerPort):
                 raise error from err
 
         # Update local collections now that S3 upload is successfully completed
-        file_upload.state = "inbox"
+        file_upload.state = FileUploadState.INBOX
         file_upload.completed = True
         s3_upload_details.completed = now_utc_ms_prec()
         await self._file_upload_dao.update(file_upload)
@@ -656,17 +661,17 @@ class UploadController(UploadControllerPort):
             raise error from err
 
         match file_upload.state:
-            case "init":
+            case FileUploadState.INIT:
                 log.warning(
                     "Ignoring FileUploadReport for FileUpload %s since it is still in the 'init' state.",
                     file_id,
                 )
                 return
-            case "inbox":
-                file_upload.state = "archived"
+            case FileUploadState.INBOX:
+                file_upload.state = FileUploadState.ARCHIVED
                 log.debug("Marking FileUpload %s as 'archived'", file_id)
                 await self._file_upload_dao.update(file_upload)
-            case "archived":
+            case FileUploadState.ARCHIVED:
                 log.debug(
                     "FileUpload %s was already marked as 'archived', so it's likely"
                     + " this FileUploadReport has been processed already.",

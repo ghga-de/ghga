@@ -56,7 +56,7 @@ async def prepare_outbox_publisher(
 async def prepare_core(
     *,
     config: Config,
-) -> AsyncGenerator[UploadControllerPort, None]:
+) -> AsyncGenerator[UploadControllerPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     object_storages = S3ObjectStorages(config=config)
 
@@ -95,7 +95,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     core_override: UploadControllerPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the core_override parameter.
@@ -122,7 +122,7 @@ async def prepare_event_subscriber(
     *,
     config: Config,
     core_override: UploadControllerPort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the core_override parameter.
