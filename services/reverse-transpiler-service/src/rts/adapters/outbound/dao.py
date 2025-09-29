@@ -108,9 +108,7 @@ class WorkbookDao(WorkbookDaoPort):
 
 
 @asynccontextmanager
-async def get_workbook_dao(
-    *, config: MongoDbConfig
-) -> AsyncGenerator[WorkbookDaoPort, None]:
+async def get_workbook_dao(*, config: MongoDbConfig) -> AsyncGenerator[WorkbookDaoPort]:
     """Constructs the WorkbookDao with the provided MongoDB configuration."""
     async with ConfiguredMongoClient(config=config) as client:
         db = client[config.db_name]

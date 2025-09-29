@@ -39,7 +39,7 @@ __all__ = [
 
 
 @asynccontextmanager
-async def get_dao(*, config: Config) -> AsyncGenerator[MetadataDao, None]:
+async def get_dao(*, config: Config) -> AsyncGenerator[MetadataDao]:
     """Constructs and initializes a MetadataDao using config."""
     async with MongoDbDaoFactory.construct(config=config) as dao_factory:
         dao = await get_metadata_dao(dao_factory=dao_factory)
@@ -52,7 +52,7 @@ async def prepare_core(
     config: Config,
     metadata_dao_override: MetadataDao | None = None,
     workbook_dao_override: WorkbookDaoPort | None = None,
-) -> AsyncGenerator[ReverseTranspilerPort, None]:
+) -> AsyncGenerator[ReverseTranspilerPort]:
     """Constructs and initializes all core components and their outbound dependencies.
 
     The _override parameters can be used to override the default dependencies.
@@ -86,7 +86,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     reverse_transpiler_override: ReverseTranspilerPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize an REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the reverse_transpiler_override parameter.
@@ -107,7 +107,7 @@ async def prepare_event_subscriber(
     *,
     config: Config,
     reverse_transpiler_override: ReverseTranspilerPort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the override parameter.
