@@ -115,7 +115,7 @@ async def joint_fixture(
     mongodb: MongoDbFixture,
     s3: S3Fixture,
     kafka: KafkaFixture,
-) -> AsyncGenerator[JointFixture, None]:
+) -> AsyncGenerator[JointFixture]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
     jwk = generate_token_signing_keys()
     auth_key = jwk.export(private_key=False)
@@ -187,7 +187,7 @@ class PopulatedFixture:
 @pytest_asyncio.fixture
 async def populated_fixture(
     joint_fixture: JointFixture,
-) -> AsyncGenerator[PopulatedFixture, None]:
+) -> AsyncGenerator[PopulatedFixture]:
     """Prepopulate state for an existing DRS object"""
     # publish an event to register a new file for download:
     file_to_register_event = event_schemas.FileInternallyRegistered(
@@ -253,7 +253,7 @@ class CleanupFixture:
 @pytest_asyncio.fixture
 async def cleanup_fixture(
     joint_fixture: JointFixture,
-) -> AsyncGenerator[CleanupFixture, None]:
+) -> AsyncGenerator[CleanupFixture]:
     """Set up state for and populate CleanupFixture"""
     # create common db dao to insert test data
     mongodb_dao = await joint_fixture.mongodb.dao_factory.get_dao(

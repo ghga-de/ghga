@@ -41,7 +41,7 @@ from dcs.ports.inbound.data_repository import DataRepositoryPort
 @asynccontextmanager
 async def get_persistent_publisher(
     config: Config, dao_factory: MongoDbDaoFactory | None = None
-) -> AsyncGenerator[PersistentKafkaPublisher, None]:
+) -> AsyncGenerator[PersistentKafkaPublisher]:
     """Construct and return a PersistentKafkaPublisher."""
     async with (
         (  # use provided factory if supplied or create new one
@@ -65,7 +65,7 @@ async def get_persistent_publisher(
 
 
 @asynccontextmanager
-async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort, None]:
+async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     object_storages = S3ObjectStorages(config=config)
 
@@ -106,7 +106,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     data_repo_override: DataRepositoryPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize an REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the data_repo_override parameter.
@@ -132,7 +132,7 @@ async def prepare_event_subscriber(
     *,
     config: Config,
     data_repo_override: DataRepositoryPort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the data_repo_override parameter.
@@ -164,7 +164,7 @@ async def prepare_outbox_cleaner(
     *,
     config: Config,
     data_repo_override: DataRepositoryPort | None = None,
-) -> AsyncGenerator[OutboxCleaner, None]:
+) -> AsyncGenerator[OutboxCleaner]:
     """Construct and initialize a coroutine that cleans the outbox once invoked.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the data_repo_override parameter.
