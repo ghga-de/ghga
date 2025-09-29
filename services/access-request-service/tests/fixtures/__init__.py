@@ -108,7 +108,7 @@ class RestFixture(NamedTuple):
 @pytest_asyncio.fixture(name="rest")
 async def rest_fixture(
     config: Config, mongodb: MongoDbFixture, kafka: KafkaFixture
-) -> AsyncGenerator[RestFixture, None]:
+) -> AsyncGenerator[RestFixture]:
     """A fixture that embeds all other fixtures for API-level integration testing."""
     async with prepare_core(config=config) as repository:
         async with (
@@ -136,7 +136,7 @@ class ConsumerFixture(NamedTuple):
 @pytest_asyncio.fixture(name="consumer")
 async def consumer_fixture(
     config: Config, mongodb: MongoDbFixture, kafka: KafkaFixture
-) -> AsyncGenerator[ConsumerFixture, None]:
+) -> AsyncGenerator[ConsumerFixture]:
     """A fixture that embeds all other fixtures for consumer integration testing."""
     async with prepare_consumer(config=config) as consumer:
         yield ConsumerFixture(

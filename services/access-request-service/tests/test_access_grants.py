@@ -60,7 +60,7 @@ GRANTS_URL = f"{DOWNLOAD_ACCESS_URL}/grants"
 
 
 @async_fixture(name="grants_adapter", scope="session", loop_scope="session")
-async def fixture_grants_adapter() -> AsyncGenerator[AccessGrantsAdapter, None]:
+async def fixture_grants_adapter() -> AsyncGenerator[AccessGrantsAdapter]:
     """Get configured access grants test adapter."""
     config = AccessGrantsConfig(download_access_url=DOWNLOAD_ACCESS_URL)
     async with AccessGrantsAdapter.construct(config=config) as adapter:
@@ -200,7 +200,7 @@ async def test_get_access_grants_with_data_error(
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
-        match="Invalid data in response: .*\nuser_name\n.* required",
+        match=r"Invalid data in response: .*\nuser_name\n.* required",
     ):
         await get_grants()
 

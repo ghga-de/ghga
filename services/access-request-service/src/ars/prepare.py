@@ -41,7 +41,7 @@ from ars.ports.outbound.daos import AccessRequestDaoPort
 async def prepare_access_request_dao(
     *,
     config: Config,
-) -> AsyncGenerator[AccessRequestDaoPort, None]:
+) -> AsyncGenerator[AccessRequestDaoPort]:
     """Prepare an access request DAO as a context manager"""
     async with MongoKafkaDaoPublisherFactory.construct(
         config=config
@@ -55,7 +55,7 @@ async def prepare_access_request_dao(
 async def prepare_core(
     *,
     config: Config,
-) -> AsyncGenerator[AccessRequestRepositoryPort, None]:
+) -> AsyncGenerator[AccessRequestRepositoryPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
@@ -89,7 +89,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     repository_override: AccessRequestRepositoryPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize a REST API app along with all its dependencies.
 
     By default, the core dependencies are automatically prepared, but you can also
@@ -124,7 +124,7 @@ async def prepare_consumer(
     *,
     config: Config,
     repository_override: AccessRequestRepositoryPort | None = None,
-) -> AsyncGenerator[Consumer, None]:
+) -> AsyncGenerator[Consumer]:
     """Construct and initialize an event subscriber with all its dependencies.
 
     By default, the core dependencies are automatically prepared, but you can also

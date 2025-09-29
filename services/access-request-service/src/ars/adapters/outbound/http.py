@@ -59,7 +59,7 @@ class AccessGrantsAdapter(AccessGrantsPort):
     @asynccontextmanager
     async def construct(
         cls, *, config: AccessGrantsConfig
-    ) -> AsyncGenerator["AccessGrantsAdapter", None]:
+    ) -> AsyncGenerator["AccessGrantsAdapter"]:
         """Setup AccessGrantsAdapter with the given config."""
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             yield cls(config=config, client=client)
