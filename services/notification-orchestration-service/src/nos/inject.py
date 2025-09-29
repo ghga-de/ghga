@@ -45,7 +45,7 @@ from nos.ports.inbound.orchestrator import OrchestratorPort
 async def prepare_core(
     *,
     config: Config,
-) -> AsyncGenerator[OrchestratorPort, None]:
+) -> AsyncGenerator[OrchestratorPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
@@ -78,7 +78,7 @@ async def prepare_event_subscriber(
     *,
     config: Config,
     core_override: OrchestratorPort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the override parameter.
