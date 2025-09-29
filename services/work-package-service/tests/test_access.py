@@ -40,7 +40,7 @@ VALID_UNTIL2 = VALID_UNTIL1 + timedelta(days=180)
 
 
 @pytest_asyncio.fixture(name="access_check", scope="function")
-async def fixture_access_check() -> AsyncGenerator[AccessCheckAdapter, None]:
+async def fixture_access_check() -> AsyncGenerator[AccessCheckAdapter]:
     """Get configured access test adapter."""
     config = AccessCheckConfig(access_url=BASE_ACCESS_URL)  # type: ignore
     async with AccessCheckAdapter.construct(config=config) as adapter:

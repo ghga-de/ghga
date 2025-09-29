@@ -52,13 +52,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/work-package-service):
 ```bash
-docker pull ghga/work-package-service:7.0.0
+docker pull ghga/work-package-service:7.0.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/work-package-service:7.0.0 .
+docker build -t ghga/work-package-service:7.0.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -66,7 +66,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/work-package-service:7.0.0 --help
+docker run -p 8080:8080 ghga/work-package-service:7.0.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:

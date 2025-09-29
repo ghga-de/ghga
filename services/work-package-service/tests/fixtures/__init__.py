@@ -135,7 +135,7 @@ async def fixture_repository(
 
 
 @pytest_asyncio.fixture(name="client")
-async def fixture_client(config: Config) -> AsyncGenerator[AsyncTestClient, None]:
+async def fixture_client(config: Config) -> AsyncGenerator[AsyncTestClient]:
     """Get test client for the work package service."""
     async with prepare_rest_app(config=config) as app:
         async with AsyncTestClient(app=app) as client:

@@ -48,7 +48,7 @@ __all__ = ["Consumer", "prepare_consumer", "prepare_core", "prepare_rest_app"]
 async def prepare_core(
     *,
     config: Config,
-) -> AsyncGenerator[WorkPackageRepositoryPort, None]:
+) -> AsyncGenerator[WorkPackageRepositoryPort]:
     """Constructs and initializes all core components with outbound dependencies."""
     async with (
         AccessCheckAdapter.construct(config=config) as download_access_checks,
@@ -88,7 +88,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     work_package_repo_override: WorkPackageRepositoryPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize an REST API app along with all its dependencies.
 
     By default, the core dependencies are automatically prepared, but you can also
@@ -123,7 +123,7 @@ async def prepare_consumer(
     *,
     config: Config,
     work_package_repo_override: WorkPackageRepositoryPort | None = None,
-) -> AsyncGenerator[Consumer, None]:
+) -> AsyncGenerator[Consumer]:
     """Construct and initialize an event subscriber with all its dependencies.
 
     By default, the core dependencies are automatically prepared, but you can also

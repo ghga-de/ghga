@@ -61,7 +61,7 @@ class AccessCheckAdapter(AccessCheckPort):
     @asynccontextmanager
     async def construct(
         cls, *, config: AccessCheckConfig
-    ) -> AsyncGenerator["AccessCheckAdapter", None]:
+    ) -> AsyncGenerator["AccessCheckAdapter"]:
         """Setup AccessGrantsAdapter with the given config."""
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             yield cls(config=config, client=client)

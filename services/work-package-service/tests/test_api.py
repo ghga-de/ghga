@@ -138,7 +138,7 @@ async def test_make_download_work_order_token(
     response = await client.get(
         "/work-packages/some-work-package-id", headers=headers_for_token(token)
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     # try to get a non-existing work package with authorization
     response = await client.get(

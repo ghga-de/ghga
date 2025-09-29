@@ -46,7 +46,7 @@ RETRIES = round(TIMEOUT / RETRY_INTERVAL)
 
 
 @pytest_asyncio.fixture(name="consumer")
-async def consumer(config: Config) -> AsyncGenerator[Consumer, None]:
+async def consumer(config: Config) -> AsyncGenerator[Consumer]:
     """Get a consumer object."""
     async with prepare_consumer(config=config) as consumer:
         yield consumer
