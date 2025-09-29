@@ -34,7 +34,7 @@ from ifrs.ports.inbound.file_registry import FileRegistryPort
 @asynccontextmanager
 async def get_persistent_publisher(
     config: Config, dao_factory: MongoDbDaoFactory | None = None
-) -> AsyncGenerator[PersistentKafkaPublisher, None]:
+) -> AsyncGenerator[PersistentKafkaPublisher]:
     """Construct and return a PersistentKafkaPublisher."""
     async with (
         (
@@ -57,7 +57,7 @@ async def get_persistent_publisher(
 
 
 @asynccontextmanager
-async def prepare_core(*, config: Config) -> AsyncGenerator[FileRegistryPort, None]:
+async def prepare_core(*, config: Config) -> AsyncGenerator[FileRegistryPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     object_storages = S3ObjectStorages(config=config)
 
@@ -94,7 +94,7 @@ async def prepare_event_subscriber(
     *,
     config: Config,
     core_override: FileRegistryPort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the core_override parameter.
