@@ -33,7 +33,7 @@ from mass.ports.inbound.query_handler import QueryHandlerPort
 
 
 @asynccontextmanager
-async def prepare_core(*, config: Config) -> AsyncGenerator[QueryHandlerPort, None]:
+async def prepare_core(*, config: Config) -> AsyncGenerator[QueryHandlerPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     async with (
         AggregatorFactory.construct(config=config) as aggregator_factory,
@@ -69,7 +69,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     query_handler_override: QueryHandlerPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize an REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the query_handler_override parameter.
@@ -89,7 +89,7 @@ async def prepare_event_subscriber(
     *,
     config: Config,
     query_handler_override: QueryHandlerPort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the query_handler_override parameter.
