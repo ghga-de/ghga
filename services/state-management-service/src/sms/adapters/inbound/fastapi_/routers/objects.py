@@ -49,7 +49,7 @@ async def does_object_exist(
         )
     except ObjectsHandlerPort.InvalidIdError as err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(err)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(err)
         ) from err
     except (
         S3ObjectStoragesPort.AliasNotConfiguredError,
@@ -89,7 +89,7 @@ async def list_objects(
         ) from err
     except ObjectsHandlerPort.InvalidBucketIdError as err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(err)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(err)
         ) from err
     except ObjectsHandlerPort.OperationError as err:
         raise HTTPException(
@@ -118,7 +118,7 @@ async def delete_objects(
         ) from err
     except ObjectsHandlerPort.InvalidBucketIdError as err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(err)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(err)
         ) from err
     except ObjectsHandlerPort.OperationError as err:
         raise HTTPException(

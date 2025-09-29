@@ -89,7 +89,7 @@ def _check_for_multiple_query_params(query_params: QueryParams):
 
     if multiples:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Only one value per query parameter is allowed: {multiples}",
         )
 
@@ -123,7 +123,7 @@ async def get_docs(
 
     if query_param_dict and request_json:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Cannot supply search criteria through both request body and query params.",
         )
 
@@ -148,7 +148,7 @@ async def get_docs(
         ) from err
     except DocsHandlerPort.CriteriaFormatError as err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(err),
         ) from err
     except DocsHandlerPort.NamespaceNotFoundError as err:
@@ -188,7 +188,7 @@ async def upsert_docs(
         ) from err
     except DocsHandlerPort.MissingIdFieldError as err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(err),
         ) from err
     except DocsHandlerPort.OperationError as err:
@@ -228,7 +228,7 @@ async def delete_docs(
 
     if query_param_dict and request_json:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Cannot supply search criteria through both request body and query params.",
         )
 
@@ -252,6 +252,6 @@ async def delete_docs(
         ) from err
     except (DocsHandlerPort.CriteriaFormatError, ValueError) as err:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(err),
         ) from err

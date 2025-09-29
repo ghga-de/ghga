@@ -37,7 +37,7 @@ from sms.ports.inbound.secrets_handler import SecretsHandlerPort
 @asynccontextmanager
 async def prepare_events_handler(
     *, config: Config
-) -> AsyncGenerator[EventsHandlerPort, None]:
+) -> AsyncGenerator[EventsHandlerPort]:
     """Prepare the EventsHandler with a KafkaEventPublisher"""
     async with KafkaEventPublisher.construct(config=config) as event_publisher:
         yield EventsHandler(config=config, event_publisher=event_publisher)
@@ -55,9 +55,7 @@ def prepare_events_handler_with_override(
 
 
 @asynccontextmanager
-async def prepare_docs_handler(
-    *, config: Config
-) -> AsyncGenerator[DocsHandlerPort, None]:
+async def prepare_docs_handler(*, config: Config) -> AsyncGenerator[DocsHandlerPort]:
     """Prepare the DocsHandler with a DocsDao to manage the database."""
     async with DocsDao.construct(config=config) as docs_dao:
         docs_handler = DocsHandler(config=config, docs_dao=docs_dao)
@@ -100,7 +98,7 @@ async def prepare_rest_app(
     objects_handler_override: ObjectsHandlerPort | None = None,
     events_handler_override: EventsHandlerPort | None = None,
     secrets_handler_override: SecretsHandlerPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the "_override" parameter(s).

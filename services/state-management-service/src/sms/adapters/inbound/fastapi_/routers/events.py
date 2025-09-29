@@ -75,7 +75,7 @@ async def clear_topics(
     if invalid_topics:
         msg = f"Invalid topic(s): {', '.join(invalid_topics)}"
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg
         )
 
     try:
@@ -110,7 +110,7 @@ async def publish_event(
     if not is_topic_valid(event_details.topic):
         msg = f"Invalid topic: {event_details.topic}"
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=msg
         )
 
     try:

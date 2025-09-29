@@ -145,7 +145,7 @@ class VaultContainerFixture(VaultContainer):
 
 
 @pytest.fixture(scope="session", name="vault_container")
-def vault_container_fixture() -> Generator[VaultContainerFixture, None, None]:
+def vault_container_fixture() -> Generator[VaultContainerFixture]:
     """Generate preconfigured test container"""
     with VaultContainerFixture() as vault_container:
         host = vault_container.get_container_host_ip()
@@ -168,7 +168,7 @@ def vault_container_fixture() -> Generator[VaultContainerFixture, None, None]:
 @pytest.fixture(scope="function", name="vault")
 def vault_fixture(
     vault_container: VaultContainerFixture,
-) -> Generator[VaultFixture, None, None]:
+) -> Generator[VaultFixture]:
     """Fixture function to produce a VaultFixture"""
     vault = VaultFixture(config=vault_container.config)
     vault.reset()
