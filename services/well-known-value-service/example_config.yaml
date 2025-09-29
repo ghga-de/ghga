@@ -4,6 +4,7 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+cors_exposed_headers: null
 crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
 dcs_api_url: http://127.0.0.1/download
 docs_url: /docs

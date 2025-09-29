@@ -32,7 +32,7 @@ from wkvs.config import Config
 async def prepare_rest_app(
     *,
     config: Config,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize an REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the data_repo_override parameter.

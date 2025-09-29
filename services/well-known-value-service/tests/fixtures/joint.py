@@ -36,7 +36,7 @@ class JointFixture:
 
 
 @pytest_asyncio.fixture
-async def joint_fixture() -> AsyncGenerator[JointFixture, None]:
+async def joint_fixture() -> AsyncGenerator[JointFixture]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
     config = get_config()
 
