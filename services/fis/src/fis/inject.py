@@ -39,7 +39,7 @@ from fis.ports.inbound.ingest import (
 @asynccontextmanager
 async def get_persistent_publisher(
     config: Config, dao_factory: MongoDbDaoFactory | None = None
-) -> AsyncGenerator[PersistentKafkaPublisher, None]:
+) -> AsyncGenerator[PersistentKafkaPublisher]:
     """Construct and return a PersistentKafkaPublisher."""
     async with (
         (
@@ -61,7 +61,7 @@ async def get_persistent_publisher(
 async def prepare_core(
     *, config: Config
 ) -> AsyncGenerator[
-    tuple[UploadMetadataProcessorPort, LegacyUploadMetadataProcessorPort], None
+    tuple[UploadMetadataProcessorPort, LegacyUploadMetadataProcessorPort]
 ]:
     """Constructs and initializes all core components and their outbound dependencies."""
     vault_adapter = VaultAdapter(config=config)
@@ -108,7 +108,7 @@ async def prepare_rest_app(
     config: Config,
     core_override: tuple[UploadMetadataProcessorPort, LegacyUploadMetadataProcessorPort]
     | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the core_override parameter.

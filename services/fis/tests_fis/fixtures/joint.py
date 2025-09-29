@@ -76,7 +76,7 @@ class JointFixture:
 @pytest_asyncio.fixture
 async def joint_fixture(
     kafka: KafkaFixture, mongodb: MongoDbFixture
-) -> AsyncGenerator[JointFixture, None]:
+) -> AsyncGenerator[JointFixture]:
     """Generate keypair for testing and setup container with updated config"""
     config = get_config(sources=[kafka.config, mongodb.config])
     assert config.private_key_passphrase is not None
