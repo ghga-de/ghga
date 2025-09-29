@@ -44,7 +44,7 @@ class JointFixture:
 async def joint_fixture(
     kafka: KafkaFixture,
     mongodb: MongoDbFixture,
-) -> AsyncGenerator[JointFixture, None]:
+) -> AsyncGenerator[JointFixture]:
     """A fixture that embeds all other fixtures for integration testing"""
     # merge configs from different sources with the default one:
     config = get_config(sources=[kafka.config, mongodb.config, SMTP_TEST_CONFIG])

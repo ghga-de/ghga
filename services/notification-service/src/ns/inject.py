@@ -31,7 +31,7 @@ from ns.ports.inbound.notifier import NotifierPort
 
 
 @asynccontextmanager
-async def prepare_core(*, config: Config) -> AsyncGenerator[NotifierPort, None]:
+async def prepare_core(*, config: Config) -> AsyncGenerator[NotifierPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     smtp_client = SmtpClient(config=config)
 
@@ -55,7 +55,7 @@ async def prepare_event_subscriber(
     *,
     config: Config,
     notifier_override: NotifierPort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the notifier_override parameter.

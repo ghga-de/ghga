@@ -68,7 +68,7 @@ class SmtpClient(SmtpClientPort):
         self._config = config
 
     @contextmanager
-    def get_connection(self) -> Generator[SMTP, None, None]:
+    def get_connection(self) -> Generator[SMTP]:
         """Establish a connection to the SMTP server"""
         timeout = self._config.smtp_timeout if self._config.smtp_timeout else None
 
