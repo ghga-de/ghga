@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.3",
+    "setuptools>=80.9",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -9,24 +9,24 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "dlqs"
-version = "3.0.0"
+version = "3.0.1"
 description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
 dependencies = [
-    "typer >= 0.15",
-    "ghga-service-commons[api] >= 5",
-    "hexkit[akafka,mongodb] >= 6",
+    "typer >= 0.19",
+    "ghga-service-commons[api] >= 5.1",
+    "hexkit[akafka,mongodb] >= 7.1",
 ]
 
 [project.license]
@@ -58,7 +58,7 @@ src = [
     "examples",
     "scripts",
 ]
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint]
 fixable = [
@@ -145,7 +145,7 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.3"
+minversion = "8.4"
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 

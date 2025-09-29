@@ -33,7 +33,7 @@ from dlqs.ports.outbound.dao import AggregatorPort
 
 
 @asynccontextmanager
-async def get_dao(*, config: Config) -> AsyncGenerator[EventDaoPort, None]:
+async def get_dao(*, config: Config) -> AsyncGenerator[EventDaoPort]:
     """Constructs and initializes the DAO factory."""
     async with MongoDbDaoFactory.construct(config=config) as dao_factory:
         dao = await get_event_dao(dao_factory=dao_factory)
@@ -43,7 +43,7 @@ async def get_dao(*, config: Config) -> AsyncGenerator[EventDaoPort, None]:
 @asynccontextmanager
 async def get_event_publisher(
     *, config: Config
-) -> AsyncGenerator[EventPublisherProtocol, None]:
+) -> AsyncGenerator[EventPublisherProtocol]:
     """Constructs and initializes the retry-topic event publisher."""
     async with KafkaEventPublisher.construct(config=config) as publisher:
         yield publisher
@@ -56,7 +56,7 @@ async def prepare_core(
     dao_override: EventDaoPort | None = None,
     aggregator_override: AggregatorPort | None = None,
     publisher_override: EventPublisherProtocol | None = None,
-) -> AsyncGenerator[DLQManagerPort, None]:
+) -> AsyncGenerator[DLQManagerPort]:
     """Constructs and initializes all core components and their outbound dependencies.
 
     The _override parameters can be used to override the default dependencies.
@@ -91,7 +91,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     dlq_manager_override: DLQManagerPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the dlq_manager_override parameter.
@@ -112,7 +112,7 @@ async def prepare_dlq_subscriber(
     *,
     config: Config,
     dlq_manager_override: DLQManagerPort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the override parameter.

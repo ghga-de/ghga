@@ -42,7 +42,7 @@ class JointFixture:
 @pytest_asyncio.fixture
 async def joint_fixture(
     kafka: KafkaFixture, mongodb: MongoDbFixture
-) -> AsyncGenerator[JointFixture, None]:
+) -> AsyncGenerator[JointFixture]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
     config = get_config([kafka.config, mongodb.config])
 

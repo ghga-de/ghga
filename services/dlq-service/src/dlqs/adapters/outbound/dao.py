@@ -92,7 +92,7 @@ class Aggregator(AggregatorPort):
 
 
 @asynccontextmanager
-async def get_aggregator(*, config: Config) -> AsyncGenerator[Aggregator, None]:
+async def get_aggregator(*, config: Config) -> AsyncGenerator[Aggregator]:
     """Return an Aggregator with a collection set up"""
     async with ConfiguredMongoClient(config=config) as client:
         db = client[config.db_name]
