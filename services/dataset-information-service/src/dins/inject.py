@@ -33,9 +33,7 @@ from dins.ports.inbound.information_service import InformationServicePort
 
 
 @asynccontextmanager
-async def prepare_core(
-    *, config: Config
-) -> AsyncGenerator[InformationServicePort, None]:
+async def prepare_core(*, config: Config) -> AsyncGenerator[InformationServicePort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     async with MongoDbDaoFactory.construct(config=config) as dao_factory:
         dataset_dao = await dao.get_dataset_dao(dao_factory=dao_factory)
@@ -66,7 +64,7 @@ async def prepare_event_subscriber(
     *,
     config: Config,
     information_service_override: InformationServicePort | None = None,
-) -> AsyncGenerator[KafkaEventSubscriber, None]:
+) -> AsyncGenerator[KafkaEventSubscriber]:
     """Construct and initialize an event subscriber with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the information_service_override parameter.
@@ -93,7 +91,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     information_service_override: InformationServicePort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize an REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the information_service_override parameter.
