@@ -46,7 +46,7 @@ class FirstPartFixture:
 async def first_part_fixture(
     *,
     vault_fixture: VaultFixture,  # noqa: F811
-) -> AsyncGenerator[FirstPartFixture, None]:
+) -> AsyncGenerator[FirstPartFixture]:
     """Create random File, encrypt with Crypt4GH, return DAOs, secrets and first file part"""
     file_size = 20 * 1024**2
     part_size = 16 * 1024**2

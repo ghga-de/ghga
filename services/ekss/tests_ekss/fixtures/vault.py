@@ -42,7 +42,7 @@ class VaultFixture:
 
 
 @pytest.fixture
-def vault_fixture() -> Generator[VaultFixture, None, None]:
+def vault_fixture() -> Generator[VaultFixture]:
     """Generate preconfigured test container"""
     vault_container = (
         DockerContainer(image="hashicorp/vault:1.12")

@@ -26,7 +26,7 @@ from ekss.config import Crypt4GHConfig
 
 
 @contextmanager
-def tmp_keypair(passphrase: str | None = None) -> Generator[Crypt4GHConfig, None]:
+def tmp_keypair(passphrase: str | None = None) -> Generator[Crypt4GHConfig]:
     """Creates a keypair in tmp using crypt4gh and yields the resulting Crypt4GHConfig"""
     # Crypt4GH always writes to file and umask inside of its code causes permission issues
     sk_file, sk_path = mkstemp(prefix="private", suffix=".key")

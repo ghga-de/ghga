@@ -47,7 +47,7 @@ class EnvelopeFixture:
 async def envelope_fixture(
     *,
     vault_fixture: VaultFixture,  # noqa: F811
-) -> AsyncGenerator[EnvelopeFixture, None]:
+) -> AsyncGenerator[EnvelopeFixture]:
     """
     Generates an EnvelopeFixture, containing a client public key as well as a secret id
     That secret id corresponds to a random secret created and put into the database
