@@ -20,6 +20,7 @@ from collections.abc import Awaitable, Callable
 
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import UUID4
 
 from metldata.event_handling.models import SubmissionEventPayload
 from metldata.event_handling.submission_events import SourceEventConfig
@@ -44,7 +45,13 @@ class SourceEventSubscriber(EventSubscriberProtocol):
         self._run_workflow_func = run_workflow_func
 
     async def _consume_validated(
-        self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
+        self,
+        *,
+        payload: JsonObject,
+        type_: Ascii,
+        topic: Ascii,
+        key: Ascii,
+        event_id: UUID4,
     ) -> None:
         """
         Receive and process an event with already validated topic and type.

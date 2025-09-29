@@ -122,11 +122,12 @@ async def test_get_stats_endpoint(mongodb: MongoDbFixture):
 
     artifact_infos = [MINIMAL_ARTIFACT_INFO]
 
-    await create_stats_using_aggregator(
-        artifact_infos=get_artifact_info_dict(artifact_infos=artifact_infos),
-        primary_artifact_name=artifact_infos[-1].name,
-        db_aggregator=MongoDbAggregator(config=mongodb.config),
-    )
+    async with MongoDbAggregator.construct(config=mongodb.config) as db_aggregator:
+        await create_stats_using_aggregator(
+            artifact_infos=get_artifact_info_dict(artifact_infos=artifact_infos),
+            primary_artifact_name=artifact_infos[-1].name,
+            db_aggregator=db_aggregator,
+        )
 
     # Get the global summary statistics:
     async with await get_example_app_client(

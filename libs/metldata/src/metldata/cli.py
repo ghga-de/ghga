@@ -45,5 +45,5 @@ async def run_api() -> None:
     """Run the combined loader and query API."""
     config = Config()  # type: ignore
     configure_logging(config=config)
-    app = await get_app(config=config)
-    await run_server(app=app, config=config)
+    async with get_app(config=config) as app:
+        await run_server(app=app, config=config)

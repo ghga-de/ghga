@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.3",
+    "setuptools>=80.9",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "metldata"
-version = "4.0.1"
+version = "4.0.2"
 description = "metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing."
 dependencies = [
-    "hexkit[akafka,mongodb] >=5.3, <6",
-    "ghga-service-commons[api,auth] >=4.1.0, <5",
+    "hexkit[akafka,mongodb] >=7.1, <8",
+    "ghga-service-commons[api,auth] >=5.1.0, <6",
     "ghga-event-schemas >=9.2.0, <10",
-    "typer >= 0.15.2",
+    "typer >= 0.19",
     "linkml == 1.6.1",
     "linkml-runtime == 1.6.0",
     "linkml-validator == 0.4.5",
@@ -150,7 +150,7 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.3"
+minversion = "8.4"
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 

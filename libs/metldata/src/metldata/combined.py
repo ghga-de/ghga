@@ -16,9 +16,12 @@
 
 """A combined service for artifact loading and browsing."""
 
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from ghga_service_commons.api import configure_app
-from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient, MongoDbDaoFactory
 
 from metldata.artifacts_rest.api_factory import (
     rest_api_factory as query_rest_api_factory,
@@ -28,30 +31,32 @@ from metldata.load.aggregator import MongoDbAggregator
 from metldata.load.api import rest_api_factory as load_rest_api_factory
 
 
-async def get_app(config: Config) -> FastAPI:
+@asynccontextmanager
+async def get_app(config: Config) -> AsyncGenerator[FastAPI]:
     """Get the FastAPI app for artifacts loading and browsing."""
     app = FastAPI(
         title="Artifacts Loader and Browser API",
         description="Load and browse artifacts user-accessible API.",
     )
     configure_app(app=app, config=config)
-    dao_factory = MongoDbDaoFactory(config=config)
-    db_aggregator = MongoDbAggregator(config=config)
 
-    load_router = await load_rest_api_factory(
-        artifact_infos=config.artifact_infos,
-        primary_artifact_name=config.primary_artifact_name,
-        config=config,
-        dao_factory=dao_factory,
-        db_aggregator=db_aggregator,
-        token_hashes=config.loader_token_hashes,
-    )
+    async with ConfiguredMongoClient(config=config) as client:
+        dao_factory = MongoDbDaoFactory(config=config, client=client)
+        db_aggregator = MongoDbAggregator(config=config, client=client)
+        load_router = await load_rest_api_factory(
+            artifact_infos=config.artifact_infos,
+            primary_artifact_name=config.primary_artifact_name,
+            config=config,
+            dao_factory=dao_factory,
+            db_aggregator=db_aggregator,
+            token_hashes=config.loader_token_hashes,
+        )
 
-    query_router = await query_rest_api_factory(
-        artifact_infos=config.artifact_infos, dao_factory=dao_factory
-    )
+        query_router = await query_rest_api_factory(
+            artifact_infos=config.artifact_infos, dao_factory=dao_factory
+        )
 
-    app.include_router(load_router)
-    app.include_router(query_router)
+        app.include_router(load_router)
+        app.include_router(query_router)
 
-    return app
+        yield app

@@ -198,6 +198,7 @@ cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
+cors_exposed_headers: null
 dataset_change_topic: metadata_datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created

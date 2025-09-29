@@ -42,4 +42,4 @@ class MongoDbAggregator(MongoDbDaoFactory, DbAggregator):
     ) -> list[dict[str, Any]]:
         """Run the given aggregation pipeline."""
         collection = self._db[collection_name]
-        return [item async for item in collection.aggregate(pipeline=pipeline)]
+        return [item async for item in await collection.aggregate(pipeline=pipeline)]

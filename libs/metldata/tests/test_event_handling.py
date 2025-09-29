@@ -21,7 +21,7 @@ import json
 import pytest
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import UUID4, BaseModel, ConfigDict, Field
 
 from metldata.event_handling.event_handling import FileSystemEventSubscriber
 from tests.fixtures.event_handling import (
@@ -84,7 +84,13 @@ async def test_pub_sub_workflow(
             self.types_of_interest = {"type1", "type2"}  # type: ignore
 
         async def _consume_validated(
-            self, *, payload: JsonObject, type_: Ascii, topic: Ascii, key: Ascii
+            self,
+            *,
+            payload: JsonObject,
+            type_: Ascii,
+            topic: Ascii,
+            key: Ascii,
+            event_id: UUID4,
         ) -> None:
             self.consumed_events.add(
                 ConsumedEvent(topic=topic, type_=type_, payload=json.dumps(payload))

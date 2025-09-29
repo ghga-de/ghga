@@ -19,12 +19,13 @@
 import json
 from collections.abc import Iterator, Mapping
 from pathlib import Path
+from uuid import uuid4
 
 from hexkit.base import InboundProviderBase
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import BaseModel, Field
+from pydantic import UUID4, BaseModel, Field
 from pydantic_settings import BaseSettings
 
 
@@ -110,13 +111,14 @@ class FileSystemEventPublisher(EventPublisherProtocol):
         """Initialize with config."""
         self._config = config
 
-    async def _publish_validated(
+    async def _publish_validated(  # noqa: PLR0913
         self,
         *,
         payload: JsonObject,
         type_: Ascii,
         key: Ascii,
         topic: Ascii,
+        event_id: UUID4 | None = None,  # match hexkit, even if unused here
         headers: Mapping[str, str],
     ) -> None:
         """Publish an event with already validated topic and type.
@@ -173,7 +175,11 @@ class FileSystemEventSubscriber(InboundProviderBase):
             event_store_path=self._config.event_store_path,
         ):
             await self._translator.consume(
-                payload=event.payload, type_=event.type_, topic=event.topic, key=""
+                payload=event.payload,
+                type_=event.type_,
+                topic=event.topic,
+                key="",
+                event_id=uuid4(),
             )
 
 
