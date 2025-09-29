@@ -33,7 +33,7 @@ from pcs.ports.inbound.file_deletion import FileDeletionPort
 @asynccontextmanager
 async def get_persistent_publisher(
     config: Config, dao_factory: MongoDbDaoFactory | None = None
-) -> AsyncGenerator[PersistentKafkaPublisher, None]:
+) -> AsyncGenerator[PersistentKafkaPublisher]:
     """Construct and return a PersistentKafkaPublisher."""
     async with (
         (
@@ -52,7 +52,7 @@ async def get_persistent_publisher(
 
 
 @asynccontextmanager
-async def prepare_core(*, config: Config) -> AsyncGenerator[FileDeletionPort, None]:
+async def prepare_core(*, config: Config) -> AsyncGenerator[FileDeletionPort]:
     """Construct and initialize the core component and its outbound dependencies."""
     async with get_persistent_publisher(config=config) as persistent_publisher:
         event_pub_translator = EventPubTranslator(
@@ -78,7 +78,7 @@ async def prepare_rest_app(
     *,
     config: Config,
     core_override: FileDeletionPort | None = None,
-) -> AsyncGenerator[FastAPI, None]:
+) -> AsyncGenerator[FastAPI]:
     """Construct and initialize an REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the core_override parameter.

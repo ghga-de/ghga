@@ -50,7 +50,7 @@ class JointFixture:
 async def joint_fixture(
     mongodb: MongoDbFixture,
     kafka: KafkaFixture,
-) -> AsyncGenerator[JointFixture, None]:
+) -> AsyncGenerator[JointFixture]:
     """A fixture that embeds all other fixtures for API-level integration testing"""
     token, hash = generate_token_and_hash()
 
