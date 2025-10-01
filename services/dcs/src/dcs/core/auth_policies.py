@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, field_validator
 class WorkOrderContext(BaseModel):
     """Work order token model"""
 
-    type: Literal["download"] = Field(
+    work_type: Literal["download"] = Field(
         default=..., title="Type", description="Work type"
     )
     file_id: str = Field(

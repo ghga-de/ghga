@@ -43,13 +43,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/download-controller-service):
 ```bash
-docker pull ghga/download-controller-service:8.0.1
+docker pull ghga/download-controller-service:8.0.2
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/download-controller-service:8.0.1 .
+docker build -t ghga/download-controller-service:8.0.2 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -57,7 +57,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/download-controller-service:8.0.1 --help
+docker run -p 8080:8080 ghga/download-controller-service:8.0.2 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -660,7 +660,7 @@ The service requires the following configuration parameters:
 
   - <a id="properties/auth_algs/items"></a>**Items** *(string)*
 
-- <a id="properties/auth_check_claims"></a>**`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Can contain additional properties. Default: `{"type": null, "file_id": null, "user_public_crypt4gh_key": null, "iat": null, "exp": null}`.
+- <a id="properties/auth_check_claims"></a>**`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Can contain additional properties. Default: `{"work_type": null, "file_id": null, "user_public_crypt4gh_key": null, "iat": null, "exp": null}`.
 
 - <a id="properties/auth_map_claims"></a>**`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
 

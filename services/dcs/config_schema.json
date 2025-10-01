@@ -583,7 +583,7 @@
     "auth_check_claims": {
       "additionalProperties": true,
       "default": {
-        "type": null,
+        "work_type": null,
         "file_id": null,
         "user_public_crypt4gh_key": null,
         "iat": null,

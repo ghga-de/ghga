@@ -6,8 +6,8 @@ auth_check_claims:
   exp: null
   file_id: null
   iat: null
-  type: null
   user_public_crypt4gh_key: null
+  work_type: null
 auth_key: '{}'
 auth_map_claims: {}
 auto_reload: true

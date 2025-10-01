@@ -41,7 +41,7 @@ def generate_work_order_token(
     user_pubkey = encode_key(generate_key_pair().public)
     # generate minimal test token
     wot = auth_policies.WorkOrderContext(
-        type="download",
+        work_type="download",
         file_id=file_id,
         user_public_crypt4gh_key=user_pubkey,
     )
