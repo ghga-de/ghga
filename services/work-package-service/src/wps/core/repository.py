@@ -147,9 +147,8 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
         dataset_id = creation_data.dataset_id
         box_id = creation_data.box_id
-        work_type = creation_data.type
 
-        match work_type:
+        match creation_data.type:
             case WorkPackageType.DOWNLOAD:
                 return await self._create_download_work_package(
                     creation_data,
@@ -176,7 +175,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         extra = {  # only used for logging
             "user_id": user_id,
             "dataset_id": dataset_id,
-            "work_type": WorkPackageType.DOWNLOAD,
+            "work_package_type": WorkPackageType.DOWNLOAD,
         }
 
         expires = await self._access.check_download_access(user_id, dataset_id)
@@ -226,7 +225,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         extra = {  # only used for logging
             "user_id": user_id,
             "box_id": box_id,
-            "work_type": WorkPackageType.UPLOAD,
+            "work_package_type": WorkPackageType.UPLOAD,
         }
 
         expires = await self._access.check_upload_access(user_id, box_id)
@@ -430,7 +429,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             "work_package_id": work_package_id,
             "file_id": file_id,
             "alias": alias,
-            "work_token_type": work_type,
+            "work_order_type": work_type,
             "check_valid": check_valid,
         }
 
