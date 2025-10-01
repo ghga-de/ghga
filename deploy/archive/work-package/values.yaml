@@ -18,7 +18,7 @@ config:
   auth_key: '{}'
   mongo_dsn: null
   db_name: wps
-  download_access_url: http://claims-repository:8080/download-access
+  access_url: http://claims-repository:8080
   host: "0.0.0.0"
   service_instance_id: 'wps_1'
   service_name: wps
@@ -33,6 +33,14 @@ cmd: wps run-rest
 # cmd: wps consume-events
 
 _topics:
+  uploadBoxTopic:
+    # as consumer
+    topic:
+      name: upload_box_topic
+      value: upload-boxes
+    kafkaUser:
+      operations:
+        - Read
   datasetChangeEvent:
     # as consumer
     topic:
