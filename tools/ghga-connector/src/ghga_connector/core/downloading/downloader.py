@@ -54,20 +54,18 @@ class Downloader(DownloaderBase):
     This is not meant to be reused, as internal state is not cleared.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         client: httpx.AsyncClient,
         file_id: str,
         max_concurrent_downloads: int,
         max_wait_time: int,
-        message_display: CLIMessageDisplay,
         work_package_accessor: WorkPackageAccessor,
     ):
         self._client = client
         self._file_id = file_id
         self._max_wait_time = max_wait_time
-        self._message_display = message_display
         self._work_package_accessor = work_package_accessor
         self._queue: Queue[tuple[int, bytes]] = PriorityQueue()
         self._semaphore = Semaphore(value=max_concurrent_downloads)
@@ -75,7 +73,7 @@ class Downloader(DownloaderBase):
     async def download_file(self, *, output_path: Path, part_size: int):
         """Download file to the specified location and manage lower level details."""
         # Split the file into parts based on the part size
-        self._message_display.display(
+        CLIMessageDisplay.display(
             f"Fetching work order token and download URL for {self._file_id}"
         )
         logger.debug("Initial fetch of download URL for file %s", self._file_id)
@@ -168,12 +166,12 @@ class Downloader(DownloaderBase):
                     bust_cache=True,
                 )
         except exceptions.BadResponseCodeError as error:
-            self._message_display.failure(
+            CLIMessageDisplay.failure(
                 f"The request for file {self._file_id} returned an unexpected HTTP status code: {error.response_code}."
             )
             raise error
         except exceptions.RequestFailedError as error:
-            self._message_display.failure(
+            CLIMessageDisplay.failure(
                 f"The download request for file {self._file_id} failed."
             )
             raise error

@@ -80,7 +80,6 @@ def exception_hook(
     type_: BaseException,
     value: BaseException,
     traceback: TracebackType | None,
-    message_display: CLIMessageDisplay,
 ):
     """When debug mode is NOT enabled, gets called to perform final error handling
     before program exits
@@ -93,16 +92,15 @@ def exception_hook(
     if value.args:
         message += f"\n{value.args[0]}"
 
-    message_display.failure(message)
+    CLIMessageDisplay.failure(message)
 
 
-def init_message_display(debug: bool = False) -> CLIMessageDisplay:
-    """Initialize message display and configure exception printing"""
-    message_display = CLIMessageDisplay()
-
-    if not debug:
-        sys.excepthook = partial(exception_hook, message_display=message_display)
-    return message_display
+def modify_for_debug(debug: bool):
+    """Enable debug logging and configure exception printing if debug=True"""
+    if debug:
+        # enable debug logging
+        logging.basicConfig(level=logging.DEBUG)
+        sys.excepthook = partial(exception_hook)
 
 
 async def retrieve_upload_parameters(client: httpx.AsyncClient) -> UploadParameters:
@@ -144,14 +142,10 @@ async def retrieve_download_parameters(
     )
 
 
-def get_work_package_information(
-    my_private_key: bytes, message_display: CLIMessageDisplay
-):
+def get_work_package_information(my_private_key: bytes):
     """Fetch a work package id and work package token and decrypt the token"""
     # get work package access token and id from user input
-    work_package_id, work_package_token = get_wps_token(
-        max_tries=3, message_display=message_display
-    )
+    work_package_id, work_package_token = get_wps_token(max_tries=3)
     decrypted_token = crypt.decrypt(data=work_package_token, key=my_private_key)
     return WorkPackageInformation(
         decrypted_token=decrypted_token, package_id=work_package_id
@@ -185,6 +179,7 @@ def upload(  # noqa: PLR0913
     ),
 ):
     """Wrapper for the async upload function"""
+    modify_for_debug(debug)
     asyncio.run(
         async_upload(
             file_id=file_id,
@@ -192,21 +187,18 @@ def upload(  # noqa: PLR0913
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
             passphrase=passphrase,
-            debug=debug,
         )
     )
 
 
-async def async_upload(  # noqa: PLR0913
+async def async_upload(
     file_id: str,
     file_path: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
     passphrase: str | None = None,
-    debug: bool = False,
 ):
     """Upload a file asynchronously"""
-    message_display = init_message_display(debug=debug)
     async with async_client() as client:
         parameters = await retrieve_upload_parameters(client)
         await upload_file(
@@ -214,7 +206,6 @@ async def async_upload(  # noqa: PLR0913
             client=client,
             file_id=file_id,
             file_path=file_path,
-            message_display=message_display,
             server_public_key=parameters.server_pubkey,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
@@ -259,40 +250,28 @@ def download(  # noqa: PLR0913
     ),
 ):
     """Wrapper for the async download function"""
+    modify_for_debug(debug)
     asyncio.run(
         async_download(
             output_dir=output_dir,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
             passphrase=passphrase,
-            debug=debug,
             overwrite=overwrite,
         )
     )
 
 
-async def async_download(  # noqa: PLR0913
-    *,
-    output_dir: Path,
-    my_public_key_path: Path,
-    my_private_key_path: Path,
-    passphrase: str | None = None,
-    debug: bool = False,
-    overwrite: bool = False,
-):
-    """Download files asynchronously"""
-    # enable debug logging
-    if debug:
-        logging.basicConfig(level=logging.DEBUG)
-
+def get_public_key(my_public_key_path: Path) -> bytes:
+    """Get the user's private key from the path supplied"""
     if not my_public_key_path.is_file():
         raise exceptions.PubKeyFileDoesNotExistError(public_key_path=my_public_key_path)
 
-    if not output_dir.is_dir():
-        raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
+    return crypt4gh.keys.get_public_key(filepath=my_public_key_path)
 
-    my_public_key = crypt4gh.keys.get_public_key(filepath=my_public_key_path)
 
+def get_private_key(my_private_key_path: Path, passphrase: str | None = None) -> bytes:
+    """Get the user's private key, using the passphrase if supplied/needed."""
     if passphrase:
         my_private_key = crypt4gh.keys.get_private_key(
             filepath=my_private_key_path, callback=lambda: passphrase
@@ -301,15 +280,31 @@ async def async_download(  # noqa: PLR0913
         my_private_key = crypt4gh.keys.get_private_key(
             filepath=my_private_key_path, callback=None
         )
+    return my_private_key
 
-    message_display = init_message_display(debug=debug)
-    message_display.display("\nFetching work package token...")
+
+async def async_download(
+    *,
+    output_dir: Path,
+    my_public_key_path: Path,
+    my_private_key_path: Path,
+    passphrase: str | None = None,
+    overwrite: bool = False,
+):
+    """Download files asynchronously"""
+    if not output_dir.is_dir():
+        raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
+
+    my_public_key = get_public_key(my_public_key_path)
+    my_private_key = get_private_key(my_private_key_path, passphrase)
+
+    CLIMessageDisplay.display("\nFetching work package token...")
     work_package_information = get_work_package_information(
-        my_private_key=my_private_key, message_display=message_display
+        my_private_key=my_private_key
     )
 
     async with async_client() as client:
-        message_display.display("Retrieving API configuration information...")
+        CLIMessageDisplay.display("Retrieving API configuration information...")
         parameters = await retrieve_download_parameters(
             client=client,
             my_private_key=my_private_key,
@@ -317,12 +312,11 @@ async def async_download(  # noqa: PLR0913
             work_package_information=work_package_information,
         )
 
-        message_display.display("Preparing files for download...")
+        CLIMessageDisplay.display("Preparing files for download...")
         stager = FileStager(
             wanted_file_ids=list(parameters.file_ids_with_extension),
             dcs_api_url=parameters.dcs_api_url,
             output_dir=output_dir,
-            message_display=message_display,
             work_package_accessor=parameters.work_package_accessor,
             client=client,
             config=CONFIG,
@@ -330,7 +324,7 @@ async def async_download(  # noqa: PLR0913
         while not stager.finished:
             staged_files = await stager.get_staged_files()
             for file_id in staged_files:
-                message_display.display(f"Downloading file with id '{file_id}'...")
+                CLIMessageDisplay.display(f"Downloading file with id '{file_id}'...")
                 await download_file(
                     api_url=parameters.dcs_api_url,
                     client=client,
@@ -340,7 +334,6 @@ async def async_download(  # noqa: PLR0913
                     max_concurrent_downloads=CONFIG.max_concurrent_downloads,
                     max_wait_time=CONFIG.max_wait_time,
                     part_size=CONFIG.part_size,
-                    message_display=message_display,
                     work_package_accessor=parameters.work_package_accessor,
                     overwrite=overwrite,
                 )
@@ -376,7 +369,7 @@ def decrypt(  # noqa: PLR0912, C901
     ),
 ):
     """Command to decrypt a downloaded file"""
-    message_display = init_message_display(debug=debug)
+    modify_for_debug(debug=debug)
 
     if not input_dir.is_dir():
         raise exceptions.DirectoryDoesNotExistError(directory=input_dir)
@@ -388,7 +381,7 @@ def decrypt(  # noqa: PLR0912, C901
         raise exceptions.OutputPathIsNotDirectory(directory=output_dir)
 
     if not output_dir.exists():
-        message_display.display(f"Creating output directory '{output_dir}'")
+        CLIMessageDisplay.display(f"Creating output directory '{output_dir}'")
         output_dir.mkdir(parents=True)
 
     errors = {}
@@ -411,7 +404,7 @@ def decrypt(  # noqa: PLR0912, C901
             continue
 
         try:
-            message_display.display(f"Decrypting file with id '{input_file}'...")
+            CLIMessageDisplay.display(f"Decrypting file with id '{input_file}'...")
             decrypt_file(
                 input_file=input_file,
                 output_file=output_file,
@@ -424,23 +417,23 @@ def decrypt(  # noqa: PLR0912, C901
             )
             continue
 
-        message_display.success(
+        CLIMessageDisplay.success(
             f"Successfully decrypted file '{input_file}' to location '{output_dir}'."
         )
     if file_count == 0:
-        message_display.display(
+        CLIMessageDisplay.display(
             f"No files were processed because the directory '{input_dir}' contains no "
             + "applicable files."
         )
 
     if skipped_files:
-        message_display.display(
+        CLIMessageDisplay.display(
             "The following files were skipped as they are not .c4gh files:"
         )
         for file in skipped_files:
-            message_display.display(f"- {file}")
+            CLIMessageDisplay.display(f"- {file}")
 
     if errors:
-        message_display.failure("The following files could not be decrypted:")
+        CLIMessageDisplay.failure("The following files could not be decrypted:")
         for input_path, cause in errors.items():
-            message_display.failure(f"- {input_path}:\n\t{cause}")
+            CLIMessageDisplay.failure(f"- {input_path}:\n\t{cause}")

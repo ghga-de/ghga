@@ -270,7 +270,7 @@ async def test_get_wps_file_info(httpx_mock: HTTPXMock):
         )
 
         httpx_mock.add_response(json={"files": files}, status_code=200)
-        wp_id, wp_token = mock_wps_token(1, None)
+        wp_id, wp_token = mock_wps_token(1)
         work_package_accessor = partial_accessor(
             access_token=wp_token,
             package_id=wp_id,
@@ -281,7 +281,7 @@ async def test_get_wps_file_info(httpx_mock: HTTPXMock):
         httpx_mock.add_response(json={"files": files}, status_code=403)
 
         with pytest.raises(exceptions.NoWorkPackageAccessError):
-            wp_id, wp_token = mock_wps_token(1, None)
+            wp_id, wp_token = mock_wps_token(1)
             work_package_accessor = partial_accessor(
                 access_token=wp_token,
                 package_id=wp_id,
@@ -291,7 +291,7 @@ async def test_get_wps_file_info(httpx_mock: HTTPXMock):
         httpx_mock.add_response(json={"files": files}, status_code=500)
 
         with pytest.raises(exceptions.InvalidWPSResponseError):
-            wp_id, wp_token = mock_wps_token(1, None)
+            wp_id, wp_token = mock_wps_token(1)
             work_package_accessor = partial_accessor(
                 access_token=wp_token,
                 package_id=wp_id,
@@ -301,7 +301,7 @@ async def test_get_wps_file_info(httpx_mock: HTTPXMock):
         httpx_mock.add_response(json={"files": files}, status_code=501)
 
         with pytest.raises(exceptions.InvalidWPSResponseError):
-            wp_id, wp_token = mock_wps_token(1, None)
+            wp_id, wp_token = mock_wps_token(1)
             work_package_accessor = partial_accessor(
                 access_token=wp_token,
                 package_id=wp_id,

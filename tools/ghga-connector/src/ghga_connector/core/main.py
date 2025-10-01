@@ -37,7 +37,6 @@ async def upload_file(  # noqa: PLR0913
     client: httpx.AsyncClient,
     file_id: str,
     file_path: Path,
-    message_display: CLIMessageDisplay,
     server_public_key: str,
     my_public_key_path: Path,
     my_private_key_path: Path,
@@ -79,20 +78,22 @@ async def upload_file(  # noqa: PLR0913
             uploader=uploader,
         )
     except exceptions.StartUploadError as error:
-        message_display.failure("The request to start a multipart upload has failed.")
+        CLIMessageDisplay.failure("The request to start a multipart upload has failed.")
         raise error
     except exceptions.CantChangeUploadStatusError as error:
-        message_display.failure(f"The file with id '{file_id}' was already uploaded.")
+        CLIMessageDisplay.failure(f"The file with id '{file_id}' was already uploaded.")
         raise error
     except exceptions.ConnectionFailedError as error:
-        message_display.failure("The upload failed too many times and was aborted.")
+        CLIMessageDisplay.failure("The upload failed too many times and was aborted.")
         raise error
     except exceptions.FinalizeUploadError as error:
-        message_display.failure(
+        CLIMessageDisplay.failure(
             f"Finishing the upload with id '{file_id}' failed.\n{error.cause}"
         )
 
-    message_display.success(f"File with id '{file_id}' has been successfully uploaded.")
+    CLIMessageDisplay.success(
+        f"File with id '{file_id}' has been successfully uploaded."
+    )
 
 
 async def download_file(  # noqa: PLR0913
@@ -102,7 +103,6 @@ async def download_file(  # noqa: PLR0913
     output_dir: Path,
     part_size: int,
     max_concurrent_downloads: int,
-    message_display: CLIMessageDisplay,
     max_wait_time: int,
     work_package_accessor: WorkPackageAccessor,
     file_id: str,
@@ -122,11 +122,11 @@ async def download_file(  # noqa: PLR0913
     output_file = output_dir / f"{file_name}.c4gh"
     if output_file.exists():
         if overwrite:
-            message_display.display(
+            CLIMessageDisplay.display(
                 f"A file with name '{output_file}' already exists and will be overwritten."
             )
         else:
-            message_display.failure(
+            CLIMessageDisplay.failure(
                 f"A file with name '{output_file}' already exists. Skipping."
             )
             return
@@ -141,7 +141,6 @@ async def download_file(  # noqa: PLR0913
         file_id=file_id,
         max_concurrent_downloads=max_concurrent_downloads,
         max_wait_time=max_wait_time,
-        message_display=message_display,
         work_package_accessor=work_package_accessor,
     )
     try:
@@ -149,23 +148,23 @@ async def download_file(  # noqa: PLR0913
             output_path=output_file_ongoing, part_size=part_size
         )
     except exceptions.GetEnvelopeError as error:
-        message_display.failure(
+        CLIMessageDisplay.failure(
             f"The request to get an envelope for file '{file_id}' failed."
         )
         raise error
     except exceptions.DownloadError as error:
-        message_display.failure(f"Failed downloading with id '{file_id}'.")
+        CLIMessageDisplay.failure(f"Failed downloading with id '{file_id}'.")
         raise error
 
     # rename fully downloaded file
     output_file_ongoing.rename(output_file)
 
-    message_display.success(
+    CLIMessageDisplay.success(
         f"File with id '{file_id}' has been successfully downloaded."
     )
 
 
-def get_wps_token(max_tries: int, message_display: CLIMessageDisplay) -> list[str]:
+def get_wps_token(max_tries: int) -> list[str]:
     """
     Expect the work package id and access token as a colon separated string
     The user will have to input this manually to avoid it becoming part of the
@@ -182,7 +181,7 @@ def get_wps_token(max_tries: int, message_display: CLIMessageDisplay) -> list[st
             and 20 <= len(work_package_parts[0]) < 40
             and 80 <= len(work_package_parts[1]) < 120
         ):
-            message_display.display(
+            CLIMessageDisplay.display(
                 "Invalid input. Please enter the download token "
                 + "you got from the GHGA data portal unaltered."
             )

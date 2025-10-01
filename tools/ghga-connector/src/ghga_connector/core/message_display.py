@@ -39,14 +39,17 @@ class CLIMessageDisplay:
     using different color based on information type
     """
 
-    def display(self, message: str):
+    @staticmethod
+    def display(message: str):
         """Write message with default color to stdout"""
         typer.secho(message, fg=MessageColors.DEFAULT)
 
-    def success(self, message: str):
+    @staticmethod
+    def success(message: str):
         """Write message to stdout representing information about a successful operation"""
         typer.secho(message, fg=MessageColors.SUCCESS)
 
-    def failure(self, message: str):
+    @staticmethod
+    def failure(message: str):
         """Write message to stderr representing information about a failed operation"""
         typer.secho(message, fg=MessageColors.FAILURE, err=True)

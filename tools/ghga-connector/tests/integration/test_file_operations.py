@@ -21,7 +21,6 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from ghga_connector.cli import CLIMessageDisplay
 from ghga_connector.core import (
     PartRange,
     WorkPackageAccessor,
@@ -67,7 +66,6 @@ async def test_download_content_range(
         object_id=big_object.object_id, bucket_id=big_object.bucket_id
     )
 
-    message_display = CLIMessageDisplay()
     # download content range with dedicated function:
     async with async_client() as client:
         # no work package accessor calls in download_content_range, just mock for correct type
@@ -78,7 +76,6 @@ async def test_download_content_range(
             max_concurrent_downloads=5,
             max_wait_time=10,
             work_package_accessor=dummy_accessor,
-            message_display=message_display,
         )
         await downloader.download_content_range(url=download_url, start=start, end=end)
 
@@ -116,14 +113,12 @@ async def test_download_file_parts(
     async with async_client() as client:
         # no work package accessor calls in download_file_parts, just mock for correct type
         dummy_accessor = Mock(spec=WorkPackageAccessor)
-        message_display = CLIMessageDisplay()
         downloader = Downloader(
             client=client,
             file_id=big_object.object_id,
             max_concurrent_downloads=5,
             max_wait_time=10,
             work_package_accessor=dummy_accessor,
-            message_display=message_display,
         )
         downloader.fetch_download_url = mock_fetch  # type: ignore
         task_handler = TaskHandler()
@@ -159,7 +154,6 @@ async def test_download_file_parts(
             max_concurrent_downloads=5,
             max_wait_time=10,
             work_package_accessor=dummy_accessor,
-            message_display=message_display,
         )
         downloader.fetch_download_url = mock_fetch  # type: ignore
         task_handler = TaskHandler()
@@ -205,7 +199,6 @@ async def test_download_file_parts(
             max_concurrent_downloads=5,
             max_wait_time=10,
             work_package_accessor=dummy_accessor,
-            message_display=message_display,
         )
         downloader.fetch_download_url = mock_fetch  # type: ignore
         task_handler = TaskHandler()

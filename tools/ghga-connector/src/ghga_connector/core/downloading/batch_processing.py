@@ -76,7 +76,6 @@ class FileStager:
         wanted_file_ids: list[str],
         dcs_api_url: str,
         output_dir: Path,
-        message_display: CLIMessageDisplay,
         work_package_accessor: WorkPackageAccessor,
         client: httpx.AsyncClient,
         config: Config,
@@ -87,7 +86,6 @@ class FileStager:
         if not is_service_healthy(dcs_api_url):
             raise exceptions.ApiNotReachableError(api_url=dcs_api_url)
         self.api_url = dcs_api_url
-        self.message_display = message_display
         self.work_package_accessor = work_package_accessor
         self.max_wait_time = config.max_wait_time
         self.client = client
@@ -113,7 +111,7 @@ class FileStager:
         These values contain the download URLs and file sizes.
         The dict should cleared after these files have been downloaded.
         """
-        self.message_display.display("Updating list of staged files...")
+        CLIMessageDisplay.display("Updating list of staged files...")
         staging_items = list(self.unstaged_retry_times.items())
         for file_id, retry_time in staging_items:
             if perf_counter() >= retry_time:
@@ -164,10 +162,10 @@ class FileStager:
         if isinstance(response, URLResponse):
             del self.unstaged_retry_times[file_id]
             self.staged_urls[file_id] = response
-            self.message_display.display(f"File {file_id} is ready for download.")
+            CLIMessageDisplay.display(f"File {file_id} is ready for download.")
         elif isinstance(response, RetryResponse):
             self.unstaged_retry_times[file_id] = perf_counter() + response.retry_after
-            self.message_display.display(f"File {file_id} is (still) being staged.")
+            CLIMessageDisplay.display(f"File {file_id} is (still) being staged.")
         else:
             self.missing_files.append(file_id)
 
@@ -189,7 +187,7 @@ class FileStager:
             return False
         missing = ", ".join(self.missing_files)
         message = f"No download exists for the following file IDs: {missing}"
-        self.message_display.failure(message)
+        CLIMessageDisplay.failure(message)
         if self.finished:
             return False
         unknown_ids_present = (
@@ -198,7 +196,7 @@ class FileStager:
         )
         response = self.io_handler.get_input(message=unknown_ids_present)
         self.io_handler.handle_response(response=response)
-        self.message_display.display("Downloading remaining files")
+        CLIMessageDisplay.display("Downloading remaining files")
         self.started_waiting = perf_counter()  # reset the timer
         self.missing_files = []  # reset list of missing files
         return True

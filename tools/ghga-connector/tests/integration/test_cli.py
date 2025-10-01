@@ -33,7 +33,7 @@ from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from ghga_connector.cli import (
     async_download,
-    init_message_display,
+    modify_for_debug,
     retrieve_upload_parameters,
 )
 from ghga_connector.constants import DEFAULT_PART_SIZE
@@ -426,7 +426,7 @@ async def test_upload(
     monkeypatch.setenv("S3_UPLOAD_URL_1", upload_url)
 
     with expected_exception:
-        message_display = init_message_display(debug=True)
+        modify_for_debug(debug=True)
         async with async_client() as client:
             parameters = await retrieve_upload_parameters(client=client)
             await upload_file(
@@ -434,7 +434,6 @@ async def test_upload(
                 client=client,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
-                message_display=message_display,
                 server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -509,7 +508,7 @@ async def test_multipart_upload(
 
     # create big temp file
     with big_temp_file(file_size) as file:
-        message_display = init_message_display(debug=True)
+        modify_for_debug(debug=True)
         async with async_client() as client:
             parameters = await retrieve_upload_parameters(client=client)
             await upload_file(
@@ -517,7 +516,6 @@ async def test_multipart_upload(
                 client=client,
                 file_id=file_id,
                 file_path=Path(file.name),
-                message_display=message_display,
                 server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
@@ -547,7 +545,7 @@ async def test_upload_bad_url(httpx_mock: HTTPXMock, mock_external_calls):  # no
     file_path = uploadable_file.file_path.resolve()
 
     with pytest.raises(exceptions.ApiNotReachableError):
-        message_display = init_message_display(debug=True)
+        modify_for_debug(debug=True)
         async with async_client() as client:
             parameters = await retrieve_upload_parameters(client=client)
             await upload_file(
@@ -555,7 +553,6 @@ async def test_upload_bad_url(httpx_mock: HTTPXMock, mock_external_calls):  # no
                 client=client,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
-                message_display=message_display,
                 server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
