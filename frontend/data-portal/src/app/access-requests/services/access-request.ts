@@ -36,7 +36,7 @@ export class AccessRequestService {
   #authBaseUrl = this.#config.authUrl;
   #arsEndpointUrl = `${this.#arsBaseUrl}/access-requests`;
   #arsManagementUrl = `${this.#arsBaseUrl}/access-grants`;
-  #grantRevocationUrl = `${this.#authBaseUrl}/download-access/grants`;
+  #grantRevocationUrl = this.#arsManagementUrl;
 
   #userAccessRequestsUrl = (userId: string) =>
     `${this.#arsEndpointUrl}?user_id=${userId}`;
