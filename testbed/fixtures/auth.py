@@ -55,7 +55,8 @@ class Session(BaseModel):
     state: str
     timeout: int
     extends: int
-    role: str | None = None
+    roles: list[str] | None = None
+    # role: str | None = None
 
     @model_validator(mode="after")
     def assign_ext_id_to_id(self):
