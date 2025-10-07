@@ -426,9 +426,9 @@ async def create_work_order_token(package_id: str, file_id: str):
     )
 
 
-@mock_external_app.get("/values/{value_name}")
-async def mock_wkvs(value_name: str):
-    """Mock the WKVS /values/value_name endpoint"""
+@mock_external_app.get("/values")
+async def mock_wkvs():
+    """Mock the WKVS /values endpoint"""
     api_url = "http://127.0.0.1"
     values: dict[str, str] = {
         "crypt4gh_public_key": "qx5g31H7rdsq7sgkew9ElkLIXvBje4RxDVcAHcJD8XY=",
@@ -437,15 +437,7 @@ async def mock_wkvs(value_name: str):
         "ucs_api_url": api_url,
     }
 
-    if value_name not in values:
-        raise HttpException(
-            status_code=404,
-            exception_id="valueNotConfigured",
-            description=f"The value {value_name} is not configured.",
-            data={"value_name": value_name},
-        )
-
-    return JSONResponse(status_code=200, content={value_name: values[value_name]})
+    return JSONResponse(status_code=200, content=values)
 
 
 config = ApiConfigBase()

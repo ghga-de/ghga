@@ -18,8 +18,10 @@
 import httpx
 from tenacity import RetryError
 
+from ghga_connector import exceptions
+from ghga_connector.config import get_dcs_api_url
 from ghga_connector.constants import CACHE_MIN_FRESH, TIMEOUT_LONG
-from ghga_connector.core import RetryHandler, WorkPackageAccessor, exceptions
+from ghga_connector.core import RetryHandler, WorkPackageAccessor
 
 from .structs import (
     RetryResponse,
@@ -63,7 +65,8 @@ async def get_envelope_authorization(
     a Crypt4GH envelope for file identified by `file_id`
     """
     # build url
-    url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}/envelopes"
+    dcs_api_url = get_dcs_api_url()
+    url = f"{dcs_api_url}/objects/{file_id}/envelopes"
     headers = await _get_authorization(
         file_id=file_id, work_package_accessor=work_package_accessor
     )
@@ -78,7 +81,8 @@ async def get_file_authorization(
     object storage URL for file download
     """
     # build URL
-    url = f"{work_package_accessor.dcs_api_url}/objects/{file_id}"
+    dcs_api_url = get_dcs_api_url()
+    url = f"{dcs_api_url}/objects/{file_id}"
     headers = await _get_authorization(
         file_id=file_id,
         work_package_accessor=work_package_accessor,

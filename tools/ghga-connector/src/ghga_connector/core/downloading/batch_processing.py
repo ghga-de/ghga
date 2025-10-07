@@ -20,11 +20,11 @@ from time import perf_counter, sleep
 
 import httpx
 
-from ghga_connector.config import Config
+from ghga_connector import exceptions
+from ghga_connector.config import Config, get_dcs_api_url
 from ghga_connector.core import (
     CLIMessageDisplay,
     WorkPackageAccessor,
-    exceptions,
 )
 from ghga_connector.core.api_calls import is_service_healthy
 
@@ -70,11 +70,10 @@ class CliIoHandler:
 class FileStager:
     """Utility class to deal with file staging in batch processing."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         wanted_file_ids: list[str],
-        dcs_api_url: str,
         output_dir: Path,
         work_package_accessor: WorkPackageAccessor,
         client: httpx.AsyncClient,
@@ -83,9 +82,9 @@ class FileStager:
         """Initialize the FileStager."""
         self.io_handler = CliIoHandler()
         existing_file_ids = set(self.io_handler.check_output(location=output_dir))
-        if not is_service_healthy(dcs_api_url):
-            raise exceptions.ApiNotReachableError(api_url=dcs_api_url)
-        self.api_url = dcs_api_url
+        self.api_url = get_dcs_api_url()
+        if not is_service_healthy(self.api_url):
+            raise exceptions.ApiNotReachableError(api_url=self.api_url)
         self.work_package_accessor = work_package_accessor
         self.max_wait_time = config.max_wait_time
         self.client = client

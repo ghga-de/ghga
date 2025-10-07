@@ -22,28 +22,27 @@ import httpx
 from ghga_service_commons.utils.crypt import decrypt
 from tenacity import RetryError
 
+from ghga_connector.config import get_wps_api_url
 from ghga_connector.constants import CACHE_MIN_FRESH
 
-from . import RetryHandler, exceptions
+from .. import exceptions
+from . import RetryHandler
 
 
 class WorkPackageAccessor:
     """Wrapper for WPS associated API call parameters"""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         access_token: str,
-        api_url: str,
         client: httpx.AsyncClient,
-        dcs_api_url: str,
         package_id: str,
         my_private_key: bytes,
         my_public_key: bytes,
     ) -> None:
         self.access_token = access_token
-        self.api_url = api_url
+        self.api_url = get_wps_api_url()
         self.client = client
-        self.dcs_api_url = dcs_api_url
         self.package_id = package_id
         self.my_private_key = my_private_key
         self.my_public_key = my_public_key

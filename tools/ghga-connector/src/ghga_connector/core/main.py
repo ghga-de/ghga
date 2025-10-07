@@ -20,7 +20,9 @@ from pathlib import Path
 
 import httpx
 
-from . import exceptions
+from ghga_connector.config import get_dcs_api_url, get_ucs_api_url
+
+from .. import exceptions
 from .api_calls import is_service_healthy
 from .crypt import Crypt4GHDecryptor
 from .downloading.downloader import Downloader
@@ -33,11 +35,9 @@ from .work_package import WorkPackageAccessor
 
 async def upload_file(  # noqa: PLR0913
     *,
-    api_url: str,
     client: httpx.AsyncClient,
     file_id: str,
     file_path: Path,
-    server_public_key: str,
     my_public_key_path: Path,
     my_private_key_path: Path,
     part_size: int,
@@ -58,11 +58,11 @@ async def upload_file(  # noqa: PLR0913
     if is_file_encrypted(file_path):
         raise exceptions.FileAlreadyEncryptedError(file_path=file_path)
 
-    if not is_service_healthy(api_url):
-        raise exceptions.ApiNotReachableError(api_url=api_url)
+    ucs_api_url = get_ucs_api_url()
+    if not is_service_healthy(ucs_api_url):
+        raise exceptions.ApiNotReachableError(api_url=ucs_api_url)
 
     uploader = Uploader(
-        api_url=api_url,
         client=client,
         file_id=file_id,
         public_key_path=my_public_key_path,
@@ -74,7 +74,6 @@ async def upload_file(  # noqa: PLR0913
             my_private_key_path=my_private_key_path,
             part_size=part_size,
             passphrase=passphrase,
-            server_public_key=server_public_key,
             uploader=uploader,
         )
     except exceptions.StartUploadError as error:
@@ -98,20 +97,19 @@ async def upload_file(  # noqa: PLR0913
 
 async def download_file(  # noqa: PLR0913
     *,
-    api_url: str,
     client: httpx.AsyncClient,
     output_dir: Path,
     part_size: int,
     max_concurrent_downloads: int,
-    max_wait_time: int,
     work_package_accessor: WorkPackageAccessor,
     file_id: str,
     file_extension: str = "",
     overwrite: bool = False,
 ) -> None:
     """Core command to download a file. Can be called by CLI, GUI, etc."""
-    if not is_service_healthy(api_url):
-        raise exceptions.ApiNotReachableError(api_url=api_url)
+    dcs_api_url = get_dcs_api_url()
+    if not is_service_healthy(dcs_api_url):
+        raise exceptions.ApiNotReachableError(api_url=dcs_api_url)
 
     # construct file name with suffix, if given
     file_name = f"{file_id}"
@@ -140,7 +138,6 @@ async def download_file(  # noqa: PLR0913
         client=client,
         file_id=file_id,
         max_concurrent_downloads=max_concurrent_downloads,
-        max_wait_time=max_wait_time,
         work_package_accessor=work_package_accessor,
     )
     try:

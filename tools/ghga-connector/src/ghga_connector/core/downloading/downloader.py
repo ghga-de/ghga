@@ -26,6 +26,7 @@ from pathlib import Path
 import httpx
 from tenacity import RetryError
 
+from ghga_connector import exceptions
 from ghga_connector.core import (
     CLIMessageDisplay,
     PartRange,
@@ -33,7 +34,6 @@ from ghga_connector.core import (
     RetryHandler,
     WorkPackageAccessor,
     calc_part_ranges,
-    exceptions,
 )
 from ghga_connector.core.tasks import TaskHandler
 
@@ -60,12 +60,10 @@ class Downloader(DownloaderBase):
         client: httpx.AsyncClient,
         file_id: str,
         max_concurrent_downloads: int,
-        max_wait_time: int,
         work_package_accessor: WorkPackageAccessor,
     ):
         self._client = client
         self._file_id = file_id
-        self._max_wait_time = max_wait_time
         self._work_package_accessor = work_package_accessor
         self._queue: Queue[tuple[int, bytes]] = PriorityQueue()
         self._semaphore = Semaphore(value=max_concurrent_downloads)

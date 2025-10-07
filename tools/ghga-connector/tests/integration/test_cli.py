@@ -31,13 +31,10 @@ import pytest
 from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from ghga_connector.cli import (
-    async_download,
-    modify_for_debug,
-    retrieve_upload_parameters,
-)
+from ghga_connector import exceptions
+from ghga_connector.cli import async_download, modify_for_debug
+from ghga_connector.config import set_runtime_config
 from ghga_connector.constants import DEFAULT_PART_SIZE
-from ghga_connector.core import exceptions
 from ghga_connector.core.client import async_client
 from ghga_connector.core.crypt import Crypt4GHEncryptor
 from ghga_connector.core.main import upload_file
@@ -91,7 +88,10 @@ def set_env_vars(monkeypatch):
 @pytest.fixture(scope="function", autouse=True)
 def apply_test_config():
     """Apply default test config"""
-    with patch("ghga_connector.cli.CONFIG", get_test_config()):
+    with (
+        patch("ghga_connector.config.CONFIG", get_test_config()),
+        patch("ghga_connector.cli.CONFIG", get_test_config()),
+    ):
         yield
 
 
@@ -173,7 +173,7 @@ async def test_multipart_download(
     """Test the multipart download of a file"""
     # override the default config fixture with updated part size
     monkeypatch.setattr(
-        "ghga_connector.cli.CONFIG", get_test_config(part_size=part_size)
+        "ghga_connector.config.CONFIG", get_test_config(part_size=part_size)
     )
 
     big_object = await get_big_s3_object(s3_fixture, object_size=file_size)
@@ -394,9 +394,12 @@ async def test_upload(
         server_pubkey = base64.b64encode(
             crypt4gh.keys.get_public_key(PUBLIC_KEY_FILE)
         ).decode("utf-8")
+        monkeypatch.setattr(
+            "ghga_connector.core.crypt.encryption.get_ghga_pubkey",
+            lambda: server_pubkey,
+        )
         encryptor = Crypt4GHEncryptor(
             part_size=8 * 1024**3,
-            server_public_key=server_pubkey,
             private_key_path=PRIVATE_KEY_FILE,
             passphrase=None,
         )
@@ -427,14 +430,11 @@ async def test_upload(
 
     with expected_exception:
         modify_for_debug(debug=True)
-        async with async_client() as client:
-            parameters = await retrieve_upload_parameters(client=client)
+        async with async_client() as client, set_runtime_config(client=client):
             await upload_file(
-                api_url=parameters.ucs_api_url,
                 client=client,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
-                server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
                 part_size=DEFAULT_PART_SIZE,
@@ -509,14 +509,11 @@ async def test_multipart_upload(
     # create big temp file
     with big_temp_file(file_size) as file:
         modify_for_debug(debug=True)
-        async with async_client() as client:
-            parameters = await retrieve_upload_parameters(client=client)
+        async with async_client() as client, set_runtime_config(client=client):
             await upload_file(
-                api_url=parameters.ucs_api_url,
                 client=client,
                 file_id=file_id,
                 file_path=Path(file.name),
-                server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
                 part_size=DEFAULT_PART_SIZE,
@@ -546,14 +543,11 @@ async def test_upload_bad_url(httpx_mock: HTTPXMock, mock_external_calls):  # no
 
     with pytest.raises(exceptions.ApiNotReachableError):
         modify_for_debug(debug=True)
-        async with async_client() as client:
-            parameters = await retrieve_upload_parameters(client=client)
+        async with async_client() as client, set_runtime_config(client=client):
             await upload_file(
-                api_url=parameters.ucs_api_url,
                 client=client,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
-                server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
                 part_size=DEFAULT_PART_SIZE,

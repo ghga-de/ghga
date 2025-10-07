@@ -29,14 +29,13 @@ import httpx
 import typer
 from ghga_service_commons.utils import crypt
 
-from ghga_connector.config import CONFIG
+from ghga_connector import exceptions
+from ghga_connector.config import CONFIG, set_runtime_config
 from ghga_connector.core import (
     CLIMessageDisplay,
     WorkPackageAccessor,
     async_client,
-    exceptions,
 )
-from ghga_connector.core.api_calls import WKVSCaller
 from ghga_connector.core.downloading.batch_processing import FileStager
 from ghga_connector.core.main import (
     decrypt_file,
@@ -50,17 +49,8 @@ from ghga_connector.core.main import (
 class DownloadParameters:
     """Contains parameters returned by API calls to prepare information needed for download"""
 
-    dcs_api_url: str
     file_ids_with_extension: dict[str, str]
     work_package_accessor: WorkPackageAccessor
-
-
-@dataclass
-class UploadParameters:
-    """Contains parameters returned by API calls to prepare information needed for upload"""
-
-    ucs_api_url: str
-    server_pubkey: str
 
 
 @dataclass
@@ -103,15 +93,6 @@ def modify_for_debug(debug: bool):
         sys.excepthook = partial(exception_hook)
 
 
-async def retrieve_upload_parameters(client: httpx.AsyncClient) -> UploadParameters:
-    """Configure httpx client and retrieve necessary parameters from WKVS"""
-    wkvs_caller = WKVSCaller(client=client, wkvs_url=CONFIG.wkvs_api_url)
-    ucs_api_url = await wkvs_caller.get_ucs_api_url()
-    server_pubkey = await wkvs_caller.get_server_pubkey()
-
-    return UploadParameters(server_pubkey=server_pubkey, ucs_api_url=ucs_api_url)
-
-
 async def retrieve_download_parameters(
     *,
     client: httpx.AsyncClient,
@@ -120,15 +101,9 @@ async def retrieve_download_parameters(
     work_package_information: WorkPackageInformation,
 ) -> DownloadParameters:
     """Run necessary API calls to configure file download"""
-    wkvs_caller = WKVSCaller(client=client, wkvs_url=CONFIG.wkvs_api_url)
-    dcs_api_url = await wkvs_caller.get_dcs_api_url()
-    wps_api_url = await wkvs_caller.get_wps_api_url()
-
     work_package_accessor = WorkPackageAccessor(
         access_token=work_package_information.decrypted_token,
-        api_url=wps_api_url,
         client=client,
-        dcs_api_url=dcs_api_url,
         package_id=work_package_information.package_id,
         my_private_key=my_private_key,
         my_public_key=my_public_key,
@@ -136,7 +111,6 @@ async def retrieve_download_parameters(
     file_ids_with_extension = await work_package_accessor.get_package_files()
 
     return DownloadParameters(
-        dcs_api_url=dcs_api_url,
         file_ids_with_extension=file_ids_with_extension,
         work_package_accessor=work_package_accessor,
     )
@@ -199,14 +173,11 @@ async def async_upload(
     passphrase: str | None = None,
 ):
     """Upload a file asynchronously"""
-    async with async_client() as client:
-        parameters = await retrieve_upload_parameters(client)
+    async with async_client() as client, set_runtime_config(client=client):
         await upload_file(
-            api_url=parameters.ucs_api_url,
             client=client,
             file_id=file_id,
             file_path=file_path,
-            server_public_key=parameters.server_pubkey,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
             passphrase=passphrase,
@@ -303,7 +274,7 @@ async def async_download(
         my_private_key=my_private_key
     )
 
-    async with async_client() as client:
+    async with async_client() as client, set_runtime_config(client=client):
         CLIMessageDisplay.display("Retrieving API configuration information...")
         parameters = await retrieve_download_parameters(
             client=client,
@@ -315,7 +286,6 @@ async def async_download(
         CLIMessageDisplay.display("Preparing files for download...")
         stager = FileStager(
             wanted_file_ids=list(parameters.file_ids_with_extension),
-            dcs_api_url=parameters.dcs_api_url,
             output_dir=output_dir,
             work_package_accessor=parameters.work_package_accessor,
             client=client,
@@ -326,13 +296,11 @@ async def async_download(
             for file_id in staged_files:
                 CLIMessageDisplay.display(f"Downloading file with id '{file_id}'...")
                 await download_file(
-                    api_url=parameters.dcs_api_url,
                     client=client,
                     file_id=file_id,
                     file_extension=parameters.file_ids_with_extension[file_id],
                     output_dir=output_dir,
                     max_concurrent_downloads=CONFIG.max_concurrent_downloads,
-                    max_wait_time=CONFIG.max_wait_time,
                     part_size=CONFIG.part_size,
                     work_package_accessor=parameters.work_package_accessor,
                     overwrite=overwrite,
