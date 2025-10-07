@@ -113,6 +113,8 @@ ng build
 
 This will compile the project and store the build artifacts in the `dist/` directory. By default, the production build optimizes the application for performance and speed.
 
+Site verification files that shall be deployed at the root path in production can be specified in the `root_files` setting, using file names as properties and file contents as values.
+
 ## Package Manager
 
 This project uses pnpm to install dependencies, which is a replacement for the much slower npm. Run

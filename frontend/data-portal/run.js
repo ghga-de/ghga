@@ -126,6 +126,24 @@ function writeSettings(settings) {
 }
 
 /**
+ * Creates the given root files (these can be used e.g. for site verification).
+ * @param {Object|string} rootFiles - object with file names and contents
+ */
+function addRootFiles(rootFiles) {
+  if (!rootFiles) return;
+  if (typeof rootFiles !== 'object') {
+    console.error('root_files must be an object with file names and contents.');
+    return;
+  }
+  const rootDir = DEV ? 'public' : getBrowserDir('dist');
+  for (const [filename, value] of Object.entries(rootFiles)) {
+    const targetPath = path.join(rootDir, filename);
+    fs.writeFileSync(targetPath, value || '', 'utf8');
+    console.log(`Created root file: ${filename}`);
+  }
+}
+
+/**
  * Find the IP address for a given hostname
  */
 function getIpAddress(hostname) {
@@ -293,6 +311,7 @@ function main() {
     log_level: logLevel,
     base_url: baseUrl,
     basic_auth: basicAuth,
+    root_files: rootFiles,
   } = settings;
 
   setVersion(settings);
@@ -350,6 +369,7 @@ function main() {
   delete settings.ssl_key;
   delete settings.log_level;
   delete settings.basic_auth;
+  delete settings.root_files;
 
   if (DEV) {
     settings.mock_api = !WITH_BACKEND;
@@ -357,6 +377,8 @@ function main() {
   }
 
   writeSettings(settings);
+
+  addRootFiles(rootFiles);
 
   (DEV ? runDevServer : runProdServer)(
     host,

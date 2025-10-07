@@ -30,9 +30,9 @@ COPY --from=builder /service/dist/data-portal/browser ./dist
 COPY --from=builder /usr/local/bin/static-web-server /usr/local/bin
 # copy the base package.json with name and version
 COPY --from=builder /service/package.json.run ./package.json
-# make the config file writeable to the appuser
 USER root
-RUN touch ./dist/config.js && chown appuser ./dist/config.js ./package.json
+# make some dirs and files writeable for the appuser
+RUN chown appuser ./dist ./dist/config.js ./package.json
 USER appuser
 # install run script
 COPY run.js ./run.mjs
