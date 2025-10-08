@@ -53,13 +53,13 @@
     "@angular-eslint/eslint-plugin": "^20.3.0",
     "@angular-eslint/eslint-plugin-template": "^20.3.0",
     "@angular-eslint/template-parser": "^20.3.0",
-    "@angular/build": "^20.3.4",
-    "@angular/cli": "^20.3.4",
+    "@angular/build": "^20.3.5",
+    "@angular/cli": "^20.3.5",
     "@angular/compiler-cli": "^20.3.3",
     "@compodoc/compodoc": "^1.1.31",
     "@eslint/js": "^9.37.0",
-    "@eslint/markdown": "^7.3.0",
-    "@playwright/test": "^1.55.1",
+    "@eslint/markdown": "^7.4.0",
+    "@playwright/test": "^1.56.0",
     "@testing-library/angular": "^18.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/user-event": "^14.6.1",
@@ -72,7 +72,7 @@
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-boundaries": "^5.0.2",
     "eslint-plugin-header": "^3.1.1",
-    "eslint-plugin-jsdoc": "^60.8.2",
+    "eslint-plugin-jsdoc": "^60.8.3",
     "eslint-plugin-prettier": "^5.5.4",
     "husky": "^9.1.7",
     "jest": "^30.2.0",
@@ -86,7 +86,7 @@
     "ts-jest": "^29.4.4",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.45.0"
+    "typescript-eslint": "^8.46.0"
   },
   "msw": {
     "workerDirectory": [
