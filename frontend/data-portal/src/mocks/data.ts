@@ -702,7 +702,7 @@ export const accessRequests = [
     access_ends: dateYesterday,
     request_created: '2023-05-11T12:04:02.000Z',
     status: 'allowed',
-    status_changed: '2023-05-19T12:04:03.000Z',
+    status_changed: '2023-05-19T11:59:03.000Z',
     changed_by: 'doe@test.dev',
     iva_id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
     internal_note: 'Allowed by Paul on 2023-05-19.',
@@ -793,7 +793,7 @@ export const accessGrants: AccessGrant[] = [
     id: 'grant-ghga-8c4b9d5a1f0b',
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901235',
-    created: '2025-01-01T10:00:00Z',
+    created: '2023-05-19T12:00:00Z',
     valid_from: '2025-01-05T00:00:00Z',
     valid_until: '2025-01-10T00:00:00Z',
     user_name: 'John Doe',
@@ -817,7 +817,7 @@ export const accessGrants: AccessGrant[] = [
     dataset_title: 'Test dataset for details',
     dac_alias: 'SOME-DAC',
     dac_email: 'dac-main@some.org',
-    iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
+    iva_id: '0063effb-2c43-4948-ba6f-f15425cb72d7',
   },
 ];
 

@@ -15,6 +15,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
@@ -25,6 +26,9 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
+import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state-pipe';
+import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type-pipe';
+import { IvaService } from '@app/verification-addresses/services/iva';
 import { lastValueFrom } from 'rxjs';
 import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation-dialog/access-grant-revocation-dialog';
 
@@ -38,15 +42,19 @@ import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation
   imports: [
     FormsModule,
     MatCardModule,
+    MatIconModule,
     MatInputModule,
     MatButtonModule,
     MatDatepickerModule,
     MatSelectModule,
+    MatTooltipModule,
     MatFormFieldModule,
     MatIconModule,
     AccessGrantStatusClassPipe,
     RouterLink,
     DatePipe,
+    IvaTypePipe,
+    IvaStatePipe,
   ],
   templateUrl: './access-grant-manager-details.html',
 })
@@ -57,6 +65,7 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
 
   #location = inject(NavigationTrackingService);
   #ars = inject(AccessRequestService);
+  #ivaService = inject(IvaService);
   #dialog = inject(MatDialog);
   #notificationService = inject(NotificationService);
 
@@ -111,12 +120,45 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
     });
   });
 
+  iva = computed(() => {
+    return this.#ivaService.allIvas.value().find((iva) => {
+      const grant = this.grant();
+      if (grant) {
+        return iva.id === grant.iva_id;
+      } else {
+        return false;
+      }
+    });
+  });
+
+  sortedLog = computed(() =>
+    [
+      ...this.ar().flatMap((ar) => [
+        { status: 'Access requested', date: ar.request_created },
+        {
+          status: ar.status === 'allowed' ? 'Access granted' : 'Access denied',
+          date: ar.status_changed,
+        },
+      ]),
+      { status: 'Grant created', date: this.grant()?.created ?? null },
+      {
+        status: 'Grant started',
+        date: this.hasStarted() ? (this.grant()?.valid_from ?? null) : null,
+      },
+      {
+        status: 'Grant expired',
+        date: this.hasEnded() ? (this.grant()?.valid_until ?? null) : null,
+      },
+    ].sort((a, b) => Date.parse(a.date!) - Date.parse(b.date!)),
+  );
+
   /**
    * Activates the transition animation and loads the grant.
    */
   ngOnInit(): void {
     this.#ars.loadAllAccessGrants();
     this.#ars.loadAllAccessRequests();
+    this.#ivaService.loadAllIvas();
     this.showTransition = true;
     setTimeout(() => (this.showTransition = false), 300);
   }

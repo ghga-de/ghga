@@ -7,10 +7,23 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
-import { accessGrants } from '@app/../mocks/data';
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { accessGrants, allIvasOfDoe } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { IvaService } from '@app/verification-addresses/services/iva';
 import { AccessGrantManagerDetailsComponent } from './access-grant-manager-details';
+
+/**
+ * Mock the IVA service as needed by the access grant manager dialog component
+ */
+class MockIvaService {
+  loadAllIvas = () => undefined;
+  allIvas = {
+    value: () => allIvasOfDoe,
+    isLoading: () => false,
+    error: () => undefined,
+  };
+}
 
 describe('AccessGrantManagerDetailsComponent', () => {
   let component: AccessGrantManagerDetailsComponent;
@@ -21,6 +34,7 @@ describe('AccessGrantManagerDetailsComponent', () => {
       imports: [AccessGrantManagerDetailsComponent],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: IvaService, useClass: MockIvaService },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } },
       ],
     }).compileComponents();
