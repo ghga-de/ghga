@@ -32,7 +32,7 @@ COPY --from=builder /usr/local/bin/static-web-server /usr/local/bin
 COPY --from=builder /service/package.json.run ./package.json
 USER root
 # make some dirs and files writeable for the appuser
-RUN chown appuser ./dist ./dist/config.js ./package.json
+RUN touch ./dist/config.js && chown appuser ./dist ./dist/config.js ./package.json
 USER appuser
 # install run script
 COPY run.js ./run.mjs
