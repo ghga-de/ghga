@@ -153,11 +153,12 @@
             <a
               mat-icon-button
               [routerLink]="`/access-request-manager/${request.id}`"
+              data-umami-event="Access Grant Details Access Request Clicked"
               class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
-              matTooltip="Link to access request details"
+              matTooltip="View access request details"
               matTooltipPosition="right"
-              [aria-label]="`Link to details page for access request ${idx}`"
-              ><mat-icon fontIcon="link" class="mb-1"></mat-icon
+              [aria-label]="`View this access request (${idx} of ${ar().length})`"
+              ><mat-icon fontIcon="description" class="mb-1"></mat-icon
             ></a>
           </p>
           } } }
