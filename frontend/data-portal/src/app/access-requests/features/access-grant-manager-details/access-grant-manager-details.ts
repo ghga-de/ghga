@@ -5,7 +5,7 @@
  */
 
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit } from '@angular/core';
+import { Component, computed, effect, inject, input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -120,15 +120,19 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
     });
   });
 
+  #loadUserIvas = effect(() => {
+    const grant = this.grant();
+    if (grant) {
+      this.#ivaService.loadUserIvas(grant.user_id);
+    }
+  });
+
   iva = computed(() => {
-    return this.#ivaService.allIvas.value().find((iva) => {
-      const grant = this.grant();
-      if (grant) {
-        return iva.id === grant.iva_id;
-      } else {
-        return false;
-      }
-    });
+    const grant = this.grant();
+    if (!grant) return undefined;
+    const ivaId = grant.iva_id;
+    const userIvas = this.#ivaService.userIvas.value();
+    return userIvas.find((iva) => iva.id === ivaId);
   });
 
   sortedLog = computed(() =>
@@ -158,7 +162,6 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
   ngOnInit(): void {
     this.#ars.loadAllAccessGrants();
     this.#ars.loadAllAccessRequests();
-    this.#ivaService.loadAllIvas();
     this.showTransition = true;
     setTimeout(() => (this.showTransition = false), 300);
   }

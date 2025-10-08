@@ -17,8 +17,8 @@ import { AccessGrantManagerDetailsComponent } from './access-grant-manager-detai
  * Mock the IVA service as needed by the access grant manager dialog component
  */
 class MockIvaService {
-  loadAllIvas = () => undefined;
-  allIvas = {
+  loadUserIvas = () => undefined;
+  userIvas = {
     value: () => allIvasOfDoe,
     isLoading: () => false,
     error: () => undefined,

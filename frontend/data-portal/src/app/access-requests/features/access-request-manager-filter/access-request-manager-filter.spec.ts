@@ -7,7 +7,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AccessRequestManagerFilterComponent } from './access-request-manager-filter';
 
@@ -43,7 +42,6 @@ describe('AccessRequestManagerFilterComponent', () => {
       providers: [
         { provide: AccessRequestService, useValue: mockAccessRequestService },
         provideNativeDateAdapter(),
-        provideNoopAnimations(),
       ],
     }).compileComponents();
 

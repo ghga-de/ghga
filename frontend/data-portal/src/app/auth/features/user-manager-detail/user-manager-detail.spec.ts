@@ -7,11 +7,10 @@
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { allIvasOfDoe } from '@app/../mocks/data';
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { UserService } from '@app/auth/services/user';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { IvaService } from '@app/verification-addresses/services/iva';
@@ -101,7 +100,6 @@ describe('UserManagerDetailComponent', () => {
     const testBed = TestBed.configureTestingModule({
       imports: [UserManagerDetailComponent],
       providers: [
-        provideNoopAnimations(),
         provideRouter([
           { path: 'user-manager/doe@test.dev', component: UserManagerDetailComponent },
           { path: 'user-manager', component: UserManagerComponent },
@@ -176,7 +174,6 @@ describe('UserManagerDetailComponent', () => {
     TestBed.configureTestingModule({
       imports: [UserManagerDetailComponent],
       providers: [
-        provideNoopAnimations(),
         { provide: IvaService, useClass: MockIvaService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],

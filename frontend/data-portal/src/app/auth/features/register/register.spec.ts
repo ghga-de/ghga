@@ -5,7 +5,6 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { UserSession } from '@app/auth/models/user';
 import { AuthService } from '@app/auth/services/auth';
 import { RegisterComponent } from './register';
@@ -38,7 +37,7 @@ describe('RegisterComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RegisterComponent, NoopAnimationsModule],
+      imports: [RegisterComponent],
       providers: [{ provide: AuthService, useClass: MockAuthService }],
     }).compileComponents();
 

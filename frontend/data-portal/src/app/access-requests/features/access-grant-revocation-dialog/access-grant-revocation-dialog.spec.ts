@@ -6,7 +6,6 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -31,7 +30,6 @@ describe('AccessGrantRevocationDialogComponent', () => {
     const { fixture: renderedFixture } = await render(
       AccessGrantRevocationDialogComponent,
       {
-        imports: [NoopAnimationsModule],
         providers: [
           { provide: AccessRequestService, useValue: mockAccessRequestService },
           { provide: MatDialogRef, useValue: mockDialogRef },

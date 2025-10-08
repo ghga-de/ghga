@@ -5,7 +5,6 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfirmTotpComponent } from './confirm-totp';
 
@@ -20,7 +19,7 @@ describe('ConfirmTotpComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ConfirmTotpComponent, NoopAnimationsModule],
+      imports: [ConfirmTotpComponent],
       providers: [{ provide: AuthService, useClass: MockAuthService }],
     }).compileComponents();
 

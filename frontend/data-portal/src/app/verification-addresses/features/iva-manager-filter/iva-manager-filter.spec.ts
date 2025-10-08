@@ -10,7 +10,6 @@ import { IvaService } from '@app/verification-addresses/services/iva';
 import { IvaManagerFilterComponent } from './iva-manager-filter';
 
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { IvaState } from '@app/verification-addresses/models/iva';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -39,7 +38,6 @@ describe('IvaManagerFilterComponent', () => {
       providers: [
         { provide: IvaService, useValue: mockIvaService },
         provideNativeDateAdapter(),
-        provideNoopAnimations(),
       ],
     }).compileComponents();
 

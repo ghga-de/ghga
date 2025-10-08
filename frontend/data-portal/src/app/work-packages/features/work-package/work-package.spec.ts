@@ -5,7 +5,6 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { datasets } from '@app/../mocks/data';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
 import { WorkPackageComponent } from './work-package';
@@ -29,7 +28,7 @@ describe('WorkPackageComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [WorkPackageComponent, NoopAnimationsModule],
+      imports: [WorkPackageComponent],
       providers: [{ provide: WorkPackageService, useClass: MockWorkPackageService }],
     }).compileComponents();
 

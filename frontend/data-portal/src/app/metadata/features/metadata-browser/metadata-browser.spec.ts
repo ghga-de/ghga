@@ -6,7 +6,6 @@
 
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { searchResults } from '@app/../mocks/data';
@@ -43,7 +42,7 @@ describe('BrowseComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MetadataBrowserComponent, NoopAnimationsModule],
+      imports: [MetadataBrowserComponent],
       providers: [
         { provide: ConfigService, useClass: MockConfigService },
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },

@@ -109,7 +109,7 @@
               <a
                 routerLink="/dataset/{{ request.dataset_id }}"
                 data-umami-event="Access Grant Details Access Requests List Dataset Clicked"
-                aria-label="Link to access request manager page for the access request"
+                aria-label="View this dataset"
                 >{{ request.dataset_id }}</a
               ><br />
               from {{ request.access_starts | date: friendlyDateFormat : periodTimeZone
@@ -118,12 +118,13 @@
             >
             <a
               mat-icon-button
-              [routerLink]="`/access-request-manager/${request.id}`"
+              routerLink="/access-request-manager/{{request.id}}"
+              data-umami-event="Access Grant Details Access Request Clicked"
               class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
-              matTooltip="Link to access request details"
+              matTooltip="View access request details"
               matTooltipPosition="right"
-              [aria-label]="`Link to details page for the access request`"
-              ><mat-icon fontIcon="link" class="mb-1"></mat-icon
+              aria-label="View this access request"
+              ><mat-icon fontIcon="description" class="mb-1"></mat-icon
             ></a>
           </p>
           } @default {
@@ -170,21 +171,7 @@
         <mat-card-content
           class="min-w-2xl *:mb-2 *:flex md:min-w-xl [&_div>strong]:inline-block [&_div>strong]:min-w-44"
         >
-          @if (iva(); as iva) { @if (iva.user_id !== ag.user_id) {
-          <span class="text-error flex items-center pb-2"
-            ><mat-icon fontIcon="error" class="me-4 shrink-0"></mat-icon> The IVA does
-            not belong to the same user as the access grant. The access grant is
-            therefore considered invalid.</span
-          >
-          <div>
-            <strong>User:</strong
-            ><span
-              ><a [routerLink]="`/user-manager/${iva.user_id}`"
-                >{{ iva.user_name }} ({{iva.user_email}})</a
-              ></span
-            >
-          </div>
-          }
+          @if (iva(); as iva) {
           <div>
             <strong>Type:</strong>
             <span class="flex"
@@ -203,9 +190,10 @@
             >
           </div>
           } @else {
-          <strong class="text-error"
-            >IVA details could not be loaded. Please try again later or contact your
-            administrator if the issue persists.</strong
+          <span class="text-error flex items-center pb-2"
+            ><mat-icon fontIcon="error" class="me-4 shrink-0"></mat-icon> The
+            corresponding IVA does not exist or is not owned by the user. Therefore,
+            this grant is considered invalid.</span
           >
           }
           <div class="mt-4">

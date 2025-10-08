@@ -8,7 +8,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
 import { UserManagerComponent } from './user-manager';
@@ -33,7 +32,7 @@ describe('UserManagerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [UserManagerComponent, NoopAnimationsModule],
+      imports: [UserManagerComponent],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),

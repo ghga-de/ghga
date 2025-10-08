@@ -6,7 +6,6 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { searchResults } from '@app/../mocks/data';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { SearchResultComponent } from '../search-result/search-result';
@@ -31,7 +30,7 @@ describe('SearchResultListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SearchResultListComponent, NoopAnimationsModule],
+      imports: [SearchResultListComponent],
       providers: [
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
       ],

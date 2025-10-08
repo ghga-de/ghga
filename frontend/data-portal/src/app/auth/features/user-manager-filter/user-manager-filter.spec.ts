@@ -10,7 +10,6 @@ import { UserManagerFilterComponent } from './user-manager-filter';
 
 import { provideHttpClient } from '@angular/common/http';
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { UserStatus } from '@app/auth/models/user';
 import { UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
@@ -49,7 +48,6 @@ describe('UserManagerFilterComponent', () => {
         { provide: ConfigService, useClass: MockConfigService },
         provideHttpClient(),
         provideNativeDateAdapter(),
-        provideNoopAnimations(),
       ],
     }).compileComponents();
 

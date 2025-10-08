@@ -5,7 +5,6 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute } from '@angular/router';
 
 import { screen } from '@testing-library/angular';
@@ -21,7 +20,6 @@ describe('SiteHeaderComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [NoopAnimationsModule],
       providers: [
         {
           provide: ActivatedRoute,
