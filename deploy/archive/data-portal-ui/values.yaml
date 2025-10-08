@@ -8,6 +8,7 @@ apiBasePath: /
 config:
   host: 0.0.0.0
   oidc_use_discovery: false
+  root_files: {}
 
 configMap:
   mountPath: /home/appuser/data-portal.yaml
