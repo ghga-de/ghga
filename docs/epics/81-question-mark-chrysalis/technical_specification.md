@@ -70,3 +70,8 @@ The service will have 3 collections:
 - The service has no REST API to configure workflows but instead reads workflows from the database, where workflows must be stored in a predefined schema or format as required by the service.
 
 - The service has no event consumer to populate its collection of known models but instead reads the models from a database where they have to be stored manually
+
+
+# Questions:
+
+1. Is it correct to assume that the workflow routes will always have one of the universal GHGA models as a root? 
