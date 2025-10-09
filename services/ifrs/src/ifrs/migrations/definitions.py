@@ -15,6 +15,8 @@
 
 """Database migration logic for IFRS"""
 
+from uuid import UUID
+
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
@@ -60,12 +62,27 @@ class V2Migration(MigrationDefinition, Reversible):
 
     async def apply(self):
         """Perform the migration"""
-        convert_file_metadata = convert_uuids_and_datetimes_v6(
+        _convert_file_metadata = convert_uuids_and_datetimes_v6(
             uuid_fields=["object_id"], date_fields=["upload_date"]
         )
 
+        async def convert_file_metadata(doc: Document) -> Document:
+            """Convert file metadata, skipping already converted docs.
+
+            Docs will have either str `object_id` and str date fields OR
+            UUID `object_id` and datetime date fields. So we check if the
+            `object_id` is a string to tell if the document needs migration.
+            """
+            if isinstance(doc["object_id"], UUID):
+                return doc
+            return await _convert_file_metadata(doc)
+
         async def convert_event(doc: Document) -> Document:
             """Convert a persistent event and its payload."""
+            # Check if already migrated by looking at correlation_id type
+            if isinstance(doc["correlation_id"], UUID):
+                return doc  # already migrated
+
             doc = await convert_persistent_event_v6(doc)
 
             # The only payloads to migrate are ones that have object id

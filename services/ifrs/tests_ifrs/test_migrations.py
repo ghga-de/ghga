@@ -21,6 +21,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.utils import now_utc_ms_prec
 
 from ifrs.migrations import run_db_migrations
 from tests_ifrs.fixtures.config import get_config
@@ -180,3 +181,72 @@ async def test_v2_migration(mongodb: MongoDbFixture):
         metadata_collection.find({}).to_list(), key=lambda d: d["_id"]
     )
     assert reverted_metadata == expected_reverted_metadata
+
+
+async def test_migration_v2_on_migrated_file_metadata(mongodb: MongoDbFixture):
+    """This test verifies that the fix for V2 will gracefully handle the presence of
+    already migrated data by simply skipping it.
+    """
+    config = get_config(sources=[mongodb.config])
+    db = mongodb.client[config.db_name]
+    metadata_collection = db["file_metadata"]
+
+    # Create already migrated data (with UUID and datetime types)
+    migrated_date = datetime(2025, 4, 9, 15, 10, 2, 284000, tzinfo=UTC)
+    migrated_uuid = uuid4()
+
+    data = {
+        "_id": "test-file-id",
+        "upload_date": migrated_date,
+        "decryption_secret_id": "some-secret-id",
+        "decrypted_size": 64 * 1024**2,
+        "encrypted_part_size": 64 * 1024**2,
+        "content_offset": 64 * 1024**2,
+        "decrypted_sha256": "abc12345",
+        "encrypted_parts_md5": ["1", "z", "4"],
+        "encrypted_parts_sha256": ["a", "b", "c"],
+        "storage_alias": "my-cool-storage",
+        "object_id": migrated_uuid,
+        "object_size": 64 * 1024**2 + 1234567,
+    }
+
+    # Clear out anything so we definitely start with an empty collection
+    metadata_collection.delete_many({})
+
+    # Insert the already migrated test data
+    metadata_collection.insert_one(data)
+
+    # Run the migration -- if no error then all good
+    await run_db_migrations(config=config, target_version=2)
+
+
+async def test_migration_v2_on_migrated_persisted_events(mongodb: MongoDbFixture):
+    """This test verifies that the fix for V2 will gracefully handle the presence of
+    already migrated persistent event data by simply skipping it.
+    """
+    config = get_config(sources=[mongodb.config])
+    db = mongodb.client[config.db_name]
+    events_collection = db["ifrsPersistedEvents"]
+
+    # Create already migrated event data (with UUID and datetime types)
+    event = {
+        "_id": "test-topic:test-key",
+        "topic": "test-topic",
+        "payload": {"upload_date": now_utc_ms_prec(), "object_id": uuid4()},
+        "key": "test-key",
+        "type_": "some-type",
+        "headers": {},
+        "correlation_id": uuid4(),
+        "created": now_utc_ms_prec(),
+        "published": True,
+        "event_id": uuid4(),
+    }
+
+    # Clear out anything so we definitely start with an empty collection
+    events_collection.delete_many({})
+
+    # Insert already migrated item
+    events_collection.insert_one(event)
+
+    # Run the migration -- no news is good news
+    await run_db_migrations(config=config, target_version=2)
