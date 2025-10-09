@@ -51,9 +51,22 @@ class V2Migration(MigrationDefinition, Reversible):
 
     async def apply(self):
         """Perform the migration."""
-        convert_drs_objects = convert_uuids_and_datetimes_v6(
+        _convert_drs_objects = convert_uuids_and_datetimes_v6(
             uuid_fields=["object_id"], date_fields=self._drs_dates
         )
+
+        async def convert_drs_objects(doc: Document) -> Document:
+            """Convert DRS object IDs and dates, skipping converted docs (bug fix).
+
+            Docs will have either str `object_id` and str date fields OR
+            UUID `object_id` and datetime date fields. So we just check if the
+            `object_id` is a string or not to tell if the document is already
+            migrated.
+            """
+            object_id = doc["object_id"]
+            if isinstance(object_id, UUID):
+                return doc
+            return await _convert_drs_objects(doc)
 
         convert_file_registered = convert_uuids_and_datetimes_v6(
             date_fields=["upload_date"]
@@ -61,6 +74,8 @@ class V2Migration(MigrationDefinition, Reversible):
 
         async def convert_persisted_events(doc: Document) -> Document:
             # Convert the common event fields with hexkit's utility function
+            if isinstance(doc["correlation_id"], UUID):
+                return doc  # already migrated
             doc = await convert_persistent_event_v6(doc)
 
             # convert the remaining fields inside the payload, treat payload as subdoc

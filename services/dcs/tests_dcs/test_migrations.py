@@ -23,6 +23,8 @@ from uuid import UUID, uuid4
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
+from hexkit.utils import now_utc_ms_prec
 
 from dcs.core.models import AccessTimeDrsObject
 from dcs.migrations import run_db_migrations
@@ -122,6 +124,69 @@ async def test_migration_v2_drs_objects(mongodb: MongoDbFixture):
         assert reverted["last_accessed"] == new["last_accessed"].isoformat()
 
 
+async def test_migration_v2_on_migrated_data(mongodb: MongoDbFixture):
+    """This test is to verify that the fix for V2 will gracefully handle already
+    migrated drs object data.
+    """
+    config = get_config(sources=[mongodb.config])
+
+    data = AccessTimeDrsObject(
+        file_id="test-file-id",
+        decryption_secret_id="abc123",
+        decrypted_sha256="some-stuff",
+        decrypted_size=100,
+        encrypted_size=128,
+        creation_date=now_as_utc(),
+        s3_endpoint_alias="HD01",
+        object_id=uuid4(),
+        last_accessed=now_as_utc(),
+    ).model_dump()
+
+    data["_id"] = data.pop("file_id")
+
+    # Clear out anything so we definitely start with an empty collection
+    db = mongodb.client[config.db_name]
+    collection = db["drs_objects"]
+    collection.delete_many({})
+
+    # Insert the test data
+    collection.insert_one(data)
+
+    # Run the migration -- if no error then all good
+    await run_db_migrations(config=config, target_version=2)
+
+
+async def test_migration_v2_on_migrated_persisted_events_(mongodb: MongoDbFixture):
+    """This test is to verify that the fix for V2 will gracefully handle already
+    migrated persisted event data.
+    """
+    config = get_config(sources=[mongodb.config])
+
+    file_registered_topic = config.file_registered_for_download_topic
+    event = PersistentKafkaEvent(
+        compaction_key="file_registered",
+        topic=file_registered_topic,
+        payload={"upload_date": now_utc_ms_prec()},
+        correlation_id=uuid4(),
+        key="something",
+        type_="something",
+        created=now_utc_ms_prec(),
+        published=True,
+    ).model_dump()
+    event["_id"] = event.pop("compaction_key")
+
+    # Clear out anything so we definitely start with an empty collection
+    db = mongodb.client[config.db_name]
+    collection = db["dcsPersistedEvents"]
+    collection.delete_many({})
+
+    # Insert already migrated item
+    collection.insert_one(event)
+
+    # Run the migration -- no news is good news
+    await run_db_migrations(config=config, target_version=2)
+
+
 async def test_migration_v2_persisted_events(mongodb: MongoDbFixture):
     """Test the migration to DB version 2 and reversion to DB version 1.
 
@@ -159,7 +224,6 @@ async def test_migration_v2_persisted_events(mongodb: MongoDbFixture):
         }
         old_events.append(event)
 
-    # Insert the test data
     # Clear out anything so we definitely start with an empty collection
     db = mongodb.client[config.db_name]
     collection = db["dcsPersistedEvents"]
