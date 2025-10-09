@@ -45,6 +45,9 @@ The service will have 3 collections:
 
 
 
+![em transformation service components](./images/em_transformation_service.png)
+
+
 #### Service Start-up
 
 1. When started up
@@ -60,7 +63,7 @@ The service will have 3 collections:
    1. The service checks the `type` of the incoming AnnotatedEMPack and retrieves all WorkflowRoutes where the `route_name` matches the `type` of the incoming AnnotatedEMPack.
    2. The service executes the workflows of all the retrieved WorkflowRoutes on the `data` of the incoming AnnotatedEMPack.
    3. The output AnnotatedEMPack is stored in the AnnotatedEMPack collection if the workflow route has `publish` set to True.
-####  Processing Annotated Experimental Metadata
+
 
 ### Not included:
 
