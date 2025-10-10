@@ -16,9 +16,10 @@
 """Tests for DCS database migrations"""
 
 from asyncio import sleep
+from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID, uuid1, uuid4
 
 import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -287,3 +288,46 @@ async def test_migration_v2_persisted_events(mongodb: MongoDbFixture):
             assert (
                 reverted_upload_date == migrated["payload"]["upload_date"].isoformat()
             )
+
+
+async def test_migration_v2_with_other_cid_versions(mongodb: MongoDbFixture):
+    """Test the migration with the presence of a migrated persistent event doc that has
+    a version 1 UUID for a correlation ID, as well as another doc with the same
+    but in string format.
+    """
+    config = get_config(sources=[mongodb.config])
+    db = mongodb.client[config.db_name]
+    events_collection = db["dcsPersistedEvents"]
+
+    # Create already migrated event data (with UUID and datetime types)
+    now = now_utc_ms_prec()
+    migrated_event: dict[str, Any] = {
+        "_id": "test-topic:test-key1",
+        "topic": "test-topic",
+        "payload": {"upload_date": now},
+        "key": "test-key",
+        "type_": "some-type",
+        "headers": {},
+        "correlation_id": uuid1(),
+        "created": now,
+        "published": True,
+        "event_id": uuid4(),
+    }
+    old_event: dict[str, Any] = deepcopy(migrated_event)
+    old_event["_id"] = old_event["_id"].replace("1", "2")
+    del old_event["event_id"]
+    old_event["created"] = now.isoformat()
+    old_event["correlation_id"] = str(uuid1())
+    old_event["payload"]["upload_date"] = now.isoformat()
+
+    events = [migrated_event, old_event]
+    events_collection.delete_many({})
+    events_collection.insert_many(events)
+    await run_db_migrations(config=config, target_version=2)
+
+    migrated_events = sorted(
+        events_collection.find({}).to_list(), key=lambda d: d["_id"]
+    )
+    for i in range(2):
+        assert migrated_events[i]["correlation_id"].version == 4
+        assert migrated_events[i]["correlation_id"] != events[i]["correlation_id"]

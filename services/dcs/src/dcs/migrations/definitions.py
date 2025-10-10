@@ -15,7 +15,7 @@
 
 """Database migration logic for DCS"""
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from hexkit.providers.mongodb.migrations import (
     Document,
@@ -75,8 +75,20 @@ class V2Migration(MigrationDefinition, Reversible):
         async def convert_persisted_events(doc: Document) -> Document:
             # Convert the common event fields with hexkit's utility function
             if isinstance(doc["correlation_id"], UUID):
+                # Check for version and generate new cid if not version 4
+                # This is due to an issue that also affected the FIS, where early
+                #  correlation IDs were generated externally with version 9
+                if doc["correlation_id"].version != 4:
+                    doc["correlation_id"] = uuid4()
                 return doc  # already migrated
+
             doc = await convert_persistent_event_v6(doc)
+
+            # Some earlier 'bad' correlation IDs were generated before the move to UUIDs
+            #  so we have to check again. The conversion function above will not raise
+            #  an error because it works with all UUID versions, so we check now.
+            if doc["correlation_id"].version != 4:
+                doc["correlation_id"] = uuid4()
 
             # convert the remaining fields inside the payload, treat payload as subdoc
             payload = doc["payload"]  # the field should always exist, raise if not
