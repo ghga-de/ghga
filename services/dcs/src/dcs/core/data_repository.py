@@ -308,7 +308,7 @@ class DataRepository(DataRepositoryPort):
                 )
                 continue
 
-            # only remove file if last access is later than oubtox_cache_timeout days ago
+            # only remove file if last access is later than outbox_cache_timeout days ago
             if drs_object.last_accessed <= threshold:
                 log.info(f"Deleting object {object_id} from storage {storage_alias}.")
                 try:
