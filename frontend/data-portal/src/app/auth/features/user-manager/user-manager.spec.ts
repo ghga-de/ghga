@@ -20,11 +20,24 @@ class MockConfigService {
 }
 
 /**
- * Mock UserService for testing
+ * Mock the user service as needed by the user manager child components
  */
-const MockUserService = {
-  loadUsers: jest.fn(),
-};
+class MockUserService {
+  loadUsers = () => undefined;
+  setUsersFilter = () => undefined;
+  users = {
+    value: () => [],
+    isLoading: () => false,
+    error: () => undefined,
+  };
+  usersFilter = () => ({
+    idStrings: '',
+    role: undefined,
+    status: undefined,
+  });
+  usersFiltered = () => this.users.value();
+  ambiguousUserIds = () => new Set();
+}
 
 describe('UserManagerComponent', () => {
   let component: UserManagerComponent;
@@ -38,7 +51,7 @@ describe('UserManagerComponent', () => {
         provideHttpClientTesting(),
         provideNativeDateAdapter(),
         { provide: ConfigService, useClass: MockConfigService },
-        { provide: UserService, useValue: MockUserService },
+        { provide: UserService, useClass: MockUserService },
       ],
     }).compileComponents();
 

@@ -16,241 +16,235 @@
       <h1>User{{ user() ? ': ' + user()!.displayName : ' Details' }}</h1>
     </header>
     @if (user(); as user) {
-      <div class="float-right space-x-3 text-end lg:col-start-2">
-        @if (user.status === 'active') {
-          <button
-            matIconButton
-            class="button-danger"
-            matTooltip="Deactivate User"
-            aria-label="Deactivate User"
-            (click)="safeStatusChange()"
-          >
-            <mat-icon fontIcon="person_remove"></mat-icon>
-          </button>
-        } @else {
-          <button
-            matIconButton
-            class="button-danger"
-            matTooltip="Activate User"
-            aria-label="Activate User"
-            (click)="safeStatusChange(true)"
-          >
-            <mat-icon fontIcon="person_check"></mat-icon>
-          </button>
-        }
-        <button
-          matIconButton
-          class="button-error"
-          matTooltip="Delete User"
-          aria-label="Delete User"
-          (click)="safeDeletion()"
-        >
-          <mat-icon fontIcon="person_off"></mat-icon>
-        </button>
-      </div>
+    <div class="float-right space-x-3 text-end lg:col-start-2">
+      @if (user.status === 'active') {
+      <button
+        matIconButton
+        class="button-danger"
+        matTooltip="Deactivate User"
+        aria-label="Deactivate User"
+        (click)="safeStatusChange()"
+      >
+        <mat-icon fontIcon="person_remove"></mat-icon>
+      </button>
+      } @else {
+      <button
+        matIconButton
+        class="button-danger"
+        matTooltip="Activate User"
+        aria-label="Activate User"
+        (click)="safeStatusChange(true)"
+      >
+        <mat-icon fontIcon="person_check"></mat-icon>
+      </button>
+      }
+      <button
+        matIconButton
+        class="button-error"
+        matTooltip="Delete User"
+        aria-label="Delete User"
+        (click)="safeDeletion()"
+      >
+        <mat-icon fontIcon="person_off"></mat-icon>
+      </button>
+    </div>
     }
   </div>
   @if (user(); as user) {
-    <mat-card>
-      <mat-card-content class="min-w-2xl">
-        <div class="flex flex-col gap-6 lg:grid lg:grid-cols-2">
-          <div>
-            <h2 class="mb-4 font-semibold">Basic Information</h2>
-            <div class="space-y-3">
-              <div>
-                <strong>Name:</strong>
-                <p class="mt-1 text-gray-900">{{ user.name }}</p>
-              </div>
+  <mat-card>
+    <mat-card-content class="min-w-2xl">
+      <div class="flex flex-col gap-6 lg:grid lg:grid-cols-2">
+        <div>
+          <h2 class="mb-4 font-semibold">Basic Information</h2>
+          <div class="space-y-3">
+            <div>
+              <strong>Title:</strong>
               @if (user.title) {
-                <div>
-                  <strong>Title:</strong>
-                  <p class="mt-1 text-gray-900">{{ user.title }}</p>
-                </div>
+              <p class="mt-1 text-gray-900">{{ user.title }}</p>
+              } @else {
+              <p class="text-gray-500">N/A</p>
               }
-              <div>
-                <strong>Email:</strong>
-                <p class="mt-1 text-gray-900">{{ user.email }}</p>
-              </div>
             </div>
             <div>
-              <strong>Roles:</strong>
-              <div class="mt-1 flex flex-wrap gap-1">
-                @for (roleName of user.roleNames; track roleName) {
-                  <mat-chip class="chip-tertiary">{{ roleName }}</mat-chip>
-                } @empty {
-                  <p class="text-gray-500">No roles assigned</p>
-                }
-              </div>
+              <strong>Name:</strong>
+              <p class="mt-1 text-gray-900">{{ user.name }}</p>
+            </div>
+            <div>
+              <strong>Email:</strong>
+              <p class="mt-1 text-gray-900">{{ user.email }}</p>
             </div>
           </div>
-
           <div>
-            <h2 class="mb-4 font-semibold">Account Details</h2>
-            <div class="space-y-3">
-              <div>
-                <strong>Status:</strong>
-                <p
-                  class="mt-1 capitalize"
-                  [class]="user.status === 'active' ? 'text-green-600' : 'text-red-600'"
-                >
-                  {{ user.status }}
-                </p>
-              </div>
-              <div>
-                <strong>Registration Date:</strong>
-                <p class="mt-1 text-gray-900">
-                  {{ user.registration_date | date: friendlyDateFormat }}
-                </p>
-              </div>
-              <div>
-                <strong
-                  >{{
-                    user.status_change
-                      ? user.status === 'active'
-                        ? 'Re-activation'
-                        : 'Deactivation'
-                      : 'Status Change'
-                  }}
-                  Date:</strong
-                >
-                <p class="mt-1 text-gray-900">
-                  @if (user.status_change) {
-                    {{ user.status_change | date: friendlyDateFormat : periodTimeZone }}
-                  } @else {
-                    Not applicable
-                  }
-                </p>
-              </div>
+            <strong>Roles:</strong>
+            <div class="mt-1 flex flex-wrap gap-1">
+              @for (roleName of user.roleNames; track roleName) {
+              <mat-chip class="chip-tertiary">{{ roleName }}</mat-chip>
+              } @empty {
+              <p class="text-gray-500">No roles assigned</p>
+              }
             </div>
           </div>
+        </div>
 
-          <!-- External ID in full row -->
-          <div class="col-span-2 pt-2">
+        <div>
+          <h2 class="mb-4 font-semibold">Account Details</h2>
+          <div class="space-y-3 [&_p]:mt-1 [&_p]:text-gray-900">
             <div>
-              <strong>Life Science (LS) ID:</strong>
-              <p class="mt-1 font-mono break-all text-gray-900">
-                {{ user.ext_id }}
+              <strong>Status:</strong>
+              <p
+                class="mt-1 capitalize"
+                [class]="user.status === 'active' ? 'text-green-600' : 'text-red-600'"
+              >
+                {{ user.status }}
               </p>
             </div>
-          </div>
-        </div></mat-card-content
-      ></mat-card
-    >
-
-    <mat-card>
-      <mat-card-header
-        ><mat-card-title><h2>IVAs</h2></mat-card-title></mat-card-header
-      >
-      <mat-card-content
-        class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
-      >
-        @if (userIvas().length) {
-          @for (iva of userIvas(); track iva.id) {
-            <div class="flex items-center gap-x-4 gap-y-4 pb-3">
-              <span class="min-w-42"
-                ><strong>{{ (iva.type | IvaTypePipe).name }}:</strong></span
-              >
-              <span class="min-w-54 grow">{{ iva.value }}</span>
-
-              <span [class]="(iva.state | IvaStatePipe).class" class="min-w-54">
-                {{ (iva.state | IvaStatePipe).name }}
-              </span>
+            <div>
+              <strong>Registration Date:</strong>
+              <p class="mt-1 text-gray-900">
+                {{ user.registration_date | date: friendlyDateFormat }}
+              </p>
             </div>
-          }
-        } @else {
-          <p>No contact addresses could be found for the user.</p>
-        }
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card>
-      <mat-card-header
-        ><mat-card-title><h2>Access Grants</h2></mat-card-title></mat-card-header
-      >
-      <mat-card-content
-        class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
-      >
-        @if (userGrants().length) {
-          @for (ag of userGrants(); track ag.id) {
-            <div class="min-w-xl">
+            @if (user.status_change) {
+            <div>
+              <strong>Status Change Information:</strong>
+              <p class="mb-0">
+                {{ user.status === 'active' ? 'Re-activated' : 'Deactivated' }} @if
+                (statusChangedBy()) { by
+                <a [routerLink]="`/user-manager/${user.status_change.by}`"
+                  >{{ statusChangedBy()!.displayName }}</a
+                >} on {{ user.status_change.change_date| date: friendlyDateFormat :
+                periodTimeZone }}
+              </p>
+              @if (user.status_change.context) {
+              <p>Reason: {{ user.status_change.context }}</p>
+              } @if (statusChangedBy() === null) {
               <p>
-                <strong
-                  class="{{
+                <span class="text-warning mb-2 flex items-center">
+                  <mat-icon fontIcon="warning" class="me-1 shrink-0"></mat-icon>Could
+                  not find user who performed the change.
+                </span>
+              </p>
+              }
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- External ID in full row -->
+        <div class="col-span-2 pt-2">
+          <div>
+            <strong>Life Science (LS) ID:</strong>
+            <p class="mt-1 font-mono break-all text-gray-900">{{ user.ext_id }}</p>
+          </div>
+        </div>
+      </div></mat-card-content
+    ></mat-card
+  >
+
+  <mat-card>
+    <mat-card-header
+      ><mat-card-title><h2>IVAs</h2></mat-card-title></mat-card-header
+    >
+    <mat-card-content
+      class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
+    >
+      @if (userIvas().length) { @for (iva of userIvas(); track iva.id) {
+      <div class="flex items-center gap-x-4 gap-y-4 pb-3">
+        <span class="min-w-42"
+          ><strong>{{ (iva.type | IvaTypePipe).name }}:</strong></span
+        >
+        <span class="min-w-54 grow">{{ iva.value }}</span>
+
+        <span [class]="(iva.state | IvaStatePipe).class" class="min-w-54">
+          {{ (iva.state | IvaStatePipe).name }}
+        </span>
+      </div>
+      } } @else {
+      <p>No contact addresses could be found for the user.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-header
+      ><mat-card-title><h2>Access Grants</h2></mat-card-title></mat-card-header
+    >
+    <mat-card-content
+      class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
+    >
+      @if (userGrants().length) { @for (ag of userGrants(); track ag.id) {
+      <div class="min-w-xl">
+        <p>
+          <strong
+            class="{{
                     ag.status! | AccessGrantStatusClassPipe
                   }} capitalize inline-block w-22"
-                >
-                  {{ ag.status }}
-                </strong>
-                <a
-                  [routerLink]="`/access-grant-manager/${ag.id}`"
-                  class="hover:text-primary focus:text-primary text-black"
-                  >grant</a
-                >
-                for the dataset
-                <a [routerLink]="`/dataset/${ag.dataset_id}`">{{ ag.dataset_id }}</a>
-                from {{ ag.valid_from | date: friendlyDateFormat : periodTimeZone }} to
-                {{ ag.valid_until | date: friendlyDateFormat : periodTimeZone }}
-              </p>
-            </div>
-          }
-        } @else {
-          <p>No access grants could be found for the user.</p>
-        }
-      </mat-card-content>
-    </mat-card>
+          >
+            {{ ag.status }}
+          </strong>
+          <a
+            [routerLink]="`/access-grant-manager/${ag.id}`"
+            class="hover:text-primary focus:text-primary text-black"
+            >grant</a
+          >
+          for the dataset
+          <a [routerLink]="`/dataset/${ag.dataset_id}`">{{ ag.dataset_id }}</a>
+          from {{ ag.valid_from | date: friendlyDateFormat : periodTimeZone }} to {{
+          ag.valid_until | date: friendlyDateFormat : periodTimeZone }}
+        </p>
+      </div>
+      } } @else {
+      <p>No access grants could be found for the user.</p>
+      }
+    </mat-card-content>
+  </mat-card>
 
-    <mat-card>
-      <mat-card-header
-        ><mat-card-title><h2>Access Requests</h2></mat-card-title></mat-card-header
-      >
-      <mat-card-content
-        class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
-      >
-        @if (userRequests().length) {
-          @for (ar of userRequests(); track ar.id) {
-            <div class="min-w-xl">
-              <p [class.lg:mb-0]="ar.internal_note" class="mb-3">
-                <strong
-                  class="{{
+  <mat-card>
+    <mat-card-header
+      ><mat-card-title><h2>Access Requests</h2></mat-card-title></mat-card-header
+    >
+    <mat-card-content
+      class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
+    >
+      @if (userRequests().length) { @for (ar of userRequests(); track ar.id) {
+      <div class="min-w-xl">
+        <p [class.lg:mb-0]="ar.internal_note" class="mb-3">
+          <strong
+            class="{{
                     ar.status | AccessRequestStatusClassPipe
                   }} capitalize inline-block w-22"
-                >
-                  {{ ar.status }}
-                </strong>
-                <a
-                  [routerLink]="`/access-request-manager/${ar.id}`"
-                  class="hover:text-primary focus:text-primary text-black"
-                  >request</a
-                >
-                for the dataset
-                <a [routerLink]="`/dataset/${ar.dataset_id}`">{{ ar.dataset_id }}</a>
-                from
-                {{ ar.access_starts | date: friendlyDateFormat : periodTimeZone }} to
-                {{ ar.access_ends | date: friendlyDateFormat : periodTimeZone }}
-              </p>
-              @if (ar.internal_note) {
-                <p class="text-gray mt-2 mb-3 text-base">
-                  <strong>Internal Note:</strong> {{ ar.internal_note }}
-                </p>
-              }
-            </div>
-          }
-        } @else {
-          <p>No access requests could be found for the user.</p>
+          >
+            {{ ar.status }}
+          </strong>
+          <a
+            [routerLink]="`/access-request-manager/${ar.id}`"
+            class="hover:text-primary focus:text-primary text-black"
+            >request</a
+          >
+          for the dataset
+          <a [routerLink]="`/dataset/${ar.dataset_id}`">{{ ar.dataset_id }}</a>
+          from {{ ar.access_starts | date: friendlyDateFormat : periodTimeZone }} to {{
+          ar.access_ends | date: friendlyDateFormat : periodTimeZone }}
+        </p>
+        @if (ar.internal_note) {
+        <p class="text-gray mt-2 mb-3 text-base">
+          <strong>Internal Note:</strong> {{ ar.internal_note }}
+        </p>
         }
-      </mat-card-content>
-    </mat-card>
+      </div>
+      } } @else {
+      <p>No access requests could be found for the user.</p>
+      }
+    </mat-card-content>
+  </mat-card>
   } @else if (loading()) {
-    <p>Loading user details...</p>
+  <p>Loading user details...</p>
   } @else {
-    <div class="container mx-auto p-6">
-      <p class="text-center text-red-600">
-        @if (error() === 'not found') {
-          The selected user could not be found.
-        } @else {
-          An error occurred while loading the user details. Please try again later.
-        }
-      </p>
-    </div>
+  <div class="container mx-auto p-6">
+    <p class="text-center text-red-600">
+      @if (error() === 'not found') { The selected user could not be found. } @else { An
+      error occurred while loading the user details. Please try again later. }
+    </p>
+  </div>
   }
 </div>

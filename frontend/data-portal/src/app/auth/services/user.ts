@@ -316,4 +316,25 @@ export class UserService {
       .delete<null>(`${this.#usersUrl}/${id}`)
       .pipe(tap(() => this.#removeUserLocally(id)));
   }
+
+  /**
+   * Factory for creating independent user resources.
+   * Use this in components when you need additional users (e.g., "status changed by").
+   * @returns object with methods to load/clear the user and the user resource itself
+   */
+  createUserResource() {
+    const id = signal<string | undefined>(undefined);
+    const resource = httpResource<DisplayUser>(
+      () => (id() ? `${this.#usersUrl}/${id()}` : undefined),
+      {
+        parse: (rawUser: unknown) => this.#createDisplayUser(rawUser as RegisteredUser),
+        defaultValue: undefined,
+      },
+    );
+    return {
+      load: (userId: string) => id.set(userId),
+      clear: () => id.set(undefined),
+      resource,
+    };
+  }
 }

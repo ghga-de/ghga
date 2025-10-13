@@ -18,7 +18,6 @@ import { UserManagerListComponent } from '../user-manager-list/user-manager-list
 @Component({
   selector: 'app-user-manager',
   imports: [UserManagerListComponent, UserManagerFilterComponent],
-  providers: [UserService],
   templateUrl: './user-manager.html',
 })
 export class UserManagerComponent implements OnInit {

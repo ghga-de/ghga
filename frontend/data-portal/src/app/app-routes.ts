@@ -9,6 +9,7 @@ import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, Routes, TitleStrategy } from '@angular/router';
 import { canDeactivate as canDeactivateAuth } from './auth/features/can-deactivate';
 import { AuthService } from './auth/services/auth';
+import { UserService } from './auth/services/user';
 import { pendingEditsGuard } from './shared/features/pending-edits';
 
 export const routes: Routes = [
@@ -81,59 +82,72 @@ export const routes: Routes = [
   {
     path: 'access-request-manager',
     canActivate: [() => inject(AuthService).guardDataSteward()],
-    loadComponent: () =>
-      import(
-        './access-requests/features/access-request-manager/access-request-manager'
-      ).then((m) => m.AccessRequestManagerComponent),
-    title: 'Access Request Manager',
-  },
-  {
-    path: 'access-request-manager/:id',
-    canActivate: [() => inject(AuthService).guardDataSteward()],
-    canDeactivate: [pendingEditsGuard],
-    loadComponent: () =>
-      import(
-        './access-requests/features/access-request-manager-detail/access-request-manager-detail'
-      ).then((m) => m.AccessRequestManagerDetailComponent),
-    title: 'Access Request Details',
-    data: { transition: 'detail' },
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import(
+            './access-requests/features/access-request-manager/access-request-manager'
+          ).then((m) => m.AccessRequestManagerComponent),
+        title: 'Access Request Manager',
+      },
+      {
+        path: ':id',
+        canDeactivate: [pendingEditsGuard],
+        loadComponent: () =>
+          import(
+            './access-requests/features/access-request-manager-detail/access-request-manager-detail'
+          ).then((m) => m.AccessRequestManagerDetailComponent),
+        title: 'Access Request Details',
+        data: { transition: 'detail' },
+      },
+    ],
   },
   {
     path: 'user-manager',
+    providers: [UserService],
     canActivate: [() => inject(AuthService).guardDataSteward()],
-    loadComponent: () =>
-      import('./auth/features/user-manager/user-manager').then(
-        (m) => m.UserManagerComponent,
-      ),
-    title: 'User Manager',
-  },
-  {
-    path: 'user-manager/:id',
-    canActivate: [() => inject(AuthService).guardDataSteward()],
-    loadComponent: () =>
-      import('./auth/features/user-manager-detail/user-manager-detail').then(
-        (m) => m.UserManagerDetailComponent,
-      ),
-    title: 'User Details',
-    data: { transition: 'detail' },
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./auth/features/user-manager/user-manager').then(
+            (m) => m.UserManagerComponent,
+          ),
+        title: 'User Manager',
+      },
+      {
+        path: ':id',
+        loadComponent: () =>
+          import('./auth/features/user-manager-detail/user-manager-detail').then(
+            (m) => m.UserManagerDetailComponent,
+          ),
+        title: 'User Details',
+        data: { transition: 'detail' },
+      },
+    ],
   },
   {
     path: 'access-grant-manager',
     canActivate: [() => inject(AuthService).guardDataSteward()],
-    loadComponent: () =>
-      import(
-        './access-requests/features/access-grant-manager/access-grant-manager'
-      ).then((m) => m.AccessGrantManagerComponent),
-    title: 'Access Grant Manager',
-  },
-  {
-    path: 'access-grant-manager/:id',
-    canActivate: [() => inject(AuthService).guardDataSteward()],
-    loadComponent: () =>
-      import(
-        './access-requests/features/access-grant-manager-details/access-grant-manager-details'
-      ).then((m) => m.AccessGrantManagerDetailsComponent),
-    title: 'Access Grant Manager Details',
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import(
+            './access-requests/features/access-grant-manager/access-grant-manager'
+          ).then((m) => m.AccessGrantManagerComponent),
+        title: 'Access Grant Manager',
+      },
+      {
+        path: ':id',
+        loadComponent: () =>
+          import(
+            './access-requests/features/access-grant-manager-details/access-grant-manager-details'
+          ).then((m) => m.AccessGrantManagerDetailsComponent),
+        title: 'Access Grant Manager Details',
+      },
+    ],
   },
   // routes used in the authentication flows
   {
