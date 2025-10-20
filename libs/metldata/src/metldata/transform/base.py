@@ -193,12 +193,12 @@ class WorkflowDefinition(BaseModel):
         return steps
 
     @model_validator(mode="after")
-    def validate_artifact_references(cls, values):  # noqa: N805
+    def validate_artifact_references(self):
         """Validate that artifacts reference existing workflow steps."""
-        steps = values.steps
+        steps = self.steps
         if steps is None:
             raise ValueError("Steps are undefined.")
-        artifacts = values.artifacts
+        artifacts = self.artifacts
         if artifacts is None:
             raise ValueError("Artifacts are undefined.")
 
@@ -208,7 +208,7 @@ class WorkflowDefinition(BaseModel):
                     f"Step {step_name} referenced in artifact {artifact_name} is not defined."
                 )
 
-        return values
+        return self
 
     @property
     def config_cls(self) -> type[WorkflowConfig]:
