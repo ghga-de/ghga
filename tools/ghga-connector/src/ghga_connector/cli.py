@@ -25,32 +25,25 @@ from pathlib import Path
 from types import TracebackType
 
 import crypt4gh.keys
-import httpx
 import typer
 from ghga_service_commons.utils import crypt
 
 from ghga_connector import exceptions
 from ghga_connector.config import CONFIG, set_runtime_config
+from ghga_connector.constants import C4GH
 from ghga_connector.core import (
     CLIMessageDisplay,
-    WorkPackageAccessor,
+    WorkPackageClient,
     async_client,
 )
-from ghga_connector.core.downloading.batch_processing import FileStager
+from ghga_connector.core.downloading.api_calls import DownloadClient
+from ghga_connector.core.downloading.batch_processing import FileInfo, FileStager
 from ghga_connector.core.main import (
     decrypt_file,
     download_file,
-    get_wps_token,
+    get_work_package_token,
     upload_file,
 )
-
-
-@dataclass
-class DownloadParameters:
-    """Contains parameters returned by API calls to prepare information needed for download"""
-
-    file_ids_with_extension: dict[str, str]
-    work_package_accessor: WorkPackageAccessor
 
 
 @dataclass
@@ -93,33 +86,10 @@ def modify_for_debug(debug: bool):
         sys.excepthook = partial(exception_hook)
 
 
-async def retrieve_download_parameters(
-    *,
-    client: httpx.AsyncClient,
-    my_private_key: bytes,
-    my_public_key: bytes,
-    work_package_information: WorkPackageInformation,
-) -> DownloadParameters:
-    """Run necessary API calls to configure file download"""
-    work_package_accessor = WorkPackageAccessor(
-        access_token=work_package_information.decrypted_token,
-        client=client,
-        package_id=work_package_information.package_id,
-        my_private_key=my_private_key,
-        my_public_key=my_public_key,
-    )
-    file_ids_with_extension = await work_package_accessor.get_package_files()
-
-    return DownloadParameters(
-        file_ids_with_extension=file_ids_with_extension,
-        work_package_accessor=work_package_accessor,
-    )
-
-
 def get_work_package_information(my_private_key: bytes):
     """Fetch a work package id and work package token and decrypt the token"""
     # get work package access token and id from user input
-    work_package_id, work_package_token = get_wps_token(max_tries=3)
+    work_package_id, work_package_token = get_work_package_token(max_tries=3)
     decrypted_token = crypt.decrypt(data=work_package_token, key=my_private_key)
     return WorkPackageInformation(
         decrypted_token=decrypted_token, package_id=work_package_id
@@ -276,36 +246,68 @@ async def async_download(
 
     async with async_client() as client, set_runtime_config(client=client):
         CLIMessageDisplay.display("Retrieving API configuration information...")
-        parameters = await retrieve_download_parameters(
+        work_package_client = WorkPackageClient(
+            access_token=work_package_information.decrypted_token,
             client=client,
+            package_id=work_package_information.package_id,
             my_private_key=my_private_key,
             my_public_key=my_public_key,
-            work_package_information=work_package_information,
+        )
+
+        file_ids_with_extension = await work_package_client.get_package_files()
+
+        download_client = DownloadClient(
+            client=client, work_package_client=work_package_client
         )
 
         CLIMessageDisplay.display("Preparing files for download...")
         stager = FileStager(
-            wanted_file_ids=list(parameters.file_ids_with_extension),
+            wanted_files=file_ids_with_extension,
             output_dir=output_dir,
-            work_package_accessor=parameters.work_package_accessor,
-            client=client,
+            work_package_client=work_package_client,
+            download_client=download_client,
             config=CONFIG,
         )
         while not stager.finished:
             staged_files = await stager.get_staged_files()
-            for file_id in staged_files:
-                CLIMessageDisplay.display(f"Downloading file with id '{file_id}'...")
+            for file_info in staged_files:
+                check_for_existing_file(file_info=file_info, overwrite=overwrite)
                 await download_file(
-                    client=client,
-                    file_id=file_id,
-                    file_extension=parameters.file_ids_with_extension[file_id],
-                    output_dir=output_dir,
+                    download_client=download_client,
+                    file_info=file_info,
                     max_concurrent_downloads=CONFIG.max_concurrent_downloads,
                     part_size=CONFIG.part_size,
-                    work_package_accessor=parameters.work_package_accessor,
-                    overwrite=overwrite,
                 )
+                finalize_download(file_info)
             staged_files.clear()
+
+
+def check_for_existing_file(*, file_info: FileInfo, overwrite: bool):
+    """Check if a file with the given name already exists and conditionally overwrite it."""
+    # check output file
+    output_file = file_info.path_once_complete
+    if output_file.exists():
+        if overwrite:
+            CLIMessageDisplay.display(
+                f"A file with name '{output_file}' already exists and will be overwritten."
+            )
+        else:
+            CLIMessageDisplay.failure(
+                f"A file with name '{output_file}' already exists. Skipping."
+            )
+            return
+
+    output_file_ongoing = file_info.path_during_download
+    if output_file_ongoing.exists():
+        output_file_ongoing.unlink()
+
+
+def finalize_download(file_info: FileInfo):
+    """Rename a file after downloading and announce completion"""
+    file_info.path_during_download.rename(file_info.path_once_complete)
+    CLIMessageDisplay.success(
+        f"File with id '{file_info.file_id}' has been successfully downloaded."
+    )
 
 
 @cli.command(no_args_is_help=True)
@@ -356,7 +358,7 @@ def decrypt(  # noqa: PLR0912, C901
     skipped_files = []
     file_count = 0
     for input_file in input_dir.iterdir():
-        if not input_file.is_file() or input_file.suffix != ".c4gh":
+        if not input_file.is_file() or input_file.suffix != C4GH:
             skipped_files.append(str(input_file))
             continue
 
@@ -396,7 +398,7 @@ def decrypt(  # noqa: PLR0912, C901
 
     if skipped_files:
         CLIMessageDisplay.display(
-            "The following files were skipped as they are not .c4gh files:"
+            f"The following files were skipped as they are not {C4GH} files:"
         )
         for file in skipped_files:
             CLIMessageDisplay.display(f"- {file}")

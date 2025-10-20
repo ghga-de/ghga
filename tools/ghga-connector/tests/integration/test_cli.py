@@ -34,7 +34,7 @@ from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 from ghga_connector import exceptions
 from ghga_connector.cli import async_download, modify_for_debug
 from ghga_connector.config import set_runtime_config
-from ghga_connector.constants import DEFAULT_PART_SIZE
+from ghga_connector.constants import C4GH, DEFAULT_PART_SIZE
 from ghga_connector.core.client import async_client
 from ghga_connector.core.crypt import Crypt4GHEncryptor
 from ghga_connector.core.main import upload_file
@@ -51,10 +51,14 @@ from tests.fixtures.s3 import (  # noqa: F401
     reset_state,
     s3_fixture,
 )
-from tests.fixtures.utils import PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, mock_wps_token
+from tests.fixtures.utils import (
+    PRIVATE_KEY_FILE,
+    PUBLIC_KEY_FILE,
+    mock_work_package_token,
+)
 
 GET_PACKAGE_FILES_ATTR = (
-    "ghga_connector.core.work_package.WorkPackageAccessor.get_package_files"
+    "ghga_connector.core.work_package.WorkPackageClient.get_package_files"
 )
 ENVIRON_DEFAULTS = {
     "DEFAULT_PART_SIZE": str(16 * 1024 * 1024),
@@ -98,7 +102,9 @@ def apply_test_config():
 @pytest.fixture(scope="function")
 def apply_common_download_mocks(monkeypatch):
     """Monkeypatch download-specific functions and values"""
-    monkeypatch.setattr("ghga_connector.cli.get_wps_token", mock_wps_token)
+    monkeypatch.setattr(
+        "ghga_connector.cli.get_work_package_token", mock_work_package_token
+    )
     monkeypatch.setattr(
         "ghga_connector.core.work_package._decrypt",
         lambda data, key: data,
@@ -209,7 +215,7 @@ async def test_multipart_download(
         my_private_key_path=Path(PRIVATE_KEY_FILE),
     )
 
-    with open(tmp_path / f"{big_object.object_id}.c4gh", "rb") as file:
+    with open(tmp_path / f"{big_object.object_id}{C4GH}", "rb") as file:
         observed_content = file.read()
 
     assert len(observed_content) == len(big_file_content)
@@ -283,7 +289,7 @@ async def test_download(
             file_write.write(buffer)
 
     if not expected_exception:
-        assert cmp(output_dir / f"{file.file_id}.c4gh", tmp_file)
+        assert cmp(output_dir / f"{file.file_id}{C4GH}", tmp_file)
 
 
 async def test_file_not_downloadable(
@@ -349,7 +355,7 @@ async def test_file_not_downloadable(
             my_private_key_path=Path(PRIVATE_KEY_FILE),
         )
 
-    # Exception arising when the file ID is valid, but not found in the DCS (and the
+    # Exception arising when the file ID is valid, but not found in the Download API (and the
     #  user inputs 'no' instead of 'yes' when prompted if they want to continue anyway)
     with (
         patch(

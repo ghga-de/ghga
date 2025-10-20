@@ -41,6 +41,10 @@ from pydantic import BaseModel
 
 from ghga_connector.core.client import get_cache_transport
 
+WORK = "/work"
+UPLOAD = "/upload"
+DOWNLOAD = "/download"
+
 
 class UploadStatus(str, Enum):
     """Enum for the possible UploadStatus of a specific upload_id"""
@@ -54,13 +58,13 @@ class UploadStatus(str, Enum):
 
 
 class StatePatch(BaseModel):
-    """Model containing a state parameter. Needed for the UCS patch: /uploads/... api call"""
+    """Model containing a state parameter. Needed for the Upload API patch: /uploads/... api call"""
 
     status: UploadStatus
 
 
 class StatePost(BaseModel):
-    """Model containing a state parameter. Needed for the UCS post: /uploads api call"""
+    """Model containing a state parameter. Needed for the Upload API post: /uploads api call"""
 
     file_id: str
 
@@ -88,7 +92,7 @@ class AccessMethod(BaseModel):
 
 
 class UploadProperties(BaseModel):
-    """The Upload Properties returned by the UCS post /uploads endpoint"""
+    """The Upload Properties returned by the Upload API post /uploads endpoint"""
 
     upload_id: str
     file_id: str
@@ -96,7 +100,7 @@ class UploadProperties(BaseModel):
 
 
 class FileProperties(BaseModel):
-    """The File Properties returned by the UCS get /files/{file_id} endpoint"""
+    """The File Properties returned by the Upload API get /files/{file_id} endpoint"""
 
     file_id: str
     file_name: str
@@ -172,9 +176,9 @@ async def health():
     )
 
 
-@mock_external_app.get("/objects/{file_id}")
+@mock_external_app.get(DOWNLOAD + "/objects/{file_id}")
 async def drs3_objects(file_id: str, request: Request, expires_after: UrlLifespan):
-    """Mock for the drs3 /objects/{file_id} call.
+    """Mock for the Download API's /objects/{file_id} call.
 
     The `url_expires_after` parameter is an app dependency that is overridden by tests
     that use this mock api.
@@ -231,9 +235,9 @@ async def drs3_objects(file_id: str, request: Request, expires_after: UrlLifespa
     )
 
 
-@mock_external_app.get("/objects/{file_id}/envelopes")
+@mock_external_app.get(DOWNLOAD + "/objects/{file_id}/envelopes")
 async def drs3_objects_envelopes(file_id: str):
-    """Mock for the dcs /objects/{file_id}/envelopes call"""
+    """Mock for the Download API's /objects/{file_id}/envelopes call"""
     if file_id in ("downloadable", "big-downloadable"):
         response_str = str.encode(os.environ["FAKE_ENVELOPE"])
         envelope = base64.b64encode(response_str).decode("utf-8")
@@ -249,9 +253,9 @@ async def drs3_objects_envelopes(file_id: str):
     )
 
 
-@mock_external_app.get("/files/{file_id}")
-async def ulc_get_files(file_id: str):
-    """Mock for the ulc GET /files/{file_id} call."""
+@mock_external_app.get(UPLOAD + "/files/{file_id}")
+async def get_files(file_id: str):
+    """Mock for the Upload API's GET /files/{file_id} call."""
     if file_id == "pending":
         return FileProperties(
             file_id=file_id,
@@ -273,9 +277,9 @@ async def ulc_get_files(file_id: str):
     )
 
 
-@mock_external_app.get("/uploads/{upload_id}")
-async def ulc_get_uploads(upload_id: str):
-    """Mock for the ulc GET /uploads/{upload_id} call."""
+@mock_external_app.get(UPLOAD + "/uploads/{upload_id}")
+async def get_uploads(upload_id: str):
+    """Mock for the Upload API's GET /uploads/{upload_id} call."""
     if upload_id == "pending":
         return Response(
             status_code=200,
@@ -294,9 +298,9 @@ async def ulc_get_uploads(upload_id: str):
     )
 
 
-@mock_external_app.post("/uploads")
-async def ulc_post_files_uploads(request: Request):
-    """Mock for the ulc POST /uploads call."""
+@mock_external_app.post(UPLOAD + "/uploads")
+async def post_files_uploads(request: Request):
+    """Mock for the Upload API's POST /uploads call."""
     content = json.loads(await request.body())
     state: StatePost = StatePost(**content)
 
@@ -346,9 +350,9 @@ async def ulc_post_files_uploads(request: Request):
     )
 
 
-@mock_external_app.post("/uploads/{upload_id}/parts/{part_no}/signed_urls")
-async def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
-    """Mock for the ulc POST /uploads/{upload_id}/parts/{part_no}/signed_urls call."""
+@mock_external_app.post(UPLOAD + "/uploads/{upload_id}/parts/{part_no}/signed_urls")
+async def post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
+    """Mock for the Upload Api's POST /uploads/{upload_id}/parts/{part_no}/signed_urls call."""
     if upload_id == "pending":
         if part_no in (1, 2):
             urls = (os.environ["S3_UPLOAD_URL_1"], os.environ["S3_UPLOAD_URL_2"])
@@ -364,9 +368,9 @@ async def ulc_post_uploads_parts_files_signed_posts(upload_id: str, part_no: int
     )
 
 
-@mock_external_app.patch("/uploads/{upload_id}")
-async def ulc_patch_uploads(upload_id: str, request: Request):
-    """Mock for the ulc PATCH /uploads/{upload_id} call"""
+@mock_external_app.patch(UPLOAD + "/uploads/{upload_id}")
+async def patch_uploads(upload_id: str, request: Request):
+    """Mock for the Upload API's PATCH /uploads/{upload_id} call"""
     content = json.loads(await request.body())
     state: StatePatch = StatePatch(**content)
     upload_status = state.status
@@ -409,7 +413,9 @@ async def ulc_patch_uploads(upload_id: str, request: Request):
     )
 
 
-@mock_external_app.post("/work-packages/{package_id}/files/{file_id}/work-order-tokens")
+@mock_external_app.post(
+    WORK + "/work-packages/{package_id}/files/{file_id}/work-order-tokens"
+)
 async def create_work_order_token(package_id: str, file_id: str):
     """Mock Work Order Token endpoint.
 
@@ -432,9 +438,9 @@ async def mock_wkvs():
     api_url = "http://127.0.0.1"
     values: dict[str, str] = {
         "crypt4gh_public_key": "qx5g31H7rdsq7sgkew9ElkLIXvBje4RxDVcAHcJD8XY=",
-        "wps_api_url": api_url,
-        "dcs_api_url": api_url,
-        "ucs_api_url": api_url,
+        "wps_api_url": f"{api_url}{WORK}",
+        "dcs_api_url": f"{api_url}{DOWNLOAD}",
+        "ucs_api_url": f"{api_url}{UPLOAD}",
     }
 
     return JSONResponse(status_code=200, content=values)

@@ -26,7 +26,7 @@ import crypt4gh.lib
 import httpx
 
 from ghga_connector import exceptions
-from ghga_connector.config import get_ucs_api_url
+from ghga_connector.config import get_upload_api_url
 from ghga_connector.constants import MAX_PART_NUMBER
 from ghga_connector.core import ResponseExceptionTranslator
 from ghga_connector.core.crypt import Encryptor
@@ -50,7 +50,7 @@ class Uploader(UploaderBase):
     ) -> None:
         self._part_size = 0
         self._upload_id = ""
-        self._api_url = get_ucs_api_url()
+        self._api_url = get_upload_api_url()
         self._client = client
         self._file_id = file_id
         self._public_key_path = public_key_path

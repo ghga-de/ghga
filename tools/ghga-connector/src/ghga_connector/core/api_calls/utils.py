@@ -42,3 +42,16 @@ def check_url(api_url: str, *, timeout_in_seconds: int = 5) -> bool:
 
     content = response.json()
     return "status" in content and content["status"].lower() == "ok"
+
+
+def modify_headers_for_cache_refresh(headers: httpx.Headers) -> None:
+    """Update cache-control headers to get fresh response from source.
+
+    Headers object is modified in place, hence no return value.
+    """
+    cache_control_headers = headers.get("Cache-Control")
+    if not cache_control_headers:
+        cache_control_headers = ["max-age=0"]
+    else:
+        cache_control_headers = [cache_control_headers, "max-age=0"]
+    headers["Cache-Control"] = ",".join(cache_control_headers)

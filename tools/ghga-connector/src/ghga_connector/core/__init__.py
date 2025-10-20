@@ -28,4 +28,4 @@ from .file_operations import (  # noqa: F401
 from .http_translation import ResponseExceptionTranslator  # noqa: F401
 from .message_display import CLIMessageDisplay, MessageColors  # noqa: F401
 from .structs import PartRange  # noqa: F401
-from .work_package import WorkPackageAccessor  # noqa: F401
+from .work_package import WorkPackageClient  # noqa: F401

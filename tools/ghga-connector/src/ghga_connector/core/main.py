@@ -20,7 +20,9 @@ from pathlib import Path
 
 import httpx
 
-from ghga_connector.config import get_dcs_api_url, get_ucs_api_url
+from ghga_connector.config import get_download_api_url, get_upload_api_url
+from ghga_connector.core.downloading.api_calls import DownloadClient
+from ghga_connector.core.downloading.batch_processing import FileInfo
 
 from .. import exceptions
 from .api_calls import is_service_healthy
@@ -30,7 +32,6 @@ from .file_operations import is_file_encrypted
 from .message_display import CLIMessageDisplay
 from .uploading.main import run_upload
 from .uploading.uploader import Uploader
-from .work_package import WorkPackageAccessor
 
 
 async def upload_file(  # noqa: PLR0913
@@ -58,9 +59,9 @@ async def upload_file(  # noqa: PLR0913
     if is_file_encrypted(file_path):
         raise exceptions.FileAlreadyEncryptedError(file_path=file_path)
 
-    ucs_api_url = get_ucs_api_url()
-    if not is_service_healthy(ucs_api_url):
-        raise exceptions.ApiNotReachableError(api_url=ucs_api_url)
+    upload_api_url = get_upload_api_url()
+    if not is_service_healthy(upload_api_url):
+        raise exceptions.ApiNotReachableError(api_url=upload_api_url)
 
     uploader = Uploader(
         client=client,
@@ -95,54 +96,29 @@ async def upload_file(  # noqa: PLR0913
     )
 
 
-async def download_file(  # noqa: PLR0913
+async def download_file(
     *,
-    client: httpx.AsyncClient,
-    output_dir: Path,
+    download_client: DownloadClient,
     part_size: int,
     max_concurrent_downloads: int,
-    work_package_accessor: WorkPackageAccessor,
-    file_id: str,
-    file_extension: str = "",
-    overwrite: bool = False,
+    file_info: FileInfo,
 ) -> None:
     """Core command to download a file. Can be called by CLI, GUI, etc."""
-    dcs_api_url = get_dcs_api_url()
-    if not is_service_healthy(dcs_api_url):
-        raise exceptions.ApiNotReachableError(api_url=dcs_api_url)
-
-    # construct file name with suffix, if given
-    file_name = f"{file_id}"
-    if file_extension:
-        file_name = f"{file_id}{file_extension}"
-
-    # check output file
-    output_file = output_dir / f"{file_name}.c4gh"
-    if output_file.exists():
-        if overwrite:
-            CLIMessageDisplay.display(
-                f"A file with name '{output_file}' already exists and will be overwritten."
-            )
-        else:
-            CLIMessageDisplay.failure(
-                f"A file with name '{output_file}' already exists. Skipping."
-            )
-            return
-
-    # with_suffix() might overwrite existing suffixes, do this instead
-    output_file_ongoing = output_file.parent / (output_file.name + ".part")
-    if output_file_ongoing.exists():
-        output_file_ongoing.unlink()
+    file_id = file_info.file_id
+    CLIMessageDisplay.display(f"Downloading file with id '{file_id}'...")
+    download_api_url = get_download_api_url()
+    if not is_service_healthy(download_api_url):
+        raise exceptions.ApiNotReachableError(api_url=download_api_url)
 
     downloader = Downloader(
-        client=client,
+        download_client=download_client,
         file_id=file_id,
+        file_size=file_info.file_size,
         max_concurrent_downloads=max_concurrent_downloads,
-        work_package_accessor=work_package_accessor,
     )
     try:
         await downloader.download_file(
-            output_path=output_file_ongoing, part_size=part_size
+            output_path=file_info.path_during_download, part_size=part_size
         )
     except exceptions.GetEnvelopeError as error:
         CLIMessageDisplay.failure(
@@ -153,15 +129,8 @@ async def download_file(  # noqa: PLR0913
         CLIMessageDisplay.failure(f"Failed downloading with id '{file_id}'.")
         raise error
 
-    # rename fully downloaded file
-    output_file_ongoing.rename(output_file)
 
-    CLIMessageDisplay.success(
-        f"File with id '{file_id}' has been successfully downloaded."
-    )
-
-
-def get_wps_token(max_tries: int) -> list[str]:
+def get_work_package_token(max_tries: int) -> list[str]:
     """
     Expect the work package id and access token as a colon separated string
     The user will have to input this manually to avoid it becoming part of the

@@ -32,16 +32,18 @@ from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_RETRIES, MAX_WAIT_TI
 __all__ = [
     "CONFIG",
     "Config",
-    "get_dcs_api_url",
+    "get_download_api_url",
     "get_ghga_pubkey",
-    "get_ucs_api_url",
-    "get_wps_api_url",
+    "get_upload_api_url",
+    "get_work_package_api_url",
     "set_runtime_config",
 ]
 
-ucs_api_url_var: ContextVar[str] = ContextVar("ucs_api_url", default="")
-dcs_api_url_var: ContextVar[str] = ContextVar("dcs_api_url", default="")
-wps_api_url_var: ContextVar[str] = ContextVar("wps_api_url", default="")
+upload_api_url_var: ContextVar[str] = ContextVar("upload_api_url_var", default="")
+download_api_url_var: ContextVar[str] = ContextVar("download_api_url_var", default="")
+work_package_api_url_var: ContextVar[str] = ContextVar(
+    "work_package_api_url_var", default=""
+)
 ghga_pubkey_var: ContextVar[str] = ContextVar("ghga_pubkey", default="")
 
 
@@ -52,19 +54,19 @@ def _get_context_var(context_var: ContextVar) -> Any:
     return value
 
 
-def get_ucs_api_url() -> str:
-    """Get the UCS API URL."""
-    return _get_context_var(ucs_api_url_var)
+def get_upload_api_url() -> str:
+    """Get the Upload API URL."""
+    return _get_context_var(upload_api_url_var)
 
 
-def get_dcs_api_url() -> str:
-    """Get the DCS API URL."""
-    return _get_context_var(dcs_api_url_var)
+def get_download_api_url() -> str:
+    """Get the Download API URL."""
+    return _get_context_var(download_api_url_var)
 
 
-def get_wps_api_url() -> str:
-    """Get the WPS API URL."""
-    return _get_context_var(wps_api_url_var)
+def get_work_package_api_url() -> str:
+    """Get the Work Package API URL."""
+    return _get_context_var(work_package_api_url_var)
 
 
 def get_ghga_pubkey() -> str:
@@ -112,9 +114,9 @@ async def set_runtime_config(client: httpx.AsyncClient):
 
     This sets the following values:
     - ghga_pubkey
-    - wps_api_url
-    - dcs_api_url
-    - ucs_api_url
+    - work_package_api_url
+    - download_api_url
+    - upload_api_url
 
     Raises:
         WellKnownValueNotFound: If one of the well-known values is not found in the
@@ -135,9 +137,9 @@ async def set_runtime_config(client: httpx.AsyncClient):
 
     async with (
         set_context_var(ghga_pubkey_var, values["crypt4gh_public_key"]),
-        set_context_var(wps_api_url_var, values["wps_api_url"].rstrip("/")),
-        set_context_var(dcs_api_url_var, values["dcs_api_url"].rstrip("/")),
-        set_context_var(ucs_api_url_var, values["ucs_api_url"].rstrip("/")),
+        set_context_var(work_package_api_url_var, values["wps_api_url"].rstrip("/")),
+        set_context_var(download_api_url_var, values["dcs_api_url"].rstrip("/")),
+        set_context_var(upload_api_url_var, values["ucs_api_url"].rstrip("/")),
     ):
         yield
 
