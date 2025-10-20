@@ -295,13 +295,8 @@ export class UserService {
    */
   #removeUserLocally(id: string): void {
     if (this.users.error()) return;
-    const oldUser = this.users.value().find((user) => user.id === id);
-    if (oldUser) {
-      const newUser = { ...oldUser };
-      const update = (users: DisplayUser[]) =>
-        users.map((user) => (user.id === id ? newUser : user));
-      this.users.value.set(update(this.users.value()));
-    }
+    const newUsers = this.users.value().filter((user) => user.id !== id);
+    this.users.value.set(newUsers);
   }
 
   /**

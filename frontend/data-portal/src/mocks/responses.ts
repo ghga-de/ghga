@@ -56,14 +56,14 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/auth/users/roe@test.dev/ivas': allIvasOfRoe,
   'GET /api/auth/users/mar@test.dev/ivas': allIvasOfMar,
 
+  // Delete access grant
+  'DELETE /api/auth/users/*': 204,
+
   // New IVA
   'POST /api/auth/users/*/ivas': { id: 'ABC123' },
 
   // Delete IVA
   'DELETE /api/auth/users/*/ivas/*': 204,
-
-  // Revoke Access Grant
-  'DELETE /api/auth/download-access/grants/*': 204,
 
   // Request IVA verification
   'POST /api/auth/rpc/ivas/*/request-code': 204,
@@ -169,6 +169,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // User Grants
   'GET /api/ars/access-grants/doe@test.dev': accessGrants,
+
+  // Delete access grant
+  'DELETE /api/ars/access-grants/*': 204,
 
   // Create an access request
   'POST /api/ars/access-requests': 204,

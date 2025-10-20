@@ -6,40 +6,36 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { render, screen } from '@testing-library/angular';
+import { accessGrants } from '@app/../mocks/data';
+import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { AccessGrantRevocationDialogComponent } from './access-grant-revocation-dialog';
 
 describe('AccessGrantRevocationDialogComponent', () => {
-  let accessRequestService: AccessRequestService;
+  let component: AccessGrantRevocationDialogComponent;
   let fixture: ComponentFixture<AccessGrantRevocationDialogComponent>;
 
-  const mockDialogRef = {
+  const dialogRef = {
     close: jest.fn(),
   };
 
-  const testGrantId = 'GHGAD12345678901236';
-  const placeholderText = 'Type the Grant ID here';
-
   beforeEach(async () => {
-    const mockAccessRequestService = {
-      revokeAccessGrant: jest.fn(),
-    };
+    await TestBed.configureTestingModule({
+      imports: [AccessGrantRevocationDialogComponent],
+      providers: [
+        {
+          provide: MAT_DIALOG_DATA,
+          useValue: {
+            grant: accessGrants[0],
+          },
+        },
+        { provide: MatDialogRef, useValue: dialogRef },
+      ],
+    }).compileComponents();
 
-    const { fixture: renderedFixture } = await render(
-      AccessGrantRevocationDialogComponent,
-      {
-        providers: [
-          { provide: AccessRequestService, useValue: mockAccessRequestService },
-          { provide: MatDialogRef, useValue: mockDialogRef },
-          { provide: MAT_DIALOG_DATA, useValue: { grantID: testGrantId } },
-        ],
-      },
-    );
-
-    fixture = renderedFixture;
-    accessRequestService = TestBed.inject(AccessRequestService);
+    fixture = TestBed.createComponent(AccessGrantRevocationDialogComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
   afterEach(() => {
@@ -47,47 +43,30 @@ describe('AccessGrantRevocationDialogComponent', () => {
   });
 
   it('should create', () => {
-    expect(fixture.componentInstance).toBeTruthy();
+    expect(component).toBeTruthy();
   });
 
-  it('should have the Revoke button disabled initially', () => {
-    const revokeButton = screen.getByRole('button', { name: /revoke/i });
-    expect(revokeButton).toBeDisabled();
+  it('should return false when cancelled', () => {
+    jest.spyOn(dialogRef, 'close');
+    expect(dialogRef.close).not.toHaveBeenCalled();
+    const button = screen.getByRole('button', { name: 'Cancel' });
+    expect(button).toBeVisible();
+    expect(button).toHaveTextContent('Cancel');
+    button.click();
+    expect(dialogRef.close).toHaveBeenCalledWith(false);
   });
 
-  it('should enable the Revoke button when the correct grant ID is typed', async () => {
-    const revokeButton = screen.getByRole('button', { name: /revoke/i });
-    const input = screen.getByPlaceholderText(placeholderText);
-
-    expect(revokeButton).toBeDisabled();
-
-    await userEvent.type(input, testGrantId);
-
-    expect(revokeButton).toBeEnabled();
-  });
-
-  it('should keep the Revoke button disabled if the wrong grant ID is typed', async () => {
-    const revokeButton = screen.getByRole('button', { name: /revoke/i });
-    const input = screen.getByPlaceholderText(placeholderText);
-
-    await userEvent.type(input, 'WRONG-ID');
-
-    expect(revokeButton).toBeDisabled();
-  });
-
-  it('should call revokeAccessGrant and close the dialog on successful revocation', async () => {
-    (accessRequestService.revokeAccessGrant as jest.Mock).mockResolvedValue(true);
-
-    const revokeButton = screen.getByRole('button', { name: /revoke/i });
-    const input = screen.getByPlaceholderText(placeholderText);
-
-    await userEvent.type(input, testGrantId);
-    await userEvent.click(revokeButton);
-
-    // Wait for promises to resolve and UI to update
-    await fixture.whenStable();
-
-    expect(accessRequestService.revokeAccessGrant).toHaveBeenCalledWith(testGrantId);
-    expect(mockDialogRef.close).toHaveBeenCalledWith(true);
+  it('should return true when confirmed after confirming the user and dataset', async () => {
+    const nameInput = screen.getByPlaceholderText('Confirm email of user');
+    await userEvent.type(nameInput, 'doe@home.org');
+    const datasetInput = screen.getByPlaceholderText('Confirm dataset accession');
+    await userEvent.type(datasetInput, 'GHGAD12345678901234');
+    jest.spyOn(dialogRef, 'close');
+    expect(dialogRef.close).not.toHaveBeenCalled();
+    const button = screen.getByRole('button', { name: 'Confirm revocation' });
+    expect(button).toBeVisible();
+    expect(button).toHaveTextContent('Confirm revocation');
+    button.click();
+    expect(dialogRef.close).toHaveBeenCalledWith(true);
   });
 });

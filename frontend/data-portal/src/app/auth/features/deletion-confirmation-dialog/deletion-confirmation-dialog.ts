@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, model } from '@angular/core';
+import { Component, computed, inject, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -41,6 +41,8 @@ export class DeletionConfirmationDialogComponent {
   data = inject<{ user: DisplayUser }>(MAT_DIALOG_DATA);
 
   userInput = model<string | undefined>();
+
+  disabled = computed(() => this.userInput()?.trim() !== this.user.email);
 
   /**
    * User to delete

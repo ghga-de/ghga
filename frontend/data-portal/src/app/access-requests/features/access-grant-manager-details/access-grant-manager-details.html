@@ -41,9 +41,9 @@
     <div class="w-64">
       <button
         mat-raised-button
+        class="button-error"
         matTooltip="Revoke Access Grant"
-        aria-label="Revoke Access Grant"
-        (click)="openRevokeDialog()"
+        (click)="safeRevoke()"
       >
         Revoke Access Grant
         <mat-icon fontIcon="block"></mat-icon>
@@ -61,15 +61,15 @@
         </mat-card-header>
         <mat-card-content class="min-w-2xl md:min-w-xl">
           <p>
-            <strong class="inline-block w-44">Email:</strong>
-            <a appExtLink [href]="'mailto:' + ag.user_email" tabindex="-1"
-              >{{ ag.user_email }}</a
-            >
-          </p>
-          <p>
             <strong class="inline-block w-44">Name:</strong>
             <a [routerLink]="'/user-manager/' + ag.user_id"
               >{{ ag.user_title }} {{ ag.user_name }}</a
+            >
+          </p>
+          <p>
+            <strong class="inline-block w-44">Email:</strong>
+            <a appExtLink [href]="'mailto:' + ag.user_email" tabindex="-1"
+              >{{ ag.user_email }}</a
             >
           </p>
         </mat-card-content>
@@ -96,8 +96,9 @@
           @switch (ar().length) { @case (0) {
           <p>
             <span
-              ><span class="warn"
-                >No access request was matched for this grant!</span
+              ><span class="text-warning flex pt-2"
+                ><mat-icon fontIcon="warning" class="me-1 shrink-0"></mat-icon>No access
+                request was matched for this grant!</span
               ></span
             >
           </p>
@@ -121,9 +122,8 @@
               routerLink="/access-request-manager/{{request.id}}"
               data-umami-event="Access Grant Details Access Request Clicked"
               class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
-              matTooltip="View access request details"
+              matTooltip="View details of this access request"
               matTooltipPosition="right"
-              aria-label="View this access request"
               ><mat-icon fontIcon="description" class="mb-1"></mat-icon
             ></a>
           </p>
@@ -155,9 +155,8 @@
               [routerLink]="`/access-request-manager/${request.id}`"
               data-umami-event="Access Grant Details Access Request Clicked"
               class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
-              matTooltip="View access request details"
+              [matTooltip]="`View details of this access request (${idx + 1} of ${ar().length})`"
               matTooltipPosition="right"
-              [aria-label]="`View this access request (${idx} of ${ar().length})`"
               ><mat-icon fontIcon="description" class="mb-1"></mat-icon
             ></a>
           </p>

@@ -29,7 +29,6 @@ import {
 import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type-pipe';
 import { IvaService } from '@app/verification-addresses/services/iva';
-import { lastValueFrom } from 'rxjs';
 import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation-dialog/access-grant-revocation-dialog';
 
 /**
@@ -177,32 +176,36 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
   }
 
   /**
-   * Waits for a specified number of milliseconds.
-   * @param ms The number of milliseconds to wait.
-   * @returns A promise that resolves after the specified time.
+   * Revoke the grant.
    */
-  delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+  #revoke(): void {
+    const id = this.grant()?.id;
+    if (!id) return;
+    this.#ars.revokeAccessGrant(id).subscribe({
+      next: () => {
+        this.#notificationService.showSuccess(`Access grant was successfully revoked.`);
+      },
+      error: (err) => {
+        console.debug(err);
+        this.#notificationService.showError(
+          'Access grant could not be revoked. Please try again later',
+        );
+      },
+    });
+  }
 
   /**
-   * Opens the revocation dialog for the access grant.
+   * Revoke the grant after confirmation.
    */
-  async openRevokeDialog(): Promise<void> {
-    const grant = this.grant();
-    if (!grant) return;
-
+  safeRevoke(): void {
     const dialogRef = this.#dialog.open(AccessGrantRevocationDialogComponent, {
-      data: { grantID: grant.id },
+      data: {
+        grant: this.grant()!,
+      },
     });
 
-    const result = await lastValueFrom(dialogRef.afterClosed());
-
-    if (result === true) {
-      this.#notificationService.showSuccess(
-        'Access grant revoked successfully. Exiting details view...',
-      );
-      await this.delay(3000);
-      this.#ars.loadAllAccessGrants(true);
-      this.goBack();
-    }
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) this.#revoke();
+    });
   }
 }

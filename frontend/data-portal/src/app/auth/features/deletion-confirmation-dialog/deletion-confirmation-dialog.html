@@ -14,17 +14,17 @@
   <button
     mat-button
     (click)="onCancel()"
-    data-umami-event="Confirm Dialog Cancel Clicked"
+    data-umami-event="Confirm User Deletion Dialog Cancel Clicked"
   >
     Cancel
   </button>
   <button
     mat-raised-button
     cdkFocusInitial
-    [disabled]="userInput() !== user.email"
+    [disabled]="disabled()"
     (click)="onConfirm()"
-    class="error"
-    data-umami-event="Confirm Dialog Confirm Clicked"
+    class="button-error"
+    data-umami-event="Confirm User Deletion Dialog Confirm Clicked"
   >
     Confirm deletion
   </button>
