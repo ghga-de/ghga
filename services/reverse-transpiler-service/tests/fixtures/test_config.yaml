@@ -2,7 +2,9 @@ service_instance_id: "1"
 kafka_servers: ["kafka:9092"]
 mongo_dsn: mongodb://localhost:27017
 db_name: rts
-mongo_timeout: 300
+mongo_timeout: 10
+db_version_collection: rtsDbVersions
+migration_wait_sec: 10
 artifact_topic: artifacts
 sheet_names:
   analyses: Analysis

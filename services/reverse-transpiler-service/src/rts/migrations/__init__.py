@@ -13,30 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""DB migration logic"""
 
-import asyncio
+from .definitions import V2Migration
+from .entry import run_db_migrations
 
-import typer
-
-from rts.main import consume_events, migrate_db, run_rest_app
-
-cli = typer.Typer()
-
-
-@cli.command(name="run-rest")
-def sync_run_api():
-    """Run the HTTP REST API."""
-    asyncio.run(run_rest_app())
-
-
-@cli.command(name="consume-events")
-def sync_consume_events(run_forever: bool = True):
-    """Run an event consumer listening to the specified topic."""
-    asyncio.run(consume_events(run_forever=run_forever))
-
-
-@cli.command(name="migrate-db")
-def sync_migrate_db():
-    """Run database migrations."""
-    asyncio.run(migrate_db())
+__all__ = ["V2Migration", "run_db_migrations"]

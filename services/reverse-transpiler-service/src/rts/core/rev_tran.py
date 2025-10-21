@@ -29,7 +29,11 @@ from pydantic_settings import BaseSettings
 
 from rts.models import StudyMetadata
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
-from rts.ports.outbound.dao import MetadataDao, ResourceNotFoundError, WorkbookDaoPort
+from rts.ports.outbound.dao import (
+    MetadataGridFSDaoPort,
+    ResourceNotFoundError,
+    WorkbookGridFSDaoPort,
+)
 
 log = logging.getLogger(__name__)
 
@@ -61,8 +65,8 @@ class ReverseTranspiler(ReverseTranspilerPort):
     def __init__(
         self,
         config: SheetNameConfig,
-        metadata_dao: MetadataDao,
-        workbook_dao: WorkbookDaoPort,
+        metadata_dao: MetadataGridFSDaoPort,
+        workbook_dao: WorkbookGridFSDaoPort,
     ):
         self._config = config
         self._metadata_dao = metadata_dao
@@ -78,7 +82,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
         """
         accession = study_metadata.study_accession
         try:
-            existing_metadata = await self._metadata_dao.get_by_id(accession)
+            existing_metadata = await self._metadata_dao.find(filename=accession)
             log.debug(
                 "Metadata for accession '%s' already exists, comparing...",
                 accession,
@@ -100,13 +104,14 @@ class ReverseTranspiler(ReverseTranspilerPort):
                 accession,
             )
 
-        await self._metadata_dao.upsert(study_metadata)
+        await self._metadata_dao.upsert(data=study_metadata, filename=accession)
 
         log.debug("Transpiling metadata to workbook for accession '%s'.", accession)
         workbook = self._reverse_transpile(study_metadata)
 
         log.debug("Workbook created for accession '%s', upserting to DB.", accession)
-        await self._workbook_dao.upsert(workbook=workbook, study_accession=accession)
+        await self._workbook_dao.upsert(data=workbook, filename=accession)
+        log.debug("Workbook upserted for study accession: %s", accession)
 
     async def retrieve_metadata(self, *, study_accession: str) -> StudyMetadata:
         """Retrieve study metadata from the DAO by its accession.
@@ -115,7 +120,8 @@ class ReverseTranspiler(ReverseTranspilerPort):
         given study accession.
         """
         try:
-            return await self._metadata_dao.get_by_id(study_accession)
+            metadata = await self._metadata_dao.find(filename=study_accession)
+            return metadata
         except ResourceNotFoundError as err:
             error = self.MetadataNotFoundError(study_accession=study_accession)
             log.error(error)
@@ -130,11 +136,11 @@ class ReverseTranspiler(ReverseTranspilerPort):
         Does not raise an error if the metadata or workbook does not exist.
         """
         try:
-            await self._metadata_dao.delete(study_accession)
+            await self._metadata_dao.delete(filename=study_accession)
         except ResourceNotFoundError:
             log.debug("Metadata for accession '%s' already deleted.", study_accession)
 
-        await self._workbook_dao.delete(study_accession=study_accession)
+        await self._workbook_dao.delete(filename=study_accession)
         log.info("Workbook and metadata deleted for accession '%s'.", study_accession)
 
     async def retrieve_workbook(self, *, study_accession: str) -> bytes:
@@ -146,7 +152,9 @@ class ReverseTranspiler(ReverseTranspilerPort):
         - The workbook as bytes.
         """
         try:
-            return await self._workbook_dao.find(study_accession=study_accession)
+            workbook_data = await self._workbook_dao.find(filename=study_accession)
+            log.debug("Workbook found for study accession: %s", study_accession)
+            return workbook_data
         except ResourceNotFoundError as err:
             error = self.MetadataNotFoundError(study_accession=study_accession)
             log.error(error)

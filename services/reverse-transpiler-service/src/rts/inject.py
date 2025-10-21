@@ -20,51 +20,35 @@ from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
 from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
-from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from rts.adapters.inbound.event_sub import EventSubTranslator
 from rts.adapters.inbound.fastapi_ import dummies
 from rts.adapters.inbound.fastapi_.configure import get_configured_app
-from rts.adapters.outbound.dao import get_metadata_dao, get_workbook_dao
+from rts.adapters.outbound.dao import GridFSDaoFactory
 from rts.config import Config
 from rts.core.rev_tran import ReverseTranspiler
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
-from rts.ports.outbound.dao import MetadataDao, WorkbookDaoPort
 
-__all__ = [
-    "prepare_core",
-    "prepare_event_subscriber",
-    "prepare_rest_app",
-]
-
-
-@asynccontextmanager
-async def get_dao(*, config: Config) -> AsyncGenerator[MetadataDao]:
-    """Constructs and initializes a MetadataDao using config."""
-    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
-        dao = await get_metadata_dao(dao_factory=dao_factory)
-        yield dao
+__all__ = ["prepare_core", "prepare_event_subscriber", "prepare_rest_app"]
 
 
 @asynccontextmanager
 async def prepare_core(
     *,
     config: Config,
-    metadata_dao_override: MetadataDao | None = None,
-    workbook_dao_override: WorkbookDaoPort | None = None,
+    grid_fs_factory_override: GridFSDaoFactory | None = None,
 ) -> AsyncGenerator[ReverseTranspilerPort]:
     """Constructs and initializes all core components and their outbound dependencies.
 
     The _override parameters can be used to override the default dependencies.
     """
     async with (
-        nullcontext(workbook_dao_override)
-        if workbook_dao_override
-        else get_workbook_dao(config=config) as workbook_dao,
-        nullcontext(metadata_dao_override)
-        if metadata_dao_override
-        else get_dao(config=config) as metadata_dao,
+        nullcontext(grid_fs_factory_override)
+        if grid_fs_factory_override
+        else GridFSDaoFactory.construct(config=config) as grid_fs_factory,
     ):
+        metadata_dao = grid_fs_factory.get_metadata_dao()
+        workbook_dao = grid_fs_factory.get_workbook_dao()
         yield ReverseTranspiler(
             config=config, metadata_dao=metadata_dao, workbook_dao=workbook_dao
         )

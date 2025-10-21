@@ -22,6 +22,7 @@ from openpyxl import Workbook, load_workbook
 
 from rts.models import StudyMetadata
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
+from rts.ports.outbound.dao import ResourceNotFoundError
 from tests.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio()
@@ -129,7 +130,7 @@ async def test_upsert(joint_fixture: JointFixture):
     accession = study_metadata.study_accession
 
     # Delete the workbook from storage, since that is only created when new data comes in
-    await reverse_transpiler._workbook_dao.delete(study_accession=accession)  # type: ignore
+    await reverse_transpiler._workbook_dao.delete(filename=accession)  # type: ignore
 
     # Load the data again, but this time it shouldn't recreate the workbook
     await reverse_transpiler.upsert_metadata(study_metadata=study_metadata)
@@ -175,9 +176,8 @@ async def test_data_deletion(joint_fixture: JointFixture):
 async def test_delete_non_existent_metadata(joint_fixture: JointFixture):
     """Test that deleting non-existent metadata does not raise an error."""
     reverse_transpiler = joint_fixture.reverse_transpiler
-
-    # This should not raise an error, even though the metadata does not exist
-    await reverse_transpiler.delete_metadata(study_accession="non_existent_accession")
+    with pytest.raises(ResourceNotFoundError):
+        await reverse_transpiler.delete_metadata(study_accession="random")
 
 
 async def test_event_handling(joint_fixture: JointFixture):

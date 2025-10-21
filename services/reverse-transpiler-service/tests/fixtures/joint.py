@@ -25,11 +25,9 @@ from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
-from rts.adapters.outbound.dao import get_metadata_dao
 from rts.config import Config
 from rts.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
-from rts.ports.outbound.dao import MetadataDao
 from tests.fixtures.config import get_config
 
 
@@ -42,7 +40,6 @@ class JointFixture:
     event_subscriber: KafkaEventSubscriber
     kafka: KafkaFixture
     mongodb: MongoDbFixture
-    metadata_dao: MetadataDao
     rest_client: AsyncTestClient
 
 
@@ -74,6 +71,5 @@ async def joint_fixture(
             event_subscriber=event_subscriber,
             kafka=kafka,
             mongodb=mongodb,
-            metadata_dao=await get_metadata_dao(dao_factory=mongodb.dao_factory),
             rest_client=rest_client,
         )

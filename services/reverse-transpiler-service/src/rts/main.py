@@ -25,6 +25,9 @@ from hexkit.log import configure_logging
 
 from rts.config import Config
 from rts.inject import prepare_event_subscriber, prepare_rest_app
+from rts.migrations.entry import run_db_migrations
+
+DB_VERSION = 2
 
 
 async def run_rest_app():
@@ -43,3 +46,10 @@ async def consume_events(run_forever: bool = True):
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
+
+
+async def migrate_db() -> None:
+    """Run database migrations as a one-off command."""
+    config = Config()  # type: ignore
+    configure_logging(config=config)
+    await run_db_migrations(config=config, target_version=DB_VERSION)
