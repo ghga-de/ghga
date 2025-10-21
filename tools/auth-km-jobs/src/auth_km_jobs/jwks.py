@@ -26,6 +26,6 @@ def fetch_external_jwks() -> str:
     return jwks_response.text
 
 
-def generate_internal_jwk() -> str:
+def generate_internal_jwk() -> jwk.JWK:
     """Generate a JSON string with a new key pair."""
     return jwk.JWK.generate(kty="EC", crv="P-256")

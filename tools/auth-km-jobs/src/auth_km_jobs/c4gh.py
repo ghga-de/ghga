@@ -1,4 +1,6 @@
 import base64
+import os
+from contextlib import redirect_stderr
 
 from crypt4gh.keys.c4gh import encode_private_key
 from nacl.public import PrivateKey
@@ -15,7 +17,9 @@ class Crypt4GHKeyPair:
 
     def export_private(self, passphrase=None, comment=None) -> str:
         """Export the private key with metadata, optionally encrypted."""
-        key_bytes = encode_private_key(self.key, passphrase, comment)
+        # Suppress unencrypted key warnings emitted by encode_private_key to stderr
+        with open(os.devnull, "w") as _null, redirect_stderr(_null):
+            key_bytes = encode_private_key(self.key, passphrase, comment)
         return encode_key(key_bytes)
 
     def export_public(self) -> str:

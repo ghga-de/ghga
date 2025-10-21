@@ -5,6 +5,7 @@ import typer
 from .c4gh import generate_crypt4gh_key_pair
 from .jwks import fetch_external_jwks, generate_internal_jwk
 from .tokens import generate_simple_token
+from .totp import re_encrypt_tokens
 from .vault import (
     store_private_int_key,
     store_private_wps_key,
@@ -56,7 +57,7 @@ def refresh_all_keys():
     ):
         try:
             cmd()
-        except Exception as error:  # pylint: disable=broad-except
+        except Exception as error:
             print("ERROR:", error)
             if not first_error:
                 first_error = error
@@ -94,6 +95,14 @@ def generate_test_keys(num_jwk: int = 1, num_c4gh: int = 1, num_tokens: int = 1)
         token = generate_simple_token()
         print(f"{name}={token.token}")
         print(f"{name}_HASH={token.hash}")
+
+
+@app.command()
+def re_encrypt_totp_tokens():
+    """Re-encrypt TOTP tokens."""
+    print("Re-encrypting TOTP tokens...")
+    re_encrypt_tokens()
+    print("TOTP tokens have been re-encrypted.")
 
 
 if __name__ == "__main__":

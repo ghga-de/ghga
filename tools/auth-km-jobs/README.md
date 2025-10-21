@@ -1,7 +1,8 @@
 
 # GHGA Auth Key Management Jobs
 
-This repo contains the script that manages JWT signing keys used by GHGA.
+This repo contains the script that manages JWT signing keys used by GHGA,
+and can also re-encrypt all user TOTP tokens stored in the auth database.
 This script can be executed as a Kubernetes Job, either regularly or on demand.
 
 ## Keys managed by this script
@@ -19,6 +20,10 @@ Public key set fetched from OICD provider, it is used to verify the signature of
 ### GHGA work package tokens
 
 **Private** and **public** key to sign internally used work package tokens. The service `work-package` uses the private part of the key pair to sign, other GHGA microservices (for example `download-controller`) verify the token with the respective public part.
+
+## TOTP tokens re-encrypted by this script
+
+The GHGA auth service stores encrypted TOTP tokens in the user token collection in the Mongo database. The symmetric encryption key is stored in the vault and passed to the auth service as a configuration parameter. The script can generate a new symmetric key, re-encrypt all tokens with this key, and update the Vault with the new key. If an error happens during re-encryption, the tokens are rolled back. During the re-encryption process, the collection is locked for writing. No new TOTP tokens can be created in that time. Therefore, it's recommended to run the script not too frequently and not in the busy hours.
 
 ## Subcommands
 
@@ -147,3 +152,21 @@ OIDC authority URL.
 *Optional*, default value: `https://login.aai.lifescience-ri.eu/oidc/.well-known/openid-configuration`
 
 OIDC discovery URL.
+
+#### `AUTH_KM_MONGO_DSN`
+
+*Optional*, default_value: `mongodb://localhost:27017/`
+
+MongoDB connection string for the auth service database.
+
+#### `AUTH_KM_DB_NAME`:
+
+*Optional*, default_value: `auth-service`
+
+The name of the auth service database.
+
+#### `AUTH_KM_USER_TOKENS:COLLECTION`:
+
+*Optional*, default_value: `user_tokens`
+
+The name of the user token collection in the auth service database.

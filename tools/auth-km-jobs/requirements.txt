@@ -1,3 +1,0 @@
-# The "." states that pip should look at the setup.py
-# for requirements.
-.

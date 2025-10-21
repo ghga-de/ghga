@@ -1,20 +1,23 @@
-from typing import Optional
-
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
 class Config(BaseSettings):
+    """Configuration settings for the auth_km_jobs service."""
+
+    # Vault settings
     vault_addr: str = Field(
         default="http://localhost:8200", description="Vault address."
     )
     vault_namespace: str = Field(default="vault", description="Vault namespace.")
-    vault_auth_mount_point: str = Field(default="kubernetes", description="Mount point for Kubernetes authentication.")
+    vault_auth_mount_point: str = Field(
+        default="kubernetes", description="Mount point for Kubernetes authentication."
+    )
     token: str = Field(default="dev-token", description="Vault token.")
     secret_key_name: str = Field(
         default="key", description="Name of the key for stored secrets."
     )
-    kube_role: Optional[str] = Field(
+    kube_role: str | None = Field(
         default=None,
         description="Vault Kubernetes authentication role name.",
     )
@@ -37,6 +40,10 @@ class Config(BaseSettings):
         default="work-package-sign/public",
         description="Public work-package signing key path.",
     )
+    path_totp_key: str = Field(
+        default="totp/encryption-key",
+        description="TOTP token symmetric encryption key path.",
+    )
 
     mount_point: str = Field(
         default="secret", description="Mount point for secrets engine."
@@ -56,6 +63,8 @@ class Config(BaseSettings):
         description="Kubernetes service account token path.",
     )
 
+    # OIDC settings
+
     oidc_authority_url: str = Field(
         default="https://login.aai.lifescience-ri.eu/oidc/",
         description="OIDC authority URL.",
@@ -65,11 +74,31 @@ class Config(BaseSettings):
         description="OIDC discovery URL.",
     )
 
+    # MongoDB settings
+    mongo_dsn: str = Field( 
+        default="mongodb://localhost:27017/",
+        description="Auth service MongoDB connection string.",
+    )
+    db_name: str = Field(
+        default="auth-service",
+        description="Name of the auth service database.",
+    )
+    user_tokens_collection: str = Field( 
+        default="user_tokens",
+        description="Name of the collection for user tokens.",
+    )
+
+    # General settings
     timeout: int = Field(default=30, description="Timeout in seconds.")
 
-    @validator("path_prefix")
-    def ensure_slash_prefix(cls, v: str) -> str:
+    @field_validator("path_prefix", mode="before")
+    @classmethod
+    def ensure_slash_prefix(cls, v: str | None) -> str:
+        """Normalize path_prefix to always end with a single slash."""
+        if not v:
+            return "/"
         return v.rstrip("/") + "/"
 
-    class Config:
-        env_prefix = "AUTH_KM_JOBS_"  # Prefix for environment variables
+    model_config = {
+        "env_prefix": "AUTH_KM_JOBS_",
+    }

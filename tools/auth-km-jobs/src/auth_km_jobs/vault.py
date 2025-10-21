@@ -37,6 +37,16 @@ def get_vault() -> hvac.Client:
     return client
 
 
+
+def read_from_vault(path: str) -> str:
+    """Read and return the stored string value for a given path."""
+    vault = get_vault()
+    read_response = vault.secrets.kv.read_secret_version(
+        path=path, mount_point=config.mount_point, raise_on_deleted_version=True
+    )
+    return read_response["data"]["data"][config.secret_key_name]
+
+
 def store_in_vault(path: str, value: str):
     """Store a string value under they given path."""
     vault = get_vault()
@@ -46,11 +56,12 @@ def store_in_vault(path: str, value: str):
         mount_point=config.mount_point,
     )
     if config.verify_write:
-        read_response = vault.secrets.kv.read_secret_version(
-            path=path, mount_point=config.mount_point
-        )
-        read_value = read_response["data"]["data"][config.secret_key_name]
+        read_value = read_from_vault(path)
         if read_value != value:
+            # For troubleshooting, perform an additional raw read to include in logs
+            read_response = get_vault().secrets.kv.read_secret_version(
+                path=path, mount_point=config.mount_point
+            )
             print("ERROR: Could not read back the stored value.")
             print("Create response:", create_response)
             print("Read response:", read_response)
