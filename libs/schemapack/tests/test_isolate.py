@@ -135,7 +135,7 @@ def test_isolate_with_non_existing_resource():
         )
 
 
-def test_isolate_resource_non_exisiting_class():
+def test_isolate_resource_non_existing_class():
     """Test the isolate_resource function with a non-existing class. Happy paths are
     tested as part of the isolate function and appear not worth repeating for this
     specific function.
@@ -154,7 +154,7 @@ def test_isolate_resource_non_exisiting_class():
         )
 
 
-def test_isolate_class_non_exisiting_class():
+def test_isolate_class_non_existing_class():
     """Test the isolate_class function with a non-existing class. Happy paths are
     tested as part of the isolate function and appear not worth repeating for this
     specific function.

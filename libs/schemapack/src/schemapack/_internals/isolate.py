@@ -33,15 +33,15 @@ from schemapack.spec.datapack import DataPack, Resource
 from schemapack.spec.schemapack import SchemaPack
 
 
-def identify_resource_dependencies(  # noqa: C901
+def identify_resource_dependencies(
     *,
     datapack: DataPack,
     class_name: ClassName,
     resource_id: ResourceId,
     schemapack: SchemaPack,
     include_target: bool = False,
-    _resource_blacklist: Mapping[ClassName, set[ResourceId]] | None = None,
-) -> Mapping[ClassName, set[ResourceId]]:
+    _dependencies_by_class: dict[ClassName, set[ResourceId]] | None = None,
+) -> dict[ClassName, set[ResourceId]]:
     """Identify all dependencies (recursively) for a given resource
     of the given class in the given datapack. Please note that it is assumed that
     the datapack has already been validated against the schemapack.
@@ -57,10 +57,9 @@ def identify_resource_dependencies(  # noqa: C901
             The schemapack used for looking up the classes of relations.
         include_target:
             Set to true if the target dependency shall be included in the result.
-        _resource_blacklist:
-            A mapping containing resources (resource ids as values and class names as
-            keys) that shall be ignored during the dependency resolution and thus will
-            not appear in the result. This is only used internally for recursion.
+        _dependencies_by_class:
+            A mapping containing resource ids (values) of dependencies by class names
+            (keys) that are already in the recursion.
 
     Returns:
         A mapping containing resource ids (values) of dependencies by class names
@@ -87,15 +86,11 @@ def identify_resource_dependencies(  # noqa: C901
     if target_class_definition is None:
         raise ClassNotFoundError(class_name=class_name, spec_type=SpecType.SCHEMAPACK)
 
-    # Define a blacklist of resources to avoid getting lost in infinity loop for
-    # circular dependencies:
-    resource_blacklist: dict[ClassName, set[ResourceId]] = defaultdict(set)
-    resource_blacklist[class_name].add(resource_id)
-    if _resource_blacklist:
-        for class_name, resource_ids in _resource_blacklist.items():  # noqa: PLR1704
-            resource_blacklist[class_name].update(resource_ids)
-
-    dependencies_by_class: dict[ClassName, set[ResourceId]] = defaultdict(set)
+    if _dependencies_by_class is None:
+        _dependencies_by_class = defaultdict(set)
+    else:  # do not remove the target in recursion
+        include_target = True
+    _dependencies_by_class[class_name].add(resource_id)
 
     for relation_name in target_resource.relations:
         try:
@@ -116,30 +111,25 @@ def identify_resource_dependencies(  # noqa: C901
                 context="relation resolution in datapack"
             ) from error
 
-        for target_id in target_ids:
-            if (
-                target_class_name in resource_blacklist
-                and target_id in resource_blacklist[target_class_name]
-            ):
-                continue
+        # Remove already known dependencies to avoid circular loops
+        target_ids -= _dependencies_by_class.get(target_class_name, set())
 
-            dependencies_by_class[target_class_name].add(target_id)
+        for target_id in target_ids:
+            _dependencies_by_class[target_class_name].add(target_id)
 
             # Recursively add dependencies of this target resource:
-            nested_dependencies = identify_resource_dependencies(
+            identify_resource_dependencies(
                 datapack=datapack,
                 class_name=target_class_name,
                 resource_id=target_id,
                 schemapack=schemapack,
-                _resource_blacklist=resource_blacklist,
+                _dependencies_by_class=_dependencies_by_class,
             )
-            for nested_class_name, nested_ids in nested_dependencies.items():
-                dependencies_by_class[nested_class_name].update(nested_ids)
 
-    if include_target:
-        dependencies_by_class[class_name].add(resource_id)
+    if not include_target:  # only removed in the initial call
+        _dependencies_by_class[class_name].discard(resource_id)
 
-    return dependencies_by_class
+    return _dependencies_by_class
 
 
 def downscope_datapack(

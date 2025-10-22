@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.3",
+    "setuptools>=80.9",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -14,7 +14,7 @@ classifiers = [
     "Development Status :: 1 - Planning",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
@@ -62,7 +62,7 @@ src = [
     "examples",
     "scripts",
 ]
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint]
 fixable = [
@@ -149,7 +149,7 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.3"
+minversion = "8.4"
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 
