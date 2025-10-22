@@ -53,7 +53,7 @@ data structure:
 ```python
 class AnnotatedEMPack(BaseModel):
    workflow_route_name: str
-   data: Dict[str, Any]
+   data: DataPack
 ```
 
 
@@ -65,7 +65,7 @@ data structure:
 ```python
 class TransformationWorkflow(BaseModel):
    workflow_id: PyObjectId = Field(..., alias="_id")
-   workflow_definition: Dict[str, Any] = Field(default_factory=dict)
+   workflow_definition: Workflow = Field(default_factory=dict)
 ```
 
 
@@ -78,8 +78,8 @@ class WorkflowRoute(BaseModel):
    id: Optional[PyObjectId] = Field(default=None, alias="_id")
    workflow_route_name: str
    workflow_id: PyObjectId
-   workflow_input_schema_type: str
-   workflow_output_schema: Dict[str, Any] = Field(default_factory=dict)
+   workflow_input_schema_type: SchemaPack
+   workflow_output_schema: SchemaPack = Field(default_factory=dict)
    publish: bool
 ```
 
