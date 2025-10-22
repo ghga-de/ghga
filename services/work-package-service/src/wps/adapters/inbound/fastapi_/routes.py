@@ -120,6 +120,7 @@ async def get_work_package(
     return WorkPackageDetails(
         type=package.type,
         files=package.files,
+        box_id=package.box_id,
         created=package.created,
         expires=package.expires,
     )

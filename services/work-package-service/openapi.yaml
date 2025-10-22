@@ -227,6 +227,13 @@ components:
     WorkPackageDetails:
       description: Details about the work package that can be requested.
       properties:
+        box_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of the upload box (for upload work packages)
+          title: Box Id
         created:
           description: Creation date of the work package
           format: date-time
@@ -237,19 +244,21 @@ components:
           title: Expiration date of the work package
           type: string
         files:
-          additionalProperties:
-            type: string
-          description: IDs of all included files mapped to their file extensions
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          description: IDs of all included files mapped to their file extensions (None
+            for upload work packages)
           examples:
           - file-id-1: .json
             file-id-2: .csv
           title: Files
-          type: object
         type:
           $ref: '#/components/schemas/WorkPackageType'
       required:
       - type
-      - files
       - created
       - expires
       title: WorkPackageDetails
@@ -268,7 +277,7 @@ components:
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
-  version: 7.0.1
+  version: 7.0.2
 openapi: 3.1.0
 paths:
   /health:

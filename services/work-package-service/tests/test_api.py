@@ -155,6 +155,7 @@ async def test_make_download_work_order_token(
     response_data = response.json()
     assert isinstance(response_data, dict)
     assert sorted(response_data) == [
+        "box_id",
         "created",
         "expires",
         "files",
@@ -165,6 +166,7 @@ async def test_make_download_work_order_token(
     assert response_data == {
         "type": "download",
         "files": {"file-id-1": ".json", "file-id-3": ".bam"},
+        "box_id": None,
     }
 
     # try to get a work order token without authorization
@@ -277,6 +279,29 @@ async def test_make_upload_work_order_token(
     response_data = response.json()
     work_package_id = response_data["id"]
     token = decrypt(response_data["token"])
+
+    # get the proper work package with authorization
+    response = await client.get(
+        f"/work-packages/{work_package_id}", headers=headers_for_token(token)
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response_data = response.json()
+    assert isinstance(response_data, dict)
+    assert sorted(response_data) == [
+        "box_id",
+        "created",
+        "expires",
+        "files",
+        "type",
+    ]
+
+    assert response_data.pop("created") < response_data.pop("expires")
+    assert response_data == {
+        "type": "upload",
+        "files": {},
+        "box_id": RDU_BOX_ID,
+    }
 
     # Test CREATE work order token
     create_request = {"work_type": "create", "alias": "test-file"}

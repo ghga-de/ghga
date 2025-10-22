@@ -385,7 +385,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             raise access_error
 
         # For Download-type work packages, the file ID must be in the list of files
-        if file_id not in work_package.files:
+        if file_id not in (work_package.files or {}):
             access_error = self.WorkPackageAccessError(
                 "File is not contained in work package"
             )

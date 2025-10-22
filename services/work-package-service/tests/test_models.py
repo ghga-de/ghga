@@ -148,6 +148,7 @@ def test_work_package():
     )
     assert package.id == TEST_ID
     assert package.full_user_name == "Dr. John Doe"
+    assert package.files is not None
     assert package.files["another-file-id"] == ".bam"
     assert (package.expires - package.created).seconds == 60 * 60
 
