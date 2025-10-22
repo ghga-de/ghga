@@ -16,6 +16,9 @@
 """Contains additional data structures needed by the download code"""
 
 from dataclasses import dataclass
+from pathlib import Path
+
+from ghga_connector.constants import C4GH
 
 
 @dataclass
@@ -23,3 +26,33 @@ class RetryResponse:
     """Response to download request if file is not yet staged"""
 
     retry_after: int
+
+
+@dataclass
+class FileInfo:
+    """Information about a file to be downloaded"""
+
+    file_id: str
+    file_extension: str
+    file_size: int
+    output_dir: Path
+
+    @property
+    def file_name(self) -> str:
+        """Construct file name with suffix, if given"""
+        file_name = f"{self.file_id}"
+        if self.file_extension:
+            file_name = f"{self.file_id}{self.file_extension}"
+        return file_name
+
+    @property
+    def path_during_download(self) -> Path:
+        """The file path while the file download is still in progress"""
+        # with_suffix() might overwrite existing suffixes, do this instead:
+        output_file = self.path_once_complete
+        return output_file.parent / (output_file.name + ".part")
+
+    @property
+    def path_once_complete(self) -> Path:
+        """The file path once the download is complete"""
+        return self.output_dir / f"{self.file_name}{C4GH}"

@@ -14,6 +14,7 @@
 # limitations under the License.
 """Module for batch processing related code"""
 
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from pathlib import Path
 from time import perf_counter, sleep
@@ -21,11 +22,11 @@ from time import perf_counter, sleep
 from ghga_connector import exceptions
 from ghga_connector.config import Config, get_download_api_url
 from ghga_connector.constants import C4GH
-from ghga_connector.core import CLIMessageDisplay, WorkPackageClient
+from ghga_connector.core import CLIMessageDisplay, WorkPackageClient, utils
 from ghga_connector.core.api_calls import is_service_healthy
 
 from .api_calls import DownloadClient
-from .structs import RetryResponse
+from .structs import FileInfo, RetryResponse
 
 
 @dataclass
@@ -58,36 +59,6 @@ class CliIoHandler:
         """Handle response from get_input."""
         if not (response.lower() == "yes" or response.lower() == "y"):
             raise exceptions.AbortBatchProcessError()
-
-
-@dataclass
-class FileInfo:
-    """Information about a file to be downloaded"""
-
-    file_id: str
-    file_extension: str
-    file_size: int
-    output_dir: Path
-
-    @property
-    def file_name(self) -> str:
-        """Construct file name with suffix, if given"""
-        file_name = f"{self.file_id}"
-        if self.file_extension:
-            file_name = f"{self.file_id}{self.file_extension}"
-        return file_name
-
-    @property
-    def path_during_download(self) -> Path:
-        """The file path while the file download is still in progress"""
-        # with_suffix() might overwrite existing suffixes, do this instead:
-        output_file = self.path_once_complete
-        return output_file.parent / (output_file.name + ".part")
-
-    @property
-    def path_once_complete(self) -> Path:
-        """The file path once the download is complete"""
-        return self.output_dir / f"{self.file_name}{C4GH}"
 
 
 class FileStager:
@@ -130,7 +101,7 @@ class FileStager:
     async def get_staged_files(self) -> list[FileInfo]:
         """Get files that are already staged.
 
-        Returns a dict with file IDs as keys and FileInfo as values.
+        Returns a list of `FileInfo` instances.
         These values contain the download URLs and file sizes.
         The dict should be cleared after these files have been downloaded.
         """
@@ -221,3 +192,20 @@ class FileStager:
         self._started_waiting = perf_counter()  # reset the timer
         self._missing_files = []  # reset list of missing files
         return True
+
+    async def manage_file_downloads(self, overwrite: bool) -> AsyncGenerator[FileInfo]:
+        """Manages file downloads by checking for existing files before download,
+        printing messages to the display, and renaming files after they are downloaded.
+
+        Yields file information.
+        """
+        while not self.finished:
+            staged_files = await self.get_staged_files()
+            for file_info in staged_files:
+                utils.check_for_existing_file(file_info=file_info, overwrite=overwrite)
+                yield file_info
+                file_info.path_during_download.rename(file_info.path_once_complete)
+                CLIMessageDisplay.success(
+                    f"File with id '{file_info.file_id}' has been successfully downloaded."
+                )
+            staged_files.clear()

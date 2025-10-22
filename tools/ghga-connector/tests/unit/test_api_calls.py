@@ -59,10 +59,7 @@ pytestmark = [
 @pytest.fixture(scope="function", autouse=True)
 def apply_test_config():
     """Apply default test config"""
-    with (
-        patch("ghga_connector.config.CONFIG", get_test_config()),
-        patch("ghga_connector.cli.CONFIG", get_test_config()),
-    ):
+    with patch("ghga_connector.config.CONFIG", get_test_config()):
         yield
 
 

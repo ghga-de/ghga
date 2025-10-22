@@ -16,85 +16,17 @@
 """CLI-specific wrappers around core functions."""
 
 import asyncio
-import logging
 import os
-import sys
-from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
-from types import TracebackType
 
-import crypt4gh.keys
 import typer
-from ghga_service_commons.utils import crypt
 
 from ghga_connector import exceptions
 from ghga_connector.config import CONFIG, set_runtime_config
 from ghga_connector.constants import C4GH
-from ghga_connector.core import (
-    CLIMessageDisplay,
-    WorkPackageClient,
-    async_client,
-)
-from ghga_connector.core.downloading.api_calls import DownloadClient
-from ghga_connector.core.downloading.batch_processing import FileInfo, FileStager
-from ghga_connector.core.main import (
-    decrypt_file,
-    download_file,
-    get_work_package_token,
-    upload_file,
-)
-
-
-@dataclass
-class WorkPackageInformation:
-    """Wraps decrypted work package token and id to pass to other functions"""
-
-    decrypted_token: str
-    package_id: str
-
-
-def strtobool(value: str) -> bool:
-    """Inplace replacement for distutils.utils"""
-    return value.lower() in ("y", "yes", "on", "1", "true", "t")
-
-
-def exception_hook(
-    type_: BaseException,
-    value: BaseException,
-    traceback: TracebackType | None,
-):
-    """When debug mode is NOT enabled, gets called to perform final error handling
-    before program exits
-    """
-    message = (
-        "An error occurred. Rerun command"
-        + " with --debug at the end to see more information."
-    )
-
-    if value.args:
-        message += f"\n{value.args[0]}"
-
-    CLIMessageDisplay.failure(message)
-
-
-def modify_for_debug(debug: bool):
-    """Enable debug logging and configure exception printing if debug=True"""
-    if debug:
-        # enable debug logging
-        logging.basicConfig(level=logging.DEBUG)
-        sys.excepthook = partial(exception_hook)
-
-
-def get_work_package_information(my_private_key: bytes):
-    """Fetch a work package id and work package token and decrypt the token"""
-    # get work package access token and id from user input
-    work_package_id, work_package_token = get_work_package_token(max_tries=3)
-    decrypted_token = crypt.decrypt(data=work_package_token, key=my_private_key)
-    return WorkPackageInformation(
-        decrypted_token=decrypted_token, package_id=work_package_id
-    )
-
+from ghga_connector.core import CLIMessageDisplay, async_client
+from ghga_connector.core.main import async_download, decrypt_file, upload_file
+from ghga_connector.core.utils import modify_for_debug, strtobool
 
 cli = typer.Typer(no_args_is_help=True)
 
@@ -200,113 +132,6 @@ def download(  # noqa: PLR0913
             passphrase=passphrase,
             overwrite=overwrite,
         )
-    )
-
-
-def get_public_key(my_public_key_path: Path) -> bytes:
-    """Get the user's private key from the path supplied"""
-    if not my_public_key_path.is_file():
-        raise exceptions.PubKeyFileDoesNotExistError(public_key_path=my_public_key_path)
-
-    return crypt4gh.keys.get_public_key(filepath=my_public_key_path)
-
-
-def get_private_key(my_private_key_path: Path, passphrase: str | None = None) -> bytes:
-    """Get the user's private key, using the passphrase if supplied/needed."""
-    if passphrase:
-        my_private_key = crypt4gh.keys.get_private_key(
-            filepath=my_private_key_path, callback=lambda: passphrase
-        )
-    else:
-        my_private_key = crypt4gh.keys.get_private_key(
-            filepath=my_private_key_path, callback=None
-        )
-    return my_private_key
-
-
-async def async_download(
-    *,
-    output_dir: Path,
-    my_public_key_path: Path,
-    my_private_key_path: Path,
-    passphrase: str | None = None,
-    overwrite: bool = False,
-):
-    """Download files asynchronously"""
-    if not output_dir.is_dir():
-        raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
-
-    my_public_key = get_public_key(my_public_key_path)
-    my_private_key = get_private_key(my_private_key_path, passphrase)
-
-    CLIMessageDisplay.display("\nFetching work package token...")
-    work_package_information = get_work_package_information(
-        my_private_key=my_private_key
-    )
-
-    async with async_client() as client, set_runtime_config(client=client):
-        CLIMessageDisplay.display("Retrieving API configuration information...")
-        work_package_client = WorkPackageClient(
-            access_token=work_package_information.decrypted_token,
-            client=client,
-            package_id=work_package_information.package_id,
-            my_private_key=my_private_key,
-            my_public_key=my_public_key,
-        )
-
-        file_ids_with_extension = await work_package_client.get_package_files()
-
-        download_client = DownloadClient(
-            client=client, work_package_client=work_package_client
-        )
-
-        CLIMessageDisplay.display("Preparing files for download...")
-        stager = FileStager(
-            wanted_files=file_ids_with_extension,
-            output_dir=output_dir,
-            work_package_client=work_package_client,
-            download_client=download_client,
-            config=CONFIG,
-        )
-        while not stager.finished:
-            staged_files = await stager.get_staged_files()
-            for file_info in staged_files:
-                check_for_existing_file(file_info=file_info, overwrite=overwrite)
-                await download_file(
-                    download_client=download_client,
-                    file_info=file_info,
-                    max_concurrent_downloads=CONFIG.max_concurrent_downloads,
-                    part_size=CONFIG.part_size,
-                )
-                finalize_download(file_info)
-            staged_files.clear()
-
-
-def check_for_existing_file(*, file_info: FileInfo, overwrite: bool):
-    """Check if a file with the given name already exists and conditionally overwrite it."""
-    # check output file
-    output_file = file_info.path_once_complete
-    if output_file.exists():
-        if overwrite:
-            CLIMessageDisplay.display(
-                f"A file with name '{output_file}' already exists and will be overwritten."
-            )
-        else:
-            CLIMessageDisplay.failure(
-                f"A file with name '{output_file}' already exists. Skipping."
-            )
-            return
-
-    output_file_ongoing = file_info.path_during_download
-    if output_file_ongoing.exists():
-        output_file_ongoing.unlink()
-
-
-def finalize_download(file_info: FileInfo):
-    """Rename a file after downloading and announce completion"""
-    file_info.path_during_download.rename(file_info.path_once_complete)
-    CLIMessageDisplay.success(
-        f"File with id '{file_info.file_id}' has been successfully downloaded."
     )
 
 

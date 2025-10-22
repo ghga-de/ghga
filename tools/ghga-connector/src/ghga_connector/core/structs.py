@@ -24,3 +24,11 @@ class PartRange:
 
     start: int
     stop: int
+
+
+@dataclass
+class WorkPackageInformation:
+    """Wraps decrypted work package token and id to pass to other functions"""
+
+    decrypted_token: str
+    package_id: str

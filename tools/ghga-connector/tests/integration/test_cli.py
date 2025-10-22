@@ -32,12 +32,12 @@ from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from ghga_connector import exceptions
-from ghga_connector.cli import async_download, modify_for_debug
 from ghga_connector.config import set_runtime_config
 from ghga_connector.constants import C4GH, DEFAULT_PART_SIZE
 from ghga_connector.core.client import async_client
 from ghga_connector.core.crypt import Crypt4GHEncryptor
-from ghga_connector.core.main import upload_file
+from ghga_connector.core.main import async_download, upload_file
+from ghga_connector.core.utils import modify_for_debug
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.app import (
@@ -94,7 +94,7 @@ def apply_test_config():
     """Apply default test config"""
     with (
         patch("ghga_connector.config.CONFIG", get_test_config()),
-        patch("ghga_connector.cli.CONFIG", get_test_config()),
+        patch("ghga_connector.core.main.CONFIG", get_test_config()),
     ):
         yield
 
@@ -103,7 +103,7 @@ def apply_test_config():
 def apply_common_download_mocks(monkeypatch):
     """Monkeypatch download-specific functions and values"""
     monkeypatch.setattr(
-        "ghga_connector.cli.get_work_package_token", mock_work_package_token
+        "ghga_connector.core.utils.get_work_package_token", mock_work_package_token
     )
     monkeypatch.setattr(
         "ghga_connector.core.work_package._decrypt",

@@ -25,7 +25,10 @@ from ghga_connector import exceptions
 from ghga_connector.config import get_download_api_url
 from ghga_connector.constants import TIMEOUT_LONG
 from ghga_connector.core import RetryHandler
-from ghga_connector.core.api_calls.utils import modify_headers_for_cache_refresh
+from ghga_connector.core.api_calls.utils import (
+    is_service_healthy,
+    modify_headers_for_cache_refresh,
+)
 from ghga_connector.core.work_package import WorkPackageClient
 
 from .structs import RetryResponse
@@ -99,6 +102,14 @@ class DownloadClient:
                 raise
 
         return _handle_drs_object_response(url=url, response=response)
+
+    def check_download_api_is_reachable(self):
+        """Verify that the download API is reachable.
+
+        Raises an `ApiNotReachableError` if it is not reachable.
+        """
+        if not is_service_healthy(self._download_api_url):
+            raise exceptions.ApiNotReachableError(api_url=self._download_api_url)
 
     async def get_envelope_authorization_headers(
         self, *, file_id: str

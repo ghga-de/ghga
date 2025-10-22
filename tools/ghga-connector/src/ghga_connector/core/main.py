@@ -20,14 +20,20 @@ from pathlib import Path
 
 import httpx
 
-from ghga_connector.config import get_download_api_url, get_upload_api_url
+from ghga_connector.config import CONFIG, get_upload_api_url, set_runtime_config
+from ghga_connector.core.client import async_client
 from ghga_connector.core.downloading.api_calls import DownloadClient
-from ghga_connector.core.downloading.batch_processing import FileInfo
+from ghga_connector.core.downloading.batch_processing import FileStager
+from ghga_connector.core.downloading.downloader import (
+    Downloader,
+    handle_download_errors,
+)
+from ghga_connector.core.work_package import WorkPackageClient
 
 from .. import exceptions
+from . import utils
 from .api_calls import is_service_healthy
 from .crypt import Crypt4GHDecryptor
-from .downloading.downloader import Downloader
 from .file_operations import is_file_encrypted
 from .message_display import CLIMessageDisplay
 from .uploading.main import run_upload
@@ -96,64 +102,65 @@ async def upload_file(  # noqa: PLR0913
     )
 
 
-async def download_file(
+async def async_download(
     *,
-    download_client: DownloadClient,
-    part_size: int,
-    max_concurrent_downloads: int,
-    file_info: FileInfo,
-) -> None:
-    """Core command to download a file. Can be called by CLI, GUI, etc."""
-    file_id = file_info.file_id
-    CLIMessageDisplay.display(f"Downloading file with id '{file_id}'...")
-    download_api_url = get_download_api_url()
-    if not is_service_healthy(download_api_url):
-        raise exceptions.ApiNotReachableError(api_url=download_api_url)
+    output_dir: Path,
+    my_public_key_path: Path,
+    my_private_key_path: Path,
+    passphrase: str | None = None,
+    overwrite: bool = False,
+):
+    """Download files asynchronously"""
+    if not output_dir.is_dir():
+        raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
-    downloader = Downloader(
-        download_client=download_client,
-        file_id=file_id,
-        file_size=file_info.file_size,
-        max_concurrent_downloads=max_concurrent_downloads,
+    my_public_key = utils.get_public_key(my_public_key_path)
+    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+
+    CLIMessageDisplay.display("\nFetching work package token...")
+    work_package_information = utils.get_work_package_information(
+        my_private_key=my_private_key
     )
-    try:
-        await downloader.download_file(
-            output_path=file_info.path_during_download, part_size=part_size
-        )
-    except exceptions.GetEnvelopeError as error:
-        CLIMessageDisplay.failure(
-            f"The request to get an envelope for file '{file_id}' failed."
-        )
-        raise error
-    except exceptions.DownloadError as error:
-        CLIMessageDisplay.failure(f"Failed downloading with id '{file_id}'.")
-        raise error
 
-
-def get_work_package_token(max_tries: int) -> list[str]:
-    """
-    Expect the work package id and access token as a colon separated string
-    The user will have to input this manually to avoid it becoming part of the
-    command line history.
-    """
-    for _ in range(max_tries):
-        work_package_string = input(
-            "Please paste the complete download token "
-            + "that you copied from the GHGA data portal: "
+    async with async_client() as client, set_runtime_config(client=client):
+        CLIMessageDisplay.display("Retrieving API configuration information...")
+        work_package_client = WorkPackageClient(
+            access_token=work_package_information.decrypted_token,
+            client=client,
+            package_id=work_package_information.package_id,
+            my_private_key=my_private_key,
+            my_public_key=my_public_key,
         )
-        work_package_parts = work_package_string.split(":")
-        if not (
-            len(work_package_parts) == 2
-            and 20 <= len(work_package_parts[0]) < 40
-            and 80 <= len(work_package_parts[1]) < 120
-        ):
-            CLIMessageDisplay.display(
-                "Invalid input. Please enter the download token "
-                + "you got from the GHGA data portal unaltered."
+        file_ids_with_extension = await work_package_client.get_package_files()
+        download_client = DownloadClient(
+            client=client, work_package_client=work_package_client
+        )
+
+        CLIMessageDisplay.display("Preparing files for download...")
+        file_stager = FileStager(
+            wanted_files=file_ids_with_extension,
+            output_dir=output_dir,
+            work_package_client=work_package_client,
+            download_client=download_client,
+            config=CONFIG,
+        )
+
+        # Use file stager to manage downloads
+        async for file_info in file_stager.manage_file_downloads(overwrite):
+            file_id = file_info.file_id
+            download_client.check_download_api_is_reachable()
+            downloader = Downloader(
+                download_client=download_client,
+                file_id=file_id,
+                file_size=file_info.file_size,
+                max_concurrent_downloads=CONFIG.max_concurrent_downloads,
             )
-            continue
-        return work_package_parts
-    raise exceptions.InvalidWorkPackageToken(tries=max_tries)
+            CLIMessageDisplay.display(f"Downloading file with id '{file_id}'...")
+            with handle_download_errors(file_info):
+                await downloader.download_file(
+                    output_path=file_info.path_during_download,
+                    part_size=CONFIG.part_size,
+                )
 
 
 def decrypt_file(
