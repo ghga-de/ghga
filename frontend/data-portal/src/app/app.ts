@@ -4,7 +4,13 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, OnInit } from '@angular/core';
+import {
+  Component,
+  EnvironmentInjector,
+  inject,
+  OnInit,
+  runInInjectionContext,
+} from '@angular/core';
 import { MatIconRegistry } from '@angular/material/icon';
 import { RouterOutlet } from '@angular/router';
 import { SiteFooterComponent } from '@app/portal/features/site-footer/site-footer';
@@ -27,15 +33,34 @@ import { UmamiService } from './shared/services/umami';
 })
 export class AppComponent implements OnInit {
   #matIconReg = inject(MatIconRegistry);
-  #umami = inject(UmamiService);
+  #envInjector = inject(EnvironmentInjector);
 
   /**
    * Run on App component initialization
    */
   ngOnInit(): void {
+    this.#initMaterial();
+    this.#initUmami();
+  }
+
+  /**
+   * Set up Material icon ligatures and default font set for the app.
+   */
+  #initMaterial(): void {
     this.#matIconReg.setDefaultFontSetClass(
       'material-symbols-outlined',
       'mat-ligature-font',
     );
+  }
+
+  /**
+   * Initialize Umami analytics when the browser is idle.
+   */
+  #initUmami(): void {
+    const scheduleIdle = (cb: () => void) =>
+      (((window as any).requestIdleCallback as any) || setTimeout)(cb);
+    scheduleIdle(() => {
+      runInInjectionContext(this.#envInjector, () => inject(UmamiService));
+    });
   }
 }

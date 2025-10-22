@@ -23,6 +23,7 @@
       >
     </div>
 
+    @defer (on idle) {
     <div class="hidden lg:block xl:basis-1/2">
       <mat-nav-list class="my-8 text-center" aria-label="Header Navigation">
         <app-site-header-nav-buttons />
@@ -32,6 +33,7 @@
     <div class="my-4 hidden text-right lg:block xl:basis-1/4">
       <app-account-button></app-account-button>
     </div>
+    }
 
     <div class="lg:hidden">
       <mat-sidenav-container class="relative z-2 flex-[1_0_auto]">
@@ -53,9 +55,13 @@
             </button>
           </div>
           <mat-nav-list>
-            <app-site-header-nav-buttons
-              class="mb-4 grid grid-cols-1 gap-y-2 px-4" /><app-account-button /></mat-nav-list
-        ></mat-sidenav>
+            @defer (on idle) {
+            <app-site-header-nav-buttons class="mb-4 grid grid-cols-1 gap-y-2 px-4" />
+            <app-account-button />
+            }
+          </mat-nav-list>
+          ></mat-sidenav
+        >
       </mat-sidenav-container>
     </div>
 

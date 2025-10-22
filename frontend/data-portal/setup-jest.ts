@@ -21,3 +21,26 @@ global.console = {
 
 // configure a test environment that doesn't use zone.js
 setupZonelessTestEnv();
+
+// Minimal polyfills for browser APIs used by deferrable views during tests
+if (!(globalThis as any).IntersectionObserver) {
+  (globalThis as any).IntersectionObserver = class {
+    observe = (): void => {};
+    unobserve = (): void => {};
+    disconnect = (): void => {};
+    takeRecords = (): unknown[] => {
+      return [];
+    };
+  };
+}
+
+// Ensure idle callbacks exist; Angular will fall back to setTimeout if absent,
+// but providing a minimal shim makes idle defers deterministic.
+if (!(globalThis as any).requestIdleCallback) {
+  (globalThis as any).requestIdleCallback = (
+    cb: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void,
+  ) => cb({ didTimeout: false, timeRemaining: () => 50 });
+}
+if (!(globalThis as any).cancelIdleCallback) {
+  (globalThis as any).cancelIdleCallback = () => {};
+}

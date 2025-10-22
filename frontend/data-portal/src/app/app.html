@@ -7,7 +7,9 @@
       >Skip to content</a
     >
   </div>
+  @defer (on idle) {
   <app-version-ribbon></app-version-ribbon>
+  }
   <header class="mb-2">
     <app-site-header></app-site-header>
   </header>
@@ -17,6 +19,10 @@
   </main>
 
   <footer>
+    @defer (on viewport) {
     <app-site-footer></app-site-footer>
+    } @placeholder {
+    <div class="invisible h-px" aria-hidden="true"></div>
+    }
   </footer>
 </div>

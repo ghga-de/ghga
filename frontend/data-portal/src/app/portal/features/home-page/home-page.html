@@ -38,16 +38,24 @@
     >
   </div>
 </section>
+@defer (on idle) {
 <app-global-stats />
+}
 <section>
   <h2>About GHGA</h2>
   <h3>The German Human Genome‑Phenome Archive</h3>
   <div class="grid grid-cols-12">
     <div class="col-span-12 flex md:col-span-4 lg:col-span-3 2xl:col-span-2">
       <img
-        src="assets/images/ghga-logo-full-orange.png"
+        ngSrc="assets/images/ghga-logo-full-orange.png"
         alt="GHGA Logo"
         class="object-contain"
+        loading="lazy"
+        decoding="async"
+        fetchpriority="low"
+        width="1000"
+        height="357"
+        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 33vw, (max-width: 1536px) 25vw, 17vw"
       />
     </div>
     <div class="col-span-12 md:col-span-8 lg:col-span-9 2xl:col-span-10">

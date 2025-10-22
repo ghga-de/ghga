@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { NgOptimizedImage } from '@angular/common';
 import { Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
@@ -15,7 +16,13 @@ import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-lin
  */
 @Component({
   selector: 'app-home-page',
-  imports: [MatButtonModule, RouterLink, GlobalSummaryComponent, ExternalLinkDirective],
+  imports: [
+    MatButtonModule,
+    RouterLink,
+    GlobalSummaryComponent,
+    ExternalLinkDirective,
+    NgOptimizedImage,
+  ],
   templateUrl: './home-page.html',
 })
 export class HomePageComponent {}
