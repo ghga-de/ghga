@@ -16,6 +16,8 @@
 
 """Application logic for verifying user TOTP tokens."""
 
+import logging
+
 from fastapi import HTTPException, status
 from hexkit.protocols.dao import ResourceNotFoundError
 
@@ -31,6 +33,8 @@ from ..ports.totp import TOTPHandlerPort
 from .session_store import Session, SessionState
 
 __all__ = ["verify_totp"]
+
+log = logging.getLogger(__name__)
 
 
 async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
@@ -73,6 +77,8 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         if totp_handler.is_invalid(totp_token):
             limit = True
             verified = None
+            # reset the TOTP token again
+            totp_handler.reset(totp_token)
             # too many invalid TOTP codes
             if user and user.status is UserStatus.ACTIVE:
                 # disable the user account (only the specified fields will be changed)
@@ -83,8 +89,15 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
                     context="Too many failed TOTP login attempts",
                     changed_by=session.user_id,
                 )
-            # reset the TOTP token again
-            totp_handler.reset(totp_token)
+                # store the cleared token in the database so that the users can work
+                # again after they have been reactivated
+                if user_token:
+                    await token_dao.update(user_token)
+                log.warning(
+                    "Too many failed TOTP login attempts for user %s (%s)",
+                    user.id,
+                    user.name,
+                )
             # remove the session (logging the user out)
             await session_store.delete_session(session.session_id)
         else:

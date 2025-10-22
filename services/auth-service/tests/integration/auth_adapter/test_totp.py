@@ -16,6 +16,7 @@
 
 """Test the base TOTP functionality."""
 
+import logging
 from datetime import datetime
 from random import randint
 from urllib.parse import parse_qs, urlparse
@@ -340,7 +341,9 @@ async def test_rate_limiting_totp(
     assert not response.text
 
 
-async def test_total_limit_totp(client_with_session: ClientWithSession):
+async def test_total_limit_totp(
+    client_with_session: ClientWithSession, caplog: pytest.LogCaptureFixture
+):
     """Test that there is a total limit for code verification."""
     client, session, user_registry, user_token_dao = client_with_session
     headers = headers_for_session(session)
@@ -381,15 +384,26 @@ async def test_total_limit_totp(client_with_session: ClientWithSession):
         )
         assert response.json() == {"detail": "Invalid TOTP code"}
         totp_token.counter_attempts = 0  # suppress rate limiting
+    assert totp_token.total_attempts == 10
 
     # now the user should not be verified any more
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    caplog.set_level(
+        logging.WARNING, logger="auth_service.auth_adapter.core.verify_totp"
+    )
+    caplog.clear()
     response = await client.post(
         VERIFY_TOTP_PATH,
         headers=with_totp_code(headers, secret),
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Too many failed attempts"}
+
+    warning_messages = [rec.getMessage() for rec in caplog.records]
+    assert len(warning_messages) == 1
+    assert warning_messages[0] == (
+        f"Too many failed TOTP login attempts for user {user.id} (John Doe)"
+    )
 
     # check that the user account has been disabled
     user = user_registry.dummy_user
@@ -401,6 +415,9 @@ async def test_total_limit_totp(client_with_session: ClientWithSession):
     assert status_change.context == "Too many failed TOTP login attempts"
     assert status_change.change_date
     assert 0 <= (now_utc_ms_prec() - status_change.change_date).total_seconds() < 3
+    totp_token = user_token_dao.user_tokens[user_id].totp_token
+    # check that the TOTP token has been reset
+    assert totp_token.total_attempts == 0
 
     # check that the user is not authorized any more
     response = await client.post(USERS_URL, headers=headers)

@@ -979,7 +979,7 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 8.1.1
+  version: 8.1.2
 openapi: 3.1.0
 paths:
   /download-access/grants:
