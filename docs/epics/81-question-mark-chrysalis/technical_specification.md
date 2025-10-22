@@ -53,7 +53,7 @@ data structure:
 ```python
 class AnnotatedEMPack(BaseModel):
    workflow_route_name: str
-   data: Dict[str, Any]  # Example: {"sample_id": "S123", "experiment_type": "RNA-seq", ...}
+   data: Dict[str, Any]
 ```
 
 
