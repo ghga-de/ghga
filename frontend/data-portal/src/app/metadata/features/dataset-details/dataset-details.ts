@@ -7,25 +7,21 @@
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
-  AfterViewInit,
   Component,
   computed,
   effect,
   inject,
   input,
   OnInit,
-  QueryList,
   Signal,
-  ViewChild,
-  ViewChildren,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Title } from '@angular/platform-browser';
@@ -36,7 +32,6 @@ import { ValidateDOI } from '@app/metadata/pipes/validate-doi-pipe';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
-import { AddPluralS } from '@app/shared/pipes/add-plural-s-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space-pipe';
 import { ConfigService } from '@app/shared/services/config';
@@ -44,6 +39,7 @@ import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
 import { ParagraphsComponent } from '../../../shared/ui/paragraphs/paragraphs';
+import { DatasetDetailsTableComponent } from '../dataset-details-table/dataset-details-table';
 
 const COLUMNS = {
   experiments: 'accession ega_accession title description method platform',
@@ -66,8 +62,6 @@ const COLUMNS = {
     MatTableModule,
     MatPaginatorModule,
     MatSortModule,
-    AddPluralS,
-    ParseBytes,
     UnderscoreToSpace,
     MatIconModule,
     ClipboardModule,
@@ -76,12 +70,12 @@ const COLUMNS = {
     ValidateDOI,
     ParagraphsComponent,
     ExternalLinkDirective,
+    DatasetDetailsTableComponent,
   ],
   providers: [MetadataService],
   templateUrl: './dataset-details.html',
-  styleUrl: './dataset-details.scss',
 })
-export class DatasetDetailsComponent implements OnInit, AfterViewInit {
+export class DatasetDetailsComponent implements OnInit {
   id = input.required<string>();
   #config = inject(ConfigService);
   #location = inject(NavigationTrackingService);
@@ -121,11 +115,9 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   study = computed(() => this.datasetDetails().study);
   publications = computed(() => this.study().publications);
 
-  #experiments: Signal<Experiment[]> = computed(
-    () => this.datasetDetails().experiments,
-  );
-  #samples: Signal<Sample[]> = computed(() => this.datasetDetails().samples);
-  #files: Signal<File[]> = computed(() =>
+  experiments: Signal<Experiment[]> = computed(() => this.datasetDetails().experiments);
+  samples: Signal<Sample[]> = computed(() => this.datasetDetails().samples);
+  files: Signal<File[]> = computed(() =>
     Object.entries(this.datasetDetails())
       .filter(([key]) => key.endsWith('_files'))
       .flatMap(([key, files]) => {
@@ -143,38 +135,24 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
       }),
   );
 
-  numExperiments = computed(() => this.#experiments().length);
-  numSamples = computed(() => this.#samples().length);
-  numFiles = computed(() => this.#files().length);
+  numExperiments = computed(() => this.experiments().length);
+  numSamples = computed(() => this.samples().length);
+  numFiles = computed(() => this.files().length);
   numBytes = computed(() =>
-    this.#files().reduce((acc, file) => acc + (file.file_information?.size ?? 0), 0),
+    this.files().reduce((acc, file) => acc + (file.file_information?.size ?? 0), 0),
   );
 
-  experimentsDataSource = new MatTableDataSource<Experiment>([]);
-  samplesDataSource = new MatTableDataSource<Sample>([]);
-  filesDataSource = new MatTableDataSource<File>([]);
-
-  defaultTablePageSize = 10;
-  tablePageSizeOptions = [10, 25, 50, 100];
-
-  @ViewChild('sortExperiments') sortExperiments!: MatSort;
-  @ViewChild('sortSamples') sortSamples!: MatSort;
-  @ViewChild('sortFiles') sortFiles!: MatSort;
-  @ViewChildren(MatSort) matSorts!: QueryList<MatSort>;
-
-  @ViewChild('experimentsPaginator') experimentsPaginator!: MatPaginator;
-  @ViewChild('samplesPaginator') samplesPaginator!: MatPaginator;
-  @ViewChild('filesPaginator') filesPaginator!: MatPaginator;
-  @ViewChildren(MatPaginator) matPaginators!: QueryList<MatPaginator>;
-
-  #updateExperimentsDataSourceEffect = effect(
-    () => (this.experimentsDataSource.data = this.#experiments()),
+  experimentsHeader = computed(
+    () =>
+      `Experiments Summary (${this.numExperiments()} experiment${this.numExperiments() === 1 ? '' : 's'})`,
   );
-  #updateSamplesDataSourceEffect = effect(
-    () => (this.samplesDataSource.data = this.#samples()),
+  samplesHeader = computed(
+    () =>
+      `Samples Summary (${this.numSamples()} sample${this.numSamples() === 1 ? '' : 's'})`,
   );
-  #updateFilesDataSourceEffect = effect(
-    () => (this.filesDataSource.data = this.#files()),
+  filesHeader = computed(
+    () =>
+      `Files Summary (${this.numFiles()} file${this.numFiles() === 1 ? '' : 's'}, ${ParseBytes.prototype.transform(this.numBytes())} in total)`,
   );
 
   #datasetDetailsErrorEffect = effect(() => {
@@ -195,65 +173,6 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
     }
   });
 
-  experimentsColumns: string[] = COLUMNS.experiments.split(' ');
-  samplesColumns: string[] = COLUMNS.samples.split(' ');
-  filesColumns: string[] = COLUMNS.files.split(' ');
-
-  #experimentsSortingDataAccessor = (experiment: Experiment, key: string) => {
-    switch (key) {
-      case 'method':
-        return experiment.experiment_method.name;
-      case 'platform':
-        return experiment.experiment_method.instrument_model;
-      default:
-        const value = experiment[key as keyof Experiment];
-        if (typeof value === 'string' || typeof value === 'number') {
-          return value;
-        }
-        return '';
-    }
-  };
-
-  #samplesSortingDataAccessor = (sample: Sample, key: string) => {
-    switch (key) {
-      case 'status':
-        return sample.case_control_status;
-      case 'sex':
-        return sample.individual.sex;
-      case 'phenotype':
-        return (sample.individual.phenotypic_features_terms || []).join(', ');
-      case 'tissue':
-        return sample.biospecimen_tissue_term || '';
-      default:
-        const value = sample[key as keyof Sample];
-        if (typeof value === 'string' || typeof value === 'number') {
-          return value;
-        }
-        return '';
-    }
-  };
-
-  #filesSortingDataAccessor = (file: File, key: string) => {
-    switch (key) {
-      case 'type':
-        return file.format;
-      case 'origin':
-        return file.file_category ?? '';
-      case 'size':
-        return file.file_information?.size ?? '';
-      case 'location':
-        return file.file_information?.storage_alias ?? '';
-      case 'hash':
-        return file.file_information?.sha256_hash ?? '';
-      default:
-        const value = file[key as keyof File];
-        if (typeof value === 'string' || typeof value === 'number') {
-          return value;
-        }
-        return '';
-    }
-  };
-
   /**
    * On component initialisation
    * - update the title according to the ID
@@ -272,42 +191,9 @@ export class DatasetDetailsComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * After the view has been initialised
-   * assign the sorting of the tables to the data sources
-   */
-  ngAfterViewInit() {
-    this.experimentsDataSource.sortingDataAccessor =
-      this.#experimentsSortingDataAccessor;
-    this.samplesDataSource.sortingDataAccessor = this.#samplesSortingDataAccessor;
-    this.filesDataSource.sortingDataAccessor = this.#filesSortingDataAccessor;
-    // Note: The following would be easier if the tables were their own components.
-    // We need to wait for the tables to become visible before assigning the sorting.
-    this.matSorts.changes.subscribe(() => {
-      if (this.sortExperiments) this.experimentsDataSource.sort = this.sortExperiments;
-      if (this.sortSamples) this.samplesDataSource.sort = this.sortSamples;
-      if (this.sortFiles) this.filesDataSource.sort = this.sortFiles;
-    });
-    // Similarly for assigning the table paginators
-    this.matPaginators.changes.subscribe(() => {
-      if (this.experimentsPaginator)
-        this.experimentsDataSource.paginator = this.experimentsPaginator;
-      if (this.samplesPaginator)
-        this.samplesDataSource.paginator = this.samplesPaginator;
-      if (this.filesPaginator) this.filesDataSource.paginator = this.filesPaginator;
-    });
-  }
-
-  /**
    * Function to go back to previous page
    */
   goBack() {
     this.#location.back(['browse']);
-  }
-
-  /**
-   * Function to notify user that full hash was copied to clipboard
-   */
-  notifyCopied() {
-    this.#notify.showInfo('Complete file hash copied to clipboard', 1000);
   }
 }

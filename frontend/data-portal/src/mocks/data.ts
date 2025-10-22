@@ -541,20 +541,21 @@ export const datasetDetails: DatasetDetailsRaw = {
       accession: 'GHGAI12345678901234',
       sex: 'FEMALE',
       phenotypic_features_terms: [
-        'Test phenotypic feature 1 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+        'Test phenotypic feature 1',
+        'Lorem ipsum dolor sit amet consectetur adipiscing elit',
       ],
     },
     {
       accession: 'GHGAI12345678901235',
       sex: 'MALE',
       phenotypic_features_terms: [
-        'Test phenotypic feature 2 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+        'Test phenotypic feature 2 Lorem ipsum dolor sit amet consectetur adipiscing elit',
       ],
     },
     {
       accession: 'GHGAI12345678901236',
       phenotypic_features_terms: [
-        'Test phenotypic feature 3 Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+        'Test phenotypic feature 3 Lorem ipsum dolor sit amet consectetur adipiscing elit',
       ],
       sex: 'FEMALE',
     },

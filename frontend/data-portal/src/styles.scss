@@ -247,41 +247,6 @@ mat-icon.large-icon {
   );
 }
 
-.mat-mdc-snack-bar-container {
-  &.snackbar-ok .mat-mdc-snackbar-surface {
-    background-color: var(--mat-sys-success);
-    color: var(--mat-sys-on-primary);
-    .mat-icon {
-      color: var(--mat-sys-on-primary);
-      opacity: 0.75;
-    }
-  }
-  &.snackbar-info .mat-mdc-snackbar-surface {
-    background-color: var(--mat-sys-info);
-    color: var(--mat-sys-on-surface);
-    .mat-icon {
-      color: var(--mat-sys-on-surface);
-      opacity: 0.75;
-    }
-  }
-  &.snackbar-warn .mat-mdc-snackbar-surface {
-    background-color: var(--mat-sys-warning);
-    color: var(--mat-sys-on-tertiary-fixed);
-    .mat-icon {
-      color: var(--mat-sys-on-tertiary-fixed);
-      opacity: 0.75;
-    }
-  }
-  &.snackbar-error .mat-mdc-snackbar-surface {
-    background-color: var(--mat-sys-error);
-    color: var(--mat-sys-on-error);
-    .mat-icon {
-      color: var(--mat-sys-on-error);
-      opacity: 0.75;
-    }
-  }
-}
-
 .interactive-chip span .mat-mdc-chip-action-label {
   cursor: pointer;
 }
@@ -334,6 +299,21 @@ $colour-suffixes: (
   danger,
   error
 );
+
+@each $suffix in $colour-suffixes {
+  .snackbar-#{$suffix} {
+    @include mat.snack-bar-overrides(
+      (
+        container-color: var(--mat-sys-#{$suffix}),
+        supporting-text-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
+    .mat-icon {
+      color: var(--mat-sys-on-#{$suffix});
+      opacity: 0.75;
+    }
+  }
+}
 
 @each $suffix in $colour-suffixes {
   .button-#{$suffix} {

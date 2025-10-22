@@ -1,0 +1,15 @@
+@if (value()) {
+<span
+  class="inline-block max-w-[10ex] overflow-hidden font-mono text-ellipsis whitespace-nowrap"
+  title="{{ value() }}"
+  >{{ value() }}</span
+>
+<button
+  mat-icon-button
+  cdkCopyToClipboard="{{ value() }}"
+  (cdkCopyToClipboardCopied)="notifyCopied()"
+  aria-label="Copy full text to clipboard"
+>
+  <mat-icon>content_copy</mat-icon>
+</button>
+} @else { N/A }
