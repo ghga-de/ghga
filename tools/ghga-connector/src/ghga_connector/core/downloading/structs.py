@@ -16,8 +16,9 @@
 """Contains additional data structures needed by the download code"""
 
 from dataclasses import dataclass
+from pathlib import Path
 
-from httpx import Headers
+from ghga_connector.constants import C4GH
 
 
 @dataclass
@@ -28,16 +29,30 @@ class RetryResponse:
 
 
 @dataclass
-class URLResponse:
-    """Response to download request, containing file size and presigned object storage URL for download"""
+class FileInfo:
+    """Information about a file to be downloaded"""
 
-    download_url: str
+    file_id: str
+    file_extension: str
     file_size: int
+    output_dir: Path
 
+    @property
+    def file_name(self) -> str:
+        """Construct file name with suffix, if given"""
+        file_name = f"{self.file_id}"
+        if self.file_extension:
+            file_name = f"{self.file_id}{self.file_extension}"
+        return file_name
 
-@dataclass
-class UrlAndHeaders:
-    """Combination of endpoint url and headers needed to make an authorized call against the endpoint"""
+    @property
+    def path_during_download(self) -> Path:
+        """The file path while the file download is still in progress"""
+        # with_suffix() might overwrite existing suffixes, do this instead:
+        output_file = self.path_once_complete
+        return output_file.parent / (output_file.name + ".part")
 
-    endpoint_url: str
-    headers: Headers
+    @property
+    def path_once_complete(self) -> Path:
+        """The file path once the download is complete"""
+        return self.output_dir / f"{self.file_name}{C4GH}"

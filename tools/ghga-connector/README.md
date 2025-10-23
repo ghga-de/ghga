@@ -24,7 +24,7 @@ Additionally, the decrypt command needs the private key to decrypt the downloade
 
 We recommend using the provided Docker container.
 
-A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
+A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
 ```bash
 docker pull ghga/ghga-connector:1.7.3
 ```
@@ -35,11 +35,11 @@ Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 docker build -t ghga/ghga-connector:1.7.3 .
 ```
 
-For production-ready deployment, we recommend using Kubernetes, however,
-for simple use cases, you could execute the service using docker
+For production-ready deployment, we recommend using Kubernetes.
+However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
-# The entrypoint is preconfigured:
+# The entrypoint is pre-configured:
 docker run -p 8080:8080 ghga/ghga-connector:1.7.3 --help
 ```
 
@@ -76,18 +76,18 @@ The service requires the following configuration parameters:
 
 ### Usage:
 
-A template YAML for configuring the service can be found at
+A template YAML file for configuring the service can be found at
 [`./example_config.yaml`](./example_config.yaml).
 Please adapt it, rename it to `.ghga_connector.yaml`, and place it in one of the following locations:
 - in the current working directory where you execute the service (on Linux: `./.ghga_connector.yaml`)
 - in your home directory (on Linux: `~/.ghga_connector.yaml`)
 
-The config yaml will be automatically parsed by the service.
+The config YAML file will be automatically parsed by the service.
 
 **Important: If you are using containers, the locations refer to paths within the container.**
 
 All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml)
-could also be set using environment variables or file secrets.
+can also be set using environment variables or file secrets.
 
 For naming the environment variables, just prefix the parameter name with `ghga_connector_`,
 e.g. for the `host` set an environment variable named `ghga_connector_host`
@@ -128,12 +128,12 @@ This will give you a full-fledged, pre-configured development environment includ
 - a pre-configured debugger
 - automatic license-header insertion
 
-Moreover, inside the devcontainer, a command `dev_install` is available for convenience.
+Inside the devcontainer, a command `dev_install` is available for convenience.
 It installs the service with all development dependencies, and it installs pre-commit.
 
 The installation is performed automatically when you build the devcontainer. However,
 if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
-[`lock/requirements-dev.txt`](./lock/requirements-dev.txt), please run it again.
+[`lock/requirements-dev.txt`](./lock/requirements-dev.txt), run it again.
 
 ## License
 

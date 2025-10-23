@@ -31,16 +31,13 @@ import pytest
 from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from ghga_connector.cli import (
-    async_download,
-    init_message_display,
-    retrieve_upload_parameters,
-)
-from ghga_connector.constants import DEFAULT_PART_SIZE
-from ghga_connector.core import exceptions
+from ghga_connector import exceptions
+from ghga_connector.config import set_runtime_config
+from ghga_connector.constants import C4GH, DEFAULT_PART_SIZE
 from ghga_connector.core.client import async_client
 from ghga_connector.core.crypt import Crypt4GHEncryptor
-from ghga_connector.core.main import upload_file
+from ghga_connector.core.main import async_download, upload_file
+from ghga_connector.core.utils import modify_for_debug
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.app import (
@@ -54,10 +51,14 @@ from tests.fixtures.s3 import (  # noqa: F401
     reset_state,
     s3_fixture,
 )
-from tests.fixtures.utils import PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, mock_wps_token
+from tests.fixtures.utils import (
+    PRIVATE_KEY_FILE,
+    PUBLIC_KEY_FILE,
+    mock_work_package_token,
+)
 
 GET_PACKAGE_FILES_ATTR = (
-    "ghga_connector.core.work_package.WorkPackageAccessor.get_package_files"
+    "ghga_connector.core.work_package.WorkPackageClient.get_package_files"
 )
 ENVIRON_DEFAULTS = {
     "DEFAULT_PART_SIZE": str(16 * 1024 * 1024),
@@ -91,14 +92,19 @@ def set_env_vars(monkeypatch):
 @pytest.fixture(scope="function", autouse=True)
 def apply_test_config():
     """Apply default test config"""
-    with patch("ghga_connector.cli.CONFIG", get_test_config()):
+    with (
+        patch("ghga_connector.config.CONFIG", get_test_config()),
+        patch("ghga_connector.core.main.CONFIG", get_test_config()),
+    ):
         yield
 
 
 @pytest.fixture(scope="function")
 def apply_common_download_mocks(monkeypatch):
     """Monkeypatch download-specific functions and values"""
-    monkeypatch.setattr("ghga_connector.cli.get_wps_token", mock_wps_token)
+    monkeypatch.setattr(
+        "ghga_connector.core.utils.get_work_package_token", mock_work_package_token
+    )
     monkeypatch.setattr(
         "ghga_connector.core.work_package._decrypt",
         lambda data, key: data,
@@ -173,7 +179,7 @@ async def test_multipart_download(
     """Test the multipart download of a file"""
     # override the default config fixture with updated part size
     monkeypatch.setattr(
-        "ghga_connector.cli.CONFIG", get_test_config(part_size=part_size)
+        "ghga_connector.config.CONFIG", get_test_config(part_size=part_size)
     )
 
     big_object = await get_big_s3_object(s3_fixture, object_size=file_size)
@@ -209,7 +215,7 @@ async def test_multipart_download(
         my_private_key_path=Path(PRIVATE_KEY_FILE),
     )
 
-    with open(tmp_path / f"{big_object.object_id}.c4gh", "rb") as file:
+    with open(tmp_path / f"{big_object.object_id}{C4GH}", "rb") as file:
         observed_content = file.read()
 
     assert len(observed_content) == len(big_file_content)
@@ -283,7 +289,7 @@ async def test_download(
             file_write.write(buffer)
 
     if not expected_exception:
-        assert cmp(output_dir / f"{file.file_id}.c4gh", tmp_file)
+        assert cmp(output_dir / f"{file.file_id}{C4GH}", tmp_file)
 
 
 async def test_file_not_downloadable(
@@ -349,11 +355,11 @@ async def test_file_not_downloadable(
             my_private_key_path=Path(PRIVATE_KEY_FILE),
         )
 
-    # Exception arising when the file ID is valid, but not found in the DCS (and the
+    # Exception arising when the file ID is valid, but not found in the Download API (and the
     #  user inputs 'no' instead of 'yes' when prompted if they want to continue anyway)
     with (
         patch(
-            "ghga_connector.core.downloading.batch_processing.CliInputHandler.get_input",
+            "ghga_connector.core.downloading.batch_processing.CliIoHandler.get_input",
             return_value="no",
         ),
         pytest.raises(exceptions.AbortBatchProcessError),
@@ -394,9 +400,12 @@ async def test_upload(
         server_pubkey = base64.b64encode(
             crypt4gh.keys.get_public_key(PUBLIC_KEY_FILE)
         ).decode("utf-8")
+        monkeypatch.setattr(
+            "ghga_connector.core.crypt.encryption.get_ghga_pubkey",
+            lambda: server_pubkey,
+        )
         encryptor = Crypt4GHEncryptor(
             part_size=8 * 1024**3,
-            server_public_key=server_pubkey,
             private_key_path=PRIVATE_KEY_FILE,
             passphrase=None,
         )
@@ -426,16 +435,12 @@ async def test_upload(
     monkeypatch.setenv("S3_UPLOAD_URL_1", upload_url)
 
     with expected_exception:
-        message_display = init_message_display(debug=True)
-        async with async_client() as client:
-            parameters = await retrieve_upload_parameters(client=client)
+        modify_for_debug(debug=True)
+        async with async_client() as client, set_runtime_config(client=client):
             await upload_file(
-                api_url=parameters.ucs_api_url,
                 client=client,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
-                message_display=message_display,
-                server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
                 part_size=DEFAULT_PART_SIZE,
@@ -509,16 +514,12 @@ async def test_multipart_upload(
 
     # create big temp file
     with big_temp_file(file_size) as file:
-        message_display = init_message_display(debug=True)
-        async with async_client() as client:
-            parameters = await retrieve_upload_parameters(client=client)
+        modify_for_debug(debug=True)
+        async with async_client() as client, set_runtime_config(client=client):
             await upload_file(
-                api_url=parameters.ucs_api_url,
                 client=client,
                 file_id=file_id,
                 file_path=Path(file.name),
-                message_display=message_display,
-                server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
                 part_size=DEFAULT_PART_SIZE,
@@ -547,16 +548,12 @@ async def test_upload_bad_url(httpx_mock: HTTPXMock, mock_external_calls):  # no
     file_path = uploadable_file.file_path.resolve()
 
     with pytest.raises(exceptions.ApiNotReachableError):
-        message_display = init_message_display(debug=True)
-        async with async_client() as client:
-            parameters = await retrieve_upload_parameters(client=client)
+        modify_for_debug(debug=True)
+        async with async_client() as client, set_runtime_config(client=client):
             await upload_file(
-                api_url=parameters.ucs_api_url,
                 client=client,
                 file_id=uploadable_file.file_id,
                 file_path=file_path,
-                message_display=message_display,
-                server_public_key=parameters.server_pubkey,
                 my_public_key_path=Path(PUBLIC_KEY_FILE),
                 my_private_key_path=Path(PRIVATE_KEY_FILE),
                 part_size=DEFAULT_PART_SIZE,

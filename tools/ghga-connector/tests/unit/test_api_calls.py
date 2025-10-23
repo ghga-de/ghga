@@ -21,22 +21,31 @@ import base64
 from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from ghga_connector.core import WorkPackageAccessor, async_client, exceptions
-from ghga_connector.core.api_calls.well_knowns import WKVSCaller
+from ghga_connector import exceptions
+from ghga_connector.config import (
+    get_download_api_url,
+    get_ghga_pubkey,
+    get_upload_api_url,
+    get_work_package_api_url,
+    set_runtime_config,
+)
+from ghga_connector.core import WorkPackageClient, async_client
 from ghga_connector.core.uploading.structs import UploadStatus
 from ghga_connector.core.uploading.uploader import Uploader
-from tests.fixtures.mock_api.app import create_caching_headers
-from tests.fixtures.utils import mock_wps_token
-
-pytest.mark.httpx_mock(
-    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
+from tests.fixtures import set_runtime_test_config  # noqa: F401
+from tests.fixtures.config import get_test_config
+from tests.fixtures.mock_api.app import (
+    create_caching_headers,
+    mock_external_calls,  # noqa: F401
 )
+from tests.fixtures.utils import mock_work_package_token
+
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.httpx_mock(
@@ -45,7 +54,13 @@ pytestmark = [
         should_mock=lambda request: True,
     ),
 ]
-API_URL = "http://127.0.0.1"
+
+
+@pytest.fixture(scope="function", autouse=True)
+def apply_test_config():
+    """Apply default test config"""
+    with patch("ghga_connector.config.CONFIG", get_test_config()):
+        yield
 
 
 class RecordingClient(httpx.AsyncClient):
@@ -81,11 +96,12 @@ class RecordingClient(httpx.AsyncClient):
         return await self._do_request("post", *args, **kwargs)
 
 
-async def test_get_work_order_token_caching(monkeypatch, httpx_mock: HTTPXMock):
-    """Test the caching of call to the WPS to get a work order token.
-
-    The `mock_external_calls` fixture will route HTTP requests to the mock API.
-    """
+async def test_get_work_order_token_caching(
+    monkeypatch,
+    httpx_mock: HTTPXMock,
+    set_runtime_test_config,  # noqa: F811
+):
+    """Test the caching of call to the Work Package API to get a work order token."""
     # Patch the decrypt function so we don't need an actual token
     monkeypatch.setattr(
         "ghga_connector.core.work_package._decrypt", lambda data, key: data
@@ -95,10 +111,8 @@ async def test_get_work_order_token_caching(monkeypatch, httpx_mock: HTTPXMock):
     monkeypatch.setattr("ghga_connector.core.client.httpx.AsyncClient", RecordingClient)
     async with async_client() as client:
         assert isinstance(client, RecordingClient)
-        accessor = WorkPackageAccessor(
-            api_url=API_URL,
+        work_pkg_client = WorkPackageClient(
             client=client,
-            dcs_api_url="",
             my_private_key=b"",
             my_public_key=b"",
             access_token="",
@@ -112,20 +126,20 @@ async def test_get_work_order_token_caching(monkeypatch, httpx_mock: HTTPXMock):
             headers=create_caching_headers(3),
         )
         add_httpx_response()
-        await accessor.get_work_order_token(file_id=file_id)
+        await work_pkg_client.get_download_wot(file_id=file_id)
 
         # Verify that the call was made
         assert client.calls
         client.assert_last_call_not_from_cache()
 
         # Make same call and verify that the response came from the cache instead
-        await accessor.get_work_order_token(file_id=file_id)
+        await work_pkg_client.get_download_wot(file_id=file_id)
         client.assert_last_call_from_cache()
 
         # Wait for the cache entry to expire, then make the call again
         await asyncio.sleep(1)
         add_httpx_response()
-        await accessor.get_work_order_token(file_id=file_id)
+        await work_pkg_client.get_download_wot(file_id=file_id)
         client.assert_last_call_not_from_cache()
 
 
@@ -161,6 +175,7 @@ async def test_patch_multipart_upload(
     upload_id: str,
     upload_status: UploadStatus,
     expected_exception: type[Exception | None],
+    set_runtime_test_config,  # noqa: F811
 ):
     """Test the patch_multipart_upload function"""
     api_url = "http://bad_url" if bad_url else "http://127.0.0.1"
@@ -195,9 +210,7 @@ async def test_patch_multipart_upload(
         else nullcontext()
     ):
         async with async_client() as client:
-            uploader = Uploader(
-                api_url=api_url, client=client, file_id="", public_key_path=Path("")
-            )
+            uploader = Uploader(client=client, file_id="", public_key_path=Path(""))
             uploader._upload_id = upload_id
 
             await uploader.patch_multipart_upload(upload_status=upload_status)
@@ -215,10 +228,11 @@ async def test_get_part_upload_urls(
     from_part: int | None,
     end_part: int,
     expected_exception: type[Exception | None],
+    set_runtime_test_config,  # noqa: F811
 ):
     """Test the `get_part_upload_urls` generator for iterating through signed part urls"""
     upload_id = "example-upload"
-    api_url = "http://my-api.example"
+    api_url = "http://127.0.0.1/upload"  # matches value in set_runtime_test_config
     from_part_ = 1 if from_part is None else from_part
 
     # mock the function to get a specific part upload url:
@@ -229,9 +243,7 @@ async def test_get_part_upload_urls(
         from_part = 1
 
     async with async_client() as client:
-        uploader = Uploader(
-            api_url=api_url, client=client, file_id="", public_key_path=Path("")
-        )
+        uploader = Uploader(client=client, file_id="", public_key_path=Path(""))
         uploader._upload_id = upload_id
 
         part_upload_urls = uploader.get_part_upload_urls(
@@ -255,82 +267,80 @@ async def test_get_part_upload_urls(
                 break
 
 
-async def test_get_wps_file_info(httpx_mock: HTTPXMock):
+async def test_get_work_package_file_info(
+    httpx_mock: HTTPXMock,
+    set_runtime_test_config,  # noqa: F811
+):
     """Test response handling with some mock - just make sure code paths work"""
     files = {"file_1": ".tar.gz"}
 
     async with async_client() as client:
-        partial_accessor = partial(
-            WorkPackageAccessor,
-            api_url="http://127.0.0.1",
+        partial_work_pkg_client = partial(
+            WorkPackageClient,
             client=client,
-            dcs_api_url="",
             my_private_key=b"",
             my_public_key=b"",
         )
 
         httpx_mock.add_response(json={"files": files}, status_code=200)
-        wp_id, wp_token = mock_wps_token(1, None)
-        work_package_accessor = partial_accessor(
+        wp_id, wp_token = mock_work_package_token(1)
+        work_package_client = partial_work_pkg_client(
             access_token=wp_token,
             package_id=wp_id,
         )
-        response = await work_package_accessor.get_package_files()
+        response = await work_package_client.get_package_files()
         assert response == files
 
         httpx_mock.add_response(json={"files": files}, status_code=403)
 
         with pytest.raises(exceptions.NoWorkPackageAccessError):
-            wp_id, wp_token = mock_wps_token(1, None)
-            work_package_accessor = partial_accessor(
+            wp_id, wp_token = mock_work_package_token(1)
+            work_package_client = partial_work_pkg_client(
                 access_token=wp_token,
                 package_id=wp_id,
             )
-            response = await work_package_accessor.get_package_files()
+            response = await work_package_client.get_package_files()
 
         httpx_mock.add_response(json={"files": files}, status_code=500)
 
-        with pytest.raises(exceptions.InvalidWPSResponseError):
-            wp_id, wp_token = mock_wps_token(1, None)
-            work_package_accessor = partial_accessor(
+        with pytest.raises(exceptions.InvalidWorkPackageResponseError):
+            wp_id, wp_token = mock_work_package_token(1)
+            work_package_client = partial_work_pkg_client(
                 access_token=wp_token,
                 package_id=wp_id,
             )
-            response = await work_package_accessor.get_package_files()
+            response = await work_package_client.get_package_files()
 
         httpx_mock.add_response(json={"files": files}, status_code=501)
 
-        with pytest.raises(exceptions.InvalidWPSResponseError):
-            wp_id, wp_token = mock_wps_token(1, None)
-            work_package_accessor = partial_accessor(
+        with pytest.raises(exceptions.InvalidWorkPackageResponseError):
+            wp_id, wp_token = mock_work_package_token(1)
+            work_package_client = partial_work_pkg_client(
                 access_token=wp_token,
                 package_id=wp_id,
             )
-            response = await work_package_accessor.get_package_files()
+            response = await work_package_client.get_package_files()
 
 
-async def test_wkvs_calls(httpx_mock: HTTPXMock):
-    """Test handling of responses for WKVS api calls"""
-    wkvs_url = "https://127.0.0.1"
-
+async def test_set_runtime_config(mock_external_calls):  # noqa: F811
+    """Test set_runtime_config and related code"""
+    # Make a list of the ctx var retrieval functions
+    ctx_var_getter_fns = [
+        get_download_api_url,
+        get_ghga_pubkey,
+        get_upload_api_url,
+        get_work_package_api_url,
+    ]
     async with async_client() as client:
-        wkvs_caller = WKVSCaller(client=client, wkvs_url=wkvs_url)
+        # Verify that all the context vars are empty before calling config setup
+        for func in ctx_var_getter_fns:
+            with pytest.raises(ValueError):
+                _ = func()
 
-        with pytest.raises(exceptions.WellKnownValueNotFound):
-            httpx_mock.add_response(status_code=404)
-            await wkvs_caller.get_server_pubkey()
-
-        with pytest.raises(KeyError):
-            httpx_mock.add_response(status_code=200, json={})
-            await wkvs_caller.get_server_pubkey()
-
-        # test each call to CYA
-        for func, value_name in [
-            (wkvs_caller.get_dcs_api_url, "dcs_api_url"),
-            (wkvs_caller.get_server_pubkey, "crypt4gh_public_key"),
-            (wkvs_caller.get_ucs_api_url, "ucs_api_url"),
-            (wkvs_caller.get_wps_api_url, "wps_api_url"),
-        ]:
-            httpx_mock.add_response(json={value_name: "dummy-value"})
-            value = await func()
-            assert value == "dummy-value"
+        # Set up runtime config
+        async with set_runtime_config(client):
+            # verify values are now set (from mock api)
+            for func in ctx_var_getter_fns:
+                value = func()
+                assert isinstance(value, str)
+                assert len(value) > 0

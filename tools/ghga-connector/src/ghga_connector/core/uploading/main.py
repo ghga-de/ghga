@@ -17,7 +17,7 @@
 
 from pathlib import Path
 
-from ghga_connector.core import exceptions
+from ghga_connector import exceptions
 from ghga_connector.core.crypt import Crypt4GHEncryptor
 
 from .abstract_uploader import UploaderBase
@@ -30,14 +30,12 @@ async def run_upload(  # noqa: PLR0913
     my_private_key_path: Path,
     part_size: int,
     passphrase: str | None,
-    server_public_key: str,
     uploader: UploaderBase,
 ):
     """Initialize client and uploader and delegate to function performing the actual upload"""
     encryptor = Crypt4GHEncryptor(
         part_size=part_size,
         private_key_path=my_private_key_path,
-        server_public_key=server_public_key,
         passphrase=passphrase,
     )
     chunked_uploader = ChunkedUploader(

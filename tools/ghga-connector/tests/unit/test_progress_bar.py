@@ -19,7 +19,10 @@
 from math import ceil
 from time import sleep
 
-from ghga_connector.core.downloading.progress_bar import ProgressBar
+from ghga_connector.core.progress_bar import (
+    DownloadProgressBar,
+    UploadProgressBar,
+)
 
 
 def test_progress_bar():
@@ -28,7 +31,15 @@ def test_progress_bar():
     file_size = 1024**3
     chunk_size = 100 * 1024**2
 
-    with ProgressBar(file_name=file_name, file_size=file_size) as progress:
+    with DownloadProgressBar(file_name=file_name, file_size=file_size) as progress:
+        for _ in range(ceil(file_size / chunk_size)):
+            progress.advance(chunk_size)
+            sleep(0.1)
+
+        assert progress._progress.finished
+        assert progress._progress.tasks[0].completed == file_size
+
+    with UploadProgressBar(file_name=file_name, file_size=file_size) as progress:
         for _ in range(ceil(file_size / chunk_size)):
             progress.advance(chunk_size)
             sleep(0.1)

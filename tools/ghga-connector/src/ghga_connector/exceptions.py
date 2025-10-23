@@ -108,6 +108,8 @@ class EnvelopeNotFoundError(RuntimeError):
 class ExternalApiError(RuntimeError):
     """Thrown when the services request to an external API failed"""
 
+    # TODO: [later] Maybe remove this if not needed during setup
+
     def __init__(self):
         message = "The service was unable to contact an external API."
         super().__init__(message)
@@ -172,16 +174,16 @@ class InvalidWorkPackageToken(RuntimeError):
         super().__init__(message)
 
 
-class InvalidWPSResponseError(RuntimeError):
+class InvalidWorkPackageResponseError(RuntimeError):
     """
     Thrown when communication with the Work Package Service returns an unexpected response.
-    This should be used instead of BadResponseError when handling WPS results to differentiate.
+    This should be used instead of BadResponseError when handling Work Package API results to differentiate.
     """
 
     def __init__(self, *, url: str, response_code: int):
         self.response_code = response_code
         message = (
-            f"The request to the WPS at '{url}' failed with an unexpected response code "
+            f"The request to the Work Package API at '{url}' failed with an unexpected response code "
             + f"of {response_code}."
         )
         super().__init__(message)
@@ -210,8 +212,10 @@ class MaxWaitTimeExceededError(RuntimeError):
 class NoS3AccessMethodError(RuntimeError):
     """Thrown when a request returns the desired response code, but no S3 Access Method"""
 
-    def __init__(self, *, url: str):
-        message = f"The request to '{url}' did not return an S3 Access Method."
+    def __init__(self, *, file_id: str):
+        message = (
+            f"DRS object for file ID '{file_id}' did not contain an S3 Access Method."
+        )
         super().__init__(message)
 
 

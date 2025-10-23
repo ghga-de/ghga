@@ -15,6 +15,8 @@
 #
 """Contains progress bar related code for a better user experience"""
 
+from typing import Literal
+
 from rich.progress import (
     BarColumn,
     DownloadColumn,
@@ -26,8 +28,10 @@ from rich.progress import (
 )
 
 
-class ProgressBar:
-    """Download progress bar wrapping rich behavior. To be used as context manager."""
+class _ProgressBar:
+    """Progress bar wrapping rich behavior. To be used as context manager."""
+
+    activity: Literal["Download", "Upload"]
 
     def __init__(self, file_name: str, file_size: int, binary_units: bool = False):
         self._task_id = TaskID(-1)
@@ -35,7 +39,7 @@ class ProgressBar:
         self._file_size = file_size
 
         self._progress = Progress(
-            TextColumn(f"Downloading to file '{self._file_name}'"),
+            TextColumn(f"{self.activity}ing file '{self._file_name}'"),
             BarColumn(),
             TimeRemainingColumn(compact=True, elapsed_when_finished=True),
             TransferSpeedColumn(),
@@ -47,7 +51,7 @@ class ProgressBar:
         """Enable progress bar and add progress bar task on enter."""
         self._progress.start()
         self._task_id = self._progress.add_task(
-            description="File Download",
+            description=f"File {self.activity}",
             total=self._file_size,
         )
         return self
@@ -71,3 +75,15 @@ class ProgressBar:
         if self._progress.tasks[self._task_id].completed > self._file_size:  # noqa: PLR1730
             self._progress.tasks[self._task_id].completed = self._file_size
         self._progress.refresh()
+
+
+class DownloadProgressBar(_ProgressBar):
+    """A progress bar for file downloads. To be used as context manager."""
+
+    activity = "Download"
+
+
+class UploadProgressBar(_ProgressBar):
+    """A progress bar for file uploads. To be used as context manager."""
+
+    activity = "Upload"

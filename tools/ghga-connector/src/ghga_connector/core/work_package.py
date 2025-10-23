@@ -17,48 +17,59 @@
 import base64
 import json
 from collections.abc import Callable
+from typing import Any, Literal
 
 import httpx
 from ghga_service_commons.utils.crypt import decrypt
+from pydantic import UUID4
 from tenacity import RetryError
 
+from ghga_connector.config import get_work_package_api_url
 from ghga_connector.constants import CACHE_MIN_FRESH
+from ghga_connector.core.api_calls.utils import modify_headers_for_cache_refresh
 
-from . import RetryHandler, exceptions
+from .. import exceptions
+from . import RetryHandler
+
+WorkType = Literal["create", "upload", "close", "delete"]
 
 
-class WorkPackageAccessor:
-    """Wrapper for WPS associated API call parameters"""
+class WorkPackageClient:
+    """A client handling calls to the Work Package API and related logic"""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         access_token: str,
-        api_url: str,
         client: httpx.AsyncClient,
-        dcs_api_url: str,
         package_id: str,
         my_private_key: bytes,
         my_public_key: bytes,
     ) -> None:
         self.access_token = access_token
-        self.api_url = api_url
+        self.work_package_api_url = get_work_package_api_url()
         self.client = client
-        self.dcs_api_url = dcs_api_url
         self.package_id = package_id
         self.my_private_key = my_private_key
         self.my_public_key = my_public_key
 
     async def _call_url(
-        self, *, fn: Callable, headers: httpx.Headers, url: str
+        self,
+        *,
+        fn: Callable,
+        headers: httpx.Headers,
+        url: str,
+        body: dict[str, Any] | None = None,
     ) -> httpx.Response:
         """Call url with provided headers and client method passed as callable."""
         try:
             retry_handler = RetryHandler.basic()
-            response: httpx.Response = await retry_handler(
-                fn=fn,
-                headers=headers,
-                url=url,
-            )
+            args = {  # we don't always want to supply 'json' kwarg, so do it like this
+                "url": url,
+                "headers": headers,
+            }
+            if body is not None:
+                args["json"] = body
+            response: httpx.Response = await retry_handler(fn=fn, **args)
         except RetryError as retry_error:
             wrapped_exception = retry_error.last_attempt.exception()
 
@@ -74,8 +85,8 @@ class WorkPackageAccessor:
         return response
 
     async def get_package_files(self) -> dict[str, str]:
-        """Call WPS endpoint and retrieve work package information."""
-        url = f"{self.api_url}/work-packages/{self.package_id}"
+        """Call Work Package API endpoint and retrieve work package information."""
+        url = f"{self.work_package_api_url}/work-packages/{self.package_id}"
 
         # send authorization header as bearer token
         headers = httpx.Headers({"Authorization": f"Bearer {self.access_token}"})
@@ -87,17 +98,52 @@ class WorkPackageAccessor:
                 raise exceptions.NoWorkPackageAccessError(
                     work_package_id=self.package_id
                 )
-            raise exceptions.InvalidWPSResponseError(url=url, response_code=status_code)
+            raise exceptions.InvalidWorkPackageResponseError(
+                url=url, response_code=status_code
+            )
 
         work_package = response.json()
         return work_package["files"]
 
-    async def get_work_order_token(
-        self, *, file_id: str, bust_cache: bool = False
-    ) -> str:
-        """Call WPS endpoint to retrieve and decrypt work order token."""
-        url = f"{self.api_url}/work-packages/{self.package_id}/files/{file_id}/work-order-tokens"
+    async def get_download_wot(self, *, file_id: str, bust_cache: bool = False) -> str:
+        """Get a work order token from the Work Package API enabling download of a single file"""
+        url = f"{self.work_package_api_url}/work-packages/{self.package_id}/files/{file_id}/work-order-tokens"
+        download_wot = await self._get_work_order_token(url=url, bust_cache=bust_cache)
+        return download_wot
 
+    async def get_upload_wot(
+        self,
+        *,
+        work_type: WorkType,
+        box_id: UUID4,
+        file_id: UUID4 | None = None,
+        alias: str | None = None,
+        bust_cache: bool = False,
+    ) -> str:
+        """Get a work order token from the Work Package API enabling file upload operations for
+        a single file.
+        """
+        url = f"{self.work_package_api_url}/work-packages/{self.package_id}/boxes/{box_id}/work-order-tokens"
+        body = {
+            "work_type": work_type,
+            "alias": alias,
+            "file_id": file_id,
+        }
+        upload_wot = await self._get_work_order_token(
+            url=url, bust_cache=bust_cache, body=body
+        )
+        return upload_wot
+
+    async def _get_work_order_token(
+        self, *, url: str, bust_cache: bool, body: dict[str, Any] | None = None
+    ) -> str:
+        """Call Work Package API endpoint to retrieve and decrypt work order token.
+
+        Raises:
+            NoWorkPackageAccessError: If the Work Package API returns an unauthorized response.
+            InvalidWorkPackageResponseError: If the Work Package API returns an response
+                code other than 403 or 201, OR the response doesn't contain a WOT.
+        """
         # send authorization header as bearer token
         headers = httpx.Headers(
             {
@@ -106,12 +152,11 @@ class WorkPackageAccessor:
             }
         )
         if bust_cache:
-            # update cache-control headers to get fresh response from source
-            cache_control_headers = headers.get("Cache-Control")
-            cache_control_headers = [cache_control_headers, "max-age=0"]
-            headers["Cache-Control"] = ",".join(cache_control_headers)
+            modify_headers_for_cache_refresh(headers)
 
-        response = await self._call_url(fn=self.client.post, headers=headers, url=url)
+        response = await self._call_url(
+            fn=self.client.post, body=body, headers=headers, url=url
+        )
 
         status_code = response.status_code
         if status_code != 201:
@@ -119,11 +164,15 @@ class WorkPackageAccessor:
                 raise exceptions.NoWorkPackageAccessError(
                     work_package_id=self.package_id
                 )
-            raise exceptions.InvalidWPSResponseError(url=url, response_code=status_code)
+            raise exceptions.InvalidWorkPackageResponseError(
+                url=url, response_code=status_code
+            )
 
         encrypted_token = response.json()
         if not encrypted_token or not isinstance(encrypted_token, str):
-            raise exceptions.InvalidWPSResponseError(url=url, response_code=status_code)
+            raise exceptions.InvalidWorkPackageResponseError(
+                url=url, response_code=status_code
+            )
         decrypted_token = _decrypt(data=encrypted_token, key=self.my_private_key)
         self._check_public_key(decrypted_token)
         return decrypted_token
@@ -133,6 +182,9 @@ class WorkPackageAccessor:
 
         If the public key cannot be retrieved from the token, ignore this error,
         an authorization error will then be raised later in the process.
+
+        Raises:
+            PubKeyMismatchError: if the public key does not match.
         """
         try:
             mismatch = json.loads(
@@ -144,6 +196,26 @@ class WorkPackageAccessor:
             mismatch = False
         if mismatch:
             raise exceptions.PubKeyMismatchError()
+
+    async def make_auth_headers(self, decrypted_token: str) -> httpx.Headers:
+        """
+        Prepare headers for calling Upload or Download API with a decrypted work order
+        token.
+
+        The calls will use the cache if possible while the cached responses are still
+        fresh for at least another `CACHE_MIN_FRESH` seconds.
+        """
+        # build headers
+        headers = httpx.Headers(
+            {
+                "Accept": "application/json",
+                "Authorization": f"Bearer {decrypted_token}",
+                "Content-Type": "application/json",
+                "Cache-Control": f"min-fresh={CACHE_MIN_FRESH}",
+            }
+        )
+
+        return headers
 
 
 def _decrypt(*, data: str, key: bytes):

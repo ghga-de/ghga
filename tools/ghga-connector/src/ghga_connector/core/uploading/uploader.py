@@ -25,8 +25,10 @@ import crypt4gh.keys
 import crypt4gh.lib
 import httpx
 
+from ghga_connector import exceptions
+from ghga_connector.config import get_upload_api_url
 from ghga_connector.constants import MAX_PART_NUMBER
-from ghga_connector.core import ResponseExceptionTranslator, exceptions
+from ghga_connector.core import ResponseExceptionTranslator
 from ghga_connector.core.crypt import Encryptor
 
 from .abstract_uploader import UploaderBase
@@ -42,14 +44,13 @@ class Uploader(UploaderBase):
     def __init__(
         self,
         *,
-        api_url: str,
         client: httpx.AsyncClient,
         file_id: str,
         public_key_path: Path,
     ) -> None:
         self._part_size = 0
         self._upload_id = ""
-        self._api_url = api_url
+        self._api_url = get_upload_api_url()
         self._client = client
         self._file_id = file_id
         self._public_key_path = public_key_path

@@ -16,350 +16,198 @@
 """Contains a concrete implementation of the abstract downloader"""
 
 import asyncio
-import base64
 import gc
 import logging
-from asyncio import PriorityQueue, Queue, Semaphore, Task, create_task
-from collections.abc import Coroutine
+from asyncio import PriorityQueue, Queue, Semaphore, Task
+from contextlib import contextmanager
 from io import BufferedWriter
 from pathlib import Path
-from typing import Any
 
-import httpx
-from tenacity import RetryError
+from ghga_connector import exceptions
+from ghga_connector.core import CLIMessageDisplay, PartRange, calc_part_ranges
+from ghga_connector.core.tasks import TaskHandler
 
-from ghga_connector.core import (
-    AbstractMessageDisplay,
-    PartRange,
-    ResponseExceptionTranslator,
-    RetryHandler,
-    WorkPackageAccessor,
-    calc_part_ranges,
-    exceptions,
-)
-
-from .abstract_downloader import DownloaderBase
-from .api_calls import (
-    get_download_url,
-    get_envelope_authorization,
-    get_file_authorization,
-)
-from .progress_bar import ProgressBar
-from .structs import RetryResponse, URLResponse
+from ..progress_bar import DownloadProgressBar
+from .api_calls import DownloadClient, extract_download_url
+from .structs import FileInfo, RetryResponse
 
 logger = logging.getLogger(__name__)
+# TODO: [later] More better logging
+
+__all__ = ["Downloader", "handle_download_errors"]
 
 
-class TaskHandler:
-    """Wraps task scheduling details."""
-
-    def __init__(self):
-        self._tasks: set[Task] = set()
-
-    def schedule(self, fn: Coroutine[Any, Any, None]):
-        """Create a task and register its callback."""
-        task = create_task(fn)
-        self._tasks.add(task)
-        task.add_done_callback(self.finalize)
-
-    def cancel_tasks(self):
-        """Cancel all running taks."""
-        for task in self._tasks:
-            if not task.done():
-                task.cancel()
-
-    def finalize(self, task: Task):
-        """Deal with potential errors when a task is done.
-
-        This is called as done callback, so there are three possibilites here:
-        1. A task encountered an exception: Cancel all remaining tasks and reraise
-        2. A task was cancelled: There's nothing to do, we are already propagating
-           the exception causing the cancellation
-        3. A task finished normally: Remove its handle
-        """
-        if not task.cancelled():
-            exception = task.exception()
-            if exception:
-                self.cancel_tasks()
-                raise exception
-        self._tasks.discard(task)
-        logger.debug(
-            "Finished download task. Remaining: %i",
-            len([task for task in asyncio.all_tasks() if not task.done()]),
+@contextmanager
+def handle_download_errors(file_info: FileInfo):
+    """Used to handle download errors from `Downloader.download_file()`"""
+    file_id = file_info.file_id
+    try:
+        yield
+    except exceptions.GetEnvelopeError as error:
+        CLIMessageDisplay.failure(
+            f"The request to get an envelope for file '{file_id}' failed."
         )
+        raise error
+    except exceptions.DownloadError as error:
+        CLIMessageDisplay.failure(f"Failed downloading with id '{file_id}'.")
+        raise error
 
-    async def gather(self):
-        """Await all remaining tasks."""
-        await asyncio.gather(*self._tasks)
 
+class Downloader:
+    """Centralized high-level interface for downloading a single file.
 
-class Downloader(DownloaderBase):
-    """Centralized high-level interface for download functionality. Used in the core.
     This is not meant to be reused, as internal state is not cleared.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
-        client: httpx.AsyncClient,
+        download_client: DownloadClient,
         file_id: str,
+        file_size: int,
         max_concurrent_downloads: int,
-        max_wait_time: int,
-        message_display: AbstractMessageDisplay,
-        work_package_accessor: WorkPackageAccessor,
     ):
-        self._client = client
+        self._download_client = download_client
         self._file_id = file_id
-        self._max_wait_time = max_wait_time
-        self._message_display = message_display
-        self._work_package_accessor = work_package_accessor
+        self._file_size = file_size
         self._queue: Queue[tuple[int, bytes]] = PriorityQueue()
         self._semaphore = Semaphore(value=max_concurrent_downloads)
+        self._task_handler = TaskHandler()
 
     async def download_file(self, *, output_path: Path, part_size: int):
-        """Download file to the specified location and manage lower level details."""
+        """Download file to the specified location and manage lower level details.
+
+        The process is, roughly:
+        - Retrieve file envelope
+        - Schedule a download task for every file part
+        - Write file parts to disk as they're completed
+        """
         # Split the file into parts based on the part size
-        self._message_display.display(
+        CLIMessageDisplay.display(
             f"Fetching work order token and download URL for {self._file_id}"
         )
         logger.debug("Initial fetch of download URL for file %s", self._file_id)
-        url_response = await self.fetch_download_url()
         part_ranges = calc_part_ranges(
-            part_size=part_size, total_file_size=url_response.file_size
+            part_size=part_size, total_file_size=self._file_size
         )
 
-        task_handler = TaskHandler()
+        # get file header envelope
+        logger.debug("Fetching Crypt4GH envelope for file %s", self._file_id)
+        try:
+            envelope = await self._download_client.get_file_envelope(
+                file_id=self._file_id
+            )
+        except (
+            exceptions.FileNotRegisteredError,
+            exceptions.BadResponseCodeError,
+        ) as error:
+            raise exceptions.GetEnvelopeError() from error
 
         # start async part download to intermediate queue
         logger.debug("Scheduling download for file %s", self._file_id)
         for part_range in part_ranges:
-            task_handler.schedule(self.download_to_queue(part_range=part_range))
+            self._task_handler.schedule(self._download_to_queue(part_range=part_range))
 
         logger.debug(
             "Current amount of download tasks after scheduling: %i",
             len([task for task in asyncio.all_tasks() if not task.done()]),
         )
 
-        # get file header envelope
-        logger.debug("Fetching Crypt4GH envelope for file %s", self._file_id)
-        try:
-            envelope = await self.get_file_header_envelope()
-        except (
-            exceptions.FileNotRegisteredError,
-            exceptions.EnvelopeNotFoundError,
-            exceptions.ExternalApiError,
-        ) as error:
-            # Cancel running tasks before raising
-            task_handler.cancel_tasks()
-            raise exceptions.GetEnvelopeError() from error
-
         # Write the downloaded parts to a file
-        with (
-            output_path.open("wb") as file,
-            ProgressBar(
-                file_name=file.name, file_size=url_response.file_size
-            ) as progress_bar,
-        ):
+        with output_path.open("wb") as file:
             # put envelope in file
             logger.debug("Writing Crypt4GH envelope for file %s", self._file_id)
             file.write(envelope)
             # start download task
             logger.debug("Starting to write file parts to disk for %s", self._file_id)
             write_to_file = Task(
-                self.drain_queue_to_file(
+                self._drain_queue_to_file(
                     file=file,
-                    file_size=url_response.file_size,
+                    file_size=self._file_size,
                     offset=len(envelope),
-                    progress_bar=progress_bar,
                 ),
                 name="Write queue to file",
             )
             try:
-                await task_handler.gather()
+                await self._task_handler.gather()
             except:
                 write_to_file.cancel()
                 raise
             else:
                 await write_to_file
 
-    async def fetch_download_url(self, bust_cache: bool = False) -> URLResponse:
-        """Fetch a work order token and retrieve the download url.
+    async def fetch_download_url(self, bust_cache: bool = False) -> str:
+        """Retrieve the download URL.
 
-        Returns a URLResponse containing two elements:
-            1. the download url
-            2. the file size in bytes
+        Uses the DownloadClient to get the DRS object from the Download API, then
+        extracts the presigned S3 download URL from the DRS object.
+
+        Raises:
+            NoS3AccessMethodError: If the DRS object for the file doesn't have an S3
+                access method.
+            RequestFailedError: If the file download fails.
+            UnexpectedRetryResponseError: If the file still isn't staged to the download
+                bucket in object storage even though it should be.
         """
         try:
-            url_and_headers = await get_file_authorization(
-                file_id=self._file_id,
-                work_package_accessor=self._work_package_accessor,
+            drs_object = await self._download_client.get_drs_object(
+                self._file_id, bust_cache=bust_cache
             )
-            try:
-                response = await get_download_url(
-                    client=self._client,
-                    url_and_headers=url_and_headers,
-                    bust_cache=bust_cache,
-                )
-            except exceptions.UnauthorizedAPICallError:
-                url_and_headers = await get_file_authorization(
-                    file_id=self._file_id,
-                    work_package_accessor=self._work_package_accessor,
-                    bust_cache=True,
-                )
-                response = await get_download_url(
-                    client=self._client,
-                    url_and_headers=url_and_headers,
-                    bust_cache=True,
-                )
-        except exceptions.BadResponseCodeError as error:
-            self._message_display.failure(
-                f"The request for file {self._file_id} returned an unexpected HTTP status code: {error.response_code}."
+        except exceptions.BadResponseCodeError as err:
+            CLIMessageDisplay.failure(
+                f"The request for file {self._file_id} returned an unexpected HTTP status code: {err.response_code}."
             )
-            raise error
-        except exceptions.RequestFailedError as error:
-            self._message_display.failure(
+            raise
+        except exceptions.RequestFailedError:
+            CLIMessageDisplay.failure(
                 f"The download request for file {self._file_id} failed."
             )
-            raise error
+            raise
 
-        if isinstance(response, RetryResponse):
-            # File should be staged at that point in time
+        # If the Download API returns a RetryResponse, it means the S3 object has not
+        #  yet been staged or made available for download from the proper S3 bucket.
+        if isinstance(drs_object, RetryResponse):
+            # At this point, the file should definitely be staged -- raise an error
             raise exceptions.UnexpectedRetryResponseError()
 
-        return response
+        # Extract the actual download URL from the DRS object received from the Download API
+        download_url = extract_download_url(drs_object)
+        return download_url
 
-    async def get_file_header_envelope(self) -> bytes:
-        """
-        Perform a RESTful API call to retrieve a file header envelope.
-        Returns:
-            The file header envelope (bytes object)
-        """
-        url_and_headers = await get_envelope_authorization(
-            file_id=self._file_id, work_package_accessor=self._work_package_accessor
-        )
-        url = url_and_headers.endpoint_url
-        # Make function call to get download url
-        try:
-            retry_handler = RetryHandler.basic()
-            response: httpx.Response = await retry_handler(
-                fn=self._client.get,
-                headers=url_and_headers.headers,
-                url=url,
-            )
-        except httpx.RequestError as request_error:
-            raise exceptions.RequestFailedError(url=url) from request_error
-
-        status_code = response.status_code
-
-        if status_code == 200:
-            return base64.b64decode(response.content)
-
-        # For now unauthorized responses are not handled by httpyexpect
-        if status_code == 403:
-            content = response.json()
-            # handle both normal and httpyexpect 403 response
-            try:
-                cause = content["description"]
-            except KeyError:
-                cause = content["detail"]
-            raise exceptions.UnauthorizedAPICallError(url=url, cause=cause)
-
-        spec = {
-            404: {
-                "envelopeNotFoundError": lambda: exceptions.EnvelopeNotFoundError(
-                    file_id=self._file_id
-                ),
-                "noSuchObject": lambda: exceptions.FileNotRegisteredError(
-                    file_id=self._file_id
-                ),
-            },
-            500: {"externalAPIError": exceptions.ExternalApiError},
-        }
-
-        ResponseExceptionTranslator(spec=spec).handle(response=response)
-        raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
-
-    async def download_to_queue(self, *, part_range: PartRange) -> None:
+    async def _download_to_queue(self, *, part_range: PartRange) -> None:
         """
         Start downloading file parts in parallel into a queue.
-        This should be wrapped into  asyncio.task and is guarded by a semaphore to limit
-        the amount of ongoing parallel downloads to max_concurrent_downloads.
+        This should be wrapped into an asyncio.task and is guarded by a semaphore to
+        limit the amount of ongoing parallel downloads to max_concurrent_downloads.
         """
         # Guard with semaphore to ensure only a set amount of downloads runs in parallel
         async with self._semaphore:
-            url_and_headers = await self.fetch_download_url()
-            url = url_and_headers.download_url
+            download_url = await self.fetch_download_url()
             try:
                 try:
-                    await self.download_content_range(
-                        url=url, start=part_range.start, end=part_range.stop
+                    offset, bytes = await self._download_client.download_content_range(
+                        url=download_url, start=part_range.start, end=part_range.stop
                     )
+                    await self._queue.put((offset, bytes))
                 except exceptions.UnauthorizedAPICallError:
-                    url_and_headers = await self.fetch_download_url(bust_cache=True)
-                    url = url_and_headers.download_url
-                    logger.debug("Encountered 403, trying again with new URL: %s", url)
-                    await self.download_content_range(
-                        url=url, start=part_range.start, end=part_range.stop
+                    # For clarity, this means the S3 URL was expired
+                    download_url = await self.fetch_download_url(bust_cache=True)
+                    logger.debug(
+                        "Encountered 403, trying again with new URL: %s", download_url
                     )
+                    offset, bytes = await self._download_client.download_content_range(
+                        url=download_url, start=part_range.start, end=part_range.stop
+                    )
+                    await self._queue.put((offset, bytes))
             except Exception as exception:
                 raise exceptions.DownloadError(reason=str(exception)) from exception
 
-    async def download_content_range(
-        self,
-        *,
-        url: str,
-        start: int,
-        end: int,
-    ) -> None:
-        """Download a specific range of a file's content using a presigned download url."""
-        headers = httpx.Headers(
-            {
-                "Range": f"bytes={start}-{end}",
-                "Cache-Control": "no-store",  # don't cache part downloads
-            }
-        )
-
-        try:
-            retry_handler = RetryHandler.basic()
-            response: httpx.Response = await retry_handler(
-                fn=self._client.get, url=url, headers=headers
-            )
-        except RetryError as retry_error:
-            wrapped_exception = retry_error.last_attempt.exception()
-
-            if isinstance(wrapped_exception, httpx.RequestError):
-                exceptions.raise_if_connection_failed(
-                    request_error=wrapped_exception, url=url
-                )
-                raise exceptions.RequestFailedError(url=url) from retry_error
-            elif wrapped_exception:
-                raise wrapped_exception from retry_error
-            elif result := retry_error.last_attempt.result():
-                response = result
-            else:
-                raise
-
-        status_code = response.status_code
-
-        # 200, if the full file was returned, 206 else.
-        if status_code in (200, 206):
-            await self._queue.put((start, response.content))
-            return
-
-        if status_code == 403:
-            raise exceptions.UnauthorizedAPICallError(
-                url=url, cause="Presigned URL is likely expired."
-            )
-
-        raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
-
-    async def drain_queue_to_file(
+    async def _drain_queue_to_file(
         self,
         *,
         file: BufferedWriter,
         file_size: int,
         offset: int,
-        progress_bar: ProgressBar,
     ) -> None:
         """Write downloaded file bytes from queue.
         This should be started as asyncio.Task and awaited after the download_to_queue
@@ -368,14 +216,17 @@ class Downloader(DownloaderBase):
         # track and display actually written bytes
         downloaded_size = 0
 
-        while downloaded_size < file_size:
-            result = await self._queue.get()
-            start, part = result
-            file.seek(offset + start)
-            file.write(part)
-            # update tracking information
-            chunk_size = len(part)
-            downloaded_size += chunk_size
-            self._queue.task_done()
-            progress_bar.advance(chunk_size)
-            gc.collect()
+        with DownloadProgressBar(
+            file_name=file.name, file_size=file_size
+        ) as progress_bar:
+            while downloaded_size < file_size:
+                result = await self._queue.get()
+                start, part = result
+                file.seek(offset + start)
+                file.write(part)
+                # update tracking information
+                chunk_size = len(part)
+                downloaded_size += chunk_size
+                self._queue.task_done()
+                progress_bar.advance(chunk_size)
+                gc.collect()

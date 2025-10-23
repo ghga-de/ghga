@@ -60,7 +60,12 @@ def test_read_file_parts(from_part: int | None):
     "pk_name,sk_name",
     [("key.pub", "key.sec"), ("encrypted_key.pub", "encrypted_key.sec")],
 )
-def test_encryption_decryption(pk_name: str, sk_name: str):
+@pytest.mark.asyncio
+async def test_encryption_decryption(
+    pk_name: str,
+    sk_name: str,
+    monkeypatch,
+):
     """Encrypt and decrypt a file to check if it is actually encrypted"""
     file_size = 20 * 1024 * 1024
     key_dir = Path(__file__).parent.parent / "fixtures" / "keypair"
@@ -68,6 +73,9 @@ def test_encryption_decryption(pk_name: str, sk_name: str):
     private_key_path = key_dir / sk_name
 
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
+    monkeypatch.setattr(
+        "ghga_connector.core.crypt.encryption.get_ghga_pubkey", lambda: pubkey
+    )
 
     with (
         NamedTemporaryFile() as in_file,
@@ -82,7 +90,6 @@ def test_encryption_decryption(pk_name: str, sk_name: str):
         passphrase = "test" if sk_name.startswith("encrypted") else None
         encryptor = Crypt4GHEncryptor(
             part_size=8 * 1024**3,
-            server_public_key=pubkey,
             private_key_path=private_key_path,
             passphrase=passphrase,
         )

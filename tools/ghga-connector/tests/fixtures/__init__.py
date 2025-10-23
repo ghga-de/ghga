@@ -15,6 +15,30 @@
 
 """Fixtures that are used in both integration and unit tests"""
 
+import pytest_asyncio
+from hexkit.utils import set_context_var
+
+from ghga_connector.config import (
+    download_api_url_var,
+    ghga_pubkey_var,
+    upload_api_url_var,
+    work_package_api_url_var,
+)
+
 from .mock_api import UploadStatus  # noqa: F401
 from .s3 import s3_fixture  # noqa: F401
 from .state import FILES  # noqa: F401
+
+
+@pytest_asyncio.fixture()
+async def set_runtime_test_config():
+    """Set runtime config to dummy values so httpx mock can be used without mock api"""
+    async with (
+        set_context_var(upload_api_url_var, "http://127.0.0.1/upload"),
+        set_context_var(download_api_url_var, "http://127.0.0.1/download"),
+        set_context_var(work_package_api_url_var, "http://127.0.0.1/work"),
+        set_context_var(
+            ghga_pubkey_var, "qx5g31H7rdsq7sgkew9ElkLIXvBje4RxDVcAHcJD8XY="
+        ),
+    ):
+        yield

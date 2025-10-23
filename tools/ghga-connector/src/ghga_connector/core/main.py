@@ -20,25 +20,31 @@ from pathlib import Path
 
 import httpx
 
-from . import exceptions
+from ghga_connector.config import CONFIG, get_upload_api_url, set_runtime_config
+from ghga_connector.core.client import async_client
+from ghga_connector.core.downloading.api_calls import DownloadClient
+from ghga_connector.core.downloading.batch_processing import FileStager
+from ghga_connector.core.downloading.downloader import (
+    Downloader,
+    handle_download_errors,
+)
+from ghga_connector.core.work_package import WorkPackageClient
+
+from .. import exceptions
+from . import utils
 from .api_calls import is_service_healthy
 from .crypt import Crypt4GHDecryptor
-from .downloading.downloader import Downloader
 from .file_operations import is_file_encrypted
-from .message_display import AbstractMessageDisplay
+from .message_display import CLIMessageDisplay
 from .uploading.main import run_upload
 from .uploading.uploader import Uploader
-from .work_package import WorkPackageAccessor
 
 
 async def upload_file(  # noqa: PLR0913
     *,
-    api_url: str,
     client: httpx.AsyncClient,
     file_id: str,
     file_path: Path,
-    message_display: AbstractMessageDisplay,
-    server_public_key: str,
     my_public_key_path: Path,
     my_private_key_path: Path,
     part_size: int,
@@ -59,11 +65,11 @@ async def upload_file(  # noqa: PLR0913
     if is_file_encrypted(file_path):
         raise exceptions.FileAlreadyEncryptedError(file_path=file_path)
 
-    if not is_service_healthy(api_url):
-        raise exceptions.ApiNotReachableError(api_url=api_url)
+    upload_api_url = get_upload_api_url()
+    if not is_service_healthy(upload_api_url):
+        raise exceptions.ApiNotReachableError(api_url=upload_api_url)
 
     uploader = Uploader(
-        api_url=api_url,
         client=client,
         file_id=file_id,
         public_key_path=my_public_key_path,
@@ -75,120 +81,86 @@ async def upload_file(  # noqa: PLR0913
             my_private_key_path=my_private_key_path,
             part_size=part_size,
             passphrase=passphrase,
-            server_public_key=server_public_key,
             uploader=uploader,
         )
     except exceptions.StartUploadError as error:
-        message_display.failure("The request to start a multipart upload has failed.")
+        CLIMessageDisplay.failure("The request to start a multipart upload has failed.")
         raise error
     except exceptions.CantChangeUploadStatusError as error:
-        message_display.failure(f"The file with id '{file_id}' was already uploaded.")
+        CLIMessageDisplay.failure(f"The file with id '{file_id}' was already uploaded.")
         raise error
     except exceptions.ConnectionFailedError as error:
-        message_display.failure("The upload failed too many times and was aborted.")
+        CLIMessageDisplay.failure("The upload failed too many times and was aborted.")
         raise error
     except exceptions.FinalizeUploadError as error:
-        message_display.failure(
+        CLIMessageDisplay.failure(
             f"Finishing the upload with id '{file_id}' failed.\n{error.cause}"
         )
 
-    message_display.success(f"File with id '{file_id}' has been successfully uploaded.")
+    CLIMessageDisplay.success(
+        f"File with id '{file_id}' has been successfully uploaded."
+    )
 
 
-async def download_file(  # noqa: PLR0913
+async def async_download(
     *,
-    api_url: str,
-    client: httpx.AsyncClient,
     output_dir: Path,
-    part_size: int,
-    max_concurrent_downloads: int,
-    message_display: AbstractMessageDisplay,
-    max_wait_time: int,
-    work_package_accessor: WorkPackageAccessor,
-    file_id: str,
-    file_extension: str = "",
+    my_public_key_path: Path,
+    my_private_key_path: Path,
+    passphrase: str | None = None,
     overwrite: bool = False,
-) -> None:
-    """Core command to download a file. Can be called by CLI, GUI, etc."""
-    if not is_service_healthy(api_url):
-        raise exceptions.ApiNotReachableError(api_url=api_url)
+):
+    """Download files asynchronously"""
+    if not output_dir.is_dir():
+        raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
-    # construct file name with suffix, if given
-    file_name = f"{file_id}"
-    if file_extension:
-        file_name = f"{file_id}{file_extension}"
+    my_public_key = utils.get_public_key(my_public_key_path)
+    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
 
-    # check output file
-    output_file = output_dir / f"{file_name}.c4gh"
-    if output_file.exists():
-        if overwrite:
-            message_display.display(
-                f"A file with name '{output_file}' already exists and will be overwritten."
-            )
-        else:
-            message_display.failure(
-                f"A file with name '{output_file}' already exists. Skipping."
-            )
-            return
-
-    # with_suffix() might overwrite existing suffixes, do this instead
-    output_file_ongoing = output_file.parent / (output_file.name + ".part")
-    if output_file_ongoing.exists():
-        output_file_ongoing.unlink()
-
-    downloader = Downloader(
-        client=client,
-        file_id=file_id,
-        max_concurrent_downloads=max_concurrent_downloads,
-        max_wait_time=max_wait_time,
-        message_display=message_display,
-        work_package_accessor=work_package_accessor,
-    )
-    try:
-        await downloader.download_file(
-            output_path=output_file_ongoing, part_size=part_size
-        )
-    except exceptions.GetEnvelopeError as error:
-        message_display.failure(
-            f"The request to get an envelope for file '{file_id}' failed."
-        )
-        raise error
-    except exceptions.DownloadError as error:
-        message_display.failure(f"Failed downloading with id '{file_id}'.")
-        raise error
-
-    # rename fully downloaded file
-    output_file_ongoing.rename(output_file)
-
-    message_display.success(
-        f"File with id '{file_id}' has been successfully downloaded."
+    CLIMessageDisplay.display("\nFetching work package token...")
+    work_package_information = utils.get_work_package_information(
+        my_private_key=my_private_key
     )
 
-
-def get_wps_token(max_tries: int, message_display: AbstractMessageDisplay) -> list[str]:
-    """
-    Expect the work package id and access token as a colon separated string
-    The user will have to input this manually to avoid it becoming part of the
-    command line history.
-    """
-    for _ in range(max_tries):
-        work_package_string = input(
-            "Please paste the complete download token "
-            + "that you copied from the GHGA data portal: "
+    async with async_client() as client, set_runtime_config(client=client):
+        CLIMessageDisplay.display("Retrieving API configuration information...")
+        work_package_client = WorkPackageClient(
+            access_token=work_package_information.decrypted_token,
+            client=client,
+            package_id=work_package_information.package_id,
+            my_private_key=my_private_key,
+            my_public_key=my_public_key,
         )
-        work_package_parts = work_package_string.split(":")
-        if not (
-            len(work_package_parts) == 2
-            and 20 <= len(work_package_parts[0]) < 40
-            and 80 <= len(work_package_parts[1]) < 120
-        ):
-            message_display.display(
-                "Invalid input. Please enter the download token "
-                + "you got from the GHGA data portal unaltered."
+        file_ids_with_extension = await work_package_client.get_package_files()
+        download_client = DownloadClient(
+            client=client, work_package_client=work_package_client
+        )
+
+        CLIMessageDisplay.display("Preparing files for download...")
+        file_stager = FileStager(
+            wanted_files=file_ids_with_extension,
+            output_dir=output_dir,
+            work_package_client=work_package_client,
+            download_client=download_client,
+            config=CONFIG,
+        )
+
+        # Use file stager to manage downloads
+        async for file_info in file_stager.manage_file_downloads(overwrite):
+            file_id = file_info.file_id
+            download_client.check_download_api_is_reachable()
+            downloader = Downloader(
+                download_client=download_client,
+                file_id=file_id,
+                file_size=file_info.file_size,
+                max_concurrent_downloads=CONFIG.max_concurrent_downloads,
             )
-            continue
-        return work_package_parts
-    raise exceptions.InvalidWorkPackageToken(tries=max_tries)
+            CLIMessageDisplay.display(f"Downloading file with id '{file_id}'...")
+            with handle_download_errors(file_info):
+                await downloader.download_file(
+                    output_path=file_info.path_during_download,
+                    part_size=CONFIG.part_size,
+                )
 
 
 def decrypt_file(

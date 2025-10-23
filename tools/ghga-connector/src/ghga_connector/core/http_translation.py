@@ -23,6 +23,7 @@ import httpx
 from ghga_service_commons.httpyexpect.client import ExceptionMapping, ResponseTranslator
 
 
+# TODO: [later] Revisit this and see if it is useful enough to warrant maintenance
 class ResponseExceptionTranslator:
     """Base class providing behaviour and injection point for spec"""
 

@@ -26,6 +26,7 @@ import crypt4gh.keys
 import crypt4gh.lib
 from nacl.bindings import crypto_aead_chacha20poly1305_ietf_encrypt
 
+from ghga_connector.config import get_ghga_pubkey
 from ghga_connector.core import get_segments, read_file_parts
 
 from .abstract_bases import Encryptor
@@ -35,11 +36,10 @@ from .checksums import Checksums
 class Crypt4GHEncryptor(Encryptor):
     """Handles on the fly encryption and checksum calculation"""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         part_size: int,
         private_key_path: Path,
-        server_public_key: str,
         passphrase: str | None,
         checksums: Checksums = Checksums(),
         file_secret: bytes | None = None,
@@ -48,7 +48,7 @@ class Crypt4GHEncryptor(Encryptor):
         self._checksums = checksums
         self._part_size = part_size
         self._private_key_path = private_key_path
-        self._server_public_key = base64.b64decode(server_public_key)
+        self._server_public_key = base64.b64decode(get_ghga_pubkey())
         self._passphrase = passphrase
         if file_secret is None:
             file_secret = os.urandom(32)
