@@ -148,8 +148,52 @@ The implementation of the EM transformation service will involve the following k
    4. The service executes the workflows of all the retrieved WorkflowRoutes on the `data` of the incoming AnnotatedEMPack.
    5. Marks the AnnotatedEMPack as processed after the execution of the workflow by updating a status field (e.g., `status: "processed"`) in the AnnotatedEMPackCollection.
    6. The output AnnotatedEMPack is stored in the AnnotatedEMPack collection if the workflow route has `publish` set to True.
+   7. If publish is False, 
 
+#### Examples
 
+**User Story 1: Service Startup and Schema Derivation**
+   | workflow_route_name     | workflow_id      | workflow_input_schema_type | publish | workflow_output_schema                 |
+   | ----------------------- | ---------------- | -------------------------- | ------- | -------------------------------------- |
+   | universal_ingress_model |                  |                            | False   | {schemapack: 3.0.0, ...}               |
+   | accession_model         | add_accession_wf | universal_ingress_model    | False   | {} (empty dictionary as a placeholder) |
+   | aggregated_model        | aggregate_wf     | accession_model            | True    | {} (empty dictionary as a placeholder) |
+
+At the service start up, 
+1. identify the routes with an empty `workflow_output_schema`
+    [aggregation_model, accession_model]
+2. get the dependencies for the routes required to derive the `workflow_output_model`
+    aggregation_model -> accession_model -> universal_ingress_model
+    accession_model -> universal_ingress_model
+3. when the dependency search finds a route who has a non empty `workflow_output_schema`, it starts the execution on the next route that depends on the current one. 
+    path to execute: aggregation_model -> accession_model -> universal_ingress_model
+        first gets universal_ingress_model's schema
+        next executes accession_model and caches its result
+        finally executes aggregation_model and caches its result
+    path to execute: accession_model -> universal_ingress_model
+        sees that it is already executed and skips it
+4. The workflow_output_models are saved to their corresponding workflow route
+
+**User Story 2: All routes have derived models**
+
+   | workflow_route_name     | workflow_id      | workflow_input_schema_type | publish | workflow_output_schema   |
+   | ----------------------- | ---------------- | -------------------------- | ------- | ------------------------ |
+   | universal_ingress_model |                  |                            | False   | {schemapack: 3.0.0, ...} |
+   | accession_model         | add_accession_wf | universal_ingress_model    | False   | {schemapack: 3.0.0, ...} |
+   | aggregated_model        | aggregate_wf     | accession_model            | True    | {schemapack: 3.0.0, ...} |
+
+1. The service polls database in every second to check for new AnnotatedEMPacks in the `AnnotatedEMPackCollection`.
+
+**User Story 3: An AnnotatedEMPack, workflow_route_name tuple is added to the AnnotatedEMPackCollection**
+
+The tuple (data=ghga_metadata_data, workflow_route_name=accession_model) arrives at the AnnotatedEMPack collection:
+1. The service picks up the tuple
+2. It retrieves the workflow route that matches the `workflow_route_name`
+    1. Data transform on (accession_model, add_accession_wf, universal_ingress_model, {schemapack:3.0.0,...}, false) is executed
+    2. Since the publish is false, the service searched the workflow routes whose input_schema_type equals to the executed route's output_schema
+    3. The service identifies and executes (aggregation_model, aggregate_wf, accession_model, {schemapack: 3.0.0,...}, true)
+        1. Since the publish is true, the service updates the AnnotatedEMPackCollection with the derived_data, and the name of the last executed route:
+        (data, aggregation_model)
 
 ### Not included:
 
