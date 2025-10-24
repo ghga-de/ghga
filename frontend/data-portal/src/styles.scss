@@ -316,6 +316,17 @@ $colour-suffixes: (
 }
 
 @each $suffix in $colour-suffixes {
+  .menu-item-#{$suffix} {
+    @include mat.menu-overrides(
+      (
+        item-icon-color: var(--mat-sys-#{$suffix}),
+        item-label-text-color: var(--mat-sys-#{$suffix}),
+      )
+    );
+  }
+}
+
+@each $suffix in $colour-suffixes {
   .button-#{$suffix} {
     @include mat.button-overrides(
       (
@@ -380,21 +391,33 @@ a.active-sub-page {
   mat-icon {
     color: var(--mat-sys-on-tertiary-fixed);
   }
+  @include mat.menu-overrides(
+    (
+      item-icon-color: var(--mat-sys-on-tertiary-fixed),
+    )
+  );
 }
 
-nav a:hover,
-nav a:active,
-mat-toolbar a:not(.active-page):hover,
-mat-toolbar a:not(.active-page):active,
-mat-toolbar button:not(.active-page):hover,
-mat-toolbar button:not(.active-page):active {
-  background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 8%);
+nav a,
+mat-toolbar a:not(.active-page),
+mat-toolbar button:not(.active-page) {
+  &:hover,
+  &:active {
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 8%);
+  }
+  &:focus {
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
+  }
 }
 
-nav a:focus,
-mat-toolbar a:not(.active-page):focus,
-mat-toolbar button:not(.active-page):focus {
-  background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
+mat-toolbar button.account-page-active {
+  &:hover,
+  &:active {
+    background-color: color-mix(in srgb, var(--mat-sys-quaternary) 100%, #fff 8%);
+  }
+  &:focus {
+    background-color: color-mix(in srgb, var(--mat-sys-quaternary) 100%, #fff 12%);
+  }
 }
 
 mat-chip.chip-tertiary,

@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth';
 import { InitialsPipe } from '@app/shared/pipes/initials-pipe';
+import { BaseRouteService } from '@app/shared/services/base-route';
 import { ConfigService } from '@app/shared/services/config';
 
 /**
@@ -45,6 +46,9 @@ export class AccountButtonComponent {
   name = this.#auth.name;
   fullName = this.#auth.fullName;
   roleNames = this.#auth.roleNames;
+
+  #baseRoute = inject(BaseRouteService);
+  #route = this.#baseRoute.route;
 
   /**
    * User login
@@ -80,6 +84,11 @@ export class AccountButtonComponent {
         return 'two-factor authentication setup';
     }
   });
+
+  /**
+   * Whether the account button should be highlighted as being active
+   */
+  protected accountPageActive = computed(() => this.#route() === 'account');
 
   /**
    * Navigate to the account page

@@ -3,6 +3,7 @@
   mat-icon-button
   class="button-on-primary"
   [class.with-initials]="initials"
+  [class.account-page-active]="accountPageActive()"
   [matMenuTriggerFor]="menu"
   aria-label="Account"
   matTooltip="Your GHGA account"
@@ -21,27 +22,31 @@
   <button
     (click)="gotoAccount()"
     mat-menu-item
+    [class.menu-item-secondary]="!accountPageActive()"
+    [class.active-sub-page]="accountPageActive()"
     data-umami-event="Account Button Menu Account Clicked"
   >
-    <mat-icon class="button-secondary" fontIcon="account_circle"></mat-icon>
-    <span class="text-secondary">Your GHGA account page</span>
+    <mat-icon fontIcon="account_circle"></mat-icon>
+    <span>Your GHGA account page</span>
   </button>
   <button
     (click)="manageLsLogin()"
     mat-menu-item
+    class="menu-item-quaternary"
     arial-label="Manage LS Login account (in new tab)"
     data-umami-event="Account Button Menu LS Login Clicked"
   >
-    <mat-icon class="button-quaternary" fontIcon="open_in_new"></mat-icon>
-    <span class="text-quaternary">Manage LS Login account</span>
+    <mat-icon fontIcon="open_in_new"></mat-icon>
+    <span>Manage LS Login account</span>
   </button>
   <button
     (click)="onLogout()"
     mat-menu-item
+    class="menu-item-error"
     data-umami-event="Account Button Menu Logout Clicked"
   >
-    <mat-icon class="button-tertiary" fontIcon="logout"></mat-icon>
-    <span class="text-tertiary">Log out</span>
+    <mat-icon fontIcon="logout"></mat-icon>
+    <span>Log out</span>
   </button>
 </mat-menu>
 } @else if (isLoggedIn()) {
@@ -64,18 +69,20 @@
   <button
     (click)="continue()"
     mat-menu-item
+    class="menu-item-quaternary"
     data-umami-event="Account Button Menu Continue Clicked"
   >
-    <mat-icon class="button-quaternary" fontIcon="arrow_forward"></mat-icon>
-    <span class="text-quaternary">Complete {{ ongoingProcess() }} </span>
+    <mat-icon fontIcon="arrow_forward"></mat-icon>
+    <span>Complete {{ ongoingProcess() }} </span>
   </button>
   <button
     (click)="onLogout()"
     mat-menu-item
+    class="menu-item-error"
     data-umami-event="Account Button Menu Cancel Clicked"
   >
-    <mat-icon class="button-quaternary" fontIcon="logout"></mat-icon>
-    <span class="text-quaternary">Cancel and log out</span>
+    <mat-icon fontIcon="logout"></mat-icon>
+    <span>Cancel and log out</span>
   </button>
 </mat-menu>
 } @else {
@@ -102,10 +109,11 @@
   <button
     (click)="onLogin()"
     mat-menu-item
+    class="menu-item-quaternary"
     matTooltip="Log in via LS Login"
     data-umami-event="Account Button Menu LS Login Clicked"
   >
-    <mat-icon class="button-quaternary" fontIcon="login"></mat-icon>
+    <mat-icon fontIcon="login"></mat-icon>
     <img
       ngSrc="assets/images/ls-login.png"
       alt="LS Login"
