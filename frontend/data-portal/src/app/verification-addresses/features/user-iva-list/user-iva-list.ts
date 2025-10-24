@@ -95,12 +95,13 @@ export class UserIvaListComponent implements OnInit {
     const address = this.#ivaAddress(iva);
     this.#confirm.confirm({
       title: 'Request verification of your address',
-      message:
-        'We will send a verification code to the address selected for verification (' +
-        address +
-        '). Please allow some time for processing' +
-        ' your request. When the verification code has been transmitted,' +
-        ' you will also be notified via e-mail.',
+      message: `We will send a verification code to the address selected for
+      verification (${address}). <strong>Please allow some time for processing your
+      request.</strong> When the verification code has been transmitted,
+      you will also be notified via e-mail.<p
+      class="text-error bg-warning/15 mt-3 p-3 font-bold rounded-xl">Note: Verification
+      codes via SMS are currently sent out manually by our data stewards, therefore it
+      may take up to 2-3 working days until you will receive your code.</p>`,
       callback: (confirmed) => {
         if (confirmed) this.#requestVerification(iva);
       },

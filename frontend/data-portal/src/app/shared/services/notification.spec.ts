@@ -65,9 +65,23 @@ describe('NotificationService', () => {
     expect(matSnackBar.openFromComponent).toHaveBeenCalledWith(
       CustomSnackBarComponent,
       {
-        data: { message: 'Test warning message', type: 'warn' },
+        data: { message: 'Test warning message', type: 'warning' },
         duration: 4000,
-        panelClass: 'snackbar-warn',
+        panelClass: 'snackbar-warning',
+        horizontalPosition,
+        verticalPosition,
+      },
+    );
+  });
+
+  it('should call openFromComponent properly when showDanger is called', () => {
+    service.showDanger('Test danger message');
+    expect(matSnackBar.openFromComponent).toHaveBeenCalledWith(
+      CustomSnackBarComponent,
+      {
+        data: { message: 'Test danger message', type: 'danger' },
+        duration: 4000,
+        panelClass: 'snackbar-danger',
         horizontalPosition,
         verticalPosition,
       },

@@ -43,7 +43,17 @@ export class NotificationService {
    */
   showWarning(message: string, duration: number = 4000): void {
     console.warn(message);
-    this.#show(message, 'warn', duration);
+    this.#show(message, 'warning', duration);
+  }
+
+  /**
+   * Show a danger message
+   * @param message - the text to show to the user
+   * @param duration - the duration in milliseconds to show the message
+   */
+  showDanger(message: string, duration: number = 4000): void {
+    console.warn(message);
+    this.#show(message, 'danger', duration);
   }
 
   /**
@@ -64,7 +74,7 @@ export class NotificationService {
    */
   #show(
     message: string,
-    type: 'ok' | 'info' | 'warn' | 'error',
+    type: 'ok' | 'info' | 'warning' | 'danger' | 'error',
     duration: number | undefined,
   ): void {
     this.#snackBar.openFromComponent(CustomSnackBarComponent, {

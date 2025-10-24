@@ -7,7 +7,7 @@
   <span class="flex flex-wrap gap-2 text-2xl"
     ><span>{{ fullName() }}</span>
     @for (roleName of roleNames(); track roleName) {
-      <mat-chip class="chip-tertiary">{{ roleName }}</mat-chip>
+    <mat-chip class="chip-tertiary">{{ roleName }}</mat-chip>
     }
   </span>
 </h2>
@@ -29,7 +29,6 @@
       You can change this email address in your
       <a
         appExtLink
-        [inline]="true"
         class="text-quaternary hover:text-secondary focus:text-secondary"
         href="https://profile.aai.lifescience-ri.eu/profile"
         data-umami-event="Account Email Change Clicked"

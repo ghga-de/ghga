@@ -24,7 +24,8 @@ warnUserIds = ambiguousUserIds();
         <a
           routerLink="/user-manager/{{ iva.user_id }}"
           data-umami-event="IVA Manager User Name Clicked"
-          >{{ iva.user_name }}</a
+          >{{ iva.user_title ? iva.user_title + ' ' + iva.user_name : iva.user_name
+          }}</a
         ><br />
         <span class="text-sm text-gray-600">({{ iva.user_email }})</span>
       </td>
