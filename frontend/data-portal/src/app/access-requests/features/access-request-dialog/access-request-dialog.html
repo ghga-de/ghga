@@ -1,7 +1,7 @@
 <div class="w-full sm:p-8">
   <h2 mat-dialog-title>
-    <span class="fa-file-download"></span>Request access for dataset
-    {{ data.datasetID }}
+    <span class="fa-file-download"></span>Request access for dataset {{ data.datasetID
+    }}
   </h2>
   <mat-dialog-content>
     <mat-form-field class="mt-4 w-full">
@@ -15,9 +15,7 @@
         required
       ></textarea>
       @if (descriptionErrorMessage()) {
-        <mat-error>
-          {{ descriptionErrorMessage() }}
-        </mat-error>
+      <mat-error> {{ descriptionErrorMessage() }} </mat-error>
       }
     </mat-form-field>
     <mat-form-field class="mt-4 w-full">
@@ -34,9 +32,7 @@
         required
       />
       @if (fromDateErrorMessage()) {
-        <mat-error>
-          {{ fromDateErrorMessage() }}
-        </mat-error>
+      <mat-error> {{ fromDateErrorMessage() }} </mat-error>
       }
       <mat-hint>{{ dateInputFormatHint }}</mat-hint>
       <mat-datepicker-toggle matIconSuffix [for]="from_picker"></mat-datepicker-toggle>
@@ -56,9 +52,7 @@
         required
       />
       @if (untilDateErrorMessage()) {
-        <mat-error>
-          {{ untilDateErrorMessage() }}
-        </mat-error>
+      <mat-error> {{ untilDateErrorMessage() }} </mat-error>
       }
       <mat-hint>{{ dateInputFormatHint }}</mat-hint>
       <mat-datepicker-toggle matIconSuffix [for]="until_picker"></mat-datepicker-toggle>
@@ -78,9 +72,16 @@
         required
       />
       @if (emailFormControl.invalid) {
-        <mat-error>{{ emailErrorMessage() }}</mat-error>
+      <mat-error>{{ emailErrorMessage() }}</mat-error>
       }
     </mat-form-field>
+    <div class="py-3">
+      <aside class="text-danger bg-warning/15 rounded-xl p-3 text-sm">
+        Note that most data access committees (DACs) require that access requests be
+        associated with institutional email addresses rather than private ones. Please
+        keep this in mind when selecting the email address to use for your request.
+      </aside>
+    </div>
   </mat-dialog-content>
   <mat-dialog-actions class="gap-y-2">
     <button
