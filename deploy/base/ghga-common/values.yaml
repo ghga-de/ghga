@@ -11,6 +11,9 @@ exports:
         resource:
           patternType: literal
           type: group
+    
+    # This is the actual Kubernetes `command` field
+    command: ["sh", "-c"]
 
     deployment:
       enabled: true
@@ -56,6 +59,15 @@ exports:
 
     initContainers: []
 
+    migrationInitContainer:
+      enabled: false
+      image: ""
+      cmd: ["sh", "-c"]
+      args: []
+      env: []
+      resources: {}
+      volumeMounts: []
+
     hostAliases: []
 
     podLabels: {}
@@ -90,6 +102,8 @@ exports:
 
     podRestartPolicy: Always
 
+    # This is the actual Kubernetes `args` passed as string into array
+    # TODO: rename to a better name
     cmd: /bin/sh
 
     ports:

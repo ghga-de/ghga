@@ -54,12 +54,9 @@ spec:
           containers:
           - image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart ) }}
             imagePullPolicy: {{ default (eq .Values.image.tag "latest" | ternary "Always" "IfNotPresent") .Values.image.pullPolicy }}
-            {{- include "ghga-common.command-args" (list $ .Values.cmd) | nindent 12 }}
-            {{- if .Values.args }}
-            args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 14 }}
-            {{- end }}
+            {{- include "ghga-common.command-args" (list $ .Values.cmd .Values.command) | nindent 12 }}
             {{- $envVars := include "ghga-common.env-vars" $ | fromYaml | dig "envVars" list -}}
-            {{- if $envVars -}}
+            {{- if $envVars }}
             env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
             {{- end }}
             {{- if or .Values.envVarsConfigMap .Values.envVarsSecret }}

@@ -29,7 +29,7 @@ config:
   db_name: test-database # That should be omitted and set dynamically to release name
   service_instance_id: test-id
 
-cmd:  test
+cmd: test
 
 ports:
   enabled: true
@@ -81,6 +81,18 @@ httpRoute:
           port: 80
 
 topicPrefix: prefix
+
+initContainers:
+- name: init-test
+  cmd: [sh, -c]
+  args:
+    - do_the_init
+
+migrationInitContainer:
+ enabled: true
+ cmd: [sh, -c]
+ args:
+  - do_the_migration
 
 kafkaUser:
   enabled: true

@@ -13,12 +13,12 @@ metadata:
     app.kubernetes.io/version: "0.0.0"
     app: test-job
   annotations:
-    configmap-hash: 00108bebc22d5392583470fb8341f592b96477f81cd4aedd52e35acff49034e5
+    configmap-hash: 9620dc98951be381437a8ba53f76b0fe7acbdd9e6f0cf1ddb749d6440137420f
 spec:
   template:
     metadata:
       annotations:
-        configmap-hash: 00108bebc22d5392583470fb8341f592b96477f81cd4aedd52e35acff49034e5
+        configmap-hash: 9620dc98951be381437a8ba53f76b0fe7acbdd9e6f0cf1ddb749d6440137420f
         helm.sh/revision: "1"
       labels:
         app.kubernetes.io/name: test-job
@@ -47,17 +47,13 @@ spec:
               type: RuntimeDefault
           image: docker.io/busybox:latest
           imagePullPolicy: Always
-          command: ["sh", "-c"]
+          command:
+          - sh
+          - -c
           
           args:
-            - if [ -d "/vault/secrets" ]; then
-                for f in /vault/secrets/*; do
-                  if [ -f "$f" ]; then
-                    . "$f";
-                  fi;
-                done;
-              fi;
-              sleep 100000000;
+          - if [ -d "/vault/secrets" ]; then for f in /vault/secrets/*; do if [ -f "$f" ]; then
+            . "$f"; fi; done; fi; sleep 100000000;
           env:
             - name: _CONFIG_YAML
               value: /etc/config.yaml

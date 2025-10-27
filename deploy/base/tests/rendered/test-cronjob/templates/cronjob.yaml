@@ -69,18 +69,13 @@ spec:
           containers:
           - image: docker.io/busybox:latest
             imagePullPolicy: Always
-            command: ["sh", "-c"]
+            command:
+            - sh
+            - -c
             
             args:
-              - if [ -d "/vault/secrets" ]; then
-                  for f in /vault/secrets/*; do
-                    if [ -f "$f" ]; then
-                      . "$f";
-                    fi;
-                  done;
-                fi;
-                sleep 100000000;
-            
+            - if [ -d "/vault/secrets" ]; then for f in /vault/secrets/*; do if [ -f "$f" ]; then
+              . "$f"; fi; done; fi; sleep 100000000;
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:
