@@ -11,6 +11,7 @@ import { DatasetInformation } from '@app/metadata/models/dataset-information';
 import { DatasetSummary } from '@app/metadata/models/dataset-summary';
 import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
+import { Study } from '@app/metadata/models/study';
 import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { IvaState, IvaType, UserWithIva } from '@app/verification-addresses/models/iva';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
@@ -978,4 +979,17 @@ export const storageLabels: BaseStorageLabels = {
     HD04: 'Heidelberg 4',
     HD05: 'Heidelberg 5',
   },
+};
+
+export const studyData: Study = {
+  accession: 'GHGAS12345678901234',
+  ega_accession: 'EGAS12345678901',
+  alias: 'TEST_STUDY',
+  types: ['test_genomics_Lorem ipsum dolor sit amet, consectetur adipiscing elit'],
+  title: 'Test Study',
+  affiliations: ['Test affiliation'],
+  datasets: ['GHGAD12345678901234', 'GHGAD12345678901235'],
+  description:
+    'Test study description. Pharetra convallis posuere morbi leo urna molestie. Ut faucibus pulvinar elementum integer. Nec nam aliquam sem et tortor. Pretium viverra suspendisse potenti nullam ac. Commodo sed egestas egestas fringilla. Tincidunt dui ut ornare lectus sit. Amet massa vitae tortor condimentum lacinia quis vel eros donec. Feugiat pretium nibh ipsum consequat. Pulvinar etiam non quam lacus suspendisse faucibus interdum. Aliquam sem et tortor consequat id.',
+  publications: ['GHGA123456789', 'GHGA123456709'],
 };

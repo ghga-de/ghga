@@ -19,6 +19,7 @@ import {
   metadataGlobalSummary,
   searchResults,
   storageLabels,
+  studyData,
   users,
   workPackageResponse,
 } from './data';
@@ -114,6 +115,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
     getDatasetDetails('GHGAD12345678901235'),
   'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD12345678901236':
     getDatasetDetails('GHGAD12345678901236'),
+
+  // Get study details (embedded)
+  'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/*': studyData,
 
   /**
    * MASS API

@@ -99,22 +99,25 @@
             }
           } @else {
             @for (facet of facets(); track facet.key) {
-              <div>
-                {{ facet.name }}
-                <ul class="mt-1 mb-5 rounded-lg border">
-                  @for (option of facet.options; track option.value) {
-                    @let name = `${facet.key}#${option.value}`;
-                    <li>
-                      <mat-checkbox
-                        [name]="name"
-                        (change)="onFacetFilterChanged($event)"
-                        [checked]="name | facetActivity: facetData()"
-                        >{{ option.value }} ({{ option.count }})</mat-checkbox
-                      >
-                    </li>
-                  }
-                </ul>
-              </div>
+              <!-- Skip the study Id facet -->
+              @if (facet.name !== 'sid') {
+                <div>
+                  {{ facet.name }}
+                  <ul class="mt-1 mb-5 rounded-lg border">
+                    @for (option of facet.options; track option.value) {
+                      @let name = `${facet.key}#${option.value}`;
+                      <li>
+                        <mat-checkbox
+                          [name]="name"
+                          (change)="onFacetFilterChanged($event)"
+                          [checked]="name | facetActivity: facetData()"
+                          >{{ option.value }} ({{ option.count }})</mat-checkbox
+                        >
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
             }
           }
           <div class="mt-8 grid grid-cols-2 gap-5">
@@ -152,8 +155,6 @@
   </div>
 } @else {
   <div>
-    <p class="text-error text-2xl">
-      {{ errorMessage() }}
-    </p>
+    <p class="text-error text-2xl">{{ errorMessage() }}</p>
   </div>
 }

@@ -313,9 +313,7 @@ $colour-suffixes: (
       opacity: 0.75;
     }
   }
-}
 
-@each $suffix in $colour-suffixes {
   .menu-item-#{$suffix} {
     @include mat.menu-overrides(
       (
@@ -324,9 +322,7 @@ $colour-suffixes: (
       )
     );
   }
-}
 
-@each $suffix in $colour-suffixes {
   .button-#{$suffix} {
     @include mat.button-overrides(
       (

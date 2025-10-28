@@ -52,6 +52,22 @@ export const routes: Routes = [
       ),
     title: 'Dataset Details',
   },
+  {
+    path: 's/:id',
+    loadComponent: () =>
+      import('./metadata/features/study-details/study-details').then(
+        (m) => m.StudyDetailsComponent,
+      ),
+    title: 'Study Details',
+  },
+  {
+    path: 'study/:id',
+    loadComponent: () =>
+      import('./metadata/features/study-details/study-details').then(
+        (m) => m.StudyDetailsComponent,
+      ),
+    title: 'Study Details',
+  },
   // routes that need user authentication
   {
     path: 'work-package',

@@ -15,6 +15,7 @@ import {
   Individual,
 } from '../models/dataset-details';
 import { DatasetSummary, emptyDatasetSummary } from '../models/dataset-summary';
+import { emptyStudy, Study } from '../models/study';
 
 /**
  * Metadata query service
@@ -32,9 +33,30 @@ export class MetadataService {
 
   #datasetSummaryUrl = `${this.#metldataUrl}/artifacts/stats_public/classes/DatasetStats/resources`;
   #datasetDetailsUrl = `${this.#metldataUrl}/artifacts/embedded_public/classes/EmbeddedDataset/resources`;
+  #studyUrl = `${this.#metldataUrl}/artifacts/embedded_public/classes/Study/resources`;
 
   #summaryID = signal<string | undefined>(undefined);
   #detailsID = signal<string | undefined>(undefined);
+  #studyID = signal<string | undefined>(undefined);
+
+  /**
+   * The study (empty while loading) as a resource
+   */
+  study = httpResource<Study>(
+    () => {
+      const id = this.#studyID();
+      return id ? `${this.#studyUrl}/${id}` : undefined;
+    },
+    { defaultValue: emptyStudy },
+  );
+
+  /**
+   * Load the study details for the given ID
+   * @param id study ID
+   */
+  loadStudy(id: string): void {
+    this.#studyID.set(id);
+  }
 
   /**
    * The dataset summary (empty while loading) as a resource
