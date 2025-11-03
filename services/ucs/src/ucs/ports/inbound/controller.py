@@ -132,7 +132,7 @@ class UploadControllerPort(ABC):
 
     @abstractmethod
     async def initiate_file_upload(
-        self, *, box_id: UUID4, alias: str, checksum: str, size: int
+        self, *, box_id: UUID4, alias: str, size: int
     ) -> UUID4:
         """Initialize a new multipart upload and return the file ID.
 
@@ -159,7 +159,9 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def complete_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
+    async def complete_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4, checksum: str
+    ) -> None:
         """Instruct S3 to complete a multipart upload.
 
         Raises:

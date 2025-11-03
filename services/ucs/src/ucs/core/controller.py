@@ -83,7 +83,7 @@ class UploadController(UploadControllerPort):
         return bucket_id, object_storage
 
     async def _insert_file_upload_if_new(
-        self, *, box: FileUploadBox, alias: str, checksum: str, size: int
+        self, *, box: FileUploadBox, alias: str, size: int
     ) -> UUID4:
         """Create a new FileUpload for the provided file alias and return the file_id.
 
@@ -102,7 +102,7 @@ class UploadController(UploadControllerPort):
                 box_id=box_id,
                 alias=alias,
                 size=size,
-                checksum=checksum,
+                checksum="",  # Checksum is empty until file upload is complete
             )
 
             await self._file_upload_dao.insert(file_upload)
@@ -115,7 +115,6 @@ class UploadController(UploadControllerPort):
                     "box_id": box.id,
                     "generated_file_id": file_id,
                     "file_alias": alias,
-                    "checksum": checksum,
                     "size": size,
                 },
             )
@@ -259,7 +258,7 @@ class UploadController(UploadControllerPort):
             pass
 
     async def initiate_file_upload(
-        self, *, box_id: UUID4, alias: str, checksum: str, size: int
+        self, *, box_id: UUID4, alias: str, size: int
     ) -> UUID4:
         """Initialize a new multipart upload and return the file ID.
 
@@ -283,9 +282,7 @@ class UploadController(UploadControllerPort):
         extra["bucked_id"] = bucket_id
 
         initiated = now_utc_ms_prec()  # Generate timestamp early to minimize error risk
-        file_id = await self._insert_file_upload_if_new(
-            box=box, alias=alias, checksum=checksum, size=size
-        )
+        file_id = await self._insert_file_upload_if_new(box=box, alias=alias, size=size)
         log.info("FileUpload %s added for alias %s.", file_id, alias, extra=extra)
 
         # Initiate a new multipart file upload on the S3 instance
@@ -356,10 +353,7 @@ class UploadController(UploadControllerPort):
             error = self.S3UploadDetailsNotFoundError(file_id=file_id)
             log.error(
                 error,
-                extra={
-                    "file_id": file_id,
-                    "part_no": part_no,
-                },
+                extra={"file_id": file_id, "part_no": part_no},
             )
             raise error from err
         storage_alias = s3_upload_details.storage_alias
@@ -393,7 +387,9 @@ class UploadController(UploadControllerPort):
             )
             raise error from err
 
-    async def complete_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
+    async def complete_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4, checksum: str
+    ) -> None:
         """Instruct S3 to complete a multipart upload.
 
         Raises:
@@ -481,6 +477,7 @@ class UploadController(UploadControllerPort):
 
         # Update local collections now that S3 upload is successfully completed
         file_upload.state = FileUploadState.INBOX
+        file_upload.checksum = checksum
         file_upload.completed = True
         s3_upload_details.completed = now_utc_ms_prec()
         await self._file_upload_dao.update(file_upload)

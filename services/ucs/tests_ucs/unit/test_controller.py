@@ -105,13 +105,13 @@ async def test_create_new_file_upload(rig: JointRig):
 
     # Then create a FileUpload within the box
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Verify the FileUpload was created
     assert file_upload_dao.latest.id == file_id
     assert file_upload_dao.latest.alias == "test_file"
-    assert file_upload_dao.latest.checksum == "sha256:abc123"
+    assert file_upload_dao.latest.checksum == ""
     assert file_upload_dao.latest.size == 1024
 
     # Verify S3UploadDetails were created
@@ -130,7 +130,7 @@ async def test_get_part_url(rig: JointRig):
 
     # Then create a FileUpload within the box
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Now get the part upload URL
@@ -149,11 +149,13 @@ async def test_complete_file_upload(rig: JointRig):
 
     # Then create a FileUpload within the box
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Now complete the file upload
-    await controller.complete_file_upload(box_id=box_id, file_id=file_id)
+    await controller.complete_file_upload(
+        box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+    )
     bucket_id, object_storage = rig.object_storages.for_alias("test")
     assert await object_storage.does_object_exist(
         bucket_id=bucket_id, object_id=str(file_id)
@@ -173,9 +175,11 @@ async def test_complete_file_upload(rig: JointRig):
     # Now repeat the process to ensure the box stats are incremented, not overwritten
     await sleep(0.1)
     file_id2 = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file2", checksum="sha256:abc123", size=1000
+        box_id=box_id, alias="test_file2", size=1000
     )
-    await controller.complete_file_upload(box_id=box_id, file_id=file_id2)
+    await controller.complete_file_upload(
+        box_id=box_id, file_id=file_id2, checksum="md5checksumhere"
+    )
     latest_s3_details = s3_upload_details_dao.latest
     assert latest_s3_details.file_id == file_id2
     assert latest_s3_details.completed
@@ -198,11 +202,13 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
 
     # Then create a FileUpload within the box
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     if complete_before_delete:
-        await controller.complete_file_upload(box_id=box_id, file_id=file_id)
+        await controller.complete_file_upload(
+            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+        )
         assert file_upload_box_dao.latest.file_count == 1
         assert file_upload_box_dao.latest.size == 1024
         assert await object_storage.does_object_exist(
@@ -270,7 +276,6 @@ async def test_get_box_uploads(rig: JointRig):
         await controller.initiate_file_upload(
             box_id=box_id,
             alias=f"file{i}",
-            checksum="sha256:xyz789",
             size=1024,
         )
         for i in range(3)
@@ -282,7 +287,6 @@ async def test_get_box_uploads(rig: JointRig):
         await controller.initiate_file_upload(
             box_id=other_box_id,
             alias=f"file{i}",
-            checksum="sha256:xyz789",
             size=1024,
         )
         for i in range(2)
@@ -290,11 +294,15 @@ async def test_get_box_uploads(rig: JointRig):
 
     # Complete the file uploads so they appear in the results
     for file_id in file_ids:
-        await controller.complete_file_upload(box_id=box_id, file_id=file_id)
+        await controller.complete_file_upload(
+            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+        )
 
     # Complete the uploads in the other box too
     for file_id in other_file_ids:
-        await controller.complete_file_upload(box_id=other_box_id, file_id=file_id)
+        await controller.complete_file_upload(
+            box_id=other_box_id, file_id=file_id, checksum="md5checksumhere"
+        )
 
     # Create a third, empty box
     empty_box_id = await controller.create_file_upload_box(storage_alias="test")
@@ -349,7 +357,6 @@ async def test_create_file_upload_when_box_missing(rig: JointRig):
         await controller.initiate_file_upload(
             box_id=non_existent_box_id,
             alias="test_file",
-            checksum="sha256:abc123",
             size=1024,
         )
 
@@ -376,7 +383,7 @@ async def test_create_file_upload_when_box_locked(rig: JointRig):
     # Try to create a FileUpload in the locked box - should raise LockedBoxError
     with pytest.raises(UploadControllerPort.LockedBoxError) as exc_info:
         await controller.initiate_file_upload(
-            box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+            box_id=box_id, alias="test_file", size=1024
         )
 
     # Verify the exception contains the correct box_id
@@ -424,7 +431,7 @@ async def test_delete_file_upload_when_box_locked(rig: JointRig):
     # First create a FileUploadBox and FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Lock the box manually
@@ -470,7 +477,7 @@ async def test_delete_file_upload_with_missing_s3_details(rig: JointRig):
     # Create a FileUploadBox and a FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Verify both FileUpload and S3UploadDetails were created
@@ -506,7 +513,7 @@ async def test_delete_file_upload_with_s3_error(rig: JointRig):
     # Create a FileUploadBox and a FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Set the mock to raise a MultiPartUploadAbortError
@@ -566,10 +573,10 @@ async def test_lock_box_with_incomplete_upload(rig: JointRig):
     box_id = await controller.create_file_upload_box(storage_alias="test")
 
     file_id1 = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
     file_id2 = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file2", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file2", size=1024
     )
     file_ids = sorted([file_id1, file_id2])
 
@@ -599,7 +606,7 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
     # Create a FileUploadBox and a FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Manually delete the box (simulating a scenario where the box was deleted
@@ -613,7 +620,9 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
 
     # Try to complete the file upload for the now missing box
     with pytest.raises(UploadControllerPort.BoxNotFoundError) as exc_info:
-        await controller.complete_file_upload(box_id=box_id, file_id=file_id)
+        await controller.complete_file_upload(
+            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+        )
 
     # Verify the exception contains the correct box_id
     assert str(box_id) in str(exc_info.value)
@@ -634,7 +643,7 @@ async def test_complete_missing_file_upload(rig: JointRig):
 
     with pytest.raises(UploadControllerPort.FileUploadNotFound) as exc_info:
         await controller.complete_file_upload(
-            box_id=box_id, file_id=non_existent_file_id
+            box_id=box_id, file_id=non_existent_file_id, checksum="md5checksumhere"
         )
     assert not rig.file_upload_dao.resources
     assert not rig.s3_upload_details_dao.resources
@@ -653,7 +662,7 @@ async def test_complete_file_upload_with_missing_s3_details(rig: JointRig):
     # Create a FileUploadBox and a FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Manually delete the S3UploadDetails but leave the FileUpload
@@ -662,7 +671,9 @@ async def test_complete_file_upload_with_missing_s3_details(rig: JointRig):
 
     # Try to complete the file upload - should raise S3UploadDetailsNotFoundError
     with pytest.raises(UploadControllerPort.S3UploadDetailsNotFoundError) as exc_info:
-        await controller.complete_file_upload(box_id=box_id, file_id=file_id)
+        await controller.complete_file_upload(
+            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+        )
 
     # Verify the exception contains the correct file_id
     assert str(file_id) in str(exc_info.value)
@@ -684,7 +695,7 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
     # Create a FileUploadBox and a FileUpload with a valid storage alias
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Verify both FileUpload and S3UploadDetails were created
@@ -699,7 +710,9 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
 
     # Try to complete the file upload - should raise UnknownStorageAliasError
     with pytest.raises(UploadControllerPort.UnknownStorageAliasError) as exc_info:
-        await controller.complete_file_upload(box_id=box_id, file_id=file_id)
+        await controller.complete_file_upload(
+            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+        )
 
     # Verify the exception message contains the unknown storage alias
     assert "does_not_exist" in str(exc_info.value)
@@ -719,7 +732,7 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
     # Create a FileUploadBox and a FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Set the mock to raise a MultiPartUploadConfirmError
@@ -729,7 +742,9 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
         raise_object_storage_error(InMemObjectStorage.MultiPartUploadConfirmError),
         pytest.raises(UploadControllerPort.UploadCompletionError) as exc_info,
     ):
-        await controller.complete_file_upload(box_id=box_id, file_id=file_id)
+        await controller.complete_file_upload(
+            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+        )
 
     # Verify the exception contains the S3 upload ID
     s3_upload_id = s3_upload_details_dao.latest.s3_upload_id
@@ -748,7 +763,7 @@ async def test_get_part_upload_url_with_missing_file_id(rig: JointRig):
     controller = rig.controller
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Manually delete the S3UploadDetails but leave the FileUpload
@@ -772,7 +787,7 @@ async def test_get_part_upload_url_with_unknown_storage_alias(rig: JointRig):
     s3_upload_details_dao = rig.s3_upload_details_dao
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Manually modify the S3UploadDetails to have an unknown storage alias
@@ -797,7 +812,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found(rig: JointRig):
     controller = rig.controller
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id = await controller.initiate_file_upload(
-        box_id=box_id, alias="test_file", checksum="sha256:abc123", size=1024
+        box_id=box_id, alias="test_file", size=1024
     )
 
     # Set the mock to raise a MultiPartUploadNotFoundError

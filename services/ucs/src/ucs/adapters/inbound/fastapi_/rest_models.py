@@ -54,9 +54,15 @@ class FileUploadCreationRequest(BaseModel):
         ...,
         description="The alias for the file within the box (must be unique within the box)",
     )
-    checksum: str = Field(..., description="The checksum of the file")
     size: int = Field(..., description="The size of the file in bytes", ge=1)
     model_config = ConfigDict(title="File Upload Creation Request")
+
+
+class FileUploadCompletionRequest(BaseModel):
+    """Request body for completing a FileUpload."""
+
+    checksum: str = Field(..., description="The checksum of the file")
+    model_config = ConfigDict(title="File Upload Completion Request")
 
 
 WorkType = Literal["create", "lock", "unlock", "view", "upload", "close", "delete"]

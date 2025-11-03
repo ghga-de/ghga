@@ -17,6 +17,7 @@
 
 from contextlib import nullcontext
 from tempfile import NamedTemporaryFile
+from typing import Any
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
@@ -90,11 +91,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             create_file_token_header = utils.create_file_token_header(
                 jwk=wps_jwk, box_id=box_id, alias="test_file"
             )
-            file_creation_body = {
-                "alias": "test_file",
-                "checksum": "abc123",
-                "size": file_size,
-            }
+            file_creation_body = {"alias": "test_file", "size": file_size}
             response = await rest_client.post(
                 f"/boxes/{box_id}/uploads",
                 json=file_creation_body,
@@ -109,6 +106,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         assert events[0].payload == {
             **file_creation_body,
             "state": "init",
+            "checksum": "",
             "completed": False,
             "id": str(file_id),
             "box_id": str(box_id),
@@ -137,8 +135,11 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             close_file_token_header = utils.close_file_token_header(
                 jwk=wps_jwk, box_id=box_id, file_id=file_id
             )
+            body = {"checksum": "abc123"}
             response = await rest_client.patch(
-                f"/boxes/{box_id}/uploads/{file_id}", headers=close_file_token_header
+                f"/boxes/{box_id}/uploads/{file_id}",
+                json=body,
+                headers=close_file_token_header,
             )
         events = file_recorder.recorded_events
         assert len(events) == 1
@@ -207,7 +208,7 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     async with set_correlation_id(uuid4()):
         box_id = await controller.create_file_upload_box(storage_alias="test")
         file_id = await controller.initiate_file_upload(
-            box_id=box_id, alias="test-file", checksum="abc123", size=1024
+            box_id=box_id, alias="test-file", size=1024
         )
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
@@ -232,8 +233,9 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     close_token_header = utils.close_file_token_header(
         box_id=box_id, file_id=file_id, jwk=joint_fixture.wps_jwk
     )
+    body = {"checksum": "abc123"}
     response = await joint_fixture.rest_client.patch(
-        f"/boxes/{box_id}/uploads/{file_id}", headers=close_token_header
+        f"/boxes/{box_id}/uploads/{file_id}", json=body, headers=close_token_header
     )
 
     # Response should indicate success because the file was uploaded
@@ -265,7 +267,7 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     async with set_correlation_id(uuid4()):
         box_id = await controller.create_file_upload_box(storage_alias="test")
         file_id = await controller.initiate_file_upload(
-            box_id=box_id, alias="test-file", checksum="abc123", size=1024
+            box_id=box_id, alias="test-file", size=1024
         )
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
@@ -289,8 +291,9 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     close_token_header = utils.close_file_token_header(
         box_id=box_id, file_id=file_id, jwk=wps_jwk
     )
+    body: dict[str, Any] = {"checksum": "abc123"}
     response = await rest_client.patch(
-        f"/boxes/{box_id}/uploads/{file_id}", headers=close_token_header
+        f"/boxes/{box_id}/uploads/{file_id}", json=body, headers=close_token_header
     )
     # Response should indicate failure and parameters
     assert response.status_code == 500
@@ -335,8 +338,9 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     close_token_header2 = utils.close_file_token_header(
         box_id=box_id, file_id=file_id2, jwk=wps_jwk
     )
+    body = {"checksum": "abc123"}
     response = await rest_client.patch(
-        f"/boxes/{box_id}/uploads/{file_id2}", headers=close_token_header2
+        f"/boxes/{box_id}/uploads/{file_id2}", json=body, headers=close_token_header2
     )
     assert response.status_code == 204
 
@@ -435,11 +439,11 @@ async def test_file_upload_index(joint_fixture: JointFixture, monkeypatch):
             storage_alias="test"
         )
         _ = await joint_fixture.upload_controller.initiate_file_upload(
-            box_id=box_id, alias="file1", checksum="blah", size=1024
+            box_id=box_id, alias="file1", size=1024
         )
         with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
             _ = await joint_fixture.upload_controller.initiate_file_upload(
-                box_id=box_id, alias="file1", checksum="blah", size=1024
+                box_id=box_id, alias="file1", size=1024
             )
 
 
@@ -456,7 +460,7 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
     async with set_correlation_id(uuid4()):
         box_id = await controller.create_file_upload_box(storage_alias="test")
         file_id = await controller.initiate_file_upload(
-            box_id=box_id, alias="test-file", checksum="abc123", size=1024
+            box_id=box_id, alias="test-file", size=1024
         )
 
     # Get upload URL and upload the file content
@@ -466,7 +470,9 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
 
     # Complete the file upload
     async with set_correlation_id(uuid4()):
-        await controller.complete_file_upload(box_id=box_id, file_id=file_id)
+        await controller.complete_file_upload(
+            box_id=box_id, file_id=file_id, checksum="abc123"
+        )
 
     # Verify the file exists in S3
     object_id = str(file_id)

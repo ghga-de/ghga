@@ -279,7 +279,6 @@ async def create_file_upload(
         file_id = await upload_controller.initiate_file_upload(
             box_id=box_id,
             alias=file_alias,
-            checksum=file_upload_creation.checksum,
             size=file_upload_creation.size,
         )
     except UploadControllerPort.BoxNotFoundError as error:
@@ -379,6 +378,7 @@ async def get_part_upload_url(
 async def complete_file_upload(
     box_id: UUID4,
     file_id: UUID4,
+    file_upload_completion: rest_models.FileUploadCompletionRequest,
     work_order: Annotated[
         rest_models.CloseFileWorkOrder,
         http_authorization.require_close_file_work_order,
@@ -395,7 +395,9 @@ async def complete_file_upload(
         raise http_exceptions.HttpNotAuthorizedError()
 
     try:
-        await upload_controller.complete_file_upload(box_id=box_id, file_id=file_id)
+        await upload_controller.complete_file_upload(
+            box_id=box_id, file_id=file_id, checksum=file_upload_completion.checksum
+        )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
     except UploadControllerPort.LockedBoxError as error:
