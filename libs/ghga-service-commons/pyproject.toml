@@ -23,7 +23,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "5.1.0"
+version = "5.2.0"
 description = "A library that contains common functionality used in services of GHGA"
 dependencies = [
     "pydantic >=2, <3",
@@ -34,7 +34,7 @@ text = "Apache 2.0"
 
 [project.optional-dependencies]
 api = [
-    "fastapi>=0.115.4, <0.118",
+    "fastapi>=0.115.4, <0.121",
     "uvicorn[standard]>=0.35, <0.37",
     "ghga-service-commons[http,objectstorage]",
 ]
@@ -174,4 +174,24 @@ asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.tox]
-legacy_tox_ini = "    [tox]\n    env_list = py3{10,11,12,13}\n\n    [gh-actions]\n    python =\n        3.10: py310\n        3.11: py311\n        3.12: py312\n        3.13: py313\n\n    [testenv]\n    pass_env =\n        TC_HOST\n        DOCKER_HOST\n    deps =\n        --no-deps -r ./lock/requirements-dev.txt\n    commands =\n        py3{9,10}: pip install --no-deps backports.asyncio.runner==1.2.0 exceptiongroup==1.3.0\n        pytest {posargs}\n"
+legacy_tox_ini = """
+    [tox]
+    env_list = py3{10,11,12,13}
+
+    [gh-actions]
+    python =
+        3.10: py310
+        3.11: py311
+        3.12: py312
+        3.13: py313
+
+    [testenv]
+    pass_env =
+        TC_HOST
+        DOCKER_HOST
+    deps =
+        --no-deps -r ./lock/requirements-dev.txt
+    commands =
+        py3{9,10}: pip install --no-deps backports.asyncio.runner==1.2.0 exceptiongroup==1.3.0
+        pytest {posargs}
+"""
