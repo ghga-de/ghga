@@ -20,7 +20,6 @@ import { RouterLink } from '@angular/router';
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
@@ -66,7 +65,6 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
   #ars = inject(AccessRequestService);
   #ivaService = inject(IvaService);
   #dialog = inject(MatDialog);
-  #notificationService = inject(NotificationService);
 
   id = input.required<string>();
   showTransition = false;
@@ -176,36 +174,13 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
   }
 
   /**
-   * Revoke the grant.
-   */
-  #revoke(): void {
-    const id = this.grant()?.id;
-    if (!id) return;
-    this.#ars.revokeAccessGrant(id).subscribe({
-      next: () => {
-        this.#notificationService.showSuccess(`Access grant was successfully revoked.`);
-      },
-      error: (err) => {
-        console.debug(err);
-        this.#notificationService.showError(
-          'Access grant could not be revoked. Please try again later',
-        );
-      },
-    });
-  }
-
-  /**
    * Revoke the grant after confirmation.
    */
   safeRevoke(): void {
-    const dialogRef = this.#dialog.open(AccessGrantRevocationDialogComponent, {
+    this.#dialog.open(AccessGrantRevocationDialogComponent, {
       data: {
         grant: this.grant()!,
       },
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) this.#revoke();
     });
   }
 }

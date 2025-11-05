@@ -210,25 +210,6 @@ export class UserManagerDetailComponent implements OnInit {
   }
 
   /**
-   * Delete the user.
-   */
-  #delete(): void {
-    const id = this.user()?.id;
-    if (!id) return;
-    this.#userService.deleteUser(id).subscribe({
-      next: () => {
-        this.#notificationService.showSuccess(`User account was successfully deleted.`);
-      },
-      error: (err) => {
-        console.debug(err);
-        this.#notificationService.showError(
-          'User account could not be deleted. Please try again later',
-        );
-      },
-    });
-  }
-
-  /**
    * Update the user data.
    * @param changes - The changes to apply
    */
@@ -272,12 +253,8 @@ export class UserManagerDetailComponent implements OnInit {
    * Delete the user after confirmation.
    */
   safeDeletion(): void {
-    const dialogRef = this.#dialog.open(DeletionConfirmationDialogComponent, {
+    this.#dialog.open(DeletionConfirmationDialogComponent, {
       data: { user: this.user()! },
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) this.#delete();
     });
   }
 }

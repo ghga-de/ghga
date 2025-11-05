@@ -2,12 +2,21 @@
 <div mat-dialog-content>
   <p>
     Please confirm that the user account of <strong>{{ user.displayName }}</strong> with
-    email <strong>{{ user.email }}</strong> shall be <strong>deleted</strong> by writing
+    email <strong>{{ user.email }}</strong> shall be <strong>deleted</strong> by enterin
     the user's email in the box below.
   </p>
   <mat-form-field class="w-full">
     <mat-label>Confirm user email</mat-label>
-    <input type="text" matInput class="w-full" [(ngModel)]="userInput" />
+    <input
+      type="text"
+      matInput
+      class="w-full"
+      [(ngModel)]="userInput"
+      (input)="onInput($event)"
+    />
+    <mat-error>{{
+      deletionError() ? 'User deletion failed. Please try again.' : ''
+    }}</mat-error>
   </mat-form-field>
 </div>
 <div mat-dialog-actions cdkTrapFocus>
