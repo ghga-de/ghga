@@ -19,18 +19,19 @@ export const datasetDetailsTableColumns: Record<string, DatasetDetailsTableColum
     {
       columnDef: 'accession',
       header: 'Experiment ID',
-      class: 'w-40',
+      class: 'min-w-40',
       accessor: 'accession',
     },
     {
       columnDef: 'ega_accession',
       header: 'EGA ID',
-      class: 'w-40',
+      class: 'min-w-40',
       accessor: 'ega_accession',
     },
     {
       columnDef: 'title',
       header: 'Title',
+      class: 'min-w-lg',
       accessor: 'title',
     },
     {
@@ -54,13 +55,13 @@ export const datasetDetailsTableColumns: Record<string, DatasetDetailsTableColum
     {
       columnDef: 'accession',
       header: 'Sample ID',
-      class: 'w-40',
+      class: 'min-w-40',
       accessor: 'accession',
     },
     {
       columnDef: 'ega_accession',
       header: 'EGA ID',
-      class: 'w-40',
+      class: 'min-w-40',
       accessor: 'ega_accession',
     },
     {
@@ -82,6 +83,7 @@ export const datasetDetailsTableColumns: Record<string, DatasetDetailsTableColum
     {
       columnDef: 'phenotype',
       header: 'Phenotype',
+      class: 'min-w-44',
       accessor: 'individual.phenotypic_features_terms',
     },
     {
@@ -93,6 +95,7 @@ export const datasetDetailsTableColumns: Record<string, DatasetDetailsTableColum
     {
       columnDef: 'tissue',
       header: 'Tissue',
+      class: 'min-w-44',
       accessor: 'biospecimen_tissue_term',
     },
   ],
@@ -100,13 +103,13 @@ export const datasetDetailsTableColumns: Record<string, DatasetDetailsTableColum
     {
       columnDef: 'accession',
       header: 'File ID',
-      class: 'w-40',
+      class: 'min-w-40',
       accessor: 'accession',
     },
     {
       columnDef: 'ega_accession',
       header: 'EGA ID',
-      class: 'w-40',
+      class: 'min-w-40',
       accessor: 'ega_accession',
     },
     {
@@ -118,26 +121,31 @@ export const datasetDetailsTableColumns: Record<string, DatasetDetailsTableColum
     {
       columnDef: 'type',
       header: 'File type',
+      class: 'min-w-32',
       accessor: 'format',
     },
     {
       columnDef: 'origin',
       header: 'File origin',
+      class: 'min-w-58',
       accessor: 'file_category',
     },
     {
       columnDef: 'size',
       header: 'File size',
+      class: 'min-w-32',
       accessor: 'file_information.size',
     },
     {
       columnDef: 'location',
       header: 'Storage location',
+      class: 'min-w-40',
       accessor: 'file_information.storage_alias',
     },
     {
       columnDef: 'hash',
       header: 'File hash',
+      class: 'min-w-40',
       accessor: 'file_information.sha256_hash',
     },
   ],

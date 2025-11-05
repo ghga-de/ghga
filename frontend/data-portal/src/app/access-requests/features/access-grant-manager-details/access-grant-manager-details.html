@@ -18,214 +18,242 @@
   </div>
 
   @if (grant(); as ag) {
-  <div class="flex w-full items-center justify-between">
-    <div>
-      <p>
-        <strong>Status:</strong>&nbsp;<span
-          class="{{ ag?.status | AccessGrantStatusClassPipe }} capitalize w-24"
-          >{{ ag.status }}</span
-        >
-      </p>
-
-      <p>
-        <strong>Dataset:</strong>&nbsp;<span class="w-24 capitalize"
-          ><a
-            routerLink="/dataset/{{ ag?.dataset_id }}"
-            data-umami-event="Access Grant Details Dataset Clicked"
-            >{{ ag?.dataset_id }}</a
-          ></span
-        >
-      </p>
-    </div>
-    @if (ag.status !== 'expired') {
-    <div class="w-64">
-      <button
-        mat-raised-button
-        class="button-error"
-        matTooltip="Revoke Access Grant"
-        (click)="safeRevoke()"
-      >
-        Revoke Access Grant
-        <mat-icon fontIcon="block"></mat-icon>
-      </button>
-    </div>
-    }
-  </div>
-  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-    <div
-      class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
-    >
-      <mat-card>
-        <mat-card-header>
-          <mat-card-title><h2>Grantee</h2></mat-card-title>
-        </mat-card-header>
-        <mat-card-content class="min-w-2xl md:min-w-xl">
-          <p>
-            <strong class="inline-block w-44">Name:</strong>
-            <a [routerLink]="'/user-manager/' + ag.user_id"
-              >{{ ag.user_title }} {{ ag.user_name }}</a
-            >
-          </p>
-          <p>
-            <strong class="inline-block w-44">Email:</strong>
-            <a appExtLink [href]="'mailto:' + ag.user_email" tabindex="-1"
-              >{{ ag.user_email }}</a
-            >
-          </p>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card>
-        <mat-card-header>
-          <mat-card-title><h2>DAC and Access Request</h2></mat-card-title>
-        </mat-card-header>
-        <mat-card-content class="min-w-2xl md:min-w-xl">
-          <p>
-            <strong class="inline-block w-44">DAC:</strong>
-            <span>{{ ag.dac_alias }}</span>
-          </p>
-          <p>
-            <strong class="inline-block w-44">DAC Email:</strong>
-            <span
-              ><a appExtLink [href]="'mailto:' + ag.dac_email" tabindex="-1"
-                >{{ ag.dac_email }}</a
-              ></span
-            >
-          </p>
-
-          @switch (ar().length) { @case (0) {
-          <p>
-            <span
-              ><span class="text-warning flex pt-2"
-                ><mat-icon fontIcon="warning" class="me-1 shrink-0"></mat-icon>No access
-                request was matched for this grant!</span
-              ></span
-            >
-          </p>
-          } @case (1) { @let request = ar()[0];
-          <p class="flex">
-            <strong class="inline-block min-w-44">Access Request:</strong>
-            <span class="grow"
-              >for the dataset
-              <a
-                routerLink="/dataset/{{ request.dataset_id }}"
-                data-umami-event="Access Grant Details Access Requests List Dataset Clicked"
-                aria-label="View this dataset"
-                >{{ request.dataset_id }}</a
-              ><br />
-              from {{ request.access_starts | date: friendlyDateFormat : periodTimeZone
-              }} to {{ request.access_ends | date: friendlyDateFormat : periodTimeZone
-              }}</span
-            >
-            <a
-              mat-icon-button
-              routerLink="/access-request-manager/{{request.id}}"
-              data-umami-event="Access Grant Details Access Request Clicked"
-              class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
-              matTooltip="View details of this access request"
-              matTooltipPosition="right"
-              ><mat-icon fontIcon="description" class="mb-1"></mat-icon
-            ></a>
-          </p>
-          } @default {
-          <p>
-            <span class="text-warning flex pt-2"
-              ><mat-icon fontIcon="warning" class="me-1 shrink-0"></mat-icon>Warning:
-              Found multiple requests by this user for this dataset!</span
-            >
-          </p>
-
-          @for (request of ar(); track request.id; let idx = $index) {
-          <p class="flex">
-            <strong class="inline-block w-44">Access Request:</strong>
-            <span class="grow"
-              >For the dataset
-              <a
-                class="text-tertiary hover:text-secondary focus:text-secondary"
-                routerLink="/dataset/{{ request.dataset_id }}"
-                data-umami-event="Granted Access Requests List Dataset Clicked"
-                >{{ request.dataset_id }}</a
-              ><br />
-              from {{ request.access_starts | date: friendlyDateFormat : periodTimeZone
-              }} to {{ request.access_ends | date: friendlyDateFormat : periodTimeZone
-              }}.</span
-            >
-            <a
-              mat-icon-button
-              [routerLink]="`/access-request-manager/${request.id}`"
-              data-umami-event="Access Grant Details Access Request Clicked"
-              class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
-              [matTooltip]="`View details of this access request (${idx + 1} of ${ar().length})`"
-              matTooltipPosition="right"
-              ><mat-icon fontIcon="description" class="mb-1"></mat-icon
-            ></a>
-          </p>
-          } } }
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card>
-        <mat-card-header>
-          <mat-card-title><h2>IVA & Status</h2></mat-card-title>
-        </mat-card-header>
-        <mat-card-content
-          class="min-w-2xl *:mb-2 *:flex md:min-w-xl [&_div>strong]:inline-block [&_div>strong]:min-w-44"
-        >
-          @if (iva(); as iva) {
-          <div>
-            <strong>Type:</strong>
-            <span class="flex"
-              ><mat-icon [fontIcon]="(iva.type | IvaTypePipe).icon"></mat-icon>{{
-              (iva.type | IvaTypePipe).name }}</span
-            >
-          </div>
-          <div>
-            <strong>Value:</strong>
-            <span>{{ iva.value }}</span>
-          </div>
-          <div>
-            <strong>State:</strong>
-            <span [class]="(iva.state | IvaStatePipe).class"
-              >{{ (iva.state | IvaStatePipe).name }}</span
-            >
-          </div>
-          } @else {
-          <span class="text-error flex items-center pb-2"
-            ><mat-icon fontIcon="error" class="me-4 shrink-0"></mat-icon> The
-            corresponding IVA does not exist or is not owned by the user. Therefore,
-            this grant is considered invalid.</span
+    <div class="flex w-full flex-wrap items-center justify-between">
+      <div class="me-4">
+        <p>
+          <strong>Status:</strong>&nbsp;<span
+            class="{{ ag?.status | AccessGrantStatusClassPipe }} capitalize w-24"
+            >{{ ag.status }}</span
           >
-          }
-          <div class="mt-4">
-            <a routerLink="/iva-manager" matButton="outlined">IVA Manager</a>
-          </div>
-        </mat-card-content>
-      </mat-card>
+        </p>
+
+        <p>
+          <strong>Dataset:</strong>&nbsp;<span class="w-24 capitalize"
+            ><a
+              routerLink="/dataset/{{ ag?.dataset_id }}"
+              data-umami-event="Access Grant Details Dataset Clicked"
+              >{{ ag?.dataset_id }}</a
+            ></span
+          >
+        </p>
+      </div>
+      @if (ag.status !== 'expired') {
+        <div class="w-64">
+          <button
+            mat-raised-button
+            class="button-error"
+            matTooltip="Revoke Access Grant"
+            (click)="safeRevoke()"
+          >
+            Revoke Access Grant
+            <mat-icon fontIcon="block"></mat-icon>
+          </button>
+        </div>
+      }
     </div>
-    <div
-      class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
-    >
-      <mat-card>
-        <mat-card-header>
-          <mat-card-title><h2>Audit Log</h2></mat-card-title>
-        </mat-card-header>
-        <mat-card-content class="divide-outline divide-y">
-          @for (item of sortedLog(); track item) { @if (item.date) {
-          <p class="mb-2 pb-2">
-            <strong class="inline-block w-44 xl:w-32">{{ item.date | date }}</strong>
-            <span>{{item.status}}</span>
-          </p>
-          } }
-        </mat-card-content>
-      </mat-card>
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div
+        class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
+      >
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Grantee</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-2xl md:min-w-xl">
+            <p>
+              <strong class="inline-block w-44">Name:</strong>
+              <a [routerLink]="'/user-manager/' + ag.user_id"
+                >{{ ag.user_title }} {{ ag.user_name }}</a
+              >
+            </p>
+            <p>
+              <strong class="inline-block w-44">Email:</strong>
+              <a appExtLink [href]="'mailto:' + ag.user_email" tabindex="-1">{{
+                ag.user_email
+              }}</a>
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>DAC and Access Request</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-2xl md:min-w-xl">
+            <p>
+              <strong class="inline-block w-44">DAC:</strong>
+              <span>{{ ag.dac_alias }}</span>
+            </p>
+            <p>
+              <strong class="inline-block w-44">DAC Email:</strong>
+              <span
+                ><a appExtLink [href]="'mailto:' + ag.dac_email" tabindex="-1">{{
+                  ag.dac_email
+                }}</a></span
+              >
+            </p>
+
+            @switch (ar().length) {
+              @case (0) {
+                <p>
+                  <span
+                    ><span class="text-warning flex pt-2"
+                      ><mat-icon fontIcon="warning" class="me-1 shrink-0"></mat-icon>No
+                      access request was matched for this grant!</span
+                    ></span
+                  >
+                </p>
+              }
+              @case (1) {
+                @let request = ar()[0];
+                <p class="flex">
+                  <strong class="inline-block min-w-44">Access Request:</strong>
+                  <span class="grow"
+                    >for the dataset
+                    <a
+                      routerLink="/dataset/{{ request.dataset_id }}"
+                      data-umami-event="Access Grant Details Access Requests List Dataset Clicked"
+                      aria-label="View this dataset"
+                      >{{ request.dataset_id }}</a
+                    ><br />
+                    from
+                    {{
+                      request.access_starts | date: friendlyDateFormat : periodTimeZone
+                    }}
+                    to
+                    {{
+                      request.access_ends | date: friendlyDateFormat : periodTimeZone
+                    }}</span
+                  >
+                  <a
+                    mat-icon-button
+                    routerLink="/access-request-manager/{{ request.id }}"
+                    data-umami-event="Access Grant Details Access Request Clicked"
+                    class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
+                    matTooltip="View details of this access request"
+                    matTooltipPosition="right"
+                    ><mat-icon fontIcon="description" class="mb-1"></mat-icon
+                  ></a>
+                </p>
+              }
+              @default {
+                <p>
+                  <span class="text-warning flex pt-2"
+                    ><mat-icon fontIcon="warning" class="me-1 shrink-0"></mat-icon
+                    >Warning: Found multiple requests by this user for this
+                    dataset!</span
+                  >
+                </p>
+
+                @for (request of ar(); track request.id; let idx = $index) {
+                  <p class="flex">
+                    <strong class="inline-block w-44">Access Request:</strong>
+                    <span class="grow"
+                      >For the dataset
+                      <a
+                        class="text-tertiary hover:text-secondary focus:text-secondary"
+                        routerLink="/dataset/{{ request.dataset_id }}"
+                        data-umami-event="Granted Access Requests List Dataset Clicked"
+                        >{{ request.dataset_id }}</a
+                      ><br />
+                      from
+                      {{
+                        request.access_starts
+                          | date: friendlyDateFormat : periodTimeZone
+                      }}
+                      to
+                      {{
+                        request.access_ends | date: friendlyDateFormat : periodTimeZone
+                      }}.</span
+                    >
+                    <a
+                      mat-icon-button
+                      [routerLink]="`/access-request-manager/${request.id}`"
+                      data-umami-event="Access Grant Details Access Request Clicked"
+                      class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
+                      [matTooltip]="
+                        `View details of this access request (${idx + 1} of ${ar().length})`
+                      "
+                      matTooltipPosition="right"
+                      ><mat-icon fontIcon="description" class="mb-1"></mat-icon
+                    ></a>
+                  </p>
+                }
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>IVA & Status</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content
+            class="min-w-2xl *:mb-2 *:flex md:min-w-xl [&_div>strong]:inline-block [&_div>strong]:min-w-44"
+          >
+            @if (iva(); as iva) {
+              <div>
+                <strong>Type:</strong>
+                <span class="flex"
+                  ><mat-icon [fontIcon]="(iva.type | IvaTypePipe).icon"></mat-icon
+                  >{{ (iva.type | IvaTypePipe).name }}</span
+                >
+              </div>
+              <div>
+                <strong>Value:</strong>
+                <span>{{ iva.value }}</span>
+              </div>
+              <div>
+                <strong>State:</strong>
+                <span [class]="(iva.state | IvaStatePipe).class">{{
+                  (iva.state | IvaStatePipe).name
+                }}</span>
+              </div>
+            } @else {
+              <span class="text-error flex items-center pb-2"
+                ><mat-icon fontIcon="error" class="me-4 shrink-0"></mat-icon> The
+                corresponding IVA does not exist or is not owned by the user. Therefore,
+                this grant is considered invalid.</span
+              >
+            }
+            <div class="mt-4">
+              <a routerLink="/iva-manager" matButton="outlined">IVA Manager</a>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <div
+        class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
+      >
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Audit Log</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="divide-outline divide-y">
+            @for (item of sortedLog(); track item) {
+              @if (item.date) {
+                <p class="mb-2 pb-2">
+                  <strong class="inline-block w-44 xl:w-32">{{
+                    item.date | date
+                  }}</strong>
+                  <span>{{ item.status }}</span>
+                </p>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
     </div>
-  </div>
   } @else {
-  <div class="container mx-auto p-6">
-    <p class="text-center text-red-600">
-      @if (!grant()) { The selected access grant could not be found. } @else { An error
-      occurred while loading the access grant details. Please try again later. }
-    </p>
-  </div>
+    <div class="container mx-auto p-6">
+      <p class="text-center text-red-600">
+        @if (!grant()) {
+          The selected access grant could not be found.
+        } @else {
+          An error occurred while loading the access grant details. Please try again
+          later.
+        }
+      </p>
+    </div>
   }
 </div>

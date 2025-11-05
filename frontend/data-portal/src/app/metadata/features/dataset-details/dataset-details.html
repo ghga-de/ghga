@@ -71,32 +71,35 @@
           </ng-template>
           <div class="overflow-x-auto p-4">
             <div class="min-w-72">
-              @if (study().ega_accession) {
-                <a
-                  appExtLink
-                  mat-stroked-button
-                  class="mb-4 ml-2 w-64 sm:float-right sm:mb-0"
-                  [href]="'https://ega-archive.org/studies/' + study().ega_accession"
-                >
-                  Visit EGA Study Page
-                </a>
-              }
-              @if (study().accession) {
-                <a
-                  mat-raised-button
-                  class="button-quaternary mb-4 ml-2 w-64 sm:float-right sm:mb-0"
-                  [href]="metadataDownloadUrl()"
-                  download
-                  title="Download the study metadata as an Excel file"
-                  data-umami-event="Study Metadata Download Clicked"
-                  ><mat-icon fontIcon="download"></mat-icon>Download Metadata</a
-                >
-              }
+              <div
+                class="flex w-full flex-wrap justify-items-stretch *:mb-4 *:ml-2 *:w-full *:sm:w-auto *:sm:grow md:float-right md:w-auto md:justify-items-end *:md:mb-0 *:md:w-64"
+              >
+                @if (study().ega_accession) {
+                  <a
+                    appExtLink
+                    mat-stroked-button
+                    [href]="'https://ega-archive.org/studies/' + study().ega_accession"
+                  >
+                    Visit EGA Study Page
+                  </a>
+                }
+                @if (study().accession) {
+                  <a
+                    mat-raised-button
+                    class="button-quaternary"
+                    [href]="metadataDownloadUrl()"
+                    download
+                    title="Download the study metadata as an Excel file"
+                    data-umami-event="Study Metadata Download Clicked"
+                    ><mat-icon fontIcon="download"></mat-icon>Download Metadata</a
+                  >
+                }
+              </div>
               <h2 class="flex items-center text-2xl sm:inline-flex">
                 <span
-                  class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                  class="bg-primary/15 text-primary me-2 inline-flex items-center rounded p-1 text-4xl"
                   ><mat-icon inline fontIcon="book_2"></mat-icon></span
-                >&nbsp;Study
+                ><span>Study</span>
               </h2>
               <p class="text-base"><strong>ID:</strong> {{ study().accession }}</p>
               @if (study().ega_accession) {
@@ -153,9 +156,9 @@
                     }
                     <h2 class="flex items-center text-2xl sm:inline-flex">
                       <span
-                        class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                        class="bg-primary/15 text-primary me-2 inline-flex items-center rounded p-1 text-4xl"
                         ><mat-icon inline fontIcon="article"></mat-icon></span
-                      >&nbsp;{{ pub.title ?? 'Unknown publication title' }}
+                      ><span>{{ pub.title ?? 'Unknown publication title' }}</span>
                     </h2>
                     <p class="text-base">
                       <strong>Author(s):</strong> {{ pub.author ?? 'Unknown authors' }}
@@ -207,19 +210,19 @@
                 <a
                   appExtLink
                   mat-stroked-button
-                  class="mb-4 w-64 md:float-right md:mb-0 md:w-auto"
+                  class="mb-4 w-full md:float-right md:mb-0 md:w-auto"
                   [href]="dap().policy_url"
                   data-umami-event="Dataset Details Visit DAP Policy Clicked"
                   >Data Access Info Form</a
                 >
               }
               <h2
-                class="lg:max-w-auto flex items-center text-2xl sm:inline-flex md:max-w-[26rem]"
+                class="flex items-center text-2xl sm:inline-flex md:max-w-[26rem] lg:max-w-[unset]"
               >
                 <span
-                  class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+                  class="bg-primary/15 text-primary me-2 inline-flex items-center rounded p-1 text-4xl"
                   ><mat-icon inline fontIcon="data_loss_prevention"></mat-icon></span
-                >&nbsp;<span>Policy and Data Access Committee</span>
+                ><span>Policy and Data Access Committee</span>
               </h2>
               <p class="text-base">
                 <strong>Data Access Committee:</strong> {{ dac().alias }}

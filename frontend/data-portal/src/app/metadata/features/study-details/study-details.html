@@ -24,32 +24,35 @@
   } @else if (studyDetails.hasValue() && datasetsRequest.hasValue()) {
     @let study = studyDetails.value();
     <div class="min-w-72">
-      @if (study.ega_accession) {
-        <a
-          appExtLink
-          mat-stroked-button
-          class="mb-4 ml-2 w-64 sm:float-right sm:mb-0"
-          [href]="'https://ega-archive.org/studies/' + study.ega_accession"
-        >
-          Visit EGA Study Page
-        </a>
-      }
-      @if (study.accession) {
-        <a
-          mat-raised-button
-          class="button-quaternary mb-4 ml-2 w-64 sm:float-right sm:mb-0"
-          [href]="metadataDownloadUrl()"
-          download
-          title="Download the study metadata as an Excel file"
-          data-umami-event="Study Metadata Download Clicked"
-          ><mat-icon fontIcon="download"></mat-icon>Download Metadata</a
-        >
-      }
+      <div
+        class="flex w-full flex-wrap justify-items-stretch *:mb-4 *:ml-2 *:w-full *:sm:w-auto *:sm:grow lg:float-right lg:w-auto lg:justify-items-end *:lg:mb-0 *:lg:w-64"
+      >
+        @if (study.ega_accession) {
+          <a
+            appExtLink
+            mat-stroked-button
+            [href]="'https://ega-archive.org/studies/' + study.ega_accession"
+          >
+            Visit EGA Study Page
+          </a>
+        }
+        @if (study.accession) {
+          <a
+            mat-raised-button
+            class="button-quaternary"
+            [href]="metadataDownloadUrl()"
+            download
+            title="Download the study metadata as an Excel file"
+            data-umami-event="Study Metadata Download Clicked"
+            ><mat-icon fontIcon="download"></mat-icon>Download Metadata</a
+          >
+        }
+      </div>
       <h2 class="flex items-center text-2xl sm:inline-flex">
         <span
-          class="bg-primary/15 text-primary inline-flex items-center rounded p-1 text-4xl"
+          class="bg-primary/15 text-primary me-2 inline-flex items-center rounded p-1 text-4xl"
           ><mat-icon inline fontIcon="book_2"></mat-icon></span
-        >&nbsp; {{ study.title }}
+        ><span>{{ study.title }}</span>
       </h2>
       <p class="text-base"><strong>ID:</strong> {{ study.accession }}</p>
       @if (study.ega_accession) {
