@@ -26,13 +26,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/purge-controller-service):
 ```bash
-docker pull ghga/purge-controller-service:5.0.1
+docker pull ghga/purge-controller-service:5.0.2
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/purge-controller-service:5.0.1 .
+docker build -t ghga/purge-controller-service:5.0.2 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -40,7 +40,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/purge-controller-service:5.0.1 --help
+docker run -p 8080:8080 ghga/purge-controller-service:5.0.2 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:

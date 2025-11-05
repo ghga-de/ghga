@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pcs"
-version = "5.0.1"
+version = "5.0.2"
 description = "Purge Controller Service - a service to commission file deletions"
 readme = "README.md"
 authors = [
