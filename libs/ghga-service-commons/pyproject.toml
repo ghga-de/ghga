@@ -58,7 +58,7 @@ objectstorage = [
 transports = [
     "hishel>=0.1.1, <0.2",
     "tenacity >=9.0.0, <10",
-    "ghga-service-commons[transports]",
+    "ghga-service-commons[http]",
 ]
 all = [
     "ghga-service-commons[api,auth,crypt,dev,http,objectstorage,transports]",
