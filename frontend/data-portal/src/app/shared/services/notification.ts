@@ -23,7 +23,7 @@ export class NotificationService {
    */
   showSuccess(message: string, duration: number = 3000): void {
     console.debug(message);
-    this.#show(message, 'ok', duration);
+    this.#show(message, 'success', duration);
   }
 
   /**
@@ -74,7 +74,7 @@ export class NotificationService {
    */
   #show(
     message: string,
-    type: 'ok' | 'info' | 'warning' | 'danger' | 'error',
+    type: 'success' | 'info' | 'warning' | 'danger' | 'error',
     duration: number | undefined,
   ): void {
     this.#snackBar.openFromComponent(CustomSnackBarComponent, {

@@ -7,6 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { IvaService } from '@app/verification-addresses/services/iva';
 import { VerificationDialogComponent } from './verification-dialog';
 
 describe('VerificationDialogComponent', () => {
@@ -18,6 +19,7 @@ describe('VerificationDialogComponent', () => {
       imports: [VerificationDialogComponent],
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: { address: 'SMS: 123/456' } },
+        { provide: IvaService, useValue: {} },
         { provide: MatDialogRef, useValue: {} },
       ],
     }).compileComponents();

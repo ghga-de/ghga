@@ -16,8 +16,7 @@
       class="totp-input-style text-center sm:text-left"
       matInput
       [formControl]="codeControl"
-      (input)="onInput()"
-      maxlength="6"
+      (input)="onInput($event)"
       autocomplete="one-time-code"
       aria-required="true"
     />
@@ -25,7 +24,9 @@
   <div class="mb-4 w-full sm:w-auto">
     <button
       id="submit-auth"
+      type="submit"
       class="w-full sm:w-auto"
+      [disabled]="disabled()"
       mat-raised-button
       data-umami-event="Confirm TOTP Submit Clicked"
     >
@@ -45,6 +46,6 @@
   </button>
 </p>
 
-@if (verificationError) {
-  <mat-error>The entered authentication code was not valid.</mat-error>
+@if (verificationError()) {
+<mat-error>The submitted authentication code is invalid.</mat-error>
 }

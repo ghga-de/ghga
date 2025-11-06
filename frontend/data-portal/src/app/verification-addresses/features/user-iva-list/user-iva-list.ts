@@ -110,38 +110,6 @@ export class UserIvaListComponent implements OnInit {
   }
 
   /**
-   * Submit the verification code for the given IVA
-   * @param iva - the IVA to verify
-   * @param code - the verification code
-   */
-  submitVerificationCode(iva: Iva, code: string): void {
-    this.#ivaService.validateCodeForIva(iva.id, code).subscribe({
-      next: () => {
-        this.#notify.showSuccess('Verification was successful');
-      },
-      error: (err) => {
-        switch (err.status) {
-          case 403:
-            this.#notify.showError(
-              'The entered verification code was invalid. Please enter the submitted code correctly.',
-            );
-            break;
-          case 429:
-            this.#notify.showError(
-              'Too many attempts at entering code. Contact address has been reverted to unverified.',
-            );
-            break;
-          default:
-            console.debug(err);
-            this.#notify.showError(
-              'Code verification currently not possible. Please try again later.',
-            );
-        }
-      },
-    });
-  }
-
-  /**
    * Enter the verification code if possible at this point.
    * If the IVA is not in the state CodeTransmitted, we first reload the IVAs
    * and check the state again. If it is still not in the state CodeTransmitted,
@@ -151,13 +119,8 @@ export class UserIvaListComponent implements OnInit {
   enterVerificationCode(iva: Iva): void {
     if (iva.state === IvaState.CodeTransmitted) {
       const address = this.#ivaAddress(iva);
-      const dialogRef = this.#dialog.open(VerificationDialogComponent, {
-        data: { address },
-      });
-      dialogRef.afterClosed().subscribe((code) => {
-        if (code) {
-          this.submitVerificationCode(iva, code);
-        }
+      this.#dialog.open(VerificationDialogComponent, {
+        data: { id: iva.id, address },
       });
     } else {
       if (this.checkingIvaId()) return;

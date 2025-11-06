@@ -1,8 +1,8 @@
 <h1 mat-dialog-title>Contact address verification</h1>
 <div mat-dialog-content>
   <p class="mb-5 max-w-md">
-    We sent a verification code to your selected contact address ({{ address() }}).
-    Please enter it here:
+    We sent a verification code to your contact address
+    <strong>{{ address() }}</strong>. Please enter it here:
   </p>
   <form defaultButton="submit-code" (ngSubmit)="onSubmit()">
     <mat-form-field class="w-full sm:w-auto">
@@ -13,20 +13,13 @@
         class="totp-style-input text-center sm:text-left"
         matInput
         [formControl]="codeControl"
-        (input)="onInput()"
-        maxlength="6"
+        (input)="onInput($event)"
       />
     </mat-form-field>
-    <div>
-      @if (
-        !codeControl.valid &&
-        codeControl.dirty &&
-        codeControl.value &&
-        codeControl.value.length >= 6
-      ) {
-        <mat-error>Please enter a valid verification code.</mat-error>
-      }
-    </div>
+    <mat-error
+      >{{ verificationError() ? 'Verification failed. Please try again.' : ''
+      }}</mat-error
+    >
   </form>
 </div>
 <div mat-dialog-actions cdkTrapFocus>
@@ -40,7 +33,8 @@
   <button
     id="submit-code"
     mat-raised-button
-    [disabled]="!codeControl.valid"
+    type="submit"
+    [disabled]="disabled()"
     (click)="onSubmit()"
     data-umami-event="Verification Dialog Submit Clicked"
   >

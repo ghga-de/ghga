@@ -37,9 +37,9 @@ describe('NotificationService', () => {
     expect(matSnackBar.openFromComponent).toHaveBeenCalledWith(
       CustomSnackBarComponent,
       {
-        data: { message: 'Test success message', type: 'ok' },
+        data: { message: 'Test success message', type: 'success' },
         duration: 3000,
-        panelClass: 'snackbar-ok',
+        panelClass: 'snackbar-success',
         horizontalPosition,
         verticalPosition,
       },
