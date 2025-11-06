@@ -250,7 +250,10 @@ async def test_complete_file_upload_endpoint_auth(
     incorrect data, and a 204 if the request succeeds.
     """
     wps_jwk = config.wps_jwk
-    body: dict[str, str] = {"checksum": "md5checksumhere"}
+    body: dict[str, str] = {
+        "unencrypted_checksum": "unencrypted_checksum",
+        "encrypted_checksum": "encrypted_checksum",
+    }
     rest_client = app_fixture.rest_client
     url = f"/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}"
 
@@ -575,7 +578,10 @@ async def test_complete_file_upload_endpoint_error_handling(
 ):
     """Test that the endpoint correctly translates errors from the core."""
     wps_jwk = config.wps_jwk
-    body: dict[str, str] = {"checksum": "sha256:abc123"}
+    body: dict[str, str] = {
+        "unencrypted_checksum": "unencrypted_checksum",
+        "encrypted_checksum": "encrypted_checksum",
+    }
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
     core_mock.complete_file_upload.side_effect = core_error

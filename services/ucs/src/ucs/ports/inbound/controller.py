@@ -130,6 +130,16 @@ class UploadControllerPort(ABC):
             msg = f"FileUpload with ID {file_id} not found."
             super().__init__(msg)
 
+    class ChecksumMismatchError(RuntimeError):
+        """Raised when the user-supplied encrypted checksum doesn't match S3."""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = (
+                f"The MD5 checksum supplied for the encrypted file content of {file_id}"
+                + " doesn't match the value calculated by S3."
+            )
+            super().__init__(msg)
+
     @abstractmethod
     async def initiate_file_upload(
         self, *, box_id: UUID4, alias: str, size: int
@@ -160,9 +170,16 @@ class UploadControllerPort(ABC):
 
     @abstractmethod
     async def complete_file_upload(
-        self, *, box_id: UUID4, file_id: UUID4, checksum: str
+        self,
+        *,
+        box_id: UUID4,
+        file_id: UUID4,
+        unencrypted_checksum: str,
+        encrypted_checksum: str,
     ) -> None:
-        """Instruct S3 to complete a multipart upload.
+        """Instruct S3 to complete a multipart upload and compares the remote checksum
+        with the value provided for `encrypted_checksum`. The `unencrypted_checksum`
+        is stored in the database.
 
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
@@ -171,6 +188,7 @@ class UploadControllerPort(ABC):
         - `LockedBoxError` if the box exists but is locked.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
+        - `ChecksumMismatchError` if the checksums don't match.
         """
         ...
 

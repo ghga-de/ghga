@@ -205,6 +205,28 @@ class HttpUploadAbortError(HttpCustomExceptionBase):
         )
 
 
+class HttpChecksumMismatchError(HttpCustomExceptionBase):
+    """Thrown when the user-supplied encrypted checksum doesn't match S3."""
+
+    exception_id = "checksumMismatch"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        file_id: UUID4
+
+    def __init__(self, *, file_id: UUID4, status_code: int = 400):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=(
+                f"The checksum supplied for file {file_id} doesn't match the value"
+                + " calculated by S3."
+            ),
+            data={"file_id": str(file_id)},
+        )
+
+
 class HttpNotAuthorizedError(HttpCustomExceptionBase):
     """Thrown when the user is not authorized to perform the requested action."""
 

@@ -15,6 +15,7 @@
 
 """Integration tests for the UploadController"""
 
+import hashlib
 from contextlib import nullcontext
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -33,6 +34,17 @@ from ucs.main import initialize
 from ucs.ports.inbound.controller import UploadControllerPort
 
 pytestmark = pytest.mark.asyncio()
+CONTENT = "a" * 1024
+
+
+def calc_expected_encrypted_checksum(content: str) -> str:
+    """Calculate the expected checksum for 'encrypted' (test) data in S3.
+
+    This assumes only one object part for simplicity.
+    """
+    part_md5 = hashlib.md5(content.encode(), usedforsecurity=False).digest()
+    object_md5 = hashlib.md5(part_md5, usedforsecurity=False).hexdigest()
+    return object_md5 + "-1"  # only one part
 
 
 async def test_integrated_aspects(joint_fixture: JointFixture):
@@ -74,15 +86,13 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         }, "Payload was wrong for new file upload box event"
 
         # Make the temp test file
+        temp_file.write(("abcdefghij" * (1024 * 1024)).encode())
         file_size = 10 * 1024 * 1024  # 10 MiB
-        chunk_size = 1024
-        chunk = b"\0" * chunk_size
-        current_size = 0
-        while current_size < file_size:
-            write_size = min(chunk_size, file_size - current_size)
-            temp_file.write(chunk[:write_size])
-            current_size += write_size
         temp_file.flush()
+
+        expected_encrypted_checksum = calc_expected_encrypted_checksum(
+            "abcdefghij" * (1024 * 1024)
+        )
 
         # Create a FileUpload
         async with kafka.record_events(
@@ -135,7 +145,10 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             close_file_token_header = utils.close_file_token_header(
                 jwk=wps_jwk, box_id=box_id, file_id=file_id
             )
-            body = {"checksum": "abc123"}
+            body = {
+                "unencrypted_checksum": "abc123",
+                "encrypted_checksum": expected_encrypted_checksum,
+            }
             response = await rest_client.patch(
                 f"/boxes/{box_id}/uploads/{file_id}",
                 json=body,
@@ -213,7 +226,7 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
     # Upload the content
-    response = httpx.put(url, content="a" * 1024)
+    response = httpx.put(url, content=CONTENT)
     assert response.status_code == 200
 
     # To simulate the hiccup, we'll manually complete the upload. This will create the
@@ -233,7 +246,11 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     close_token_header = utils.close_file_token_header(
         box_id=box_id, file_id=file_id, jwk=joint_fixture.wps_jwk
     )
-    body = {"checksum": "abc123"}
+    expected_encrypted_checksum = calc_expected_encrypted_checksum(CONTENT)
+    body = {
+        "unencrypted_checksum": "abc123",
+        "encrypted_checksum": expected_encrypted_checksum,
+    }
     response = await joint_fixture.rest_client.patch(
         f"/boxes/{box_id}/uploads/{file_id}", json=body, headers=close_token_header
     )
@@ -272,7 +289,7 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
     # Upload the content
-    response = httpx.put(url, content="a" * 1024)
+    response = httpx.put(url, content=CONTENT)
     assert response.status_code == 200
 
     # To simulate the hiccup, we'll manually abort the upload. This will create the
@@ -291,7 +308,10 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     close_token_header = utils.close_file_token_header(
         box_id=box_id, file_id=file_id, jwk=wps_jwk
     )
-    body: dict[str, Any] = {"checksum": "abc123"}
+    body: dict[str, Any] = {
+        "unencrypted_checksum": "abc123",
+        "encrypted_checksum": "abc123",
+    }
     response = await rest_client.patch(
         f"/boxes/{box_id}/uploads/{file_id}", json=body, headers=close_token_header
     )
@@ -314,7 +334,7 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     create_token_header = utils.create_file_token_header(
         box_id=box_id, alias="test-file", jwk=wps_jwk
     )
-    body = {"alias": "test-file", "checksum": "abc123", "size": 1024}
+    body = {"alias": "test-file", "size": 1024}
     response = await rest_client.post(
         f"/boxes/{box_id}/uploads", headers=create_token_header, json=body
     )
@@ -331,14 +351,18 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     part_url = response.json()
 
     # Upload the content again
-    response = httpx.put(part_url, content="a" * 1024)
+    response = httpx.put(part_url, content=CONTENT)
     assert response.status_code == 200
+    expected_encrypted_checksum = calc_expected_encrypted_checksum(CONTENT)
 
     # Now complete the file
     close_token_header2 = utils.close_file_token_header(
         box_id=box_id, file_id=file_id2, jwk=wps_jwk
     )
-    body = {"checksum": "abc123"}
+    body = {
+        "unencrypted_checksum": "abc123",
+        "encrypted_checksum": expected_encrypted_checksum,
+    }
     response = await rest_client.patch(
         f"/boxes/{box_id}/uploads/{file_id2}", json=body, headers=close_token_header2
     )
@@ -465,13 +489,17 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
 
     # Get upload URL and upload the file content
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
-    response = httpx.put(url, content="a" * 1024)
+    response = httpx.put(url, content=CONTENT)
+    expected_encrypted_checksum = calc_expected_encrypted_checksum(CONTENT)
     assert response.status_code == 200
 
     # Complete the file upload
     async with set_correlation_id(uuid4()):
         await controller.complete_file_upload(
-            box_id=box_id, file_id=file_id, checksum="abc123"
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="abc123",
+            encrypted_checksum=expected_encrypted_checksum,
         )
 
     # Verify the file exists in S3

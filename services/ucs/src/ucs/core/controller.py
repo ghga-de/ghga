@@ -387,10 +387,41 @@ class UploadController(UploadControllerPort):
             )
             raise error from err
 
-    async def complete_file_upload(
-        self, *, box_id: UUID4, file_id: UUID4, checksum: str
+    async def _compare_checksums(
+        self,
+        object_storage: ObjectStorageProtocol,
+        bucket_id: str,
+        file_id: UUID4,
+        expected_checksum: str,
     ) -> None:
-        """Instruct S3 to complete a multipart upload.
+        """Compare checksums and raise a `ChecksumMismatchError` if they don't match."""
+        actual_checksum = await object_storage.get_object_etag(
+            bucket_id=bucket_id, object_id=str(file_id)
+        )
+        actual_checksum = actual_checksum.strip('"')
+
+        if actual_checksum != expected_checksum:
+            error = self.ChecksumMismatchError(file_id=file_id)
+            extra = {
+                "bucket_id": bucket_id,
+                "file_id": file_id,
+                "expected_checksum": expected_checksum,
+                "actual_checksum": actual_checksum,
+            }
+            log.error(error, exc_info=True, extra=extra)
+            raise error
+
+    async def complete_file_upload(
+        self,
+        *,
+        box_id: UUID4,
+        file_id: UUID4,
+        unencrypted_checksum: str,
+        encrypted_checksum: str,
+    ) -> None:
+        """Instruct S3 to complete a multipart upload and compares the remote checksum
+        with the value provided for `encrypted_checksum`. The `unencrypted_checksum`
+        is stored in the database.
 
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
@@ -399,6 +430,7 @@ class UploadController(UploadControllerPort):
         - `LockedBoxError` if the box exists but is locked.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
+        - `ChecksumMismatchError` if the checksums don't match.
         """
         # Get the FileUploadBox instance and verify that it is unlocked
         box = await self._get_unlocked_box(box_id=box_id)
@@ -411,14 +443,6 @@ class UploadController(UploadControllerPort):
             error = self.FileUploadNotFound(file_id=file_id)
             log.error(error, extra=extra)
             raise error from err
-
-        # Exit early if the FileUpload is complete (already in the inbox or archived)
-        if file_upload.completed:
-            log.info("FileUpload with ID %s already complete.", file_id)
-            # If this method is called but the file is already completed, triple
-            #  check that the box is up to date
-            await self._update_box_stats(box=box)
-            return
 
         # Get s3 upload details
         try:
@@ -435,6 +459,21 @@ class UploadController(UploadControllerPort):
         extra["storage_alias"] = storage_alias
         extra["s3_upload_id"] = s3_upload_id
         extra["bucket_id"] = bucket_id
+
+        # Exit early if the FileUpload is complete (already in the inbox or archived)
+        if file_upload.completed:
+            log.info("FileUpload with ID %s already complete.", file_id)
+            # If this method is called but the file is already completed, triple
+            #  check that the box is up to date
+            await self._update_box_stats(box=box)
+            await self._compare_checksums(
+                object_storage=object_storage,
+                bucket_id=bucket_id,
+                file_id=file_id,
+                expected_checksum=encrypted_checksum,
+            )
+            return
+
         try:
             await object_storage.complete_multipart_upload(
                 upload_id=s3_upload_id,
@@ -475,9 +514,16 @@ class UploadController(UploadControllerPort):
                 log.error(error, exc_info=True, extra=extra)
                 raise error from err
 
+        await self._compare_checksums(
+            object_storage=object_storage,
+            bucket_id=bucket_id,
+            file_id=file_id,
+            expected_checksum=encrypted_checksum,
+        )
+
         # Update local collections now that S3 upload is successfully completed
         file_upload.state = FileUploadState.INBOX
-        file_upload.checksum = checksum
+        file_upload.checksum = unencrypted_checksum
         file_upload.completed = True
         s3_upload_details.completed = now_utc_ms_prec()
         await self._file_upload_dao.update(file_upload)

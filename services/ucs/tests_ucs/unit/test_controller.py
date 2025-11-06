@@ -21,6 +21,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
+import pytest_asyncio
 from ghga_event_schemas.pydantic_ import (
     FileUpload,
     FileUploadBox,
@@ -28,6 +29,8 @@ from ghga_event_schemas.pydantic_ import (
     FileUploadState,
 )
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
+from hexkit.protocols.objstorage import ObjectStorageProtocol
+from hexkit.providers.testing.s3 import InMemObjectStorage
 from hexkit.utils import now_utc_ms_prec
 
 from tests_ucs.fixtures import ConfigFixture
@@ -38,7 +41,6 @@ from tests_ucs.fixtures.in_mem_dao import (
     InMemS3UploadDetailsDao,
 )
 from tests_ucs.fixtures.in_mem_obj_storage import (
-    InMemObjectStorage,
     InMemS3ObjectStorages,
     raise_object_storage_error,
 )
@@ -53,8 +55,9 @@ pytestmark = pytest.mark.asyncio()
 @pytest.fixture()
 def patch_s3_calls(monkeypatch):
     """Mocks the object storage provider with an InMemObjectStorage object"""
+    pass
     monkeypatch.setattr(
-        f"{InMemObjectStorage.__module__}.S3ObjectStorage", InMemObjectStorage
+        f"{InMemS3ObjectStorages.__module__}.S3ObjectStorage", InMemObjectStorage
     )
 
 
@@ -80,6 +83,7 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
         s3_upload_details_dao=(s3_upload_details_dao := InMemS3UploadDetailsDao()),
         object_storages=(object_storages := InMemS3ObjectStorages(config=_config)),
     )
+
     return JointRig(
         config=_config,
         file_upload_box_dao=file_upload_box_dao,
@@ -88,6 +92,12 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
         object_storages=object_storages,
         controller=controller,
     )
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def create_default_bucket(rig: JointRig):
+    """Create the `test-inbox` bucket automatically for tests."""
+    await rig.object_storages.for_alias("test")[1].create_bucket("test-inbox")
 
 
 async def test_create_new_box(rig: JointRig):
@@ -154,7 +164,10 @@ async def test_complete_file_upload(rig: JointRig):
 
     # Now complete the file upload
     await controller.complete_file_upload(
-        box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+        box_id=box_id,
+        file_id=file_id,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{file_id}",
     )
     bucket_id, object_storage = rig.object_storages.for_alias("test")
     assert await object_storage.does_object_exist(
@@ -178,7 +191,10 @@ async def test_complete_file_upload(rig: JointRig):
         box_id=box_id, alias="test_file2", size=1000
     )
     await controller.complete_file_upload(
-        box_id=box_id, file_id=file_id2, checksum="md5checksumhere"
+        box_id=box_id,
+        file_id=file_id2,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{file_id2}",
     )
     latest_s3_details = s3_upload_details_dao.latest
     assert latest_s3_details.file_id == file_id2
@@ -207,7 +223,10 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
 
     if complete_before_delete:
         await controller.complete_file_upload(
-            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="unencrypted_checksum",
+            encrypted_checksum=f"etag_for_{file_id}",
         )
         assert file_upload_box_dao.latest.file_count == 1
         assert file_upload_box_dao.latest.size == 1024
@@ -295,13 +314,19 @@ async def test_get_box_uploads(rig: JointRig):
     # Complete the file uploads so they appear in the results
     for file_id in file_ids:
         await controller.complete_file_upload(
-            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="unencrypted_checksum",
+            encrypted_checksum=f"etag_for_{file_id}",
         )
 
     # Complete the uploads in the other box too
     for file_id in other_file_ids:
         await controller.complete_file_upload(
-            box_id=other_box_id, file_id=file_id, checksum="md5checksumhere"
+            box_id=other_box_id,
+            file_id=file_id,
+            unencrypted_checksum="unencrypted_checksum",
+            encrypted_checksum=f"etag_for_{file_id}",
         )
 
     # Create a third, empty box
@@ -519,6 +544,12 @@ async def test_delete_file_upload_with_s3_error(rig: JointRig):
     # Set the mock to raise a MultiPartUploadAbortError
     # This simulates S3 failing to abort the multipart upload
     # Try to delete the file upload - should raise UploadAbortError
+    storage = rig.object_storages.for_alias("test")[1]
+
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.MultiPartUploadAbortError("", "", "")
+
+    storage.abort_multipart_upload = do_error  # type: ignore[method-assign]
     with (
         raise_object_storage_error(InMemObjectStorage.MultiPartUploadAbortError),
         pytest.raises(UploadControllerPort.UploadAbortError) as exc_info,
@@ -621,7 +652,10 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
     # Try to complete the file upload for the now missing box
     with pytest.raises(UploadControllerPort.BoxNotFoundError) as exc_info:
         await controller.complete_file_upload(
-            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="sha256:unencrypted_checksum_here",
+            encrypted_checksum="sha256:encrypted_checksum_here",
         )
 
     # Verify the exception contains the correct box_id
@@ -643,7 +677,10 @@ async def test_complete_missing_file_upload(rig: JointRig):
 
     with pytest.raises(UploadControllerPort.FileUploadNotFound) as exc_info:
         await controller.complete_file_upload(
-            box_id=box_id, file_id=non_existent_file_id, checksum="md5checksumhere"
+            box_id=box_id,
+            file_id=non_existent_file_id,
+            unencrypted_checksum="sha256:unencrypted_checksum_here",
+            encrypted_checksum="sha256:encrypted_checksum_here",
         )
     assert not rig.file_upload_dao.resources
     assert not rig.s3_upload_details_dao.resources
@@ -672,7 +709,10 @@ async def test_complete_file_upload_with_missing_s3_details(rig: JointRig):
     # Try to complete the file upload - should raise S3UploadDetailsNotFoundError
     with pytest.raises(UploadControllerPort.S3UploadDetailsNotFoundError) as exc_info:
         await controller.complete_file_upload(
-            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="sha256:unencrypted_checksum_here",
+            encrypted_checksum="sha256:encrypted_checksum_here",
         )
 
     # Verify the exception contains the correct file_id
@@ -711,7 +751,10 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
     # Try to complete the file upload - should raise UnknownStorageAliasError
     with pytest.raises(UploadControllerPort.UnknownStorageAliasError) as exc_info:
         await controller.complete_file_upload(
-            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="sha256:unencrypted_checksum_here",
+            encrypted_checksum="sha256:encrypted_checksum_here",
         )
 
     # Verify the exception message contains the unknown storage alias
@@ -738,12 +781,21 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
     # Set the mock to raise a MultiPartUploadConfirmError
     # This simulates S3 failing to complete the multipart upload
     # Try to complete the file upload - should raise UploadCompletionError
+    storage = rig.object_storages.for_alias("test")[1]
+
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.MultiPartUploadConfirmError("", "", "")
+
+    storage.complete_multipart_upload = do_error  # type: ignore[method-assign]
     with (
         raise_object_storage_error(InMemObjectStorage.MultiPartUploadConfirmError),
         pytest.raises(UploadControllerPort.UploadCompletionError) as exc_info,
     ):
         await controller.complete_file_upload(
-            box_id=box_id, file_id=file_id, checksum="md5checksumhere"
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="sha256:unencrypted_checksum_here",
+            encrypted_checksum=f"etag_for_{file_id}",
         )
 
     # Verify the exception contains the S3 upload ID
@@ -818,6 +870,12 @@ async def test_get_part_upload_url_when_s3_upload_not_found(rig: JointRig):
     # Set the mock to raise a MultiPartUploadNotFoundError
     # This simulates S3 not being able to find the multipart upload
     # Try to get a part upload URL - should raise S3UploadNotFoundError
+    storage = rig.object_storages.for_alias("test")[1]
+
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.MultiPartUploadNotFoundError("", "", "")
+
+    storage.get_part_upload_url = do_error  # type: ignore[method-assign]
     with (
         raise_object_storage_error(InMemObjectStorage.MultiPartUploadNotFoundError),
         pytest.raises(UploadControllerPort.S3UploadNotFoundError) as exc_info,

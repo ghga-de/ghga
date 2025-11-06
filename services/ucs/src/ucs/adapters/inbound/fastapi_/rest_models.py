@@ -61,7 +61,12 @@ class FileUploadCreationRequest(BaseModel):
 class FileUploadCompletionRequest(BaseModel):
     """Request body for completing a FileUpload."""
 
-    checksum: str = Field(..., description="The checksum of the file")
+    unencrypted_checksum: str = Field(
+        ..., description="The checksum of the unencrypted file"
+    )
+    encrypted_checksum: str = Field(
+        ..., description="The checksum of the encrypted file"
+    )
     model_config = ConfigDict(title="File Upload Completion Request")
 
 

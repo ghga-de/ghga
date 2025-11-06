@@ -109,6 +109,13 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpUploadAbortError.get_body_model(),
     },
+    "checksumMismatch": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- checksumMismatch: The user-supplied encrypted checksum doesn't match S3."
+        ),
+        "model": http_exceptions.HttpChecksumMismatchError.get_body_model(),
+    },
 }
 
 
@@ -365,6 +372,7 @@ async def get_part_upload_url(
     status_code=status.HTTP_204_NO_CONTENT,
     response_description="File upload completed successfully",
     responses={
+        status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["checksumMismatch"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
         | ERROR_RESPONSES["s3UploadDetailsNotFound"]
         | ERROR_RESPONSES["fileUploadNotFound"],
@@ -396,7 +404,10 @@ async def complete_file_upload(
 
     try:
         await upload_controller.complete_file_upload(
-            box_id=box_id, file_id=file_id, checksum=file_upload_completion.checksum
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum=file_upload_completion.unencrypted_checksum,
+            encrypted_checksum=file_upload_completion.encrypted_checksum,
         )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
@@ -412,6 +423,8 @@ async def complete_file_upload(
         raise http_exceptions.HttpUploadCompletionError(
             box_id=box_id, file_id=file_id
         ) from error
+    except UploadControllerPort.ChecksumMismatchError as error:
+        raise http_exceptions.HttpChecksumMismatchError(file_id=file_id) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
