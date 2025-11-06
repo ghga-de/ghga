@@ -97,3 +97,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://ghga.pag
 - (78) [Royal Angelfish](./78-royal-angelfish/technical_specification.md): Basic User and Access Management
 - (79) [Miniature Horse](./79-miniature-horse/technical_specification.md): Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs
 - (80) [Hedgehog Seahorse](./80-hedgehog-seahorse/technical_specification.md): GHGA Connector refactoring/rewrite and upload path implementation
+- (81) [Laotian Rock Rat](./81-laotian-rock-rat/technical_specification.md): Client Retry Logic Refactoring for Ratelimiting 
