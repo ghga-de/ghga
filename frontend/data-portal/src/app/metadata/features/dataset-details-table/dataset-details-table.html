@@ -1,5 +1,13 @@
 <mat-expansion-panel>
-  <mat-expansion-panel-header>{{ header() }}</mat-expansion-panel-header
+  <mat-expansion-panel-header
+    matTooltip="Download the full metadata to view all properties"
+    matTooltipPosition="above"
+    matTooltipShowDelay="500"
+    matTooltipPositionAtOrigin="true"
+    [matTooltipDisabled]="tooltipDisabled()"
+    (mouseenter)="startHoverHeader()"
+    (mouseleave)="endHoverHeader()"
+    >{{ header() }}</mat-expansion-panel-header
   ><ng-template matExpansionPanelContent
     ><div class="overflow-auto">
       <table
@@ -9,27 +17,31 @@
         matSort
       >
         <caption class="cdk-visually-hidden">
-          {{ caption() }}
+          {{
+            caption()
+          }}
         </caption>
-        @for (col of columns(); track col){
-        <ng-container [matColumnDef]="col.columnDef">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header [class]="col.class">
-            {{col.header}}
-          </th>
-          @if (col.columnDef === 'hash') {
-          <td mat-cell *matCellDef="let item">
-            <app-with-copy-button
-              [value]="item.file_information?.sha256_hash"
-              notifyMessage="The full hash has been copied to the clipboard"
-            ></app-with-copy-button>
-          </td>
-          } @else {
-          <td mat-cell *matCellDef="let item">
-            {{col.columnDef | detailsDataRenderer: item : col.accessor :
-            storageLabels()}}
-          </td>
-          }
-        </ng-container>
+        @for (col of columns(); track col) {
+          <ng-container [matColumnDef]="col.columnDef">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header [class]="col.class">
+              {{ col.header }}
+            </th>
+            @if (col.columnDef === 'hash') {
+              <td mat-cell *matCellDef="let item">
+                <app-with-copy-button
+                  [value]="item.file_information?.sha256_hash"
+                  notifyMessage="The full hash has been copied to the clipboard"
+                ></app-with-copy-button>
+              </td>
+            } @else {
+              <td mat-cell *matCellDef="let item">
+                {{
+                  col.columnDef
+                    | detailsDataRenderer: item : col.accessor : storageLabels()
+                }}
+              </td>
+            }
+          </ng-container>
         }
 
         <tr mat-header-row *matHeaderRowDef="displayCols()"></tr>
@@ -37,15 +49,13 @@
       </table>
 
       @if (numItems() > 10) {
-      <mat-paginator
-        [pageSize]="defaultTablePageSize"
-        [pageSizeOptions]="tablePageSizeOptions"
-        showFirstLastButtons
-        aria-label="Select page"
-        class="sticky left-0"
-      >
-      </mat-paginator>
-      }
-    </div></ng-template
-  ></mat-expansion-panel
->
+        <mat-paginator
+          [pageSize]="defaultTablePageSize"
+          [pageSizeOptions]="tablePageSizeOptions"
+          showFirstLastButtons
+          aria-label="Select page"
+          class="sticky left-0"
+        >
+        </mat-paginator>
+      }</div></ng-template
+></mat-expansion-panel>

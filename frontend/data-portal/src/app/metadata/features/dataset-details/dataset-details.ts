@@ -32,7 +32,6 @@ import { ValidateDOI } from '@app/metadata/pipes/validate-doi-pipe';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
-import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space-pipe';
 import { ConfigService } from '@app/shared/services/config';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
@@ -161,19 +160,6 @@ export class DatasetDetailsComponent implements OnInit {
   numFiles = computed(() => this.files().length);
   numBytes = computed(() =>
     this.files().reduce((acc, file) => acc + (file.file_information?.size ?? 0), 0),
-  );
-
-  experimentsHeader = computed(
-    () =>
-      `Experiments Summary (${this.numExperiments()} experiment${this.numExperiments() === 1 ? '' : 's'})`,
-  );
-  samplesHeader = computed(
-    () =>
-      `Samples Summary (${this.numSamples()} sample${this.numSamples() === 1 ? '' : 's'})`,
-  );
-  filesHeader = computed(
-    () =>
-      `Files Summary (${this.numFiles()} file${this.numFiles() === 1 ? '' : 's'}, ${ParseBytes.prototype.transform(this.numBytes())} in total)`,
   );
 
   #datasetDetailsErrorEffect = effect(() => {

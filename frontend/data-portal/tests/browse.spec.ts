@@ -63,7 +63,7 @@ test('can navigate to dataset details', async ({ page }) => {
   await expect(main).toContainText('Test dataset with some details for testing.');
 
   await expect(main).toContainText('Test study description.');
-  await expect(main).toContainText('Files Summary (12 files, 6.16 GB in total)');
+  await expect(main).toContainText('List of files (12 total, 6.16 GB)');
 
   // files table should not yet be visible
   await expect(main).not.toContainText('File ID');
@@ -71,7 +71,7 @@ test('can navigate to dataset details', async ({ page }) => {
   await expect(main).not.toContainText('Research data file 3');
   await expect(main).not.toContainText('Tübingen 3');
 
-  const openFile = main.getByRole('button', { name: 'Files Summary' });
+  const openFile = main.getByRole('button', { name: 'List of files' });
   await expect(openFile).toBeVisible();
   await openFile.click();
 
