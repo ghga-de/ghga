@@ -20,6 +20,8 @@ config:
   service_name: rts
   kafka_enable_dlq: true
   mongo_dsn: null
+  db_version_collection: rtsDbVersions
+  migration_wait_sec: 10
   sheet_names:
     analyses: Analysis
     analysis_methods: AnalysisMethod
@@ -39,6 +41,11 @@ config:
     publications: Publication
 
 cmd: rts run-rest
+
+migrationInitContainer:
+ args:
+  - rts migrate-db
+
 # cmd: rts consume-events
 
 _topics:
