@@ -224,10 +224,39 @@
                   ><mat-icon inline fontIcon="data_loss_prevention"></mat-icon></span
                 ><span>Policy and Data Access Committee</span>
               </h2>
-              <p class="text-base">
-                <strong>Data Access Committee:</strong> {{ dac().alias }}
-              </p>
-              <p class="text-base"><strong>e-Mail:</strong> {{ dac().email }}</p>
+              <div
+                class="*:text-base lg:grid lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-[fit-content(1px)_fit-content(1px)] lg:gap-x-2 2xl:grid-cols-3"
+              >
+                <p><strong>Data Access Committee:</strong> {{ dac().alias }}</p>
+                <p><strong>e-Mail:</strong> {{ dac().email }}</p>
+                <p class="2xl:col-span-2">
+                  <strong>Data Use Permission:</strong>&nbsp;<a
+                    appExtLink
+                    [href]="dap().data_use_permission_url"
+                    >{{ dap().data_use_permission_term }}</a
+                  >
+                </p>
+                <p class="2xl:col-span-2">
+                  <strong>Data Use Modifiers:</strong>
+                  @if (dap().data_use_modifier_terms.length > 0) {
+                    @for (
+                      term of dap().data_use_modifier_terms;
+                      track term;
+                      let idx = $index;
+                      let first = $first;
+                      let last = $last
+                    ) {
+                      {{ first ? ' ' : '' }}
+                      <a appExtLink [href]="dap().data_use_modifier_urls[idx]">{{
+                        term
+                      }}</a
+                      >{{ last ? '' : ', ' }}
+                    }
+                  } @else {
+                    N/A
+                  }
+                </p>
+              </div>
               <p class="text-base">
                 <strong>Data Access Policy:</strong> {{ dap().name }}
               </p>

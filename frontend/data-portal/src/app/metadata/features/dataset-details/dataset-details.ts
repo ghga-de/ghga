@@ -110,7 +110,28 @@ export class DatasetDetailsComponent implements OnInit {
     } else return undefined;
   });
 
-  dap = computed(() => this.datasetDetails().data_access_policy);
+  readonly baseDuoUrl = 'https://purl.obolibrary.org/obo/';
+
+  dap = computed(() => {
+    const dap = this.datasetDetails().data_access_policy;
+    const data_use_permission_url = `${this.baseDuoUrl}${dap.data_use_permission_id.replace(':', '_')}`;
+    const data_use_modifier_urls = dap.data_use_modifier_ids.map(
+      (x) => `${this.baseDuoUrl}${x.replace(':', '_')}`,
+    );
+    const data_use_permission_term = dap.data_use_permission_term
+      .toLowerCase()
+      .replaceAll('_', ' ');
+    const data_use_modifier_terms = dap.data_use_modifier_terms.map((x) =>
+      x.toLowerCase().replace('_', ' '),
+    );
+    return {
+      ...dap,
+      data_use_permission_term,
+      data_use_modifier_terms,
+      data_use_permission_url,
+      data_use_modifier_urls,
+    };
+  });
   dac = computed(() => this.dap().data_access_committee);
   study = computed(() => this.datasetDetails().study);
   publications = computed(() => this.study().publications);
