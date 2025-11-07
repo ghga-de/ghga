@@ -33,8 +33,8 @@ To utilize the Notification Service to send SMS, publishers will need to publish
 SMS will be sent via HTTP, and SMS contents will be injected into the requests. The parameters required to successfully configure the service are as follows:
 - `sms_gateway_address`: The address of the SMS gateway
 - `sms_gateway_port`: The port to use
-- `token`: The API token used for authentication and authorization
-- `sender_id`: Sender's ID or phone number
+- `sms_token`: The API token used for authentication and authorization
+- `sms_sender_id`: Sender's ID or phone number
 
 ## Human Resource/Time Estimation
 
