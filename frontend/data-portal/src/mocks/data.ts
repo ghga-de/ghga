@@ -229,10 +229,20 @@ export const allIvasOfMar = allIvas.filter((iva) => iva.user_id === 'mar@test.de
  */
 
 // get dataset summaries with arbitrary accessions
-export const getDatasetSummary = (accession: string) => ({
-  ...datasetSummary,
-  accession: accession,
-});
+// get dataset summaries with arbitrary accessions
+export const getDatasetSummary = (accession: string) => {
+  const summary = structuredClone(datasetSummary);
+  if (accession === 'GHGAD12345678901236') {
+    // this is to test the rendering of empty stats
+    summary.samples_summary.stats.phenotypic_features =
+      summary.experiments_summary.stats.experiment_methods =
+      summary.files_summary.stats.format =
+      summary.samples_summary.stats.tissues =
+        [];
+  }
+  summary.accession = accession;
+  return summary;
+};
 
 // get embedded datasets with arbitrary accessions
 export const getDatasetDetails = (accession: string) => ({
