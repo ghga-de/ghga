@@ -16,10 +16,10 @@
 """Business logic service for the Upload Orchestration Service."""
 
 import logging
-from collections.abc import Sequence
 from uuid import UUID
 
 from ghga_event_schemas.pydantic_ import (
+    FileUpload,
     FileUploadBox,
     ResearchDataUploadBox,
     ResearchDataUploadBoxState,
@@ -278,11 +278,10 @@ class UploadOrchestrator(UploadOrchestratorPort):
         *,
         box_id: UUID4,
         auth_context: AuthContext,
-    ) -> Sequence[UUID4]:
-        """Get list of file IDs for a research data upload box.
+    ) -> list[FileUpload]:
+        """Get list of file uploads for a research data upload box.
 
-        Returns:
-            Sequence of file IDs in the upload box
+        Returns a list of file uploads in the upload box
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.
@@ -296,12 +295,12 @@ class UploadOrchestrator(UploadOrchestratorPort):
         )
 
         # Get file list from file box service
-        file_ids = await self._file_upload_box_client.get_file_upload_list(
+        file_uploads = await self._file_upload_box_client.get_file_upload_list(
             box_id=upload_box.file_upload_box_id,
         )
 
-        # Sort files by ID for predictability
-        return sorted(file_ids)
+        # Sort files by alias for predictability
+        return sorted(file_uploads, key=lambda x: x.alias)
 
     async def upsert_file_upload_box(self, file_upload_box: FileUploadBox) -> None:
         """Handle FileUploadBox update events from file box service.

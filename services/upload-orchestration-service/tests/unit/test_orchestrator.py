@@ -23,12 +23,17 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from ghga_event_schemas.pydantic_ import FileUploadBox, ResearchDataUploadBox
+from ghga_event_schemas.pydantic_ import (
+    FileUpload,
+    FileUploadBox,
+    FileUploadState,
+    ResearchDataUploadBox,
+)
 from ghga_service_commons.auth.context import AuthContext
+from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.utils import now_utc_ms_prec
 
 from tests.fixtures import ConfigFixture
-from tests.fixtures.in_mem_dao import BaseInMemDao, InMemBoxDao
 from uos.config import Config
 from uos.core import models
 from uos.core.orchestrator import UploadOrchestrator
@@ -48,6 +53,8 @@ DATA_STEWARD_AUTH_CONTEXT.roles = ["data_steward"]
 USER1_AUTH_CONTEXT = Mock(spec=AuthContext)
 USER1_AUTH_CONTEXT.id = str(TEST_USER_ID1)
 USER1_AUTH_CONTEXT.roles = []
+
+InMemBoxDao = new_mock_dao_class(dto_model=ResearchDataUploadBox, id_field="id")
 
 
 @dataclass
@@ -207,10 +214,23 @@ async def test_update_research_data_upload_box_not_found(rig: JointRig):
 
 
 async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[UUID]):
-    """Test the normal path of getting a list of file IDs for a box from the file box service."""
-    # Mock the file box client to return a list of file IDs
-    test_file_ids = sorted([uuid4(), uuid4(), uuid4()])
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_ids  # type: ignore
+    """Test the normal path of getting a list of FileUpload objects for a box from the file box service."""
+    # Mock the file box client to return a list of FileUpload objects
+    test_file_uploads = [
+        FileUpload(
+            id=uuid4(),
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            alias=f"test{i}",
+            checksum=f"checksum{i}",
+            size=1000 + i * 100,
+            state=FileUploadState.ARCHIVED,
+            completed=True,
+        )
+        for i in range(3)
+    ]
+    # Sort by alias as expected by the orchestrator
+    test_file_uploads_sorted = sorted(test_file_uploads, key=lambda x: x.alias)
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
 
     # Mock the access client for non-data steward case
     box_id = populated_boxes[0]
@@ -221,8 +241,8 @@ async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[U
         box_id=box_id, auth_context=USER1_AUTH_CONTEXT
     )
 
-    # Verify the results
-    assert result == test_file_ids
+    # Verify the results are sorted by alias
+    assert result == test_file_uploads_sorted
 
     # Verify the file box client was called
     rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore

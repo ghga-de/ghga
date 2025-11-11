@@ -20,6 +20,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
+from ghga_event_schemas.pydantic_ import FileUpload
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from jwcrypto import jwk
 from pydantic import UUID4, Field, HttpUrl, SecretStr
@@ -346,8 +347,8 @@ class FileBoxClient(FileBoxClientPort):
             )
             raise self.OperationError("Failed to unlock FileUploadBox.")
 
-    async def get_file_upload_list(self, *, box_id: UUID4) -> list[UUID4]:
-        """Get list of file IDs in a FileUploadBox.
+    async def get_file_upload_list(self, *, box_id: UUID4) -> list[FileUpload]:
+        """Get list of file uploads in a FileUploadBox.
 
         Raises:
             OperationError if there's a problem with the operation.
@@ -368,7 +369,7 @@ class FileBoxClient(FileBoxClientPort):
 
         try:
             files = response.json()
-            return [UUID(file) for file in files]
+            return [FileUpload(**file) for file in files]
         except Exception as err:
             msg = "Failed to extract list of file IDs from response body."
             log.error(msg, exc_info=True)

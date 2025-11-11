@@ -16,9 +16,9 @@
 """Port definition for the Upload Orchestrator."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 
 from ghga_event_schemas.pydantic_ import (
+    FileUpload,
     FileUploadBox,
     ResearchDataUploadBox,
 )
@@ -146,11 +146,10 @@ class UploadOrchestratorPort(ABC):
         *,
         box_id: UUID4,
         auth_context: AuthContext,
-    ) -> Sequence[UUID4]:
-        """Get list of file IDs for a research data upload box.
+    ) -> list[FileUpload]:
+        """Get list of file uploads for a research data upload box.
 
-        Returns:
-            Sequence of file IDs in the upload box
+        Returns a list of file uploads in the upload box
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.

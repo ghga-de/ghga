@@ -18,6 +18,7 @@
 from uuid import UUID, uuid4
 
 import pytest
+from ghga_event_schemas.pydantic_ import FileUpload, FileUploadState
 from pytest_httpx import HTTPXMock
 
 from tests.fixtures import ConfigFixture
@@ -77,8 +78,21 @@ async def test_unlock_file_upload_box(config: ConfigFixture, httpx_mock: HTTPXMo
 async def test_get_file_upload_list(config: ConfigFixture, httpx_mock: HTTPXMock):
     """Test the get_file_upload_list function"""
     file_upload_box_client = FileBoxClient(config=config.config)
-    file_list_response = [uuid4() for _ in range(3)]
-    httpx_mock.add_response(200, json=[str(x) for x in file_list_response])
+    file_list_response = [
+        FileUpload(
+            id=uuid4(),
+            box_id=uuid4(),
+            alias=f"test{i}",
+            checksum=f"checksum{i}",
+            size=1000 + i * 100,
+            state=FileUploadState.ARCHIVED,
+            completed=True,
+        )
+        for i in range(3)
+    ]
+    httpx_mock.add_response(
+        200, json=[x.model_dump(mode="json") for x in file_list_response]
+    )
     file_list = await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
     assert file_list == file_list_response
 

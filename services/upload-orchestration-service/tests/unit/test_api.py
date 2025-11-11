@@ -19,7 +19,11 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-from ghga_event_schemas.pydantic_ import ResearchDataUploadBox
+from ghga_event_schemas.pydantic_ import (
+    FileUpload,
+    FileUploadState,
+    ResearchDataUploadBox,
+)
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from hexkit.utils import now_utc_ms_prec
@@ -361,8 +365,20 @@ async def test_list_upload_box_files(
         assert response.status_code == 401
 
         # normal response with user auth
-        file_list = [uuid4() for _ in range(3)]
-        file_list_json = [str(file) for file in file_list]
+        file_list = [
+            FileUpload(
+                id=uuid4(),
+                box_id=TEST_BOX_ID,
+                alias=f"test{i}",
+                checksum=f"checksum{i}",
+                size=1000 + i * 100,
+                state=FileUploadState.ARCHIVED,
+                completed=True,
+            )
+            for i in range(3)
+        ]
+
+        file_list_json = [file.model_dump(mode="json") for file in file_list]
         orchestrator.get_upload_box_files.return_value = file_list
         response = await rest_client.get(url, headers=user_auth_headers)
         assert response.status_code == 200

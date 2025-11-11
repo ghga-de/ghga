@@ -17,6 +17,7 @@
 
 from abc import ABC, abstractmethod
 
+from ghga_event_schemas.pydantic_ import FileUpload
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4
 
@@ -130,8 +131,8 @@ class FileBoxClientPort(ABC):
         ...
 
     @abstractmethod
-    async def get_file_upload_list(self, *, box_id: UUID4) -> list[UUID4]:
-        """Get list of file IDs in a FileUploadBox.
+    async def get_file_upload_list(self, *, box_id: UUID4) -> list[FileUpload]:
+        """Get list of file uploads in a FileUploadBox.
 
         Raises:
             OperationError if there's a problem with the operation.
