@@ -291,61 +291,79 @@ async def test_get_box_uploads(rig: JointRig):
     box_id = await controller.create_file_upload_box(storage_alias="test")
 
     # Create multiple FileUploads within the box
-    file_ids = [
-        await controller.initiate_file_upload(
+    file_uploads: list[FileUpload] = []
+    for i in range(3):
+        file_id = await controller.initiate_file_upload(
             box_id=box_id,
             alias=f"file{i}",
             size=1024,
         )
-        for i in range(3)
-    ]
+        file_upload = FileUpload(
+            id=file_id,
+            box_id=box_id,
+            state=FileUploadState.INBOX,
+            alias=f"file{i}",
+            size=1024,
+            checksum="unencrypted_checksum",
+            completed=True,
+        )
+        file_uploads.append(file_upload)
 
     # Create a second box with different files to test isolation
     other_box_id = await controller.create_file_upload_box(storage_alias="test")
-    other_file_ids = [
-        await controller.initiate_file_upload(
+    other_file_uploads: list[FileUpload] = []
+    for i in range(2):
+        other_file_id = await controller.initiate_file_upload(
             box_id=other_box_id,
             alias=f"file{i}",
             size=1024,
         )
-        for i in range(2)
-    ]
+        file_upload = FileUpload(
+            id=other_file_id,
+            box_id=other_box_id,
+            state=FileUploadState.INBOX,
+            alias=f"file{i}",
+            size=1024,
+            checksum="unencrypted_checksum",
+            completed=True,
+        )
+        other_file_uploads.append(file_upload)
 
     # Complete the file uploads so they appear in the results
-    for file_id in file_ids:
+    for file_upload in file_uploads:
         await controller.complete_file_upload(
             box_id=box_id,
-            file_id=file_id,
+            file_id=file_upload.id,
             unencrypted_checksum="unencrypted_checksum",
-            encrypted_checksum=f"etag_for_{file_id}",
+            encrypted_checksum=f"etag_for_{file_upload.id}",
         )
 
     # Complete the uploads in the other box too
-    for file_id in other_file_ids:
+    for file_upload in other_file_uploads:
         await controller.complete_file_upload(
             box_id=other_box_id,
-            file_id=file_id,
+            file_id=file_upload.id,
             unencrypted_checksum="unencrypted_checksum",
-            encrypted_checksum=f"etag_for_{file_id}",
+            encrypted_checksum=f"etag_for_{file_upload.id}",
         )
 
     # Create a third, empty box
     empty_box_id = await controller.create_file_upload_box(storage_alias="test")
 
-    # Get the file IDs for the first box
-    file_ids = await controller.get_file_ids_for_box(box_id=box_id)
+    # Get the file uploads for the first box
+    results = await controller.get_box_file_info(box_id=box_id)
 
     # Verify only the files from the first box are returned (not from other_box)
-    expected_file_ids = {file_ids[0], file_ids[1], file_ids[2]}
-    assert set(file_ids) == expected_file_ids
+    expected_file_uploads = [file_uploads[0], file_uploads[1], file_uploads[2]]
+    assert str(results) == str(expected_file_uploads)
 
     # Also verify the other box returns its own files
-    other_file_ids = await controller.get_file_ids_for_box(box_id=other_box_id)
-    expected_other_file_ids = {other_file_ids[0], other_file_ids[1]}
-    assert set(other_file_ids) == expected_other_file_ids
+    other_results = await controller.get_box_file_info(box_id=other_box_id)
+    expected_other_file_uploads = [other_results[0], other_results[1]]
+    assert str(other_results) == str(expected_other_file_uploads)
 
     # Verify that we get an empty list for the third box
-    no_ids = await controller.get_file_ids_for_box(box_id=empty_box_id)
+    no_ids = await controller.get_box_file_info(box_id=empty_box_id)
     assert no_ids == []
 
 
@@ -890,7 +908,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found(rig: JointRig):
 async def test_get_file_ids_for_non_existent_box(rig: JointRig):
     """Test get_file_ids_for_box with a non-existent box ID."""
     with pytest.raises(UploadControllerPort.BoxNotFoundError):
-        await rig.controller.get_file_ids_for_box(box_id=uuid4())
+        await rig.controller.get_box_file_info(box_id=uuid4())
 
 
 async def test_file_upload_report_no_file_upload(rig: JointRig):

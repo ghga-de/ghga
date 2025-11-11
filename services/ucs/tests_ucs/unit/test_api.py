@@ -415,13 +415,13 @@ async def test_view_box_endpoint_error_handling(
     uos_jwk = config.uos_jwk
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
-    core_mock.get_file_ids_for_box.side_effect = core_error
+    core_mock.get_box_file_info.side_effect = core_error
     token_header = utils.view_file_box_token_header(jwk=uos_jwk, box_id=TEST_BOX_ID)
     response = await rest_client.get(
         f"/boxes/{TEST_BOX_ID}/uploads",
         headers=token_header,
     )
-    assert response.json()["description"] == str(http_error)
+    assert response.json()["description"] == str(http_error), response.json()
 
 
 @pytest.mark.parametrize(

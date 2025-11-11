@@ -19,6 +19,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, status
+from ghga_event_schemas.pydantic_ import FileUpload
 from pydantic import UUID4
 
 from ucs.adapters.inbound.fastapi_ import (
@@ -213,7 +214,7 @@ async def update_box(
     summary="Retrieve list of file IDs for box",
     operation_id="getBoxUploads",
     status_code=status.HTTP_200_OK,
-    response_model=rest_models.BoxUploadsResponse,
+    response_model=list[FileUpload],
     response_description="List of file IDs for completed uploads in the box",
     responses={
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
@@ -227,24 +228,24 @@ async def get_box_uploads(
         http_authorization.require_view_file_box_work_order,
     ],
     upload_controller: dummies.UploadControllerDummy,
-):
-    """Retrieve list of file IDs for a FileUploadBox.
+) -> list[FileUpload]:
+    """Retrieve list of FileUploads for a FileUploadBox.
 
-    Returns the list of file IDs for completed uploads in the specified box.
+    Returns the list of FileUploads for completed uploads in the specified box.
     Requires ViewFileBoxWorkOrder token from the UOS.
     """
     if work_order.box_id != box_id:
         raise http_exceptions.HttpNotAuthorizedError()
 
     try:
-        file_ids = await upload_controller.get_file_ids_for_box(box_id=box_id)
+        file_uploads = await upload_controller.get_box_file_info(box_id=box_id)
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
 
-    return rest_models.BoxUploadsResponse(file_ids=file_ids)
+    return file_uploads
 
 
 @router.post(

@@ -38,15 +38,6 @@ class BoxUpdateRequest(BaseModel):
     model_config = ConfigDict(title="Box Update Request")
 
 
-class BoxUploadsResponse(BaseModel):
-    """Response body for listing file IDs in a FileUploadBox."""
-
-    file_ids: list[UUID4] = Field(
-        ..., description="List of file IDs for completed uploads in the box"
-    )
-    model_config = ConfigDict(title="Box Uploads Response")
-
-
 class FileUploadCreationRequest(BaseModel):
     """Request body for creating a new FileUpload."""
 

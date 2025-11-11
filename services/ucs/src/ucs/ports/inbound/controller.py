@@ -17,7 +17,7 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_event_schemas.pydantic_ import FileUploadReport
+from ghga_event_schemas.pydantic_ import FileUpload, FileUploadReport
 from pydantic import UUID4
 
 
@@ -234,8 +234,8 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def get_file_ids_for_box(self, *, box_id: UUID4) -> list[UUID4]:
-        """Return the list of file IDs for a FileUploadBox.
+    async def get_box_file_info(self, *, box_id: UUID4) -> list[FileUpload]:
+        """Return the list of FileUploads for a FileUploadBox.
 
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.

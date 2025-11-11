@@ -22,19 +22,47 @@ components:
       - lock
       title: Box Update Request
       type: object
-    BoxUploadsResponse:
-      description: Response body for listing file IDs in a FileUploadBox.
+    FileUpload:
+      description: A File Upload.
       properties:
-        file_ids:
-          description: List of file IDs for completed uploads in the box
-          items:
-            format: uuid4
-            type: string
-          title: File Ids
-          type: array
+        alias:
+          description: The submitted alias from the metadata (unique within the box)
+          title: Alias
+          type: string
+        box_id:
+          description: The ID of the FileUploadBox this FileUpload belongs to
+          format: uuid4
+          title: Box Id
+          type: string
+        checksum:
+          description: Unencrypted checksum
+          title: Checksum
+          type: string
+        completed:
+          default: false
+          description: Whether or not the file upload has finished
+          title: Completed
+          type: boolean
+        id:
+          description: Unique identifier for the file upload
+          format: uuid4
+          title: Id
+          type: string
+        size:
+          description: File size in bytes
+          title: Size
+          type: integer
+        state:
+          $ref: '#/components/schemas/FileUploadState'
+          default: init
+          description: The state of the FileUpload
       required:
-      - file_ids
-      title: Box Uploads Response
+      - id
+      - box_id
+      - alias
+      - checksum
+      - size
+      title: FileUpload
       type: object
     FileUploadCompletionRequest:
       description: Request body for completing a FileUpload.
@@ -70,6 +98,21 @@ components:
       - size
       title: File Upload Creation Request
       type: object
+    FileUploadState:
+      description: 'The allowed states for a ResearchDataUploadBox instance.
+
+
+        init: file upload initiated, but not yet finished
+
+        inbox: file upload complete, file in inbox
+
+        archived: file moved out of inbox after completion'
+      enum:
+      - init
+      - inbox
+      - archived
+      title: FileUploadState
+      type: string
     HTTPValidationError:
       properties:
         detail:
@@ -497,10 +540,10 @@ paths:
       - UploadControllerService
   /boxes/{box_id}/uploads:
     get:
-      description: 'Retrieve list of file IDs for a FileUploadBox.
+      description: 'Retrieve list of FileUploads for a FileUploadBox.
 
 
-        Returns the list of file IDs for completed uploads in the specified box.
+        Returns the list of FileUploads for completed uploads in the specified box.
 
         Requires ViewFileBoxWorkOrder token from the UOS.'
       operationId: getBoxUploads
@@ -517,7 +560,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BoxUploadsResponse'
+                items:
+                  $ref: '#/components/schemas/FileUpload'
+                title: Response Getboxuploads
+                type: array
           description: List of file IDs for completed uploads in the box
         '404':
           content:

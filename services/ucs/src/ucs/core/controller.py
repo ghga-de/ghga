@@ -660,8 +660,8 @@ class UploadController(UploadControllerPort):
         else:
             log.debug("Box with ID %s is already unlocked", box_id)
 
-    async def get_file_ids_for_box(self, *, box_id: UUID4) -> list[UUID4]:
-        """Return the list of file IDs for a FileUploadBox.
+    async def get_box_file_info(self, *, box_id: UUID4) -> list[FileUpload]:
+        """Return the list of FileUploads for a FileUploadBox, sorted by alias.
 
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
@@ -674,14 +674,15 @@ class UploadController(UploadControllerPort):
             log.error(error)
             raise error from err
 
-        # Box exists, now get all file uploads
-        file_ids = [
-            x.id
+        # Box exists, now get all completed file uploads
+        file_uploads = [
+            x
             async for x in self._file_upload_dao.find_all(
                 mapping={"box_id": box_id, "completed": True}
             )
         ]
-        return file_ids
+        file_uploads.sort(key=lambda x: x.alias)
+        return file_uploads
 
     async def process_file_upload_report(
         self, *, file_upload_report: FileUploadReport
