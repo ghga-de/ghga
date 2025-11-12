@@ -1,6 +1,6 @@
 {
   "name": "data-portal",
-  "version": "2.2.8",
+  "version": "2.2.9",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
