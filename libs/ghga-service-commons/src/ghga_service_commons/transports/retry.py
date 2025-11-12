@@ -17,12 +17,12 @@
 
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from logging import getLogger
 from types import TracebackType
 from typing import Any, Self
 
 import httpx
-import tenacity
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
@@ -39,12 +39,12 @@ log = getLogger(__name__)
 
 def _default_wait_strategy(config: RetryTransportConfig):
     """Wait strategy using exponential backoff, not waiting for 429 responses."""
-    return wait_exponential_ignore_429(max=config.exponential_backoff_max)
+    return wait_exponential_ignore_429(max=config.client_exponential_backoff_max)
 
 
 def _default_stop_strategy(config: RetryTransportConfig):
     """Basic stop strategy aborting retrying after a configured number of attempts."""
-    return stop_after_attempt(config.max_retries)
+    return stop_after_attempt(config.client_num_retries)
 
 
 def _log_retry_stats(retry_state: RetryCallState):
@@ -65,13 +65,15 @@ def _log_retry_stats(retry_state: RetryCallState):
 
     # Enrich with details from current attempt for debugging
     if outcome := retry_state.outcome:
-        result = outcome.result()
-        if isinstance(result, httpx.Response):
-            stats["response_status_code"] = result.status_code
-            stats["response_headers"] = result.headers
-        elif isinstance(result, Exception):
-            stats["exception_type"] = type(result)
-            stats["exception_message"] = str(result)
+        try:
+            result = outcome.result()
+        except Exception as exc:
+            stats["exception_type"] = type(exc)
+            stats["exception_message"] = str(exc)
+        else:
+            if isinstance(result, httpx.Response):
+                stats["response_status_code"] = result.status_code
+                stats["response_headers"] = result.headers
 
     log.info(
         "Retry attempt number %i for function %s.",
@@ -90,14 +92,15 @@ class wait_exponential_ignore_429(wait_exponential):  # noqa: N801
 
     def __call__(self, retry_state: RetryCallState) -> float:
         """Copied from base class and adjusted."""
-        if (
-            retry_state.outcome
-            and (result := retry_state.outcome.result())
-            and isinstance(result, httpx.Response)
-            and result.status_code == 429
-            and not result.headers.get("Should-Wait")
-        ):
-            return 0
+        if retry_state.outcome:
+            with suppress(Exception):
+                result = retry_state.outcome.result()
+                if (
+                    isinstance(result, httpx.Response)
+                    and result.status_code == 429
+                    and not result.headers.get("Should-Wait")
+                ):
+                    return 0
         try:
             exp = self.exp_base ** (retry_state.attempt_number - 1)
             result = self.multiplier * exp
@@ -133,16 +136,9 @@ class AsyncRetryTransport(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         """Handles HTTP requests and adds retry logic around calls."""
-        response = None
-        try:
-            response = await self._retry_handler(
-                fn=self._transport.handle_async_request, request=request
-            )
-        except tenacity.RetryError as exc:
-            # last_attempt is potentially an unawaited future, need to explicitly reraise
-            # to get the correct inner instance displayed
-            exc.reraise()
-        return response
+        return await self._retry_handler(
+            fn=self._transport.handle_async_request, request=request
+        )
 
     async def aclose(self) -> None:  # noqa: D102
         await self._transport.aclose()
@@ -167,7 +163,7 @@ def _configure_retry_handler(
 ):
     """Configure the AsyncRetrying instance that is used for handling retryable responses/exceptions."""
     return AsyncRetrying(
-        reraise=True,
+        reraise=config.client_reraise_from_retry_error,
         retry=(
             retry_if_exception_type(
                 (
@@ -177,7 +173,8 @@ def _configure_retry_handler(
                 )
             )
             | retry_if_result(
-                lambda response: response.status_code in config.retry_status_codes
+                lambda response: response.status_code
+                in config.client_retry_status_codes
             )
         ),
         stop=stop_strategy(config),

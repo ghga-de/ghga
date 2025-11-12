@@ -15,8 +15,8 @@
 
 """Provides factories for different flavors of httpx.AsyncHTTPTransport."""
 
-from hishel import AsyncCacheTransport, AsyncInMemoryStorage
-from httpx import AsyncHTTPTransport, Limits
+from hishel import AsyncCacheTransport, AsyncInMemoryStorage, Controller
+from httpx import AsyncBaseTransport, AsyncHTTPTransport, Limits
 
 from .config import CompositeCacheConfig, CompositeConfig
 from .ratelimiting import AsyncRateLimitingTransport
@@ -28,11 +28,21 @@ class CompositeTransportFactory:
 
     @classmethod
     def _create_common_transport_layers(
-        cls, config: CompositeConfig, limits: Limits | None = None
+        cls,
+        config: CompositeConfig,
+        base_transport: AsyncBaseTransport | None = None,
+        limits: Limits | None = None,
     ):
-        """Creates wrapped transports reused between different factory methods."""
+        """Creates wrapped transports reused between different factory methods.
+
+        If provided, limits are applied to the AsyncHTTPTransport instance this method creates.
+        If provided, a custom base_transport class is used and any limits are ignored.
+        Those have to be provided directly to the custom base_transport passed into this method.
+        """
         base_transport = (
-            AsyncHTTPTransport(limits=limits) if limits else AsyncHTTPTransport()
+            base_transport or AsyncHTTPTransport(limits=limits)
+            if limits
+            else AsyncHTTPTransport()
         )
         ratelimiting_transport = AsyncRateLimitingTransport(
             config=config, transport=base_transport
@@ -44,16 +54,44 @@ class CompositeTransportFactory:
 
     @classmethod
     def create_ratelimiting_retry_transport(
-        cls, config: CompositeConfig, limits: Limits | None = None
+        cls,
+        config: CompositeConfig,
+        base_transport: AsyncBaseTransport | None = None,
+        limits: Limits | None = None,
     ) -> AsyncRetryTransport:
-        """Creates a retry transport, wrapping a rate limiting transport, wrapping an AsyncHTTPTransport."""
-        return cls._create_common_transport_layers(config, limits=limits)
+        """Creates a retry transport, wrapping, in sequence, a rate limiting transport and AsyncHTTPTransport.
+
+        If provided, limits are applied to the wrapped AsyncHTTPTransport instance.
+        If provided, a custom base_transport class is used and any limits are ignored.
+        Those have to be provided directly to the custom base_transport passed into this method.
+        """
+        return cls._create_common_transport_layers(
+            config, base_transport=base_transport, limits=limits
+        )
 
     @classmethod
     def create_cached_ratelimiting_retry_transport(
-        cls, config: CompositeCacheConfig, limits: Limits | None = None
+        cls,
+        config: CompositeCacheConfig,
+        base_transport: AsyncBaseTransport | None = None,
+        limits: Limits | None = None,
     ) -> AsyncCacheTransport:
-        """Creates a retry transport, wrapping a rate limiting transport, wrapping a cache transport, wrapping an AsyncHTTPTransport."""
-        storage = AsyncInMemoryStorage(ttl=config.cache_ttl)
-        retry_transport = cls._create_common_transport_layers(config, limits=limits)
-        return AsyncCacheTransport(transport=retry_transport, storage=storage)
+        """Creates a cache transport, wrapping, in sequence, a retry, rate limiting transport and AsyncHTTPTransport.
+
+        If provided, limits are applied to the wrapped AsyncHTTPTransport instance.
+        If provided, a custom base_transport class is used and any limits are ignored.
+        Those have to be provided directly to the custom base_transport passed into this method.
+        """
+        retry_transport = cls._create_common_transport_layers(
+            config, base_transport=base_transport, limits=limits
+        )
+        controller = Controller(
+            cacheable_methods=config.client_cacheable_methods,
+            cacheable_status_codes=config.client_cacheable_status_codes,
+        )
+        storage = AsyncInMemoryStorage(
+            ttl=config.client_cache_ttl, capacity=config.client_cache_capacity
+        )
+        return AsyncCacheTransport(
+            controller=controller, transport=retry_transport, storage=storage
+        )
