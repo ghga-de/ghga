@@ -20,7 +20,7 @@ from collections.abc import Callable
 from contextlib import suppress
 from logging import getLogger
 from types import TracebackType
-from typing import Any, Self
+from typing import Any
 
 import httpx
 from tenacity import (
@@ -143,7 +143,7 @@ class AsyncRetryTransport(httpx.AsyncBaseTransport):
     async def aclose(self) -> None:  # noqa: D102
         await self._transport.aclose()
 
-    async def __aenter__(self) -> Self:  # noqa: D105
+    async def __aenter__(self) -> "AsyncRetryTransport":  # noqa: D105
         return self
 
     async def __aexit__(  # noqa: D105
