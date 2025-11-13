@@ -19,67 +19,33 @@ from contextlib import asynccontextmanager
 import hishel
 import httpx
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
-from tenacity import (
-    AsyncRetrying,
-    retry_if_exception_type,
-    retry_if_result,
-    stop_after_attempt,
-    wait_exponential_jitter,
-)
+from ghga_service_commons.transports import CompositeTransportFactory
 
 from ghga_connector.config import CONFIG
 from ghga_connector.constants import TIMEOUT
 
 
-class RetryHandler:
-    """Helper class to make max_retries user configurable"""
-
-    @classmethod
-    def basic(cls):
-        """Configure client retry handler with exponential backoff"""
-        return AsyncRetrying(
-            reraise=True,
-            retry=(
-                retry_if_exception_type(
-                    (
-                        httpx.ConnectError,
-                        httpx.ConnectTimeout,
-                        httpx.TimeoutException,
-                    )
-                )
-                | retry_if_result(
-                    lambda response: response.status_code in CONFIG.retry_status_codes
-                )
-            ),
-            stop=stop_after_attempt(CONFIG.max_retries),
-            wait=wait_exponential_jitter(max=CONFIG.exponential_backoff_max),
-        )
-
-
 def get_cache_transport(
-    wrapped_transport: httpx.AsyncBaseTransport | None = None,
+    base_transport: httpx.AsyncBaseTransport | None = None,
+    limits: httpx.Limits | None = None,
 ) -> hishel.AsyncCacheTransport:
     """Construct an async cache transport with `hishel`.
 
     The `wrapped_transport` parameter can be used for testing to inject, for example,
     an httpx.ASGITransport pointing to a FastAPI app.
     """
-    cache_transport = hishel.AsyncCacheTransport(
-        transport=wrapped_transport or httpx.AsyncHTTPTransport(),
-        # set ttl to expected lifetime of presigned URL - min-fresh
-        storage=hishel.AsyncInMemoryStorage(ttl=57, capacity=512),
-        controller=hishel.Controller(
-            cacheable_methods=["POST", "GET"],
-            cacheable_status_codes=[200, 201],
-        ),
+    return CompositeTransportFactory.create_cached_ratelimiting_retry_transport(
+        CONFIG, base_transport=base_transport, limits=limits
     )
-    return cache_transport
 
 
-def get_mounts() -> dict[str, httpx.AsyncBaseTransport]:
+def get_mounts(
+    base_transport: httpx.AsyncHTTPTransport | None = None,
+    limits: httpx.Limits | None = None,
+) -> dict[str, httpx.AsyncBaseTransport]:
     """Return a dict of mounts for the cache transport."""
     return {
-        "all://": get_cache_transport(),
+        "all://": get_cache_transport(base_transport=base_transport, limits=limits),
     }
 
 
@@ -88,11 +54,12 @@ async def async_client():
     """Yields a context manager async httpx client and closes it afterward"""
     async with httpx.AsyncClient(
         timeout=TIMEOUT,
-        limits=httpx.Limits(
-            max_connections=CONFIG.max_concurrent_downloads,
-            max_keepalive_connections=CONFIG.max_concurrent_downloads,
+        mounts=get_mounts(
+            limits=httpx.Limits(
+                max_connections=CONFIG.max_concurrent_downloads,
+                max_keepalive_connections=CONFIG.max_concurrent_downloads,
+            )
         ),
-        mounts=get_mounts(),
     ) as client:
         attach_correlation_id_to_requests(client)
         yield client

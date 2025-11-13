@@ -24,7 +24,6 @@ from tenacity import RetryError
 from ghga_connector import exceptions
 from ghga_connector.config import get_download_api_url
 from ghga_connector.constants import TIMEOUT_LONG
-from ghga_connector.core import RetryHandler
 from ghga_connector.core.api_calls.utils import (
     is_service_healthy,
     modify_headers_for_cache_refresh,
@@ -50,7 +49,6 @@ class DownloadClient:
         self._client = client
         self._work_package_client = work_package_client
         self._download_api_url = get_download_api_url()
-        self._retry_handler = RetryHandler.basic()
 
     async def _get_drs_object_retrieval_auth_headers(
         self, *, file_id: str, bust_cache: bool = False
@@ -81,8 +79,7 @@ class DownloadClient:
             modify_headers_for_cache_refresh(headers)
 
         try:
-            response: httpx.Response = await self._retry_handler(
-                fn=self._client.get,
+            response: httpx.Response = await self._client.get(
                 url=url,
                 headers=headers,
                 timeout=TIMEOUT_LONG,
@@ -137,10 +134,8 @@ class DownloadClient:
 
         # Make function call to get file header envelope
         try:
-            response: httpx.Response = await self._retry_handler(
-                fn=self._client.get,
-                headers=auth_headers,
-                url=url,
+            response: httpx.Response = await self._client.get(
+                headers=auth_headers, url=url
             )
         except httpx.RequestError as request_error:
             raise exceptions.RequestFailedError(url=url) from request_error
@@ -221,9 +216,7 @@ class DownloadClient:
             }
         )
         try:
-            response: httpx.Response = await self._retry_handler(
-                fn=self._client.get, url=url, headers=headers
-            )
+            response: httpx.Response = await self._client.get(url=url, headers=headers)
         except RetryError as retry_error:
             wrapped_exception = retry_error.last_attempt.exception()
 

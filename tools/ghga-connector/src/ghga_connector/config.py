@@ -21,13 +21,13 @@ from contextvars import ContextVar
 from typing import Any
 
 import httpx
+from ghga_service_commons.transports import CompositeCacheConfig
 from hexkit.config import config_from_yaml
 from hexkit.utils import set_context_var
-from pydantic import Field, NonNegativeInt, PositiveInt
-from pydantic_settings import BaseSettings
+from pydantic import Field, PositiveInt
 
 from ghga_connector import exceptions
-from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_RETRIES, MAX_WAIT_TIME
+from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_WAIT_TIME
 
 __all__ = [
     "CONFIG",
@@ -75,14 +75,11 @@ def get_ghga_pubkey() -> str:
 
 
 @config_from_yaml(prefix="ghga_connector")
-class Config(BaseSettings):
+class Config(CompositeCacheConfig):
     """Global Config Parameters"""
 
     max_concurrent_downloads: PositiveInt = Field(
         default=5, description="Number of parallel downloader tasks for file parts."
-    )
-    max_retries: NonNegativeInt = Field(
-        default=MAX_RETRIES, description="Number of times to retry failed API calls."
     )
     max_wait_time: PositiveInt = Field(
         default=MAX_WAIT_TIME,
@@ -94,14 +91,6 @@ class Config(BaseSettings):
     wkvs_api_url: str = Field(
         default="https://data.ghga.de/.well-known",
         description="URL to the root of the WKVS API. Should start with https://",
-    )
-    exponential_backoff_max: NonNegativeInt = Field(
-        default=60,
-        description="Maximum number of seconds to wait for when using exponential backoff retry strategies.",
-    )
-    retry_status_codes: list[NonNegativeInt] = Field(
-        default=[408, 500, 502, 503, 504],
-        description="List of status codes that should trigger retrying a request.",
     )
 
 

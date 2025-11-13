@@ -29,7 +29,6 @@ from ghga_connector.constants import CACHE_MIN_FRESH
 from ghga_connector.core.api_calls.utils import modify_headers_for_cache_refresh
 
 from .. import exceptions
-from . import RetryHandler
 
 WorkType = Literal["create", "upload", "close", "delete"]
 
@@ -62,14 +61,13 @@ class WorkPackageClient:
     ) -> httpx.Response:
         """Call url with provided headers and client method passed as callable."""
         try:
-            retry_handler = RetryHandler.basic()
             args = {  # we don't always want to supply 'json' kwarg, so do it like this
                 "url": url,
                 "headers": headers,
             }
             if body is not None:
                 args["json"] = body
-            response: httpx.Response = await retry_handler(fn=fn, **args)
+            response: httpx.Response = await fn(**args)
         except RetryError as retry_error:
             wrapped_exception = retry_error.last_attempt.exception()
 

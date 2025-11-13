@@ -450,16 +450,23 @@ config = ApiConfigBase()
 configure_app(mock_external_app, config)
 
 
-def get_test_mounts():
+def get_test_mounts(
+    base_transport: httpx.AsyncHTTPTransport | None = None,
+    limits: httpx.Limits | None = None,
+):
     """Test-only version of `async_client` to route traffic to the specified app.
 
     Lets other traffic go out as usual, e.g. to the S3 testcontainer, while still using
     the same caching logic as the real client.
     """
-    mock_app_transport = get_cache_transport(httpx.ASGITransport(app=mock_external_app))
+    mock_app_transport = get_cache_transport(
+        base_transport=httpx.ASGITransport(app=mock_external_app), limits=limits
+    )
     mounts = {
         "all://127.0.0.1": mock_app_transport,  # route traffic to the mock app
-        "all://host.docker.internal": get_cache_transport(),  # let S3 traffic go out
+        "all://host.docker.internal": get_cache_transport(
+            base_transport=base_transport, limits=limits
+        ),  # let S3 traffic go out
     }
     return mounts
 
