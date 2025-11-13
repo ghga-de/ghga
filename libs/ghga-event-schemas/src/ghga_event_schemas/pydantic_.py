@@ -353,9 +353,9 @@ class FileDownloadServed(NonStagedFileRequested):
     model_config = ConfigDict(title="file_download_served")
 
 
-class Notification(BaseModel):
+class EmailNotification(BaseModel):
     """
-    This event is emitted by services that desire to send a notification.
+    This event is emitted by services that desire to send a email notification.
     It is picked up by the notification service.
     """
 
@@ -378,6 +378,19 @@ class Notification(BaseModel):
     )
     model_config = ConfigDict(title="notification")
 
+class SmsNotification(BaseModel):
+    """
+    This event is emitted by services that desire to send a sms notification.
+    It is picked up by the notification service.
+    """
+
+    phone: str = Field(
+        ..., description="The primary recipient of the sms"
+    )
+    text: str = Field(
+        ..., description="The text for the notification body"
+    )
+    model_config = ConfigDict(title="notification")
 
 class FileDeletionRequested(FileIdModel):
     """
