@@ -19,7 +19,6 @@ An SMS notification event schema will be defined in the `ghga-event-schemas` rep
 The event schema will detail all the information needed to send a notification via SMS:
 - `text` (required)
 - `phone` (required)
-- `delivery_at` (optional)
 
 The exact field names and constraints will be provided in the `ghga-event-schemas` repository, which is considered the source of truth.
 This information will be used to create an SMS with a consistent format.
