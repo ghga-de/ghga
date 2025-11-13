@@ -161,6 +161,8 @@ class Config(BaseSettings):
     totp_digits: int = 6
     totp_algorithm: str = "sha1"
     totp_interval: int = 30
+    totp_max_failed_attempts: int = 3
+    totp_tolerance: int = 1
 
     # wkvs
     wkvs_url: str = "wkvs"

@@ -18,6 +18,7 @@
 
 import hashlib
 import json
+import random
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -109,6 +110,7 @@ class TokenGenerator:
             self.digest = hashlib.sha512
         self.totp_digits = config.totp_digits
         self.totp_interval = config.totp_interval
+        self.totp_tolerance = config.totp_tolerance
 
     @classmethod
     def split_title(cls, full_name: str) -> tuple[str | None, str]:
@@ -310,6 +312,20 @@ class TokenGenerator:
         if for_time is None:
             for_time = now_as_utc()
         return totp.at(for_time, offset)
+
+    def generate_wrong_totp(self, totp_token: str) -> str:
+        """Generate valid TOTP but with the wrong time window."""
+        tolerance = self.totp_tolerance
+        tolerated_totps = {
+            self.generate_totp(totp_token, offset=offset)
+            for offset in range(-tolerance, tolerance + 1)
+        }
+        offset = tolerance - 1
+        while True:
+            wrong_code = self.generate_totp(totp_token, offset=offset)
+            if wrong_code not in tolerated_totps:
+                return wrong_code
+            offset -= 1
 
     def verify_totp(self, totp: str, headers: dict[str, Any]) -> Response:
         """Verify the TOTP code."""

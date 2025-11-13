@@ -179,3 +179,15 @@ def user_account_inactivation(
     assert response.status_code == 204, f"Unable to update user status: {response.text}"
     sub = fixtures.auth.get_sub(user_name)
     fixtures.state.set_state(f"status-{sub}", status)
+
+
+@when(parse('"{name}" tries to log in'), target_fixture="response")
+def user_tries_to_login(name: str, fixtures: JointFixture) -> Response:
+    sub = fixtures.auth.get_sub(name)
+    email = fixtures.auth.get_email(name)
+    external_token = fixtures.auth.oidc_login(
+        name=name, email=email, sub=sub, valid_seconds=10
+    )
+    auth_headers = {"Authorization": f"Bearer {external_token}"}
+    url = fixtures.config.auth_adapter_url + "/rpc/login"
+    return fixtures.http.post(url, headers=auth_headers)
