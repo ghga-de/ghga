@@ -376,7 +376,8 @@ class EmailNotification(BaseModel):
     plaintext_body: str = Field(
         ..., description="The basic text for the notification body"
     )
-    model_config = ConfigDict(title="notification")
+    model_config = ConfigDict(title="email_notification")
+
 
 class SmsNotification(BaseModel):
     """
@@ -384,13 +385,10 @@ class SmsNotification(BaseModel):
     It is picked up by the notification service.
     """
 
-    phone: str = Field(
-        ..., description="The primary recipient of the sms"
-    )
-    text: str = Field(
-        ..., description="The text for the notification body"
-    )
-    model_config = ConfigDict(title="notification")
+    phone: str = Field(..., description="The primary recipient of the sms")
+    text: str = Field(..., description="The text for the notification body")
+    model_config = ConfigDict(title="sms_notification")
+
 
 class FileDeletionRequested(FileIdModel):
     """
@@ -668,7 +666,8 @@ schema_registry: dict[str, type[BaseModel]] = {
     "non_staged_file_requested": NonStagedFileRequested,
     "file_staged_for_download": FileStagedForDownload,
     "file_download_served": FileDownloadServed,
-    "notification": Notification,
+    "email_notification": EmailNotification,
+    "sms_notification": SmsNotification,
     "searchable_resource_deleted": SearchableResourceInfo,
     "searchable_resource_upserted": SearchableResource,
     "user_id": UserID,
