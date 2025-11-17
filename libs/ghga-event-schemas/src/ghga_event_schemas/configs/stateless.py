@@ -82,10 +82,15 @@ class NotificationEventsConfig(BaseSettings):
         description=("Name of the topic used for notification events."),
         examples=["notifications"],
     )
-    notification_type: str = Field(
+    email_notification_type: str = Field(
         default=...,
-        description=("The type used for notification events."),
-        examples=["notification"],
+        description=("The type used for email notification events."),
+        examples=["email_notification"],
+    )
+    sms_notification_type: str = Field(
+        default=...,
+        description=("The type used for SMS notification events."),
+        examples=["sms_notification"],
     )
 
 

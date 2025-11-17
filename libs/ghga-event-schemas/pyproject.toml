@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_event_schemas"
-version = "10.1.2"
+version = "11.0.0"
 description = "GHGA Event Schemas: A package that collects schemas used for events exchanged between GHGA service."
 dependencies = [
     "jsonschema>=4.23.0,<5.0.0",
