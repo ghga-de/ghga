@@ -355,7 +355,7 @@ class FileDownloadServed(NonStagedFileRequested):
 
 class EmailNotification(BaseModel):
     """
-    This event is emitted by services that desire to send a email notification.
+    This event is emitted by services that desire to send an email notification.
     It is picked up by the notification service.
     """
 
