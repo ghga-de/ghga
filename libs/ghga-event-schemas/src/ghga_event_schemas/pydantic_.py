@@ -381,7 +381,7 @@ class EmailNotification(BaseModel):
 
 class SmsNotification(BaseModel):
     """
-    This event is emitted by services that desire to send a sms notification.
+    This event is emitted by services that desire to send an SMS notification.
     It is picked up by the notification service.
     """
 
