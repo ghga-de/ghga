@@ -23,6 +23,10 @@ The event schema will detail all the information needed to send a notification v
 The exact field names and constraints will be provided in the `ghga-event-schemas` repository, which is considered the source of truth.
 This information will be used to create an SMS with a consistent format.
 
+### Email Notification Event
+The notification event `Notification` will be renamed to `EmailNotification` for clarity.
+
+
 ### Notification Service
 This is a microservice dedicated to consuming notification events from the "notifications" topic in Kafka.
 In this update, a new type of notification event will be added to expand the service's capabilities. 
