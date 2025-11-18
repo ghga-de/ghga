@@ -41,9 +41,10 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 ### Included/Required:
 
-- Implement logic to process incoming AnnotatedEMPacks, execute the corresponding workflows and store the resulting AnnotatedEMPacks if required.
+- Implement a service that persists the annotatedEMPacks, workflows, and workflowRoutes entities.
+- Implement logic to process incoming annotatedEMPacks, execute the corresponding workflows and store the resulting annotatedEMPacks if required.
 - Implement service start-up logic to derive missing schemas for workflow routes with empty output schemas.
-- Implement MongoDB collections to store AnnotatedEMPacks, Workflows and WorkflowRoutes.
+
 
 #### Collections
 
