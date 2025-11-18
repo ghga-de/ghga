@@ -32,7 +32,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Workflow`: Instructions on how to produce a certain data/model representation from another data/model. The workflows are defined by the `metldata` library on which the transformation service will be built.
 
-`Workflows`: A MongoDB collection of Workflow objects.
+`workflows`: A MongoDB collection of Workflow objects.
 
 `WorkflowRoute`: Information on which specific workflow is used to produce data compliant with the output model when presented with data compliant with the input model.
 
