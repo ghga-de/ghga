@@ -20,6 +20,11 @@
 from collections.abc import Callable
 
 
+def to_string(value: int | str) -> str:
+    """Converts a value to string"""
+    return str(value)
+
+
 def split_by_semicolon(value: str) -> list[str]:
     """Splits a string by semicolon"""
     return [elem.strip() for elem in value.split(";")]

@@ -1,4 +1,4 @@
-ghga_metadata_version: 2.0.0
+ghga_metadata_version: 2.2.0
 default_settings:
   header_row: 1
   start_row: 7
@@ -17,12 +17,16 @@ worksheets:
           !!python/object/apply:ghga_transpiler.transformations.to_list []
     sheet_name: Analysis
   - settings:
-      end_column: 11
+      end_column: 17
       name: analysis_methods
       transformations:
+        reference_type:
+          !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
         parameters:
           !!python/object/apply:ghga_transpiler.transformations.to_attributes []
         software_versions:
+          !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+        attributes:
           !!python/object/apply:ghga_transpiler.transformations.to_attributes []
     sheet_name: AnalysisMethod
   - settings:

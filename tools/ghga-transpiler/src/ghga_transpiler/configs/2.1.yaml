@@ -121,6 +121,8 @@ worksheets:
           !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
         attributes:
           !!python/object/apply:ghga_transpiler.transformations.to_attributes []
+        sequencing_read_length:
+          !!python/name:ghga_transpiler.transformations.to_string
     sheet_name: ExperimentMethod
   - settings:
       end_column: 7
@@ -138,6 +140,8 @@ worksheets:
           !!python/object/apply:ghga_transpiler.transformations.to_list []
         format:
           !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
+        sequencing_lane_id:
+          !!python/name:ghga_transpiler.transformations.to_string
     sheet_name: ResearchDataFile
   - settings:
       end_column: 7
