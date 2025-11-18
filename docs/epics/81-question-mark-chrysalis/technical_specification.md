@@ -124,7 +124,7 @@ The implementation of the EM transformation service will involve the following k
    * `version` is the version of the schema, initially None if it is not an original schema
    * `content` is the schema in schemapack format, initially None if it is not an original schema
    * `publish` is a boolean flag indicating whether the derived datapacks conforming to this schema should be published
-   * `order` is the order in a topological ordering of the schemas in the transformation graph, initially None if it is not an original schema
+   * `order` is the order in a topological ordering of the schemas in the transformation graph, initially None if not yet computed
    
 
    This collection is populated manually with the defined ghga schemas.
