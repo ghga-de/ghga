@@ -24,7 +24,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Universal Discovery Model`: A common target representation to which all the EMs are transformed, serving as a basis for data queries and data display via the GHGA Data Portal.  
 
-`EMPack`: Experimental metadata in datapack format. It follows a relation data schema and compatible with one of the EMIMs.
+`EMPack`: Experimental metadata in datapack format. It follows a relational data schema corresponding to one of the EMIMs.
 
 `AnnotatedEMPack`: A datapack enriched with additional information. 
 
