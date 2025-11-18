@@ -36,7 +36,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `WorkflowRoute`: Information on which specific workflow is used to produce data compliant with the output model when presented with data compliant with the input model.
 
-`WorkflowRoutes`: A MongoDB collection of WorkflowRoute objects.
+`workflowRoutes`: A MongoDB collection of WorkflowRoute objects.
 
 
 ### Included/Required:
