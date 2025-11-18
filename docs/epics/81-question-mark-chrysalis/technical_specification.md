@@ -26,7 +26,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `EMPack`: Experimental metadata in datapack format. It follows a relational data schema corresponding to one of the EMIMs.
 
-`AnnotatedEMPack`: A datapack enriched with additional information. 
+`AnnotatedEMPack`: A datapack enriched with additional information such as accessions that help integrate the EMPack into the archive.
 
 `AnnotatedEMPacks`: A MongoDB collection of AnnotatedEMPack objects.
 
