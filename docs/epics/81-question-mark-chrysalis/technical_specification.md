@@ -75,7 +75,7 @@ data structure:
 ```python
 class TransformationWorkflow(BaseModel):
    id: uuid
-   name: str | None
+   name: str
    description: str | None
    workflow: metldata.workflow.base.Workflow
 ```
@@ -135,7 +135,7 @@ The implementation of the EM transformation service will involve the following k
 
    Consists of TransformationWorkflow objects
    * `id` is a unique identifier for a workflow
-   * `name` is a human readable name for the workflow
+   * `name` is a human readable name for the workflow. It should be a name indicating the purpose of the workflow for easier debugging and understanding of the operations.
    * `description` is a more verbose description of the workflow
    * `workflow` is the definition of the workflow in metldata format
 
