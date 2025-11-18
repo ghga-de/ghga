@@ -172,7 +172,7 @@ The implementation of the EM transformation service will involve the following k
 
 A transformation is configured through the Schemas, Workflows and WorkflowRoutes collections.
 
-Workflow routes defines the transformation paths from input schemas to output schemas using specific workflows. Each workflow route specifies which workflow to apply for a given input schema and what output schema to produce. 
+Workflow routes define the transformation workflows to transform an input schema to an output schemas. Each workflow route specifies which workflow to apply to a given input schema and what output schema it is expected to produce.
 
 Workflow routes also define a a graph structure where schemas are nodes and workflow routes are directed edges. The source nodes of this graph are the “original schemas” aka EM models defined as schemapacks. The graph must not contain any cycles, i.e. it should be a directed acyclic graph (DAG). Additionally, the graph must not contain any "diamonds", i.e. there must be at most one directed path between any two schemas in the graph.
 
