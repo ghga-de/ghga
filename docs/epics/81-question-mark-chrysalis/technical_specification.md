@@ -184,7 +184,7 @@ This graph structure is used to validate the transformation configuration and to
 
 Transformation configuration validation includes:
 
-1. Check the graph follows a tree-like structure, i.e. it conforms to the unique path requirement mentioned above.
+1. Check the graph conforms to the unique path requirement mentioned above, and thereby also that it does not contain cycles.
 2. Calculate the topological order of the nodes in the graph using an algorithm similar to Kahn's algorithm, so that the schemas are ordered in a way that if we process the schemas in that order, the previous schemas have already been processed.
 3. Update the `order` field of each schema in the `Schemas` according to the calculated topological order. 
 4. Check the workflows and the original schemas referred by the workflow routes exist in their corresponding collections.
