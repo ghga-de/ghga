@@ -28,15 +28,15 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `AnnotatedEMPack`: A datapack enriched with additional information. 
 
-`AnnotatedEMPackCollection`: A MongoDB collection of AnnotatedEMPack objects.
+`AnnotatedEMPacks`: A MongoDB collection of AnnotatedEMPack objects.
 
 `Workflow`: Instructions on how to produce a certain data/model representation from another data/model. The workflows are defined by the `metldata` library on which the transformation service will be built.
 
-`WorkflowCollection`: A MongoDB collection of Workflow objects.
+`Workflows`: A MongoDB collection of Workflow objects.
 
 `WorkflowRoute`: Information on which specific workflow is used to produce data compliant with the output model when presented with data compliant with the input model.
 
-`WorkflowRoutesCollection`: A MongoDB collection of WorkflowRoute objects.
+`WorkflowRoutes`: A MongoDB collection of WorkflowRoute objects.
 
 
 ### Included/Required:
@@ -48,11 +48,11 @@ To this goal, it needs to keep track of the transformation workflows, original a
 #### Collections
 
 
-`SchemaCollection`
+`Schemas`
 
-- purpose: describe schemas
+- purpose: store schemas
 
-
+data structure:
 ```python
 class Schema(BaseModel):
    id: uuid
@@ -64,7 +64,7 @@ class Schema(BaseModel):
 
 ```
 
-`WorkflowCollection`
+`Workflows`
 
 - Purpose: store metldata-compatible workflow definitions used to transform schemas/data.
 
@@ -78,11 +78,11 @@ class TransformationWorkflow(BaseModel):
 ```
 
 
-`WorkflowRoutesCollection`
+`WorkflowRoutes`
 
 - Purpose: describe named routes that bind workflows, input schema types and produced output schema types, and whether outputs should be published.
 
-
+data structure:
 ```python
 class WorkflowRoute(BaseModel):
    id: uuid
@@ -100,7 +100,7 @@ class WorkflowRoute(BaseModel):
 **REMARK2: I moved the order from the schema collection to the workflow route collection, since the order is more related to the workflow routes than the schemas themselves.**
 
 
-`AnnotatedEMPackCollection`
+`AnnotatedEMPacks`
 
 Purpose: store incoming and derived annotated EM datapacks that are to be processed or published.
 
@@ -118,7 +118,7 @@ class AnnotatedEMPack(BaseModel):
 
 The implementation of the EM transformation service will involve the following key components.
 
-1. `SchemaCollection`
+1. `Schemas`
    
    Consists of Schema objects
    * `id` is a unique identifier of the schema
@@ -130,9 +130,9 @@ The implementation of the EM transformation service will involve the following k
 
    This collection is populated manually with the defined ghga schemas.
 
-   These are original schemas (`original: true`) stored in the `SchemaCollection` and serve as the entry point for data that will be transformed into Universal GHGA Models. EMIM schemas provide a stable interface for data providers and may be more flexible or permissive than internal canonical models to accommodate varied input sources.
+   These are original schemas (`original: true`) stored in the `Schemas` and serve as the entry point for data that will be transformed into Universal GHGA Models. EMIM schemas provide a stable interface for data providers and may be more flexible or permissive than internal canonical models to accommodate varied input sources.
 
-1. `WorkflowCollection`
+1. `Workflows`
 
    Consists of TransformationWorkflow objects
    * `id` is a unique identifier for a workflow
@@ -143,7 +143,7 @@ The implementation of the EM transformation service will involve the following k
    This collection is populated manually with the defined ghga transformation workflows.
 
 
-1. `WorkflowRoutesCollection`
+1. `WorkflowRoutes`
 
    Consists of WorkflowRoute object
    * `id` is a unique identifier for the workflow route
@@ -157,7 +157,7 @@ The implementation of the EM transformation service will involve the following k
    This collection is populated manually with the defined ghga workflow routes.  
    An empty workflow_output_schema indicates the route requires schema derivation at startup.  
 
-1. `AnnotatedEMPackCollection`
+1. `AnnotatedEMPacks`
 
    Consists of AnnotatedEMPack objects.
    * `id` is a unique identifier for the AnnotatedEMPack
@@ -174,7 +174,7 @@ The implementation of the EM transformation service will involve the following k
 
 A transformation is configured through the Schemas, Workflows and WorkflowRoutes collections.
 
-Workflow routes defines the transformation paths from input schemas to output schemas using specific workflows. Each workflow route specifies which workflow to apply for a given input schema and what output schema to produce. The `publish` flag indicates whether the resulting AnnotatedEMPack should be stored in the AnnotatedEMPackCollection.
+Workflow routes defines the transformation paths from input schemas to output schemas using specific workflows. Each workflow route specifies which workflow to apply for a given input schema and what output schema to produce. The `publish` flag indicates whether the resulting AnnotatedEMPack should be stored in the AnnotatedEMPacks.
 
 Workflow routes also define a a graph structure where schemas are nodes and workflow routes are directed edges. The source nodes of this graph are the “original schemas” aka EM models defined as schemapacks.
 
@@ -186,7 +186,7 @@ Transformation configuration validation includes:
 
 1. Check the workflow routes graph do not contain cycles, i.e. it is a directed acyclic graph
 2. Calculate the topological order of the nodes in the graph using Kahn's algorithm, so that the schemas are ordered in a way that if we process the schemas in that order, the previous schemas have already been processed.
-3. Update the `order` field of each route in the `WorkflowRoutesCollection` according to the calculated topological order. 
+3. Update the `order` field of each route in the `WorkflowRoutes` according to the calculated topological order. 
 4. check the workflows and the original schemas referred by the workflow routes exist in their corresponding collections.
 
 #### User Journeys: Service Start-up
@@ -195,10 +195,10 @@ Service starts up and derives the output schemas for all workflow routes with em
 
 1. Validate the transformation configuration of the workflow routes.
 2. Traverse the schemas in the transformation graph starting with the original schema, in topological order.For every route execute the following
-   1. Retrieve the workflow of the corresponding `workflow_id` from the `WorkflowCollection`
-   2. Retrieve the schema corresponding to the `input_schema_id` from the `WorkflowRoutesCollection`.
+   1. Retrieve the workflow of the corresponding `workflow_id` from the `Workflows`
+   2. Retrieve the schema corresponding to the `input_schema_id` from the `WorkflowRoutes`.
    3. Call metldata to execute the workflow on the input schema to compute the derived schema.
-   4. Record the derived schema in the `SchemaCollection` and save its id to the `output_schema_id` of the WorkflowRoute.
+   4. Record the derived schema in the `Schemas` and save its id to the `output_schema_id` of the WorkflowRoute.
 3. If there are any errors / conflicts the service shall not start up.
 
 
