@@ -20,7 +20,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Experimental Metadata (EM)`: Data describing the experimental process of generating the Research Data archived in GHGA.
 
-`Experimental Metadata Ingress Models (EMIM)`: Schemas that define the structure and format of experimental metadata as it enters the GHGA system from external sources. Currently, GHGA has a single data ingress model for experimental metadata, which is the ghga-metadata-schema. 
+`Experimental Metadata Ingress Models (EMIM)`: Schemas that define the structure and format of experimental metadata as it enters the GHGA system from external sources. Currently, GHGA supports only a single data ingress model for experimental metadata, which is the [ghga-metadata-schema](https://github.com/ghga-de/ghga-metadata-schema), but this epic is part of the effort to lift that restriction.
 
 `Universal Discovery Model`: A common target representation to which all the EMs are transformed into, used for data queries and data display via th GHGA Data Portal.  
 
