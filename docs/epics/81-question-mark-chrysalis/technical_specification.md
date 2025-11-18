@@ -164,7 +164,7 @@ The implementation of the EM transformation service will involve the following k
    * `datapack` is the EM in datapack format that conforms to the schema identified by `schema_id`
    * `annotation` is an annotation object with information from other models held by the service
 
-   This collection is filled from two sources: incoming events GHGA Study Repository and outputs of executed workflow routes.
+   This collection is filled from two sources: incoming events from the GHGA Study Repository and outputs of workflow routes executed by the EM Transformation Service.
 
    Note that we only store published datapacks on the collection. If there are intermediate transformed datapacks, they will only be created and kept in memory as long as they are needed for running a full transformation graph corresponding to a single original datapack.
 
