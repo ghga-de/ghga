@@ -146,7 +146,7 @@ The implementation of the EM transformation service will involve the following k
 
    Consists of WorkflowRoute object
    * `id` is a unique identifier for the workflow route
-   * `name` is a human readable name for the workflow route
+   * `name` is a human readable name for the workflow route. It must be calculated from the input and output schema names and the workflow name, e.g. `{input_schema_name} via {workflow_name} to {output_schema_name}`. 
    * `input_schema_id` is the id of the input schema that the workflow route accepts
    * `output_schema_id` is the id of the output schema that the workflow route produces 
    * `workflow_id` is a workflow identifier that is to be applied on a data / schema  
@@ -155,7 +155,7 @@ The implementation of the EM transformation service will involve the following k
    This collection is populated manually with the defined ghga workflow routes.  
    An empty workflow_output_schema indicates the route requires schema derivation at startup.  
 
-1. `AnnotatedEMPacks`
+2. `AnnotatedEMPacks`
 
    Consists of AnnotatedEMPack objects.
    * `id` is a unique identifier for the AnnotatedEMPack
