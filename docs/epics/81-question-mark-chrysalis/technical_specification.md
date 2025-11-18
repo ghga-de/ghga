@@ -28,7 +28,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `AnnotatedEMPack`: A datapack enriched with additional information such as accessions that help integrate the EMPack into the archive.
 
-`AnnotatedEMPacks`: A MongoDB collection of AnnotatedEMPack objects.
+`annotatedEMPacks`: A MongoDB collection of AnnotatedEMPack objects.
 
 `Workflow`: Instructions on how to produce a certain data/model representation from another data/model. The workflows are defined by the `metldata` library on which the transformation service will be built.
 
