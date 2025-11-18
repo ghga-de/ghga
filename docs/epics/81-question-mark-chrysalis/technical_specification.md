@@ -43,7 +43,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 - Implement a service that persists the annotatedEMPacks, workflows, and workflowRoutes entities.
 - Implement logic to process incoming AnnotatedEMPacks, execute the corresponding workflows and store the resulting AnnotatedEMPacks if required.
-- Implement service start-up logic to derive missing schemas for workflow routes with empty output schemas.
+- Implement code to manage changes in schemas, workflows and workflowRoutes, e.g. by creating universal schema descriptions from the ingress schema descriptions and re-transforming the AnnotatedEMPacks.
 
 
 #### Collections
@@ -58,6 +58,7 @@ data structure:
 class Schema(BaseModel):
    id: uuid
    name: str
+   description: str | None
    original: bool
    version: str | None
    content: SchemaPack | None
@@ -118,6 +119,7 @@ The implementation of the EM transformation service will involve the following k
    Consists of Schema objects
    * `id` is a unique identifier of the schema
    * `name` is a human readable name of the schema
+   * `description` is a human readable description of the schema
    * `original` is a boolean flag indicating whether the schema is an original or derived schema
    * `version` is the version of the schema (aka type of the schema), initially None if it is not an original schema
    * `content` is the schema in schemapack format, initially None if it is not an original schema
