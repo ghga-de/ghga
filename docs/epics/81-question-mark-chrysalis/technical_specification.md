@@ -142,7 +142,7 @@ The implementation of the EM transformation service will involve the following k
    This collection is populated manually with the defined ghga transformation workflows.
 
 
-1. `WorkflowRoutes`
+3. `WorkflowRoutes`
 
    Consists of WorkflowRoute object
    * `id` is a unique identifier for the workflow route
