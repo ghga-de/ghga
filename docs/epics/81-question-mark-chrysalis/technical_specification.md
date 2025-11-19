@@ -201,7 +201,7 @@ When manually triggered, the service derives the output schemas for all workflow
    1. Retrieve the workflow of the corresponding `workflow_id` from the `Workflows`
    2. Retrieve the schema corresponding to the `input_schema_id` from the `WorkflowRoutes`.
    3. Call metldata to execute the workflow on the schemapack of the input schema to compute the schemapack for the derived schema.
-   4. Record the derived schema in the `Schemas` and save its id to the `output_schema_id` of the WorkflowRoute.
+   4. Update the schemapack field of the Schema corresponding to the `output_schema_id` of the WorkflowRoute with the output of step 3.
 3. If there are any errors / conflicts, the operation shall fail and report the error.
 
 
