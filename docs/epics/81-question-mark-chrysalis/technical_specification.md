@@ -214,8 +214,8 @@ The transformation operation is triggered when the service consumer receives an 
    1. Get the route that has the current schema as input. Since we require the unique-path-property, there should be exactly one such route. Raise an error if this is not the case (should never happen if the traverse correctly and the graph was properly validated).
    2. Get the datapack from the “transformed map” that corresponds to the input schema of that route. This is the “input datapack” for this step. It should always exist at this point if the topological order was computed correctly, and we can raise an error at this point if this is not the case.
    3. Compute the transformed datapack using the input datapack and the workflow route.
-   4. If the current schema id is in the “dirty map”, remove it there and update the “computed map” with the transformed datapack.
-   4. Otherwise, add the transformed datapack to the “computed map” with a newly generated id, setting its schema_id to the current schema id, and its original_id field to the original datapack id.
+   4. If the current schema id is in the “dirty map”, remove it there and update the “transformed map” with the transformed datapack.
+   5. Otherwise, add the transformed datapack to the “transformed map” with a newly generated id, setting its schema_id to the current schema id, and its original_id field to the original datapack id.
 4. Finally, upsert all entries in the “transformed map” to the database that should be published, and delete all remaining entries in the “dirty map” from the database.
 
 This course of action avoids deleting “dirty” datapacks while they are recreated, since that would make the corresponding resources disappear while the transformation is ongoing. It also keeps any intermediate datapacks in memory, avoiding unnecessary database operations and operations.
