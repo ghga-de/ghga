@@ -184,10 +184,13 @@ This graph structure is used to validate the transformation configuration and to
 
 Transformation configuration validation includes:
 
-1. Check the graph conforms to the unique path requirement mentioned above, and thereby also that it does not contain cycles.
-2. Calculate the topological order of the nodes in the graph using an algorithm similar to Kahn's algorithm, so that the schemas are ordered in a way that if we process the schemas in that order, the previous schemas have already been processed.
-3. Update the `order` field of each schema in the `Schemas` according to the calculated topological order. 
-4. Check the workflows and the original schemas referred by the workflow routes exist in their corresponding collections.
+1. Check the workflows and the original schemas referred by the workflow routes exist in their corresponding collections.
+2. Check that the schemas marked as `original` are not referred as workflow route output schemas.
+3. Validate the schemas using SchemaPack library and workflows using the metldata library.
+4. Check the graph conforms to the unique path requirement mentioned above, and thereby also that it does not contain cycles.
+5. Calculate the topological order of the nodes in the graph using an algorithm similar to Kahn's algorithm, so that the schemas are ordered in a way that if we process the schemas in that order, the previous schemas have already been processed.
+6. Update the `order` field of each schema in the `Schemas` according to the calculated topological order. 
+
 
 #### User Journeys: Schema Derivation (Manual Trigger)
 
