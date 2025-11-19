@@ -225,18 +225,18 @@
                 ><span>Policy and Data Access Committee</span>
               </h2>
               <div
-                class="*:text-base lg:grid lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-[fit-content(1px)_fit-content(1px)] lg:gap-x-2 2xl:grid-cols-3"
+                class="*:items-start *:text-base lg:grid lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-[fit-content(1px)_fit-content(1px)] lg:gap-x-15"
               >
                 <p><strong>Data Access Committee:</strong> {{ dac().alias }}</p>
                 <p><strong>e-Mail:</strong> {{ dac().email }}</p>
-                <p class="2xl:col-span-2">
+                <p>
                   <strong>Data Use Permission:</strong>&nbsp;<a
                     appExtLink
                     [href]="dap().data_use_permission_url"
                     >{{ dap().data_use_permission_term }}</a
                   >
                 </p>
-                <p class="2xl:col-span-2">
+                <p>
                   <strong>Data Use Modifiers:</strong>
                   @if (dap().data_use_modifier_terms.length > 0) {
                     @for (

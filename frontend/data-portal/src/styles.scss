@@ -488,8 +488,7 @@ a[appExtLink]:not(.mdc-button).inline-ext-link::after {
 
 p a[appExtLink]:not(.mdc-button)::after {
   scale: 0.6;
-  margin: 0 -5px 0 -3px;
-  transform: translateY(10px);
+  margin: 0 -5px -7px -3px;
 }
 
 mat-nav-list a[appExtLink].mdc-button::before,
