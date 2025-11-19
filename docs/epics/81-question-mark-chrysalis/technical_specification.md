@@ -61,7 +61,7 @@ class Schema(BaseModel):
    description: str | None
    original: bool
    version: str | None
-   content: SchemaPack | None
+   schema_content: SchemaPack | None
    publish: bool 
    order: int | None
 
@@ -122,7 +122,7 @@ The implementation of the EM transformation service will involve the following k
    * `description` is a human readable description of the schema
    * `original` is a boolean flag indicating whether the schema is an original or derived schema
    * `version` is the version of the schema, initially None if it is not an original schema
-   * `content` is the schema in schemapack format, initially None if it is not an original schema
+   * `schema_content` is the schema in schemapack format, initially None if it is not an original schema
    * `publish` is a boolean flag indicating whether the derived datapacks conforming to this schema should be published
    * `order` is the order in a topological ordering of the schemas in the transformation graph, initially None if not yet computed
    
