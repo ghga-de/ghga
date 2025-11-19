@@ -205,7 +205,7 @@ When manually triggered, the service derives the output schemas for all workflow
 3. If there are any errors / conflicts, the operation shall fail and report the error.
 
 
-#### User Journeys: Service Consumer Receives An Original AnnotatedEMPack
+#### User Journeys: Service Consumer Transforms An Original AnnotatedEMPack
 
 The transformation operation is triggered when the service consumer receives "original annotated Em Pack" or a “re-transform metadata” event.
 
