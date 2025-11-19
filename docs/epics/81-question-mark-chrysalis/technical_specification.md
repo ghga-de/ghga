@@ -200,7 +200,7 @@ When manually triggered, the service derives the output schemas for all workflow
 2. Traverse the schemas in the transformation graph starting with the original schema, in topological order. For every route execute the following:
    1. Retrieve the workflow of the corresponding `workflow_id` from the `Workflows`
    2. Retrieve the schema corresponding to the `input_schema_id` from the `WorkflowRoutes`.
-   3. Call metldata to execute the workflow on the input schema to compute the derived schema.
+   3. Call metldata to execute the workflow on the schemapack of the input schema to compute the schemapack for the derived schema.
    4. Record the derived schema in the `Schemas` and save its id to the `output_schema_id` of the WorkflowRoute.
 3. If there are any errors / conflicts, the operation shall fail and report the error.
 
