@@ -30,8 +30,8 @@ from ghga_connector import exceptions
 from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_WAIT_TIME
 
 __all__ = [
-    "CONFIG",
     "Config",
+    "get_config",
     "get_download_api_url",
     "get_ghga_pubkey",
     "get_upload_api_url",
@@ -79,7 +79,10 @@ class Config(CompositeCacheConfig):
     """Global Config Parameters"""
 
     max_concurrent_downloads: PositiveInt = Field(
-        default=5, description="Number of parallel downloader tasks for file parts."
+        default=5, description="Number of parallel download tasks for file parts."
+    )
+    max_concurrent_uploads: PositiveInt = Field(
+        default=5, description="Number of parallel upload tasks for file parts."
     )
     max_wait_time: PositiveInt = Field(
         default=MAX_WAIT_TIME,
@@ -95,6 +98,13 @@ class Config(CompositeCacheConfig):
 
 
 CONFIG = Config()
+
+
+def get_config() -> Config:
+    """Return the configuration."""
+    # Accessing config globally via this function lets us patch CONFIG once in tests
+    #  instead of patching all locations where it is imported.
+    return CONFIG
 
 
 @asynccontextmanager
@@ -141,7 +151,7 @@ async def _get_wkvs_values(client: httpx.AsyncClient) -> dict[str, Any]:
         ConnectionFailedError: If the request fails due to a timeout/connection problem
         RequestFailedError: If the request fails for any other reason
     """
-    url = f"{CONFIG.wkvs_api_url}/values"
+    url = f"{get_config().wkvs_api_url}/values"
 
     try:
         response = await client.get(url)

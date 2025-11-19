@@ -22,19 +22,26 @@ from pathlib import Path
 import typer
 
 from ghga_connector import exceptions
-from ghga_connector.config import CONFIG, set_runtime_config
 from ghga_connector.constants import C4GH
-from ghga_connector.core import CLIMessageDisplay, async_client
-from ghga_connector.core.main import async_download, decrypt_file, upload_file
+from ghga_connector.core import CLIMessageDisplay
+from ghga_connector.core.main import async_download, async_upload, decrypt_file
 from ghga_connector.core.utils import modify_for_debug, strtobool
 
 cli = typer.Typer(no_args_is_help=True)
 
 
-def upload(  # noqa: PLR0913
-    *,
-    file_id: str = typer.Option(..., help="The id of the file to upload"),
-    file_path: Path = typer.Option(..., help="The path to the file to upload"),
+@cli.command(no_args_is_help=True)
+def upload(
+    file_info: list[str] = typer.Argument(
+        ...,
+        help=(
+            "The comma-separated file alias and path. If only a file path is supplied"
+            + " then the file name will be used instead. Example:"
+            + " 'my_file,./files/abc.bam' or './files/abc.bam' (in the latter, the file"
+            + " alias would be 'abc.bam'). Specify as many files as needed, e.g.:"
+            + " 'ghga-connector upload alias1,file1.bam file2.bam alias3,file3.bam ...'"
+        ),
+    ),
     my_public_key_path: Path = typer.Option(
         "./key.pub",
         help="The path to a public key from the key pair that was announced in the "
@@ -54,37 +61,16 @@ def upload(  # noqa: PLR0913
         False, help="Set this option in order to view traceback for errors."
     ),
 ):
-    """Wrapper for the async upload function"""
+    """Upload one or more files asynchronously"""
     modify_for_debug(debug)
     asyncio.run(
         async_upload(
-            file_id=file_id,
-            file_path=file_path,
+            unparsed_file_info=file_info,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
             passphrase=passphrase,
         )
     )
-
-
-async def async_upload(
-    file_id: str,
-    file_path: Path,
-    my_public_key_path: Path,
-    my_private_key_path: Path,
-    passphrase: str | None = None,
-):
-    """Upload a file asynchronously"""
-    async with async_client() as client, set_runtime_config(client=client):
-        await upload_file(
-            client=client,
-            file_id=file_id,
-            file_path=file_path,
-            my_public_key_path=my_public_key_path,
-            my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
-            part_size=CONFIG.part_size,
-        )
 
 
 if strtobool(os.getenv("UPLOAD_ENABLED") or "false"):

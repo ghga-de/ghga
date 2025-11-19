@@ -20,7 +20,7 @@ from pathlib import Path
 
 import httpx
 
-from ghga_connector.config import CONFIG, get_upload_api_url, set_runtime_config
+from ghga_connector.config import get_config, set_runtime_config
 from ghga_connector.core.client import async_client
 from ghga_connector.core.downloading.api_calls import DownloadClient
 from ghga_connector.core.downloading.batch_processing import FileStager
@@ -28,77 +28,90 @@ from ghga_connector.core.downloading.downloader import (
     Downloader,
     handle_download_errors,
 )
+from ghga_connector.core.uploading.api_calls import UploadClient
+from ghga_connector.core.uploading.batch_processing import upload_files_from_list
+from ghga_connector.core.uploading.structs import FileInfoForUpload
 from ghga_connector.core.work_package import WorkPackageClient
 
 from .. import exceptions
 from . import utils
-from .api_calls import is_service_healthy
 from .crypt import Crypt4GHDecryptor
-from .file_operations import is_file_encrypted
 from .message_display import CLIMessageDisplay
-from .uploading.main import run_upload
-from .uploading.uploader import Uploader
 
 
-async def upload_file(  # noqa: PLR0913
+def parse_file_info_for_upload(file_info: list[str]) -> list[FileInfoForUpload]:
+    """Given a list of strings, derive a file alias, path, and size from each item."""
+    items: list[FileInfoForUpload] = []
+    for i, arg in enumerate(file_info, 1):
+        if not arg:
+            continue
+        if "," in arg:
+            alias, path = arg.split(",", 1)
+            alias = alias.strip()
+            if not path.strip():
+                raise RuntimeError(
+                    f"No path supplied for alias '{alias}' in arg #{i}. Verify input and"
+                    + " ensure that alias and file path are separated only by a comma"
+                    + " and no whitespace."
+                )
+            validated_path = utils.parse_file_upload_path(path)
+        else:
+            validated_path = utils.parse_file_upload_path(arg)
+            alias = validated_path.name
+        size = validated_path.stat().st_size
+        items.append(FileInfoForUpload(alias=alias, path=validated_path, size=size))
+
+    # Ensure unique aliases and file paths
+    for field_name in ["alias", "path"]:
+        utils.detect_duplicates([getattr(x, field_name) for x in items], field_name)
+
+    return items
+
+
+async def async_upload(
     *,
-    client: httpx.AsyncClient,
-    file_id: str,
-    file_path: Path,
+    unparsed_file_info: list[str],
     my_public_key_path: Path,
     my_private_key_path: Path,
-    part_size: int,
+    passphrase: str | None = None,
+):
+    """Upload one or more files asynchronously"""
+    parsed_file_info = parse_file_info_for_upload(unparsed_file_info)
+    async with async_client() as client, set_runtime_config(client=client):
+        await upload_files(
+            client=client,
+            file_info_list=parsed_file_info,
+            my_public_key_path=my_public_key_path,
+            my_private_key_path=my_private_key_path,
+            passphrase=passphrase,
+        )
+
+
+async def upload_files(
+    *,
+    client: httpx.AsyncClient,
+    file_info_list: list[FileInfoForUpload],
+    my_public_key_path: Path,
+    my_private_key_path: Path,
     passphrase: str | None = None,
 ) -> None:
-    """Core command to upload a file. Can be called by CLI, GUI, etc."""
-    if not my_public_key_path.is_file():
-        raise exceptions.PubKeyFileDoesNotExistError(public_key_path=my_public_key_path)
+    """Core command to upload one or more files. Can be called by CLI, GUI, etc."""
+    my_public_key = utils.get_public_key(my_public_key_path)
+    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
 
-    if not my_private_key_path.is_file():
-        raise exceptions.PrivateKeyFileDoesNotExistError(
-            private_key_path=my_private_key_path
-        )
-
-    if not file_path.is_file():
-        raise exceptions.FileDoesNotExistError(file_path=file_path)
-
-    if is_file_encrypted(file_path):
-        raise exceptions.FileAlreadyEncryptedError(file_path=file_path)
-
-    upload_api_url = get_upload_api_url()
-    if not is_service_healthy(upload_api_url):
-        raise exceptions.ApiNotReachableError(api_url=upload_api_url)
-
-    uploader = Uploader(
-        client=client,
-        file_id=file_id,
-        public_key_path=my_public_key_path,
+    work_package_client = WorkPackageClient(
+        client=client, my_private_key=my_private_key, my_public_key=my_public_key
     )
-    try:
-        await run_upload(
-            file_id=file_id,
-            file_path=file_path,
-            my_private_key_path=my_private_key_path,
-            part_size=part_size,
-            passphrase=passphrase,
-            uploader=uploader,
-        )
-    except exceptions.StartUploadError as error:
-        CLIMessageDisplay.failure("The request to start a multipart upload has failed.")
-        raise error
-    except exceptions.CantChangeUploadStatusError as error:
-        CLIMessageDisplay.failure(f"The file with id '{file_id}' was already uploaded.")
-        raise error
-    except exceptions.ConnectionFailedError as error:
-        CLIMessageDisplay.failure("The upload failed too many times and was aborted.")
-        raise error
-    except exceptions.FinalizeUploadError as error:
-        CLIMessageDisplay.failure(
-            f"Finishing the upload with id '{file_id}' failed.\n{error.cause}"
-        )
+    upload_client = UploadClient(client=client, work_package_client=work_package_client)
+    config = get_config()
 
-    CLIMessageDisplay.success(
-        f"File with id '{file_id}' has been successfully uploaded."
+    CLIMessageDisplay.display(f"Preparing to upload {len(file_info_list)} files")
+    await upload_files_from_list(
+        upload_client=upload_client,
+        file_info_list=file_info_list,
+        my_private_key=my_private_key,
+        configured_part_size=config.part_size,
+        max_concurrent_uploads=config.max_concurrent_uploads,
     )
 
 
@@ -117,17 +130,10 @@ async def async_download(
     my_public_key = utils.get_public_key(my_public_key_path)
     my_private_key = utils.get_private_key(my_private_key_path, passphrase)
 
-    CLIMessageDisplay.display("\nFetching work package token...")
-    work_package_information = utils.get_work_package_information(
-        my_private_key=my_private_key
-    )
-
     async with async_client() as client, set_runtime_config(client=client):
         CLIMessageDisplay.display("Retrieving API configuration information...")
         work_package_client = WorkPackageClient(
-            access_token=work_package_information.decrypted_token,
             client=client,
-            package_id=work_package_information.package_id,
             my_private_key=my_private_key,
             my_public_key=my_public_key,
         )
@@ -135,6 +141,7 @@ async def async_download(
         download_client = DownloadClient(
             client=client, work_package_client=work_package_client
         )
+        config = get_config()
 
         CLIMessageDisplay.display("Preparing files for download...")
         file_stager = FileStager(
@@ -142,7 +149,7 @@ async def async_download(
             output_dir=output_dir,
             work_package_client=work_package_client,
             download_client=download_client,
-            config=CONFIG,
+            config=config,
         )
 
         # Use file stager to manage downloads
@@ -153,13 +160,13 @@ async def async_download(
                 download_client=download_client,
                 file_id=file_id,
                 file_size=file_info.file_size,
-                max_concurrent_downloads=CONFIG.max_concurrent_downloads,
+                max_concurrent_downloads=config.max_concurrent_downloads,
             )
             CLIMessageDisplay.display(f"Downloading file with id '{file_id}'...")
             with handle_download_errors(file_info):
                 await downloader.download_file(
                     output_path=file_info.path_during_download,
-                    part_size=CONFIG.part_size,
+                    part_size=config.part_size,
                 )
 
 

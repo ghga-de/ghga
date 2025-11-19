@@ -16,7 +16,6 @@
 
 """Tests for the up- and download functions of the cli"""
 
-import base64
 import os
 import pathlib
 from contextlib import nullcontext
@@ -25,19 +24,13 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
-import crypt4gh.keys
 import httpx
 import pytest
-from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from ghga_connector import exceptions
-from ghga_connector.config import set_runtime_config
 from ghga_connector.constants import C4GH, DEFAULT_PART_SIZE
-from ghga_connector.core.client import async_client
-from ghga_connector.core.crypt import Crypt4GHEncryptor
-from ghga_connector.core.main import async_download, upload_file
-from ghga_connector.core.utils import modify_for_debug
+from ghga_connector.core.main import async_download
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.app import (
@@ -54,7 +47,7 @@ from tests.fixtures.s3 import (  # noqa: F401
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,
     PUBLIC_KEY_FILE,
-    mock_work_package_token,
+    patch_work_package_functions,  # noqa: F401
 )
 
 GET_PACKAGE_FILES_ATTR = (
@@ -63,8 +56,6 @@ GET_PACKAGE_FILES_ATTR = (
 ENVIRON_DEFAULTS = {
     "DEFAULT_PART_SIZE": str(16 * 1024 * 1024),
     "S3_DOWNLOAD_URL": "test://download.url",
-    "S3_UPLOAD_URL_1": "test://upload.url",
-    "S3_UPLOAD_URL_2": "test://upload.url",
     "S3_DOWNLOAD_FIELD_SIZE": str(146),
     "FAKE_ENVELOPE": "Fake_envelope",
 }
@@ -92,23 +83,16 @@ def set_env_vars(monkeypatch):
 @pytest.fixture(scope="function", autouse=True)
 def apply_test_config():
     """Apply default test config"""
-    with (
-        patch("ghga_connector.config.CONFIG", get_test_config()),
-        patch("ghga_connector.core.main.CONFIG", get_test_config()),
-    ):
+    with patch("ghga_connector.config.CONFIG", get_test_config()):
         yield
 
 
 @pytest.fixture(scope="function")
-def apply_common_download_mocks(monkeypatch):
+def apply_common_download_mocks(
+    monkeypatch,
+    patch_work_package_functions,  # noqa: F811
+):
     """Monkeypatch download-specific functions and values"""
-    monkeypatch.setattr(
-        "ghga_connector.core.utils.get_work_package_token", mock_work_package_token
-    )
-    monkeypatch.setattr(
-        "ghga_connector.core.work_package._decrypt",
-        lambda data, key: data,
-    )
     monkeypatch.setenv("FAKE_ENVELOPE", FAKE_ENVELOPE)
 
 
@@ -369,195 +353,6 @@ async def test_file_not_downloadable(
             my_public_key_path=Path(PUBLIC_KEY_FILE),
             my_private_key_path=Path(PRIVATE_KEY_FILE),
         )
-
-
-@pytest.mark.parametrize(
-    "file_name,expected_exception",
-    [
-        ("file_uploadable", nullcontext()),
-        ("file_not_uploadable", pytest.raises(exceptions.StartUploadError)),
-        ("file_with_bad_path", pytest.raises(exceptions.FileDoesNotExistError)),
-        ("encrypted_file", pytest.raises(exceptions.FileAlreadyEncryptedError)),
-    ],
-)
-async def test_upload(
-    file_name: str,
-    expected_exception: Any,
-    httpx_mock: HTTPXMock,  # noqa: F811
-    s3_fixture: S3Fixture,  # noqa F811
-    monkeypatch,
-    mock_external_calls,  # noqa: F811
-    tmpdir,
-):
-    """Test the upload of a file, expects Abort, if the file was not found"""
-    uploadable_file = state.FILES[file_name]
-
-    # The intercepted health check API calls will return the following mock response
-    httpx_mock.add_response(json={"status": "OK"})
-
-    if file_name == "encrypted_file":
-        # encrypt test file on the fly
-        server_pubkey = base64.b64encode(
-            crypt4gh.keys.get_public_key(PUBLIC_KEY_FILE)
-        ).decode("utf-8")
-        monkeypatch.setattr(
-            "ghga_connector.core.crypt.encryption.get_ghga_pubkey",
-            lambda: server_pubkey,
-        )
-        encryptor = Crypt4GHEncryptor(
-            part_size=8 * 1024**3,
-            private_key_path=PRIVATE_KEY_FILE,
-            passphrase=None,
-        )
-        with uploadable_file.file_path.open("rb") as source_file:
-            with open(tmpdir.join("encrypted_file"), "wb") as encrypted_file:
-                for chunk in encryptor.process_file(file=source_file):
-                    encrypted_file.write(chunk)
-        file_path = Path(encrypted_file.name)
-    else:
-        file_path = uploadable_file.file_path
-
-    file_path = file_path.resolve()
-
-    # initiate upload
-    upload_id = await s3_fixture.storage.init_multipart_upload(
-        bucket_id=uploadable_file.grouping_label,
-        object_id=uploadable_file.file_id,
-    )
-
-    upload_url = await s3_fixture.storage.get_part_upload_url(
-        bucket_id=uploadable_file.grouping_label,
-        object_id=uploadable_file.file_id,
-        upload_id=upload_id,
-        part_number=1,
-    )
-
-    monkeypatch.setenv("S3_UPLOAD_URL_1", upload_url)
-
-    with expected_exception:
-        modify_for_debug(debug=True)
-        async with async_client() as client, set_runtime_config(client=client):
-            await upload_file(
-                client=client,
-                file_id=uploadable_file.file_id,
-                file_path=file_path,
-                my_public_key_path=Path(PUBLIC_KEY_FILE),
-                my_private_key_path=Path(PRIVATE_KEY_FILE),
-                part_size=DEFAULT_PART_SIZE,
-            )
-
-        await s3_fixture.storage.complete_multipart_upload(
-            upload_id=upload_id,
-            bucket_id=uploadable_file.grouping_label,
-            object_id=uploadable_file.file_id,
-        )
-
-        assert await s3_fixture.storage.does_object_exist(
-            bucket_id=uploadable_file.grouping_label,
-            object_id=uploadable_file.file_id,
-        )
-
-
-@pytest.mark.parametrize(
-    "file_size,anticipated_part_size",
-    [
-        (6 * 1024 * 1024, 8),
-        (20 * 1024 * 1024, 16),
-    ],
-)
-async def test_multipart_upload(
-    file_size: int,
-    anticipated_part_size: int,
-    httpx_mock: HTTPXMock,  # noqa: F811
-    s3_fixture: S3Fixture,  # noqa F811
-    monkeypatch,
-    mock_external_calls,  # noqa: F811
-):
-    """Test the upload of a file, expects Abort, if the file was not found"""
-    bucket_id = s3_fixture.existing_buckets[0]
-    file_id = "uploadable-" + str(anticipated_part_size)
-
-    # The intercepted health check API calls will return the following mock response
-    httpx_mock.add_response(json={"status": "OK"})
-
-    anticipated_part_size = anticipated_part_size * 1024 * 1024
-
-    anticipated_part_quantity = file_size // anticipated_part_size
-
-    if anticipated_part_quantity * anticipated_part_size < file_size:
-        anticipated_part_quantity += 1
-
-    # initiate upload
-    upload_id = await s3_fixture.storage.init_multipart_upload(
-        bucket_id=bucket_id,
-        object_id=file_id,
-    )
-
-    # create presigned url for upload part 1
-    upload_url_1 = await s3_fixture.storage.get_part_upload_url(
-        upload_id=upload_id,
-        bucket_id=bucket_id,
-        object_id=file_id,
-        part_number=1,
-    )
-
-    # create presigned url for upload part 2
-    upload_url_2 = await s3_fixture.storage.get_part_upload_url(
-        upload_id=upload_id,
-        bucket_id=bucket_id,
-        object_id=file_id,
-        part_number=2,
-    )
-
-    monkeypatch.setenv("S3_UPLOAD_URL_1", upload_url_1)
-    monkeypatch.setenv("S3_UPLOAD_URL_2", upload_url_2)
-
-    # create big temp file
-    with big_temp_file(file_size) as file:
-        modify_for_debug(debug=True)
-        async with async_client() as client, set_runtime_config(client=client):
-            await upload_file(
-                client=client,
-                file_id=file_id,
-                file_path=Path(file.name),
-                my_public_key_path=Path(PUBLIC_KEY_FILE),
-                my_private_key_path=Path(PRIVATE_KEY_FILE),
-                part_size=DEFAULT_PART_SIZE,
-            )
-
-    # confirm upload
-    await s3_fixture.storage.complete_multipart_upload(
-        upload_id=upload_id,
-        bucket_id=bucket_id,
-        object_id=file_id,
-        anticipated_part_quantity=anticipated_part_quantity,
-        anticipated_part_size=anticipated_part_size,
-    )
-    assert await s3_fixture.storage.does_object_exist(
-        bucket_id=bucket_id,
-        object_id=file_id,
-    )
-
-
-async def test_upload_bad_url(httpx_mock: HTTPXMock, mock_external_calls):  # noqa: F811
-    """Check that the right error is raised for a bad URL in the upload logic."""
-    # The intercepted health check API call will return the following mock response
-    httpx_mock.add_exception(httpx.RequestError(""))
-
-    uploadable_file = state.FILES["file_uploadable"]
-    file_path = uploadable_file.file_path.resolve()
-
-    with pytest.raises(exceptions.ApiNotReachableError):
-        modify_for_debug(debug=True)
-        async with async_client() as client, set_runtime_config(client=client):
-            await upload_file(
-                client=client,
-                file_id=uploadable_file.file_id,
-                file_path=file_path,
-                my_public_key_path=Path(PUBLIC_KEY_FILE),
-                my_private_key_path=Path(PRIVATE_KEY_FILE),
-                part_size=DEFAULT_PART_SIZE,
-            )
 
 
 async def test_download_bad_url(

@@ -18,15 +18,18 @@ import base64
 import json
 from collections.abc import Callable
 from typing import Any, Literal
+from uuid import UUID
 
 import httpx
+from ghga_service_commons.utils import crypt
 from ghga_service_commons.utils.crypt import decrypt
-from pydantic import UUID4
+from pydantic import UUID4, SecretBytes
 from tenacity import RetryError
 
 from ghga_connector.config import get_work_package_api_url
 from ghga_connector.constants import CACHE_MIN_FRESH
 from ghga_connector.core.api_calls.utils import modify_headers_for_cache_refresh
+from ghga_connector.core.utils import get_work_package_token
 
 from .. import exceptions
 
@@ -38,18 +41,22 @@ class WorkPackageClient:
 
     def __init__(
         self,
-        access_token: str,
         client: httpx.AsyncClient,
-        package_id: str,
-        my_private_key: bytes,
+        my_private_key: SecretBytes,
         my_public_key: bytes,
     ) -> None:
-        self.access_token = access_token
+        """Set up WorkPackageClient and get work package info using private key"""
         self.work_package_api_url = get_work_package_api_url()
         self.client = client
-        self.package_id = package_id
         self.my_private_key = my_private_key
         self.my_public_key = my_public_key
+
+        # Get work package information using user's private key
+        package_id, encrypted_token = get_work_package_token(max_tries=3)
+        self.package_id = UUID(package_id)
+        self.access_token = crypt.decrypt(
+            data=encrypted_token, key=my_private_key.get_secret_value()
+        )
 
     async def _call_url(
         self,
@@ -82,8 +89,15 @@ class WorkPackageClient:
 
         return response
 
-    async def get_package_files(self) -> dict[str, str]:
-        """Call Work Package API endpoint and retrieve work package information."""
+    async def _get_work_package(self) -> dict[str, Any]:
+        """Call Work Package API and retrieve work package information.
+
+        Returns the work package details as a dictionary.
+
+        Raises:
+            NoWorkPackageAccessError: If a 403 is received.
+            InvalidWorkPackageResponseError: If any other non-200 error code is received.
+        """
         url = f"{self.work_package_api_url}/work-packages/{self.package_id}"
 
         # send authorization header as bearer token
@@ -91,17 +105,35 @@ class WorkPackageClient:
         response = await self._call_url(fn=self.client.get, headers=headers, url=url)
 
         status_code = response.status_code
-        if status_code != 200:
-            if status_code == 403:
-                raise exceptions.NoWorkPackageAccessError(
-                    work_package_id=self.package_id
-                )
-            raise exceptions.InvalidWorkPackageResponseError(
-                url=url, response_code=status_code
-            )
 
-        work_package = response.json()
+        if status_code == 200:
+            return response.json()
+
+        if status_code == 403:
+            raise exceptions.NoWorkPackageAccessError(work_package_id=self.package_id)
+        raise exceptions.InvalidWorkPackageResponseError(
+            url=url, response_code=status_code
+        )
+
+    async def get_package_files(self) -> dict[str, str]:
+        """Call Work Package API and retrieve work package information.
+
+        Raises:
+            NoWorkPackageAccessError: If a 403 is received.
+            InvalidWorkPackageResponseError: If any other non-200 error code is received.
+        """
+        work_package = await self._get_work_package()
         return work_package["files"]
+
+    async def get_package_box_id(self) -> UUID4:
+        """Call Work Package API and retrieve FileUploadBox ID.
+
+        Raises:
+            NoWorkPackageAccessError: If a 403 is received.
+            InvalidWorkPackageResponseError: If any other non-200 error code is received.
+        """
+        work_package = await self._get_work_package()
+        return UUID(work_package["box_id"])
 
     async def get_download_wot(self, *, file_id: str, bust_cache: bool = False) -> str:
         """Get a work order token from the Work Package API enabling download of a single file"""
@@ -125,7 +157,7 @@ class WorkPackageClient:
         body = {
             "work_type": work_type,
             "alias": alias,
-            "file_id": file_id,
+            "file_id": str(file_id),
         }
         upload_wot = await self._get_work_order_token(
             url=url, bust_cache=bust_cache, body=body
@@ -216,6 +248,6 @@ class WorkPackageClient:
         return headers
 
 
-def _decrypt(*, data: str, key: bytes):
+def _decrypt(*, data: str, key: SecretBytes):
     """Factored out decryption so this can be mocked."""
-    return decrypt(data=data, key=key)
+    return decrypt(data=data, key=key.get_secret_value())

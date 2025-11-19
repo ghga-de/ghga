@@ -27,6 +27,7 @@ from ghga_service_commons.utils.temp_files import big_temp_file
 
 from ghga_connector.core import is_file_encrypted, read_file_parts
 from ghga_connector.core.crypt import Crypt4GHDecryptor, Crypt4GHEncryptor
+from ghga_connector.core.utils import get_private_key
 
 
 @pytest.mark.parametrize("from_part", (None, 3))
@@ -72,6 +73,9 @@ async def test_encryption_decryption(
     pubkey_path = key_dir / pk_name
     private_key_path = key_dir / sk_name
 
+    passphrase = "test" if sk_name.startswith("encrypted") else None
+    private_key = get_private_key(private_key_path, passphrase=passphrase)
+
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
     monkeypatch.setattr(
         "ghga_connector.core.crypt.encryption.get_ghga_pubkey", lambda: pubkey
@@ -87,14 +91,13 @@ async def test_encryption_decryption(
         in_file.seek(0)
 
         # produce encrypted file
-        passphrase = "test" if sk_name.startswith("encrypted") else None
         encryptor = Crypt4GHEncryptor(
             part_size=8 * 1024**3,
-            private_key_path=private_key_path,
-            passphrase=passphrase,
+            my_private_key=private_key,
+            file_size=file_size,
         )
         for chunk in encryptor.process_file(file=in_file):  # type: ignore
-            encrypted_file.write(chunk)
+            encrypted_file.write(chunk[1])
 
         # rewind file and check if file is recognized as encrypted
         in_file.seek(0)

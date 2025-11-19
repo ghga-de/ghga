@@ -22,35 +22,34 @@ class Checksums:
     """Container for checksum calculation"""
 
     def __init__(self):
-        self._unencrypted_sha256 = hashlib.sha256()
-        self._encrypted_md5: list[str] = []
-        self._encrypted_sha256: list[str] = []
+        self.unencrypted_sha256 = hashlib.sha256()
+        self.encrypted_md5: list[str] = []
+        self.encrypted_sha256: list[str] = []
 
     def __str__(self) -> str:
         """Return multiline representation of checksum hashes"""
         return (
-            f"Unencrypted: {self._unencrypted_sha256.hexdigest()}\n"
-            + f"Encrypted MD5: {self._encrypted_md5}\n"
-            + f"Encrypted SHA256: {self._encrypted_sha256}"
+            f"Unencrypted: {self.unencrypted_sha256.hexdigest()}\n"
+            + f"Encrypted MD5: {self.encrypted_md5}\n"
+            + f"Encrypted SHA256: {self.encrypted_sha256}"
         )
 
     def encrypted_is_empty(self):
         """Returns true if the encryption checksum buffer is still empty"""
-        return len(self._encrypted_md5) > 0
-
-    def get(self):
-        """Return all checksums at the end of processing"""
-        return (
-            self._unencrypted_sha256.hexdigest(),
-            self._encrypted_md5,
-            self._encrypted_sha256,
-        )
+        return len(self.encrypted_md5) == 0
 
     def update_unencrypted(self, part: bytes):
         """Update checksum for unencrypted file"""
-        self._unencrypted_sha256.update(part)
+        self.unencrypted_sha256.update(part)
 
     def update_encrypted(self, part: bytes):
         """Update encrypted part checksums"""
-        self._encrypted_md5.append(hashlib.md5(part, usedforsecurity=False).hexdigest())
-        self._encrypted_sha256.append(hashlib.sha256(part).hexdigest())
+        self.encrypted_md5.append(hashlib.md5(part, usedforsecurity=False).hexdigest())
+        self.encrypted_sha256.append(hashlib.sha256(part).hexdigest())
+
+    def encrypted_checksum_for_s3(self) -> str:
+        """Formulate the expected encrypted checksum str (etag) stored by S3."""
+        concatenated_md5s = b"".join(bytes.fromhex(md5) for md5 in self.encrypted_md5)
+        object_md5 = hashlib.md5(concatenated_md5s, usedforsecurity=False).hexdigest()
+        num_parts = len(self.encrypted_md5)
+        return object_md5 + f"-{num_parts}"

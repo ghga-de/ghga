@@ -16,18 +16,23 @@
 """Various helper functions"""
 
 import logging
+import math
 import sys
 from functools import partial
 from pathlib import Path
 from types import TracebackType
+from typing import Any
 
 import crypt4gh.keys
-from ghga_service_commons.utils import crypt
+import crypt4gh.lib
+from pydantic import SecretBytes
 
 from ghga_connector import exceptions
 from ghga_connector.core.downloading.structs import FileInfo
+from ghga_connector.core.file_operations import is_file_encrypted
 from ghga_connector.core.message_display import CLIMessageDisplay
-from ghga_connector.core.structs import WorkPackageInformation
+
+log = logging.getLogger(__name__)
 
 
 def strtobool(value: str) -> bool:
@@ -62,25 +67,16 @@ def modify_for_debug(debug: bool):
         sys.excepthook = partial(exception_hook)
 
 
-def get_work_package_information(my_private_key: bytes):
-    """Fetch a work package id and work package token and decrypt the token"""
-    # get work package access token and id from user input
-    work_package_id, work_package_token = get_work_package_token(max_tries=3)
-    decrypted_token = crypt.decrypt(data=work_package_token, key=my_private_key)
-    return WorkPackageInformation(
-        decrypted_token=decrypted_token, package_id=work_package_id
-    )
-
-
 def get_work_package_token(max_tries: int) -> list[str]:
     """
     Expect the work package id and access token as a colon separated string
     The user will have to input this manually to avoid it becoming part of the
     command line history.
     """
+    CLIMessageDisplay.display("\nFetching work package token...")
     for _ in range(max_tries):
         work_package_string = input(
-            "Please paste the complete download token "
+            "Please paste the complete access token "
             + "that you copied from the GHGA data portal: "
         )
         work_package_parts = work_package_string.split(":")
@@ -90,7 +86,7 @@ def get_work_package_token(max_tries: int) -> list[str]:
             and 80 <= len(work_package_parts[1]) < 120
         ):
             CLIMessageDisplay.display(
-                "Invalid input. Please enter the download token "
+                "Invalid input. Please enter the access token "
                 + "you got from the GHGA data portal unaltered."
             )
             continue
@@ -106,16 +102,18 @@ def get_public_key(my_public_key_path: Path) -> bytes:
     return crypt4gh.keys.get_public_key(filepath=my_public_key_path)
 
 
-def get_private_key(my_private_key_path: Path, passphrase: str | None = None) -> bytes:
+def get_private_key(
+    my_private_key_path: Path, passphrase: str | None = None
+) -> SecretBytes:
     """Get the user's private key, using the passphrase if supplied/needed."""
-    if passphrase:
-        my_private_key = crypt4gh.keys.get_private_key(
-            filepath=my_private_key_path, callback=lambda: passphrase
+    if not my_private_key_path.is_file():
+        raise exceptions.PrivateKeyFileDoesNotExistError(
+            private_key_path=my_private_key_path
         )
-    else:
-        my_private_key = crypt4gh.keys.get_private_key(
-            filepath=my_private_key_path, callback=None
-        )
+    callback = (lambda: passphrase) if passphrase else None
+    my_private_key = SecretBytes(
+        crypt4gh.keys.get_private_key(filepath=my_private_key_path, callback=callback)
+    )
     return my_private_key
 
 
@@ -137,3 +135,67 @@ def check_for_existing_file(*, file_info: FileInfo, overwrite: bool):
     output_file_ongoing = file_info.path_during_download
     if output_file_ongoing.exists():
         output_file_ongoing.unlink()
+
+
+def check_adjust_part_size(part_size: int, file_size: int) -> int:
+    """
+    Convert specified part size from MiB to bytes, check if it needs adjustment and
+    adjust accordingly
+    """
+    lower_bound = 5 * 1024**2
+    upper_bound = 5 * 1024**3
+    part_size = part_size * 1024**2
+
+    # clamp user input part sizes
+    if part_size < lower_bound:
+        part_size = lower_bound
+    elif part_size > upper_bound:
+        part_size = upper_bound
+
+    # fixed list for now, maybe change to something more meaningful
+    sizes_mib = [2**x for x in range(3, 13)]
+    sizes = [size * 1024**2 for size in sizes_mib]
+
+    # encryption will cause growth of ~ 0.0427%, so assume we might
+    # need five more parts for this check
+    if file_size / part_size > 9_995:
+        for candidate_size in sizes:
+            if candidate_size > part_size and file_size / candidate_size <= 9_995:
+                part_size = candidate_size
+                break
+        else:
+            raise ValueError(
+                "Could not find a valid part size that would allow to upload all file parts"
+            )
+
+    if part_size != part_size * 1024**2:
+        log.info(
+            "Part size was adjusted from %iMiB to %iMiB.\nThe configured part size"
+            + " would either have yielded more than the supported 10.000 parts or was"
+            + " not within the expected bounds (5MiB <= part_size <= 5GiB).",
+            part_size,
+            part_size / 1024**2,
+        )
+
+    return part_size
+
+
+def calc_number_of_parts(encrypted_file_size: int, part_size: int) -> int:
+    """Calculate the number of file parts from the file and part sizes"""
+    return math.ceil(encrypted_file_size / part_size)
+
+
+def parse_file_upload_path(s: str) -> Path:
+    """Ensure the specified path points to an existing file for upload"""
+    path = Path(s).resolve()
+    if not (path.exists() and path.is_file()):
+        raise exceptions.FileDoesNotExistError(file_path=path)
+    if is_file_encrypted(path):
+        raise exceptions.FileAlreadyEncryptedError(file_path=path)
+    return path
+
+
+def detect_duplicates(values: list[Any], field_name: str = ""):
+    """Raise an error if there are duplicate values in the list"""
+    if len(set(values)) < len(values):
+        raise ValueError(f"Duplicate {field_name} values detected.")

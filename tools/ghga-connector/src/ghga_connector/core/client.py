@@ -21,7 +21,7 @@ import httpx
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from ghga_service_commons.transports import CompositeTransportFactory
 
-from ghga_connector.config import CONFIG
+from ghga_connector.config import get_config
 from ghga_connector.constants import TIMEOUT
 
 
@@ -35,7 +35,7 @@ def get_cache_transport(
     an httpx.ASGITransport pointing to a FastAPI app.
     """
     return CompositeTransportFactory.create_cached_ratelimiting_retry_transport(
-        CONFIG, base_transport=base_transport, limits=limits
+        get_config(), base_transport=base_transport, limits=limits
     )
 
 
@@ -52,12 +52,13 @@ def get_mounts(
 @asynccontextmanager
 async def async_client():
     """Yields a context manager async httpx client and closes it afterward"""
+    config = get_config()
     async with httpx.AsyncClient(
         timeout=TIMEOUT,
         mounts=get_mounts(
             limits=httpx.Limits(
-                max_connections=CONFIG.max_concurrent_downloads,
-                max_keepalive_connections=CONFIG.max_concurrent_downloads,
+                max_connections=config.max_concurrent_downloads,
+                max_keepalive_connections=config.max_concurrent_downloads,
             )
         ),
     ) as client:

@@ -20,10 +20,8 @@ from pathlib import Path
 import crypt4gh.keys
 import crypt4gh.lib
 
-from .abstract_bases import Decryptor
 
-
-class Crypt4GHDecryptor(Decryptor):
+class Crypt4GHDecryptor:
     """Convenience class to deal with Crypt4GH decryption"""
 
     def __init__(self, decryption_key_path: Path, passphrase: str | None):

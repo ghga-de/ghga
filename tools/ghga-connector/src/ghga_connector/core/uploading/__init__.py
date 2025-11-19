@@ -14,5 +14,3 @@
 # limitations under the License.
 #
 """This subpackage contains functionality to upload a file to GHGA"""
-
-from .abstract_uploader import UploaderBase  # noqa: F401

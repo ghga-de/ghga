@@ -19,6 +19,7 @@
 from pathlib import Path
 
 import httpx
+from pydantic import UUID4
 
 from ghga_connector.constants import MAX_PART_NUMBER
 
@@ -39,6 +40,14 @@ class ApiNotReachableError(RuntimeError):
         super().__init__(message)
 
 
+class AuthorizationError(RuntimeError):
+    """Raised when a protected endpoint returns a 401 or 403"""
+
+    def __init__(self):
+        msg = "Your request did not include valid credentials."
+        super().__init__(msg)
+
+
 class BadResponseCodeError(RuntimeError):
     """Thrown when a request returns an unexpected response code (e.g. 500)"""
 
@@ -48,15 +57,32 @@ class BadResponseCodeError(RuntimeError):
         super().__init__(message)
 
 
-class CantChangeUploadStatusError(RuntimeError):
-    """
-    Thrown when the upload status of a file can't be set to the requested status
-    (response code 400)
-    """
+class _FileUploadError(RuntimeError):
+    """Base error class for top-level errors in file upload"""
 
-    def __init__(self, *, upload_id: str, upload_status: str):
-        message = f"The upload with id '{upload_id}' can't be set to '{upload_status}'."
-        super().__init__(message)
+    def __init__(
+        self, *, action: str, file_alias: str, reason: str, file_id: UUID4 | None = None
+    ):
+        # Make sure we only use one period at the end of the error message
+        reason = reason.removesuffix(".")
+
+        # Make first character of 'reason' lowercase
+        reason = reason[0].lower() + reason[1:]
+
+        # Calculate whether to show the file ID and if so format it
+        file_id_portion = f" ({file_id=})" if file_id else ""
+        msg = (
+            f"Failed to {action} upload for file with alias {file_alias}"
+            + f"{file_id_portion} because {reason}."
+        )
+        super().__init__(msg)
+
+
+class CompleteFileUploadError(_FileUploadError):
+    """Raised when there's a problem trying to complete an upload."""
+
+    def __init__(self, *, file_alias: str, reason: str):
+        super().__init__(action="complete", file_alias=file_alias, reason=reason)
 
 
 class ConnectionFailedError(RuntimeError):
@@ -65,6 +91,13 @@ class ConnectionFailedError(RuntimeError):
     def __init__(self, *, url: str, reason: str):
         message = f"Request to '{url}' failed to connect. Reason: {reason}"
         super().__init__(message)
+
+
+class CreateFileUploadError(_FileUploadError):
+    """Raised when there's a problem trying to create a new FileUpload."""
+
+    def __init__(self, *, file_alias: str, reason: str):
+        super().__init__(action="initiate", file_alias=file_alias, reason=reason)
 
 
 class DirectoryDoesNotExistError(RuntimeError):
@@ -105,16 +138,6 @@ class EnvelopeNotFoundError(RuntimeError):
         super().__init__(message)
 
 
-class ExternalApiError(RuntimeError):
-    """Thrown when the services request to an external API failed"""
-
-    # TODO: [later] Maybe remove this if not needed during setup
-
-    def __init__(self):
-        message = "The service was unable to contact an external API."
-        super().__init__(message)
-
-
 class FileAlreadyEncryptedError(RuntimeError):
     """Thrown when the specified file is already encrypted."""
 
@@ -132,6 +155,18 @@ class FileAlreadyExistsError(RuntimeError):
     def __init__(self, *, output_file: str):
         message = f"The file '{output_file}' already exists."
         super().__init__(message)
+
+
+class DeleteFileUploadError(_FileUploadError):
+    """Raised when there's a problem deleting a FileUpload in the Upload API"""
+
+    def __init__(self, *, file_alias: str, file_id: UUID4, reason: str):
+        super().__init__(
+            action="delete",
+            file_alias=file_alias,
+            file_id=file_id,
+            reason=reason,
+        )
 
 
 class FileDoesNotExistError(RuntimeError):
@@ -153,17 +188,27 @@ class FileNotRegisteredError(RuntimeError):
         super().__init__(message)
 
 
-class FinalizeUploadError(RuntimeError):
-    """Raised when a finished multipart upload cannot be finalized"""
-
-    def __init__(self, *, cause: str):
-        self.cause = cause
-        message = f"Could not finalize download due to: {cause}"
-        super().__init__(message)
-
-
 class GetEnvelopeError(RuntimeError):
-    """Raised when fetching an header envelope fails"""
+    """Raised when fetching a header envelope fails"""
+
+
+class InvalidBoxError(RuntimeError):
+    """Raised when receiving a 404 from the Upload API for a given box ID"""
+
+    def __init__(self, *, work_package_id: UUID4):
+        msg = f"The upload box associated with Work Package {work_package_id} doesn't exist."
+        super().__init__(msg)
+
+
+class InvalidFileUploadError(RuntimeError):
+    """Raised when receiving a 404 from the Upload API for a given file ID"""
+
+    def __init__(self, *, work_package_id: UUID4, file_id: UUID4):
+        msg = (
+            f"The upload box associated with Work Package {work_package_id} doesn't"
+            + f" have any files with the given file ID ({file_id})"
+        )
+        super().__init__(msg)
 
 
 class InvalidWorkPackageToken(RuntimeError):
@@ -193,7 +238,7 @@ class MaxPartNoExceededError(RuntimeError):
     """
     Thrown when requesting a part number larger than the maximally possible number of parts.
 
-    This exception should never be reaised and indicates a bug.
+    This exception should never be raised and indicates a bug.
     """
 
     def __init__(self):
@@ -244,30 +289,34 @@ class NoUploadAccessError(RuntimeError):
         super().__init__(message)
 
 
-class NoUploadPossibleError(RuntimeError):
-    """Thrown when a multipart upload currently can't be started (response code 400)"""
-
-    def __init__(self, *, file_id: str):
-        message = (
-            "It is not possible to start a multipart upload for file with id "
-            + f"'{file_id}' because this download is already pending or has been "
-            + "accepted."
-        )
-        super().__init__(message)
-
-
 class NoWorkPackageAccessError(RuntimeError):
     """
     Thrown when the given auth token does not provide access for
     a specific work package id (response code 403)
     """
 
-    def __init__(self, *, work_package_id: str):
+    def __init__(self, *, work_package_id: UUID4):
         message = (
             "This auth token is not valid "
             f"for the work package with the id '{work_package_id}'."
         )
         super().__init__(message)
+
+
+class OrphanedUploadError(RuntimeError):
+    """Raised when a multipart upload is found to be already in progress for a file
+    which we are trying to create. This is a rare situation that will have to be
+    resolved by the GHGA dev team if it occurs.
+    """
+
+    def __init__(self, *, file_alias: str, box_id: UUID4):
+        msg = (
+            "A multipart upload is already in progress for this file, but"
+            + " cannot be aborted due to a system error. Please contact the GHGA Help"
+            + " Desk and request manual abortion of any S3 uploads for file alias"
+            + f" {file_alias} in box {box_id}."
+        )
+        super().__init__(msg)
 
 
 class OutputPathIsNotDirectory(RuntimeError):
@@ -337,6 +386,39 @@ class RetryTimeExpectedError(RuntimeError):
         super().__init__(message)
 
 
+class S3StorageError(RuntimeError):
+    """Raised when there's a problem in the Upload API related to the S3 storage."""
+
+    def __init__(self, *, work_package_id: UUID4):
+        msg = (
+            "There was a problem with the S3 storage configuration for the upload box"
+            + f" associated with Work Package {work_package_id}."
+        )
+        super().__init__(msg)
+
+
+class S3UploadDetailsError(RuntimeError):
+    """Raised when the Upload API fails to find expected details of an ongoing S3 upload"""
+
+    def __init__(self, *, file_alias: str, work_package_id: UUID4):
+        msg = (
+            "The Upload API failed to find the expected information about the ongoing"
+            + f" S3 upload for file alias {file_alias} in the upload box associated"
+            + f" with Work Package {work_package_id}."
+        )
+        super().__init__(msg)
+
+
+class S3UploadMissingError(RuntimeError):
+    """Raised when the Upload API indicates that the S3 instance does not have record
+    of a multipart upload with the ID that is stored in the Upload API's database.
+    """
+
+    def __init__(self):
+        msg = "According to the Upload API, the expected multipart upload wasn't found in S3"
+        super().__init__(msg)
+
+
 class StartUploadError(RuntimeError):
     """Raised when an issue is encountered during the initialization of a multipart upload"""
 
@@ -347,6 +429,14 @@ class UnauthorizedAPICallError(RuntimeError):
     def __init__(self, *, url: str, cause: str):
         message = f"Could not authorize call to '{url}': {cause}"
         super().__init__(message)
+
+
+class UnexpectedError(RuntimeError):
+    """Raised as a catch-all when unexpected errors occur."""
+
+    def __init__(self, info: str):
+        msg = f"An unexpected error occurred: {info}"
+        super().__init__(msg)
 
 
 class UnexpectedRetryResponseError(RuntimeError):
@@ -361,6 +451,34 @@ class UnexpectedRetryResponseError(RuntimeError):
             + " staged download"
         )
         super().__init__(message)
+
+
+class UploadAlreadyExistsError(RuntimeError):
+    """Raised when trying to create a duplicate file upload."""
+
+    def __init__(self, *, work_package_id: UUID4):
+        msg = (
+            "An upload for this file alias already exists in the upload box associated"
+            + f" with Work Package {work_package_id}"
+        )
+        super().__init__(msg)
+
+
+class UploadBoxLockedError(RuntimeError):
+    """Raised when trying to add/remove files for a locked FileUploadBox."""
+
+    def __init__(self, *, work_package_id: UUID4):
+        msg = (
+            f"The upload box associated with work package {work_package_id} is locked."
+        )
+        super().__init__(msg)
+
+
+class UploadFileError(_FileUploadError):
+    """Raised when there's a problem trying to upload a file part."""
+
+    def __init__(self, *, file_alias: str, reason: str):
+        super().__init__(action="perform", file_alias=file_alias, reason=reason)
 
 
 class UploadIdUnsetError(RuntimeError):

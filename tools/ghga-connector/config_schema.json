@@ -93,9 +93,16 @@
     },
     "max_concurrent_downloads": {
       "default": 5,
-      "description": "Number of parallel downloader tasks for file parts.",
+      "description": "Number of parallel download tasks for file parts.",
       "exclusiveMinimum": 0,
       "title": "Max Concurrent Downloads",
+      "type": "integer"
+    },
+    "max_concurrent_uploads": {
+      "default": 5,
+      "description": "Number of parallel upload tasks for file parts.",
+      "exclusiveMinimum": 0,
+      "title": "Max Concurrent Uploads",
       "type": "integer"
     },
     "max_wait_time": {
@@ -106,7 +113,7 @@
       "type": "integer"
     },
     "part_size": {
-      "default": 16777216,
+      "default": 67108864,
       "description": "The part size to use for download.",
       "exclusiveMinimum": 0,
       "title": "Part Size",

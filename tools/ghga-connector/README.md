@@ -83,11 +83,13 @@ The service requires the following configuration parameters:
 
 - <a id="properties/retry_after_applicable_for_num_requests"></a>**`retry_after_applicable_for_num_requests`** *(integer)*: Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. Exclusive minimum: `0`. Default: `1`.
 
-- <a id="properties/max_concurrent_downloads"></a>**`max_concurrent_downloads`** *(integer)*: Number of parallel downloader tasks for file parts. Exclusive minimum: `0`. Default: `5`.
+- <a id="properties/max_concurrent_downloads"></a>**`max_concurrent_downloads`** *(integer)*: Number of parallel download tasks for file parts. Exclusive minimum: `0`. Default: `5`.
+
+- <a id="properties/max_concurrent_uploads"></a>**`max_concurrent_uploads`** *(integer)*: Number of parallel upload tasks for file parts. Exclusive minimum: `0`. Default: `5`.
 
 - <a id="properties/max_wait_time"></a>**`max_wait_time`** *(integer)*: Maximum time in seconds to wait before quitting without a download. Exclusive minimum: `0`. Default: `3600`.
 
-- <a id="properties/part_size"></a>**`part_size`** *(integer)*: The part size to use for download. Exclusive minimum: `0`. Default: `16777216`.
+- <a id="properties/part_size"></a>**`part_size`** *(integer)*: The part size to use for download. Exclusive minimum: `0`. Default: `67108864`.
 
 - <a id="properties/wkvs_api_url"></a>**`wkvs_api_url`** *(string)*: URL to the root of the WKVS API. Should start with https://. Default: `"https://data.ghga.de/.well-known"`.
 

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""This module provides all API calls related to downloading files."""
+"""This module provides a client class for contacting the Download API"""
 
 import base64
 from typing import Any

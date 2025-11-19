@@ -28,6 +28,7 @@ from datetime import datetime
 from email.utils import format_datetime
 from enum import Enum
 from typing import Annotated, Literal
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -44,6 +45,7 @@ from ghga_connector.core.client import get_cache_transport
 WORK = "/work"
 UPLOAD = "/upload"
 DOWNLOAD = "/download"
+FILE_UPLOAD_ID1 = UUID("310282cc-1469-4ae4-8653-a6497bc972be")
 
 
 class UploadStatus(str, Enum):
@@ -55,18 +57,6 @@ class UploadStatus(str, Enum):
     PENDING = "pending"
     REJECTED = "rejected"
     UPLOADED = "uploaded"
-
-
-class StatePatch(BaseModel):
-    """Model containing a state parameter. Needed for the Upload API patch: /uploads/... api call"""
-
-    status: UploadStatus
-
-
-class StatePost(BaseModel):
-    """Model containing a state parameter. Needed for the Upload API post: /uploads api call"""
-
-    file_id: str
 
 
 class Checksum(BaseModel):
@@ -253,103 +243,6 @@ async def drs3_objects_envelopes(file_id: str):
     )
 
 
-@mock_external_app.get(UPLOAD + "/files/{file_id}")
-async def get_files(file_id: str):
-    """Mock for the Upload API's GET /files/{file_id} call."""
-    if file_id == "pending":
-        return FileProperties(
-            file_id=file_id,
-            file_name=file_id,
-            md5_checksum="",
-            size=0,
-            grouping_label="inbox",
-            creation_date=now_as_utc(),
-            update_date=now_as_utc(),
-            format="",
-            current_upload_id="pending",
-        )
-
-    raise HttpException(
-        status_code=404,
-        exception_id="fileNotRegistered",
-        description=f'The file with the file_id "{file_id}" does not exist.',
-        data={"file_id": file_id},
-    )
-
-
-@mock_external_app.get(UPLOAD + "/uploads/{upload_id}")
-async def get_uploads(upload_id: str):
-    """Mock for the Upload API's GET /uploads/{upload_id} call."""
-    if upload_id == "pending":
-        return Response(
-            status_code=200,
-            content=UploadProperties(
-                upload_id="pending",
-                file_id="pending",
-                part_size=int(os.environ["DEFAULT_PART_SIZE"]),
-            ).json(),
-        )
-
-    raise HttpException(
-        status_code=404,
-        exception_id="noSuchUpload",
-        description=f'The upload with the id "{upload_id}" does not exist.',
-        data={"upload_id": upload_id},
-    )
-
-
-@mock_external_app.post(UPLOAD + "/uploads")
-async def post_files_uploads(request: Request):
-    """Mock for the Upload API's POST /uploads call."""
-    content = json.loads(await request.body())
-    state: StatePost = StatePost(**content)
-
-    file_id = state.file_id
-
-    if file_id == "uploadable":
-        return Response(
-            status_code=200,
-            content=UploadProperties(
-                upload_id="pending",
-                file_id=file_id,
-                part_size=int(os.environ["DEFAULT_PART_SIZE"]),
-            ).model_dump_json(),
-        )
-    if file_id == "uploadable-16":
-        return Response(
-            status_code=200,
-            content=UploadProperties(
-                upload_id="pending",
-                file_id=file_id,
-                part_size=16 * 1024 * 1024,
-            ).model_dump_json(),
-        )
-
-    if file_id == "uploadable-8":
-        return Response(
-            status_code=200,
-            content=UploadProperties(
-                upload_id="pending",
-                file_id=file_id,
-                part_size=8 * 1024 * 1024,
-            ).model_dump_json(),
-        )
-    if file_id == "pending":
-        raise HttpException(
-            status_code=403,
-            exception_id="noFileAccess",
-            description=f'Can`t start multipart upload for file with file id "{file_id}".',
-            data={"file_id": file_id},
-        )
-
-    raise HttpException(
-        status_code=400,
-        exception_id="fileNotRegistered",
-        description=f'The file with the file_id "{file_id}" does not exist.',
-        data={"file_id": file_id},
-    )
-
-
 @mock_external_app.post(UPLOAD + "/uploads/{upload_id}/parts/{part_no}/signed_urls")
 async def post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
     """Mock for the Upload Api's POST /uploads/{upload_id}/parts/{part_no}/signed_urls call."""
@@ -368,55 +261,55 @@ async def post_uploads_parts_files_signed_posts(upload_id: str, part_no: int):
     )
 
 
-@mock_external_app.patch(UPLOAD + "/uploads/{upload_id}")
-async def patch_uploads(upload_id: str, request: Request):
-    """Mock for the Upload API's PATCH /uploads/{upload_id} call"""
-    content = json.loads(await request.body())
-    state: StatePatch = StatePatch(**content)
-    upload_status = state.status
+async def init_upload_placeholder(object_id: str):
+    """This is a placeholder function for initiating an actual S3 multipart upload"""
+    raise NotImplementedError()
 
-    if upload_id == "uploaded":
-        if upload_status == UploadStatus.CANCELLED:
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-        raise HttpException(
-            status_code=400,
-            exception_id="uploadNotPending",
-            description=f'The upload with id "{upload_id}" can`t be set to "{upload_status}"',
-            data={"upload_id": upload_id, "current_upload_status": upload_id},
-        )
+@mock_external_app.post(UPLOAD + "/boxes/{box_id}/uploads")
+async def create_file_upload(box_id: UUID, request: Request):
+    """Mock for Upload API's POST /boxes/{box_id}/uploads endpoint.
 
-    if upload_id == "pending":
-        if upload_status == UploadStatus.UPLOADED:
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
+    Due to test constraints, the upload is actually created ahead of time in the test
+    fixture itself. This function returns a file ID.
+    """
+    _ = json.loads(await request.body())["alias"]
+    file_id = str(uuid4())
+    await init_upload_placeholder(object_id=file_id)
+    return JSONResponse(status_code=201, content=file_id)
 
-        raise HttpException(
-            status_code=400,
-            exception_id="uploadStatusChange",
-            description=f'The upload with id "{upload_id}" can`t be set to "{upload_status}"',
-            data={"upload_id": upload_id, "target_status": upload_status},
-        )
 
-    if upload_id == "uploadable":
-        raise HttpException(
-            status_code=400,
-            exception_id="uploadNotPending",
-            description=f'The upload with id "{upload_id}" can`t be set to "{upload_status}"',
-            data={"upload_id": upload_id, "current_upload_status": upload_id},
-        )
+async def update_part_upload_url_placeholder(object_id: str, part_no: int) -> str:
+    """Placeholder function to generate a new S3 upload URL."""
+    raise NotImplementedError()
 
-    raise HttpException(
-        status_code=404,
-        exception_id="noSuchUpload",
-        description=f'The upload with id "{upload_id}" does not exist',
-        data={"upload_id": upload_id},
-    )
+
+@mock_external_app.get(UPLOAD + "/boxes/{box_id}/uploads/{file_id}/parts/{part_no}")
+async def get_upload_url(box_id: UUID, file_id: UUID, part_no: int, request: Request):
+    """Returns a part upload URL for an in-progress multipart upload"""
+    url = await update_part_upload_url_placeholder(str(file_id), part_no)
+    return JSONResponse(status_code=200, content=url)
+
+
+async def terminate_upload_placeholder(object_id: str):
+    """Placeholder for a function that terminates an S3 multipart upload."""
+    raise NotImplementedError()
+
+
+@mock_external_app.patch(UPLOAD + "/boxes/{box_id}/uploads/{file_id}")
+async def complete_file_upload(box_id: UUID, file_id: UUID, request: Request):
+    """Mock for the Upload API's PATCH /boxes/{box_id}/uploads/{file_id} endpoint.
+
+    This endpoint terminates the upload and verifies the checksum of the encrypted file.
+    """
+    await terminate_upload_placeholder(str(file_id))
+    return Response(status_code=204)
 
 
 @mock_external_app.post(
     WORK + "/work-packages/{package_id}/files/{file_id}/work-order-tokens"
 )
-async def create_work_order_token(package_id: str, file_id: str):
+async def get_download_wot(package_id: str, file_id: str):
     """Mock Work Order Token endpoint.
 
     Cached response will be valid for 5 seconds for testing purposes.
@@ -428,6 +321,23 @@ async def create_work_order_token(package_id: str, file_id: str):
     return JSONResponse(
         status_code=201,
         content=base64.b64encode(b"1234567890" * 5).decode(),
+        headers=headers,
+    )
+
+
+@mock_external_app.post(
+    WORK + "/work-packages/{package_id}/boxes/{box_id}/work-order-tokens"
+)
+async def get_upload_wot(package_id: UUID, request: Request):
+    """Mock Upload Work Order Token endpoint."""
+    body = json.loads(await request.body())
+    work_type = body["work_type"]
+    file_id = body["file_id"]
+    file_alias = body["alias"]
+    headers = create_caching_headers(expires_after=5)
+    return JSONResponse(
+        status_code=201,
+        content=f"{work_type}_wot_for_{file_id or file_alias}",
         headers=headers,
     )
 

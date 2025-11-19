@@ -12,18 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-"""Contains additional data structures needed by the upload code"""
 
-from enum import Enum
+"""Data structures for file upload"""
+
+from pathlib import Path
+from typing import NamedTuple
 
 
-class UploadStatus(str, Enum):
-    """Enum for the possible statuses of an upload attempt."""
+class FileInfoForUpload(NamedTuple):
+    """A tuple containing a file alias and a file path"""
 
-    ACCEPTED = "accepted"
-    CANCELLED = "cancelled"
-    FAILED = "failed"
-    PENDING = "pending"
-    REJECTED = "rejected"
-    UPLOADED = "uploaded"
+    # This is similar to the FileInfo defined in the download path, but cannot be
+    #  consolidated yet due to some differences we have to resolve in the future
+
+    alias: str
+    path: Path
+    size: int

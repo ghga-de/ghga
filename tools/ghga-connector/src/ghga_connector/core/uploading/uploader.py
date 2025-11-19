@@ -12,362 +12,144 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Upload functionality"""
 
-"""This file contains all api calls related to uploading files"""
+import asyncio
+import logging
 
-import base64
-import json
-import math
-from collections.abc import Iterator
-from pathlib import Path
-
-import crypt4gh.keys
-import crypt4gh.lib
-import httpx
+from pydantic import UUID4
 
 from ghga_connector import exceptions
-from ghga_connector.config import get_upload_api_url
-from ghga_connector.constants import MAX_PART_NUMBER
-from ghga_connector.core import ResponseExceptionTranslator
-from ghga_connector.core.crypt import Encryptor
+from ghga_connector.core.crypt.encryption import Crypt4GHEncryptor, FileProcessor
+from ghga_connector.core.progress_bar import UploadProgressBar
+from ghga_connector.core.tasks import TaskHandler
+from ghga_connector.core.uploading.api_calls import UploadClient
+from ghga_connector.core.uploading.structs import FileInfoForUpload
+from ghga_connector.core.utils import calc_number_of_parts
 
-from .abstract_uploader import UploaderBase
-from .structs import UploadStatus
+log = logging.getLogger(__name__)
 
 
-class Uploader(UploaderBase):
-    """
-    Class bundling functionality calling Upload Controller Service to initiate and
-    manage an ongoing upload
-    """
+class Uploader:
+    """Provides the functionality to upload a single file"""
 
     def __init__(
         self,
         *,
-        client: httpx.AsyncClient,
-        file_id: str,
-        public_key_path: Path,
-    ) -> None:
-        self._part_size = 0
-        self._upload_id = ""
-        self._api_url = get_upload_api_url()
-        self._client = client
-        self._file_id = file_id
-        self._public_key_path = public_key_path
-
-    async def start_multipart_upload(self):
-        """Start multipart upload"""
-        try:
-            await self._initiate_multipart_upload()
-
-        except exceptions.NoUploadPossibleError as error:
-            file_metadata = await self.get_file_metadata()
-            upload_id = file_metadata["current_upload_id"]
-            if upload_id is None:
-                raise error
-
-            await self.patch_multipart_upload(
-                upload_status=UploadStatus.CANCELLED,
-            )
-
-            await self._initiate_multipart_upload()
-
-        except Exception as error:
-            raise error
-
-    async def finish_multipart_upload(self):
-        """Complete or clean up multipart upload"""
-        await self.patch_multipart_upload(upload_status=UploadStatus.UPLOADED)
-
-    async def _initiate_multipart_upload(self) -> None:
-        """
-        Perform a RESTful API call to initiate a multipart upload
-        Returns an upload id and a part size
-        """
-        # build url and headers
-        url = f"{self._api_url}/uploads"
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        public_key = base64.b64encode(
-            crypt4gh.keys.get_public_key(self._public_key_path)
-        ).decode()
-
-        post_data = {"file_id": self._file_id, "public_key": public_key}
-        serialized_data = json.dumps(post_data)
-
-        # Make function call to get upload url
-        try:
-            response = await self._client.post(
-                url=url, headers=headers, content=serialized_data
-            )
-        except httpx.RequestError as request_error:
-            exceptions.raise_if_connection_failed(request_error=request_error, url=url)
-            raise exceptions.RequestFailedError(url=url) from request_error
-
-        status_code = response.status_code
-        if status_code != 200:
-            spec = {
-                400: {
-                    "existingActiveUpload": lambda: exceptions.NoUploadPossibleError(
-                        file_id=self._file_id
-                    ),
-                    "fileNotRegistered": lambda: exceptions.FileNotRegisteredError(
-                        file_id=self._file_id
-                    ),
-                },
-                403: {
-                    "noFileAccess": lambda: exceptions.NoFileAccessError(
-                        file_id=self._file_id
-                    )
-                },
-            }
-            ResponseExceptionTranslator(spec=spec).handle(response=response)
-            raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
-
-        response_body = response.json()
-
-        self._part_size = int(response_body["part_size"])
-        self._upload_id = response_body["upload_id"]
-
-    async def get_file_metadata(self) -> dict[str, str]:
-        """Get all file metadata"""
-        # build url and headers
-        url = f"{self._api_url}/files/{self._file_id}"
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-
-        try:
-            response = await self._client.get(url=url, headers=headers)
-        except httpx.RequestError as request_error:
-            exceptions.raise_if_connection_failed(request_error=request_error, url=url)
-            raise exceptions.RequestFailedError(url=url) from request_error
-
-        status_code = response.status_code
-        if status_code != 200:
-            spec = {
-                403: {
-                    "noFileAccess": lambda: exceptions.NoFileAccessError(
-                        file_id=self._file_id
-                    )
-                },
-                404: {
-                    "fileNotRegistered": lambda: exceptions.FileNotRegisteredError(
-                        file_id=self._file_id
-                    )
-                },
-            }
-            ResponseExceptionTranslator(spec=spec).handle(response=response)
-            raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
-
-        file_metadata = response.json()
-
-        return file_metadata
-
-    async def get_part_upload_url(self, *, part_no: int) -> str:
-        """Get a presigned url to upload a specific part"""
-        if not self._upload_id:
-            raise exceptions.UploadIdUnsetError()
-
-        # build url and headers
-        url = f"{self._api_url}/uploads/{self._upload_id}/parts/{part_no}/signed_urls"
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-
-        # Make function call to get upload url
-        try:
-            response = await self._client.post(url=url, headers=headers)
-        except httpx.RequestError as request_error:
-            exceptions.raise_if_connection_failed(request_error=request_error, url=url)
-            raise exceptions.RequestFailedError(url=url) from request_error
-
-        status_code = response.status_code
-        if status_code != 200:
-            spec = {
-                403: {
-                    "noFileAccess": lambda: exceptions.NoUploadAccessError(
-                        upload_id=self._upload_id
-                    )
-                },
-                404: {
-                    "noSuchUpload": lambda: exceptions.UploadNotRegisteredError(
-                        upload_id=self._upload_id
-                    )
-                },
-            }
-            ResponseExceptionTranslator(spec=spec).handle(response=response)
-            raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
-
-        response_body = response.json()
-        presigned_url = response_body["url"]
-
-        return presigned_url
-
-    def get_part_upload_urls(
-        self,
-        *,
-        from_part: int = 1,
-        get_url_func=get_part_upload_url,
-    ) -> Iterator[str]:
-        """
-        Return an iterator for a specific multipart upload to lazily iterate through
-        file parts and obtain the corresponding upload urls.
-
-        By default this starts with the first part but you may also start from a
-        specific part using the `from_part` argument.
-
-        Please note: the upload must already have been initiated.
-        """
-        if not self._upload_id:
-            raise exceptions.UploadIdUnsetError()
-
-        for part_no in range(from_part, MAX_PART_NUMBER + 1):
-            yield get_url_func(
-                api_url=self._api_url, upload_id=self._upload_id, part_no=part_no
-            )
-
-        raise exceptions.MaxPartNoExceededError()
-
-    async def get_upload_info(self) -> dict[str, str]:
-        """Get details on a specific upload"""
-        if not self._upload_id:
-            raise exceptions.UploadIdUnsetError()
-
-        # build url and headers
-        url = f"{self._api_url}/uploads/{self._upload_id}"
-        headers = {"Accept": "*/*", "Content-Type": "application/json"}
-
-        try:
-            response = await self._client.get(url=url, headers=headers)
-        except httpx.RequestError as request_error:
-            exceptions.raise_if_connection_failed(request_error=request_error, url=url)
-            raise exceptions.RequestFailedError(url=url) from request_error
-
-        status_code = response.status_code
-        if status_code != 200:
-            spec = {
-                403: {
-                    "noFileAccess": lambda: exceptions.NoUploadAccessError(
-                        upload_id=self._upload_id
-                    )
-                },
-                404: {
-                    "noSuchUpload": lambda: exceptions.UploadNotRegisteredError(
-                        upload_id=self._upload_id
-                    )
-                },
-            }
-            ResponseExceptionTranslator(spec=spec).handle(response=response)
-            raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
-
-        return response.json()
-
-    async def patch_multipart_upload(self, *, upload_status: UploadStatus) -> None:
-        """
-        Set the status of a specific upload attempt.
-        The API accepts "uploaded" or "accepted",
-        if the upload_id is currently set to "pending"
-        """
-        if not self._upload_id:
-            raise exceptions.UploadIdUnsetError()
-
-        # build url and headers
-        url = f"{self._api_url}/uploads/{self._upload_id}"
-        headers = {"Accept": "*/*", "Content-Type": "application/json"}
-        post_data = {"status": upload_status}
-        serialized_data = json.dumps(post_data)
-
-        try:
-            response = await self._client.patch(
-                url=url, headers=headers, content=serialized_data
-            )
-        except httpx.RequestError as request_error:
-            exceptions.raise_if_connection_failed(request_error=request_error, url=url)
-            raise exceptions.RequestFailedError(url=url) from request_error
-
-        status_code = response.status_code
-        if status_code != 204:
-            spec = {
-                400: {
-                    "uploadNotPending": lambda: exceptions.CantChangeUploadStatusError(
-                        upload_id=self._upload_id, upload_status=upload_status
-                    ),
-                    "uploadStatusChange": lambda: exceptions.CantChangeUploadStatusError(
-                        upload_id=self._upload_id, upload_status=upload_status
-                    ),
-                },
-                403: {
-                    "noFileAccess": lambda: exceptions.NoUploadAccessError(
-                        upload_id=self._upload_id
-                    )
-                },
-                404: {
-                    "noSuchUpload": lambda: exceptions.UploadNotRegisteredError(
-                        upload_id=self._upload_id
-                    )
-                },
-            }
-            ResponseExceptionTranslator(spec=spec).handle(response=response)
-            raise exceptions.BadResponseCodeError(url=url, response_code=status_code)
-
-    async def upload_file_part(self, *, presigned_url: str, part: bytes) -> None:
-        """Upload File"""
-        try:
-            response = await self._client.put(presigned_url, content=part)
-        except httpx.RequestError as request_error:
-            exceptions.raise_if_connection_failed(
-                request_error=request_error, url=presigned_url
-            )
-            raise exceptions.RequestFailedError(url=presigned_url) from request_error
-
-        status_code = response.status_code
-        if status_code == 200:
-            return
-
-        raise exceptions.BadResponseCodeError(
-            url=presigned_url, response_code=status_code
-        )
-
-
-class ChunkedUploader:
-    """Handler class dealing with upload functionality"""
-
-    def __init__(
-        self,
-        *,
-        encryptor: Encryptor,
-        file_id: str,
-        file_path: Path,
+        upload_client: UploadClient,
+        encryptor: Crypt4GHEncryptor,
+        file_info: FileInfoForUpload,
         part_size: int,
-        uploader: UploaderBase,
-    ) -> None:
-        self._encrypted_file_size = 0
+        max_concurrent_uploads: int,
+    ):
+        """Instantiate the Uploader"""
+        self._upload_client = upload_client
+        self._file_alias = file_info.alias
+        self._file_path = file_info.path
         self._encryptor = encryptor
-        self._file_id = file_id
-        self._input_path = file_path
         self._part_size = part_size
-        self._unencrypted_file_size = file_path.stat().st_size
-        self._uploader = uploader
+        self._file_size = file_info.size
+        self._semaphore = asyncio.Semaphore(max_concurrent_uploads)
 
-    async def encrypt_and_upload(self):
-        """Delegate encryption and perform multipart upload"""
-        # compute encrypted_file_size
-        num_segments = math.ceil(
-            self._unencrypted_file_size / crypt4gh.lib.SEGMENT_SIZE
-        )
-        expected_encrypted_size = (
-            self._unencrypted_file_size + num_segments * crypt4gh.lib.CIPHER_DIFF
-        )
+    def new_progress_bar(self) -> UploadProgressBar:
+        """Create a new progress bar"""
+        return UploadProgressBar(file_name=self._file_alias, file_size=self._file_size)
 
-        with self._input_path.open("rb") as file:
-            for part_number, part in enumerate(
-                self._encryptor.process_file(file=file), start=1
-            ):
-                upload_url = await self._uploader.get_part_upload_url(
-                    part_no=part_number
+    async def initiate_file_upload(self) -> UUID4:
+        """Initiate a file upload in the Upload API, exchanging the file alias for a
+        UUID4 file ID.
+
+        Raises a `CreateFileUploadError` if the operation fails.
+        """
+        # Establish the file expectation and open the multipart upload
+        try:
+            self._file_id = await self._upload_client.create_file_upload(
+                file_alias=self._file_alias, file_size=self._file_size
+            )
+            return self._file_id
+        except Exception as err:
+            raise exceptions.CreateFileUploadError(
+                file_alias=self._file_alias, reason=str(err)
+            ) from err
+
+    async def delete_file(self) -> None:
+        """Delete a file from its FileUploadBox
+
+        Raises a `FileDeletionError` if there's a problem with the operation.
+        """
+        try:
+            await self._upload_client.delete_file(file_id=self._file_id)
+        except Exception as err:
+            raise exceptions.DeleteFileUploadError(
+                file_alias=self._file_alias, file_id=self._file_id, reason=str(err)
+            ) from err
+
+    async def _upload_file_part(self, file_processor: FileProcessor) -> None:
+        """Encrypt and upload a file part
+
+        Raises:
+            UploadFileError: If there is a problem during content transfer.
+            CancelledError: If the task is cancelled.
+            RequestFailedError: If the request fails without returning a response code.
+            UnexpectedError: If the status code is not 200.
+        """
+        async with self._semaphore:
+            part_number = 0  # defined here so it can be used in the exception
+            try:
+                part_number, part = next(file_processor)
+                await self._upload_client.upload_file_part(
+                    file_id=self._file_id, content=part, part_no=part_number
                 )
-                await self._uploader.upload_file_part(
-                    presigned_url=upload_url, part=part
+                self._progress_bar.advance(len(part))  # Created in `.upload_file()`
+                self._in_sequence_part_number += 1
+
+            except BaseException as exc:
+                # correctly reraise CancelledError, else this might get stuck waiting
+                # on semaphore lock release
+                if isinstance(exc, asyncio.CancelledError):
+                    raise
+                raise exceptions.UploadFileError(
+                    file_alias=self._file_alias, reason=str(exc)
+                ) from exc
+
+    async def upload_file(self):
+        """Upload a file to S3, encrypting it on the fly.
+
+        Raises:
+            UploadFileError: If there's a problem during actual file upload.
+            EncryptedSizeMismatch: If the actual size of the encrypted file doesn't
+                match the expected value.
+            CompleteFileUploadError: If there's an error completing the file upload.
+        """
+        num_parts = calc_number_of_parts(
+            self._encryptor.expected_encrypted_size, self._part_size
+        )
+        self._in_sequence_part_number = 1
+
+        # Encrypt and upload file parts in parallel
+        self._progress_bar = self.new_progress_bar()
+        with self._file_path.open("rb") as file, self._progress_bar:
+            file_processor = self._encryptor.process_file(file=file)
+            task_handler = TaskHandler()
+            for _ in range(num_parts):
+                task_handler.schedule(
+                    self._upload_file_part(file_processor=file_processor)
                 )
-            encrypted_file_size = self._encryptor.get_encrypted_size()
-            if expected_encrypted_size != encrypted_file_size:
-                raise exceptions.EncryptedSizeMismatch(
-                    actual_encrypted_size=encrypted_file_size,
-                    expected_encrypted_size=expected_encrypted_size,
-                )
+            # Wait for all upload tasks to finish
+            await task_handler.gather()
+
+        # Get the unencrypted checksum and tell the Upload API to conclude the S3 upload
+        unencrypted_checksum = self._encryptor.checksums.unencrypted_sha256.hexdigest()
+        encrypted_checksum = self._encryptor.checksums.encrypted_checksum_for_s3()
+
+        try:
+            await self._upload_client.complete_file_upload(
+                file_id=self._file_id,
+                unencrypted_checksum=unencrypted_checksum,
+                encrypted_checksum=encrypted_checksum,
+            )
+            log.info("(4/4) Finished upload for %s.", self._file_id)
+        except Exception as err:
+            raise exceptions.CompleteFileUploadError(
+                file_alias=self._file_alias, reason=str(err)
+            ) from err
