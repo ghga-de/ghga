@@ -206,7 +206,7 @@ When manually triggered, the service derives the output schemas for all workflow
 
 #### User Journeys: Service Consumer Transforms An Original AnnotatedEMPack
 
-The transformation operation is triggered when the service consumer receives "original annotated Em Pack" or a “re-transform metadata” event.
+The transformation operation is triggered when the service consumer receives an upsertion of an "original AnnotatedEMPack" or a “re-transform AnnotatedEMPack” event.
 
 1. Fetch the datapack ids and corresponding schema ids of all datapacks in the collection where the original_id field matches our original datapack id. Create a mapping of these schema ids to their datapack ids that we call “dirty map”, because all of these datapacks need to be either re-created or deleted.
 2. Create a “transformed map” that maps schema ids to datapacks. This will hold the datapacks that have been transformed in this operation already. Initialize it with just the original schemapack id mapping to the original datapack.
