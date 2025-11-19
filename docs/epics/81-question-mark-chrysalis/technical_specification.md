@@ -152,10 +152,9 @@ The implementation of the EM transformation service will involve the following k
    * `workflow_id` is a workflow identifier that is to be applied on a data / schema  
    
 
-   This collection is populated manually with the defined ghga workflow routes.  
-   An empty workflow_output_schema indicates the route requires schema derivation at startup.  
+   This collection is populated manually with the defined ghga workflow routes or via transformation configuration change.
 
-2. `AnnotatedEMPacks`
+4. `AnnotatedEMPacks`
 
    Consists of AnnotatedEMPack objects.
    * `id` is a unique identifier for the AnnotatedEMPack
