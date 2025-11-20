@@ -233,7 +233,7 @@ class Config(BaseSettings):
     dcs_objects_collection: str = "drs_objects"
 
     # data portal ui
-    data_portal_url: str = "http://data-portal"
+    data_portal_url: str = "https://local.ghga.de"
 
     # vault
     vault_path: str = "testing"

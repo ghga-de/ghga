@@ -1,6 +1,6 @@
 
 @files @deletion @purge
-Feature: 410 Deletion of files
+Feature: 510 Deletion of files
   As an authorized user, I can delete the files from the file backend
 
   Scenario: Deleting files from the file backend

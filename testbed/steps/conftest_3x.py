@@ -27,12 +27,11 @@ from fixtures import (  # noqa: RUF100
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_bdd import (  # noqa: RUF100
     given,
-    parsers,
     then,
     when,
 )
 
-parse: type[parsers.StepParser] = parsers.parse  # pylint: disable=invalid-name
+from steps.utils import parse
 
 
 @when(

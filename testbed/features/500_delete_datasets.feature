@@ -1,6 +1,6 @@
 
 @metadata @deletion
-Feature: 40 Deletion of datasets
+Feature: 500 Deletion of datasets
   As a data steward, I can delete datasets from the system
 
   Scenario: Re-uploading metadata after deletion of datasets
@@ -27,8 +27,7 @@ Feature: 40 Deletion of datasets
 
   Scenario: Trying to query datasets to create a new download token
 
-    Given we have the state "John Doe is allowed to download the test dataset"
-    And I am registered as "Dr. John Doe"
+    Given I am registered as "Dr. John Doe"
     And I am logged in as "Dr. John Doe"
     And I am authenticated as "Dr. John Doe"
 
@@ -37,5 +36,5 @@ Feature: 40 Deletion of datasets
     And no dataset is returned
 
     Then remove the state "metadata has been loaded into the system"
-    And remove the state "John Doe is allowed to download the test dataset"
+    And remove the state "John Doe is allowed to download the test datasets"
     And set the state to "metadata has been re-loaded into the system"

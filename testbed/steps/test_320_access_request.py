@@ -36,29 +36,6 @@ from .conftest import (
 scenarios("../features/320_access_request.feature")
 
 
-@given("no access requests have been made yet")
-def ars_database_is_empty(fixtures: JointFixture):
-    assert not fixtures.state.get_state("is allowed to download")
-    fixtures.mongo.empty_databases(
-        fixtures.config.ars_db_name,
-        collection_names=[fixtures.config.ars_access_requests_collection],
-    )
-    fixtures.state.unset_state("is allowed to download")
-
-
-@given("the claims repository is empty")
-def claims_repository_is_empty(fixtures: JointFixture):
-    """Remove all claims except for the data steward claim."""
-    saved_data_steward = fetch_data_stewardship(fixtures)
-    fixtures.mongo.empty_databases(
-        fixtures.config.ums_db_name,
-        collection_names=[
-            fixtures.config.ums_claims_collection,
-        ],
-    )
-    restore_data_stewardship(saved_data_steward, fixtures)
-
-
 @when(
     parse('"{full_name}" requests access to the test dataset "{alias}"'),
     target_fixture="response",

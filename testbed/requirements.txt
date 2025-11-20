@@ -24,3 +24,8 @@ typer>=0.12.3,<1
 httpx>=0.27,<0.28
 
 hvac>=2.2.0,<3
+
+#playwright
+playwright>=1.51.0,<2
+pytest-html>=4.1.1,<5
+pytest-xdist>=3.6.1,<4

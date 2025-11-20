@@ -16,8 +16,6 @@
 
 """Shared steps and fixtures"""
 
-import inspect
-from functools import wraps
 from time import sleep
 from typing import Any, NamedTuple
 
@@ -29,6 +27,7 @@ from fixtures import (  # noqa: RUF100
     JointFixture,
     KafkaFixture,
     MongoFixture,
+    PlaywrightFixture,
     Response,
     S3Fixture,
     StateManager,
@@ -44,6 +43,7 @@ from fixtures import (  # noqa: RUF100
     joint_fixture,
     kafka_fixture,
     mongo_fixture,
+    playwright_fixture,
     s3_fixture,
     state_fixture,
     state_manager_fixture,
@@ -58,9 +58,10 @@ from pytest_bdd import (  # noqa: RUF100
 )
 
 from steps.conftest_3x import *  # noqa: F403
-from steps.conftest_3x import parse
+from steps.conftest_4x import *  # noqa: F403
 from steps.utils import (
     EXPECTED_NOTIFICATIONS,
+    parse,
     parse_notifications,
     reset_user_token_counter,
 )
@@ -362,3 +363,26 @@ def reset_file_encryption_secrets(fixtures: JointFixture):
     """Reset the file encryption secrets in the vault."""
     if not fixtures.config.black_box_mode:
         fixtures.vault.empty_secrets()  # empty secret storage
+
+
+@given("no access requests have been made yet")
+def ars_database_is_empty(fixtures: JointFixture):
+    assert not fixtures.state.get_state("is allowed to download")
+    fixtures.mongo.empty_databases(
+        fixtures.config.ars_db_name,
+        collection_names=[fixtures.config.ars_access_requests_collection],
+    )
+    fixtures.state.unset_state("is allowed to download")
+
+
+@given("the claims repository is empty")
+def claims_repository_is_empty(fixtures: JointFixture):
+    """Remove all claims except for the data steward claim."""
+    saved_data_steward = fetch_data_stewardship(fixtures)
+    fixtures.mongo.empty_databases(
+        fixtures.config.ums_db_name,
+        collection_names=[
+            fixtures.config.ums_claims_collection,
+        ],
+    )
+    restore_data_stewardship(saved_data_steward, fixtures)

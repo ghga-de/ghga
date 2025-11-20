@@ -121,6 +121,18 @@ class TokenGenerator:
             title, name = None, full_name
         return title, name
 
+    @classmethod
+    def get_initials(cls, full_name: str) -> str | None:
+        """Transform the given name to its initials."""
+        _, name = cls.split_title(full_name)
+        name_parts = name.split()
+        if not name_parts:
+            return None
+        initials = name_parts[0][0].upper()
+        if len(name_parts) > 1:
+            initials += name_parts[-1][0].upper()
+        return initials or None
+
     def get_user_id(self, full_name: str) -> str:
         """Get the plain identifier of the user without the domain."""
         name = self.split_title(full_name)[1]

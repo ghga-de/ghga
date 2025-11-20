@@ -4,7 +4,7 @@ Feature: 33 Work Packages
   and a download token corresponding ot that work package.
 
   Background:
-    Given we have the state "John Doe is allowed to download the test dataset"
+    Given we have the state "John Doe is allowed to download the test datasets"
     And I am logged in as "Dr. John Doe"
     And I am registered as "Dr. John Doe"
     And I am authenticated as "Dr. John Doe"

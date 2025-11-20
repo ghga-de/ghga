@@ -33,7 +33,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/410_delete_files.feature")
+scenarios("../features/510_delete_files.feature")
 
 TIMEOUT = 5
 INTERVAL = 0.1

@@ -70,4 +70,4 @@ Feature: 320 Access Request
 
     And "Access Request Allowed" email was sent to "Central Data Steward"
     And "Access Request Accepted" email was sent to "Dr. John Doe"
-    And set the state to "John Doe is allowed to download the test dataset"
+    And set the state to "John Doe is allowed to download the test datasets"

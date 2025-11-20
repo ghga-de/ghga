@@ -21,6 +21,7 @@ from typing import NamedTuple
 from pytest import fixture
 
 from fixtures.auth import TokenGenerator, auth_fixture
+from fixtures.browser import PlaywrightFixture, playwright_fixture
 from fixtures.config import Config
 from fixtures.connector import ConnectorFixture, connector_fixture
 from fixtures.dsk import DskFixture, dsk_fixture
@@ -51,6 +52,7 @@ __all__ = [
     "joint_fixture",
     "kafka_fixture",
     "mongo_fixture",
+    "playwright_fixture",
     "s3_fixture",
     "state_fixture",
     "state_manager_fixture",
@@ -82,6 +84,7 @@ class JointFixture(NamedTuple):
     state: StateStorage
     vault: VaultFixture
     iva: IVAFixture
+    playwright: PlaywrightFixture
 
 
 @fixture(name="config", scope="session")  # pyright: ignore
@@ -104,6 +107,7 @@ def joint_fixture(
     state: StateStorage,
     vault: VaultFixture,
     iva: IVAFixture,
+    playwright: PlaywrightFixture,
 ) -> JointFixture:
     """A fixture that collects all fixtures for integration testing."""
 
@@ -119,4 +123,5 @@ def joint_fixture(
         state,
         vault,
         iva,
+        playwright,
     )

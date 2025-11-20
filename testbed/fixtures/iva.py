@@ -56,6 +56,13 @@ class IVAFixture:
         assert response.status_code == 200, f"Failed to retrieve IVAs: {response.text}"
         return response.json()
 
+    def list_all(self, headers: dict) -> list:
+        """Retrieve the list of all IVAs, only Data Steward account has permissions"""
+        url = f"{self.config.ums_url}/ivas"
+        response = self.http.get(url, headers=headers)
+        assert response.status_code == 200, f"Failed to retrieve IVAs: {response.text}"
+        return response.json()
+
     def delete(self, iva_ids: str | list[str], user_id: str, headers: dict) -> None:
         """Delete the given IVAs for the user"""
         if isinstance(iva_ids, str):

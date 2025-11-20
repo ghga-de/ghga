@@ -29,6 +29,9 @@ from ghga_datasteward_kit.file_ingest import IngestConfig
 from ghga_datasteward_kit.loading import LoadConfig
 from hexkit.providers.s3.testutils import FileObject
 from pydantic import BaseModel, EmailStr
+from pytest_bdd import parsers
+
+parse: type[parsers.StepParser] = parsers.parse  # pylint: disable=invalid-name
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
 DATASET_SEARCH_RESULT_KEYS = {"accession", "title", "ega_accession", "alias"}
@@ -51,6 +54,15 @@ EXPECTED_NOTIFICATIONS = {
     "iva_code_requested": "IVA Request Received",
     "iva_verification_requested": "Contact Address Verification Request Received",
     "iva_code_transmitted": "Contact Address Verification Code Transmitted",
+}
+
+IVA_TYPE_NAMES = {"Phone": "SMS", "InPerson": "In Person"}
+
+ADMIN_PAGES = {
+    "Access Request Manager": ["access-request-manager", "Access Request Management"],
+    "Access Grant Manager": ["access-grant-manager", ""],
+    "IVA Manager": ["iva-manager", ""],
+    "User Manager": ["user-manager", ""],
 }
 
 
