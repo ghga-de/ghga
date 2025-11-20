@@ -22,7 +22,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Experimental Metadata Ingress Models (EMIM)`: Schemas that define the structure and format of experimental metadata as it enters the GHGA system from external sources. Currently, GHGA supports only a single data ingress model for experimental metadata, which is the [ghga-metadata-schema](https://github.com/ghga-de/ghga-metadata-schema), but this epic is part of the effort to lift that restriction.
 
-`Universal Discovery Model`: A common target representation to which all the EMs are transformed, serving as a basis for data queries and data display via the GHGA Data Portal.  
+`Universal Discovery Model`: A common target representation to which all the EMs are transformed, serving as a basis for data queries and data display via the GHGA Data Portal. 
 
 `EMPack`: Experimental metadata in datapack format. It follows a relational data schema corresponding to one of the EMIMs.
 
@@ -274,10 +274,8 @@ The “configuration change” operation should be triggered after detecting a c
 The transformation change is detected by comparing the current configuration stored in the `configs` collection with the latest configuration stored in the `transformationConfigs` collection. If there is a difference, and the transformation configuration that is read from the `transformationConfigs` matches an old version, the service rolls back to that version. If it is different and does not match any old version, the new transformation configuration is set as the current configuration in the `configs` collection that triggers the re-computation of derived schemas and re-transformation of all original AnnotatedEMPacks.
 
 The configuration change will trigger the following operations:
-1. Validate the transformation configuration
-2. Recalculate the topological order of the schemas and update the `order` field
-3. Re-compute the schemapacks of all transformed schemas
-4. Re-run the transformations for all original datapacks
+1. Re-compute the schemapacks of all transformed schemas as described in the "Schema Derivation" user journey
+2. Re-run the transformations for all original datapacks as described in the "Service Consumer Transforms An Original AnnotatedEMPack" user journey.
 
 ### Not included:
 
