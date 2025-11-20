@@ -269,7 +269,7 @@ This course of action avoids deleting “dirty” datapacks while they are recre
 
 #### User Journeys: Configuration Change
 
-The “configuration change” operation should be triggered whenever anything in the Schemas, Workflows or WorkflowRoutes collection changes. 
+The “configuration change” operation should be triggered after detecting a change in the configuration YAML file.
 
 The transformation change is detected by comparing the current configuration stored in the `configs` collection with the latest configuration stored in the `transformationConfigs` collection. If there is a difference, and the transformation configuration that is read from the `transformationConfigs` matches an old version, the service rolls back to that version. If it is different and does not match any old version, the new transformation configuration is set as the current configuration in the `configs` collection that triggers the re-computation of derived schemas and re-transformation of all original AnnotatedEMPacks.
 
