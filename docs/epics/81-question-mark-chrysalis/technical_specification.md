@@ -282,4 +282,4 @@ The configuration change will trigger the following operations:
 
 - The service has no REST API to configure workflows but instead reads workflows from the database, where workflows must be stored in a predefined schema or format as required by the service.
 
-- The service has no event consumer to populate its collection of known models but instead reads the models from a database where they have to be stored manually
+- The service has no event consumer to populate its collection of known models but instead reads the models from a database where they have to be populated from the YAML configuration files as explained above.
