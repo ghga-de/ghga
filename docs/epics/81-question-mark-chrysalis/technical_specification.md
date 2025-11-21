@@ -170,9 +170,7 @@ The implementation of the EM transformation service will involve the following k
 
 4. `configs`
 
-   Consists of a single document that holds the transformation configuration YAML.
-
-   * `config` is a `BaseConfig` object that contains the full YAML content of the models, workflows and routes collections
+   Consists of a single document that holds the transformation configuration YAML. It defines the models, workflows, and routes. It is used to populate the `models`, `workflows`, and `routes` collections.
 
 
 5. `AnnotatedEMPacks`
