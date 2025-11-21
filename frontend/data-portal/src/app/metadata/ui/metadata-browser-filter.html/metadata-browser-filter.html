@@ -1,0 +1,103 @@
+<div class="mb-3 lg:hidden">
+  <button
+    mat-stroked-button
+    class="button-primary w-full font-bold"
+    (click)="displayFilters = !displayFilters"
+  >
+    <mat-icon fontIcon="search"></mat-icon><mat-icon fontIcon="filter_alt"></mat-icon>
+    @if (displayFilters) {
+      Close search and filters
+    } @else {
+      Search and filter results
+    }
+  </button>
+</div>
+<aside
+  [class.hidden]="!displayFilters"
+  class="mb-4 lg:col-span-4 lg:mb-0 lg:block xl:col-span-3"
+>
+  <mat-card appearance="outlined" class="p-3">
+    <form
+      [formGroup]="searchFormGroup"
+      (keydown.enter)="submitted.emit($event)"
+      (submit)="submitted.emit($event)"
+    >
+      <mat-form-field class="w-full">
+        <input
+          type="search"
+          matInput
+          placeholder="Enter any keyword or ID"
+          aria-label="Enter any keyword or ID"
+          name="searchTerm"
+          [formControl]="searchFormControl"
+          (change)="searchFormChanged.emit(searchFormControl.value)"
+          (keyup)="searchFormChanged.emit(searchFormControl.value)"
+          (keydown.enter)="submitted.emit($event)"
+        />
+        <mat-icon matSuffix fontIcon="search"></mat-icon>
+      </mat-form-field>
+      @if (loading()) {
+        @for (i of [1, 2]; track i) {
+          <div class="w-1/2">
+            <app-stencil></app-stencil>
+          </div>
+          <ul class="mt-1 mb-5 rounded-lg border">
+            @for (j of [1, 2]; track j) {
+              <li>
+                <app-stencil></app-stencil>
+              </li>
+            }
+          </ul>
+        }
+      } @else {
+        @for (facet of facets(); track facet.key) {
+          <!-- Skip the study Id facet -->
+          @if (facet.name !== 'sid') {
+            <div>
+              {{ facet.name }}
+              <ul class="mt-1 mb-5 rounded-lg border">
+                @for (option of facet.options; track option.value) {
+                  @let name = `${facet.key}#${option.value}`;
+                  <li>
+                    <mat-checkbox
+                      [name]="name"
+                      (change)="facetFilterChanged.emit($event)"
+                      [checked]="name | facetActivity: facetData()"
+                      >{{ option.value }} ({{ option.count }})</mat-checkbox
+                    >
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        }
+      }
+      <div class="mt-8 grid grid-cols-2 gap-5">
+        <button
+          mat-stroked-button
+          (click)="cleared.emit($event)"
+          data-umami-event="Metadata Browser Clear Clicked"
+        >
+          Clear
+        </button>
+        <button
+          mat-flat-button
+          (click)="submitted.emit($event)"
+          type="submit"
+          data-umami-event="Metadata Browser Submit Clicked"
+        >
+          Filter
+        </button>
+      </div>
+    </form>
+    <div class="mt-6 lg:hidden">
+      <button
+        mat-stroked-button
+        class="button-primary w-full"
+        (click)="displayFilters = !displayFilters"
+      >
+        Close filters
+      </button>
+    </div>
+  </mat-card>
+</aside>

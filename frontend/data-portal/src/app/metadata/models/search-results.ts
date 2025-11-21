@@ -10,7 +10,7 @@ export interface SearchResults {
   hits: Hit[];
 }
 
-interface Facet {
+export interface Facet {
   key: string;
   name: string;
   options: FacetOption[];

@@ -36,7 +36,7 @@ class MockMetadataSearchService {
   facets = signal({});
 }
 
-describe('BrowseComponent', () => {
+describe('MetadataBrowserComponent', () => {
   let component: MetadataBrowserComponent;
   let fixture: ComponentFixture<MetadataBrowserComponent>;
 
