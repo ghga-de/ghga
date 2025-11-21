@@ -12,7 +12,7 @@ import { MatNavList } from '@angular/material/list';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NavigationStart, Router, RouterLink } from '@angular/router';
-import { AccountButtonComponent } from '../account-button/account-button';
+import { AccountButtonComponent } from '../../../auth/features/account-button/account-button';
 import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-header-nav-buttons';
 
 /**

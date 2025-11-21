@@ -824,7 +824,37 @@ export const accessGrants: AccessGrant[] = [
     dataset_title: 'Test dataset for details',
     dac_alias: 'SOME-DAC',
     dac_email: 'dac-main@some.org',
-    iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
+    iva_id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
+  },
+  {
+    id: 'grant-ghga-8c4b9d5a1f0a',
+    user_id: 'doe@test.dev',
+    dataset_id: 'GHGAD12345678901234',
+    created: '2025-07-20T10:00:00Z',
+    valid_from: '2025-08-01T00:00:00Z',
+    valid_until: '2026-08-01T00:00:00Z',
+    user_name: 'John Doe',
+    user_title: 'Dr.',
+    user_email: 'doe@home.org',
+    dataset_title: 'Test dataset for details',
+    dac_alias: 'SOME-DAC',
+    dac_email: 'dac-main@some.org',
+    iva_id: 'fc3c0ad8-01a4-4eb1-b8f3-40b04bb4bcb2',
+  },
+  {
+    id: 'grant-ghga-8c4b9d5a1f0a',
+    user_id: 'doe@test.dev',
+    dataset_id: 'GHGAD12345678901234',
+    created: '2025-07-20T10:00:00Z',
+    valid_from: '2025-08-01T00:00:00Z',
+    valid_until: '2026-08-01T00:00:00Z',
+    user_name: 'John Doe',
+    user_title: 'Dr.',
+    user_email: 'doe@home.org',
+    dataset_title: 'Test dataset for details',
+    dac_alias: 'SOME-DAC',
+    dac_email: 'dac-main@some.org',
+    iva_id: '347368b5-718e-49ba-80ad-bc128e83b609',
   },
   {
     id: 'grant-ghga-8c4b9d5a1f0b',
@@ -864,6 +894,9 @@ export const getAccessRequests = (user_id?: string, dataset_id?: string) =>
       (!dataset_id || x.dataset_id === dataset_id) &&
       (!user_id || x.user_id === user_id),
   );
+
+export const getAccessGrants = (user_id?: string) =>
+  accessGrants.filter((x) => !user_id || x.user_id === user_id);
 
 /**
  * DINS API

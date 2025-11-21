@@ -9,7 +9,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AuthService } from '@app/auth/services/auth';
-import { AccountButtonComponent } from '../account-button/account-button';
+import { AccountButtonComponent } from '../../../auth/features/account-button/account-button';
 import { AdminMenuComponent } from '../admin-menu/admin-menu';
 import { SiteHeaderNavButtonsComponent } from './site-header-nav-buttons';
 

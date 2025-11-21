@@ -8,7 +8,7 @@ import { Component, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
-import { GrantedAccessRequestsListComponent } from '@app/access-requests/features/granted-access-requests-list/granted-access-requests-list';
+import { ActiveAccessGrantsListComponent } from '@app/access-requests/features/active-access-grants-list/active-access-grants-list';
 import { PendingAccessRequestsListComponent } from '@app/access-requests/features/pending-access-requests-list/pending-access-requests-list';
 import { AuthService } from '@app/auth/services/auth';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
@@ -24,7 +24,7 @@ import { UserIvaListComponent } from '@app/verification-addresses/features/user-
     MatIconModule,
     MatChipsModule,
     PendingAccessRequestsListComponent,
-    GrantedAccessRequestsListComponent,
+    ActiveAccessGrantsListComponent,
     UserIvaListComponent,
     ExternalLinkDirective,
   ],

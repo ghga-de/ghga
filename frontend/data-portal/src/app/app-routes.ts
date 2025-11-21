@@ -82,7 +82,7 @@ export const routes: Routes = [
     path: 'account',
     canActivate: [() => inject(AuthService).guardAuthenticated()],
     loadComponent: () =>
-      import('./portal/features/account/account').then((m) => m.AccountComponent),
+      import('./auth/features/account/account').then((m) => m.AccountComponent),
     title: 'User Account',
   },
   // routes that are only available to data stewards

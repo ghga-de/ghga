@@ -13,6 +13,7 @@ import {
   allIvasOfRoe,
   datasetInformation,
   datasets,
+  getAccessGrants,
   getAccessRequests,
   getDatasetDetails,
   getDatasetSummary,
@@ -170,6 +171,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // All access grants
   'GET /api/ars/access-grants': accessGrants,
+
+  // Specific dataset and user access requests
+  'GET /api/ars/access-grants?*': getAccessGrants('doe@test.dev'),
 
   // User Grants
   'GET /api/ars/access-grants/doe@test.dev': accessGrants,

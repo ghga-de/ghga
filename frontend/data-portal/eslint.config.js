@@ -113,7 +113,12 @@ export default [
                 [
                   'features',
                   {
-                    context: ['metadata', 'verification-addresses', 'access-requests'],
+                    context: [
+                      'metadata',
+                      'verification-addresses',
+                      'access-requests',
+                      'auth',
+                    ],
                   },
                 ],
               ],
@@ -144,6 +149,7 @@ export default [
                 ['service', { context: 'access-requests' }],
                 ['model', { context: 'access-requests' }],
                 ['pipe', { context: 'access-requests' }],
+                ['features', { context: 'access-requests' }],
               ],
             },
             // main may only import config and main app modules

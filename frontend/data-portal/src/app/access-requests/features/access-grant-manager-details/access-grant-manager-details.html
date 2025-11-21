@@ -63,7 +63,7 @@
             <p>
               <strong class="inline-block w-44">Name:</strong>
               <a [routerLink]="'/user-manager/' + ag.user_id"
-                >{{ ag.user_title }} {{ ag.user_name }}</a
+                >{{ ag.user_title ? ag.user_title + ' ' : '' }}{{ ag.user_name }}</a
               >
             </p>
             <p>

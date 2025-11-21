@@ -1,0 +1,57 @@
+@if (hasError()) {
+  <p class="text-base">There was an error retrieving your granted access requests.</p>
+} @else {
+  @if (isLoading()) {
+    <app-stencil></app-stencil>
+  } @else {
+    @let grants = activeGrants();
+    @if (grants.length === 0) {
+      <p class="text-base">You do not yet have access to any datasets.</p>
+    } @else {
+      <p class="text-base">You have the following granted access requests:</p>
+      <ul>
+        @for (grant of grantWithIvas(); track grant.id) {
+          @let iva = grant.iva;
+          <li class="mb-2 flex flex-wrap items-center gap-x-2">
+            <span class="w-full">
+              For the dataset
+              <a
+                class="text-quaternary hover:text-secondary focus:text-secondary"
+                routerLink="/dataset/{{ grant.dataset_id }}"
+                data-umami-event="Granted Access Requests List Dataset Clicked"
+                >{{ grant.dataset_id }}</a
+              >
+              from {{ grant.valid_from | date: friendlyDateFormat }} to
+              {{ grant.valid_until | date: friendlyDateFormat }} &ndash;
+              <span class="font-bold">{{ grant.daysRemaining }}</span> days left.
+            </span>
+            @if (iva === undefined) {
+              <span class="text-error inline-flex items-center">
+                <mat-icon fontIcon="error" class="me-1.5 shrink-0"></mat-icon>Could not
+                find verification address associated with this grant in your account.
+                Please contact the helpdesk if you require assistance.
+              </span>
+            } @else if (iva.state !== 'Verified') {
+              <span class="text-warning inline-flex items-center">
+                <mat-icon fontIcon="warning" class="me-1.5 shrink-0"></mat-icon>The
+                verification address associated with this access grant is not yet
+                verified. Please verify it to download the data:<br />
+                {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}
+              </span>
+            }
+          </li>
+        }
+      </ul>
+      @if (anyActiveGrantWithValidIva()) {
+        <button
+          routerLink="/work-package"
+          mat-raised-button
+          class="button-quaternary mt-8"
+          data-umami-event="Granted Access Requests List Download Clicked"
+        >
+          <mat-icon fontIcon="download"></mat-icon>Set up a download token
+        </button>
+      }
+    }
+  }
+}

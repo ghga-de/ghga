@@ -6,12 +6,15 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
+import { ConfigService } from '@app/shared/services/config';
 import { UserIvaListComponent } from '@app/verification-addresses/features/user-iva-list/user-iva-list';
+import { provideHttpCache } from '@ngneat/cashew';
 import { AccountComponent } from './account';
 
 /**
@@ -22,7 +25,12 @@ class MockAuthService {
   email = () => 'doe@home.org';
   roles = () => ['data_steward'];
   roleNames = () => ['Data Steward'];
+  user = () => null;
 }
+
+const MockConfigService = {
+  auth_url: '/test/auth',
+};
 
 describe('AccountComponent', () => {
   let component: AccountComponent;
@@ -34,10 +42,13 @@ describe('AccountComponent', () => {
       providers: [
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: ConfigService, useValue: MockConfigService },
         {
           provide: ActivatedRoute,
           useValue: fakeActivatedRoute,
         },
+        provideHttpClient(),
+        provideHttpCache(),
       ],
     })
       .overrideComponent(AccountComponent, {

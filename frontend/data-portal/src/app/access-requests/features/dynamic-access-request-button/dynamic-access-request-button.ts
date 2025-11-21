@@ -10,10 +10,10 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 import {
+  AccessGrant,
   AccessRequest,
   AccessRequestDetailData,
   AccessRequestStatus,
-  GrantedAccessRequest,
 } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AuthService } from '@app/auth/services/auth';
@@ -40,17 +40,17 @@ export class DynamicAccessRequestButtonComponent {
       .pendingUserAccessRequests()
       .some((ar: AccessRequest) => ar.dataset_id == this.datasetID()),
   );
-  #activeGrantedAccessRequests = computed(() =>
+  #activeAccessGrants = computed(() =>
     this.#accessRequestService
-      .grantedUserAccessRequests()
-      .some((grantedAccessRequest: GrantedAccessRequest) => {
-        const hasSameId = grantedAccessRequest.request.dataset_id == this.datasetID();
-        const isValid = grantedAccessRequest.daysRemaining > 0;
+      .activeUserAccessGrants()
+      .some((activeAccessGrant: AccessGrant) => {
+        const hasSameId = activeAccessGrant.dataset_id == this.datasetID();
+        const isValid = activeAccessGrant.daysRemaining ?? -1 > 0;
         return hasSameId && isValid;
       }),
   );
   status = computed<AccessRequestStatus>(() => {
-    if (this.#activeGrantedAccessRequests()) return AccessRequestStatus.allowed;
+    if (this.#activeAccessGrants()) return AccessRequestStatus.allowed;
     if (this.#pendingAccessRequests()) return AccessRequestStatus.pending;
     return AccessRequestStatus.denied;
   });

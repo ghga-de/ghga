@@ -50,7 +50,7 @@ test('show account page when logged in', async ({ loggedInPage }) => {
 
   await expect(main).toContainText('Dataset Access');
   await expect(main).toContainText(
-    /For the dataset GHGAD12345678901235 from .* to .* – .* days left\./,
+    /For the dataset GHGAD12345678901235 from .* to .*\./,
   );
 
   await expect(main).toContainText('Pending Access Requests');

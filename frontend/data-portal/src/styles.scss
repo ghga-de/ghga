@@ -340,6 +340,14 @@ $colour-suffixes: (
         state-layer-color: var(--mat-sys-#{$suffix}),
       )
     );
+    @include mat.fab-overrides(
+      (
+        container-color: var(--mat-sys-#{$suffix}),
+        foreground-color: var(--mat-sys-on-#{$suffix}),
+        small-container-color: var(--mat-sys-#{$suffix}),
+        small-foreground-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
   }
   .button-on-#{$suffix} {
     @include mat.button-overrides(
@@ -356,6 +364,14 @@ $colour-suffixes: (
       (
         icon-color: var(--mat-sys-on-#{$suffix}),
         state-layer-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
+    @include mat.fab-overrides(
+      (
+        container-color: var(--mat-sys-on-#{$suffix}),
+        foreground-color: var(--mat-sys-#{$suffix}),
+        small-container-color: var(--mat-sys-on-#{$suffix}),
+        small-foreground-color: var(--mat-sys-#{$suffix}),
       )
     );
   }

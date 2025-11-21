@@ -50,12 +50,6 @@ export interface AccessRequest {
   note_to_requester: null | string;
 }
 
-export interface GrantedAccessRequest {
-  request: AccessRequest;
-  isExpired: boolean;
-  daysRemaining: number;
-}
-
 export interface AccessRequestDetailData {
   datasetID: string;
   email: string;
@@ -93,6 +87,7 @@ export interface AccessGrant {
   dac_email: string;
   iva_id: string | null;
   status?: AccessGrantStatus;
+  daysRemaining?: number;
 }
 
 export interface AccessGrantFilter {

@@ -10,7 +10,7 @@ import { ActivatedRoute } from '@angular/router';
 import { screen } from '@testing-library/angular';
 
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { AccountButtonComponent } from '../account-button/account-button';
+import { AccountButtonComponent } from '../../../auth/features/account-button/account-button';
 import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-header-nav-buttons';
 import { SiteHeaderComponent } from './site-header';
 

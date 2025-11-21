@@ -18,7 +18,6 @@ import {
   AccessRequestDetailData,
   AccessRequestFilter,
   AccessRequestStatus,
-  GrantedAccessRequest,
 } from '../models/access-requests';
 
 /**
@@ -33,17 +32,16 @@ export class AccessRequestService {
   #config = inject(ConfigService);
 
   #arsBaseUrl = this.#config.arsUrl;
-  #authBaseUrl = this.#config.authUrl;
-  #arsEndpointUrl = `${this.#arsBaseUrl}/access-requests`;
-  #arsManagementUrl = `${this.#arsBaseUrl}/access-grants`;
-  #grantRevocationUrl = this.#arsManagementUrl;
+  #arsRequestsUrl = `${this.#arsBaseUrl}/access-requests`;
+  #arsGrantUrl = `${this.#arsBaseUrl}/access-grants`;
 
   #userAccessRequestsUrl = (userId: string) =>
-    `${this.#arsEndpointUrl}?user_id=${userId}`;
+    `${this.#arsRequestsUrl}?user_id=${userId}`;
+  #userAccessGrantsUrl = (userId: string) => `${this.#arsGrantUrl}?user_id=${userId}`;
 
   performAccessRequest = (data: AccessRequestDetailData) => {
     this.#http
-      .post<void>(this.#arsEndpointUrl, {
+      .post<void>(this.#arsRequestsUrl, {
         user_id: data.userId,
         dataset_id: data.datasetID,
         email: data.email,
@@ -82,24 +80,6 @@ export class AccessRequestService {
         ),
       defaultValue: [],
     },
-  );
-
-  /**
-   * The list of granted access requests of the current user
-   */
-  grantedUserAccessRequests = computed(() =>
-    this.userAccessRequests
-      .value()
-      .filter((ar: AccessRequest) => ar.status == 'allowed')
-      .map((request: AccessRequest) => {
-        const expiryDate = new Date(request.access_ends);
-        let grantedAccessRequest: GrantedAccessRequest = {
-          request,
-          isExpired: expiryDate < new Date(),
-          daysRemaining: this.daysUntil(expiryDate),
-        };
-        return grantedAccessRequest;
-      }),
   );
 
   /**
@@ -167,7 +147,7 @@ export class AccessRequestService {
    * but in principle we can also do some filtering on the sever.
    */
   allAccessRequests = httpResource<AccessRequest[]>(
-    () => (this.#loadAllAccessRequests() ? this.#arsEndpointUrl : undefined),
+    () => (this.#loadAllAccessRequests() ? this.#arsRequestsUrl : undefined),
     {
       defaultValue: [],
     },
@@ -259,7 +239,7 @@ export class AccessRequestService {
     () => {
       const id = this.#loadSingle();
       if (!id) return undefined;
-      return `${this.#arsEndpointUrl}/${id}`;
+      return `${this.#arsRequestsUrl}/${id}`;
     },
     {
       defaultValue: undefined,
@@ -318,7 +298,7 @@ export class AccessRequestService {
    */
   updateRequest(id: string, changes: Partial<AccessRequest>): Observable<null> {
     return this.#http
-      .patch<null>(`${this.#arsEndpointUrl}/${id}`, changes)
+      .patch<null>(`${this.#arsRequestsUrl}/${id}`, changes)
       .pipe(tap(() => this.#updateAccessRequestLocally(id, changes)));
   }
 
@@ -356,7 +336,7 @@ export class AccessRequestService {
   }
 
   allAccessGrantsResource = httpResource<AccessGrant[]>(
-    () => (this.#loadAllAccessGrants() ? this.#arsManagementUrl : undefined),
+    () => (this.#loadAllAccessGrants() ? this.#arsGrantUrl : undefined),
     {
       defaultValue: [],
     },
@@ -424,6 +404,38 @@ export class AccessRequestService {
   });
 
   /**
+   * Resource for loading the currently logged-in user's access grants
+   */
+  userAccessGrants = httpResource<AccessGrant[]>(
+    () => {
+      const userId = this.#userId();
+      return userId ? this.#userAccessGrantsUrl(userId) : undefined;
+    },
+    {
+      parse: (raw) =>
+        (raw as AccessGrant[]).map((g) => {
+          g.status = this.computeStatusForAccessGrant(g);
+          return g;
+        }),
+      defaultValue: [],
+    },
+  );
+
+  /**
+   * The list of active access grants of the current user with days remaining
+   */
+  activeUserAccessGrants = computed(() =>
+    this.userAccessGrants
+      .value()
+      .filter((x) => x.status === 'active')
+      .map((grant: AccessGrant) => {
+        const expiryDate = new Date(grant.valid_until);
+        grant.daysRemaining = this.daysUntil(expiryDate);
+        return grant;
+      }),
+  );
+
+  /**
    * Remove the grant locally.
    * @param id - the ID of the grant to remove
    */
@@ -444,7 +456,7 @@ export class AccessRequestService {
    */
   revokeAccessGrant(id: string): Observable<null> {
     return this.#http
-      .delete<null>(`${this.#grantRevocationUrl}/${id}`)
+      .delete<null>(`${this.#arsGrantUrl}/${id}`)
       .pipe(tap(() => this.#removeGrantLocally(id)));
   }
 }
