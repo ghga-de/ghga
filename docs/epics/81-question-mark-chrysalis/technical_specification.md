@@ -109,7 +109,7 @@ class BaseConfig(BaseModel):
 
 class Config(BaseModel):
    version: int = 0  # always 0
-   created: datetime
+   created: datetime # is the date when the config is validated and activated.
    config: BaseConfig
 ```
 
