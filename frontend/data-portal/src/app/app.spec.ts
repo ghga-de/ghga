@@ -7,6 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AppComponent } from './app';
 
+import { Component } from '@angular/core';
 import { SiteFooterComponent } from './portal/features/site-footer/site-footer';
 import { SiteHeaderComponent } from './portal/features/site-header/site-header';
 import { ConfigService } from './shared/services/config';
@@ -18,6 +19,24 @@ class MockConfigService {
   ribbonText = 'Test ribbon';
 }
 
+/**
+ * Mock the site header component
+ */
+@Component({
+  selector: 'app-site-header',
+  template: '<header>Mock Header</header>',
+})
+class MockSiteHeaderComponent {}
+
+/**
+ * Mock the site footer component
+ */
+@Component({
+  selector: 'app-site-footer',
+  template: '<footer>Mock Footer</footer>',
+})
+class MockSiteFooterComponent {}
+
 describe('AppComponent', () => {
   let component: AppComponent;
   let fixture: ComponentFixture<AppComponent>;
@@ -26,9 +45,11 @@ describe('AppComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [{ provide: ConfigService, useClass: MockConfigService }],
+      teardown: { destroyAfterEach: false },
     })
       .overrideComponent(AppComponent, {
         remove: { imports: [SiteHeaderComponent, SiteFooterComponent] },
+        add: { imports: [MockSiteHeaderComponent, MockSiteFooterComponent] },
       })
       .compileComponents();
 

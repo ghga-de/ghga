@@ -13,7 +13,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
-import { UserIvaListComponent } from '@app/verification-addresses/features/user-iva-list/user-iva-list';
+import { IvaService } from '@app/verification-addresses/services/iva';
 import { provideHttpCache } from '@ngneat/cashew';
 import { AccountComponent } from './account';
 
@@ -26,6 +26,14 @@ class MockAuthService {
   roles = () => ['data_steward'];
   roleNames = () => ['Data Steward'];
   user = () => null;
+}
+
+/**
+ * Mock the IVA service as needed by the account component
+ */
+class MockIvaService {
+  loadUserIvas = () => undefined;
+  userIvas = { value: () => [], isLoading: () => false, error: () => undefined };
 }
 
 const MockConfigService = {
@@ -42,23 +50,17 @@ describe('AccountComponent', () => {
       providers: [
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: IvaService, useClass: MockIvaService },
         { provide: ConfigService, useValue: MockConfigService },
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         provideHttpClient(),
         provideHttpCache(),
       ],
-    })
-      .overrideComponent(AccountComponent, {
-        remove: { imports: [UserIvaListComponent] },
-      })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(AccountComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {

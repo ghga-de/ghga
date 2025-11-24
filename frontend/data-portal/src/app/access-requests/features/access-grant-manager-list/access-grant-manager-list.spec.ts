@@ -6,8 +6,10 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { ActivatedRoute } from '@angular/router';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessGrantManagerListComponent } from './access-grant-manager-list';
 
 describe('AccessGrantManagerListComponent', () => {
@@ -19,6 +21,7 @@ describe('AccessGrantManagerListComponent', () => {
       imports: [],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 

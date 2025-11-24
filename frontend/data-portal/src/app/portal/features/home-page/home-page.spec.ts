@@ -8,8 +8,22 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { GlobalSummaryComponent } from '@app/metadata/features/global-summary/global-summary';
 import { HomePageComponent } from './home-page';
+
+import { metadataGlobalSummary } from '@app/../mocks/data';
+import { GlobalSummaryComponent } from '@app/metadata/features/global-summary/global-summary';
+import { MetadataStatsService } from '@app/metadata/services/metadata-stats';
+
+/**
+ * Mock the metadata service as needed for the home page
+ */
+class MockMetadataStatsService {
+  globalSummary = {
+    value: () => metadataGlobalSummary.resource_stats,
+    isLoading: () => false,
+    error: () => undefined,
+  };
+}
 
 describe('HomePageComponent', () => {
   let component: HomePageComponent;
@@ -18,15 +32,14 @@ describe('HomePageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HomePageComponent],
-      providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
-      ],
+      providers: [{ provide: ActivatedRoute, useValue: fakeActivatedRoute }],
     })
-      .overrideComponent(HomePageComponent, {
-        remove: { imports: [GlobalSummaryComponent] },
+      .overrideComponent(GlobalSummaryComponent, {
+        set: {
+          providers: [
+            { provide: MetadataStatsService, useClass: MockMetadataStatsService },
+          ],
+        },
       })
       .compileComponents();
 

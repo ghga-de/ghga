@@ -34,7 +34,7 @@ class MockIvaService {
  */
 class MockUserService {
   users = {
-    value: jest.fn(() => [
+    value: vitest.fn(() => [
       {
         id: '123',
         name: 'John Doe',
@@ -61,13 +61,13 @@ class MockUserService {
         sortName: 'Smith, Jane',
       },
     ]),
-    isLoading: jest.fn(() => false),
-    error: jest.fn(() => null),
+    isLoading: vitest.fn(() => false),
+    error: vitest.fn(() => null),
   };
   loadUsers = () => undefined;
 
   user = {
-    value: jest.fn(() => {
+    value: vitest.fn(() => {
       return {
         id: '123',
         name: 'John Doe',
@@ -82,8 +82,8 @@ class MockUserService {
         sortName: 'Doe, John, Dr.',
       };
     }),
-    isLoading: jest.fn(() => false),
-    error: jest.fn(() => null),
+    isLoading: vitest.fn(() => false),
+    error: vitest.fn(() => null),
   };
   loadUser = () => undefined;
   deleteUser = () => undefined;
@@ -147,7 +147,7 @@ describe('UserManagerDetailComponent', () => {
   });
 
   it('should navigate back when goBack is called', async () => {
-    jest.spyOn(navigation, 'back');
+    vitest.spyOn(navigation, 'back');
     component.goBack();
     await new Promise((resolve) => setTimeout(resolve));
     expect(navigation.back).toHaveBeenCalled();
@@ -166,14 +166,14 @@ describe('UserManagerDetailComponent', () => {
     // Create a new mock that returns empty array
     const emptyMockUserService = {
       user: {
-        value: jest.fn(() => undefined),
-        isLoading: jest.fn(() => false),
-        error: jest.fn(() => new HttpErrorResponse({ status: 404 })),
+        value: vitest.fn(() => undefined),
+        isLoading: vitest.fn(() => false),
+        error: vitest.fn(() => new HttpErrorResponse({ status: 404 })),
       },
       users: {
-        value: jest.fn(() => []),
-        isLoading: jest.fn(() => false),
-        error: jest.fn(() => null),
+        value: vitest.fn(() => []),
+        isLoading: vitest.fn(() => false),
+        error: vitest.fn(() => null),
       },
       loadUser: () => undefined,
       createUserResource: () => undefined,
@@ -201,12 +201,12 @@ describe('UserManagerDetailComponent', () => {
   });
 
   it('should reload when id input changes', async () => {
-    const loadUserSpy = jest.spyOn(mockUserService, 'loadUser');
+    const loadUserSpy = vitest.spyOn(mockUserService, 'loadUser');
 
     fixture.detectChanges();
     expect(component.user()?.id).toBe('123');
 
-    mockUserService.user.value = jest.fn(() => ({
+    mockUserService.user.value = vitest.fn(() => ({
       id: '456',
       name: 'Jane Smith',
       displayName: 'Jane Smith',

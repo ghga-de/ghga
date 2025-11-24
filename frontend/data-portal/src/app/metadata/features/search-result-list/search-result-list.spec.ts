@@ -6,13 +6,19 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { searchResults } from '@app/../mocks/data';
+import { ActivatedRoute } from '@angular/router';
+import { datasetSummary, searchResults } from '@app/../mocks/data';
+import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { AuthService } from '@app/auth/services/auth';
+import { MetadataService } from '@app/metadata/services/metadata';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
+import { fakeActivatedRoute } from 'src/mocks/route';
 import { SearchResultComponent } from '../search-result/search-result';
 import { SearchResultListComponent } from './search-result-list';
 
 /**
- * Mock the metadata service as needed for the results list
+ * Mock the metadata service as needed for the search result list
  */
 class MockMetadataSearchService {
   searchResults = {
@@ -22,6 +28,27 @@ class MockMetadataSearchService {
   };
   searchResultsLimit = () => 10;
   searchResultsSkip = () => 0;
+}
+
+/**
+ * Mock the metadata service as needed for the search result list
+ */
+class MockMetadataService {
+  datasetSummary = {
+    value: () => datasetSummary,
+    isLoading: () => false,
+    error: () => undefined,
+  };
+}
+
+/**
+ * Mock the auth service as needed for the search result list
+ */
+class MockAuthService {
+  fullName = () => 'Dr. John Doe';
+  email = () => 'doe@home.org';
+  roles = () => ['data_steward'];
+  roleNames = () => ['Data Steward'];
 }
 
 describe('SearchResultListComponent', () => {
@@ -35,8 +62,15 @@ describe('SearchResultListComponent', () => {
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
       ],
     })
-      .overrideComponent(SearchResultListComponent, {
-        remove: { imports: [SearchResultComponent] },
+      .overrideComponent(SearchResultComponent, {
+        set: {
+          providers: [
+            { provide: ActivatedRoute, useValue: fakeActivatedRoute },
+            { provide: AuthService, useClass: MockAuthService },
+            { provide: AccessRequestService, useClass: MockAccessRequestService },
+            { provide: MetadataService, useClass: MockMetadataService },
+          ],
+        },
       })
       .compileComponents();
 

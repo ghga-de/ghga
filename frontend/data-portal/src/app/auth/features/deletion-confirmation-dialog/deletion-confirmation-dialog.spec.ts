@@ -19,7 +19,7 @@ const MockConfigService = {
   auth_url: '/test/auth',
 };
 const MockUserService = {
-  deleteUser: jest.fn(),
+  deleteUser: vitest.fn(),
 };
 
 describe('DeletionConfirmationDialogComponent', () => {
@@ -28,30 +28,27 @@ describe('DeletionConfirmationDialogComponent', () => {
   let service: UserService;
 
   const dialogRef = {
-    close: jest.fn(),
+    close: vitest.fn(),
   };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DeletionConfirmationDialogComponent],
       providers: [
-        {
-          provide: MAT_DIALOG_DATA,
-          useValue: {
-            user: users[0],
-          },
-        },
+        { provide: MAT_DIALOG_DATA, useValue: { user: users[0] } },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: UserService, useValue: MockUserService },
         { provide: ConfigService, useValue: MockConfigService },
         provideHttpClient(),
       ],
+      teardown: { destroyAfterEach: false },
     }).compileComponents();
 
     fixture = TestBed.createComponent(DeletionConfirmationDialogComponent);
     component = fixture.componentInstance;
     service = fixture.debugElement.injector.get(UserService);
-    fixture.detectChanges();
+    vitest.clearAllMocks();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
@@ -59,7 +56,6 @@ describe('DeletionConfirmationDialogComponent', () => {
   });
 
   it('should return false when cancelled', () => {
-    jest.spyOn(dialogRef, 'close');
     expect(dialogRef.close).not.toHaveBeenCalled();
     const button = screen.getByRole('button', { name: 'Cancel' });
     expect(button).toBeVisible();
@@ -71,7 +67,7 @@ describe('DeletionConfirmationDialogComponent', () => {
   it('should call the delete user method when confirmed after confirming the user email', async () => {
     const input = screen.getByRole('textbox');
     await userEvent.type(input, 'doe@home.org');
-    const deleteSpy = jest.spyOn(service, 'deleteUser');
+    const deleteSpy = vitest.spyOn(service, 'deleteUser');
     expect(deleteSpy).not.toHaveBeenCalled();
     const button = screen.getByRole('button', { name: 'Confirm deletion' });
     expect(button).toBeEnabled();

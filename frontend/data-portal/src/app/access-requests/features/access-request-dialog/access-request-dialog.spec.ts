@@ -12,7 +12,6 @@ import {
   MatDialogModule,
   MatDialogRef,
 } from '@angular/material/dialog';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { ConfigService } from '@app/shared/services/config';
 import { AccessRequestDialogComponent } from './access-request-dialog';
 
@@ -53,7 +52,6 @@ describe('AccessRequestDialogComponent', () => {
       imports: [AccessRequestDialogComponent, MatDialogModule],
       providers: [
         provideNativeDateAdapter(),
-        provideAnimationsAsync(),
         { provide: MatDialogRef, useValue: {} },
         { provide: MAT_DIALOG_DATA, useValue: {} },
         { provide: ConfigService, useValue: mockConfig },
@@ -63,7 +61,7 @@ describe('AccessRequestDialogComponent', () => {
     fixture = TestBed.createComponent(AccessRequestDialogComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('datasetID', 'GHGAD12345678901234');
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {

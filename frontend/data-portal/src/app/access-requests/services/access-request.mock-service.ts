@@ -7,7 +7,11 @@
 import { signal } from '@angular/core';
 // eslint-disable-next-line boundaries/element-types
 import { accessGrants, accessRequests } from '@app/../mocks/data';
-import { AccessGrantFilter } from '../models/access-requests';
+import {
+  AccessGrantFilter,
+  AccessRequestFilter,
+  AccessRequestStatus,
+} from '../models/access-requests';
 
 /**
  * Mock for the Access Request Service
@@ -40,10 +44,22 @@ export class MockAccessRequestService {
     value: signal(accessGrants.filter((ar) => ar.user_id === 'doe@test.dev')),
   };
   activeUserAccessGrants = signal(accessGrants.filter((ag) => ag.status === 'active'));
-  loadUserAccessRequests = () => undefined;
   loadUserAccessGrants = () => undefined;
   loadAllAccessRequests = () => undefined;
   loadAllAccessGrants = () => undefined;
+  allAccessRequestsFilter = () => ({
+    ticketId: '',
+    dataset: '',
+    requester: '',
+    dac: '',
+    fromDate: undefined,
+    toDate: undefined,
+    status: AccessRequestStatus.pending,
+    requestText: '',
+    noteToRequester: '',
+    internalNote: '',
+  });
+  allAccessRequestsFiltered = () => accessRequests;
   allAccessGrantsFilter = () => ({
     status: undefined,
     user: undefined,
@@ -54,6 +70,7 @@ export class MockAccessRequestService {
     error: () => false,
     value: () => accessGrants,
   };
+  setAllAccessRequestsFilter = (filter: AccessRequestFilter) => undefined;
   allAccessGrants = () => accessGrants;
   setAllAccessGrantsFilter = (filter: AccessGrantFilter) => undefined;
   allAccessGrantsFiltered = () => accessGrants;

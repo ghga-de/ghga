@@ -10,32 +10,33 @@ import { ActivatedRoute } from '@angular/router';
 import { screen } from '@testing-library/angular';
 
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { AccountButtonComponent } from '../../../auth/features/account-button/account-button';
-import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-header-nav-buttons';
+import { AuthService } from '@app/auth/services/auth';
 import { SiteHeaderComponent } from './site-header';
+
+/**
+ * Mock the auth service as needed for the site header
+ */
+class MockAuthService {
+  isAuthenticated = () => true;
+  name = () => 'John Doe';
+  fullName = () => 'Dr. John Doe';
+  roles = () => ['data_steward'];
+  roleNames = () => ['Data Steward'];
+}
 
 describe('SiteHeaderComponent', () => {
   let component: SiteHeaderComponent;
   let fixture: ComponentFixture<SiteHeaderComponent>;
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
-      ],
-    })
-      .overrideComponent(SiteHeaderComponent, {
-        remove: {
-          imports: [AccountButtonComponent, SiteHeaderNavButtonsComponent],
-        },
-      })
-      .compileComponents();
-  });
-
   beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [SiteHeaderComponent],
+      providers: [
+        { provide: AuthService, useClass: MockAuthService },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
+      ],
+    }).compileComponents();
+
     fixture = TestBed.createComponent(SiteHeaderComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();

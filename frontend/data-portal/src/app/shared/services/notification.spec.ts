@@ -17,7 +17,7 @@ describe('NotificationService', () => {
   let matSnackBar: MatSnackBar;
 
   beforeEach(() => {
-    const mockMatSnackBar = { openFromComponent: jest.fn() };
+    const mockMatSnackBar = { openFromComponent: vitest.fn() };
     TestBed.configureTestingModule({
       providers: [
         NotificationService,

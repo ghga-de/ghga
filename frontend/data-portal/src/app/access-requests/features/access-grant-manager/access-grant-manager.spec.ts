@@ -6,12 +6,12 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { ActivatedRoute } from '@angular/router';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AccessGrantManagerComponent } from './access-grant-manager';
 
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
-import { AccessGrantManagerFilterComponent } from '../access-grant-manager-filter/access-grant-manager-filter';
-import { AccessGrantManagerListComponent } from '../access-grant-manager-list/access-grant-manager-list';
 
 describe('AccessGrantManagerComponent', () => {
   let component: AccessGrantManagerComponent;
@@ -23,14 +23,9 @@ describe('AccessGrantManagerComponent', () => {
       imports: [AccessGrantManagerComponent],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
-    })
-      .overrideComponent(AccessGrantManagerComponent, {
-        remove: {
-          imports: [AccessGrantManagerFilterComponent, AccessGrantManagerListComponent],
-        },
-      })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(AccessGrantManagerComponent);
     accessRequestService = TestBed.inject(AccessRequestService);

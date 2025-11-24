@@ -4,18 +4,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
-    "types": [
-      "jest",
-      "@testing-library/jest-dom",
-      "@testing-library/angular",
-    ]
+    "types": ["@testing-library/jest-dom", "@testing-library/angular", "vitest/globals"]
   },
-  "files": [
-    "jest.config.ts",
-    "setup-test.ts"
-  ],
-  "include": [
-    "src/**/*.spec.ts",
-    "src/**/*.d.ts"
-  ]
+  "files": ["setup-test.ts"],
+  "include": ["src/**/*.ts"]
 }

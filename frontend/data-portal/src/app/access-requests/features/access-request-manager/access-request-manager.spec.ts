@@ -9,15 +9,19 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AccessRequestManagerComponent } from './access-request-manager';
 
+import { provideNativeDateAdapter } from '@angular/material/core';
+import { ActivatedRoute } from '@angular/router';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
-import { AccessRequestManagerFilterComponent } from '../access-request-manager-filter/access-request-manager-filter';
-import { AccessRequestManagerListComponent } from '../access-request-manager-list/access-request-manager-list';
+import { fakeActivatedRoute } from 'src/mocks/route';
 
 /**
- * Mock the access request service as needed by the access request manager
+ * Mock the config service as needed by the access request manager component
  */
-const mockAccessRequestService = {
-  loadAllAccessRequests: jest.fn(),
+
+const MockConfigService = {
+  helpdesk_url: 'https://helpdesk.test',
 };
 
 describe('AccessRequestManagerComponent', () => {
@@ -29,21 +33,16 @@ describe('AccessRequestManagerComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AccessRequestManagerComponent],
       providers: [
-        { provide: AccessRequestService, useValue: mockAccessRequestService },
+        { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: ConfigService, useValue: MockConfigService },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
+        provideNativeDateAdapter(),
       ],
-    })
-      .overrideComponent(AccessRequestManagerComponent, {
-        remove: {
-          imports: [
-            AccessRequestManagerFilterComponent,
-            AccessRequestManagerListComponent,
-          ],
-        },
-      })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(AccessRequestManagerComponent);
     accessRequestService = TestBed.inject(AccessRequestService);
+    accessRequestService.loadAllAccessRequests = vitest.fn();
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

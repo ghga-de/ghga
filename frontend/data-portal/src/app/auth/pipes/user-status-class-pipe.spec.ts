@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { UserStatus } from '../models/user';
 import { UserStatusClassPipe } from './user-status-class-pipe';
 
 describe('UserStatusClassPipe', () => {
@@ -18,10 +19,10 @@ describe('UserStatusClassPipe', () => {
   });
 
   it('should return text-success for active status', () => {
-    expect(pipe.transform('active')).toBe('text-success');
+    expect(pipe.transform('active' as UserStatus)).toBe('text-success');
   });
 
   it('should return text-error for inactive status', () => {
-    expect(pipe.transform('inactive')).toBe('text-error');
+    expect(pipe.transform('inactive' as UserStatus)).toBe('text-error');
   });
 });

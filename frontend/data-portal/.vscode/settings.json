@@ -13,6 +13,7 @@
     "Pydantic",
     "Pyodide",
     "schemapack",
+    "teardown",
     "TOTP"
   ],
   "cSpell.language": "en-GB",
@@ -36,13 +37,10 @@
   "eslint.options": {
     "overrideConfigFile": "/workspace/eslint.config.js"
   },
-  "jest.rootPath": "./src/app",
-  "jest.useJest30": true,
   "remote.localPortHost": "allInterfaces",
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
   "typescript.tsdk": "node_modules/typescript/lib",
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff"
-  }
+  "vitest.nodeExecutable": "",
+  "vitest.cliArguments": ""
 }

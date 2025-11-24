@@ -8,6 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { allIvas } from '@app/../mocks/data';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { IvaService } from '@app/verification-addresses/services/iva';
 import { IvaManagerListComponent } from './iva-manager-list';
 
@@ -29,7 +30,7 @@ describe('IvaManagerListComponent', () => {
       imports: [IvaManagerListComponent],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 

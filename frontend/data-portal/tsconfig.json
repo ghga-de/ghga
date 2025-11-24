@@ -19,10 +19,8 @@
     "module": "ES2022",
     "baseUrl": "./",
     "paths": {
-      "@app/*": [
-        "src/app/*"
-      ]
-    },
+      "@app/*": ["src/app/*"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
@@ -30,5 +28,14 @@
     "strictInputAccessModifiers": true,
     "strictStandalone": true,
     "strictTemplates": true
-  }
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
 }

@@ -8,6 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { accessGrants, allIvasOfDoe } from '@app/../mocks/data';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { IvaService } from '@app/verification-addresses/services/iva';
@@ -35,7 +36,7 @@ describe('AccessGrantManagerDetailsComponent', () => {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: IvaService, useClass: MockIvaService },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 

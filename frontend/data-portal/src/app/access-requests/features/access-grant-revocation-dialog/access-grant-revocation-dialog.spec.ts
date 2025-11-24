@@ -25,7 +25,7 @@ describe('AccessGrantRevocationDialogComponent', () => {
   let service: AccessRequestService;
 
   const dialogRef = {
-    close: jest.fn(),
+    close: vitest.fn(),
   };
 
   beforeEach(async () => {
@@ -49,11 +49,11 @@ describe('AccessGrantRevocationDialogComponent', () => {
     fixture = TestBed.createComponent(AccessGrantRevocationDialogComponent);
     component = fixture.componentInstance;
     service = fixture.debugElement.injector.get(AccessRequestService);
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vitest.clearAllMocks();
   });
 
   it('should create', () => {
@@ -61,7 +61,7 @@ describe('AccessGrantRevocationDialogComponent', () => {
   });
 
   it('should return false when cancelled', () => {
-    jest.spyOn(dialogRef, 'close');
+    vitest.spyOn(dialogRef, 'close');
     expect(dialogRef.close).not.toHaveBeenCalled();
     const button = screen.getByRole('button', { name: 'Cancel' });
     expect(button).toBeVisible();
@@ -75,7 +75,7 @@ describe('AccessGrantRevocationDialogComponent', () => {
     await userEvent.type(nameInput, 'doe@home.org');
     const datasetInput = screen.getByPlaceholderText('Confirm dataset accession');
     await userEvent.type(datasetInput, 'GHGAD12345678901234');
-    const revokeSpy = jest.spyOn(service, 'revokeAccessGrant');
+    const revokeSpy = vitest.spyOn(service, 'revokeAccessGrant');
     expect(revokeSpy).not.toHaveBeenCalled();
     const button = screen.getByRole('button', { name: 'Confirm revocation' });
     expect(button).toBeEnabled();

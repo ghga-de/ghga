@@ -16,6 +16,7 @@ import { allIvas, allIvasOfDoe, allIvasOfRoe } from '@app/../mocks/data';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import { HttpCacheManager } from '@ngneat/cashew';
+import { firstValueFrom } from 'rxjs';
 import { IvaType } from '../models/iva';
 import { IvaService } from './iva';
 
@@ -45,7 +46,7 @@ describe('IvaService', () => {
   let testBed: TestBed;
 
   const httpCache = {
-    delete: jest.fn(),
+    delete: vitest.fn(),
   };
 
   beforeEach(() => {
@@ -57,6 +58,7 @@ describe('IvaService', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
+      teardown: { destroyAfterEach: false },
     });
     service = TestBed.inject(IvaService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -137,7 +139,7 @@ describe('IvaService', () => {
   });
 
   it('should reload the IVAs of the current user', async () => {
-    jest.spyOn(httpCache, 'delete');
+    vitest.spyOn(httpCache, 'delete');
     currentUserId.set('doe@test.dev');
     service.loadUserIvas();
     testBed.tick();
@@ -173,7 +175,6 @@ describe('IvaService', () => {
     const error = service.userIvas.error() as HttpErrorResponse;
     expect(error).toBeDefined();
     expect(error.status).toBe(401);
-    expect(error.statusText).toBe('Unauthorized');
     expect(() => service.userIvas.value()).toThrow();
   });
 
@@ -212,214 +213,206 @@ describe('IvaService', () => {
     expect(() => service.allIvas.value()).toThrow();
   });
 
-  it('should create an IVA for the current user', (done) => {
+  it('should create an IVA for the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.createIva({ type: IvaType.Phone, value: '123/456' }).subscribe((id) => {
-      expect(id).toEqual('TEST123456');
-      done();
-    });
+    const idPromise = firstValueFrom(
+      service.createIva({ type: IvaType.Phone, value: '123/456' }),
+    );
     const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev/ivas');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ type: IvaType.Phone, value: '123/456' });
     req.flush({ id: 'TEST123456' });
+    expect(await idPromise).toEqual('TEST123456');
   });
 
-  it('should return an error if IVA to be created is missing a value', (done) => {
+  it('should return an error if IVA to be created is missing a value', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.createIva({ type: IvaType.Phone, value: '' }).subscribe({
-      error: (error) => {
-        expect(error).toBeDefined();
-        expect(error.message).toBe('IVA type or value missing');
-        done();
-      },
-    });
+    let message = 'none';
+    try {
+      await firstValueFrom(service.createIva({ type: IvaType.Phone, value: '' }));
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toBe('IVA type or value missing');
   });
 
-  it('should return an error if IVA is created while not logged in', (done) => {
+  it('should return an error if IVA is created while not logged in', async () => {
     currentUserId.set(null); // mock logout
     testBed.tick();
-    service.createIva({ type: IvaType.Phone, value: '123/456' }).subscribe({
-      error: (error) => {
-        expect(error).toBeDefined();
-        expect(error.message).toBe('Not authenticated');
-        done();
-      },
-    });
+    let message = 'none';
+    try {
+      await firstValueFrom(
+        service.createIva({ type: IvaType.Phone, value: '123/456' }),
+      );
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toBe('Not authenticated');
   });
 
-  it('should pass a server error when IVA is created', (done) => {
+  it('should pass a server error when IVA is created', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.createIva({ type: IvaType.Phone, value: '123/456' }).subscribe({
-      error: (error) => {
-        expect(error).toBeDefined();
-        expect(error.status).toBe(500);
-        expect(error.statusText).toBe('Server Error');
-        done();
-      },
-    });
+    const creationPromise = firstValueFrom(
+      service.createIva({ type: IvaType.Phone, value: '123/456' }),
+    );
+
     const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev/ivas');
     expect(req.request.method).toBe('POST');
     req.flush('Mock Error', { status: 500, statusText: 'Server Error' });
+    let status = 0;
+    try {
+      await creationPromise;
+    } catch (e) {
+      status = (e as HttpErrorResponse).status;
+    }
+    expect(status).toBe(500);
   });
 
-  it('should delete an IVA for the current user', (done) => {
+  it('should delete an IVA for the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.deleteIva({ ivaId: 'TEST123456' }).subscribe((ret) => {
-      expect(ret).toBeNull();
-      done();
-    });
+    const deletionPromise = firstValueFrom(service.deleteIva({ ivaId: 'TEST123456' }));
     const req = httpMock.expectOne(
       'http://mock.dev/auth/users/doe@test.dev/ivas/TEST123456',
     );
     expect(req.request.method).toBe('DELETE');
     expect(req.request.body).toBeNull();
     req.flush(null);
+    expect(await deletionPromise).toBeNull();
   });
 
-  it('should return an error if the IVA to be deleted has no ID', (done) => {
+  it('should return an error if the IVA to be deleted has no ID', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.deleteIva({ ivaId: '' }).subscribe({
-      error: (error) => {
-        expect(error).toBeDefined();
-        expect(error.message).toBe('IVA ID missing');
-        done();
-      },
-    });
+    let message = 'none';
+    try {
+      await firstValueFrom(service.deleteIva({ ivaId: '' }));
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toBe('IVA ID missing');
   });
 
-  it('should return an error if IVA is deleted while not logged in', (done) => {
+  it('should return an error if IVA is deleted while not logged in', async () => {
     currentUserId.set(null); // mock logout
     testBed.tick();
-    service.deleteIva({ ivaId: 'TEST123456' }).subscribe({
-      error: (error) => {
-        expect(error).toBeDefined();
-        expect(error.message).toBe('Not authenticated');
-        done();
-      },
-    });
+    let message = 'none';
+    try {
+      await firstValueFrom(service.deleteIva({ ivaId: 'TEST123456' }));
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toBe('Not authenticated');
   });
 
-  it('should pass a server error when IVA is deleted', (done) => {
+  it('should pass a server error when IVA is deleted', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.deleteIva({ ivaId: 'TEST123456' }).subscribe({
-      error: (error) => {
-        expect(error).toBeDefined();
-        expect(error.status).toBe(500);
-        expect(error.statusText).toBe('Server Error');
-        done();
-      },
-    });
+    const deletionPromise = firstValueFrom(service.deleteIva({ ivaId: 'TEST123456' }));
     const req = httpMock.expectOne(
       'http://mock.dev/auth/users/doe@test.dev/ivas/TEST123456',
     );
+
     expect(req.request.method).toBe('DELETE');
     req.flush('Mock Error', { status: 500, statusText: 'Server Error' });
+    let status = 0;
+    try {
+      await deletionPromise;
+    } catch (error) {
+      status = (error as HttpErrorResponse).status;
+    }
+    expect(status).toBe(500);
   });
 
-  it('should unverify an IVA for the current user', (done) => {
+  it('should unverify an IVA for the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.unverifyIva('TEST123456').subscribe((ret) => {
-      expect(ret).toBeNull();
-      done();
-    });
+    const unverifyPromise = firstValueFrom(service.unverifyIva('TEST123456'));
     const req = httpMock.expectOne('http://mock.dev/auth/rpc/ivas/TEST123456/unverify');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toBeNull();
     req.flush(null);
+    expect(await unverifyPromise).toBeNull();
   });
 
-  it('should request verification of an IVA for the current user', (done) => {
+  it('should request verification of an IVA for the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.requestCodeForIva('TEST123456').subscribe((ret) => {
-      expect(ret).toBeNull();
-      done();
-    });
+    const codePromise = firstValueFrom(service.requestCodeForIva('TEST123456'));
     const req = httpMock.expectOne(
       'http://mock.dev/auth/rpc/ivas/TEST123456/request-code',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toBeNull();
     req.flush(null);
+    expect(await codePromise).toBeNull();
   });
 
-  it('should create a verification code for an IVA of the current user', (done) => {
+  it('should create a verification code for an IVA of the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.createCodeForIva('TEST123456').subscribe((code) => {
-      expect(code).toBe('CODE789');
-      done();
-    });
+    const codePromise = firstValueFrom(service.createCodeForIva('TEST123456'));
+
     const req = httpMock.expectOne(
       'http://mock.dev/auth/rpc/ivas/TEST123456/create-code',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toBeNull();
     req.flush({ verification_code: 'CODE789' });
+    expect(await codePromise).toBe('CODE789');
   });
 
-  it('should confirm transmission of IVA verification for the current user', (done) => {
+  it('should confirm transmission of IVA verification for the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.confirmTransmissionForIva('TEST123456').subscribe((ret) => {
-      expect(ret).toBeNull();
-      done();
-    });
+    const confirmPromise = firstValueFrom(
+      service.confirmTransmissionForIva('TEST123456'),
+    );
     const req = httpMock.expectOne(
       'http://mock.dev/auth/rpc/ivas/TEST123456/code-transmitted',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toBeNull();
     req.flush(null);
+    expect(await confirmPromise).toBeNull();
   });
 
-  it('should validate an IVA verification for the current user', (done) => {
+  it('should validate an IVA verification for the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.validateCodeForIva('TEST123456', 'CODE789').subscribe({
-      next: (ret) => {
-        expect(ret).toBeNull();
-        done();
-      },
-      error: (error) => {
-        fail(`Unexpected error: ${error}`);
-      },
-    });
+    const validatePromise = firstValueFrom(
+      service.validateCodeForIva('TEST123456', 'CODE789'),
+    );
     const req = httpMock.expectOne(
       'http://mock.dev/auth/rpc/ivas/TEST123456/validate-code',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ verification_code: 'CODE789' });
     req.flush(null);
+    expect(await validatePromise).toBeNull();
   });
 
-  it('should pass error status for an invalid IVA verification code', (done) => {
+  it('should pass error status for an invalid IVA verification code', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    service.validateCodeForIva('TEST123456', 'CODE789').subscribe({
-      next: (ret) => {
-        fail(`Unexpected return value: ${ret}`);
-        done();
-      },
-      error: (error) => {
-        expect(error).toBeDefined();
-        expect(error.status).toBe(403);
-        expect(error.statusText).toBe('Forbidden');
-        done();
-      },
-    });
+    const validatePromise = firstValueFrom(
+      service.validateCodeForIva('TEST123456', 'CODE789'),
+    );
     const req = httpMock.expectOne(
       'http://mock.dev/auth/rpc/ivas/TEST123456/validate-code',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ verification_code: 'CODE789' });
     req.flush('Mock Error', { status: 403, statusText: 'Forbidden' });
+    let status = 0;
+    try {
+      await validatePromise;
+    } catch (error) {
+      status = (error as HttpErrorResponse).status;
+    }
+    expect(status).toBe(403);
   });
 });

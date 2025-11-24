@@ -80,6 +80,12 @@
             "port": 8080
           }
         },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "setupFiles": ["setup-test.ts"]
+          }
+        },
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n"
         },

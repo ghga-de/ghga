@@ -8,8 +8,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
 import { screen } from '@testing-library/angular';
 import { DynamicAccessRequestButtonComponent } from './dynamic-access-request-button';
@@ -41,7 +41,7 @@ describe('DynamicAccessRequestButtonComponent', () => {
     fixture = TestBed.createComponent(DynamicAccessRequestButtonComponent);
     fixture.componentRef.setInput('datasetID', 'GHGAD12345678901236');
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {

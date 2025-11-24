@@ -827,7 +827,7 @@ export const accessGrants: AccessGrant[] = [
     iva_id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
   },
   {
-    id: 'grant-ghga-8c4b9d5a1f0a',
+    id: 'grant-ghga-8c4b9d5a1f0b',
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901234',
     created: '2025-07-20T10:00:00Z',
@@ -842,7 +842,7 @@ export const accessGrants: AccessGrant[] = [
     iva_id: 'fc3c0ad8-01a4-4eb1-b8f3-40b04bb4bcb2',
   },
   {
-    id: 'grant-ghga-8c4b9d5a1f0a',
+    id: 'grant-ghga-8c4b9d5a1f0c',
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901234',
     created: '2025-07-20T10:00:00Z',
@@ -857,7 +857,7 @@ export const accessGrants: AccessGrant[] = [
     iva_id: '347368b5-718e-49ba-80ad-bc128e83b609',
   },
   {
-    id: 'grant-ghga-8c4b9d5a1f0b',
+    id: 'grant-ghga-8c4b9d5a1f0d',
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901235',
     created: '2023-05-19T12:00:00Z',
@@ -872,7 +872,7 @@ export const accessGrants: AccessGrant[] = [
     iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
   },
   {
-    id: 'grant-ghga-8c4b9d5a1f0c',
+    id: 'grant-ghga-8c4b9d5a1f0e',
     user_id: 'roe@test.dev',
     dataset_id: 'GHGAD12345678901236',
     created: '2025-07-20T10:00:00Z',

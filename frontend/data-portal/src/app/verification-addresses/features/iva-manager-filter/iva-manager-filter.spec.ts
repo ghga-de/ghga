@@ -24,7 +24,7 @@ const mockIvaService = {
     toDate: undefined,
     state: undefined,
   }),
-  setAllIvasFilter: jest.fn(),
+  setAllIvasFilter: vitest.fn(),
 };
 
 describe('IvaManagerFilterComponent', () => {

@@ -24,19 +24,19 @@ class MockConfigService {
  */
 class MockUserService {
   users = {
-    value: jest.fn(() => []),
-    isLoading: jest.fn(() => false),
-    error: jest.fn(() => null),
+    value: vitest.fn(() => []),
+    isLoading: vitest.fn(() => false),
+    error: vitest.fn(() => null),
   };
   usersFiltered = () => this.users.value();
-  ambiguousUserIds = jest.fn(() => new Set<string>());
+  ambiguousUserIds = vitest.fn(() => new Set<string>());
 }
 
 /**
  * Mock Router for testing
  */
 class MockRouter {
-  navigate = jest.fn();
+  navigate = vitest.fn();
 }
 
 describe('UserManagerListComponent', () => {

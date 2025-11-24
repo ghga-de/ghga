@@ -19,7 +19,7 @@ describe('CodeCreationDialogComponent', () => {
   let fixture: ComponentFixture<CodeCreationDialogComponent>;
 
   const dialogRef = {
-    close: jest.fn(),
+    close: vitest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,6 +33,7 @@ describe('CodeCreationDialogComponent', () => {
 
     fixture = TestBed.createComponent(CodeCreationDialogComponent);
     component = fixture.componentInstance;
+    vitest.clearAllMocks();
     await fixture.whenStable();
   });
 
@@ -81,22 +82,16 @@ describe('CodeCreationDialogComponent', () => {
   });
 
   it('should return false when closed', () => {
-    jest.spyOn(dialogRef, 'close');
     expect(dialogRef.close).not.toHaveBeenCalled();
-    // Workaround for jest selector validation issue
-    // const button = screen.getByRole('button', { name: 'Close and send later' });
-    const button = screen.getByText('Close and send later');
+    const button = screen.getByRole('button', { name: 'Close and send later' });
     expect(button).toBeVisible();
     button.click();
     expect(dialogRef.close).toHaveBeenCalledWith(false);
   });
 
   it('should return true when transmission confirmed', () => {
-    jest.spyOn(dialogRef, 'close');
     expect(dialogRef.close).not.toHaveBeenCalled();
-    // Workaround for jest selector validation issue
-    //const button = screen.getByRole('button', { name: 'Confirm transmission' });
-    const button = screen.getByText('Confirm transmission');
+    const button = screen.getByRole('button', { name: 'Confirm transmission' });
     expect(button).toBeVisible();
     button.click();
     expect(dialogRef.close).toHaveBeenCalledWith(true);

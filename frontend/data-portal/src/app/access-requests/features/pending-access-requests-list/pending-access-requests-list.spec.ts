@@ -8,8 +8,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { PendingAccessRequestsListComponent } from './pending-access-requests-list';
 
 describe('PendingAccessRequestsListComponent', () => {
@@ -21,16 +21,13 @@ describe('PendingAccessRequestsListComponent', () => {
       imports: [PendingAccessRequestsListComponent],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PendingAccessRequestsListComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {

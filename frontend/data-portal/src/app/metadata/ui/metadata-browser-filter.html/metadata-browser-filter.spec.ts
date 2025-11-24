@@ -7,6 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { MetadataBrowserFilterComponent } from './metadata-browser-filter';
 
 describe('MetadataBrowserFilterComponent', () => {
@@ -18,12 +19,7 @@ describe('MetadataBrowserFilterComponent', () => {
       imports: [MetadataBrowserFilterComponent],
       providers: [
         RouterModule,
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            snapshot: {},
-          },
-        },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 

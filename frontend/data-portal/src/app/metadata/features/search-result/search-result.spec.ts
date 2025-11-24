@@ -8,8 +8,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { SearchResultComponent } from './search-result';
@@ -37,6 +37,7 @@ class MockMetadataService {
     isLoading: () => false,
     error: () => undefined,
   };
+  loadDatasetSummary = () => undefined;
 }
 
 describe(SearchResultComponent, () => {
@@ -47,13 +48,8 @@ describe(SearchResultComponent, () => {
     await TestBed.configureTestingModule({
       imports: [SearchResultComponent],
       providers: [
-        { provide: MetadataService, useClass: MockMetadataService },
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         { provide: AuthService, useClass: MockAuthService },
-        { provide: MetadataService, useClass: MockMetadataService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],
     })

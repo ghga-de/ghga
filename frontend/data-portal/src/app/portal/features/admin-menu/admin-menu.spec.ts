@@ -20,12 +20,7 @@ describe('AdminMenuComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AdminMenuComponent],
-      providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
-      ],
+      providers: [{ provide: ActivatedRoute, useValue: fakeActivatedRoute }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AdminMenuComponent);

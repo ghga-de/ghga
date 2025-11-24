@@ -10,6 +10,7 @@ import { AccessRequestManagerListComponent } from './access-request-manager-list
 
 import { ActivatedRoute } from '@angular/router';
 import { accessRequests } from '@app/../mocks/data';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { ConfigService } from '@app/shared/services/config';
 
@@ -25,16 +26,13 @@ class MockAccessRequestService {
   allAccessRequestsFiltered = () => this.allAccessRequests.value();
 }
 
+/**
+ * Mock the config service as needed by the access request manager list component
+ */
+
 const MockConfigService = {
   helpdesk_url: 'https://helpdesk.test',
 };
-
-/**
- * Mock Router for testing
- */
-class MockRouter {
-  navigate = jest.fn();
-}
 
 describe('AccessRequestManagerListComponent', () => {
   let component: AccessRequestManagerListComponent;
@@ -46,7 +44,7 @@ describe('AccessRequestManagerListComponent', () => {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ConfigService, useValue: MockConfigService },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 

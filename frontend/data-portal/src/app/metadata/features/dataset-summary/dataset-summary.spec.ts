@@ -9,8 +9,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
 import { DatasetSummaryComponent } from './dataset-summary';
 
@@ -32,10 +32,7 @@ describe('DatasetSummaryComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DatasetSummaryComponent],
       providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: AuthService, useClass: MockAuthService },
       ],

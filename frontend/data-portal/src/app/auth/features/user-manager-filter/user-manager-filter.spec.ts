@@ -25,7 +25,7 @@ const mockUserService = {
     role: undefined,
     status: undefined,
   }),
-  setUsersFilter: jest.fn(),
+  setUsersFilter: vitest.fn(),
 };
 
 /**

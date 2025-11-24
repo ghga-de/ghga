@@ -4,7 +4,6 @@
  * @license Apache-2.0
  */
 
-import { CommonModule } from '@angular/common';
 import { Component, effect, inject, signal, WritableSignal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,7 +25,6 @@ import { StepperComponent } from '../stepper/stepper';
   selector: 'app-metadata-validator',
   templateUrl: './metadata-validator.html',
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     StepperComponent,

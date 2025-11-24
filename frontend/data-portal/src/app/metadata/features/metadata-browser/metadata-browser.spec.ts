@@ -4,11 +4,12 @@
  * @license Apache-2.0
  */
 
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { searchResults } from '@app/../mocks/data';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { ConfigService } from '@app/shared/services/config';
 import { MetadataSearchService } from '../../services/metadata-search';
 import { SearchResultListComponent } from '../search-result-list/search-result-list';
@@ -36,6 +37,15 @@ class MockMetadataSearchService {
   facets = signal({});
 }
 
+/**
+ * Mock SearchResultListComponent as needed for the metadata browser
+ */
+@Component({
+  selector: 'app-search-result-list',
+  template: '<div>Mock Search Result List</div>',
+})
+class MockSearchResultListComponent {}
+
 describe('MetadataBrowserComponent', () => {
   let component: MetadataBrowserComponent;
   let fixture: ComponentFixture<MetadataBrowserComponent>;
@@ -47,16 +57,16 @@ describe('MetadataBrowserComponent', () => {
         { provide: ConfigService, useClass: MockConfigService },
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
         RouterModule,
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            snapshot: {},
-          },
-        },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     })
       .overrideComponent(MetadataBrowserComponent, {
-        remove: { imports: [SearchResultListComponent] },
+        remove: {
+          imports: [SearchResultListComponent],
+        },
+        add: {
+          imports: [MockSearchResultListComponent],
+        },
       })
       .compileComponents();
 

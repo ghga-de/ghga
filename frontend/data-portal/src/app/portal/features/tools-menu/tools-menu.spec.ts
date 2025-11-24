@@ -20,12 +20,7 @@ describe('ToolsMenuComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ToolsMenuComponent],
-      providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
-      ],
+      providers: [{ provide: ActivatedRoute, useValue: fakeActivatedRoute }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ToolsMenuComponent);

@@ -6,20 +6,32 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { IvaManagerFilterComponent } from '../iva-manager-filter/iva-manager-filter';
-import { IvaManagerListComponent } from '../iva-manager-list/iva-manager-list';
 import { IvaManagerComponent } from './iva-manager';
 
 import { IvaService } from '@app/verification-addresses/services/iva';
 
+import { provideNativeDateAdapter } from '@angular/material/core';
+import { ActivatedRoute } from '@angular/router';
+import { allIvas } from '@app/../mocks/data';
+import { fakeActivatedRoute } from '@app/../mocks/route';
 import { screen } from '@testing-library/angular';
 
 /**
  * Mock the IVA service as needed by the IVA manager
  */
-const mockIvaService = {
-  loadAllIvas: jest.fn(),
-};
+class MockIvaService {
+  allIvas = { value: () => allIvas, isLoading: () => false, error: () => undefined };
+  allIvasFiltered = () => this.allIvas.value();
+  allIvasFilter = () => ({
+    name: '',
+    fromDate: undefined,
+    toDate: undefined,
+    state: undefined,
+  });
+  setAllIvasFilter = () => undefined;
+  loadAllIvas = vitest.fn();
+  ambiguousUserIds = () => new Set<string>();
+}
 
 describe('IvaManagerComponent', () => {
   let component: IvaManagerComponent;
@@ -29,16 +41,17 @@ describe('IvaManagerComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [IvaManagerComponent],
-      providers: [{ provide: IvaService, useValue: mockIvaService }],
-    })
-      .overrideComponent(IvaManagerComponent, {
-        remove: { imports: [IvaManagerFilterComponent, IvaManagerListComponent] },
-      })
-      .compileComponents();
+      providers: [
+        { provide: IvaService, useClass: MockIvaService },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
+        provideNativeDateAdapter(),
+      ],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(IvaManagerComponent);
     ivaService = TestBed.inject(IvaService);
     component = fixture.componentInstance;
+    vitest.clearAllMocks();
     await fixture.whenStable();
   });
 

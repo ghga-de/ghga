@@ -15,7 +15,7 @@ describe('CustomSnackBarComponent', () => {
 
   beforeEach(async () => {
     const matSnackBarData = { message: 'Test message', type: 'ok' };
-    const mockMatSnackBarRef = { dismiss: jest.fn() };
+    const mockMatSnackBarRef = { dismiss: vitest.fn() };
     await TestBed.configureTestingModule({
       imports: [CustomSnackBarComponent],
       providers: [

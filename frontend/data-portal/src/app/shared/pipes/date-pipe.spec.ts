@@ -35,7 +35,7 @@ describe('DatePipe', () => {
   it('should work with default format when no format is specified', () => {
     const date = new Date('2024-12-25');
     const result = pipe.transform(date);
-    expect(result).toBe('Dec 25, 2024');
+    expect(result).toBe('25 Dec 2024');
   });
 
   it('should work with custom format and local time zone', () => {

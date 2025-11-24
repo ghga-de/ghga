@@ -57,6 +57,7 @@ describe('UserManagerComponent', () => {
 
     fixture = TestBed.createComponent(UserManagerComponent);
     component = fixture.componentInstance;
+    await fixture.whenStable();
   });
 
   it('should create', () => {
@@ -68,13 +69,11 @@ describe('UserManagerComponent', () => {
   });
 
   it('should render the title', () => {
-    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('h1')?.textContent).toContain('User Management');
   });
 
   it('should render filter and list', () => {
-    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-user-manager-filter')).toBeTruthy();
     expect(compiled.querySelector('app-user-manager-list')).toBeTruthy();

@@ -4,7 +4,7 @@
     "esbenp.prettier-vscode",
     "dbaeumer.vscode-eslint",
     "angular.ng-template",
-    "orta.vscode-jest",
+    "vitest.explorer",
     "dbaeumer.vscode-eslint",
     "ms-playwright.playwright"
   ]

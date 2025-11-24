@@ -16,12 +16,7 @@ describe('SiteFooterComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SiteFooterComponent],
-      providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
-      ],
+      providers: [{ provide: ActivatedRoute, useValue: fakeActivatedRoute }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SiteFooterComponent);

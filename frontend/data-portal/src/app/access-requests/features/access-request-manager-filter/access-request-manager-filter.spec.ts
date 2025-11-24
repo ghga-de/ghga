@@ -28,7 +28,7 @@ const mockAccessRequestService = {
     noteToRequester: undefined,
     internalNote: undefined,
   }),
-  setAllAccessRequestsFilter: jest.fn(),
+  setAllAccessRequestsFilter: vitest.fn(),
 };
 
 describe('AccessRequestManagerFilterComponent', () => {

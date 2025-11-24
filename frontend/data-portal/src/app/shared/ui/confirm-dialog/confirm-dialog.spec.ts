@@ -16,7 +16,7 @@ describe('ConfirmDialogComponent', () => {
   let fixture: ComponentFixture<ConfirmDialogComponent>;
 
   const dialogRef = {
-    close: jest.fn(),
+    close: vitest.fn(),
   };
 
   beforeEach(async () => {
@@ -36,6 +36,7 @@ describe('ConfirmDialogComponent', () => {
 
     fixture = TestBed.createComponent(ConfirmDialogComponent);
     component = fixture.componentInstance;
+    vitest.clearAllMocks();
     await fixture.whenStable();
   });
 
@@ -59,7 +60,6 @@ describe('ConfirmDialogComponent', () => {
   });
 
   it('should return false when cancelled', () => {
-    jest.spyOn(dialogRef, 'close');
     expect(dialogRef.close).not.toHaveBeenCalled();
     const button = screen.getByRole('button', { name: 'Cancel' });
     expect(button).toBeVisible();
@@ -69,7 +69,6 @@ describe('ConfirmDialogComponent', () => {
   });
 
   it('should return true when confirmed', () => {
-    jest.spyOn(dialogRef, 'close');
     expect(dialogRef.close).not.toHaveBeenCalled();
     const button = screen.getByRole('button', { name: 'Continue' });
     expect(button).toBeVisible();

@@ -9,12 +9,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AuthService } from '@app/auth/services/auth';
-import { AccountButtonComponent } from '../../../auth/features/account-button/account-button';
-import { AdminMenuComponent } from '../admin-menu/admin-menu';
 import { SiteHeaderNavButtonsComponent } from './site-header-nav-buttons';
 
 /**
- * Mock the auth service as needed for the admin menu
+ * Mock the auth service as needed for the site header nav buttons
  */
 class MockAuthService {
   roles = () => ['data_steward'];
@@ -29,22 +27,13 @@ describe('SiteHeaderNavButtonsComponent', () => {
       imports: [SiteHeaderNavButtonsComponent],
       providers: [
         { provide: AuthService, useClass: MockAuthService },
-        {
-          provide: ActivatedRoute,
-          useValue: fakeActivatedRoute,
-        },
+        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
-    })
-      .overrideComponent(SiteHeaderNavButtonsComponent, {
-        remove: {
-          imports: [AccountButtonComponent, AdminMenuComponent],
-        },
-      })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(SiteHeaderNavButtonsComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {

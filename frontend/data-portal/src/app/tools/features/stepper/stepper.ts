@@ -20,7 +20,7 @@ import { StepDetails } from '@app/tools/models/stepper';
 @Component({
   selector: 'app-stepper',
   templateUrl: './stepper.html',
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatIconModule],
 })
 export class StepperComponent {
   steps = input.required<StepDetails[]>();

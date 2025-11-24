@@ -14,8 +14,8 @@ import { ConfirmationService } from './confirmation';
 describe('ConfirmationService', () => {
   let service: ConfirmationService;
   const matDialogMock = {
-    open: jest.fn().mockReturnValue({
-      afterClosed: jest.fn().mockReturnValue(of(true)),
+    open: vitest.fn().mockReturnValue({
+      afterClosed: vitest.fn().mockReturnValue(of(true)),
     }),
   };
 
@@ -46,8 +46,8 @@ describe('ConfirmationService', () => {
     });
   });
 
-  it('should call afterClosed and callback with the correct value', (done) => {
-    const callbackMock = jest.fn();
+  it('should call afterClosed and callback with the correct value', async () => {
+    const callbackMock = vitest.fn();
 
     service.confirm({
       message: 'Test Message',
@@ -57,12 +57,7 @@ describe('ConfirmationService', () => {
     expect(matDialogMock.open).toHaveBeenCalled();
     expect(matDialogMock.open().afterClosed).toHaveBeenCalled();
 
-    matDialogMock
-      .open()
-      .afterClosed()
-      .subscribe(() => {
-        expect(callbackMock).toHaveBeenCalledWith(true);
-        done();
-      });
+    await matDialogMock.open().afterClosed().toPromise();
+    expect(callbackMock).toHaveBeenCalledWith(true);
   });
 });
