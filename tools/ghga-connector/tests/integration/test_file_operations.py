@@ -18,7 +18,7 @@
 
 from asyncio import create_task
 from typing import Any
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -32,6 +32,7 @@ from ghga_connector.core import (
 from ghga_connector.core.downloading.api_calls import DownloadClient
 from ghga_connector.core.downloading.downloader import Downloader, TaskHandler
 from ghga_connector.exceptions import DownloadError
+from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.app import mock_external_calls  # noqa: F401
 from tests.fixtures.s3 import (  # noqa: F401
     S3Fixture,
@@ -39,6 +40,13 @@ from tests.fixtures.s3 import (  # noqa: F401
     reset_state,
     s3_fixture,
 )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def apply_test_config():
+    """Apply default test config"""
+    with patch("ghga_connector.config.CONFIG", get_test_config()):
+        yield
 
 
 def fetch_download_url_mock(return_value: Any):
