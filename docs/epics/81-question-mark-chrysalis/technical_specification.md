@@ -37,7 +37,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 - Implement code to manage changes in models, workflows and routes, e.g. by creating universal schema descriptions from the ingress schema descriptions and re-transforming the AnnotatedEMPacks.
 
 
-#### Collections
+#### Core entities
 
 
 `Model`
