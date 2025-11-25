@@ -114,8 +114,8 @@ data structure:
 ```python
 class AnnotatedEMPack(BaseModel):
    id: uuid
-   schemapack_name: str
-   original_name: str | None
+   model_name: str  # the name of the corresponding `Model`
+   original_id: str | None  # the id of the original incoming AnnotatedEMPack it was derived from
    datapack: DataPack
    annotation: dict
 ```
