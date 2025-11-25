@@ -26,13 +26,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
 ```bash
-docker pull ghga/ghga-connector:1.7.3
+docker pull ghga/ghga-connector:2.0.0-rc1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-connector:1.7.3 .
+docker build -t ghga/ghga-connector:2.0.0-rc1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -40,7 +40,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/ghga-connector:1.7.3 --help
+docker run -p 8080:8080 ghga/ghga-connector:2.0.0-rc1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
