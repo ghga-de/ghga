@@ -59,7 +59,7 @@ class Model(BaseModel):
 
 `Workflow`
 
-- Purpose: model a metldata-compatible workflow definition used to transform schemapacks/datapacks.
+- Purpose: holds a metldata-compatible workflow definition used to transform schemapacks/datapacks.
 
 data structure:
 ```python
