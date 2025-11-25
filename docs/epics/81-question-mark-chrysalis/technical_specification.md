@@ -93,7 +93,7 @@ data structure:
 ```python
 
 class BaseConfig(BaseModel):
-   schemas: list[Model]
+   models: list[Model]
    workflows: list[Workflow]
    routes: list[Route]
 
