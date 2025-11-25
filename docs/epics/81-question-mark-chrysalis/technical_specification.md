@@ -205,7 +205,7 @@ Transformation configuration validation includes:
 
 When manually triggered, the service derives the output schemapacks for all routes with empty output schemapacks. The same set of operations is also triggered when the configuration changes.
 
-1. Validate the transformation configuration of the workflow routes.
+1. Validate the transformation configuration.
 2. Traverse the schemapacks in the transformation graph starting with the original schemapack, in topological order. For every route execute the following:
    1. Retrieve the workflow of the corresponding `workflow_name` from the `Workflows`
    2. Retrieve the schemapack corresponding to the `input_model_name` from the `routes`.
