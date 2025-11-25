@@ -240,15 +240,9 @@ The configuration change will trigger the following operations:
 1. Re-compute the schemapacks of all transformed schemapacks as described in the "Model Derivation" user journey
 2. Re-run the transformations for all original datapacks as described in the "Service Consumer Transforms An Original AnnotatedEMPack" user journey.
 
-### Not included:
-
-- The service has no REST API to configure workflows but instead reads workflows from the database, where workflows must be stored in a predefined schema or format as required by the service.
-
-- The service has no event consumer to populate its collection of known models but instead reads the models from a database where they have to be populated from the YAML configuration files as explained above.
-
 
 ### Not included (but possible future extensions):
 
-- A REST API to fetch the currently used public schemapacks which will be useful for frontend developers for inspection purposes
-- A REST API to push configs instead of loading them from YAML on start
-- A versioning for configs to keep the configuration history and enable rollbacks to previous configurations
+- A REST API to retrieve the currently used public schemapacks, which would be useful for frontend developers for inspection purposes.
+- A REST API to push configuration data instead of loading it from YAML files at startup.
+- Configuration versioning to maintain a full history of changes and enable rollbacks to previous versions.
