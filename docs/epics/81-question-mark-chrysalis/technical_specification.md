@@ -13,9 +13,6 @@ This service shall provide functionality around the configurable workflow concep
 To this goal, it needs to keep track of the transformation workflows, original and derived datapacks/schemapacks and workflow routes in its database.
 
 
-![em-transformation-service overview](./images/em_transformation_service.png)
-
-
 ### Terminology
 
 `Experimental Metadata (EM)`: Data describing the experimental process of generating the Research Data archived in GHGA.
@@ -28,15 +25,9 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `AnnotatedEMPack`: A datapack enriched with additional information such as accessions that help integrate the EMPack into the archive.
 
-`annotatedEMPacks`: A MongoDB collection of AnnotatedEMPack objects.
-
 `Workflow`: Instructions on how to produce a certain datapack/schemapack representation from another datapack/schemapack. The workflows are defined by the `metldata` library on which the transformation service will be built.
 
-`workflows`: A MongoDB collection of Workflow objects.
-
 `Route`: Information on which specific workflow is used to produce datapack compliant with the output model when presented with datapack compliant with the input model.
-
-`routes`: A MongoDB collection of Route objects.
 
 
 ### Included/Required:
