@@ -168,9 +168,9 @@ The implementation of the EM transformation service will involve the following k
 
    Consists of AnnotatedEMPack objects.
    * `id` is a unique identifier for the AnnotatedEMPack
-   * `schemapack_name` is the unique name of the schemapack the EM datapack conforms to
+   * `model_name` is the unique name of the schemapack the EM datapack conforms to
    * `original_id` is the id of the original AnnotatedEMPack from which this AnnotatedEMPack was derived; it is None if this is an original AnnotatedEMPack
-   * `datapack` is the EM in datapack format that conforms to the schemapack identified by `schemapack_name`
+   * `datapack` is the EM in datapack format that conforms to the schemapack identified by `model_name`
    * `annotation` is an annotation object with information from other models held by the service
 
    This collection is filled from two sources: incoming events from the GHGA Study Repository and outputs of workflow routes executed by the EM Transformation Service.
@@ -225,7 +225,7 @@ The transformation operation is triggered when the service consumer receives an 
    2. Get the datapack from the “transformed map” that corresponds to the input schemapack of that route. This is the “input datapack” for this step. It should always exist at this point if the topological order was computed correctly, and we can raise an error at this point if this is not the case.
    3. Compute the transformed datapack using the input datapack and the workflow route.
    4. If the current schemapack name is in the “dirty map”, remove it there and update the “transformed map” with the transformed datapack.
-   5. Otherwise, add the transformed datapack to the “transformed map” with a newly generated id, setting its `schemapack_name` to the current schemapack name, and its original_id field to the original datapack id.
+   5. Otherwise, add the transformed datapack to the “transformed map” with a newly generated id, setting its `model_name` to the current schemapack name, and its original_id field to the original datapack id.
 4. Finally, upsert all entries in the “transformed map” to the database that should be published, and delete all remaining entries in the “dirty map” from the database.
 
 This course of action avoids deleting “dirty” datapacks while they are recreated, since that would make the corresponding resources disappear while the transformation is ongoing. It also keeps any intermediate datapacks in memory, avoiding unnecessary database operations and operations.
