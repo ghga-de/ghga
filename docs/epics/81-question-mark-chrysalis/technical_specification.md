@@ -107,7 +107,7 @@ class Config(BaseModel):
 
 `AnnotatedEMPack`
 
-Purpose: model incoming and derived annotated EM datapacks that are to be processed or published.
+Purpose: holds incoming and derived annotated EM datapacks that are to be processed or published.
 
 data structure:
 
