@@ -247,7 +247,7 @@ The configuration change will trigger the following operations:
 - The service has no event consumer to populate its collection of known models but instead reads the models from a database where they have to be populated from the YAML configuration files as explained above.
 
 
-### Future extensions:
+### Not included (but possible future extensions):
 
 - A REST API to fetch the currently used public schemapacks which will be useful for frontend developers for inspection purposes
 - A REST API to push configs instead of loading them from YAML on start
