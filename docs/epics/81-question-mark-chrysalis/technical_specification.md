@@ -79,8 +79,8 @@ data structure:
 ```python
 class Route(BaseModel):
    name: str | None
-   input_schema_name: str
-   output_schema_name: str
+   input_model_name: str
+   output_model_name: str
    workflow_name: str
 ```
 
