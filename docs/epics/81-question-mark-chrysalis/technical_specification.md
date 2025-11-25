@@ -150,9 +150,9 @@ The implementation of the EM transformation service will involve the following k
 3. `routes`
 
    Consists of Route object
-   * `name` is a unique human readable name for the workflow route also used as an identifier. It must be calculated from the input and output schema names and the workflow name, e.g. `{input_schema_name}:{workflow_name}:{output_schema_name}`. 
-   * `input_schema_name` is the name/id of the input schema that the workflow route accepts
-   * `output_schema_name` is the name/id of the output schema that the workflow route produces 
+   * `name` is a unique human readable name for the workflow route also used as an identifier. It must be calculated from the input and output schema names and the workflow name, e.g. `{input_model_name}:{workflow_name}:{output_model_name}`. 
+   * `input_model_name` is the name/id of the input schema that the workflow route accepts
+   * `output_model_name` is the name/id of the output schema that the workflow route produces 
    * `workflow_name` is a workflow name/id that is to be applied on a datapack / schemapack 
    
 
@@ -208,9 +208,9 @@ When manually triggered, the service derives the output schemapacks for all rout
 1. Validate the transformation configuration of the workflow routes.
 2. Traverse the schemapacks in the transformation graph starting with the original schemapack, in topological order. For every route execute the following:
    1. Retrieve the workflow of the corresponding `workflow_name` from the `Workflows`
-   2. Retrieve the schemapack corresponding to the `input_schema_name` from the `routes`.
+   2. Retrieve the schemapack corresponding to the `input_model_name` from the `routes`.
    3. Call metldata to execute the workflow on the schemapack of the input schema to compute the schemapack for the derived schema.
-   4. Update the schemapack field of the Model corresponding to the `output_schema_name` of the Route with the output of step 3.
+   4. Update the schemapack field of the Model corresponding to the `output_model_name` of the Route with the output of step 3.
 3. If there are any errors / conflicts, the operation shall fail and report the error.
 
 
