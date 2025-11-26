@@ -207,8 +207,8 @@ The transformation operation is triggered when the service receives either an �
    3. Compute the transformed data using the input data and the route's workflow.
    4. If the current model exists in the dirty map, remove it from there and update the transformed map with the newly transformed data.
    5. Otherwise, add the transformed data to the “transformed map” with a newly generated id, setting its `model_name` to the current model name, and its original_id field to the original data id.
-4. Apply database updates: Upsert all transformed data that should be published, and delete any remaining data listed in the dirty map.
 
+4. Apply database updates: Upsert all transformed data that should be published, and delete any remaining data listed in the dirty map.
 
 This approach avoids deleting "dirty" data during recreation, preventing resources from temporarily disappearing mid-transformation. It also keeps intermediate data in memory, reducing unnecessary database operations.
 
