@@ -213,7 +213,7 @@ This approach avoids deleting "dirty" data during recreation, preventing resourc
 
 #### User Journeys: Configuration Change
 
-This operation is triggered when a change to the configuration YAML file is detected.
+This operation is triggered when a change to the configuration YAML file is detected when the service is started.
 
 The service detects configuration changes by comparing the current in-memory configuration with the configuration stored in the database. When they differ, the service adopts the new configuration and performs:
 
