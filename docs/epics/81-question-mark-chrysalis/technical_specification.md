@@ -157,7 +157,7 @@ The em-transformation-service interacts with a database containing core entities
 
 #### Transformation Configuration
 
-The transformations are configured through the models, workflows and routes. The service loads the complete transformation configuration from a YAML file and stores it as a global validated `Config` object. This “last known good” configuration is used to detect configuration changes, trigger re-derivation and re-transformation when needed, and serve as a rollback state if a newly loaded YAML configuration is invalid.
+The transformations are configured through the models, workflows and routes.
 
 Routes define how to transform an input model into an output model by specifying the workflow to apply and the expected output model.
 
