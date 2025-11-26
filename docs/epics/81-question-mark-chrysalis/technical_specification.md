@@ -59,7 +59,7 @@ class Model(BaseModel):
 - description: Human-readable description.
 - is_ingress: Boolean, true for EMIMs.
 - version: Schema version, None if it is not an EMIM
-- schema: Schema in SchemaPack format, None if it is not an EMIM
+- schema: Schema in SchemaPack format, None if it is not an EMIM and not yet computed
 - publish: Boolean indicating whether the AnnotatedEMPacks conforming to the schema should be published
 - order: Order in a topological ordering of the schemas in the transformation graph, None if not yet computed
 
