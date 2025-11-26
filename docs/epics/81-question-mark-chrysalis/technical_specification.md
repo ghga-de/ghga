@@ -153,7 +153,7 @@ class AnnotatedEMPack(BaseModel):
 
 #### Database Layer
 
-The em-transformation-service interacts with a database containing core entities. Models, workflows, and routes are loaded from a configuration YAML file which is also stored in the database. AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs. Only published data is stored persistently (using an outbox DAO). Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original data.
+The em-transformation-service interacts with a database containing core entities. Models, workflows, and routes are loaded from a configuration YAML file and kept in fully in memory. The configuration YAML file is also stored in the database after a successful validation along with the re-derived models if there is a change. AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs. They are loaded into memory on demand. Only published data is stored persistently (using an outbox DAO). Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original data.
 
 #### Transformation Configuration
 
@@ -187,10 +187,8 @@ When manually triggered—or when the configuration changes—the service derive
    1. The configuration is rejected if validation fails.
    2. In case of rejection, the previous valid configuration remains active.
 2. Traverse the transformation graph starting from the EMIMs, following the topological order. For each route:
-   1. Retrieve the workflow identified by `workflow_name`.
-   2. Retrieve the schema of the model referenced by `input_model_name`.
-   3. Use metldata to run the workflow on the input model’s schema and compute the derived schema.
-   4. Update the output model’s schema accordingly.
+   1. Use metldata to run the workflow identified by `workflow_name` on the input model’s schema referenced by `input_model_name` and compute the derived schema.
+   2. Update the output model’s schema accordingly.
 3. If any errors or conflicts occur, abort the operation and report them.
 
 
