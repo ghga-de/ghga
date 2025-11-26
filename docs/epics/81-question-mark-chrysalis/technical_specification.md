@@ -10,14 +10,14 @@ Epic planning and implementation follow the
 
 The goal of this epic is to implement a service for the transformation of Experimental Metadata (EM) from one representation/model to another. 
 This service shall provide functionality around the configurable workflow concept from the `metldata` library to enable these transformations.
-To this goal, it needs to keep track of the transformation workflows, original and derived datapacks/schemapacks and workflow routes in its database.
+To this goal, it needs to keep track of the transformation workflows, original and derived data/schema and workflow routes in its database.
 
 
 ### Terminology
 
 `Experimental Metadata (EM)`: Data describing the experimental process of generating the Research Data archived in GHGA.
 
-`Experimental Metadata Ingress Models (EMIM)`: Schemas that define the structure and format of experimental metadata as it enters the GHGA system from external sources. Currently, GHGA supports only a single data ingress model for experimental metadata, which is the [ghga-metadata-schema](https://github.com/ghga-de/ghga-metadata-schema), but this epic is part of the effort to lift that restriction.
+`Experimental Metadata Ingress Models (EMIM)`: Schemas that define the structure and format of experimental metadata as it enters the GHGA system from external sources. It follows SchemaPack format. Currently, GHGA supports only a single data ingress model for experimental metadata, which is the [ghga-metadata-schema](https://github.com/ghga-de/ghga-metadata-schema), but this epic is part of the effort to lift that restriction.
 
 `Universal Discovery Model`: A common target representation to which all the EMs are transformed, serving as a basis for data queries and data display via the GHGA Data Portal. 
 
@@ -37,29 +37,36 @@ To this goal, it needs to keep track of the transformation workflows, original a
 - Implement code to manage changes in models, workflows and routes, e.g. by creating universal schema descriptions from the ingress schema descriptions and re-transforming the AnnotatedEMPacks.
 
 
-#### Core entities
+### Core entities
 
+#### `Model`
 
-`Model`
-
-- purpose: describe the model entities used in the service
+- purpose: describes how models are represented in the service.
 
 data structure:
 ```python
 class Model(BaseModel):
    name: str
    description: str | None
-   original: bool
+   is_ingress: bool
    version: str | None
-   schemapack: SchemaPack | None
+   schema: SchemaPack | None
    publish: bool 
    order: int | None
 
 ```
+- name: Unique identifier / human-readable name of the model.
+- description: Human-readable description.
+- is_ingress: Boolean, true for EMIMs.
+- version: Schema version, None if it is not an EMIM
+- schema: Schema in SchemaPack format, None if it is not an EMIM
+- publish: Boolean indicating whether the AnnotatedEMPacks conforming to the schema should be published
+- order: Order in a topological ordering of the schemas in the transformation graph, None if not yet computed
 
-`Workflow`
 
-- Purpose: holds a metldata-compatible workflow definition used to transform schemapacks/datapacks.
+#### `Workflow`
+
+- Purpose: holds a metldata-compatible workflow definition used to transform schema/data.
 
 data structure:
 ```python
@@ -69,24 +76,37 @@ class Workflow(BaseModel):
    workflow: metldata.workflow.base.Workflow
 ```
 
+- name: Unique identifier / human-readable name for the workflow. Indicates the purpose of the workflow for easier debugging and understanding of the operations.
+- description: Optional longer description of the workflow.
+- workflow: Workflow definition in metldata format.
 
-`Route`
 
-- Purpose: describe named routes that bind workflows, input schema types and produced output schema types, and whether outputs should be published.
+#### `Route`
+
+- Purpose: describe the routes for transforming models and their corresponding data by referencing the workflow, the input and output models involved in each transformation by name.
 
 data structure:
 
 ```python
 class Route(BaseModel):
-   name: str | None
+   name: str
    input_model_name: str
    output_model_name: str
    workflow_name: str
 ```
 
-`Config`
+- name: Unique identifier / human-readable name for the workflow route. Follows the format of `{input_model_name}:{workflow_name}:{output_model_name}`.
+  
+  The model must include a validator to ensure name consistency. Only one representation of the name should be provided in the transformation configuration. The validator automatically derives any missing parts: if only the composite name is given, it extracts the individual names; if only the individual names are provided, it constructs the composite name.
 
-- Purpose: model the current active transformation configuration version.
+- input_model_name: Name of the input model accepted by the route.
+- output_model_name: Name of the output model produced by the route.
+- workflow_name: Name of the workflow to apply on the route.
+
+
+#### `Config`
+
+- Purpose: describe the current active transformation configuration
 
 data structure:
 
@@ -97,15 +117,20 @@ class BaseConfig(BaseModel):
    workflows: list[Workflow]
    routes: list[Route]
 
-
 class Config(BaseModel):
-   version: int = 0  # used as identifier (always 0 in the first implementation)
-   created: datetime # is the date when the config is validated and activated.
+   version: int = 0
+   created: datetime
    config: BaseConfig
 ```
 
+- BaseConfig.models: List of Model objects defining the transformation graph.
+- BaseConfig.workflows: List of Workflow objects available.
+- BaseConfig.routes: List of Route objects composing the graph.
+- Config.version: Configuration identifier (always 0 in the first implementation).
+- Config.created: Datetime when this config was validated and activated.
+- Config.config: Transformation configuration data.
 
-`AnnotatedEMPack`
+#### `AnnotatedEMPack`
 
 Purpose: holds incoming and derived annotated EM datapacks that are to be processed or published.
 
@@ -114,135 +139,90 @@ data structure:
 ```python
 class AnnotatedEMPack(BaseModel):
    id: uuid
-   model_name: str  # the name of the corresponding `Model`
-   original_id: str | None  # the id of the original incoming AnnotatedEMPack it was derived from
-   datapack: DataPack
+   model_name: str
+   original_id: str | None
+   data: DataPack
    annotation: dict
 ```
-
-#### Implementation Details of Collections
-
-The implementation of the EM transformation service will involve the following key components.
-
-1. `models`
-   
-   Consists of Model objects
-   * `name` is a unique human readable name of the schema also used as an identifier
-   * `description` is a human readable description of the schema
-   * `original` is a boolean flag indicating whether the schema is an original or derived schema
-   * `version` is the version of the schema, initially None if it is not an original schema
-   * `schemapack` is the schema in schemapack format, initially None if it is not an original schema
-   * `publish` is a boolean flag indicating whether the AnnotatedEMPacks conforming to this schema should be published
-   * `order` is the order in a topological ordering of the schemas in the transformation graph, initially None if not yet computed
-
-   This collection is populated via a transformation configuration YAML file.
-
-2. `workflows`
-
-   Consists of Workflow objects
-   * `name` is a unique human readable name for the workflow also used as an identifier. It should be a name indicating the purpose of the workflow for easier debugging and understanding of the operations.
-   * `description` is a more verbose description of the workflow
-   * `workflow` is the definition of the workflow in metldata format
-
-   This collection is populated via a configuration YAML file that contains the defined ghga transformation workflows. 
+- id: Unique identifier for the AnnotatedEMPack.
+- model_name: Unique name of the model the EMPack conforms to
+- original_id: ID of the original incoming EMPack it was derived from. None if it is an original EMPack
+- data: EMPack conforming to the model identified by `model_name`
+- annotation: Object with information from other models held by the service 
 
 
-3. `routes`
+#### Database Layer
 
-   Consists of Route object
-   * `name` is a unique human readable name for the workflow route also used as an identifier. It must be calculated from the input and output schema names and the workflow name, e.g. `{input_model_name}:{workflow_name}:{output_model_name}`. 
-   * `input_model_name` is the name/id of the input schema that the workflow route accepts
-   * `output_model_name` is the name/id of the output schema that the workflow route produces 
-   * `workflow_name` is a workflow name/id that is to be applied on a datapack / schemapack 
-   
-
-   This collection is populated via a configuration YAML file that contains the defined ghga workflow routes. 
-
-
-4. `configs`
-
-   Consists of a single document that holds the transformation configuration YAML. It defines the models, workflows, and routes. It is used to populate the `models`, `workflows`, and `routes` collections.
-
-
-5. `AnnotatedEMPacks`
-
-   Consists of AnnotatedEMPack objects.
-   * `id` is a unique identifier for the AnnotatedEMPack
-   * `model_name` is the unique name of the schemapack the EM datapack conforms to
-   * `original_id` is the id of the original AnnotatedEMPack from which this AnnotatedEMPack was derived; it is None if this is an original AnnotatedEMPack
-   * `datapack` is the EM in datapack format that conforms to the schemapack identified by `model_name`
-   * `annotation` is an annotation object with information from other models held by the service
-
-   This collection is filled from two sources: incoming events from the GHGA Study Repository and outputs of workflow routes executed by the EM Transformation Service.
-
-   Note that we only store published datapacks on the collection. If there are intermediate transformed datapacks, they will only be created and kept in memory as long as they are needed for running a full transformation graph corresponding to a single original datapack.
+The em-transformation-service interacts with a database containing core entities. Models, workflows, and routes are loaded from a configuration YAML file which is also stored in the database. AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs. Only published data is stored persistently. Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original data.
 
 #### Transformation Configuration
 
-A transformation is configured through the models, workflows and routes collections. The current configuration of the service is read from a YAML file and stored as a global `Config` object that is later used to determine whether a configuration change has occurred.
+A transformation is configured through the models, workflows and routes. The current configuration of the service is read from a YAML file and stored as a global `Config` object that is later used to determine whether a configuration change has occurred.
 
-Routes define the transformation workflows to transform an input schemapack to an output schemapack. Each route specifies which workflow to apply to a given input schemapack and what output schemapack it is expected to produce.
+Routes define how to transform an input model into an output model by specifying the workflow to apply and the expected output model.
 
-Routes also define a a graph structure where schemapacks are nodes and routes are directed edges. The source nodes of this graph are the “original schemapacks” (aka EMIMs) defined as SchemaPack. The graph must not contain any "diamonds", i.e. there must be at most one directed path between any two schemapacks in the graph. This also implies that the graph does not contain any cycles, i.e. is a directed acyclic graph (DAG). 
+Routes also define a graph where schemas are nodes and routes are directed edges. The source nodes of this graph are the EMIMs. The graph must not contain any "diamonds", i.e. there must be at most one directed path between any two schemas in the graph. This also implies that the graph does not contain any cycles, i.e. is a directed acyclic graph (DAG). 
 
-We enforce that stronger unique-path property of the graph because "diamond" shapes indicate that there is unnecessary redundancy in the graph that should be avoided, and since it leaves no ambiguity in how datapacks are transformed.
+We enforce this stronger unique-path property because "diamond" shapes indicate unnecessary redundancy that should be avoided, and because it eliminates any ambiguity in how data are transformed.
 
-This graph structure is used to validate the transformation configuration and to determine the order in which schemapacks need to be processed during service startup and when processing incoming AnnotatedEMPacks.
+This graph structure is used to validate the transformation configuration and to determine the processing order of schemas during model derivation and configuration changes.
 
 #### Transformation Configuration Validation
 
 Transformation configuration validation includes:
 
-1. Check the workflows and the original schemapacks referred by the routes exist in their corresponding collections.
-2. Check that the schemapacks marked as `original` are not referred as route output schemapacks.
-3. Validate the schemapacks using SchemaPack library and workflows using the metldata library.
-4. Check the graph conforms to the unique path requirement mentioned above, and thereby also that it does not contain cycles.
-5. Calculate the topological order of the nodes in the graph using an algorithm similar to Kahn's algorithm, so that the schemapacks are ordered in a way that if we process the schemapacks in that order, the previous schemapack have already been processed.
-6. Update the `order` field of each schemapack in the `models` according to the calculated topological order. 
+1. Verify that all workflows and EMIMs (i.e., models with is_ingest = true) referenced by the routes exist in the database.
+2. Ensure that EMIMs do not appear as the output models of any routes.
+3. Validate schemas using the SchemaPack library and workflows using the metldata library.
+4. Confirm that the graph meets the unique-path requirement and is therefore acyclic.
+5. Compute a topological ordering of the graph’s nodes—using an algorithm similar to Kahn’s—so that each schema is processed only after all its dependencies.
+6.  Update the order field of each model based on the resulting topological order.
 
 
 #### User Journeys: Model Derivation
 
-When manually triggered, the service derives the output schemapacks for all routes with empty output schemapacks. The same set of operations is also triggered when the configuration changes.
+When manually triggered—or when the configuration changes—the service derives the output schemas for all routes.
 
 1. Validate the transformation configuration.
-2. Traverse the schemapacks in the transformation graph starting with the original schemapack, in topological order. For every route execute the following:
-   1. Retrieve the workflow of the corresponding `workflow_name` from the `Workflows`
-   2. Retrieve the schemapack corresponding to the `input_model_name` from the `routes`.
-   3. Call metldata to execute the workflow on the schemapack of the input schema to compute the schemapack for the derived schema.
-   4. Update the schemapack field of the Model corresponding to the `output_model_name` of the Route with the output of step 3.
-3. If there are any errors / conflicts, the operation shall fail and report the error.
+2. Traverse the transformation graph starting from the EMIMs, following the topological order. For each route:
+   1. Retrieve the workflow identified by `workflow_name`.
+   2. Retrieve the schema of the model referenced by `input_model_name`.
+   3. Use metldata to run the workflow on the input model’s schema and compute the derived schema.
+   4. Update the output model’s schema accordingly.
+3. If any errors or conflicts occur, abort the operation and report them.
 
 
 #### User Journeys: Service Consumer Transforms An Original AnnotatedEMPack
 
-The transformation operation is triggered when the service consumer receives an upsertion of an "original AnnotatedEMPack" or a “re-transform AnnotatedEMPack” event.
+The transformation operation is triggered when the service receives either an “original AnnotatedEMPack upsert” event or a “re-transform AnnotatedEMPack” event.
 
-1. Fetch the datapack ids and corresponding schemapack names of all datapacks in the AnnotatedEMPacks collection where the `original_id` field matches our original datapack id. Create a mapping of these schemapack names to their datapack ids that we call “dirty map”, because all of these datapacks need to be either re-created or deleted.
-2. Create a “transformed map” that maps schemapack names to datapacks. This will hold the datapacks that have been transformed in this operation already. Initialize it with just the original schemapack names mapping to the original datapack.
-3. Traverse the schemapacks in the transformation graph starting with the original schemapack, in topological order. For all of these schemapacks, do the following:
-   1. Get the route that has the current schemapack as input. Since we require the unique-path-property, there should be exactly one such route. Raise an error if this is not the case (should never happen if the traverse correctly and the graph was properly validated).
-   2. Get the datapack from the “transformed map” that corresponds to the input schemapack of that route. This is the “input datapack” for this step. It should always exist at this point if the topological order was computed correctly, and we can raise an error at this point if this is not the case.
-   3. Compute the transformed datapack using the input datapack and the workflow route.
-   4. If the current schemapack name is in the “dirty map”, remove it there and update the “transformed map” with the transformed datapack.
-   5. Otherwise, add the transformed datapack to the “transformed map” with a newly generated id, setting its `model_name` to the current schemapack name, and its original_id field to the original datapack id.
-4. Finally, upsert all entries in the “transformed map” to the database that should be published, and delete all remaining entries in the “dirty map” from the database.
+1. Build the dirty map: Query the AnnotatedEMPacks collection for all data where `original_id` matches the incoming original data's ID. Extract each data's ID and model name, then create a mapping from model names to data IDs. This "dirty map" tracks data that need to be either re-created or deleted.
 
-This course of action avoids deleting “dirty” datapacks while they are recreated, since that would make the corresponding resources disappear while the transformation is ongoing. It also keeps any intermediate datapacks in memory, avoiding unnecessary database operations and operations.
+2. Initialize the transformed map: Create a mapping from model names to data. This map will accumulate all data generated during this transformation operation. Initialize it with a single entry: the original model name mapped to the incoming original data.
+
+3. Traverse the transformation graph: Starting from the EMIM and following the topological order, perform the following for each model:
+   1. Get the route that has the current model as its input. Due to the unique-path property, exactly one route must exist; raise an error otherwise.
+   2. Retrieve the data from the transformed map using the route’s input model. This is the “input data” for this step. It should always exist at this point if the topological order was computed correctly, and we can raise an error at this point if this is not the case.
+   3. Compute the transformed data using the input data and the route's workflow.
+   4. If the current model exists in the dirty map, remove it from there and update the transformed map with the newly transformed data.
+   5. Otherwise, add the transformed data to the “transformed map” with a newly generated id, setting its `model_name` to the current model name, and its original_id field to the original data id.
+4. Apply database updates: Upsert all transformed data that should be published, and delete any remaining data listed in the dirty map.
+
+
+This approach avoids deleting "dirty" data during recreation, preventing resources from temporarily disappearing mid-transformation. It also keeps intermediate data in memory, reducing unnecessary database operations.
 
 #### User Journeys: Configuration Change
 
-The “configuration change” operation should be triggered after detecting a change in the configuration YAML file.
+This operation is triggered when a change to the configuration YAML file is detected.
 
-The transformation change is detected by comparing the current configuration with the configuration stored in the `configs` collection. If there is a difference, the new transformation configuration is set as the current configuration and the service performs the re-computation of derived schemapacks and re-transformation of all original AnnotatedEMPacks.
+The service detects configuration changes by comparing the current in-memory configuration with the configuration stored in the database. When they differ, the service adopts the new configuration and performs:
 
-The configuration change will trigger the following operations:
-1. Re-compute the schemapacks of all transformed schemapacks as described in the "Model Derivation" user journey
-2. Re-run the transformations for all original datapacks as described in the "Service Consumer Transforms An Original AnnotatedEMPack" user journey.
+1. Re-derivation of all transformed schemas (as described in "Model Derivation")
+2. Re-transformation of all original AnnotatedEMPacks (as described in "Service Consumer Transforms An Original AnnotatedEMPack")
 
 
 ### Not included (but possible future extensions):
 
-- A REST API to retrieve the currently used public schemapacks, which would be useful for frontend developers for inspection purposes.
+- A REST API to retrieve the currently used public schemas, which would be useful for frontend developers for inspection purposes.
 - A REST API to push configuration data instead of loading it from YAML files at startup.
 - Configuration versioning to maintain a full history of changes and enable rollbacks to previous versions.
