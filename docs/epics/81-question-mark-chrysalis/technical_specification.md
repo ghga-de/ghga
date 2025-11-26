@@ -32,7 +32,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 ### Included/Required:
 
-- Implement a service that persists the annotatedEMPacks, workflows, and routes entities.
+- Implement a service that persists the `AnnotatedEMPack`, `Model`, `Workflow`, and `Route` entities.
 - Implement logic to process incoming AnnotatedEMPacks, execute the corresponding workflows and store the resulting AnnotatedEMPacks if required.
 - Implement code to manage changes in models, workflows and routes, e.g. by creating universal schema descriptions from the ingress schema descriptions and re-transforming the AnnotatedEMPacks.
 
@@ -153,15 +153,15 @@ class AnnotatedEMPack(BaseModel):
 
 #### Database Layer
 
-The em-transformation-service interacts with a database containing core entities. Models, workflows, and routes are loaded from a configuration YAML file which is also stored in the database. AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs. Only published data is stored persistently. Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original data.
+The em-transformation-service interacts with a database containing core entities. Models, workflows, and routes are loaded from a configuration YAML file which is also stored in the database. AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs. Only published data is stored persistently (using an outbox DAO). Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original data.
 
 #### Transformation Configuration
 
-A transformation is configured through the models, workflows and routes. The current configuration of the service is read from a YAML file and stored as a global `Config` object that is later used to determine whether a configuration change has occurred.
+The transformations are configured through the models, workflows and routes. The service loads the complete transformation configuration from a YAML file and stores it as a global validated `Config` object. This “last known good” configuration is used to detect configuration changes, trigger re-derivation and re-transformation when needed, and serve as a rollback state if a newly loaded YAML configuration is invalid.
 
 Routes define how to transform an input model into an output model by specifying the workflow to apply and the expected output model.
 
-Routes also define a graph where schemas are nodes and routes are directed edges. The source nodes of this graph are the EMIMs. The graph must not contain any "diamonds", i.e. there must be at most one directed path between any two schemas in the graph. This also implies that the graph does not contain any cycles, i.e. is a directed acyclic graph (DAG). 
+Routes also define a graph where models are nodes and routes are directed edges. The source nodes of this graph are the EMIMs. The graph must not contain any "diamonds", i.e. there must be at most one directed path between any two models in the graph. This also implies that the graph does not contain any cycles, i.e. is a directed acyclic graph (DAG). 
 
 We enforce this stronger unique-path property because "diamond" shapes indicate unnecessary redundancy that should be avoided, and because it eliminates any ambiguity in how data are transformed.
 
@@ -171,7 +171,7 @@ This graph structure is used to validate the transformation configuration and to
 
 Transformation configuration validation includes:
 
-1. Verify that all workflows and EMIMs (i.e., models with is_ingest = true) referenced by the routes exist in the database.
+1. Verify that all workflows and EMIMs (i.e., models with is_ingest = true) referenced by the routes exist in the configuration.
 2. Ensure that EMIMs do not appear as the output models of any routes.
 3. Validate schemas using the SchemaPack library and workflows using the metldata library.
 4. Confirm that the graph meets the unique-path requirement and is therefore acyclic.
@@ -183,7 +183,9 @@ Transformation configuration validation includes:
 
 When manually triggered—or when the configuration changes—the service derives the output schemas for all routes.
 
-1. Validate the transformation configuration.
+1. Validate the transformation configuration as described above.
+   1. The configuration is rejected if validation fails.
+   2. In case of rejection, the previous valid configuration remains active.
 2. Traverse the transformation graph starting from the EMIMs, following the topological order. For each route:
    1. Retrieve the workflow identified by `workflow_name`.
    2. Retrieve the schema of the model referenced by `input_model_name`.
