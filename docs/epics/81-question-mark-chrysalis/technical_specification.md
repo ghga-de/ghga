@@ -29,6 +29,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Route`: Information on which specific workflow is used to produce datapack compliant with the output model when presented with datapack compliant with the input model.
 
+`Model`: an object that holds all information necessary for the transformation service regarding an EMIM or transformed model 
 
 ### Included/Required:
 
