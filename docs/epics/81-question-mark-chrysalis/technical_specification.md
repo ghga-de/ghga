@@ -175,8 +175,8 @@ Transformation configuration validation includes:
 2. Ensure that EMIMs do not appear as the output models of any routes.
 3. Validate schemas using the SchemaPack library and workflows using the metldata library.
 4. Confirm that the graph meets the unique-path requirement and is therefore acyclic.
-5. Compute a topological ordering of the graph’s nodes—using an algorithm similar to Kahn’s—so that each schema is processed only after all its dependencies.
-6.  Update the order field of each model based on the resulting topological order.
+5. Compute a topological order of the graph’s nodes—e.g. using Kahn’s algorithm—so that each model is processed only after all its dependencies when visiting the models in that order.
+6. Update the order field of each model based on the computed topological order.
 
 
 #### User Journeys: Model Derivation
