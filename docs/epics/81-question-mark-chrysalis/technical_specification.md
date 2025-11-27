@@ -216,7 +216,11 @@ This approach avoids deleting "dirty" data during recreation, preventing resourc
 
 This operation is triggered when a change to the configuration YAML file is detected when the service is started.
 
-The service detects configuration changes by comparing the current in-memory configuration with the configuration stored in the database. When they differ, the service adopts the new configuration and performs:
+The service detects configuration changes by comparing the configuration in the database with the configuration stored in the config YAML.
+
+When comparing the configuration, the objects should be compared recursively for equality. This is done automatically in Python when the config is deserialized as a dict or Pydantic object. However, care must be taken to not compare fields that do not exist in the raw configuration (order and derived schemas). We could implement a custom equality method to properly compare Models with RawModels in that regard.
+
+When they differ, the service adopts the new configuration and performs:
 
 1. Re-derivation of all transformed schemas (as described in "Model Derivation")
 2. Re-transformation of all original AnnotatedEMPacks (as described in "Service Consumer Transforms An Original AnnotatedEMPack")
