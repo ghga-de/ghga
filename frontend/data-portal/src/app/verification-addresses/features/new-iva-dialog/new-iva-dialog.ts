@@ -52,9 +52,10 @@ export class NewIvaDialogComponent {
    */
   valuePrompts: { [key in keyof typeof IvaType]: string } = {
     Phone: 'Please enter your phone number to receive an SMS:',
-    Fax: '', // do not show this option
-    PostalAddress: 'Please enter your postal address:',
     InPerson: 'Please enter a meeting location:',
+    // the following options should not be selectable any more:
+    Fax: '',
+    PostalAddress: '',
   };
 
   /**
