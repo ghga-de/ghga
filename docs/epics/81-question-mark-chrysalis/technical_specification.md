@@ -121,7 +121,7 @@ class Route(BaseModel):
 
 #### `RawConfig`
 
-- Purpose: describe the current active transformation configuration
+- Purpose: describes a new transformation configuration (without derived information)
 
 data structure:
 
