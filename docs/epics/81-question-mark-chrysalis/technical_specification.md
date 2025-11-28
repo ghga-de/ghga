@@ -46,24 +46,33 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 data structure:
 ```python
-class Model(BaseModel):
+from pydantic import BaseModel
+
+class RawModel(BaseModel):
    name: str
    description: str | None
    is_ingress: bool
    version: str | None
    schema: SchemaPack | None
    publish: bool 
-   order: int | None
+
+class Model(RawModel):
+   schema: SchemaPack
+   order: int
 
 ```
-- name: Unique identifier / human-readable name of the model.
-- description: Human-readable description.
-- is_ingress: Boolean, true for EMIMs.
-- version: Schema version, None if it is not an EMIM
-- schema: Schema in SchemaPack format, None if it is not an EMIM and not yet computed
-- publish: Boolean indicating whether the AnnotatedEMPacks conforming to the schema should be published
-- order: Order in a topological ordering of the schemas in the transformation graph, None if not yet computed
+- RawModel.name: Unique identifier / human-readable name of the model.
+- RawModel.description: Human-readable description.
+- RawModel.is_ingress: Boolean, true for EMIMs.
+- RawModel.version: Schema version, None if it is not an EMIM
+- RawModel.schema: Schema in SchemaPack format, None if it is not an EMIM and not yet computed
+- RawModel.publish: Boolean indicating whether the AnnotatedEMPacks conforming to the schema should be published
+- Model.order: Order in a topological ordering of the schemas in the transformation graph
+- Model.schema: Schema in SchemaPack format, always defined after derivation.
 
+`RawModel` is used when deserializing the configuration from YAML files, as it does not include the `order` field that is derived after configuration validation. `RawModel` must include a validator to ensure that EMIMs (is_ingress = true) always have a `schema` defined. And the `schema` is None for non-EMIMs when deserializing the configuration.
+
+`Model` is used for the DAO. Since the models are stored in the database only after the config is validated, the `Model` class dictates that `order` and `schema` are not null. 
 
 #### `Workflow`
 
@@ -113,23 +122,16 @@ data structure:
 
 ```python
 
-class BaseConfig(BaseModel):
-   models: list[Model]
+class RawConfig(BaseModel):
+   models: list[RawModel]
    workflows: list[Workflow]
    routes: list[Route]
 
-class Config(BaseModel):
-   version: int = 0
-   created: datetime
-   config: BaseConfig
 ```
 
-- BaseConfig.models: List of Model objects defining the transformation graph.
-- BaseConfig.workflows: List of Workflow objects available.
-- BaseConfig.routes: List of Route objects composing the graph.
-- Config.version: Configuration identifier (always 0 in the first implementation).
-- Config.created: Datetime when this config was validated and activated.
-- Config.config: Transformation configuration data.
+- Config.models: List of Model objects defining the transformation graph.
+- Config.workflows: List of Workflow objects available.
+- Config.routes: List of Route objects composing the graph.
 
 #### `AnnotatedEMPack`
 
