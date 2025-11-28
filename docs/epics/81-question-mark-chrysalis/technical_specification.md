@@ -206,6 +206,8 @@ When manually triggered—or when the configuration changes—the service derive
    2. Update the output model’s schema accordingly.
    3. If any errors or conflicts occur, abort the operation and report them.
 
+3. Store the validated configuration with the derived schemas and ordering in the database.
+
 
 The validation (including the model derivation) should be protected by a global lock that would prevent other instances of the service from running the validation and model derivation in parallel, and would also stop the processing of AnnotatedEMPack transformations while the lock is active.
 
