@@ -176,29 +176,32 @@ We enforce this stronger unique-path property because "diamond" shapes indicate 
 
 This graph structure is used to validate the transformation configuration and to determine the processing order of schemas during model derivation and configuration changes.
 
-#### Transformation Configuration Validation
-
-Transformation configuration validation includes:
-
-1. Verify that all workflows and EMIMs (i.e., models with is_ingest = true) referenced by the routes exist in the configuration.
-2. Ensure that EMIMs do not appear as the output models of any routes.
-3. Validate schemas using the SchemaPack library and workflows using the metldata library.
-4. Confirm that the graph meets the unique-path requirement and is therefore acyclic.
-5. Compute a topological order of the graph’s nodes—e.g. using Kahn’s algorithm—so that each model is processed only after all its dependencies when visiting the models in that order.
-6. Update the order field of each model based on the computed topological order.
-
-
-#### User Journeys: Model Derivation
+#### User Journeys: Transformation Configuration Validation & Model Derivation
 
 When manually triggered—or when the configuration changes—the service derives the output schemas for all routes.
 
-1. Validate the transformation configuration as described above.
-   1. The configuration is rejected if validation fails.
-   2. In case of rejection, the previous valid configuration remains active.
+1. Validate the transformation configuration:
+
+   1. Verify that all workflows and EMIMs (i.e., models with is_ingest = true) referenced by the routes exist in the configuration.
+   2. Ensure that EMIMs do not appear as the output models of any routes.
+   3. Validate schemas using the SchemaPack library and workflows using the metldata library.
+   4. Confirm that the graph meets the unique-path requirement and is therefore acyclic.
+   5. Compute a topological order of the graph’s nodes—e.g. using Kahn’s algorithm—so that each model is processed only after all its dependencies when visiting the models in that order.
+   6. Update the order field of each model based on the computed topological order.
+   7. If the validation fails:
+      1. Reject the configuration.
+      2. Re-load the previous valid configuration from the database.
+      3. If there is no configuration stored in the database yet, stop the service
+
 2. Traverse the transformation graph starting from the EMIMs, following the topological order. For each route:
    1. Use metldata to run the workflow identified by `workflow_name` on the input model’s schema referenced by `input_model_name` and compute the derived schema.
    2. Update the output model’s schema accordingly.
-3. If any errors or conflicts occur, abort the operation and report them.
+   3. If any errors or conflicts occur, abort the operation and report them.
+
+
+The validation (including the model derivation) should be protected by a global lock that would prevent other instances of the service from running the validation and model derivation in parallel, and would also stop the processing of AnnotatedEMPack transformations while the lock is active.
+
+This lock could be implemented via a special "lock" collection in the database that would contain a certain document while the lock is active.
 
 
 #### User Journeys: Service Consumer Transforms An Original AnnotatedEMPack
