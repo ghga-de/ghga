@@ -80,6 +80,9 @@ class Model(RawModel):
 
 data structure:
 ```python
+
+from pydantic import BaseModel
+
 class Workflow(BaseModel):
    name: str
    description: str | None
@@ -98,6 +101,8 @@ class Workflow(BaseModel):
 data structure:
 
 ```python
+from pydantic import BaseModel
+
 class Route(BaseModel):
    name: str
    input_model_name: str
@@ -121,6 +126,7 @@ class Route(BaseModel):
 data structure:
 
 ```python
+from pydantic import BaseModel
 
 class RawConfig(BaseModel):
    models: list[RawModel]
@@ -140,6 +146,8 @@ Purpose: holds incoming and derived annotated EM datapacks that are to be proces
 data structure:
 
 ```python
+from pydantic import BaseModel
+
 class AnnotatedEMPack(BaseModel):
    id: uuid
    model_name: str
