@@ -156,7 +156,13 @@ class AnnotatedEMPack(BaseModel):
 
 #### Database Layer
 
-The em-transformation-service interacts with a database containing core entities. Models, workflows, and routes are loaded from a configuration YAML file and kept in fully in memory. The configuration YAML file is also stored in the database after a successful validation along with the re-derived models if there is a change. AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs. They are loaded into memory on demand. Only published data is stored persistently (using an outbox DAO). Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original data.
+The em-transformation-service interacts with a database containing the core entities described above.
+
+On startup, the service reads all Models, Workflows and Routes from a config YAML and from the database. These objects should be kept completely in memory and they are only written back to the database if they are in a consistent, validated state with all necessary information (derived schemas, ordering) already computed.
+
+If the content of the config YAML file corresponds to what is stored in the database, the service continues to use the known-valid and pre-computed config from the database. If there are any changes in the YAML config, it will be validated, and the missing information (derived schemas, ordering) re-computed. If there are any errors, the YAML config will be rejected, otherwise stored in the database as new configuration.
+
+AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs. Only published data is stored persistently (using an outbox DAO). Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original piece of data, as explained in a later section..
 
 #### Transformation Configuration
 
