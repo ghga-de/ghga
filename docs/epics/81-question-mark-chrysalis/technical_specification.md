@@ -29,7 +29,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Route`: Information on which specific workflow is used to produce datapack compliant with the output model when presented with datapack compliant with the input model.
 
-`Model`: an object that holds all information necessary for the transformation service regarding an EMIM or transformed model 
+`Model`: an object that holds all information necessary for the transformation service regarding an EMIM or transformed model.
 
 ### Included/Required:
 
@@ -114,7 +114,7 @@ class Route(BaseModel):
 - workflow_name: Name of the workflow to apply on the route.
 
 
-#### `Config`
+#### `RawConfig`
 
 - Purpose: describe the current active transformation configuration
 
@@ -129,9 +129,9 @@ class RawConfig(BaseModel):
 
 ```
 
-- Config.models: List of Model objects defining the transformation graph.
-- Config.workflows: List of Workflow objects available.
-- Config.routes: List of Route objects composing the graph.
+- RawConfig.models: List of RawModel objects defining the transformation graph.
+- RawConfig.workflows: List of Workflow objects available.
+- RawConfig.routes: List of Route objects composing the graph.
 
 #### `AnnotatedEMPack`
 
