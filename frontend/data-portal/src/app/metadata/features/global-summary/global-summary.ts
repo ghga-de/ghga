@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FileStats, ValueCount } from '@app/metadata/models/global-summary';
 import { MetadataStatsService } from '@app/metadata/services/metadata-stats';
-import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space-pipe';
+import { GlobalSummaryCardContentComponent } from '@app/metadata/ui/global-summary-card-content/global-summary-card-content';
 import { NotificationService } from '@app/shared/services/notification';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
 
@@ -23,10 +23,10 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
   imports: [
     MatCardModule,
     MatIconModule,
-    UnderscoreToSpace,
     MatProgressSpinnerModule,
     StencilComponent,
     DecimalPipe,
+    GlobalSummaryCardContentComponent,
   ],
   templateUrl: './global-summary.html',
   styleUrl: './global-summary.scss',

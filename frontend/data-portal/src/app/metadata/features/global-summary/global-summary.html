@@ -1,16 +1,15 @@
 <section class="bg-primary my-8 rounded-lg p-5 pb-8">
   @if (isLoading()) {
-  <mat-spinner class="float-right" [diameter]="24"> </mat-spinner>
+    <mat-spinner class="float-right" [diameter]="24"> </mat-spinner>
   }
   <h2 class="text-white">Statistics</h2>
   <div
     [class]="
       `flex grid grid-cols-1 justify-center gap-4` +
-      ` *:min-h-56 *:p-4` +
+      ` *:min-h-56 *:p-3` +
       ` sm:grid-cols-2` +
-      ` md:gap-x-[6%] md:gap-y-8 md:px-4` +
-      ` lg:grid-cols-4 lg:gap-x-[2%] lg:gap-y-0 lg:px-1` +
-      ` xl:gap-x-[4%] xl:px-8 2xl:gap-x-[8%] 2xl:px-16`
+      ` xl:grid-cols-4 xl:gap-x-[0.75%] xl:px-0` +
+      ` 2xl:gap-x-[2%] 2xl:px-[2%]`
     "
   >
     <mat-card appearance="outlined" class="card-primary text-white"
@@ -25,8 +24,10 @@
       ><mat-card-content class="mt-4 text-2xl"
         ><div class="text-center">
           @if (isLoading()) {
-          <app-stencil />
-          } @else { {{ datasets().count | number }} }
+            <app-stencil />
+          } @else {
+            {{ datasets().count | number }}
+          }
         </div></mat-card-content
       ></mat-card
     >
@@ -38,43 +39,20 @@
             class="border-tertiary rounded-full border-4 px-1"
             fontIcon="genetics"
           ></mat-icon></span
-        ><br />Experiments: @if (isLoading()) {
-        <app-stencil class="inline-flex w-10" />
-        } @else { {{ methods().count | number }} }</mat-card-title
-      ><mat-card-content class="mt-4 text-sm">
-        <table class="mx-auto w-auto">
-          <caption class="cdk-visually-hidden">
-            Experiments
-          </caption>
-          <thead>
-            <tr class="cdk-visually-hidden italic">
-              <th scope="col" class="pe-3 text-end">Count</th>
-              <th scope="col" class="text-start">Platform</th>
-            </tr>
-          </thead>
-          <tbody>
-            @if (isLoading()) { @for (i of [1, 2, 3]; track i) {
-            <tr>
-              <td class="pe-3 text-end font-bold">
-                <app-stencil class="inline-flex w-10" />
-              </td>
-              <td class="text-left uppercase">
-                <app-stencil class="inline-flex w-16" />
-              </td>
-            </tr>
-            } } @else { @for ( platform of methods().stats?.instrument_model ?? [];
-            track platform.value ) {
-            <tr>
-              <td class="pe-3 text-right font-bold">{{ platform.count | number }}</td>
-              <td class="text-left uppercase">
-                {{ platform.value | underscoreToSpace }}
-              </td>
-            </tr>
-            } }
-          </tbody>
-        </table>
-      </mat-card-content></mat-card
-    >
+        ><br />Experiments:
+        @if (isLoading()) {
+          <app-stencil class="inline-flex w-10" />
+        } @else {
+          {{ methods().count | number }}
+        }</mat-card-title
+      ><mat-card-content>
+        <app-global-summary-card-content
+          [isLoading]="isLoading()"
+          [data]="methods().stats?.instrument_model"
+          caption="Experiments"
+          propertyName="Platform"
+        ></app-global-summary-card-content></mat-card-content
+    ></mat-card>
     <mat-card appearance="outlined" class="card-primary text-white"
       ><mat-card-title class="text-center"
         ><span class="block text-3xl"
@@ -83,40 +61,20 @@
             class="rounded-full border-4 border-white px-1"
             fontIcon="person"
           ></mat-icon></span
-        >Individuals: @if (isLoading()) {
-        <app-stencil class="inline-flex w-10" />
-        } @else { {{ individuals().count | number }} }</mat-card-title
-      ><mat-card-content class="mt-4 text-sm">
-        <table class="mx-auto w-auto">
-          <caption class="cdk-visually-hidden">
-            Individuals
-          </caption>
-          <thead>
-            <tr class="cdk-visually-hidden italic">
-              <th scope="col" class="pe-3 text-end">Count</th>
-              <th scope="col" class="text-start">Sex</th>
-            </tr>
-          </thead>
-          <tbody>
-            @if (isLoading()) { @for (i of [1, 2, 3]; track i) {
-            <tr>
-              <td class="pe-3 text-right font-bold">
-                <app-stencil class="inline-flex w-10" />
-              </td>
-              <td>
-                <app-stencil class="inline-flex w-16" />
-              </td>
-            </tr>
-            } } @else { @for (sex of individuals().stats?.sex ?? []; track sex.value) {
-            <tr>
-              <td class="pe-3 text-right font-bold">{{ sex.count | number }}</td>
-              <td class="text-left">{{ sex.value }}</td>
-            </tr>
-            } }
-          </tbody>
-        </table>
-      </mat-card-content></mat-card
-    >
+        >Individuals:
+        @if (isLoading()) {
+          <app-stencil class="inline-flex w-10" />
+        } @else {
+          {{ individuals().count | number }}
+        }</mat-card-title
+      ><mat-card-content
+        ><app-global-summary-card-content
+          [isLoading]="isLoading()"
+          [data]="individuals().stats?.sex"
+          caption="Individuals"
+          propertyName="Sex"
+        ></app-global-summary-card-content> </mat-card-content
+    ></mat-card>
     <mat-card appearance="outlined" class="text-primary"
       ><mat-card-title class="text-tertiary text-center"
         ><span class="text-3xl"
@@ -125,40 +83,19 @@
             class="border-tertiary rounded-full border-4 px-1"
             fontIcon="description"
           ></mat-icon></span
-        ><br />Files: @if (isLoading()) {
-        <app-stencil class="inline-flex w-10" />
-        } @else { {{ files().count | number }} }</mat-card-title
-      ><mat-card-content class="mt-4 text-sm">
-        <table class="mx-auto w-auto">
-          <caption class="cdk-visually-hidden">
-            Files
-          </caption>
-          <thead>
-            <tr class="cdk-visually-hidden italic">
-              <th scope="col" class="pe-3 text-end">Count</th>
-              <th scope="col" class="text-start">File Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            @if (isLoading()) { @for (i of [1, 2, 3]; track i) {
-            <tr>
-              <td class="pe-3 text-right font-bold">
-                <app-stencil class="inline-flex w-10" />
-              </td>
-              <td class="text-left uppercase">
-                <app-stencil class="inline-flex w-16" />
-              </td>
-            </tr>
-            } } @else { @for (format of files().stats?.format ?? []; track format.value)
-            {
-            <tr>
-              <td class="pe-3 text-right font-bold">{{ format.count | number }}</td>
-              <td class="text-left uppercase">{{ format.value }}</td>
-            </tr>
-            } }
-          </tbody>
-        </table>
-      </mat-card-content></mat-card
-    >
+        ><br />Files:
+        @if (isLoading()) {
+          <app-stencil class="inline-flex w-10" />
+        } @else {
+          {{ files().count | number }}
+        }</mat-card-title
+      ><mat-card-content
+        ><app-global-summary-card-content
+          [isLoading]="isLoading()"
+          [data]="files().stats?.format"
+          caption="Files"
+          propertyName="File Type"
+        ></app-global-summary-card-content> </mat-card-content
+    ></mat-card>
   </div>
 </section>

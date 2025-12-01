@@ -310,12 +310,48 @@ export const metadataGlobalSummary: BaseGlobalSummary = {
       stats: {
         instrument_model: [
           {
-            value: 'Ilumina_test',
-            count: 700,
+            value: 'HiSeq_test',
+            count: 150,
           },
           {
-            value: 'HiSeq_test',
-            count: 700,
+            value: 'Illumina_test_6002',
+            count: 50,
+          },
+          {
+            value: 'Illumina_test_6003',
+            count: 250,
+          },
+          {
+            value: 'Illumina_test_6004',
+            count: 50,
+          },
+          {
+            value: 'Illumina_test_test_6000_6001_6002_6003',
+            count: 100,
+          },
+          {
+            value: 'Illumina_test_test_6001',
+            count: 100,
+          },
+          {
+            value: 'Illumina_test_test',
+            count: 100,
+          },
+          {
+            value: 'Nexttest_100',
+            count: 100,
+          },
+          {
+            value: 'Nexttest_102',
+            count: 100,
+          },
+          {
+            value: 'Nexttest_103',
+            count: 100,
+          },
+          {
+            value: 'Nexttest_104',
+            count: 300,
           },
         ],
       },
@@ -375,7 +411,7 @@ export const datasetSummary: DatasetSummary = {
     stats: {
       experiment_methods: [
         {
-          value: 'Ilumina_test',
+          value: 'Illumina_test',
           count: 10,
         },
         { value: 'HiSeq_test', count: 4 },
