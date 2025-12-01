@@ -272,8 +272,13 @@ class IvaChangeEventsConfig(BaseSettings):
     )
     iva_state_changed_type: str = Field(
         default=...,
-        description="The type to use for iva state changed events.",
+        description="The type to use for IVA state changed events.",
         examples=["iva_state_changed"],
+    )
+    iva_send_code_type: str = Field(
+        default=...,
+        description="The type to use for IVA send code events.",
+        examples=["iva_send_code"],
     )
 
 

@@ -525,6 +525,16 @@ class UserIvaState(UserID):
     model_config = ConfigDict(title="iva_state_change")
 
 
+class UserIvaCode(UserID):
+    """Notification requesting transmission of a verification code for a user's IVA."""
+
+    value: str = Field(default=..., description="The value of the IVA")
+    type: IvaType = Field(default=..., description="The type of the IVA")
+    code: IvaState = Field(..., description="The verification code for the IVA")
+
+    model_config = ConfigDict(title="iva_send_code")
+
+
 class ResearchDataUploadBoxState(StrEnum):
     """The allowed states for a ResearchDataUploadBox instance."""
 
@@ -674,4 +684,5 @@ schema_registry: dict[str, type[BaseModel]] = {
     "second_factor_recreated": UserID,
     "access_request_details": AccessRequestDetails,
     "iva_state_changed": UserIvaState,
+    "iva_send_code": UserIvaCode,
 }
