@@ -67,7 +67,7 @@ function readSettings() {
 
   // Override settings with environment variables
   // (the env var name must be fully lower case or upper case, but not mixed)
-  const prefix = NAME.replace('-', '_');
+  const prefix = NAME.replaceAll('-', '_');
   for (const key in settings) {
     if (!settings.hasOwnProperty(key)) continue;
     const envVarName = `${prefix}_${key}`;

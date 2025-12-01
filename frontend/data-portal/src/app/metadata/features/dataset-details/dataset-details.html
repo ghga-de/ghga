@@ -62,7 +62,7 @@
           </div>
         </div>
       </div>
-      <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="center" dynamicHeight>
+      <mat-tab-group [mat-stretch-tabs]="false" mat-align-tabs="center" dynamicHeight>
         <mat-tab
           ><ng-template mat-tab-label
             ><span class="text-primary flex items-center">
@@ -206,7 +206,7 @@
           </ng-template>
           <div class="overflow-x-auto p-4">
             <div class="min-w-72">
-              @if (dap().policy_url !== '') {
+              @if (dap().policy_url) {
                 <a
                   appExtLink
                   mat-stroked-button
@@ -237,23 +237,25 @@
                   >
                 </p>
                 <p>
-                  <strong>Data Use Modifiers:</strong>
-                  @if (dap().data_use_modifier_terms.length > 0) {
+                  @if (dap().data_use_modifiers; as modifiers) {
+                    <strong>Data Use Modifiers:</strong>
                     @for (
-                      term of dap().data_use_modifier_terms;
-                      track term;
-                      let idx = $index;
+                      modifier of modifiers;
+                      track modifier.id;
                       let first = $first;
                       let last = $last
                     ) {
+                      @let id = modifier.id;
+                      @let term = modifier.term;
+                      @let url = modifier.url;
                       {{ first ? ' ' : '' }}
-                      <a appExtLink [href]="dap().data_use_modifier_urls[idx]">{{
-                        term
-                      }}</a
-                      >{{ last ? '' : ', ' }}
+                      @if (url) {
+                        <a appExtLink [href]="url">{{ term ? term : `${id}` }}</a
+                        >{{ last ? '' : ', ' }}
+                      } @else {
+                        {{ term }}{{ last ? '' : ', ' }}
+                      }
                     }
-                  } @else {
-                    N/A
                   }
                 </p>
               </div>

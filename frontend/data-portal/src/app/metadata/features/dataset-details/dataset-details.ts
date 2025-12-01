@@ -114,21 +114,30 @@ export class DatasetDetailsComponent implements OnInit {
   dap = computed(() => {
     const dap = this.datasetDetails().data_access_policy;
     const data_use_permission_url = `${this.baseDuoUrl}${dap.data_use_permission_id.replace(':', '_')}`;
-    const data_use_modifier_urls = dap.data_use_modifier_ids.map(
-      (x) => `${this.baseDuoUrl}${x.replace(':', '_')}`,
-    );
     const data_use_permission_term = dap.data_use_permission_term
       .toLowerCase()
       .replaceAll('_', ' ');
-    const data_use_modifier_terms = dap.data_use_modifier_terms.map((x) =>
-      x.toLowerCase().replace('_', ' '),
-    );
+    const modifierIds = dap.data_use_modifier_ids || [];
+    const modifierTerms = dap.data_use_modifier_terms || [];
+    const numModifiers = Math.max(modifierIds.length, modifierTerms.length);
+    const data_use_modifiers = numModifiers
+      ? Array.from({ length: numModifiers }, (_, idx) => {
+          return {
+            id: modifierIds[idx],
+            url: modifierIds[idx]
+              ? `${this.baseDuoUrl}${modifierIds[idx].replace(':', '_')}`
+              : undefined,
+            term: modifierTerms[idx]
+              ? modifierTerms[idx].toLowerCase().replaceAll('_', ' ')
+              : undefined,
+          };
+        })
+      : undefined;
     return {
       ...dap,
       data_use_permission_term,
-      data_use_modifier_terms,
       data_use_permission_url,
-      data_use_modifier_urls,
+      data_use_modifiers,
     };
   });
   dac = computed(() => this.dap().data_access_committee);
