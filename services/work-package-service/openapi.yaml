@@ -158,6 +158,8 @@ components:
             type: string
           - const: delete
             type: string
+          - const: view
+            type: string
           description: The type of work order token to create
           title: Work Type
       required:
@@ -277,7 +279,7 @@ components:
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
-  version: 7.0.2
+  version: 7.1.0
 openapi: 3.1.0
 paths:
   /health:

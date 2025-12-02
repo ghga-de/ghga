@@ -40,10 +40,11 @@ __all__ = [
     "CloseFileWorkOrder",
     "CreateFileWorkOrder",
     "DeleteFileWorkOrder",
-    "ResearchDataUploadBox",
+    "ResearchDataUploadBoxBasics",
     "UploadFileWorkOrder",
     "UploadPathType",
     "UploadWorkOrderTokenRequest",
+    "ViewFileBoxWorkOrder",
     "WorkPackage",
     "WorkPackageCreationData",
     "WorkPackageCreationResponse",
@@ -97,7 +98,8 @@ CreateType = Literal["create"]
 UploadType = Literal["upload"]
 CloseType = Literal["close"]
 DeleteType = Literal["delete"]
-UploadPathType = CreateType | UploadType | CloseType | DeleteType
+ViewType = Literal["view"]
+UploadPathType = CreateType | UploadType | CloseType | DeleteType | ViewType
 WorkType = UploadPathType | DownloadPathType
 
 
@@ -113,6 +115,13 @@ class DownloadWorkOrder(BaseWorkOrderToken):
 
     work_type: DownloadPathType = "download"
     file_id: str  # should be the file accession, as opposed to UUID4 used for uploads
+
+
+class ViewFileBoxWorkOrder(BaseWorkOrderToken):
+    """WOT schema authorizing a user to view a FileUploadBox"""
+
+    work_type: ViewType = "view"
+    box_id: UUID4
 
 
 class CreateFileWorkOrder(BaseWorkOrderToken):
@@ -151,36 +160,12 @@ class DeleteFileWorkOrder(BaseWorkOrderToken, _FileUploadToken):
     work_type: DeleteType = "delete"
 
 
-# TODO: reference the event schema once this is moved there. for now, mark with '_'
-class _ResearchDataUploadBoxState(StrEnum):
-    """The allowed states for an ResearchDataUploadBox instance"""
+class ResearchDataUploadBoxBasics(BaseDto):
+    """A model describing an upload box that groups file uploads.
 
-    OPEN = "open"
-    LOCKED = "locked"
-    CLOSED = "closed"
-
-
-class _ResearchDataUploadBox(BaseModel):
-    """A class representing a ResearchDataUploadBox.
-
-    Contains all fields from the FileUploadBox and shares IDs.
+    This model contains a selected subset of the fields from the shared model
+    ResearchDataUploadBox, which is defined in ghga-event-schemas.
     """
-
-    id: UUID4  # unique identifier for the instance
-    file_upload_box_id: UUID4  # ID of the FileUploadBox in the UCS
-    locked: bool = False  # Whether or not changes to the files in the box are allowed
-    file_count: int = 0  # The number of files in the box
-    size: int = 0  # The total size of all files in the box
-    storage_alias: str  # Storage alias assigned to the FileUploadBox
-    state: _ResearchDataUploadBoxState  # one of OPEN, LOCKED, CLOSED
-    title: str  # short meaningful name for the box
-    description: str  # describes the upload box in more detail
-    last_changed: UTCDatetime
-    changed_by: UUID4  # ID of the user who performed the latest change
-
-
-class ResearchDataUploadBox(BaseDto):
-    """A model describing an upload box that groups file uploads."""
 
     id: UUID4 = Field(
         ...,
@@ -197,7 +182,7 @@ class ResearchDataUploadBox(BaseDto):
     )
 
 
-class BoxWithExpiration(ResearchDataUploadBox):
+class BoxWithExpiration(ResearchDataUploadBoxBasics):
     """A model describing a research data upload box with an expiration date."""
 
     expires: UTCDatetime = Field(
@@ -339,6 +324,8 @@ class UploadWorkOrderTokenRequest(BaseModel):
     @model_validator(mode="after")
     def validate_parameters_and_work_type(self):
         """Ensure proper params are supplied given work type."""
+        if self.work_type == "view":
+            return self
         if self.work_type == "create" and not self.alias:
             raise ValueError("File alias is required for CREATE work type")
         elif self.work_type != "create" and not self.file_id:

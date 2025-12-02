@@ -36,9 +36,10 @@ from wps.core.models import (
     DatasetWithExpiration,
     DeleteFileWorkOrder,
     DownloadWorkOrder,
-    ResearchDataUploadBox,
+    ResearchDataUploadBoxBasics,
     UploadFileWorkOrder,
     UploadPathType,
+    ViewFileBoxWorkOrder,
     WorkPackage,
     WorkPackageCreationData,
     WorkPackageCreationResponse,
@@ -464,6 +465,11 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
                     file_id=file_id,  # type: ignore
                     user_public_crypt4gh_key=user_public_crypt4gh_key,
                 )
+            case "view":
+                work_order = ViewFileBoxWorkOrder(  # type: ignore[assignment]
+                    box_id=file_upload_box_id,
+                    user_public_crypt4gh_key=user_public_crypt4gh_key,
+                )
             case _:  # pragma: no cover
                 access_error = self.WorkPackageAccessError(
                     f"Unsupported Work Order Token type: {work_type}"
@@ -536,7 +542,9 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             datasets_with_expiration.append(dataset_with_expiration)
         return datasets_with_expiration
 
-    async def register_upload_box(self, upload_box: ResearchDataUploadBox) -> None:
+    async def register_upload_box(
+        self, upload_box: ResearchDataUploadBoxBasics
+    ) -> None:
         """Register an upload box."""
         await self._upload_box_dao.upsert(upload_box)
         log.info("Upserted UploadBox with ID %s", upload_box.id)
@@ -551,7 +559,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
                 "UploadBox with ID %s not found, presumed already deleted.", box_id
             )
 
-    async def get_upload_box(self, box_id: UUID4) -> ResearchDataUploadBox:
+    async def get_upload_box(self, box_id: UUID4) -> ResearchDataUploadBoxBasics:
         """Get a registered upload box using the given ID.
 
         Raises an `UploadBoxNotFoundError` if no doc with the box_id exists.

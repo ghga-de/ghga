@@ -303,6 +303,23 @@ async def test_make_upload_work_order_token(
         "box_id": RDU_BOX_ID,
     }
 
+    # Test VIEW work order token
+    view_request = {"work_type": "view"}
+    response = await client.post(
+        f"/work-packages/{work_package_id}/boxes/{RDU_BOX_ID}/work-order-tokens",
+        json=view_request,
+        headers=headers_for_token(token),
+    )
+    view_wot = response.json()
+    assert isinstance(view_wot, str)
+
+    # Decrypt and validate the VIEW work order token
+    decrypted_wot = decrypt(view_wot)
+    wot_dict = decode_and_validate_token(decrypted_wot, SIGNING_KEY_PAIR.public())
+    assert wot_dict["work_type"] == "view"
+    assert wot_dict["user_public_crypt4gh_key"] == user_public_crypt4gh_key
+    assert wot_dict["box_id"] == FILE_BOX_ID
+
     # Test CREATE work order token
     create_request = {"work_type": "create", "alias": "test-file"}
     response = await client.post(

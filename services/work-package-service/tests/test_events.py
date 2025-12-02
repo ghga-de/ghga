@@ -23,12 +23,13 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from ghga_event_schemas.pydantic_ import ResearchDataUploadBox
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
 
 from wps.config import Config
-from wps.core.models import ResearchDataUploadBox, _ResearchDataUploadBox
+from wps.core.models import ResearchDataUploadBoxBasics
 from wps.prepare import Consumer, prepare_consumer
 
 from .fixtures import (  # noqa: F401
@@ -237,18 +238,18 @@ async def test_outbox_consumer(config: Config, kafka: KafkaFixture):
     # Create a test upload box
     research_data_upload_box_id = uuid4()
     file_upload_box_id = uuid4()
-    test_event = _ResearchDataUploadBox(
+    test_event = ResearchDataUploadBox(
         id=research_data_upload_box_id,
         title="Test Upload Box",
         description="A test upload box for testing outbox events",
-        state="open",  # type: ignore
+        state="open",
         file_upload_box_id=file_upload_box_id,
         storage_alias="test",
         changed_by=uuid4(),
         last_changed=now_utc_ms_prec(),
     )
 
-    test_box = ResearchDataUploadBox(
+    test_box = ResearchDataUploadBoxBasics(
         id=research_data_upload_box_id,
         file_upload_box_id=file_upload_box_id,
         title=test_event.title,
