@@ -530,7 +530,7 @@ class UserIvaCode(UserID):
 
     value: str = Field(default=..., description="The value of the IVA")
     type: IvaType = Field(default=..., description="The type of the IVA")
-    code: IvaState = Field(..., description="The verification code for the IVA")
+    code: str = Field(..., description="The verification code for the IVA")
 
     model_config = ConfigDict(title="iva_send_code")
 
