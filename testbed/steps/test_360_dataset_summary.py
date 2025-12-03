@@ -28,7 +28,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/260_dataset_summary.feature")
+scenarios("../features/360_dataset_summary.feature")
 
 EXPECTED_SUMMARIES = {
     "EGADATASET000B": {

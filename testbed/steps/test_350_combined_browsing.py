@@ -18,7 +18,7 @@
 from .conftest import JointFixture, parse, scenarios, when
 from .utils import search_dataset
 
-scenarios("../features/250_combined_browsing.feature")
+scenarios("../features/350_combined_browsing.feature")
 
 
 @when(

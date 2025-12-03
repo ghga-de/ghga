@@ -25,7 +25,7 @@ from pytest_bdd import (  # noqa: RUF100
 
 from .conftest import JointFixture, Response, parse
 
-scenarios("../features/301_user_session_after_inactivation.feature")
+scenarios("../features/101_user_session_after_inactivation.feature")
 
 
 @given(parse('the status of "{full_name}" is "{status}"'))

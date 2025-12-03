@@ -29,7 +29,7 @@ from .conftest import (
 )
 from .utils import IVA_TYPE_NAMES
 
-scenarios("../features/402_data_portal_access_grants.feature")
+scenarios("../features/502_data_portal_access_grants.feature")
 
 TIMEOUT = 3000
 

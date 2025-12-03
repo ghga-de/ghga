@@ -29,7 +29,7 @@ from .conftest import (
 )
 from .utils import get_alias_from_ega_accession, get_dataset_search_summary
 
-scenarios("../features/270_dataset_details.feature")
+scenarios("../features/370_dataset_details.feature")
 
 
 def get_dataset_details(

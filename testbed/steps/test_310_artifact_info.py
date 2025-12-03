@@ -17,7 +17,7 @@
 
 from .conftest import Config, HttpClient, Response, parse, scenarios, then, when
 
-scenarios("../features/210_artifact_info.feature")
+scenarios("../features/310_artifact_info.feature")
 
 
 @when("I request info on all available artifacts", target_fixture="response")

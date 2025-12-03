@@ -26,7 +26,7 @@ from steps.utils import load_config_as_file
 
 from .conftest import Config, JointFixture, MongoFixture, scenarios, then, when
 
-scenarios("../features/130_load_metadata.feature")
+scenarios("../features/020_load_metadata.feature")
 
 
 @when("metadata is loaded into the system")

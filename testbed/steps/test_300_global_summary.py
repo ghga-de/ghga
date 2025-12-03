@@ -19,7 +19,7 @@ from datetime import UTC, datetime, timezone
 
 from .conftest import Config, HttpClient, Response, scenarios, then, when
 
-scenarios("../features/200_global_summary.feature")
+scenarios("../features/300_global_summary.feature")
 
 
 @when("I get the global summary", target_fixture="response")

@@ -29,7 +29,7 @@ from ghga_event_schemas.pydantic_ import (
 
 from .conftest import JointFixture, given, parse, scenarios, then, when
 
-scenarios("../features/600_dead_letter_queue.feature")
+scenarios("../features/700_dead_letter_queue.feature")
 
 
 @given("the dead letter queue is empty")

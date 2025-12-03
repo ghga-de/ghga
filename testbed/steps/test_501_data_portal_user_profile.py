@@ -30,7 +30,7 @@ from .conftest import (
 )
 from .utils import IVA_TYPE_NAMES
 
-scenarios("../features/401_data_portal_user_profile.feature")
+scenarios("../features/501_data_portal_user_profile.feature")
 
 STATE_MSG_MAP = {
     "verified": "Address has been verified",

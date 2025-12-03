@@ -28,7 +28,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/310_user_verification.feature")
+scenarios("../features/110_user_verification.feature")
 
 
 # Types are case-sensitive as they are requested by the API

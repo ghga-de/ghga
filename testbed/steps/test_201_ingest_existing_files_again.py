@@ -23,12 +23,12 @@ from pathlib import Path
 
 from ghga_datasteward_kit.file_ingest import IngestConfig
 
-from steps.test_120_upload_files import call_data_steward_kit_ingest
+from steps.test_200_upload_files import call_data_steward_kit_ingest
 from steps.utils import ingest_config_as_file
 
 from .conftest import JointFixture, given, scenarios, then, when
 
-scenarios("../features/121_ingest_existing_files_again.feature")
+scenarios("../features/201_ingest_existing_files_again.feature")
 
 
 def restore_file_metadata_json(file_metadata_dir: Path, file_metadata: dict):

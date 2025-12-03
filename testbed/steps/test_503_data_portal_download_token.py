@@ -28,7 +28,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/403_data_portal_download_token.feature")
+scenarios("../features/503_data_portal_download_token.feature")
 
 TIMEOUT = 3000
 

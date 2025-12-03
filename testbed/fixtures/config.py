@@ -89,6 +89,8 @@ class Config(BaseSettings):
         "pcs",
         "dlq",
         "rts",
+        "ucs",
+        "uos",
     ]
 
     object_storages: ObjectStoragesConfig = ObjectStoragesConfig(
@@ -144,10 +146,11 @@ class Config(BaseSettings):
         "pcs",
         "dlq",
         "rts",
+        "uos",
     ]
 
     # internal APIs
-    internal_apis: list[str] = ["ekss", "auth_adapter"]
+    internal_apis: list[str] = ["ekss", "auth_adapter", "ucs"]
 
     # auth
     auth_key_file: Path = Path(__file__).parent.parent / ".devcontainer/auth.env"
@@ -282,6 +285,14 @@ class Config(BaseSettings):
         "notification service": "ns",
         "metadata artifact search service": "mass",
     }
+
+    # upload-controller
+    ucs_db_name: str = "ucs"
+    ucs_url: str = "ucs"
+
+    # upload-orchestration
+    uos_db_name: str = "uos"
+    uos_url: str = "uos"
 
     @model_validator(mode="after")
     def check_operation_modes(self):

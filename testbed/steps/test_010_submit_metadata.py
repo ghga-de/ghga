@@ -23,7 +23,7 @@ from pathlib import Path
 
 from .conftest import JointFixture, given, parse, scenarios, then, when
 
-scenarios("../features/100_submit_metadata.feature")
+scenarios("../features/010_submit_metadata.feature")
 
 
 def call_data_steward_kit_submit(

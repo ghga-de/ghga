@@ -29,10 +29,10 @@ from .conftest import (
     then,
     when,
 )
-from .test_130_load_metadata import run_the_load_command
+from .test_020_load_metadata import run_the_load_command
 from .utils import get_dataset_overview, search_dataset
 
-scenarios("../features/500_delete_datasets.feature")
+scenarios("../features/600_delete_datasets.feature")
 
 
 def is_dataset_a_and_b(event_file: Path) -> bool:

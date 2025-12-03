@@ -31,7 +31,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/300_user_registration.feature")
+scenarios("../features/100_user_registration.feature")
 
 
 @given(parse('I lost my TOTP token as "{full_name}"'))

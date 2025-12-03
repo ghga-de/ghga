@@ -26,7 +26,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/280_dataset_file_information.feature")
+scenarios("../features/380_dataset_file_information.feature")
 
 EXPECTED_DATASET_FILE_COUNT = {
     "DS_A": 7,

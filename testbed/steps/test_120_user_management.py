@@ -27,7 +27,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/311_user_management.feature")
+scenarios("../features/120_user_management.feature")
 
 
 @when(parse('"{full_name}" retrieves the list of all users'), target_fixture="response")

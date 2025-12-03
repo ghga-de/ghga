@@ -33,7 +33,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/320_access_request.feature")
+scenarios("../features/400_access_request.feature")
 
 
 @when(

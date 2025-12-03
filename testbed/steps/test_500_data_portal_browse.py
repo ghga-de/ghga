@@ -29,7 +29,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/400_data_portal_browse.feature")
+scenarios("../features/500_data_portal_browse.feature")
 
 EXPECTED_STATS = {
     "Total datasets": 2,

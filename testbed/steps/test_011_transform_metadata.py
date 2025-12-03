@@ -22,7 +22,7 @@ from pathlib import Path
 
 from .conftest import JointFixture, scenarios, then, when
 
-scenarios("../features/110_transform_metadata.feature")
+scenarios("../features/011_transform_metadata.feature")
 
 
 def call_data_steward_kit_transform(

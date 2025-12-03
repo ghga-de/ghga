@@ -30,7 +30,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/330_work_packages.feature")
+scenarios("../features/410_work_packages.feature")
 
 
 @given("no work packages have been created yet")

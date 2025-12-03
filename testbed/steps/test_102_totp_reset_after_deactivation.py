@@ -25,7 +25,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/302_totp_reset_after_deactivation.feature")
+scenarios("../features/102_totp_reset_after_deactivation.feature")
 
 
 @when(parse('"{full_name}" attempts TOTP verification with wrong codes'))

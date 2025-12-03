@@ -26,7 +26,7 @@ from .conftest import (
 )
 from .utils import get_alias_from_ega_accession, search_dataset
 
-scenarios("../features/220_search_datasets.feature")
+scenarios("../features/320_search_datasets.feature")
 
 SEARCH_ALL_DATASETS = {
     "facets": [

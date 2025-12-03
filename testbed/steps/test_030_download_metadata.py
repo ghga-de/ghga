@@ -23,7 +23,7 @@ from openpyxl import load_workbook
 
 from .conftest import JointFixture, parse, scenarios, then, when
 
-scenarios("../features/140_download_metadata.feature")
+scenarios("../features/030_download_metadata.feature")
 
 
 @when(
