@@ -37,6 +37,7 @@ default_config = EventPubTranslatorConfig(
     second_factor_recreated_type="second_factor_recreated",
     iva_state_changed_topic="ivas",
     iva_state_changed_type="iva_state_changed",
+    iva_send_code_type="iva_send_code",
 )
 
 custom_config = default_config.model_copy(
@@ -45,6 +46,7 @@ custom_config = default_config.model_copy(
         "second_factor_recreated_type": "custom_second_factor_recreated",
         "iva_state_changed_topic": "custom_ivas",
         "iva_state_changed_type": "custom_iva_state_changed",
+        "iva_send_code_type": "custom_iva_send_code",
     }
 )
 

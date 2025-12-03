@@ -18,9 +18,9 @@
 An IVA is an "independent verification address" used to verify a user's identity.
 """
 
-from enum import StrEnum
 from uuid import uuid4
 
+from ghga_event_schemas.pydantic_ import IvaState, IvaType
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4, ConfigDict, Field
 
@@ -38,25 +38,6 @@ __all__ = [
     "IvaVerificationCode",
     "IvaWithState",
 ]
-
-
-class IvaType(StrEnum):
-    """The type of IVA"""
-
-    PHONE = "Phone"
-    FAX = "Fax"
-    POSTAL_ADDRESS = "PostalAddress"
-    IN_PERSON = "InPerson"
-
-
-class IvaState(StrEnum):
-    """The state of an IVA"""
-
-    UNVERIFIED = "Unverified"
-    CODE_REQUESTED = "CodeRequested"
-    CODE_CREATED = "CodeCreated"
-    CODE_TRANSMITTED = "CodeTransmitted"
-    VERIFIED = "Verified"
 
 
 class IvaBasicData(BaseDto):

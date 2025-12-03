@@ -103,28 +103,42 @@
       "type": "string"
     },
     "iva_state_changed_type": {
-      "description": "The type to use for iva state changed events.",
+      "description": "The type to use for IVA state changed events.",
       "examples": [
         "iva_state_changed"
       ],
       "title": "Iva State Changed Type",
       "type": "string"
     },
+    "iva_send_code_type": {
+      "description": "The type to use for IVA send code events.",
+      "examples": [
+        "iva_send_code"
+      ],
+      "title": "Iva Send Code Type",
+      "type": "string"
+    },
     "dataset_change_topic": {
-      "default": "metadata_datasets",
-      "description": "the topic of the event announcing dataset deletions",
+      "description": "Name of the topic announcing, among other things, the list of files included in a new dataset.",
+      "examples": [
+        "metadata_datasets"
+      ],
       "title": "Dataset Change Topic",
       "type": "string"
     },
     "dataset_deletion_type": {
-      "default": "dataset_deleted",
-      "description": "the type of the event announcing dataset deletions",
+      "description": "Event type used for communicating dataset deletions",
+      "examples": [
+        "dataset_deleted"
+      ],
       "title": "Dataset Deletion Type",
       "type": "string"
     },
     "dataset_upsertion_type": {
-      "default": "dataset_created",
-      "description": "the type of the event announcing dataset upsertions",
+      "description": "Event type used for communicating dataset upsertions",
+      "examples": [
+        "dataset_upserted"
+      ],
       "title": "Dataset Upsertion Type",
       "type": "string"
     },
@@ -434,6 +448,17 @@
       "description": "Maximum number of verification attempts for an IVA",
       "title": "Max Iva Verification Attempts",
       "type": "integer"
+    },
+    "auto_send_iva_code_for_types": {
+      "default": [
+        "Phone"
+      ],
+      "description": "IVA types for which verification codes are sent automatically",
+      "items": {
+        "$ref": "#/$defs/IvaType"
+      },
+      "title": "Auto Send Iva Code For Types",
+      "type": "array"
     },
     "totp_issuer": {
       "default": "GHGA",
@@ -911,6 +936,10 @@
     "second_factor_recreated_type",
     "iva_state_changed_topic",
     "iva_state_changed_type",
+    "iva_send_code_type",
+    "dataset_change_topic",
+    "dataset_deletion_type",
+    "dataset_upsertion_type",
     "service_instance_id",
     "kafka_servers",
     "mongo_dsn",

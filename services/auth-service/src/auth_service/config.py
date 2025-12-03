@@ -160,19 +160,6 @@ class Config(
         description="the name of the database located on the MongoDB server",
     )
 
-    dataset_change_topic: str = Field(
-        default="metadata_datasets",
-        description="the topic of the event announcing dataset deletions",
-    )
-    dataset_deletion_type: str = Field(
-        default="dataset_deleted",
-        description="the type of the event announcing dataset deletions",
-    )
-    dataset_upsertion_type: str = Field(  # required, but unused
-        default="dataset_created",
-        description="the type of the event announcing dataset upsertions",
-    )
-
     @field_validator("oidc_issuer")
     @classmethod
     def check_http_url(cls, v: str) -> str:

@@ -36,3 +36,7 @@ class EventPublisherPort(ABC):
     @abstractmethod
     async def publish_ivas_reset(self, *, user_id: UUID4) -> None:
         """Publish an event relaying that all IVAs of the user have been reset."""
+
+    @abstractmethod
+    async def publish_iva_send_code(self, *, iva: Iva, code: str) -> None:
+        """Publish a request to automatically send the code for the given IVA.."""

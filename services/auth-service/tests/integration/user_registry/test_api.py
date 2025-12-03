@@ -18,6 +18,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from functools import partial
+from typing import Any, TypeGuard
 from uuid import uuid4
 
 import pytest
@@ -61,6 +62,19 @@ OPT_USER_DATA = {
 MAX_USER_DATA = {**MIN_USER_DATA, **OPT_USER_DATA}
 
 VERIFICATION_CODE_SIZE = 6  # the expected size of verification codes
+
+
+def is_a_verification_code(code: Any) -> TypeGuard[str]:
+    """Check that the given value is a possible verification code."""
+    assert code
+    assert isinstance(code, str)
+    assert len(code) == VERIFICATION_CODE_SIZE, code
+    assert code.isascii(), code
+    assert code.isalnum(), code
+    assert code.isupper(), code
+    assert any(c.isdigit() for c in code)
+    assert any(not c.isdigit() for c in code)
+    return True
 
 
 def seconds_passed(date_string: str) -> float:
@@ -1041,7 +1055,7 @@ async def test_crud_operations_for_ivas(
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
     # Create two IVAs
-    data = {"type": "Phone", "value": "123"}
+    data = {"type": "Phone", "value": "0123 4567"}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1052,7 +1066,7 @@ async def test_crud_operations_for_ivas(
     iva_id_phone = iva_id["id"]
     assert iva_id_phone
 
-    data = {"type": "Fax", "value": "456"}
+    data = {"type": "Fax", "value": "0123 6789"}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1079,12 +1093,12 @@ async def test_crud_operations_for_ivas(
         {
             "id": iva_id_phone,
             "type": "Phone",
-            "value": "123",
+            "value": "0123 4567",
         },
         {
             "id": iva_id_fax,
             "type": "Fax",
-            "value": "456",
+            "value": "0123 6789",
         },
     ]
 
@@ -1104,13 +1118,13 @@ async def test_crud_operations_for_ivas(
         {
             "id": iva_id_phone,
             "type": "Phone",
-            "value": "123",
+            "value": "0123 4567",
             **user_info,
         },
         {
             "id": iva_id_fax,
             "type": "Fax",
-            "value": "456",
+            "value": "0123 6789",
             **user_info,
         },
     ]
@@ -1190,7 +1204,7 @@ async def test_crud_operations_for_ivas_as_data_steward(
     user_id = user["id"]
 
     # Create an IVA
-    data = {"type": "Phone", "value": "123/456"}
+    data = {"type": "Phone", "value": "0123 4567"}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=steward_headers
     )
@@ -1214,7 +1228,7 @@ async def test_crud_operations_for_ivas_as_data_steward(
     assert iva == {
         "id": iva_id,
         "type": "Phone",
-        "value": "123/456",
+        "value": "0123 4567",
         "state": "Unverified",
     }
 
@@ -1226,7 +1240,7 @@ async def test_crud_operations_for_ivas_as_data_steward(
     assert len(ivas) == 1
     iva = ivas[0]
     assert iva["id"] == iva_id
-    assert iva["value"] == "123/456"
+    assert iva["value"] == "0123 4567"
     assert iva["user_id"] == user_id
     assert iva["user_name"] == "Max Headroom"
 
@@ -1243,7 +1257,7 @@ async def test_crud_operations_for_ivas_as_data_steward(
     assert iva == {
         "id": iva_id,
         "type": "Phone",
-        "value": "123/456",
+        "value": "0123 4567",
         "state": "Unverified",
     }
 
@@ -1413,12 +1427,15 @@ async def test_deleting_non_existing_iva_for_existing_user_as_data_steward(
     assert error["detail"] == "The IVA was not found."
 
 
-async def test_happy_path_for_verifying_an_iva(
+async def test_happy_path_for_verifying_an_iva_manual(
     full_client: FullClient,
     new_user_headers: dict[str, str],
     steward_headers: dict[str, str],
 ):
-    """Test the happy path for the creation and verification of an IVA."""
+    """Test the happy path for the creation and manual verification of an IVA.
+
+    Tests that an IVA can be verified when the code is transmitted manually.
+    """
     # Create a user
     user_data = MIN_USER_DATA
     response = await full_client.post(
@@ -1430,8 +1447,8 @@ async def test_happy_path_for_verifying_an_iva(
 
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
-    # Create an IVA
-    data = {"type": "Phone", "value": "123"}
+    # Create an IVA that needs manual transmission of the code
+    data = {"type": "PostalAddress", "value": "Baker Street"}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1476,11 +1493,7 @@ async def test_happy_path_for_verifying_an_iva(
     assert isinstance(response_obj, dict)
     assert list(response_obj) == ["verification_code"]
     code = response_obj["verification_code"]
-    assert isinstance(code, str)
-    assert code.isascii()
-    assert code.isalnum()
-    assert code.isupper()
-    assert len(code) == VERIFICATION_CODE_SIZE
+    assert is_a_verification_code(code)
 
     assert not recorder.recorded_events
 
@@ -1525,8 +1538,98 @@ async def test_happy_path_for_verifying_an_iva(
     assert len(ivas) == 1
     iva = ivas[0]
     assert iva["id"] == iva_id
+    assert iva["type"] == "PostalAddress"
+    assert iva["value"] == "Baker Street"
+    assert iva["state"] == "Verified"
+
+
+async def test_happy_path_for_verifying_an_iva_automated(
+    full_client: FullClient,
+    new_user_headers: dict[str, str],
+    steward_headers: dict[str, str],
+):
+    """Test the happy path for the creation and automated verification of an IVA.
+
+    Tests that an IVA can be verified when the code is transmitted automatically.
+    """
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await full_client.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
+
+    # Create an IVA that triggers automatic transmission of the code
+    data = {"type": "Phone", "value": "0123 456789"}
+    response = await full_client.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    iva_id = response.json()["id"]
+    assert iva_id
+
+    record_events = partial(
+        full_client.kafka.record_events,
+        in_topic=full_client.config.iva_state_changed_topic,
+    )
+    expected_payload = {
+        "user_id": user_id,
+        "value": data["value"],
+        "type": data["type"],
+    }
+
+    # Request code
+    async with record_events() as recorder:
+        response = await full_client.post(
+            f"/rpc/ivas/{iva_id}/request-code", headers=headers
+        )
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    # Check that code has been transmitted automatically
+    events = recorder.recorded_events
+    assert len(events) == 2
+    event_types = [event.type_ for event in events]
+    assert event_types == ["iva_send_code", "iva_state_changed"]
+    payloads = [{**event.payload} for event in events]
+    code = payloads[0].pop("code")
+    assert is_a_verification_code(code)
+    assert payloads[1].pop("state") == "CodeTransmitted"
+    assert all(payload == expected_payload for payload in payloads)
+
+    # Validate code
+    data = {"verification_code": code}
+    async with record_events() as recorder:
+        response = await full_client.post(
+            f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers
+        )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    assert len(recorder.recorded_events) == 1
+    recorded_event = recorder.recorded_events[0]
+    assert recorded_event.payload == {
+        **expected_payload,
+        "state": "Verified",
+    }
+
+    # Check that the IVA has really been verified
+
+    response = await full_client.get(f"/users/{user_id}/ivas", headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert isinstance(ivas, list)
+    assert len(ivas) == 1
+    iva = ivas[0]
+    assert iva["id"] == iva_id
     assert iva["type"] == "Phone"
-    assert iva["value"] == "123"
+    assert iva["value"] == "0123 456789"
     assert iva["state"] == "Verified"
 
 
@@ -1571,7 +1674,7 @@ async def test_data_steward_iva_operations_without_authorization(
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
     # Create an IVA as the wrong user
-    data = {"type": "Phone", "value": "123"}
+    data = {"type": "Phone", "value": "0123 4567"}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=user_headers
     )
@@ -1580,7 +1683,7 @@ async def test_data_steward_iva_operations_without_authorization(
     assert error == {"detail": "Not authorized to create this IVA."}
 
     # Now create it as the proper user
-    data = {"type": "Phone", "value": "123"}
+    data = {"type": "Phone", "value": "0123 4567"}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1646,8 +1749,8 @@ async def test_wrongly_verifying_a_few_times(
 
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
-    # Create an IVA
-    data = {"type": "Phone", "value": "123"}
+    # Create an IVA for which the code will be transmitted manually
+    data = {"type": "PostalAddress", "value": "Sesame Street"}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1664,13 +1767,8 @@ async def test_wrongly_verifying_a_few_times(
         f"/rpc/ivas/{iva_id}/create-code", headers=steward_headers
     )
     assert response.status_code == status.HTTP_201_CREATED
-    code = response.json()["verification_code"]
-    assert code
-    assert isinstance(code, str)
-    assert code.isascii()
-    assert code.isalnum()
-    assert code.isupper()
-    assert len(code) == VERIFICATION_CODE_SIZE
+    code = response.json().get("verification_code")
+    assert is_a_verification_code(code)
     # Transmit code
     response = await full_client.post(
         f"/rpc/ivas/{iva_id}/code-transmitted", headers=steward_headers
@@ -1723,8 +1821,8 @@ async def test_wrongly_verifying_an_iva_too_often(
 
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
-    # Create an IVA
-    data = {"type": "Phone", "value": "123"}
+    # Create an IVA for which the code will be transmitted automatically
+    data = {"type": "Phone", "value": "0123 4567"}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1732,28 +1830,22 @@ async def test_wrongly_verifying_an_iva_too_often(
     iva_id = response.json()["id"]
     assert iva_id
     # Request code
-    response = await full_client.post(
-        f"/rpc/ivas/{iva_id}/request-code", headers=headers
-    )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-    # Create code
-    response = await full_client.post(
-        f"/rpc/ivas/{iva_id}/create-code", headers=steward_headers
-    )
-    assert response.status_code == status.HTTP_201_CREATED
-    code = response.json()["verification_code"]
-    assert code
-    assert isinstance(code, str)
-    assert code.isascii()
-    assert code.isalnum()
-    assert code.isupper()
-    assert len(code) == VERIFICATION_CODE_SIZE
-    # Transmit code
-    response = await full_client.post(
-        f"/rpc/ivas/{iva_id}/code-transmitted", headers=steward_headers
-    )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-    # Send wrong verification code 10 times
+    async with full_client.kafka.record_events(in_topic="ivas") as recorder:
+        response = await full_client.post(
+            f"/rpc/ivas/{iva_id}/request-code", headers=headers
+        )
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    events = recorder.recorded_events
+    assert [event.type_ for event in events] == ["iva_send_code", "iva_state_changed"]
+    payload = events[0].payload
+    assert payload["user_id"] == user_id
+    assert payload["type"] == "Phone"
+    assert payload["value"] == "0123 4567"
+    code = payload.get("code")
+    assert is_a_verification_code(code)
+
+    # User enters wrong verification code 10 times
     last_char_is_digit = code[-1].isdigit()
     wrong_last_chars = "ABCDEFGHIJ" if last_char_is_digit else "0123456789"
     for i in range(10):
@@ -1765,7 +1857,7 @@ async def test_wrongly_verifying_an_iva_too_often(
         assert response.status_code == status.HTTP_403_FORBIDDEN
         error = response.json()
         assert error == {"detail": "The submitted verification code was invalid."}
-    # Now send right verification code, but it's not accepted anymore
+    # Then enters correct verification code, but it's not accepted anymore
     data = {"verification_code": code}
     response = await full_client.post(
         f"/rpc/ivas/{iva_id}/validate-code", json=data, headers=headers

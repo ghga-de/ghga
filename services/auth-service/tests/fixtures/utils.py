@@ -522,7 +522,7 @@ class MockEventPublisher(EventPublisherPort):
 
     def __init__(self):
         """Initialize the mock event publisher."""
-        self.published_events = []
+        self.published_events: list[tuple] = []
 
     async def publish_2fa_recreated(self, *, user_id: UUID4) -> None:
         """Publish an event relaying that the 2nd factor of a user was recreated."""
@@ -536,11 +536,15 @@ class MockEventPublisher(EventPublisherPort):
         """Publish an event relaying that all IVAs of the user have been reset."""
         self.published_events.append(("ivas_reset", user_id))
 
+    async def publish_iva_send_code(self, *, iva: Iva, code: str) -> None:
+        """Publish an event relaying that all IVAs of the user have been reset."""
+        self.published_events.append(("iva_send_code", iva, code))
+
 
 class MockUserRegistry(UserRegistry):
     """A modified user registry for testing with the dummy DAOs."""
 
-    published_events: list[tuple[str, Any]]
+    published_events: list[tuple]
 
     def __init__(self, *, config: UserRegistryConfig = CONFIG):
         """Initialize the mock UserRegistry."""

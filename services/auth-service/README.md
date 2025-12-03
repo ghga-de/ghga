@@ -47,13 +47,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:8.1.2
+docker pull ghga/auth-service:8.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:8.1.2 .
+docker build -t ghga/auth-service:8.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -61,7 +61,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/auth-service:8.1.2 --help
+docker run -p 8080:8080 ghga/auth-service:8.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -101,16 +101,41 @@ The service requires the following configuration parameters:
   "ivas"
   ```
 
-- <a id="properties/iva_state_changed_type"></a>**`iva_state_changed_type`** *(string, required)*: The type to use for iva state changed events.
+- <a id="properties/iva_state_changed_type"></a>**`iva_state_changed_type`** *(string, required)*: The type to use for IVA state changed events.
 
   Examples:
   ```json
   "iva_state_changed"
   ```
 
-- <a id="properties/dataset_change_topic"></a>**`dataset_change_topic`** *(string)*: the topic of the event announcing dataset deletions. Default: `"metadata_datasets"`.
-- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string)*: the type of the event announcing dataset deletions. Default: `"dataset_deleted"`.
-- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string)*: the type of the event announcing dataset upsertions. Default: `"dataset_created"`.
+- <a id="properties/iva_send_code_type"></a>**`iva_send_code_type`** *(string, required)*: The type to use for IVA send code events.
+
+  Examples:
+  ```json
+  "iva_send_code"
+  ```
+
+- <a id="properties/dataset_change_topic"></a>**`dataset_change_topic`** *(string, required)*: Name of the topic announcing, among other things, the list of files included in a new dataset.
+
+  Examples:
+  ```json
+  "metadata_datasets"
+  ```
+
+- <a id="properties/dataset_deletion_type"></a>**`dataset_deletion_type`** *(string, required)*: Event type used for communicating dataset deletions.
+
+  Examples:
+  ```json
+  "dataset_deleted"
+  ```
+
+- <a id="properties/dataset_upsertion_type"></a>**`dataset_upsertion_type`** *(string, required)*: Event type used for communicating dataset upsertions.
+
+  Examples:
+  ```json
+  "dataset_upserted"
+  ```
+
 - <a id="properties/claims_collection"></a>**`claims_collection`** *(string)*: Name of the collection for user claims. Default: `"claims"`.
 - <a id="properties/user_topic"></a>**`user_topic`** *(string)*: The name of the topic containing user events. Default: `"users"`.
 - <a id="properties/users_collection"></a>**`users_collection`** *(string)*: Name of the collection for users. Default: `"users"`.
@@ -352,6 +377,8 @@ The service requires the following configuration parameters:
 
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 - <a id="properties/max_iva_verification_attempts"></a>**`max_iva_verification_attempts`** *(integer)*: Maximum number of verification attempts for an IVA. Default: `10`.
+- <a id="properties/auto_send_iva_code_for_types"></a>**`auto_send_iva_code_for_types`** *(array)*: IVA types for which verification codes are sent automatically. Default: `["Phone"]`.
+  - <a id="properties/auto_send_iva_code_for_types/items"></a>**Items**: Refer to *[#/$defs/IvaType](#%24defs/IvaType)*.
 - <a id="properties/totp_issuer"></a>**`totp_issuer`** *(string)*: Issuer name for TOTP provisioning URIs. Default: `"GHGA"`.
 - <a id="properties/totp_image"></a>**`totp_image`**: URL of the PNG image provided in the TOTP provisioning URIs. Default: `null`.
   - **Any of**

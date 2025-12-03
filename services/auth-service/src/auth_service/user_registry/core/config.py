@@ -20,6 +20,7 @@ from __future__ import annotations
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+from ..models.ivas import IvaType
 from ..models.users import UserStatus
 
 INITIAL_USER_STATUS = UserStatus.ACTIVE
@@ -32,4 +33,9 @@ class UserRegistryConfig(BaseSettings):
 
     max_iva_verification_attempts: int = Field(
         default=10, description="Maximum number of verification attempts for an IVA"
+    )
+
+    auto_send_iva_code_for_types: list[IvaType] = Field(
+        default=[IvaType.PHONE],
+        description="IVA types for which verification codes are sent automatically",
     )

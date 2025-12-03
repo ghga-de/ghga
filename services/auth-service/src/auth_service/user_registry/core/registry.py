@@ -73,6 +73,7 @@ class UserRegistry(UserRegistryPort):
     ):
         """Initialize the user registry."""
         self._max_iva_verification_attempts = config.max_iva_verification_attempts
+        self._auto_send_iva_code_for_types = set(config.auto_send_iva_code_for_types)
         self._user_dao = user_dao
         self._iva_dao = iva_dao
         self._claim_dao = claim_dao
@@ -438,7 +439,12 @@ class UserRegistry(UserRegistryPort):
         if iva.state is not IvaState.UNVERIFIED:
             raise self.IvaUnexpectedStateError(iva_id=iva_id, state=iva.state)
         iva = await self.update_iva(iva, state=IvaState.CODE_REQUESTED)
-        if notify:
+        if iva.type in self._auto_send_iva_code_for_types:
+            code = await self.create_iva_verification_code(iva_id)
+            await self._event_pub.publish_iva_send_code(iva=iva, code=code)
+            log.info("Sent verification code for IVA %s to user %s", iva_id, user_id)
+            await self.confirm_iva_code_transmission(iva_id, notify=notify)
+        elif notify:
             # send a notification to the user and a data steward
             await self._event_pub.publish_iva_state_changed(iva=iva)
 
@@ -475,10 +481,7 @@ class UserRegistry(UserRegistryPort):
         iva = await self.get_iva(iva_id)
         if iva.state is not IvaState.CODE_CREATED:
             raise self.IvaUnexpectedStateError(iva_id=iva_id, state=iva.state)
-        iva = await self.update_iva(
-            iva,
-            state=IvaState.CODE_TRANSMITTED,
-        )
+        iva = await self.update_iva(iva, state=IvaState.CODE_TRANSMITTED)
         if notify:
             # send a notification to the user
             await self._event_pub.publish_iva_state_changed(iva=iva)

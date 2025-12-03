@@ -97,3 +97,16 @@ class EventPubTranslator(EventPublisherPort):
             key=f"all-{user_id}",
             topic=self._config.iva_state_changed_topic,
         )
+
+    @TRACER.start_as_current_span("EventPubTranslator.publish_iva_send_code")
+    async def publish_iva_send_code(self, *, iva: Iva, code: str) -> None:
+        """Publish a request to automatically send the code for the given IVA."""
+        payload: JsonObject = event_schemas.UserIvaCode(
+            user_id=iva.user_id, value=iva.value, type=iva.type, code=code
+        ).model_dump()
+        await self._event_publisher.publish(
+            payload=payload,
+            type_=self._config.iva_send_code_type,
+            key=f"iva-{iva.id}",
+            topic=self._config.iva_state_changed_topic,
+        )
