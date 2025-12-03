@@ -28,8 +28,8 @@
 {{- end }}
 {{- end -}}
 {{- define "ghga-common.kafkauser" -}}
----
 {{- if .Values.kafkaUser.enabled -}}
+---
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaUser
 metadata:

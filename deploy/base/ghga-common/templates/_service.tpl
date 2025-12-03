@@ -38,6 +38,8 @@ spec:
   {{- if or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort") }}
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | quote }}
   {{- end }}
+  {{- if .Values.ports.enabled }}
   ports: {{- include "common.tplvalues.render" (dict "value" .Values.service.ports "context" $) | nindent 4 }}
+  {{- end }}
   selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
 {{- end -}}
