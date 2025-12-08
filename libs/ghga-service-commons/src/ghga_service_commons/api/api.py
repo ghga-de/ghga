@@ -179,7 +179,7 @@ def get_validated_correlation_id(
     """Returns valid correlation ID.
 
     If `correlation_id` is valid, it returns that.
-    If it is empty and `generate_correlation_id` is True, a new value is generated.
+    If it is empty/invalid and `generate_correlation_id` is True, a new value is generated.
     Otherwise, an error is raised.
 
     Raises:
@@ -188,9 +188,21 @@ def get_validated_correlation_id(
     """
     if not correlation_id and generate_correlation_id:
         valid_correlation_id = new_correlation_id()
-        log.debug("Generated new correlation id: %s", correlation_id)
+        log.info("No correlation ID found. Generated new one: %s", correlation_id)
     else:
-        valid_correlation_id = correlation_id_from_str(correlation_id)
+        try:
+            valid_correlation_id = correlation_id_from_str(correlation_id)
+        except InvalidCorrelationIdError:
+            if generate_correlation_id:
+                valid_correlation_id = new_correlation_id()
+                log.warning(
+                    "Detected a non-uuid4 value for correlation ID (%s). "
+                    + "Replacing with newly-generated value: %s",
+                    correlation_id,
+                    valid_correlation_id,
+                )
+            else:
+                raise
     return valid_correlation_id
 
 

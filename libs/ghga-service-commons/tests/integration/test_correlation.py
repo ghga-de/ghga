@@ -17,6 +17,7 @@
 """Test the correlation ID middleware."""
 
 from contextlib import nullcontext
+from uuid import UUID
 
 import httpx
 import pytest
@@ -52,7 +53,7 @@ VALID_CORRELATION_ID = "5deb0e61-5058-4e96-92d4-0529d045832e"
         (VALID_CORRELATION_ID, False, 200),  # happy path
         (VALID_CORRELATION_ID, True, 200),  # also fine
         ("invalid", False, 400),  # error for bad cid header
-        ("invalid", True, 400),  # the generate flag is irrelevant
+        ("invalid", True, 200),  # invalid ID will get replaced
         ("", False, 400),  # No error for empty string cid header
         ("", True, 200),  # empty string with generate flag is fine
     ],
@@ -235,3 +236,56 @@ async def test_async_client(generate_correlation_id: bool):
             response = await client.get("/")
             assert response.headers[CORRELATION_ID_HEADER_NAME] == cid_string
             assert response.json() == cid_string
+
+
+@pytest.mark.parametrize("generate_correlation_id", [True, False])
+async def test_correlation_id_middleware_non_v4_uuid(
+    generate_correlation_id: bool, caplog, monkeypatch
+):
+    """Test that the server middleware correctly replaces an inbound request's
+    correlation ID if it isn't a valid UUID4.
+    """
+    app = FastAPI()
+
+    config = ApiConfigBase(generate_correlation_id=generate_correlation_id)
+    configure_app(app, config)
+
+    @app.get("/")
+    async def endpoint():
+        """Return the correlation ID header value from the request."""
+        return get_correlation_id()
+
+    # Create test client and send a request with valid UUID but not a UUID4
+    client = AsyncTestClient(app=app)
+    non_v4_uuid = "a362ef97-f600-9b51-a5e6-163874e8778a"
+    headers = {CORRELATION_ID_HEADER_NAME: non_v4_uuid}
+
+    # Patch new_correlation_id() to produce a known value so that we can inspect the log
+    caplog.clear()
+    monkeypatch.setattr(
+        "ghga_service_commons.api.api.new_correlation_id",
+        lambda: UUID(VALID_CORRELATION_ID),
+    )
+
+    # Make a call to the endpoint defined above
+    response = await client.get("/", headers=headers)
+
+    # Test for the log generation
+    if not generate_correlation_id:
+        assert not caplog.records
+    else:
+        assert caplog.records
+        assert caplog.records[0].getMessage() == (
+            f"Detected a non-uuid4 value for correlation ID ({non_v4_uuid})."
+            + f" Replacing with newly-generated value: {VALID_CORRELATION_ID}"
+        )
+
+    # The goal is for the middleware to catch the header and update it if
+    #  generate_correlation_id is True, and otherwise return a 400 BAD REQUEST
+    assert response.status_code == 200 if generate_correlation_id else 400
+    if generate_correlation_id:
+        raw_response = response.json()
+        assert response.headers[CORRELATION_ID_HEADER_NAME] == raw_response
+        assert raw_response != non_v4_uuid, "CID header was not updated by middleware"
+        end_cid = UUID(raw_response)
+        assert end_cid.version == 4, "CID header was updated but...somehow is not v4?"
