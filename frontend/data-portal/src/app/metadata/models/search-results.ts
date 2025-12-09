@@ -16,7 +16,7 @@ export interface Facet {
   options: FacetOption[];
 }
 
-interface FacetOption {
+export interface FacetOption {
   value: string;
   count: number;
 }
@@ -36,3 +36,6 @@ export const emptySearchResults: SearchResults = {
   count: 0,
   hits: [],
 };
+
+export const DEFAULT_PAGE_SIZE = 10;
+export const DEFAULT_SKIP_VALUE = 0;

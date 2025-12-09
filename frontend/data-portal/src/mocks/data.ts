@@ -667,9 +667,13 @@ export const searchResults: SearchResults = {
     },
     {
       key: 'type',
-      name: 'Dataset Type',
+      name: 'Dataset Type with a test for how the UI handles facet names that span more than two lines in the expansion panel headers',
       options: [
-        { value: 'Test dataset type 1', count: 12 },
+        {
+          value:
+            'Test dataset lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut eget neque non enim sagittis sollicitudin.',
+          count: 12,
+        },
         { value: 'Test dataset type 2', count: 87 },
       ],
     },

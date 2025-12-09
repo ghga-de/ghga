@@ -40,7 +40,7 @@ export class GlobalSummaryComponent {
 
   #errorEffect = effect(() => {
     if (this.#stats.error()) {
-      this.#notify.showWarning('Error fetching statistics');
+      this.#notify.showError('Error fetching statistics');
     }
   });
 

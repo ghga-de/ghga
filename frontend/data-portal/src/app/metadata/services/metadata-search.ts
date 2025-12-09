@@ -8,7 +8,12 @@ import { httpResource } from '@angular/common/http';
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 import { FacetFilterSetting } from '../models/facet-filter';
-import { SearchResults, emptySearchResults } from '../models/search-results';
+import {
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_SKIP_VALUE,
+  SearchResults,
+  emptySearchResults,
+} from '../models/search-results';
 
 /**
  * Metadata search service
@@ -58,9 +63,36 @@ export class MetadataSearchService {
   /**
    * The search results (empty while loading) as a resource
    */
-  searchResults = httpResource<SearchResults>(this.#massQueryUrl, {
+  searchResultsResource = httpResource<SearchResults>(this.#massQueryUrl, {
     defaultValue: emptySearchResults,
   }).asReadonly();
+
+  isLoading = this.searchResultsResource.isLoading;
+
+  searchResults = computed(() =>
+    this.searchResultsResource.error() ? undefined : this.searchResultsResource.value(),
+  );
+
+  paginated = signal(false);
+
+  /**
+   * Change the local private variables when paginating
+   * @param limit Number of results to fetch
+   * @param skip Number of results to skip to enable pagination
+   */
+  paginate(limit: number, skip: number): void {
+    this.#limit.set(limit);
+    this.#skip.set(skip);
+    this.paginated.set(true);
+  }
+
+  /**
+   * Reset the skip variable to defaults (e.g. when changing the search query)
+   */
+  resetSkip() {
+    this.paginated.set(false);
+    this.#skip.set(DEFAULT_SKIP_VALUE);
+  }
 
   /**
    * Function to set some data into the local private variables
@@ -88,13 +120,13 @@ export class MetadataSearchService {
    * The current search results skip value
    * to be used by the paginator
    */
-  searchResultsSkip: Signal<number> = computed(() => this.#skip() ?? 0);
+  searchResultsSkip = computed(() => this.#skip() ?? 0);
 
   /**
    * The current search results limit value
    * to be used by the paginator
    */
-  searchResultsLimit: Signal<number> = computed(() => this.#limit() ?? 0);
+  searchResultsLimit = computed(() => this.#limit() ?? DEFAULT_PAGE_SIZE);
 
   /**
    * Computes an url from the provided parameters

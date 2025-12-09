@@ -21,11 +21,8 @@ import { SearchResultListComponent } from './search-result-list';
  * Mock the metadata service as needed for the search result list
  */
 class MockMetadataSearchService {
-  searchResults = {
-    value: () => searchResults,
-    isLoading: () => false,
-    error: () => undefined,
-  };
+  searchResults = () => searchResults;
+  isLoading = () => false;
   searchResultsLimit = () => 10;
   searchResultsSkip = () => 0;
 }

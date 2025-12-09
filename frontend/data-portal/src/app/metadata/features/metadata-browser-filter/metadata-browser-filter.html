@@ -1,0 +1,88 @@
+<div class="mb-3 lg:hidden">
+  <button
+    mat-stroked-button
+    class="button-primary w-full font-bold"
+    (click)="displayFilters = !displayFilters"
+  >
+    <mat-icon fontIcon="search"></mat-icon><mat-icon fontIcon="filter_alt"></mat-icon>
+    @if (displayFilters) {
+      Close search and filters
+    } @else {
+      Search and filter results
+    }
+  </button>
+</div>
+<aside
+  [class.hidden]="!displayFilters"
+  class="mb-4 lg:col-span-4 lg:mb-0 lg:block xl:col-span-3"
+>
+  <mat-card appearance="outlined" class="p-3">
+    <form [formGroup]="searchFormGroup" (submit)="submit($event)">
+      <mat-form-field
+        [class.mb-3]="lastSearchQuery() === undefined"
+        class="w-full [&_.mat-mdc-form-field-subscript-wrapper]:h-2"
+      >
+        <input
+          type="search"
+          matInput
+          placeholder="Enter any keyword or ID"
+          aria-label="Enter any keyword or ID"
+          name="searchTerm"
+          [formControl]="searchFormControl"
+          (change)="searchFormValue.set(searchFormControl.value)"
+          (keyup)="searchFormValue.set(searchFormControl.value)"
+          (keydown.enter)="submit($event)"
+        />
+        <mat-icon matSuffix fontIcon="search"></mat-icon>
+      </mat-form-field>
+      @if (lastSearchQuery() !== '') {
+        <mat-chip-set class="chip-set-tertiary mb-3">
+          <mat-chip (removed)="clearSearchQuery()">
+            Keyword: {{ lastSearchQuery() }}
+            <button
+              matChipRemove
+              data-umami-event="Metadata Browser Search Query Clear Clicked"
+            >
+              <mat-icon fontIcon="cancel"></mat-icon></button
+          ></mat-chip>
+        </mat-chip-set>
+      }
+      @if (isLoading() && !(facets().length > 0)) {
+        @for (i of [1, 2]; track i) {
+          <div class="w-1/2">
+            <app-stencil></app-stencil>
+          </div>
+          <ul class="mt-1 mb-5 rounded-lg border">
+            @for (j of [1, 2]; track j) {
+              <li>
+                <app-stencil></app-stencil>
+              </li>
+            }
+          </ul>
+        }
+      } @else {
+        <mat-accordion multi="true" class="grid grid-cols-1 gap-y-2">
+          @for (facet of facetWithSelectedOptions(); track facet.key) {
+            <app-facet-expansion-panel
+              [facet]="facet"
+              [selectedOptions]="facet.key in facetData() ? facetData()[facet.key] : []"
+              [expanded]="facet.expanded"
+              (optionSelected)="onOptionSelected($event)"
+              (optionRemoved)="removeOption($event)"
+              (panelExpansionChanged)="onExpansionPanelChange(facet.key, $event)"
+            ></app-facet-expansion-panel>
+          }
+        </mat-accordion>
+      }
+    </form>
+    <div class="mt-6 lg:hidden">
+      <button
+        mat-stroked-button
+        class="button-primary w-full"
+        (click)="displayFilters = !displayFilters"
+      >
+        Close filters
+      </button>
+    </div>
+  </mat-card>
+</aside>

@@ -12,6 +12,7 @@ import { searchResults } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { ConfigService } from '@app/shared/services/config';
 import { MetadataSearchService } from '../../services/metadata-search';
+import { MetadataBrowserFilterComponent } from '../metadata-browser-filter/metadata-browser-filter';
 import { SearchResultListComponent } from '../search-result-list/search-result-list';
 import { MetadataBrowserComponent } from './metadata-browser';
 
@@ -26,7 +27,7 @@ class MockConfigService {
  * Mock the metadata service as needed for the metadata browser
  */
 class MockMetadataSearchService {
-  searchResults = {
+  searchResultsResource = {
     value: () => searchResults,
     isLoading: () => false,
     error: () => undefined,
@@ -46,6 +47,15 @@ class MockMetadataSearchService {
 })
 class MockSearchResultListComponent {}
 
+/**
+ * Mock SearchResultListComponent as needed for the metadata browser
+ */
+@Component({
+  selector: 'app-metadata-browser-filter',
+  template: '<div>Mock Metadata Browser Filter</div>',
+})
+class MockMetadataBrowserFilterComponent {}
+
 describe('MetadataBrowserComponent', () => {
   let component: MetadataBrowserComponent;
   let fixture: ComponentFixture<MetadataBrowserComponent>;
@@ -62,10 +72,10 @@ describe('MetadataBrowserComponent', () => {
     })
       .overrideComponent(MetadataBrowserComponent, {
         remove: {
-          imports: [SearchResultListComponent],
+          imports: [SearchResultListComponent, MetadataBrowserFilterComponent],
         },
         add: {
-          imports: [MockSearchResultListComponent],
+          imports: [MockSearchResultListComponent, MockMetadataBrowserFilterComponent],
         },
       })
       .compileComponents();
@@ -79,10 +89,9 @@ describe('MetadataBrowserComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show filters', () => {
+  it('should show total datasets', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const text = compiled.textContent;
-    expect(text).toContain('Dataset Type');
-    expect(text).toContain('Test dataset type 1');
+    expect(text).toContain('26');
   });
 });

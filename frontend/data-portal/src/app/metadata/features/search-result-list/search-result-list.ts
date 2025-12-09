@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, output } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -30,12 +30,12 @@ const NUM_STENCILS = 3;
   templateUrl: './search-result-list.html',
 })
 export class SearchResultListComponent {
-  paginate = output<PageEvent>();
   #metadataSearch = inject(MetadataSearchService);
   #searchResults = this.#metadataSearch.searchResults;
-  results = this.#searchResults.value;
-  loading = this.#searchResults.isLoading;
-  error = this.#searchResults.error;
+  hits = computed(() => this.#searchResults()?.hits ?? []);
+  loading = computed(() => this.#metadataSearch.isLoading());
+  numResults = computed(() => this.#searchResults()?.count);
+
   pageSize = this.#metadataSearch.searchResultsLimit;
   pageIndex = computed(() => {
     const pageSize = this.pageSize();
@@ -43,9 +43,8 @@ export class SearchResultListComponent {
     const skip = this.#metadataSearch.searchResultsSkip() ?? 0;
     return Math.floor(skip / pageSize);
   });
-  pageSizeOptions = PAGE_SIZE_OPTIONS;
 
-  numResults = computed(() => this.results().count);
+  pageSizeOptions = PAGE_SIZE_OPTIONS;
 
   /**
    * Generate ids for the stencils
@@ -62,6 +61,6 @@ export class SearchResultListComponent {
    * @param e PageEvent instance
    */
   handlePageEvent(e: PageEvent) {
-    this.paginate.emit(e);
+    this.#metadataSearch.paginate(e.pageSize, e.pageIndex * e.pageSize);
   }
 }

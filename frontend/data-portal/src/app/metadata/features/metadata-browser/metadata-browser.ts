@@ -5,27 +5,21 @@
  */
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FacetFilterSetting } from '@app/metadata/models/facet-filter';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
-import { MetadataBrowserFilterComponent } from '@app/metadata/ui/metadata-browser-filter.html/metadata-browser-filter';
 import { ConfigService } from '@app/shared/services/config';
 import { NotificationService } from '@app/shared/services/notification';
+import { MetadataBrowserFilterComponent } from '../metadata-browser-filter/metadata-browser-filter';
 import { SearchResultListComponent } from '../search-result-list/search-result-list';
-
-const DEFAULT_PAGE_SIZE = 10;
-const DEFAULT_SKIP_VALUE = 0;
 
 /**
  * This is the metadata browser component
@@ -47,23 +41,13 @@ const DEFAULT_SKIP_VALUE = 0;
   ],
   templateUrl: './metadata-browser.html',
 })
-export class MetadataBrowserComponent implements OnInit {
+export class MetadataBrowserComponent {
   #config = inject(ConfigService);
   #notify = inject(NotificationService);
   #metadataSearch = inject(MetadataSearchService);
-  #route = inject(ActivatedRoute);
-  #router = inject(Router);
-  #className = 'EmbeddedDataset';
-  #skip = DEFAULT_SKIP_VALUE;
-  #pageSize = DEFAULT_PAGE_SIZE;
   #max_facet_options = this.#config.maxFacetOptions;
 
-  protected facetData = signal<FacetFilterSetting>({});
-  protected searchFormValue = signal<string | null>('');
-  protected searchTerm = '';
-  protected lastSearchQuery = this.#metadataSearch.query;
-  protected lastSearchFilterFacets = this.#metadataSearch.facets;
-  #searchResults = this.#metadataSearch.searchResults;
+  #searchResults = this.#metadataSearch.searchResultsResource;
   #searchResultsError = this.#searchResults.error;
   protected status = this.#searchResults.status;
   protected searchResults = this.#searchResults.value;
@@ -86,223 +70,9 @@ export class MetadataBrowserComponent implements OnInit {
     } else return undefined;
   });
 
-  /**
-   * On init, define the default values of the search variables
-   */
-  ngOnInit(): void {
-    this.#loadSearchTermsFromRoute();
-  }
-
-  /**
-   * This function takes the current URL, determines the query parameters and sets them accordingly in the metadata search service.
-   */
-  #loadSearchTermsFromRoute(): void {
-    const { s, q, f, p } = this.#router.routerState.snapshot.root.queryParams;
-    this.#pageSize = parseInt(p) || DEFAULT_PAGE_SIZE;
-    this.searchTerm = q || '';
-    if (f) {
-      const paramVals = this.#facetDataFromString(decodeURIComponent(f));
-      if (paramVals) {
-        this.facetData.set(paramVals);
-      }
-    }
-    this.#skip = parseInt(s) || DEFAULT_SKIP_VALUE;
-    this.#metadataSearch.loadQueryParameters(
-      this.#className,
-      this.#pageSize,
-      this.#skip,
-      this.searchTerm,
-      this.facetData(),
-    );
-    this.searchFormValue.set(this.searchTerm);
-  }
-
-  /**
-   * Syncs the data between this component and the search service and initiates a new search.
-   */
-  #performSearch(): void {
-    this.#updateMetadataServiceSearchTermsAndRoute();
-  }
-
-  /**
-   * Pushes the local filters, search term and page setup to the search service.
-   */
-  async #updateMetadataServiceSearchTermsAndRoute(): Promise<void> {
-    await this.#router.navigate([], {
-      relativeTo: this.#route,
-      queryParams: {
-        s: this.#skip !== DEFAULT_SKIP_VALUE ? this.#skip : undefined,
-        q: this.searchTerm !== '' ? this.searchTerm : undefined,
-        f:
-          Object.keys(this.facetData()).length !== 0
-            ? encodeURIComponent(this.#facetDataToString(this.facetData()))
-            : undefined,
-        p: this.#pageSize !== DEFAULT_PAGE_SIZE ? this.#pageSize : undefined,
-      },
-    });
-    this.#loadSearchTermsFromRoute();
-  }
-
-  /**
-   * Sets the parameters for the search and triggers it in the metadataSearch Service
-   * @param event we need to stop the event from propagating
-   */
-  protected submit(event: MouseEvent | SubmitEvent | Event): void {
-    event.preventDefault();
-    const searchTerm = this.searchFormValue() || '';
-    if (searchTerm !== this.searchTerm || this.#facetDataChanged()) {
-      this.searchTerm = searchTerm;
-      this.#skip = DEFAULT_SKIP_VALUE;
-      this.#performSearch();
-    }
-  }
-
-  /**
-   * Handles the click event on a facet filter that was active in the last search (as shown above the search results)
-   * @param facetToRemove The facet name and option to remove.
-   */
-  protected removeFacet(facetToRemove: string): void {
-    const facetToRemoveSplit = facetToRemove.split('#');
-    if (facetToRemoveSplit.length !== 2) return;
-    this.#updateFacets(facetToRemoveSplit[0], facetToRemoveSplit[1], false);
-    this.#skip = DEFAULT_SKIP_VALUE;
-    this.#performSearch();
-  }
-
-  /**
-   * Resets the search query and triggers a reload of the results.
-   */
-  protected clearSearchQuery(): void {
-    if (this.searchTerm !== '' || this.searchFormValue() || this.#facetDataChanged()) {
-      this.searchTerm = '';
-      this.searchFormValue.set('');
-      this.#skip = DEFAULT_SKIP_VALUE;
-      this.#performSearch();
-    }
-  }
-
-  /**
-   * Clears the search field input and triggers a result update
-   * @param event we need to stop the event from propagating
-   */
-  protected clear(event: MouseEvent): void {
-    event.preventDefault();
-    this.facetData.set({});
-    this.clearSearchQuery();
-  }
-
-  /**
-   * Function to handle a change in pagination
-   * @param e PageEvent instance
-   */
-  protected paginate(e: PageEvent) {
-    this.#pageSize = e.pageSize;
-    this.#skip = e.pageSize * e.pageIndex;
-    this.#performSearch();
-  }
-
   #errorEffect = effect(() => {
-    if (this.#metadataSearch.searchResults.error()) {
+    if (this.#metadataSearch.searchResultsResource.error()) {
       this.#notify.showError('Error fetching search results.');
     }
   });
-
-  /**
-   * This function transforms the checkbox change event to the data required in updateFacet(...) and calls it
-   * @param input the Event from the checkbox
-   */
-  protected onFacetFilterChanged(input: MatCheckboxChange) {
-    const facetData = input.source.name?.split('#');
-    if (facetData?.length != 2) {
-      return;
-    }
-    const [facetKey, facetOption] = facetData;
-    const newValue = input.checked;
-    this.#updateFacets(facetKey, facetOption, newValue);
-  }
-
-  /**
-   * Turns a FacetFilterSetting object into a string for usage in the url f parameter.
-   * This is the inverse operation to the #facetDataFromString function.
-   * @param facetData the object to turn into a string
-   * @returns the string representation
-   */
-  #facetDataToString(facetData: FacetFilterSetting): string {
-    if (Object.keys(facetData).length === 0) {
-      return '';
-    }
-    let facetStrings = [];
-    for (const key in facetData) {
-      for (const index in facetData[key]) {
-        facetStrings.push(key + ':' + facetData[key][index]);
-      }
-    }
-    return facetStrings.join(';');
-  }
-
-  /**
-   * Check whether the facet data is different from the last search
-   * @returns true if the facet data has changed
-   */
-  #facetDataChanged(): boolean {
-    return (
-      this.#facetDataToString(this.facetData()) !==
-      this.#facetDataToString(this.#metadataSearch.facets())
-    );
-  }
-
-  /**
-   * Turns a string (as used in the f argument of the url) into a FacetFilterSetting.
-   * This is the inverse operation of #facetDataToString.
-   * @param input the string to parse
-   * @returns The FacetFilterSetting format object
-   */
-  #facetDataFromString(input: string): FacetFilterSetting {
-    if (input.indexOf(':') == -1) {
-      return {};
-    }
-    const filterStrings = input.split(';');
-    const ret: FacetFilterSetting = {};
-    for (const facet of filterStrings) {
-      const [facetName, facetValue] = facet.split(':', 2);
-      if (facetValue !== undefined) {
-        if (ret[facetName]) {
-          ret[facetName].push(facetValue);
-        } else {
-          ret[facetName] = [facetValue];
-        }
-      }
-    }
-    return ret;
-  }
-
-  /**
-   * Handle the state change of facets filter values.
-   * The filter status is tracked in the #facetData object.
-   * @param key The key of the facet to update.
-   * @param option The option of the facet to update
-   * @param newValue The new value of the option of the facet
-   */
-  #updateFacets(key: string, option: string, newValue: boolean) {
-    const facetData = this.facetData();
-    if (newValue) {
-      // The value has been checked so we need to add it
-      if (!facetData[key]) {
-        facetData[key] = [option];
-      } else {
-        if (facetData[key].indexOf(option) == -1) {
-          facetData[key].push(option);
-        }
-      }
-    } else {
-      // The box has been deselected so we need to remove it
-      if (facetData[key]) {
-        facetData[key] = facetData[key].filter((item) => item != option);
-        if (facetData[key].length == 0) {
-          delete facetData[key];
-        }
-      }
-    }
-    this.facetData.set({ ...facetData });
-  }
 }

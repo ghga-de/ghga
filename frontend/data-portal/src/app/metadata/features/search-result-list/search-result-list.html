@@ -13,7 +13,7 @@
   </mat-accordion>
 } @else {
   <mat-accordion multi>
-    @for (hit of results().hits; track hit.id_) {
+    @for (hit of hits(); track hit.id_) {
       <app-search-result [hit]="hit" />
     }
   </mat-accordion>

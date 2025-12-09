@@ -2,41 +2,11 @@
 @if (!errorMessage()) {
   <div class="grid grid-cols-12 grid-rows-none gap-x-5 *:col-span-12">
     <div class="lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
-      <div class="flex w-full justify-between pb-4">
-        <mat-chip-set class="chip-set-tertiary">
-          @if (lastSearchQuery() !== '') {
-            <mat-chip (removed)="clearSearchQuery()">
-              Keyword: {{ lastSearchQuery() }}
-              <button
-                matChipRemove
-                data-umami-event="Metadata Browser Search Query Clear Clicked"
-              >
-                <mat-icon fontIcon="cancel"></mat-icon></button
-            ></mat-chip>
-          }
-          @for (facet of facets(); track facet.key) {
-            @if (lastSearchFilterFacets()[facet.key]) {
-              @for (option of facet.options; track option.value) {
-                @if (lastSearchFilterFacets()[facet.key].indexOf(option.value) !== -1) {
-                  <mat-chip (removed)="removeFacet(facet.key + '#' + option.value)">
-                    {{ facet.name }}: {{ option.value }}
-                    <button
-                      matChipRemove
-                      data-umami-event="Metadata Browser Facet Clear Clicked"
-                    >
-                      <mat-icon fontIcon="cancel"></mat-icon>
-                    </button>
-                  </mat-chip>
-                }
-              }
-            }
-          }
-        </mat-chip-set>
+      <div class="flex w-full justify-end pb-4">
         <mat-chip-set>
           <mat-chip>
             <div class="flex content-around">
               <span class="mr-1">Total Datasets:</span>
-
               @if (loading()) {
                 <mat-spinner
                   class="inline-block"
@@ -52,18 +22,10 @@
       </div>
     </div>
     <app-metadata-browser-filter
-      class="contents"
-      [facets]="facets()"
-      [facetData]="facetData()"
-      [loading]="loading()"
-      [searchFormValue]="searchFormValue()"
-      (cleared)="clear($event)"
-      (submitted)="submit($event)"
-      (facetFilterChanged)="onFacetFilterChanged($event)"
-      (searchFormChanged)="searchFormValue.set($event)"
+      class="col-span-12 lg:col-span-4 xl:col-span-3"
     ></app-metadata-browser-filter>
     <div class="lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
-      <app-search-result-list (paginate)="paginate($event)"></app-search-result-list>
+      <app-search-result-list></app-search-result-list>
     </div>
   </div>
 } @else {
