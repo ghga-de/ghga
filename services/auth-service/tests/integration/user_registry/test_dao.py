@@ -41,7 +41,11 @@ from auth_service.user_registry.ports.dao import (
 from auth_service.user_registry.translators.dao import (
     UserDaoPublisherFactory,
 )
-from tests.fixtures.constants import SOME_USER_ID
+from tests.fixtures.constants import (
+    PHONE_OF_JAMES,
+    PHONE_OF_JOHN,
+    SOME_USER_ID,
+)
 
 
 @pytest_asyncio.fixture(name="user_dao_publisher_factory")
@@ -137,7 +141,7 @@ async def test_iva_crud(
         created=utc_datetime(2022, 9, 1, 12, 0),
         changed=utc_datetime(2023, 4, 1, 12, 0),
         type=IvaType.PHONE,
-        value="(0123)456789",
+        value=PHONE_OF_JOHN,
     )
 
     async with kafka.record_events(in_topic="ivas") as recorder:
@@ -147,7 +151,7 @@ async def test_iva_crud(
 
         assert iva_dto == iva
 
-        changed_iva = iva.model_copy(update={"value": "(0123)444555"})
+        changed_iva = iva.model_copy(update={"value": PHONE_OF_JAMES})
         await iva_dao.update(changed_iva)
         iva_dto = await iva_dao.get_by_id(iva.id)
         assert iva_dto == changed_iva

@@ -61,6 +61,9 @@ OPT_USER_DATA = {
 
 MAX_USER_DATA = {**MIN_USER_DATA, **OPT_USER_DATA}
 
+PHONE = "+491780000008"
+FAX = "+491790000009"
+
 VERIFICATION_CODE_SIZE = 6  # the expected size of verification codes
 
 
@@ -952,7 +955,7 @@ async def test_delete_users_with_associated_data(
                 "_id": uuid4(),
                 "user_id": id_,
                 "type": "Phone",
-                "value": "0123456",
+                "value": PHONE,
                 "created": now,
                 "changed": now,
             }
@@ -1055,7 +1058,7 @@ async def test_crud_operations_for_ivas(
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
     # Create two IVAs
-    data = {"type": "Phone", "value": "0123 4567"}
+    data = {"type": "Phone", "value": PHONE}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1066,7 +1069,7 @@ async def test_crud_operations_for_ivas(
     iva_id_phone = iva_id["id"]
     assert iva_id_phone
 
-    data = {"type": "Fax", "value": "0123 6789"}
+    data = {"type": "Fax", "value": FAX}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1093,12 +1096,12 @@ async def test_crud_operations_for_ivas(
         {
             "id": iva_id_phone,
             "type": "Phone",
-            "value": "0123 4567",
+            "value": PHONE,
         },
         {
             "id": iva_id_fax,
             "type": "Fax",
-            "value": "0123 6789",
+            "value": FAX,
         },
     ]
 
@@ -1118,13 +1121,13 @@ async def test_crud_operations_for_ivas(
         {
             "id": iva_id_phone,
             "type": "Phone",
-            "value": "0123 4567",
+            "value": PHONE,
             **user_info,
         },
         {
             "id": iva_id_fax,
             "type": "Fax",
-            "value": "0123 6789",
+            "value": FAX,
             **user_info,
         },
     ]
@@ -1204,7 +1207,7 @@ async def test_crud_operations_for_ivas_as_data_steward(
     user_id = user["id"]
 
     # Create an IVA
-    data = {"type": "Phone", "value": "0123 4567"}
+    data = {"type": "Phone", "value": PHONE}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=steward_headers
     )
@@ -1228,7 +1231,7 @@ async def test_crud_operations_for_ivas_as_data_steward(
     assert iva == {
         "id": iva_id,
         "type": "Phone",
-        "value": "0123 4567",
+        "value": PHONE,
         "state": "Unverified",
     }
 
@@ -1240,7 +1243,7 @@ async def test_crud_operations_for_ivas_as_data_steward(
     assert len(ivas) == 1
     iva = ivas[0]
     assert iva["id"] == iva_id
-    assert iva["value"] == "0123 4567"
+    assert iva["value"] == PHONE
     assert iva["user_id"] == user_id
     assert iva["user_name"] == "Max Headroom"
 
@@ -1257,7 +1260,7 @@ async def test_crud_operations_for_ivas_as_data_steward(
     assert iva == {
         "id": iva_id,
         "type": "Phone",
-        "value": "0123 4567",
+        "value": PHONE,
         "state": "Unverified",
     }
 
@@ -1380,6 +1383,29 @@ async def test_create_iva_for_non_existing_user_as_data_steward(
     assert response.status_code == status.HTTP_404_NOT_FOUND
     error = response.json()
     assert error["detail"] == "The user was not found."
+
+
+async def test_create_iva_with_invalid_phone_number(
+    full_client: FullClient,
+    new_user_headers: dict[str, str],
+):
+    """Test creating an IVA with an invalid phone number."""
+    user_data = MIN_USER_DATA
+    response = await full_client.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+
+    headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
+    data = {"type": "Phone", "value": "foo bar"}
+    response = await full_client.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    error = response.json()
+    assert "Invalid phone number" in str(error["detail"])
 
 
 async def test_get_ivas_for_non_existing_user_as_data_steward(
@@ -1564,7 +1590,7 @@ async def test_happy_path_for_verifying_an_iva_automated(
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
     # Create an IVA that triggers automatic transmission of the code
-    data = {"type": "Phone", "value": "0123 456789"}
+    data = {"type": "Phone", "value": PHONE}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1629,7 +1655,7 @@ async def test_happy_path_for_verifying_an_iva_automated(
     iva = ivas[0]
     assert iva["id"] == iva_id
     assert iva["type"] == "Phone"
-    assert iva["value"] == "0123 456789"
+    assert iva["value"] == PHONE
     assert iva["state"] == "Verified"
 
 
@@ -1674,7 +1700,7 @@ async def test_data_steward_iva_operations_without_authorization(
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
     # Create an IVA as the wrong user
-    data = {"type": "Phone", "value": "0123 4567"}
+    data = {"type": "Phone", "value": PHONE}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=user_headers
     )
@@ -1683,7 +1709,7 @@ async def test_data_steward_iva_operations_without_authorization(
     assert error == {"detail": "Not authorized to create this IVA."}
 
     # Now create it as the proper user
-    data = {"type": "Phone", "value": "0123 4567"}
+    data = {"type": "Phone", "value": PHONE}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1822,7 +1848,7 @@ async def test_wrongly_verifying_an_iva_too_often(
     headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
 
     # Create an IVA for which the code will be transmitted automatically
-    data = {"type": "Phone", "value": "0123 4567"}
+    data = {"type": "Phone", "value": PHONE}
     response = await full_client.post(
         f"/users/{user_id}/ivas", json=data, headers=headers
     )
@@ -1841,7 +1867,7 @@ async def test_wrongly_verifying_an_iva_too_often(
     payload = events[0].payload
     assert payload["user_id"] == user_id
     assert payload["type"] == "Phone"
-    assert payload["value"] == "0123 4567"
+    assert payload["value"] == PHONE
     code = payload.get("code")
     assert is_a_verification_code(code)
 

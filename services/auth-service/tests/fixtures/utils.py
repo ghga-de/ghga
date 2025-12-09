@@ -73,6 +73,7 @@ from tests.fixtures.constants import (
     ID_OF_JAMES,
     ID_OF_JOHN,
     IVA_IDS,
+    PHONE_OF_JOHN,
 )
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -350,7 +351,7 @@ class MockIvaDao:
                 Iva(
                     id=DATA_STEWARD_IVA_ID,
                     user_id=ID_OF_JOHN,
-                    value="123/456",
+                    value=PHONE_OF_JOHN,
                     type=IvaType.PHONE,
                     state=state,
                     created=now,
@@ -594,7 +595,7 @@ class MockUserRegistry(UserRegistry):
         id_: UUID4 | None = None,
         user_id: UUID4 | None = None,
         type_: IvaType = IvaType.PHONE,
-        value: str = "123456",
+        value: str = PHONE_OF_JOHN,
         state: IvaState = IvaState.UNVERIFIED,
         verification_code_hash: str | None = None,
         verification_attempts: int = 0,

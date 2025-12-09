@@ -37,6 +37,7 @@ from tests.fixtures.constants import (
     DATA_STEWARD_CLAIM_ID,
     ID_OF_JANE,
     ID_OF_JOHN,
+    PHONE_OF_JOHN,
     SOME_IVA_ID,
     SOME_USER_ID,
 )
@@ -56,7 +57,7 @@ async def test_grant_download_access(full_client: FullClient):
     iva = Iva(
         id=SOME_IVA_ID,
         user_id=ID_OF_JOHN,
-        value="(0123)456789",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         state=IvaState.VERIFIED,
         created=now,
@@ -131,7 +132,7 @@ async def test_grant_download_access_with_unverified_iva(full_client: FullClient
     iva = Iva(
         id=SOME_IVA_ID,
         user_id=ID_OF_JOHN,
-        value="(0123)456789",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         created=now,
         changed=now,
@@ -213,7 +214,7 @@ async def test_check_download_access(full_client: FullClient):
     iva = Iva(
         id=SOME_IVA_ID,
         user_id=ID_OF_JOHN,
-        value="(0123)456789",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         state=IvaState.VERIFIED,
         created=now,
@@ -339,7 +340,7 @@ async def test_check_download_access_with_unverified_iva(full_client: FullClient
     iva = Iva(
         id=SOME_IVA_ID,
         user_id=ID_OF_JOHN,
-        value="(0123)456789",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         created=now,
         changed=now,
@@ -385,7 +386,7 @@ async def test_get_datasets_with_download_access(full_client: FullClient):
     unverified_iva = Iva(
         id=UUID(unverified_iva_id_str),
         user_id=ID_OF_JOHN,
-        value="(0123)456789",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         created=now,
         changed=now,

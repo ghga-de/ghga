@@ -27,7 +27,7 @@ from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.claims_repository.models.claims import VisaType
 from auth_service.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_registry.models.ivas import Iva, IvaState, IvaType
-from tests.fixtures.constants import ID_OF_JOHN
+from tests.fixtures.constants import ID_OF_JOHN, PHONE_OF_JOHN
 
 from ...fixtures.utils import MockClaimDao, MockIvaDao, MockUserDao
 from .fixtures import FullClient, fixture_full_client  # noqa: F401
@@ -40,7 +40,7 @@ UNVERIFIED_IVA_ID = uuid4()
 UNVERIFIED_IVA = Iva(
     id=UNVERIFIED_IVA_ID,
     user_id=ID_OF_JOHN,
-    value="(0123)456789",
+    value=PHONE_OF_JOHN,
     type=IvaType.PHONE,
     state=IvaState.UNVERIFIED,
     created=now,
@@ -51,7 +51,7 @@ VERIFIED_IVA_ID = uuid4()
 VERIFIED_IVA = Iva(
     id=VERIFIED_IVA_ID,
     user_id=ID_OF_JOHN,
-    value="(0123)456789",
+    value=PHONE_OF_JOHN,
     type=IvaType.PHONE,
     state=IvaState.VERIFIED,
     created=now,

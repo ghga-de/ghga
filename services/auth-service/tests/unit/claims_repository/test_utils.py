@@ -44,6 +44,7 @@ from tests.fixtures.constants import (
     DATA_STEWARD_IVA_ID,
     ID_OF_JAMES,
     ID_OF_JOHN,
+    PHONE_OF_JOHN,
     SOME_IVA_ID,
     SOME_USER_ID,
 )
@@ -79,7 +80,7 @@ async def test_iva_exists():
     iva = Iva(
         id=SOME_IVA_ID,
         user_id=SOME_USER_ID,
-        value="123/456",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         created=now,
         changed=now,
@@ -104,7 +105,7 @@ async def test_iva_exists_when_it_belongs_to_a_different_user():
     iva = Iva(
         id=SOME_IVA_ID,
         user_id=uuid4(),
-        value="123/456",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         created=now,
         changed=now,
@@ -125,7 +126,7 @@ async def test_iva_is_verified(state: IvaState):
     iva = Iva(
         id=SOME_IVA_ID,
         user_id=SOME_USER_ID,
-        value="123/456",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         state=state,
         created=now,
@@ -166,7 +167,7 @@ async def test_get_active_roles_with_iva(state: IvaState):
     iva = Iva(
         id=DATA_STEWARD_IVA_ID,
         user_id=ID_OF_JAMES,
-        value="123/456",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         state=state,
         created=now,

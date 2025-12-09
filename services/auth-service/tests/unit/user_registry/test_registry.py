@@ -44,7 +44,15 @@ from auth_service.user_registry.models.users import (
     UserStatus,
     UserWithRoles,
 )
-from tests.fixtures.constants import ID_OF_JANE, ID_OF_JOHN, ID_OF_ROD_STEWARD, IVA_IDS
+from tests.fixtures.constants import (
+    ID_OF_JANE,
+    ID_OF_JOHN,
+    ID_OF_ROD_STEWARD,
+    IVA_IDS,
+    PHONE_OF_JAMES,
+    PHONE_OF_JANE,
+    PHONE_OF_JOHN,
+)
 
 from ...fixtures.utils import MockUserRegistry
 
@@ -246,9 +254,9 @@ async def test_delete_non_existing_user():
 async def test_delete_existing_user_with_ivas():
     """Test deleting an existing user who has IVAs."""
     registry = MockUserRegistry()
-    registry.add_dummy_iva(value="123")
-    registry.add_dummy_iva(user_id=ID_OF_JANE, value="456")
-    registry.add_dummy_iva(value="789")
+    registry.add_dummy_iva(value=PHONE_OF_JOHN)
+    registry.add_dummy_iva(value=PHONE_OF_JANE, user_id=ID_OF_JANE)
+    registry.add_dummy_iva(value=PHONE_OF_JAMES)
     ivas = registry.dummy_ivas
     assert len(ivas) == 3
     await registry.delete_user(ID_OF_JOHN)
@@ -260,7 +268,7 @@ async def test_delete_existing_user_with_ivas():
 async def test_create_new_iva():
     """Test creating a new IVA."""
     registry = MockUserRegistry()
-    iva_data = IvaBasicData(type=IvaType.PHONE, value="123456")
+    iva_data = IvaBasicData(type=IvaType.PHONE, value=PHONE_OF_JOHN)
     iva_id = await registry.create_iva(ID_OF_JOHN, iva_data)
     assert iva_id
     ivas = registry.dummy_ivas
@@ -270,7 +278,7 @@ async def test_create_new_iva():
     assert iva.id == iva_id
     assert iva.user_id == ID_OF_JOHN
     assert iva.type == IvaType.PHONE
-    assert iva.value == "123456"
+    assert iva.value == PHONE_OF_JOHN
     assert iva.state == IvaState.UNVERIFIED
     assert iva.verification_code_hash is None
     assert iva.verification_attempts == 0
@@ -281,7 +289,7 @@ async def test_create_new_iva():
 async def test_create_iva_for_non_existing_user():
     """Test creating an IVA for a non-existing user."""
     registry = MockUserRegistry()
-    iva_data = IvaBasicData(type=IvaType.PHONE, value="123456")
+    iva_data = IvaBasicData(type=IvaType.PHONE, value=PHONE_OF_JOHN)
     with pytest.raises(
         registry.UserDoesNotExistError,
         match=f"User with ID {ID_OF_JANE} does not exist",
@@ -299,7 +307,7 @@ async def test_get_ivas_of_non_existing_user():
 
 
 async def test_get_ivas_of_an_existing_user_without_ivas():
-    """Test getting all IVAs of an existing user without IVAS."""
+    """Test getting all IVAs of an existing user without IVAs."""
     registry = MockUserRegistry()
     ivas = await registry.get_ivas(ID_OF_JOHN)
     assert isinstance(ivas, list)
@@ -307,11 +315,11 @@ async def test_get_ivas_of_an_existing_user_without_ivas():
 
 
 async def test_get_ivas_of_an_existing_user_with_ivas():
-    """Test getting all IVAs of an existing user without IVAS."""
+    """Test getting all IVAs of an existing user without IVAs."""
     registry = MockUserRegistry()
-    registry.add_dummy_iva(value="123")
-    registry.add_dummy_iva(value="456", user_id=ID_OF_JANE)
-    registry.add_dummy_iva(value="789")
+    registry.add_dummy_iva(value=PHONE_OF_JOHN)
+    registry.add_dummy_iva(value=PHONE_OF_JANE, user_id=ID_OF_JANE)
+    registry.add_dummy_iva(value=PHONE_OF_JAMES)
     ivas_before = list(registry.dummy_ivas)
     assert len(ivas_before) == 3
     ivas = await registry.get_ivas(ID_OF_JOHN)
@@ -326,10 +334,10 @@ async def test_get_ivas_of_an_existing_user_with_ivas():
 
 
 async def test_get_ivas_of_an_existing_user_filtering_by_state():
-    """Test getting all IVAs of an existing user without IVAS."""
+    """Test getting all IVAs of an existing user without IVAs."""
     registry = MockUserRegistry()
-    registry.add_dummy_iva(value="123")
-    registry.add_dummy_iva(value="456", state=IvaState.VERIFIED)
+    registry.add_dummy_iva(value=PHONE_OF_JOHN)
+    registry.add_dummy_iva(value=PHONE_OF_JAMES, state=IvaState.VERIFIED)
     ivas = await registry.get_ivas(ID_OF_JOHN)
     assert isinstance(ivas, list)
     assert len(ivas) == 2
@@ -356,9 +364,11 @@ async def test_get_all_ivas_with_user():
         }
     )
     registry.dummy_users.append(jane)
-    registry.add_dummy_iva(value="123", user_id=john.id)
-    registry.add_dummy_iva(value="456", user_id=jane.id)
-    registry.add_dummy_iva(value="789", user_id=john.id, state=IvaState.VERIFIED)
+    registry.add_dummy_iva(value=PHONE_OF_JOHN, user_id=john.id)
+    registry.add_dummy_iva(value=PHONE_OF_JANE, user_id=jane.id)
+    registry.add_dummy_iva(
+        value=PHONE_OF_JAMES, user_id=john.id, state=IvaState.VERIFIED
+    )
     expected_ivas_with_users = [
         IvaAndUserData(
             id=iva.id,
@@ -386,27 +396,28 @@ async def test_get_selected_ivas_with_user():
     jane = john.model_copy(update={"id": ID_OF_JANE})
     registry.dummy_users.append(jane)
     add_iva = registry.add_dummy_iva
-    add_iva(value="123", user_id=john.id)
-    add_iva(value="456", user_id=jane.id)
-    add_iva(value="789", user_id=john.id, state=IvaState.VERIFIED)
+    add_iva(user_id=john.id)
+    add_iva(value=PHONE_OF_JANE, user_id=jane.id)
+    # add a second IVA for John, but with a different phone number
+    add_iva(value=PHONE_OF_JAMES, user_id=john.id, state=IvaState.VERIFIED)
     get_ivas = registry.get_ivas_with_users
     ivas = await get_ivas(user_id=jane.id)
     assert len(ivas) == 1
-    assert ivas[0].value == "456"
+    assert ivas[0].value == PHONE_OF_JANE
     ivas = await get_ivas(state=IvaState.VERIFIED)
     assert len(ivas) == 1
-    assert ivas[0].value == "789"
+    assert ivas[0].value == PHONE_OF_JAMES
     ivas = await get_ivas(state=IvaState.UNVERIFIED, user_id=john.id)
     assert len(ivas) == 1
-    assert ivas[0].value == "123"
+    assert ivas[0].value == PHONE_OF_JOHN
     assert not registry.published_events
 
 
 async def test_delete_existing_iva():
     """Test deleting an existing IVA."""
     registry = MockUserRegistry()
-    registry.add_dummy_iva(value="123")
-    registry.add_dummy_iva(value="456", user_id=ID_OF_JANE)
+    registry.add_dummy_iva()
+    registry.add_dummy_iva(value=PHONE_OF_JANE, user_id=ID_OF_JANE)
     ivas = registry.dummy_ivas
     assert len(ivas) == 2
     await registry.delete_iva(IVA_IDS[1])
@@ -1098,7 +1109,7 @@ async def test_iva_verification_happy_path_auto():
     registry = MockUserRegistry()
     events = registry.published_events
     # create an IVA with a type that triggers automatic code transmission
-    iva_data = IvaBasicData(type=IvaType.PHONE, value="123456")
+    iva_data = IvaBasicData(type=IvaType.PHONE, value=PHONE_OF_JOHN)
     user_id = ID_OF_JOHN
     iva_id = await registry.create_iva(user_id, iva_data)
     assert iva_id
@@ -1128,7 +1139,7 @@ async def test_iva_verification_happy_path_auto():
     assert isinstance(iva, Iva)
     assert iva.id == iva_id
     assert iva.type is IvaType.PHONE
-    assert iva.value == "123456"
+    assert iva.value == PHONE_OF_JOHN
     assert iva.verification_code_hash is None
     # the verification code should be sent as extra argument with the first event
     assert len(events[0]) == 3

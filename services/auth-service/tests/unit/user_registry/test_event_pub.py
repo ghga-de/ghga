@@ -31,6 +31,7 @@ from auth_service.user_registry.translators.event_pub import (
     EventPubTranslator,
     EventPubTranslatorConfig,
 )
+from tests.fixtures.constants import PHONE_OF_JOHN
 
 default_config = EventPubTranslatorConfig(
     auth_topic="auth",
@@ -125,7 +126,7 @@ async def test_publish_iva_state_changed(config: EventPubTranslatorConfig):
     iva = Iva(
         id=iva_id,
         user_id=uuid4(),
-        value="123/456",
+        value=PHONE_OF_JOHN,
         type=IvaType.PHONE,
         state=IvaState.VERIFIED,
         created=now,

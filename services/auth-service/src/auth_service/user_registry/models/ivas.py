@@ -22,8 +22,9 @@ from uuid import uuid4
 
 from ghga_event_schemas.pydantic_ import IvaState, IvaType
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, ConfigDict, Field
+from pydantic import UUID4, ConfigDict, Field, ValidationInfo, field_validator
 
+from ..core.validation import validate_phone_number
 from . import BaseDto
 
 __all__ = [
@@ -45,6 +46,15 @@ class IvaBasicData(BaseDto):
 
     type: IvaType = Field(default=..., description="The type of the IVA")
     value: str = Field(default=..., description="The actual validation address")
+
+    @field_validator("value")
+    @classmethod
+    def validate_phone_numbers(cls, value: str, info: ValidationInfo) -> str:
+        """Validate and normalize phone and fax IVAs."""
+        iva_type = info.data.get("type")
+        if iva_type in (IvaType.PHONE, IvaType.FAX):
+            return validate_phone_number(value)
+        return value
 
 
 class IvaWithState(IvaBasicData):
