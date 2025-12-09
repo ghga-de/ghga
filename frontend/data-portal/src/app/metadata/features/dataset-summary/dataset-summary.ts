@@ -58,4 +58,5 @@ export class DatasetSummaryComponent {
   experimentsPlatforms = computed(
     () => this.experimentsSummary().stats.experiment_methods,
   );
+  hasEgaAccession = computed(() => !!this.hitContent().ega_accession?.trim());
 }

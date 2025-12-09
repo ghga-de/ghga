@@ -108,6 +108,12 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Get summary data from a single dataset
   'GET /api/metldata/artifacts/stats_public/classes/DatasetStats/resources/GHGAD12345678901236':
     getDatasetSummary('GHGAD12345678901236'),
+  // Get summary data from a single dataset
+  'GET /api/metldata/artifacts/stats_public/classes/DatasetStats/resources/GHGAD12345678901237':
+    getDatasetSummary('GHGAD12345678901237'),
+  // Get summary data from a single dataset
+  'GET /api/metldata/artifacts/stats_public/classes/DatasetStats/resources/GHGAD12345678901238':
+    getDatasetSummary('GHGAD12345678901238'),
 
   // Get dataset details (embedded)
   'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD12345678901234':
@@ -116,6 +122,10 @@ export const responses: { [endpoint: string]: ResponseValue } = {
     getDatasetDetails('GHGAD12345678901235'),
   'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD12345678901236':
     getDatasetDetails('GHGAD12345678901236'),
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD12345678901237':
+    getDatasetDetails('GHGAD12345678901237'),
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD12345678901238':
+    getDatasetDetails('GHGAD12345678901238'),
 
   // Get study details (embedded)
   'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/*': studyData,

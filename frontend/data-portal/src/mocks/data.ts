@@ -245,11 +245,23 @@ export const getDatasetSummary = (accession: string) => {
 };
 
 // get embedded datasets with arbitrary accessions
-export const getDatasetDetails = (accession: string) => ({
-  ...datasetDetails,
-  accession: accession,
-  ega_accession: accession.replace('GHGA', 'EGA'),
-});
+export const getDatasetDetails = (accession: string) => {
+  let ega_accession: string | undefined = accession.replace('GHGA', 'EGA');
+
+  // the following two IDs have special ega accessions for testing. Generally we just want some value here but these two datasets are used to test the absence of ega accession
+  if (accession === 'GHGAD12345678901237') {
+    ega_accession = '   ';
+  }
+  if (accession === 'GHGAD12345678901238') {
+    ega_accession = undefined;
+  }
+
+  return {
+    ...datasetDetails,
+    accession: accession,
+    ega_accession,
+  };
+};
 
 export const metadataGlobalSummary: BaseGlobalSummary = {
   resource_stats: {
@@ -703,6 +715,22 @@ export const searchResults: SearchResults = {
           'Test dataset for details and this is also testing whether more than two lines of text actually appear correctly on the expansion panel headers or not at least at a resolution of one thousand nine hundred and twenty pixels wide especially since this can cause issues with the layout of the expansion panels',
       },
     },
+    {
+      id_: 'GHGAD12345678901237',
+      content: {
+        ega_accession: '   ',
+        title:
+          'Test dataset for details and this is also testing whether two lines of text actually appear correctly on the expansion panel headers or not at least at a resolution of one thousand nine hundred and twenty pixels wide',
+      },
+    },
+
+    {
+      id_: 'GHGAD12345678901238',
+      content: {
+        title:
+          'Test dataset for details and this is also testing whether two lines of text actually appear correctly on the expansion panel headers or not at least at a resolution of one thousand nine hundred and twenty pixels wide',
+      },
+    },
   ],
 };
 
@@ -1037,6 +1065,28 @@ export const datasets: DatasetWithExpiration[] = [
   },
   {
     id: 'GHGAD12345678901236',
+    title: 'Another dataset to download',
+    description:
+      'This is another todally ineresting dataset that can be used' +
+      ' to test the download functionality of the Data Portal.' +
+      ' Note that the description can be longer than the title.',
+    stage: 'download',
+    files: [],
+    expires: access_ends,
+  },
+  {
+    id: 'GHGAD12345678901237',
+    title: 'Another dataset to download',
+    description:
+      'This is another todally ineresting dataset that can be used' +
+      ' to test the download functionality of the Data Portal.' +
+      ' Note that the description can be longer than the title.',
+    stage: 'download',
+    files: [],
+    expires: access_ends,
+  },
+  {
+    id: 'GHGAD12345678901238',
     title: 'Another dataset to download',
     description:
       'This is another todally ineresting dataset that can be used' +

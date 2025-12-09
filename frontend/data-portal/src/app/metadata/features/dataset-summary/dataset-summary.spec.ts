@@ -54,5 +54,26 @@ describe('DatasetSummaryComponent', () => {
     const text = compiled.textContent;
     expect(text).toContain('GHGAD12345678901234');
     expect(text).toContain('Test dataset for details');
+    expect(text).toContain('EGA Dataset');
+  });
+
+  it('should not show ega details and button for empty string ega accession', async () => {
+    fixture.componentRef.setInput('hit', searchResults.hits.at(3));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const text = compiled.textContent;
+    expect(text).not.toContain('EGA Dataset');
+  });
+
+  it('should not show ega details and button for undefined ega accession', async () => {
+    fixture.componentRef.setInput('hit', searchResults.hits.at(4));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const text = compiled.textContent;
+    expect(text).not.toContain('EGA Dataset');
   });
 });
