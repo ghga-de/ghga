@@ -25,9 +25,16 @@ from hexkit.custom_types import JsonObject
 BASE_DIR = Path(__file__).parent.resolve()
 
 
-def make_notification(payload: JsonObject):
+def make_email_notification(payload: JsonObject):
     """Convenience method to produce a validated notification object"""
-    return get_validated_payload(payload=payload, schema=event_schemas.Notification)
+    return get_validated_payload(
+        payload=payload, schema=event_schemas.EmailNotification
+    )
+
+
+def make_sms_notification(payload: JsonObject):
+    """Convenience method to produce a validated SMS notification object"""
+    return get_validated_payload(payload=payload, schema=event_schemas.SmsNotification)
 
 
 def get_free_port() -> int:

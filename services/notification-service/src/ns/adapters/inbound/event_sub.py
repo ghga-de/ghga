@@ -19,8 +19,8 @@ import logging
 from contextlib import suppress
 from uuid import UUID
 
-import ghga_event_schemas.pydantic_ as event_schemas
 from ghga_event_schemas.configs import NotificationEventsConfig
+from ghga_event_schemas.pydantic_ import EmailNotification, SmsNotification
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
@@ -47,18 +47,29 @@ class EventSubTranslator(EventSubscriberProtocol):
         event_id_dao: EventIdDaoPort,
     ):
         self.topics_of_interest = [config.notification_topic]
-        self.types_of_interest = [config.notification_type]
+        self.types_of_interest = [
+            config.email_notification_type,
+            config.sms_notification_type,
+        ]
         self._config = config
         self._notifier = notifier
         self._event_id_dao = event_id_dao
 
-    async def _send_notification(self, *, payload: JsonObject):
+    async def _send_email_notification(self, *, payload: JsonObject):
         """Validates the schema, then makes a call to the notifier with the payload"""
         validated_payload = get_validated_payload(
-            payload=payload, schema=event_schemas.Notification
+            payload=payload, schema=EmailNotification
         )
 
-        await self._notifier.send_notification(notification=validated_payload)
+        await self._notifier.send_email_notification(notification=validated_payload)
+
+    async def _send_sms_notification(self, *, payload: JsonObject):
+        """Validates the schema, then makes a call to the notifier with the payload"""
+        validated_payload = get_validated_payload(
+            payload=payload, schema=SmsNotification
+        )
+
+        await self._notifier.send_sms_notification(notification=validated_payload)
 
     async def _consume_validated(
         self,
@@ -79,7 +90,13 @@ class EventSubTranslator(EventSubscriberProtocol):
 
         # Let the DLQ handle any errors that bubble up
         log.info("Processing notification. Event_id=%s", event_id)
-        await self._send_notification(payload=payload)
+        match type_:
+            case self._config.email_notification_type:
+                await self._send_email_notification(payload=payload)
+            case self._config.sms_notification_type:
+                await self._send_sms_notification(payload=payload)
+            case _:
+                log.critical("Unexpected event type. Event_id=%s", event_id)
 
         # If successfully processed, retain the event ID
         log.info("Notification sent successfully. Event_id=%s", event_id)

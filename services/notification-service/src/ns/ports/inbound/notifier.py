@@ -38,10 +38,19 @@ class NotifierPort(ABC):
             super().__init__(message)
 
     @abstractmethod
-    async def send_notification(
+    async def send_email_notification(
         self,
         *,
-        notification: event_schemas.Notification,
+        notification: event_schemas.EmailNotification,
+    ):
+        """Sends out notifications based on the event details"""
+        ...
+
+    @abstractmethod
+    async def send_sms_notification(
+        self,
+        *,
+        notification: event_schemas.SmsNotification,
     ):
         """Sends out notifications based on the event details"""
         ...

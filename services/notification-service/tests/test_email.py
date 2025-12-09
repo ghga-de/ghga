@@ -28,6 +28,7 @@ from hexkit.correlation import correlation_id_var
 from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import SecretStr
 
+from ns.adapters.outbound.lox24_client import Lox24Client
 from ns.adapters.outbound.smtp_client import (
     SmtpAuthConfig,
     SmtpClient,
@@ -38,7 +39,7 @@ from ns.ports.outbound.dao import EventIdDaoPort
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.server import DummyServer
-from tests.fixtures.utils import make_notification
+from tests.fixtures.utils import make_email_notification
 
 pytestmark = pytest.mark.asyncio()
 
@@ -74,7 +75,7 @@ async def test_email_construction(
     # Cast notifier type
     joint_fixture.notifier = cast(Notifier, joint_fixture.notifier)
 
-    notification = make_notification(notification_details)
+    notification = make_email_notification(notification_details)
 
     msg = joint_fixture.notifier._construct_email(notification=notification)
 
@@ -174,14 +175,14 @@ async def test_failed_authentication(joint_fixture: JointFixture):
     # change the login credentials so that the authentication fails
     server.login = "bob@bobswebsite.com"
     server.password = "notCorrect"
-    notification = make_notification(sample_notification)
+    notification = make_email_notification(sample_notification)
 
     expected_email = notifier._construct_email(notification=notification)
 
     # send the notification so it gets intercepted by the dummy client
     with pytest.raises(SmtpClient.FailedLoginError):
         async with server.expect_email(expected_email=expected_email):
-            await notifier.send_notification(notification=notification)
+            await notifier.send_email_notification(notification=notification)
 
     # Make sure the event ID was not saved in the DB
     event_id_dao = cast(
@@ -203,7 +204,7 @@ async def test_consume_thru_send(joint_fixture: JointFixture):
             "recipient_name": "Yolanda Martinez",
             "plaintext_body": "Where are you, where are you, Yolanda?",
         },
-        type_=joint_fixture.config.notification_type,
+        type_=joint_fixture.config.email_notification_type,
         topic=joint_fixture.config.notification_topic,
     )
 
@@ -219,12 +220,12 @@ async def test_idempotence_and_transmission(joint_fixture: JointFixture):
     # Cast notifier type
     notifier = cast(Notifier, joint_fixture.notifier)
 
-    notification_event = make_notification(sample_notification)
+    notification_event = make_email_notification(sample_notification)
 
     # Publish the notification event (this is what the NOS would do upstream)
     await joint_fixture.kafka.publish_event(
         payload=notification_event.model_dump(),
-        type_=joint_fixture.config.notification_type,
+        type_=joint_fixture.config.email_notification_type,
         topic=joint_fixture.config.notification_topic,
         event_id=TEST_EVENT_ID,
     )
@@ -252,7 +253,7 @@ async def test_idempotence_and_transmission(joint_fixture: JointFixture):
     # Now publish the same event again
     await joint_fixture.kafka.publish_event(
         payload=notification_event.model_dump(),
-        type_=joint_fixture.config.notification_type,
+        type_=joint_fixture.config.email_notification_type,
         topic=joint_fixture.config.notification_topic,
         event_id=TEST_EVENT_ID,  # same event ID to ensure idempotence
     )
@@ -284,7 +285,7 @@ async def test_html_escaping(joint_fixture: JointFixture):
     assert original_name != escaped_name
     assert original_body != escaped_body
 
-    notification = make_notification(injected_notification)
+    notification = make_email_notification(injected_notification)
 
     msg = joint_fixture.notifier._construct_email(notification=notification)
     assert msg is not None
@@ -322,11 +323,12 @@ async def test_timeout(port: int):
     )
     config = get_config(sources=[client_config])
     smtp_client = SmtpClient(config=config)
+    sms_client = AsyncMock(spec=Lox24Client)
     dao_mock = AsyncMock()
     dao_mock.get_by_id.side_effect = ResourceNotFoundError(id_=TEST_EVENT_ID)
 
-    notifier = Notifier(config=config, smtp_client=smtp_client)
+    notifier = Notifier(config=config, smtp_client=smtp_client, sms_client=sms_client)
     with pytest.raises(smtp_client.ConnectionAttemptError):
-        await notifier.send_notification(
-            notification=make_notification(sample_notification)
+        await notifier.send_email_notification(
+            notification=make_email_notification(sample_notification)
         )

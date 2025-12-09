@@ -26,6 +26,7 @@ from pydantic import EmailStr, Field
 from pydantic_settings import BaseSettings
 
 from ns.ports.inbound.notifier import NotifierPort
+from ns.ports.outbound.sms_client import SmsClientPort
 from ns.ports.outbound.smtp_client import SmtpClientPort
 
 log = logging.getLogger(__name__)
@@ -58,19 +59,31 @@ class Notifier(NotifierPort):
         *,
         config: NotifierConfig,
         smtp_client: SmtpClientPort,
+        sms_client: SmsClientPort,
     ):
         """Initialize the Notifier with configuration and smtp client"""
         self._config = config
         self._smtp_client = smtp_client
+        self._sms_client = sms_client
 
-    async def send_notification(
+    async def send_email_notification(
         self,
         *,
-        notification: event_schemas.Notification,
+        notification: event_schemas.EmailNotification,
     ):
         """Sends out notifications based on the event details"""
         message = self._construct_email(notification=notification)
         self._smtp_client.send_email_message(message)
+
+    async def send_sms_notification(
+        self,
+        *,
+        notification: event_schemas.SmsNotification,
+    ):
+        """Sends out notifications based on the event details"""
+        self._sms_client.send_sms_message(
+            phone=notification.phone, text=notification.text
+        )
 
     def _build_email_subtype(
         self, *, template_type: EmailTemplateType, email_vars: dict[str, str]
@@ -116,7 +129,7 @@ class Notifier(NotifierPort):
         return email_subtype
 
     def _construct_email(
-        self, *, notification: event_schemas.Notification
+        self, *, notification: event_schemas.EmailNotification
     ) -> EmailMessage:
         """Constructs an EmailMessage object from the contents of an email notification event"""
         log.debug("Constructing email message for notification.")

@@ -24,6 +24,7 @@ from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 
 from ns.adapters.inbound.event_sub import EventSubTranslator
 from ns.adapters.outbound.dao import get_event_id_dao
+from ns.adapters.outbound.lox24_client import Lox24Client
 from ns.adapters.outbound.smtp_client import SmtpClient
 from ns.config import Config
 from ns.core.notifier import Notifier
@@ -34,8 +35,9 @@ from ns.ports.inbound.notifier import NotifierPort
 async def prepare_core(*, config: Config) -> AsyncGenerator[NotifierPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     smtp_client = SmtpClient(config=config)
+    sms_client = Lox24Client(config=config)
 
-    notifier = Notifier(config=config, smtp_client=smtp_client)
+    notifier = Notifier(config=config, smtp_client=smtp_client, sms_client=sms_client)
     yield notifier
 
 

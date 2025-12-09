@@ -42,13 +42,13 @@ class JointFixture:
 
 @pytest_asyncio.fixture()
 async def joint_fixture(
+    request,
     kafka: KafkaFixture,
     mongodb: MongoDbFixture,
 ) -> AsyncGenerator[JointFixture]:
     """A fixture that embeds all other fixtures for integration testing"""
     # merge configs from different sources with the default one:
     config = get_config(sources=[kafka.config, mongodb.config, SMTP_TEST_CONFIG])
-
     # prepare the core and the event subscriber
     async with (
         prepare_core(config=config) as notifier,

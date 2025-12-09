@@ -32,7 +32,7 @@ async def test_event_subscriber_dlq(kafka: KafkaFixture):
     # Publish an event with a bogus payload to a topic/type this service expects
     await kafka.publish_event(
         payload={"some_key": "some_value"},
-        type_=config.notification_type,
+        type_=config.email_notification_type,
         topic=config.notification_topic,
         key="test",
     )
@@ -64,7 +64,7 @@ async def test_consume_from_retry(kafka: KafkaFixture):
     # Publish an event with a proper payload to a topic/type this service expects
     await kafka.publish_event(
         payload=sample_notification,
-        type_=config.notification_type,
+        type_=config.email_notification_type,
         topic="retry-" + config.service_name,
         key="test",
         headers={"original_topic": config.notification_topic},

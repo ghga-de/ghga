@@ -21,6 +21,7 @@ from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 
 from ns.adapters.inbound.event_sub import EventSubTranslatorConfig
+from ns.adapters.outbound.lox24_client import Lox24ClientConfig
 from ns.adapters.outbound.smtp_client import SmtpClientConfig
 from ns.core.notifier import NotifierConfig
 
@@ -32,6 +33,7 @@ class Config(
     KafkaConfig,
     EventSubTranslatorConfig,
     SmtpClientConfig,
+    Lox24ClientConfig,
     NotifierConfig,
     LoggingConfig,
     MigrationConfig,

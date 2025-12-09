@@ -167,6 +167,54 @@
       "title": "From Address",
       "type": "string"
     },
+    "lox24_base_url": {
+      "default": "https://api.lox24.eu:443",
+      "description": "The base URL of the lox24 API",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Lox24 Base Url",
+      "type": "string"
+    },
+    "lox24_token": {
+      "description": "The authentication token",
+      "format": "password",
+      "title": "Lox24 Token",
+      "type": "string",
+      "writeOnly": true
+    },
+    "lox24_timeout": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": 10,
+      "description": "The maximum amount of time (in seconds) to wait for a connection to the lox24 API. If set to `None`, the operation will wait indefinitely.",
+      "title": "Lox24 Timeout"
+    },
+    "lox24_send_sms_path": {
+      "default": "sms",
+      "description": "The path for sending SMS messages",
+      "title": "Lox24 Send Sms Path",
+      "type": "string"
+    },
+    "lox24_auth_token_header": {
+      "default": "X-LOX24-AUTH-TOKEN",
+      "description": "The header for the authentication token",
+      "title": "Lox24 Auth Token Header",
+      "type": "string"
+    },
+    "lox24_sender_id": {
+      "default": "GHGA",
+      "description": "The sender ID to use when sending SMS messages",
+      "title": "Lox24 Sender Id",
+      "type": "string"
+    },
     "smtp_host": {
       "description": "The mail server host to connect to",
       "title": "Smtp Host",
@@ -217,12 +265,20 @@
       "title": "Notification Topic",
       "type": "string"
     },
-    "notification_type": {
-      "description": "The type used for notification events.",
+    "email_notification_type": {
+      "description": "The type used for email notification events.",
       "examples": [
-        "notification"
+        "email_notification"
       ],
-      "title": "Notification Type",
+      "title": "Email Notification Type",
+      "type": "string"
+    },
+    "sms_notification_type": {
+      "description": "The type used for SMS notification events.",
+      "examples": [
+        "sms_notification"
+      ],
+      "title": "Sms Notification Type",
       "type": "string"
     },
     "kafka_servers": {
@@ -378,10 +434,12 @@
     "plaintext_email_template",
     "html_email_template",
     "from_address",
+    "lox24_token",
     "smtp_host",
     "smtp_port",
     "notification_topic",
-    "notification_type",
+    "email_notification_type",
+    "sms_notification_type",
     "kafka_servers"
   ],
   "title": "ModSettings",

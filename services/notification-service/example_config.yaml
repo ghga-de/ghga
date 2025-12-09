@@ -1,5 +1,6 @@
 db_name: dev_db
 db_version_collection: nsDbVersions
+email_notification_type: email_notification
 from_address: test@test.com
 generate_correlation_id: true
 html_email_template: '<!DOCTYPE html><html><head></head><body style="color: #00393f;padding:
@@ -21,12 +22,17 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+lox24_auth_token_header: X-LOX24-AUTH-TOKEN
+lox24_base_url: https://api.lox24.eu/
+lox24_send_sms_path: sms
+lox24_sender_id: GHGA
+lox24_timeout: 10.0
+lox24_token: ''
 migration_max_wait_sec: null
 migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 notification_topic: notifications
-notification_type: notification
 plaintext_email_template: 'Dear $recipient_name,
 
 
@@ -39,6 +45,7 @@ plaintext_email_template: 'Dear $recipient_name,
   The GHGA Team'
 service_instance_id: '001'
 service_name: ns
+sms_notification_type: sms_notification
 smtp_auth:
   password: '**********'
   username: test@test.com
