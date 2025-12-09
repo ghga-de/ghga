@@ -102,18 +102,18 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import(
-            './access-requests/features/access-request-manager/access-request-manager'
-          ).then((m) => m.AccessRequestManagerComponent),
+          import('./access-requests/features/access-request-manager/access-request-manager').then(
+            (m) => m.AccessRequestManagerComponent,
+          ),
         title: 'Access Request Manager',
       },
       {
         path: ':id',
         canDeactivate: [pendingEditsGuard],
         loadComponent: () =>
-          import(
-            './access-requests/features/access-request-manager-detail/access-request-manager-detail'
-          ).then((m) => m.AccessRequestManagerDetailComponent),
+          import('./access-requests/features/access-request-manager-detail/access-request-manager-detail').then(
+            (m) => m.AccessRequestManagerDetailComponent,
+          ),
         title: 'Access Request Details',
         data: { transition: 'detail' },
       },
@@ -150,17 +150,17 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import(
-            './access-requests/features/access-grant-manager/access-grant-manager'
-          ).then((m) => m.AccessGrantManagerComponent),
+          import('./access-requests/features/access-grant-manager/access-grant-manager').then(
+            (m) => m.AccessGrantManagerComponent,
+          ),
         title: 'Access Grant Manager',
       },
       {
         path: ':id',
         loadComponent: () =>
-          import(
-            './access-requests/features/access-grant-manager-details/access-grant-manager-details'
-          ).then((m) => m.AccessGrantManagerDetailsComponent),
+          import('./access-requests/features/access-grant-manager-details/access-grant-manager-details').then(
+            (m) => m.AccessGrantManagerDetailsComponent,
+          ),
         title: 'Access Grant Manager Details',
       },
     ],

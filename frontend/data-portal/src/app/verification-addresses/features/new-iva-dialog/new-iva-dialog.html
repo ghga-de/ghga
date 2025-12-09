@@ -1,13 +1,12 @@
 <h1 mat-dialog-title>Add contact address</h1>
 <div mat-dialog-content cdkTrapFocus>
-  <form defaultButton="submit-code" (ngSubmit)="onSubmit()" #form="ngForm">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
     <p class="mb-3">Please select one of the following contact address types:</p>
     <div class="text-center">
       <mat-button-toggle-group
         aria-label="Contact address type"
-        [(ngModel)]="type"
-        name="type"
-        (change)="onTypeChange()"
+        formControlName="type"
+        class="[&_mat-button-toggle]:w-31 sm:[&_mat-button-toggle]:w-40"
       >
         @for (type of types; track type) {
           <mat-button-toggle [value]="type.value" class="px-0 sm:px-3.5">{{
@@ -19,20 +18,33 @@
     @if (type) {
       <p class="mt-5">{{ valuePrompt }}</p>
       <mat-form-field class="w-full">
-        <input
-          matInput
-          [type]="type === 'Phone' || type === 'Fax' ? 'tel' : 'text'"
-          [autocomplete]="
-            type === 'Phone' ? 'mobile tel' : type === 'Fax' ? 'fax' : 'street-address'
-          "
-          [(ngModel)]="value"
-          name="value"
-          cdkFocusInitial
-          maxlength="500"
-          #valueField
-          required
-        />
+        @if (type === 'Phone' || type === 'Fax') {
+          <ngx-mat-input-tel
+            class="w-full"
+            [preferredCountries]="['de']"
+            [enablePlaceholder]="true"
+            [enableSearch]="true"
+            name="value"
+            formControlName="value"
+            autocomplete="tel"
+            maxLength="15"
+            #valueField
+          ></ngx-mat-input-tel>
+        } @else {
+          <input
+            matInput
+            type="text"
+            autocomplete="street-address"
+            formControlName="value"
+            cdkFocusInitial
+            maxlength="500"
+            #valueField
+            required
+          />
+        }
       </mat-form-field>
+    } @else {
+      <p class="mb-5"></p>
     }
 
     <div mat-dialog-actions>
@@ -42,7 +54,7 @@
       <button
         id="submit-code"
         mat-raised-button
-        [disabled]="!type || !value"
+        [disabled]="isInvalid()"
         (click)="onSubmit()"
         data-umami-event="New IVA Submit Clicked"
       >

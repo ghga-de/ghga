@@ -210,9 +210,12 @@ export class UserIvaListComponent implements OnInit {
    */
   enterNew(): void {
     const dialogRef = this.#dialog.open(NewIvaDialogComponent);
-    dialogRef.afterClosed().subscribe(({ type, value }) => {
-      if (type && value) {
-        this.add(type, value);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        const { type, value } = result;
+        if (type && value) {
+          this.add(type, value);
+        }
       }
     });
   }
