@@ -41,14 +41,15 @@ class NotificationEmitter(NotificationEmitterPort):
     ):
         """Initialize with config and a provider of the EventPublisherProtocol."""
         self._event_topic = config.notification_topic
-        self._event_type = config.notification_type
+        self._email_notification_type = config.email_notification_type
+        self._sms_notification_type = config.sms_notification_type
         self._event_publisher = event_publisher
 
-    async def notify(
+    async def email_notify(
         self, *, email: str, full_name: str, notification: Notification
     ) -> None:
         """Send notification to the specified email address."""
-        payload: JsonObject = event_schemas.Notification(
+        payload: JsonObject = event_schemas.EmailNotification(
             recipient_email=email,
             recipient_name=full_name,
             subject=notification.subject,
@@ -57,7 +58,21 @@ class NotificationEmitter(NotificationEmitterPort):
 
         await self._event_publisher.publish(
             payload=payload,
-            type_=self._event_type,
+            type_=self._email_notification_type,
             key=email,
+            topic=self._event_topic,
+        )
+
+    async def sms_notify(self, *, phone: str, notification: Notification) -> None:
+        """Send notification to the specified phone number."""
+        payload: JsonObject = event_schemas.SmsNotification(
+            phone=phone,
+            text=notification.text,
+        ).model_dump()
+
+        await self._event_publisher.publish(
+            payload=payload,
+            type_=self._sms_notification_type,
+            key=phone,
             topic=self._event_topic,
         )

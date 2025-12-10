@@ -5,10 +5,12 @@ mongo_dsn: mongodb://localhost:27017
 db_name: nos
 kafka_servers: ["kafka:9092"]
 access_request_topic: access_request_events
-notification_type: notification
+email_notification_type: email_notification
+sms_notification_type: sms_notification
 notification_topic: notification_events
 iva_state_changed_topic: ivas
 iva_state_changed_type: iva_state_changed
+iva_send_code_type: iva_send_code
 user_topic: users
 auth_topic: auth
 second_factor_recreated_type: second_factor_recreated

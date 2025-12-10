@@ -84,12 +84,20 @@
       "title": "Notification Topic",
       "type": "string"
     },
-    "notification_type": {
-      "description": "The type used for notification events.",
+    "email_notification_type": {
+      "description": "The type used for email notification events.",
       "examples": [
-        "notification"
+        "email_notification"
       ],
-      "title": "Notification Type",
+      "title": "Email Notification Type",
+      "type": "string"
+    },
+    "sms_notification_type": {
+      "description": "The type used for SMS notification events.",
+      "examples": [
+        "sms_notification"
+      ],
+      "title": "Sms Notification Type",
       "type": "string"
     },
     "access_request_topic": {
@@ -131,11 +139,19 @@
       "type": "string"
     },
     "iva_state_changed_type": {
-      "description": "The type to use for iva state changed events.",
+      "description": "The type to use for IVA state changed events.",
       "examples": [
         "iva_state_changed"
       ],
       "title": "Iva State Changed Type",
+      "type": "string"
+    },
+    "iva_send_code_type": {
+      "description": "The type to use for IVA send code events.",
+      "examples": [
+        "iva_send_code"
+      ],
+      "title": "Iva Send Code Type",
       "type": "string"
     },
     "service_name": {
@@ -349,12 +365,14 @@
     "db_version_collection",
     "migration_wait_sec",
     "notification_topic",
-    "notification_type",
+    "email_notification_type",
+    "sms_notification_type",
     "access_request_topic",
     "auth_topic",
     "second_factor_recreated_type",
     "iva_state_changed_topic",
     "iva_state_changed_type",
+    "iva_send_code_type",
     "service_instance_id",
     "kafka_servers",
     "central_data_stewardship_email",

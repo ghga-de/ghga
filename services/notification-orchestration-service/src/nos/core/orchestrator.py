@@ -118,7 +118,7 @@ class Orchestrator(OrchestratorPort):
                 text interpolation.
         """
         # Send a confirmation email notification to the Data Requester
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.ACCESS_REQUEST_CREATED_TO_USER.formatted(
@@ -131,7 +131,7 @@ class Orchestrator(OrchestratorPort):
         )
 
         # Send a notification to the data steward
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,
             notification=notifications.ACCESS_REQUEST_CREATED_TO_DS.formatted(
@@ -178,7 +178,7 @@ class Orchestrator(OrchestratorPort):
             else ""
         )
 
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.ACCESS_REQUEST_ALLOWED_TO_USER.formatted(
@@ -193,7 +193,7 @@ class Orchestrator(OrchestratorPort):
 
         # Send a confirmation email to the data steward
         ticket_id = access_request.ticket_id
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,
             notification=notifications.ACCESS_REQUEST_ALLOWED_TO_DS.formatted(
@@ -235,7 +235,7 @@ class Orchestrator(OrchestratorPort):
             else ""
         )
 
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.ACCESS_REQUEST_DENIED_TO_USER.formatted(
@@ -250,7 +250,7 @@ class Orchestrator(OrchestratorPort):
 
         # Send a confirmation email to the data steward
         ticket_id = access_request.ticket_id
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,
             notification=notifications.ACCESS_REQUEST_DENIED_TO_DS.formatted(
@@ -272,7 +272,7 @@ class Orchestrator(OrchestratorPort):
         Another notification is sent to the data steward to inform them of the request.
         """
         # Send a notification to the user
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.IVA_CODE_REQUESTED_TO_USER,
@@ -284,7 +284,7 @@ class Orchestrator(OrchestratorPort):
         )
 
         # Send a notification to the data steward
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,
             notification=notifications.IVA_CODE_REQUESTED_TO_DS.formatted(
@@ -299,7 +299,7 @@ class Orchestrator(OrchestratorPort):
 
     async def _iva_code_transmitted(self, *, user: event_schemas.User):
         """Send a notification that an IVA code has been transmitted to the user."""
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.IVA_CODE_TRANSMITTED_TO_USER,
@@ -322,7 +322,7 @@ class Orchestrator(OrchestratorPort):
         code or exhausts all the allotted verification attempts.
         """
         # send a notification to the user
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.IVA_UNVERIFIED_TO_USER.formatted(
@@ -335,7 +335,7 @@ class Orchestrator(OrchestratorPort):
         )
 
         # send a notification to the data steward
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=self._config.central_data_stewardship_email,
             full_name=DATA_STEWARD_NAME,
             notification=notifications.IVA_UNVERIFIED_TO_DS.formatted(
@@ -362,7 +362,7 @@ class Orchestrator(OrchestratorPort):
             )
             raise error from err
 
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.ALL_IVAS_INVALIDATED_TO_USER.formatted(
@@ -475,7 +475,7 @@ class Orchestrator(OrchestratorPort):
         with suppress(ResourceNotFoundError):
             existing_user = await self._user_dao.get_by_id(update.user_id)
             if changed_details := self._changed_info(existing_user, update):
-                await self._notification_emitter.notify(
+                await self._notification_emitter.email_notify(
                     email=existing_user.email,
                     full_name=update.name,
                     notification=notifications.USER_REREGISTERED_TO_USER.formatted(
@@ -520,7 +520,7 @@ class Orchestrator(OrchestratorPort):
             )
             raise error from err
 
-        await self._notification_emitter.notify(
+        await self._notification_emitter.email_notify(
             email=user.email,
             full_name=user.name,
             notification=notifications.SECOND_FACTOR_RECREATED_TO_USER.formatted(
@@ -531,4 +531,37 @@ class Orchestrator(OrchestratorPort):
         log.info(
             "Sent Second Factor Recreated notification to user. Email address: %s",
             user.email,
+        )
+
+    async def send_iva_sms_code(
+        self,
+        *,
+        user_id: UUID4,
+        phone: str,
+        code: str,
+    ):
+        """Transmit IVA verification code to the requesting user via sms."""
+        try:
+            await self._user_dao.get_by_id(user_id)
+        except ResourceNotFoundError:
+            error = self.MissingUserError(
+                user_id=user_id, notification_name="IVA Send Code"
+            )
+            log.warning(
+                error,
+                extra={
+                    "user_id": user_id,
+                    "notification_name": "IVA Send Code",
+                },
+            )
+
+        await self._notification_emitter.sms_notify(
+            phone=phone,
+            notification=notifications.IVA_SEND_CODE_TRANSMISSION.formatted(
+                code=code,
+            ),
+        )
+
+        log.info(
+            f"IVA verification code transmission event has been created. Four last digits of phone number: {phone[-4:]}."
         )

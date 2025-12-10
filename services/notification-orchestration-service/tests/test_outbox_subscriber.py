@@ -142,7 +142,7 @@ async def test_user_reregistration_notifications(
     expected_notifications = []
     if "name" in changed_details or "email" in changed_details:
         expected_notifications.append(
-            event_schemas.Notification(
+            event_schemas.EmailNotification(
                 recipient_email=TEST_USER.email
                 if "email" in changed_details
                 else user.email,
@@ -159,7 +159,7 @@ async def test_user_reregistration_notifications(
     topic = joint_fixture.config.notification_topic
     expected_events = [
         ExpectedEvent(
-            type_=joint_fixture.config.notification_type,
+            type_=joint_fixture.config.email_notification_type,
             payload=notification.model_dump(),
             key=notification.recipient_email,
         )

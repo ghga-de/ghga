@@ -27,8 +27,13 @@ class NotificationEmitterPort(ABC):
     """Emits notification events."""
 
     @abstractmethod
-    async def notify(
+    async def email_notify(
         self, *, email: str, full_name: str, notification: Notification
     ) -> None:
         """Send notification to the specified email address."""
+        ...
+
+    @abstractmethod
+    async def sms_notify(self, *, phone: str, notification: Notification) -> None:
+        """Send notification to the specified phone number."""
         ...
