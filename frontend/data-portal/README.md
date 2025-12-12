@@ -4,22 +4,21 @@ This repository contains the Angular 19 front-end application for the GHGA data 
 
 <!-- toc -->
 
-- [GHGA Data Portal](#ghga-data-portal)
-  - [Local testing](#local-testing)
-    - [API requests \& the backend](#api-requests--the-backend)
-    - [Authentication](#authentication)
-  - [Code scaffolding](#code-scaffolding)
-  - [Building](#building)
-  - [Package Manager](#package-manager)
-  - [Linter, Commits, and Documentation](#linter-commits-and-documentation)
-    - [Ease of use](#ease-of-use)
-  - [Testing](#testing)
-    - [Unit-tests](#unit-tests)
-    - [End-to-End tests](#end-to-end-tests)
-      - [Issues relating to headed execution](#issues-relating-to-headed-execution)
-  - [The Architecture Matrix](#the-architecture-matrix)
-  - [References](#references)
-  - [License](#license)
+- [Local testing](#local-testing)
+  - [API requests & the backend](#api-requests--the-backend)
+  - [Authentication](#authentication)
+- [Code scaffolding](#code-scaffolding)
+- [Building](#building)
+- [Package Manager](#package-manager)
+- [Linter, Commits, and Documentation](#linter-commits-and-documentation)
+  - [Ease of use](#ease-of-use)
+- [Testing](#testing)
+  - [Unit-tests](#unit-tests)
+  - [End-to-End tests](#end-to-end-tests)
+    - [Issues relating to headed execution](#issues-relating-to-headed-execution)
+- [The Architecture Matrix](#the-architecture-matrix)
+- [References](#references)
+- [License](#license)
 
 <!-- tocstop -->
 

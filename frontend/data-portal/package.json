@@ -21,7 +21,7 @@
     "compodoc:build": "compodoc -p tsconfig.doc.json",
     "compodoc:build-and-serve": "compodoc -p tsconfig.doc.json -s -r 8081",
     "compodoc:serve": "compodoc -s",
-    "toc": "markdown-toc -i README.md"
+    "toc": "markdown-toc-gen update README.md"
   },
   "packageManager": "pnpm@10.25.0",
   "type": "module",
