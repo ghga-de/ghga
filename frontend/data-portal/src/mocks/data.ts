@@ -675,11 +675,15 @@ export const searchResults: SearchResults = {
         { value: 'Option 2', count: 37 },
         { value: 'Option 3', count: 42 },
         { value: 'Option 4', count: 21 },
+        { value: 'Option 5', count: 9 },
+        { value: 'Option 6', count: 78 },
+        { value: 'Option 7', count: 6 },
+        { value: 'Option 8', count: 12 },
       ],
     },
     {
       key: 'type',
-      name: 'Dataset Type with a test for how the UI handles facet names that span more than two lines in the expansion panel headers',
+      name: 'Dataset Type with a test for how the UI handles facet names that span more than two lines in the expansion panel headers. So long, and thanks for all the fish.',
       options: [
         {
           value:

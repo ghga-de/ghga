@@ -64,15 +64,32 @@ describe('MetadataBrowserFilterComponent', () => {
   it('should correctly filter by query', async () => {
     const searchInput = screen.getByPlaceholderText('Enter any keyword or ID');
     const routerSpy = vitest.spyOn(router, 'navigate');
-    searchInput.focus();
-    await userEvent.keyboard('test{Enter}');
+    await userEvent.type(searchInput, 'test query');
+    await userEvent.type(searchInput, '{Enter}');
+    fixture.detectChanges();
     await fixture.whenStable();
     expect(routerSpy).toHaveBeenCalledWith(
       [],
       expect.objectContaining({
-        queryParams: { f: undefined, p: undefined, q: 'test', s: undefined },
+        queryParams: { f: undefined, p: undefined, q: 'test query', s: undefined },
       }),
     );
+  });
+
+  it('should show the autocomplete options correctly', async () => {
+    const searchInput = screen.getByRole('combobox', {
+      name: 'Enter any keyword or ID',
+    });
+    searchInput.focus();
+    await userEvent.keyboard('opt');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const autoCompleteOptions = screen.getAllByRole('option');
+    expect(autoCompleteOptions.length).toBe(9);
+    expect(autoCompleteOptions[0].textContent.trim()).toBe(
+      "Press Enter to filter for the keyword 'opt'",
+    );
+    expect(autoCompleteOptions[1].ariaLabel!).toBe('Option 1 (62 results)');
   });
 
   it('should show the correct number of facet expansion panels', () => {

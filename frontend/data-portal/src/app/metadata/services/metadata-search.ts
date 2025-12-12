@@ -31,7 +31,6 @@ export class MetadataSearchService {
   #query = signal<string | undefined>(undefined);
   #facets = signal<FacetFilterSetting>({});
 
-  facets = computed(() => this.#facets());
   query = computed(() => {
     if (!this.#query()) return '';
     return this.#query();

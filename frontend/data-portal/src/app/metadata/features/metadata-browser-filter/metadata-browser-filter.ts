@@ -5,7 +5,12 @@
  */
 
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule } from '@angular/forms';
+import { Field, form } from '@angular/forms/signals';
+import {
+  MatAutocompleteModule,
+  MatAutocompleteSelectedEvent,
+} from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
@@ -24,6 +29,7 @@ import {
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { FacetExpansionPanelComponent } from '@app/metadata/ui/facet-expansion-panel/facet-expansion-panel';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
+import { highlightMatchingText } from '@app/shared/utils/highlight-matching-text';
 
 /**
  * Component for the metadata browser filter
@@ -32,6 +38,7 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
   selector: 'app-metadata-browser-filter',
   imports: [
     FacetExpansionPanelComponent,
+    MatAutocompleteModule,
     MatButtonModule,
     MatCardModule,
     MatCheckboxModule,
@@ -42,6 +49,7 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
     StencilComponent,
     ReactiveFormsModule,
     MatAccordion,
+    Field,
   ],
   templateUrl: './metadata-browser-filter.html',
 })
@@ -64,29 +72,39 @@ export class MetadataBrowserFilterComponent implements OnInit {
   protected expandedPanels: { [facetKey: string]: boolean } = {};
 
   protected facetData = signal<FacetFilterSetting>({});
-  protected searchFormValue = signal<string | null>('');
-  protected searchTerm = '';
-  protected lastSearchQuery = computed(() => this.#metadataSearch.query());
-  protected selectedFacets = computed(() => this.#metadataSearch.facets());
+  protected activeKeyword = signal<string>('');
+  protected searchModel = signal({ searchTerm: '' });
+  protected searchForm = form(this.searchModel);
 
   readonly paginated = this.#metadataSearch.paginated;
 
-  protected searchFormControl = new FormControl('');
-
-  protected searchFormGroup = new FormGroup({
-    searchTerm: this.searchFormControl,
-  });
-
   protected displayFilters = false;
 
-  protected facetWithSelectedOptions = computed(() =>
-    this.facets().map((f) => {
-      return {
-        ...f,
-        expanded: this.expandedPanels[f.key] ?? false,
-      };
-    }),
+  protected facetWithExpanded = computed(() =>
+    this.facets().map((f) => ({
+      ...f,
+      expanded: this.expandedPanels[f.key] ?? false,
+    })),
   );
+
+  protected filteredFacets = computed(() => {
+    const filter = this.searchModel().searchTerm.toLocaleLowerCase();
+    return this.facetWithExpanded()
+      .map((f) => {
+        const selectedFacets = new Set(this.facetData()[f.key] ?? []);
+        return {
+          ...f,
+          options: f.options
+            .filter((option) => option.value.toLocaleLowerCase().includes(filter))
+            .map((option) => ({
+              ...option,
+              selected: selectedFacets.has(option.value),
+              withHighlights: highlightMatchingText(option.value, filter),
+            })),
+        };
+      })
+      .filter((f) => f.options.length > 0);
+  });
 
   #paginatedEffect = effect(() => {
     this.paginated() ? this.#performSearch() : null;
@@ -186,7 +204,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
       relativeTo: this.#route,
       queryParams: {
         s: this.#skip() !== DEFAULT_SKIP_VALUE ? this.#skip() : undefined,
-        q: this.searchTerm !== '' ? this.searchTerm : undefined,
+        q: this.activeKeyword() !== '' ? this.activeKeyword() : undefined,
         f:
           Object.keys(this.facetData()).length !== 0
             ? encodeURIComponent(this.#facetDataToString(this.facetData()))
@@ -203,7 +221,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
   #loadSearchTermsFromRoute(): void {
     const { s, q, f, p } = this.#router.routerState.snapshot.root.queryParams;
     const pageSize = parseInt(p) || DEFAULT_PAGE_SIZE;
-    this.searchTerm = q || '';
+    this.activeKeyword.set(q || '');
     if (f) {
       const paramVals = this.#facetDataFromString(decodeURIComponent(f));
       if (paramVals) {
@@ -215,10 +233,9 @@ export class MetadataBrowserFilterComponent implements OnInit {
       this.#className,
       pageSize,
       skip,
-      this.searchTerm,
+      this.searchModel().searchTerm,
       this.facetData(),
     );
-    this.searchFormValue.set(this.searchTerm);
   }
 
   /**
@@ -235,14 +252,15 @@ export class MetadataBrowserFilterComponent implements OnInit {
    * Sets the parameters for the search and triggers it in the metadataSearch Service
    * @param event we need to stop the event from propagating
    */
-  protected submit(event: MouseEvent | SubmitEvent | Event): void {
+  protected submit(event: SubmitEvent | Event): void {
     event.preventDefault();
-    const searchTerm = this.searchFormValue() || '';
-    if (searchTerm !== this.searchTerm || this.#facetDataChanged()) {
-      this.searchTerm = searchTerm;
+    const searchTerm = this.searchModel().searchTerm;
+    if (searchTerm !== this.activeKeyword()) {
+      this.activeKeyword.set(searchTerm);
       this.#metadataSearch.resetSkip();
       this.facets.set([]);
       this.#currentFacet = undefined;
+      this.searchModel.set({ searchTerm: '' });
       this.#performSearch();
     }
   }
@@ -265,24 +283,11 @@ export class MetadataBrowserFilterComponent implements OnInit {
    * Resets the search query and triggers a reload of the results.
    */
   protected clearSearchQuery(): void {
-    if (this.searchTerm !== '' || this.searchFormValue() || this.#facetDataChanged()) {
-      this.searchTerm = '';
-      this.searchFormValue.set('');
-      this.#metadataSearch.resetSkip();
-      this.facets.set([]);
-      this.#currentFacet = undefined;
-      this.#performSearch();
-    }
-  }
-
-  /**
-   * Clears the search field input and triggers a result update
-   * @param event we need to stop the event from propagating
-   */
-  protected clear(event: MouseEvent): void {
-    event.preventDefault();
-    this.facetData.set({});
-    this.clearSearchQuery();
+    this.activeKeyword.set('');
+    this.#metadataSearch.resetSkip();
+    this.facets.set([]);
+    this.#currentFacet = undefined;
+    this.#performSearch();
   }
 
   /**
@@ -324,14 +329,23 @@ export class MetadataBrowserFilterComponent implements OnInit {
    * This function transforms the checkbox change event to the data required in updateFacet(...) and calls it
    * @param input the Event from the checkbox
    */
-  protected onOptionSelected(input: MatCheckboxChange) {
-    const facetData = input.source.name?.split('#');
-    if (facetData?.length != 2) {
+  protected onOptionSelected(input: MatCheckboxChange | MatAutocompleteSelectedEvent) {
+    let facetData: string[] = [];
+    let checked: boolean;
+    if (input instanceof MatAutocompleteSelectedEvent) {
+      facetData = input.option.value.split('#');
+      checked = (facetData[2] ?? 'false') === 'true' ? true : false;
+      facetData = facetData.slice(0, 2) ?? [];
+      this.searchModel.set({ searchTerm: '' });
+    } else {
+      facetData = input.source.name?.split('#') ?? [];
+      checked = input.checked;
+    }
+    if (facetData.length != 2) {
       return;
     }
     const [facetKey, facetOption] = facetData;
-    const newValue = input.checked;
-    const updateFacets = this.#updateFacets(facetKey, facetOption, newValue);
+    const updateFacets = this.#updateFacets(facetKey, facetOption, checked);
     if (updateFacets) {
       this.#currentFacet = undefined;
       this.facets.set([]);
@@ -339,16 +353,5 @@ export class MetadataBrowserFilterComponent implements OnInit {
       this.#currentFacet = facetKey;
     }
     this.#performSearch();
-  }
-
-  /**
-   * Check whether the facet data is different from the last search
-   * @returns true if the facet data has changed
-   */
-  #facetDataChanged(): boolean {
-    return (
-      this.#facetDataToString(this.facetData()) !==
-      this.#facetDataToString(this.#metadataSearch.facets())
-    );
   }
 }

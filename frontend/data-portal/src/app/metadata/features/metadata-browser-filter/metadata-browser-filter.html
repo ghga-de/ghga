@@ -17,28 +17,25 @@
   class="mb-4 lg:col-span-4 lg:mb-0 lg:block xl:col-span-3"
 >
   <mat-card appearance="outlined" class="p-3">
-    <form [formGroup]="searchFormGroup" (submit)="submit($event)">
+    <form (submit)="submit($event)">
       <mat-form-field
-        [class.mb-3]="lastSearchQuery() === undefined"
+        [class.mb-3]="!activeKeyword()"
         class="w-full [&_.mat-mdc-form-field-subscript-wrapper]:h-2"
-      >
+        ><input type="submit" class="cdk-visually-hidden" aria-hidden="true" />
         <input
           type="search"
           matInput
           placeholder="Enter any keyword or ID"
           aria-label="Enter any keyword or ID"
-          name="searchTerm"
-          [formControl]="searchFormControl"
-          (change)="searchFormValue.set(searchFormControl.value)"
-          (keyup)="searchFormValue.set(searchFormControl.value)"
-          (keydown.enter)="submit($event)"
+          [matAutocomplete]="options"
+          [field]="searchForm.searchTerm"
         />
         <mat-icon matSuffix fontIcon="search"></mat-icon>
       </mat-form-field>
-      @if (lastSearchQuery() !== '') {
+      @if (activeKeyword()) {
         <mat-chip-set class="chip-set-tertiary mb-3">
           <mat-chip (removed)="clearSearchQuery()">
-            Keyword: {{ lastSearchQuery() }}
+            Keyword: {{ activeKeyword() }}
             <button
               matChipRemove
               data-umami-event="Metadata Browser Search Query Clear Clicked"
@@ -61,8 +58,8 @@
           </ul>
         }
       } @else {
-        <mat-accordion multi="true" class="grid grid-cols-1 gap-y-2">
-          @for (facet of facetWithSelectedOptions(); track facet.key) {
+        <mat-accordion multi="true" class="grid grid-cols-1 gap-y-4 lg:gap-y-2">
+          @for (facet of facetWithExpanded(); track facet.key) {
             <app-facet-expansion-panel
               [facet]="facet"
               [selectedOptions]="facet.key in facetData() ? facetData()[facet.key] : []"
@@ -86,3 +83,46 @@
     </div>
   </mat-card>
 </aside>
+<mat-autocomplete
+  #options="matAutocomplete"
+  hideSingleSelectionIndicator="true"
+  (optionSelected)="onOptionSelected($event)"
+>
+  @if (searchModel().searchTerm) {
+    <mat-option disabled="true">
+      Press Enter to filter for the keyword '{{ searchModel().searchTerm }}'
+    </mat-option>
+    @for (facet of filteredFacets(); track facet.key) {
+      <mat-optgroup [label]="facet.name" class="larger-optgroup-label">
+        @for (option of facet.options; track option.value) {
+          <mat-option
+            [value]="`${facet.key}#${option.value}#${!option.selected}`"
+            [ariaSelected]="option.selected"
+            class="no-option-margin"
+            [ariaLabel]="`${option.value} (${option.count} results)`"
+          >
+            <span class="flex w-full items-center gap-x-2">
+              <span class="cdk-visually-hidden">{{ option.value }}</span>
+              <span class="flex grow" aria-hidden="true">
+                <input
+                  type="checkbox"
+                  [checked]="option.selected"
+                  class="pointer-events-none me-2"
+                  tabindex="-1"
+                />
+                <span>
+                  @for (value of option.withHighlights; track value.text) {
+                    <span [class.bg-yellow-300]="value.highlighted" class="text-sm">{{
+                      value.text
+                    }}</span>
+                  }
+                </span>
+              </span>
+              <span class="pe-2 text-gray-500">{{ option.count }}</span>
+            </span>
+          </mat-option>
+        }
+      </mat-optgroup>
+    }
+  }
+</mat-autocomplete>

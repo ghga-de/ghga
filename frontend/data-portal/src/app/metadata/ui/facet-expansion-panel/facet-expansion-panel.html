@@ -9,10 +9,11 @@
       ><span>({{ augmentedOptions().length }})</span></mat-panel-title
     ></mat-expansion-panel-header
   >
-  @if (facet().options.length > 6) {
+  @if (facet().options.length > maxOptionsBeforeFiltering) {
     <form (submit)="$event.preventDefault()">
       <mat-form-field class="w-full">
         <input
+          type="search"
           matInput
           placeholder="Filter options"
           [aria-label]="`Filter ${facet().name} options`"
@@ -31,8 +32,15 @@
           class="w-full [&_div]:w-full [&_label]:w-full"
           (change)="optionSelected.emit($event)"
           [checked]="option.checked"
+          [ariaLabel]="`${option.value} (${option.count} results)`"
           ><span class="flex w-full flex-nowrap gap-x-2"
-            ><span class="grow">{{ option.value | underscoreToSpace }}</span
+            ><span class="grow">
+              <span class="cdk-visually-hidden">{{ option.value }}</span>
+              @for (text of option.withHighlights; track text) {
+                <span [class.bg-yellow-300]="text.highlighted" aria-hidden="true">{{
+                  text.text | underscoreToSpace
+                }}</span>
+              }</span
             ><span class="pe-2 text-gray-500">{{ option.count }}</span></span
           ></mat-checkbox
         >

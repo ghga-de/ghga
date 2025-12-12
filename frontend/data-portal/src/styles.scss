@@ -521,6 +521,17 @@ mat-sidenav-container.mat-sidenav-container {
   z-index: 2;
 }
 
+mat-optgroup.mat-mdc-optgroup.larger-optgroup-label .mat-mdc-optgroup-label {
+  font-size: medium;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+mat-option.mat-mdc-option.no-option-margin .mdc-list-item__primary-text {
+  margin-right: 0px;
+  width: 100%;
+}
+
 /* View transitions for list-detail navigation */
 @supports (view-transition-name: none) {
   /* Default root transition */
