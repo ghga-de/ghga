@@ -341,7 +341,9 @@ describe('IvaService', () => {
   it('should request verification of an IVA for the current user', async () => {
     currentUserId.set('doe@test.dev'); // mock login
     testBed.tick();
-    const codePromise = firstValueFrom(service.requestCodeForIva('TEST123456'));
+    const codePromise = firstValueFrom(
+      service.requestCodeForIva('TEST123456', IvaType.Phone),
+    );
     const req = httpMock.expectOne(
       'http://mock.dev/auth/rpc/ivas/TEST123456/request-code',
     );

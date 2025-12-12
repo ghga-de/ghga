@@ -76,7 +76,7 @@ export class UserIvaListComponent implements OnInit {
    * @param iva - the IVA to be verified
    */
   #requestVerification(iva: Iva): void {
-    this.#ivaService.requestCodeForIva(iva.id).subscribe({
+    this.#ivaService.requestCodeForIva(iva.id, iva.type).subscribe({
       next: () => {
         this.#notify.showSuccess('Verification has been requested');
       },
@@ -96,12 +96,7 @@ export class UserIvaListComponent implements OnInit {
     this.#confirm.confirm({
       title: 'Request verification of your address',
       message: `We will send a verification code to the address selected for
-      verification (${address}). <strong>Please allow some time for processing your
-      request.</strong> When the verification code has been transmitted,
-      you will also be notified via e-mail.<p
-      class="text-error bg-warning/15 mt-3 p-3 font-bold rounded-xl">Note: Verification
-      codes via SMS are currently sent out manually by our data stewards, therefore it
-      may take up to 2-3 working days until you will receive your code.</p>`,
+      verification (${address}), you should receive it shortly.</p>`,
       callback: (confirmed) => {
         if (confirmed) this.#requestVerification(iva);
       },

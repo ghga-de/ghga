@@ -325,12 +325,22 @@ export class IvaService {
    * Request the verification of an IVA of the current user
    * and update the IVA state locally if successful.
    * @param ivaId - the ID of the IVA
+   * @param ivaType - the type of the IVA (needed to anticipate next state)
    * @returns null as an observable if successful
    */
-  requestCodeForIva(ivaId: string): Observable<null> {
+  requestCodeForIva(ivaId: string, ivaType?: IvaType): Observable<null> {
     return this.#http
       .post<null>(`${this.#ivasRpcUrl(ivaId)}/request-code`, null)
-      .pipe(tap(() => this.#updateIvaStateLocally(ivaId, IvaState.CodeRequested)));
+      .pipe(
+        tap(() =>
+          this.#updateIvaStateLocally(
+            ivaId,
+            ivaType === IvaType.Phone
+              ? IvaState.CodeTransmitted
+              : IvaState.CodeRequested,
+          ),
+        ),
+      );
   }
 
   /**
