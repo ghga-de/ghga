@@ -1,4 +1,5 @@
 {{- define "ghga-common.service" -}}
+{{- if .Values.service.enabled }}
 ---
 apiVersion: v1
 kind: Service
@@ -42,4 +43,5 @@ spec:
   ports: {{- include "common.tplvalues.render" (dict "value" .Values.service.ports "context" $) | nindent 4 }}
   {{- end }}
   selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+{{- end -}}
 {{- end -}}

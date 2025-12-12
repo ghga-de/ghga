@@ -165,6 +165,7 @@ exports:
     envVarsSecret: ""
 
     service:
+      enabled: true
       type: ClusterIP
       ports:
         - name: http
