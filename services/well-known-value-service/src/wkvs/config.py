@@ -25,7 +25,6 @@ from pydantic_settings import BaseSettings
 class WellKnownConfig(BaseSettings):
     """Contains the configured values for the service"""
 
-    crypt4gh_public_key: str = Field(..., description="The GHGA crypt4gh public key.")
     dcs_api_url: str = Field(
         ..., description="URL to the root of the DRS-compatible DCS API."
     )
@@ -42,6 +41,9 @@ class WellKnownConfig(BaseSettings):
         ...,
         description="Mapping of storage alias to its human-readable format",
         examples=[{"HD01": "Heidelberg", "TUE01": "Tübingen"}],
+    )
+    crypt4gh_public_keys: dict[str, str] = Field(
+        ..., description="Mapping of storage alias to Crypt4GH public key"
     )
 
 

@@ -52,11 +52,6 @@
       "title": "Log Traceback",
       "type": "boolean"
     },
-    "crypt4gh_public_key": {
-      "description": "The GHGA crypt4gh public key.",
-      "title": "Crypt4Gh Public Key",
-      "type": "string"
-    },
     "dcs_api_url": {
       "description": "URL to the root of the DRS-compatible DCS API.",
       "title": "Dcs Api Url",
@@ -95,6 +90,14 @@
         }
       ],
       "title": "Storage Labels",
+      "type": "object"
+    },
+    "crypt4gh_public_keys": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Mapping of storage alias to Crypt4GH public key",
+      "title": "Crypt4Gh Public Keys",
       "type": "object"
     },
     "host": {
@@ -252,12 +255,12 @@
   },
   "required": [
     "service_instance_id",
-    "crypt4gh_public_key",
     "dcs_api_url",
     "ucs_api_url",
     "wps_api_url",
     "storage_aliases",
-    "storage_labels"
+    "storage_labels",
+    "crypt4gh_public_keys"
   ],
   "title": "ModSettings",
   "type": "object"
