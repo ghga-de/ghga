@@ -19,23 +19,23 @@
   <mat-card appearance="outlined" class="p-3">
     <form (submit)="submit($event)">
       <mat-form-field
-        [class.mb-3]="!activeKeyword()"
+        [class.mb-3]="!activeQuery()"
         class="w-full [&_.mat-mdc-form-field-subscript-wrapper]:h-2"
         ><input type="submit" class="cdk-visually-hidden" aria-hidden="true" />
         <input
           type="search"
           matInput
-          placeholder="Enter any keyword or ID"
-          aria-label="Enter any keyword or ID"
+          placeholder="Enter any search terms"
+          aria-label="Enter any search terms"
           [matAutocomplete]="options"
-          [field]="searchForm.searchTerm"
+          [field]="searchForm.query"
         />
         <mat-icon matSuffix fontIcon="search"></mat-icon>
       </mat-form-field>
-      @if (activeKeyword()) {
+      @if (activeQuery()) {
         <mat-chip-set class="chip-set-tertiary mb-3">
           <mat-chip (removed)="clearSearchQuery()">
-            Keyword: {{ activeKeyword() }}
+            Search for: {{ activeQuery() }}
             <button
               matChipRemove
               data-umami-event="Metadata Browser Search Query Clear Clicked"
@@ -88,9 +88,9 @@
   hideSingleSelectionIndicator="true"
   (optionSelected)="onOptionSelected($event)"
 >
-  @if (searchModel().searchTerm) {
+  @if (searchModel().query) {
     <mat-option disabled="true">
-      Press Enter to filter for the keyword '{{ searchModel().searchTerm }}'
+      Press Enter to search for: {{ searchModel().query }}
     </mat-option>
     @for (facet of filteredFacets(); track facet.key) {
       <mat-optgroup [label]="facet.name" class="larger-optgroup-label">

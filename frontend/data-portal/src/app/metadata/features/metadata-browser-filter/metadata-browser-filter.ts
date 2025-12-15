@@ -72,8 +72,8 @@ export class MetadataBrowserFilterComponent implements OnInit {
   protected expandedPanels: { [facetKey: string]: boolean } = {};
 
   protected facetData = signal<FacetFilterSetting>({});
-  protected activeKeyword = signal<string>('');
-  protected searchModel = signal({ searchTerm: '' });
+  protected activeQuery = signal<string>('');
+  protected searchModel = signal({ query: '' });
   protected searchForm = form(this.searchModel);
 
   readonly paginated = this.#metadataSearch.paginated;
@@ -88,7 +88,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
   );
 
   protected filteredFacets = computed(() => {
-    const filter = this.searchModel().searchTerm.toLocaleLowerCase();
+    const filter = this.searchModel().query.toLocaleLowerCase();
     return this.facetWithExpanded()
       .map((f) => {
         const selectedFacets = new Set(this.facetData()[f.key] ?? []);
@@ -142,7 +142,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
    * On init, define the default values of the search variables
    */
   ngOnInit(): void {
-    this.#loadSearchTermsFromRoute();
+    this.#loadQueryFromRoute();
   }
 
   /**
@@ -174,7 +174,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
    * Syncs the data between this component and the search service and initiates a new search.
    */
   #performSearch(): void {
-    this.#updateMetadataServiceSearchTermsAndRoute();
+    this.#updateMetadataServiceQueryAndRoute();
   }
 
   /**
@@ -199,12 +199,12 @@ export class MetadataBrowserFilterComponent implements OnInit {
   /**
    * Pushes the local filters, search term and page setup to the search service.
    */
-  async #updateMetadataServiceSearchTermsAndRoute(): Promise<void> {
+  async #updateMetadataServiceQueryAndRoute(): Promise<void> {
     await this.#router.navigate([], {
       relativeTo: this.#route,
       queryParams: {
         s: this.#skip() !== DEFAULT_SKIP_VALUE ? this.#skip() : undefined,
-        q: this.activeKeyword() !== '' ? this.activeKeyword() : undefined,
+        q: this.activeQuery() !== '' ? this.activeQuery() : undefined,
         f:
           Object.keys(this.facetData()).length !== 0
             ? encodeURIComponent(this.#facetDataToString(this.facetData()))
@@ -212,16 +212,16 @@ export class MetadataBrowserFilterComponent implements OnInit {
         p: this.pageSize() !== DEFAULT_PAGE_SIZE ? this.pageSize() : undefined,
       },
     });
-    this.#loadSearchTermsFromRoute();
+    this.#loadQueryFromRoute();
   }
 
   /**
    * This function takes the current URL, determines the query parameters and sets them accordingly in the metadata search service.
    */
-  #loadSearchTermsFromRoute(): void {
+  #loadQueryFromRoute(): void {
     const { s, q, f, p } = this.#router.routerState.snapshot.root.queryParams;
     const pageSize = parseInt(p) || DEFAULT_PAGE_SIZE;
-    this.activeKeyword.set(q || '');
+    this.activeQuery.set(q || '');
     if (f) {
       const paramVals = this.#facetDataFromString(decodeURIComponent(f));
       if (paramVals) {
@@ -233,7 +233,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
       this.#className,
       pageSize,
       skip,
-      this.searchModel().searchTerm,
+      this.activeQuery(),
       this.facetData(),
     );
   }
@@ -254,13 +254,13 @@ export class MetadataBrowserFilterComponent implements OnInit {
    */
   protected submit(event: SubmitEvent | Event): void {
     event.preventDefault();
-    const searchTerm = this.searchModel().searchTerm;
-    if (searchTerm !== this.activeKeyword()) {
-      this.activeKeyword.set(searchTerm);
+    const query = this.searchModel().query;
+    if (query !== this.activeQuery()) {
+      this.activeQuery.set(query);
       this.#metadataSearch.resetSkip();
       this.facets.set([]);
       this.#currentFacet = undefined;
-      this.searchModel.set({ searchTerm: '' });
+      this.searchModel.set({ query: '' });
       this.#performSearch();
     }
   }
@@ -283,7 +283,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
    * Resets the search query and triggers a reload of the results.
    */
   protected clearSearchQuery(): void {
-    this.activeKeyword.set('');
+    this.activeQuery.set('');
     this.#metadataSearch.resetSkip();
     this.facets.set([]);
     this.#currentFacet = undefined;
@@ -336,7 +336,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
       facetData = input.option.value.split('#');
       checked = (facetData[2] ?? 'false') === 'true' ? true : false;
       facetData = facetData.slice(0, 2) ?? [];
-      this.searchModel.set({ searchTerm: '' });
+      this.searchModel.set({ query: '' });
     } else {
       facetData = input.source.name?.split('#') ?? [];
       checked = input.checked;

@@ -62,7 +62,7 @@ describe('MetadataBrowserFilterComponent', () => {
   });
 
   it('should correctly filter by query', async () => {
-    const searchInput = screen.getByPlaceholderText('Enter any keyword or ID');
+    const searchInput = screen.getByPlaceholderText('Enter any search terms');
     const routerSpy = vitest.spyOn(router, 'navigate');
     await userEvent.type(searchInput, 'test query');
     await userEvent.type(searchInput, '{Enter}');
@@ -78,7 +78,7 @@ describe('MetadataBrowserFilterComponent', () => {
 
   it('should show the autocomplete options correctly', async () => {
     const searchInput = screen.getByRole('combobox', {
-      name: 'Enter any keyword or ID',
+      name: 'Enter any search terms',
     });
     searchInput.focus();
     await userEvent.keyboard('opt');
@@ -87,7 +87,7 @@ describe('MetadataBrowserFilterComponent', () => {
     const autoCompleteOptions = screen.getAllByRole('option');
     expect(autoCompleteOptions.length).toBe(9);
     expect(autoCompleteOptions[0].textContent.trim()).toBe(
-      "Press Enter to filter for the keyword 'opt'",
+      'Press Enter to search for: opt',
     );
     expect(autoCompleteOptions[1].ariaLabel!).toBe('Option 1 (62 results)');
   });
