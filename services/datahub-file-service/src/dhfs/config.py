@@ -13,8 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Short description of package."""  # Please adapt to package
+"""Config Parameter Modeling and Parsing."""
 
-from importlib.metadata import version
+from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
+from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
+from pydantic import Field
 
-__version__ = version(__package__)
+SERVICE_NAME: str = "dhfs"
+
+
+@config_from_yaml(prefix=SERVICE_NAME)
+class Config(LoggingConfig, S3ObjectStoragesConfig):
+    """Config parameters and their defaults."""
+
+    service_name: str = Field(
+        default=SERVICE_NAME, description="Short name of this service"
+    )
+
+
+CONFIG = Config()  # type: ignore

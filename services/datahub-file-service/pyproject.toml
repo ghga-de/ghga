@@ -20,24 +20,23 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "my_microservice"
+name = "dhfs"
 version = "0.1.0"
-description = "My-Microservice - a short description"
+description = "Data Hub File Service - a service enabling file inspection and re-encryption at Data Hubs"
 dependencies = [
     "typer >= 0.19.1",
-    "ghga-service-commons[api] >= 5.0",
-    "ghga-event-schemas >= 10.0",
-    "hexkit[akafka,s3,mongodb] >= 7.0",
+    "ghga-service-commons[http,objectstorage] >= 5.0",
+    "hexkit[s3] >= 7.0",
 ]
 
 [project.license]
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/my-microservice"
+Repository = "https://github.com/ghga-de/datahub-file-service"
 
 [project.scripts]
-my-microservice = "my_microservice.__main__:run"
+dhfs = "dhfs.__main__:run"
 
 [tool.setuptools.packages.find]
 where = [

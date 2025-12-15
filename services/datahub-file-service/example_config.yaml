@@ -1,19 +1,22 @@
-api_root_path: ''
-auto_reload: false
-cors_allow_credentials: null
-cors_allowed_headers: null
-cors_allowed_methods: null
-cors_allowed_origins: null
-cors_exposed_headers: null
-docs_url: /docs
-generate_correlation_id: true
-host: 127.0.0.1
-language: Greek
 log_format: null
 log_level: INFO
 log_traceback: true
-openapi_url: /openapi.json
-port: 8080
+object_storages:
+  inbox:
+    bucket: inbox
+    credentials:
+      aws_config_ini: null
+      s3_access_key_id: test
+      s3_endpoint_url: http://dcs:4566
+      s3_secret_access_key: '**********'
+      s3_session_token: null
+  interrogation:
+    bucket: interrogation
+    credentials:
+      aws_config_ini: null
+      s3_access_key_id: test
+      s3_endpoint_url: http://dcs:4566
+      s3_secret_access_key: '**********'
+      s3_session_token: null
 service_instance_id: '1'
-service_name: my_microservice
-workers: 1
+service_name: dhfs

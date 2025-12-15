@@ -12,10 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Service configuration and execution"""
 
-"""Test dummy."""
+from hexkit.log import configure_logging
+
+from dhfs.config import Config
 
 
-def test_dummy():
-    """A very simple example test."""
-    assert True
+async def run_interrogator():
+    """Run the file interrogation and re-encryption process."""
+    config = Config()  # type: ignore
+    configure_logging(config=config)
+
+    raise NotImplementedError()
+
+
+async def perform_cleanup():
+    """Run the S3 'interrogation' bucket cleanup routine."""
+    config = Config()  # type: ignore
+    configure_logging(config=config)
+
+    raise NotImplementedError()

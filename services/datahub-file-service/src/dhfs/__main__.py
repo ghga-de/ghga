@@ -15,18 +15,12 @@
 
 """Entrypoint of the package."""
 
-import asyncio
-
-from ghga_service_commons.api import run_server
-
-from .api.main import app  # noqa: F401 pylint: disable=unused-import
-from .config import CONFIG, Config
+from dhfs.cli import cli
 
 
-def run(config: Config = CONFIG):
-    """Run the service."""
-    # Please adapt to package name
-    asyncio.run(run_server(app="my_microservice.__main__:app", config=config))
+def run():
+    """Run the service"""
+    cli()
 
 
 if __name__ == "__main__":

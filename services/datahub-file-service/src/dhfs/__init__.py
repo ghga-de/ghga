@@ -13,4 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Subpackage defining a RESTful API."""
+"""a service enabling file inspection and re-encryption at Data Hubs"""
+
+from importlib.metadata import version
+
+__version__ = version(__package__)
