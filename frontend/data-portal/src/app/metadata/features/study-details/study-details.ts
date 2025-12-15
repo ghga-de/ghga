@@ -18,6 +18,8 @@ import { MetadataService } from '@app/metadata/services/metadata';
 import { ConfigService } from '@app/shared/services/config';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 
+const MAX_DATASETS = 100;
+
 /**
  * Component for the study page
  */
@@ -41,6 +43,7 @@ export class StudyDetailsComponent implements OnInit {
   #location = inject(NavigationTrackingService);
   #study = this.#metadataService.study;
   #config = inject(ConfigService);
+  #massUrl = this.#config.massUrl;
   #rtsUrl = this.#config.rtsUrl;
 
   id = input.required<string>();
@@ -52,25 +55,22 @@ export class StudyDetailsComponent implements OnInit {
   /**
    * The list of datasets queried via mass.
    */
-  datasetsRequest = httpResource<SearchResults>(() => {
+  #datasetsResource = httpResource<SearchResults>(() => {
     return (
-      '/api/mass/search?class_name=EmbeddedDataset&filter_by=study.accession&value=' +
-      this.id() +
-      '&limit=100'
+      `${this.#massUrl}/search?class_name=EmbeddedDataset` +
+      `&filter_by=study.accession&value=${this.id()}&limit=${MAX_DATASETS}`
     );
   }).asReadonly();
 
-  datasets = computed(() => {
-    if (this.datasetsRequest.hasValue()) {
-      return this.datasetsRequest.value();
-    } else {
-      return { hits: [], total: 0 };
-    }
-  });
-  datasetsLoading = computed(() => this.datasetsRequest.isLoading());
-  datasetsError = computed(() => this.datasetsRequest.error());
+  datasets = computed(() =>
+    this.#datasetsResource.hasValue()
+      ? this.#datasetsResource.value()
+      : { hits: [], total: 0 },
+  );
+  datasetsLoading = computed(() => this.#datasetsResource.isLoading());
+  datasetsError = computed(() => this.#datasetsResource.error());
 
-  #updateSourceEffect = effect(() => (this.source.data = this.datasets()?.hits || []));
+  #updateSourceEffect = effect(() => (this.source.data = this.datasets().hits));
 
   /**
    * Called on component initialization
