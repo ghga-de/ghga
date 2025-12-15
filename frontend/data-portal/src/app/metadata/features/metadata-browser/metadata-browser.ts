@@ -47,21 +47,19 @@ export class MetadataBrowserComponent {
   #metadataSearch = inject(MetadataSearchService);
   #max_facet_options = this.#config.maxFacetOptions;
 
-  #searchResults = this.#metadataSearch.searchResultsResource;
-  #searchResultsError = this.#searchResults.error;
-  protected status = this.#searchResults.status;
-  protected searchResults = this.#searchResults.value;
+  protected searchResults = this.#metadataSearch.searchResults;
+  protected isLoading = this.#metadataSearch.isLoading;
+  #error = this.#metadataSearch.error;
   protected facets = computed(() =>
-    this.searchResults().facets.filter(
+    (this.searchResults()?.facets || []).filter(
       (f) => f.options.length > 0 && f.options.length <= this.#max_facet_options,
     ),
   );
-  protected numResults = computed(() => this.searchResults().count);
-  protected loading = computed(() => this.#searchResults.isLoading());
+  protected numResults = computed(() => this.searchResults()?.count || 0);
 
   protected errorMessage = computed(() => {
-    if (this.#searchResultsError()) {
-      switch ((this.#searchResultsError() as HttpErrorResponse)?.status) {
+    if (this.#error()) {
+      switch ((this.#error() as HttpErrorResponse)?.status) {
         case undefined:
           return undefined;
         default:
@@ -71,7 +69,7 @@ export class MetadataBrowserComponent {
   });
 
   #errorEffect = effect(() => {
-    if (this.#metadataSearch.searchResultsResource.error()) {
+    if (this.#error()) {
       this.#notify.showError('Error fetching search results.');
     }
   });

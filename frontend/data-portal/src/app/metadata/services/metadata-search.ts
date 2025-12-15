@@ -62,14 +62,16 @@ export class MetadataSearchService {
   /**
    * The search results (empty while loading) as a resource
    */
-  searchResultsResource = httpResource<SearchResults>(this.#massQueryUrl, {
+  #searchResultsResource = httpResource<SearchResults>(this.#massQueryUrl, {
     defaultValue: emptySearchResults,
   }).asReadonly();
 
-  isLoading = this.searchResultsResource.isLoading;
+  isLoading = this.#searchResultsResource.isLoading;
+
+  error = this.#searchResultsResource.error;
 
   searchResults = computed(() =>
-    this.searchResultsResource.error() ? undefined : this.searchResultsResource.value(),
+    this.error() ? undefined : this.#searchResultsResource.value(),
   );
 
   paginated = signal(false);

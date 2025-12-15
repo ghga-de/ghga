@@ -86,7 +86,7 @@ export class UserManagerDetailComponent implements OnInit {
     () => this.#cachedUser() || (this.#user.error() ? undefined : this.#user.value()),
   );
 
-  loading = computed<boolean>(() => !this.#cachedUser() && this.#user.isLoading());
+  isLoading = computed<boolean>(() => !this.#cachedUser() && this.#user.isLoading());
 
   error = computed<undefined | 'not found' | 'other'>(() => {
     if (this.#cachedUser()) return undefined;

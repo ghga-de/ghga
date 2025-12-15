@@ -59,12 +59,12 @@ export class MetadataBrowserFilterComponent implements OnInit {
   #route = inject(ActivatedRoute);
   #router = inject(Router);
   #metadataSearch = inject(MetadataSearchService);
-  #searchResults = this.#metadataSearch.searchResultsResource;
-  #facetResults = computed(() =>
-    this.#searchResults.error() ? [] : this.#searchResults.value().facets,
-  );
+
+  protected searchResults = this.#metadataSearch.searchResults;
+  protected isLoading = this.#metadataSearch.isLoading;
+  #error = this.#metadataSearch.error;
+  #facetResults = computed(() => this.searchResults()?.facets || []);
   protected facets = signal<Facet[]>([]);
-  readonly isLoading = computed(() => this.#metadataSearch.isLoading);
   pageSize = computed(() => this.#metadataSearch.searchResultsLimit());
   #skip = computed(() => this.#metadataSearch.searchResultsSkip());
   #currentFacet: string | null | undefined;
@@ -111,7 +111,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
   });
 
   #deferredFacetUpdateEffect = effect(() => {
-    if (!this.#searchResults.error() && !this.#searchResults.isLoading()) {
+    if (!this.#error() && !this.isLoading()) {
       this.#updateFacetDeferred();
     }
   });

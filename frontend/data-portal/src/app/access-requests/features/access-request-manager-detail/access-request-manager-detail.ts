@@ -101,7 +101,7 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
       (this.#request.error() ? undefined : this.#request.value()),
   );
 
-  loading = computed<boolean>(
+  isLoading = computed<boolean>(
     () => !this.#cachedRequest() && this.#request.isLoading(),
   );
 

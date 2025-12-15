@@ -19,13 +19,9 @@ import { MetadataBrowserFilterComponent } from './metadata-browser-filter';
  * Mock the metadata service as needed for the metadata browser filter
  */
 class MockMetadataSearchService {
-  searchResultsResource = {
-    value: () => searchResults,
-    isLoading: () => false,
-    error: () => undefined,
-  };
   searchResults = () => searchResults;
   isLoading = () => false;
+  error = () => undefined;
   searchResultsLimit = () => 10;
   searchResultsSkip = () => 0;
   paginated = () => false;

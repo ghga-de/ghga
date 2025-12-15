@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -27,15 +27,12 @@ class MockConfigService {
  * Mock the metadata service as needed for the metadata browser
  */
 class MockMetadataSearchService {
-  searchResultsResource = {
-    value: () => searchResults,
-    isLoading: () => false,
-    error: () => undefined,
-  };
-  searchResultsAreLoading = signal(false);
+  searchResults = () => searchResults;
+  isLoading = () => false;
+  error = () => undefined;
   loadQueryParameters = () => undefined;
-  query = signal('');
-  facets = signal({});
+  query = () => '';
+  facets = () => [];
 }
 
 /**
