@@ -96,6 +96,13 @@ if (useProxy) {
     logLevel: 'debug',
     configure,
   };
+  config['/.well-known'] = {
+    target,
+    changeOrigin: true,
+    secure: checkCert,
+    logLevel: 'debug',
+    configure,
+  };
 }
 
 if (!mockOidc && baseUrl && !baseUrl.startsWith('http://127.')) {
