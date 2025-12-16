@@ -24,11 +24,11 @@ name = "wps"
 version = "7.1.0"
 description = "Work Package Service"
 dependencies = [
-    "ghga-event-schemas~=10.1.2",
-    "ghga-service-commons[api,auth,crypt]>=5.1",
-    "hexkit[akafka,mongodb,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=7.1",
+    "ghga-event-schemas~=11.1.1",
+    "ghga-service-commons[api,auth,crypt]>=6.0.2",
+    "hexkit[akafka,mongodb,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=7.2",
     "httpx>=0.28",
-    "typer>=0.19",
+    "typer>=0.20",
 ]
 
 [project.license]
