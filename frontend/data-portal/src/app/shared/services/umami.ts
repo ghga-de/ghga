@@ -63,7 +63,6 @@ export class UmamiService {
         umami.track({
           website: this.#website_id,
           url: event.urlAfterRedirects,
-          timestamp: new Date().toISOString(),
           title:
             this.#router.routerState.snapshot.root.firstChild?.routeConfig?.title ||
             document.title,
