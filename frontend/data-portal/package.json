@@ -1,6 +1,6 @@
 {
   "name": "data-portal",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -26,11 +26,6 @@
   "packageManager": "pnpm@10.26.0",
   "type": "module",
   "private": true,
-  "pnpm": {
-    "overrides": {
-      "glob": "^13.0.0"
-    }
-  },
   "dependencies": {
     "@angular/animations": "^21.0.5",
     "@angular/cdk": "^21.0.3",
