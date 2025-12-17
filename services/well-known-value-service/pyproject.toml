@@ -24,9 +24,9 @@ name = "wkvs"
 version = "2.0.0"
 description = "Well-Known-Value-Service - Provides access to common values via API"
 dependencies = [
-    "ghga-service-commons[api]>=5.1",
-    "hexkit>=7.1",
-    "typer>=0.19",
+    "ghga-service-commons[api]>=6.0",
+    "hexkit>=7.2",
+    "typer>=0.20",
 ]
 
 [project.license]
