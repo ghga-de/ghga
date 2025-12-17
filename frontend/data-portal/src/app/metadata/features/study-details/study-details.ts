@@ -17,6 +17,7 @@ import { Hit, SearchResults } from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { ConfigService } from '@app/shared/services/config';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
+import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
 
 const MAX_DATASETS = 100;
 
@@ -33,6 +34,7 @@ const MAX_DATASETS = 100;
     MatIconModule,
     MatButtonModule,
     MatTableModule,
+    ExternalLinkDirective,
     RouterLink,
   ],
   templateUrl: './study-details.html',
