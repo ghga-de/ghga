@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dins"
-version = "4.1.0"
+version = "4.1.1"
 description = "Dataset Information Service - Providing public metadata about files registered with the Internal File Registry"
 dependencies = [
     "typer >= 0.19",
