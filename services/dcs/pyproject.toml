@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dcs"
-version = "8.0.7"
+version = "8.0.8"
 description = "Download Controller Service - a GA4GH DRS-compliant service for delivering files from S3 encrypted according to the GA4GH Crypt4GH standard."
 readme = "README.md"
 authors = [
