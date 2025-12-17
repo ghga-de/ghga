@@ -34,7 +34,7 @@ info:
   description: A service running a REST API that serves accessioned metadata files
     by study ID
   title: Reverse Transpiler Service
-  version: 2.1.0
+  version: 2.1.1
 openapi: 3.1.0
 paths:
   /health:
