@@ -49,8 +49,10 @@ _topics:
       name: notification_topic
       value: notifications
     types:
-      - name: notification_type
-        value: notification
+      - name: email_notification_type
+        value: email_notification
+      - name: sms_notification_type
+        value: sms_notification
   # as producer
   deadLetterQueue:
     topic:

@@ -47,9 +47,12 @@ _topics:
     types:
     - name: iva_state_changed_type
       value: iva_state_changed
+    - name: iva_send_code_type
+      value: iva_send_code
     kafkaUser:
       operations:
         - Write
+
   datasetChangeEvent:
     # as consumer
     topic:
