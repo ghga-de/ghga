@@ -152,7 +152,7 @@ The specified contact email address is: {email}.
 IVA_CODE_TRANSMITTED_TO_USER = Notification(
     "Contact Address Verification Code Transmitted",
     """
-A Data Steward has transmitted a verification code to the address specified by
+We sent a verification code to the address specified by
 your contact address. Please check for the verification code and submit it on the
 GHGA Data Portal.
 """,
