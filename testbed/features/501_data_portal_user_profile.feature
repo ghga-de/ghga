@@ -21,6 +21,7 @@ Feature: 401 Data Portal User Profile
 
     Scenario Outline: User profile page
       Given we have the state "John Doe is allowed to download the test datasets"
+      And all users have only a verified IVA
       And I am logged in as "<user>"
       And I am authenticated as "<user>"
       And I am logged in to the Data Portal as "<user>"

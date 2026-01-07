@@ -80,13 +80,13 @@ def check_example_datasets(fixtures: JointFixture, playwright: PlaywrightFixture
     all_datasets = fixtures.state.get_state("all available datasets")
 
     main = playwright.page.locator("main")
-    expect(main).to_contain_text("Total Datasets:2")
+    expect(main).to_contain_text(f"Total Datasets:{len(all_datasets)}")
 
-    accordion_list = playwright.page.locator(".mat-accordion")
-    assert accordion_list.get_by_role("button").count() == len(all_datasets)
+    search_results = playwright.page.locator("app-search-result")
+    expect(search_results).to_have_count(len(all_datasets))
 
     for dataset in all_datasets.values():
-        expect(accordion_list).to_contain_text(dataset["title"])
+        expect(main).to_contain_text(dataset["title"])
 
     # inner content should not be visible yet
     expect(main).not_to_contain_text("An interesting dataset A of complete example set")

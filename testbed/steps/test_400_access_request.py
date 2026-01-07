@@ -41,7 +41,7 @@ scenarios("../features/400_access_request.feature")
     target_fixture="response",
 )
 def request_access_for_dataset(full_name: str, alias: str, fixtures: JointFixture):
-    iva = fixtures.state.get_state("iva")
+    iva = fixtures.state.get_state("Phone iva")
     assert iva["id"]
     session = fixtures.auth.get_saved_session(
         name=full_name, state_store=fixtures.state

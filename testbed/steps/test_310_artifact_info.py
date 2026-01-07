@@ -102,7 +102,6 @@ def check_searchable_classes(response: Response):
         "EmbeddedDataset": {
             "description": "Dataset grouping files under controlled access",
             "facetable_fields": [
-                {"key": "study.accession", "name": "sid"},
                 {"key": "study.types", "name": "Study type"},
                 {
                     "key": "experiment_methods.instrument_model",

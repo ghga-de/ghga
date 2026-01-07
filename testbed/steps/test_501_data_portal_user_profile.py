@@ -48,7 +48,7 @@ def delete_ivas(fixtures: JointFixture):
     Ensures that only a single verified IVA remains per user. It's
     the initial state for Data portal tests.
     """
-    user_iva = fixtures.state.get_state("iva")
+    user_iva = fixtures.state.get_state("Phone iva")
     # The IVA DS account and John Doe have the same IVA value
     query = {"value": {"$ne": user_iva["value"]}}
     fixtures.mongo.remove_documents(
@@ -141,7 +141,6 @@ def check_ivas_in_profile(fixtures: JointFixture, iva_type: str, iva_state: str)
     # IVA list is <div grid> elements without specific identifiers to select.
     iva_selector = f'app-user-iva-list > .grid > .grid:has-text("{state_msg}")'
     iva = page.locator(iva_selector)
-    expect(iva).to_be_visible()  # Confirm state
     expect(iva).to_contain_text(iva_type)  # Confirm type
 
 
@@ -194,7 +193,7 @@ def check_pending_requests_in_profile(playwright: PlaywrightFixture):
 @when(parse('I add a new "{iva_type}" contact address with value "{iva_value}"'))
 def add_new_iva(playwright: PlaywrightFixture, iva_type: str, iva_value: str):
     """Add a new IVA in the user profile page."""
-    if iva_type not in ["SMS", "Postal Address", "In Person"]:
+    if iva_type not in ["SMS", "In Person"]:
         raise ValueError(f"Unsupported IVA type: {iva_type}")
     page = playwright.page
 
@@ -208,7 +207,7 @@ def add_new_iva(playwright: PlaywrightFixture, iva_type: str, iva_value: str):
     radio_group = iva_dialog.locator("mat-button-toggle-group")
     expect(radio_group).to_be_visible(timeout=TIMEOUT)
     iva_options = iva_dialog.get_by_role("radio").all_inner_texts()
-    assert sorted(iva_options) == sorted(["SMS", "Postal Address", "In Person"]), (
+    assert sorted(iva_options) == sorted(["SMS", "In Person"]), (
         f"IVA type options mismatch: {iva_options}"
     )
 

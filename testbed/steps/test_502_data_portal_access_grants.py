@@ -166,7 +166,7 @@ def check_access_request_detail_page(
     expect(main).to_contain_text(f"DAC:{dac['alias']} - {dac['email']}")
 
     expect(main).to_contain_text("Verification Address")
-    user_iva = fixtures.state.get_state("iva")
+    user_iva = fixtures.state.get_state("Phone iva")
     expect(main).to_contain_text(
         f"{IVA_TYPE_NAMES[user_iva['type']]}: {user_iva['value']} Verified"
     )

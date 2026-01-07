@@ -88,7 +88,6 @@ SEARCH_ALL_DATASETS = {
         },
     ],
 }
-EXPECTED_STUDY_ACCESSION_FACET_COUNT = 2
 
 
 @when("I search documents with an unknown class name", target_fixture="response")
@@ -124,22 +123,7 @@ def check_search_without_keyword_results(state: StateStorage, response: Response
         assert ega_accession.startswith("EGAD")
         alias = get_alias_from_ega_accession(state, ega_accession)
         datasets[alias] = summary
-
-    study_accession_facets, remaining_facets = [], []  # type: ignore
-    for f in results["facets"]:
-        (
-            study_accession_facets
-            if f["key"] == "study.accession"
-            else remaining_facets
-        ).append(f)
-
-    results["facets"] = remaining_facets
     assert results == SEARCH_ALL_DATASETS
-    assert len(study_accession_facets) == 1
-    assert (
-        len(study_accession_facets[0]["options"])
-        == EXPECTED_STUDY_ACCESSION_FACET_COUNT
-    )
     # memorize the overview of all datasets as mapping from alias to search summary
     state.set_state("all available datasets", datasets)
 

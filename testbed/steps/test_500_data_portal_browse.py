@@ -50,8 +50,9 @@ def check_global_statistics(playwright: PlaywrightFixture):
 
 @when("I clear the applied filters")
 def clear_filters(playwright: PlaywrightFixture):
-    button = playwright.page.locator("form").get_by_role("button").get_by_text("Clear")
-    button.click()
+    buttons = playwright.page.get_by_role("button", name="Remove filter")
+    for i in range(buttons.count()):
+        buttons.nth(i).click()
 
 
 @then(parse('the summary of the "{dataset_name}" dataset is displayed'))
@@ -117,12 +118,16 @@ def check_dataset_detail(
 def apply_filter(filter_option: str, playwright: PlaywrightFixture):
     """Apply the given filter."""
     expect(playwright.page).to_have_url(re.compile(r"/browse$"))
-    checkbox = playwright.page.get_by_label(filter_option).first
+    facet_panel = playwright.page.locator(
+        f'app-facet-expansion-panel:has-text("{filter_option}")'
+    )
+    expect(facet_panel).to_be_visible()
+    facet_panel.click()
+    checkbox = facet_panel.get_by_label(filter_option)
     expect(checkbox).to_be_visible()
     expect(checkbox).not_to_be_checked()
     checkbox.check()
     expect(checkbox).to_be_checked()
-
     playwright.page.locator("form").get_by_role("button").last.click()  # Submit form
     expect(playwright.page).to_have_url(re.compile(rf"{filter_option}"))
 
@@ -133,11 +138,11 @@ def apply_search(
 ):
     """Apply the given filter."""
     expect(playwright.page).to_have_url(re.compile(r"/browse$"))
-    input_box = playwright.page.get_by_placeholder("Enter any keyword or ID").first
+    input_box = playwright.page.get_by_placeholder("Enter any search terms")
     expect(input_box).to_be_visible()
+    expect(input_box).to_have_count(1)
     input_box.fill(search_option)
-
-    playwright.page.locator("form").get_by_role("button").last.click()  # Submit form
+    playwright.page.keyboard.press("Enter")
     expect(playwright.page).to_have_url(re.compile(rf"{search_option}"))
 
 
@@ -150,9 +155,10 @@ def check_filtered_dataset(
     dataset = all_datasets[dataset_name]
     main = playwright.page.locator("main")
     expect(main).to_contain_text("Total Datasets:1")
-    accordion_list = playwright.page.locator(".mat-accordion")
-    assert accordion_list.get_by_role("button").count() == 1
-    expect(main).to_contain_text(dataset["title"])
+    search_results = playwright.page.locator("app-search-result")
+    expect(search_results).to_be_visible()
+    assert search_results.count() == 1
+    expect(search_results).to_contain_text(dataset["title"])
 
 
 @then(parse('the summary tables for the "{dataset_name}" dataset are displayed'))

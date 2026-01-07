@@ -72,7 +72,7 @@ def publish_event(
         ),
         "notification": (
             fixtures.config.notification_topic,
-            fixtures.config.notification_type,
+            fixtures.config.email_notification_type,
         ),
     }
 

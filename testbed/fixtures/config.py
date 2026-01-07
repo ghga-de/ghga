@@ -274,7 +274,7 @@ class Config(BaseSettings):
     resource_change_topic: str = "searchable-resources"
     resource_change_type: str = "searchable_resource_upserted"
     notification_topic: str = "notifications"
-    notification_type: str = "notification"
+    email_notification_type: str = "email_notification"
 
     service_short_names: dict[str, str] = {
         "work package service": "wps",
@@ -293,6 +293,9 @@ class Config(BaseSettings):
     # upload-orchestration
     uos_db_name: str = "uos"
     uos_url: str = "uos"
+
+    # lox24 mock server
+    lox24_mock_url: str = "http://lox24-mock:8080"
 
     @model_validator(mode="after")
     def check_operation_modes(self):
