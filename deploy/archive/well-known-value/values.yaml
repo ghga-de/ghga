@@ -16,7 +16,7 @@ config:
     B01: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
     DD01: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
     HD01: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
-    HD01: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
+    K01: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
     TUE01: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
   dcs_api_url: http://download-controller/download
   host: "0.0.0.0"
