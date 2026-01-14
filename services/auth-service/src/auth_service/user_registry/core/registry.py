@@ -40,6 +40,7 @@ from ..models.ivas import (
     IvaState,
 )
 from ..models.users import (
+    PeriodCounter,
     StatusChange,
     User,
     UserBasicData,
@@ -72,6 +73,7 @@ class UserRegistry(UserRegistryPort):
         event_pub: EventPublisherPort,
     ):
         """Initialize the user registry."""
+        self._max_ivas = config.max_ivas
         self._max_iva_verification_attempts = config.max_iva_verification_attempts
         self._auto_send_iva_code_for_types = set(config.auto_send_iva_code_for_types)
         self._user_dao = user_dao
@@ -258,17 +260,50 @@ class UserRegistry(UserRegistryPort):
             log.error("Could not delete claims of user: %s", error)
             raise self.UserDeletionError(user_id=user_id) from error
 
+    async def _check_iva_limits(self, user_id: UUID4, data: IvaBasicData) -> None:
+        """Check whether the user exists and has not exceeded IVA creation limits.
+
+        Also updates the daily IVA creation counter.
+
+        Will raise a UserDoesNotExistError if the user does not exist.
+        May raise an IvaCreationError if the number of IVAs could not be checked.
+        Will raise an TooManyIVAsError if limits are exceeded or in case of duplicates.
+        """
+        # first check that the user actually exists
+        try:
+            user = await self.get_user(user_id)
+        except self.UserRetrievalError as error:
+            raise self.UserDoesNotExistError(user_id=user_id) from error
+        # then first check the daily limit
+        today = now_utc_ms_prec().replace(hour=0, minute=0, second=0, microsecond=0)
+        created_today = user.ivas_created_today or PeriodCounter(date=today, count=0)
+        if created_today.date == today and created_today.count >= self._max_ivas:
+            raise self.TooManyIVAsError(user_id=user_id)
+        # then also check the total limit
+        try:
+            ivas = await self._get_ivas(user_id=user_id)
+        except self.IvaRetrievalError as error:
+            raise self.IvaCreationError(user_id=user_id) from error
+        if len(ivas) >= self._max_ivas:
+            raise self.TooManyIVAsError(user_id=user_id)
+        # also check if this is a duplicate
+        if any(iva.type == data.type and iva.value == data.value for iva in ivas):
+            raise self.TooManyIVAsError(user_id=user_id)
+        # update the counter
+        created_today = PeriodCounter(date=today, count=created_today.count + 1)
+        await self._user_dao.update(
+            user.model_copy(update={"ivas_created_today": created_today})
+        )
+
     async def create_iva(self, user_id: UUID4, data: IvaBasicData) -> UUID4:
         """Create an IVA for the given user with the given basic data.
 
         Returns the internal ID of the newly createdIVA.
 
-        May raise a UserDoesNotExistError or an IvaCreationError.
+        May raise a UserDoesNotExistError, IvaCreationError or TooManyIVAsError
+        in case too many IVAs have been created by the user today or in total.
         """
-        try:
-            await self.get_user(user_id)
-        except self.UserRetrievalError as error:
-            raise self.IvaCreationError(user_id=user_id) from error
+        await self._check_iva_limits(user_id, data)
         created = changed = now_utc_ms_prec()
         iva = Iva(
             **data.model_dump(), user_id=user_id, created=created, changed=changed

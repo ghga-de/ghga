@@ -19,7 +19,7 @@ import asyncio
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Any, TypeGuard
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
@@ -132,6 +132,8 @@ async def test_post_user(full_client: FullClient, new_user_headers: dict[str, st
     assert user.pop("status_change") is None
     assert 0 <= seconds_passed(user.pop("registration_date")) <= 10
 
+    assert user.pop("ivas_created_today") is None
+
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
     assert user.pop("roles") == []
@@ -178,6 +180,8 @@ async def test_post_user_with_minimal_data(
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
     assert 0 <= seconds_passed(user.pop("registration_date")) <= 10
+
+    assert user.pop("ivas_created_today") is None
 
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
@@ -336,6 +340,7 @@ async def test_put_user(full_client: FullClient, new_user_headers: dict[str, str
     assert user.pop("status") == "active"
     assert user.pop("status_change") is None
     assert 0 <= seconds_passed(user.pop("registration_date")) <= 10
+    assert user.pop("ivas_created_today") is None
     assert user.pop("active_submissions") == []
     assert user.pop("active_access_requests") == []
     assert user.pop("roles") == []
@@ -924,7 +929,6 @@ async def test_delete_user_unauthenticated(bare_client: BareClient):
 
 async def test_delete_users_with_associated_data(
     full_client: FullClient,
-    new_user_headers: dict[str, str],
     steward_headers: dict[str, str],
 ):
     """Test that when a user is deleted, all associated data is deleted as well."""
@@ -1370,6 +1374,107 @@ async def test_crud_operations_for_ivas_as_another_user(
     ivas = response.json()
     assert isinstance(ivas, list)
     assert not ivas
+
+
+async def test_create_too_many_ivas(
+    full_client: FullClient,
+    new_user_headers: dict[str, str],
+):
+    """Test creating too many IVAs."""
+    # Create a user
+    user_data = MIN_USER_DATA
+    response = await full_client.post(
+        "/users", json=user_data, headers=new_user_headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    user = response.json()
+    user_id = user["id"]
+    headers = get_headers_for(id=user_id, name=user["name"], email=user["email"])
+
+    # Create an IVA
+    data = {"type": "Phone", "value": PHONE}
+    response = await full_client.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    # Try to create the same IVA again
+    response = await full_client.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    error = response.json()
+    assert error["detail"] == "Too many IVAs have been created."
+    # Try to create a different IVA (same type, but slightly different value)
+    data = {"type": "Phone", "value": FAX}
+    response = await full_client.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Check that the user has created two IVAs today
+    response = await full_client.get(f"/users/{user_id}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    user = response.json()
+    assert user["ivas_created_today"]["count"] == 2
+
+    # Create four more IVAs - the last one should fail
+    for i in range(4):
+        data = {"type": "InPerson", "value": f"Location {i}"}
+        response = await full_client.post(
+            f"/users/{user_id}/ivas", json=data, headers=headers
+        )
+        if i < 3:
+            assert response.status_code == status.HTTP_201_CREATED
+        else:
+            assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+            error = response.json()
+            assert error["detail"] == "Too many IVAs have been created."
+
+    # Delete all IVAs
+    response = await full_client.get(f"/users/{user_id}/ivas", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert len(ivas) == 5
+    for iva in ivas:
+        response = await full_client.delete(
+            f"/users/{user_id}/ivas/{iva['id']}", headers=headers
+        )
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+    response = await full_client.get(f"/users/{user_id}/ivas", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    ivas = response.json()
+    assert not ivas
+
+    # Check that we still cannot create a new IVA today
+    data = {"type": "InPerson", "value": "New location"}
+    response = await full_client.post(
+        f"/users/{user_id}/ivas", json=data, headers=headers
+    )
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    error = response.json()
+    assert error["detail"] == "Too many IVAs have been created."
+
+    # Now we reset the daily counter in the database manually every time
+    # and check that we still fail when creating more than five IVAs in total.
+    config = full_client.config
+    db = full_client.mongodb.client[config.db_name]
+    users_collection = db[config.users_collection]
+    for i in range(6):
+        result = users_collection.update_one(
+            {"_id": UUID(user_id)},
+            {"$unset": {"ivas_created_today": ""}},
+        )
+        assert result.matched_count == 1
+        data = {"type": "InPerson", "value": f"Location {i}"}
+        response = await full_client.post(
+            f"/users/{user_id}/ivas", json=data, headers=headers
+        )
+        if i < 5:
+            assert response.status_code == status.HTTP_201_CREATED
+        else:
+            assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+            error = response.json()
+            assert error["detail"] == "Too many IVAs have been created."
 
 
 async def test_create_iva_for_non_existing_user_as_data_steward(

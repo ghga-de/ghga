@@ -443,6 +443,12 @@
       "title": "Log Traceback",
       "type": "boolean"
     },
+    "max_ivas": {
+      "default": 5,
+      "description": "Maximum number of IVAs a user can create per day and in total",
+      "title": "Max Ivas",
+      "type": "integer"
+    },
     "max_iva_verification_attempts": {
       "default": 10,
       "description": "Maximum number of verification attempts for an IVA",

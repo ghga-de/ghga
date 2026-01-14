@@ -376,6 +376,7 @@ The service requires the following configuration parameters:
   ```
 
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+- <a id="properties/max_ivas"></a>**`max_ivas`** *(integer)*: Maximum number of IVAs a user can create per day and in total. Default: `5`.
 - <a id="properties/max_iva_verification_attempts"></a>**`max_iva_verification_attempts`** *(integer)*: Maximum number of verification attempts for an IVA. Default: `10`.
 - <a id="properties/auto_send_iva_code_for_types"></a>**`auto_send_iva_code_for_types`** *(array)*: IVA types for which verification codes are sent automatically. Default: `["Phone"]`.
   - <a id="properties/auto_send_iva_code_for_types/items"></a>**Items**: Refer to *[#/$defs/IvaType](#%24defs/IvaType)*.

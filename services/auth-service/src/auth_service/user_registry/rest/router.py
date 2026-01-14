@@ -413,6 +413,7 @@ async def get_user_ivas(
         403: {"description": "Not authorized to create this IVA."},
         404: {"description": "The user was not found."},
         422: {"description": "Validation error in submitted user identification."},
+        429: {"description": "Too many IVAs have been created."},
     },
     status_code=201,
 )
@@ -443,8 +444,12 @@ async def post_user_iva(
         raise HTTPException(
             status_code=404, detail="The user was not found."
         ) from error
-    except user_registry.IvaRetrievalError as error:
-        raise HTTPException(status_code=500, detail="Cannot create IVA") from error
+    except user_registry.TooManyIVAsError as error:
+        raise HTTPException(
+            status_code=429, detail="Too many IVAs have been created."
+        ) from error
+    except user_registry.IvaCreationError as error:
+        raise HTTPException(status_code=500, detail="Cannot create IVA.") from error
     return IvaId(id=id_)
 
 

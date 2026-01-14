@@ -31,6 +31,11 @@ __all__ = ["INITIAL_USER_STATUS", "UserRegistryConfig"]
 class UserRegistryConfig(BaseSettings):
     """Configuration for the user registry."""
 
+    max_ivas: int = Field(
+        default=5,
+        description="Maximum number of IVAs a user can create per day and in total",
+    )
+
     max_iva_verification_attempts: int = Field(
         default=10, description="Maximum number of verification attempts for an IVA"
     )

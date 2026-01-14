@@ -582,6 +582,24 @@ components:
       - split_pattern
       title: MatchType
       type: string
+    PeriodCounter:
+      additionalProperties: false
+      description: Counter for user-related actions across time periods.
+      properties:
+        count:
+          description: Count value for the period
+          title: Count
+          type: integer
+        date:
+          description: Timestamp for which the counter is valid
+          format: date-time
+          title: Date
+          type: string
+      required:
+      - date
+      - count
+      title: PeriodCounter
+      type: object
     StatusChange:
       additionalProperties: false
       description: Details of a status change
@@ -732,6 +750,11 @@ components:
           format: uuid4
           title: Id
           type: string
+        ivas_created_today:
+          anyOf:
+          - $ref: '#/components/schemas/PeriodCounter'
+          - type: 'null'
+          description: Number of IVAs that have been created today
         name:
           description: Full name of the user
           examples:
@@ -891,6 +914,11 @@ components:
           format: uuid4
           title: Id
           type: string
+        ivas_created_today:
+          anyOf:
+          - $ref: '#/components/schemas/PeriodCounter'
+          - type: 'null'
+          description: Number of IVAs that have been created today
         name:
           description: Full name of the user
           examples:
@@ -2212,6 +2240,8 @@ paths:
           description: The user was not found.
         '422':
           description: Validation error in submitted user identification.
+        '429':
+          description: Too many IVAs have been created.
       security:
       - HTTPBearer: []
       summary: Create a new IVA

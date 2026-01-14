@@ -23,7 +23,23 @@ from pydantic import UUID4, EmailStr, Field
 
 from . import BaseDto
 
-__all__ = ["StatusChange", "User", "UserData", "UserStatus", "UserWithRoles"]
+__all__ = [
+    "PeriodCounter",
+    "StatusChange",
+    "User",
+    "UserData",
+    "UserStatus",
+    "UserWithRoles",
+]
+
+
+class PeriodCounter(BaseDto):
+    """Counter for user-related actions across time periods."""
+
+    date: UTCDatetime = Field(
+        default=..., description="Timestamp for which the counter is valid"
+    )
+    count: int = Field(default=..., description="Count value for the period")
 
 
 class UserStatus(StrEnum):
@@ -106,6 +122,10 @@ class UserAutomaticData(BaseDto):
 
     status_change: StatusChange | None = Field(
         default=None, description="Last status change"
+    )
+
+    ivas_created_today: PeriodCounter | None = Field(
+        default=None, description="Number of IVAs that have been created today"
     )
 
     active_submissions: list[str] = Field(

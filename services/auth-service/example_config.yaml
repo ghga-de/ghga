@@ -64,6 +64,7 @@ log_format: null
 log_level: DEBUG
 log_traceback: true
 max_iva_verification_attempts: 10
+max_ivas: 5
 migration_max_wait_sec: null
 migration_wait_sec: 10
 mongo_dsn: '**********'

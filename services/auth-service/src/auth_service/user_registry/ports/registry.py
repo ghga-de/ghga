@@ -96,6 +96,13 @@ class UserRegistryPort(ABC):
             message = f"Could not create IVA for user with ID {user_id}"
             super().__init__(message)
 
+    class TooManyIVAsError(UserRegistryIvaError):
+        """Raised when too many IVAs have been created by the user."""
+
+        def __init__(self, *, user_id: UUID4):
+            message = f"Too many IVAs created by user with ID {user_id}"
+            super().__init__(message)
+
     class IvaRetrievalError(UserRegistryIvaError):
         """Raised when IVAs cannot be retrieved from the database."""
 
@@ -252,7 +259,8 @@ class UserRegistryPort(ABC):
 
         Returns the internal ID of the newly createdIVA.
 
-        May raise a UserDoesNotExistError or an IvaCreationError.
+        May raise a UserDoesNotExistError, IvaCreationError or TooManyIVAsError
+        in case too many IVAs have been created by the user today or in total.
         """
         ...
 
