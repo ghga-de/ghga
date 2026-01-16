@@ -58,7 +58,14 @@
       @if (study.ega_accession) {
         <p class="text-base"><strong>EGA ID:</strong> {{ study.ega_accession }}</p>
       }
-      <p class="text-base"><strong>Description:</strong> {{ study.description }}</p>
+      <div class="my-4 min-w-72">
+        <p class="text-primary flex w-full items-center text-sm">
+          <mat-icon fontIcon="description"></mat-icon><strong>&nbsp;Description</strong>
+        </p>
+        <div class="border-primary w-full border-y pt-2">
+          <app-paragraphs [text]="study.description" pClasses="text-sm" />
+        </div>
+      </div>
       <h3 class="flex items-center text-2xl sm:inline-flex">Datasets</h3>
       <div class="overflow-x-auto">
         @let columns = ['accession', 'title', 'ega'];

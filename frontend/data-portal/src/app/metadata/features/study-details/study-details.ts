@@ -18,6 +18,7 @@ import { MetadataService } from '@app/metadata/services/metadata';
 import { ConfigService } from '@app/shared/services/config';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
+import { ParagraphsComponent } from '@app/shared/ui/paragraphs/paragraphs';
 
 const MAX_DATASETS = 100;
 
@@ -35,6 +36,7 @@ const MAX_DATASETS = 100;
     MatButtonModule,
     MatTableModule,
     ExternalLinkDirective,
+    ParagraphsComponent,
     RouterLink,
   ],
   templateUrl: './study-details.html',
