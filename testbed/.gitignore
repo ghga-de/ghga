@@ -112,6 +112,12 @@ ENV/
 env.bak/
 venv.bak/
 
+# Security keys and certificates
+rootCA.*
+*.crt
+*.srl
+*.key
+
 # Local configuration
 *.local.yaml
 *.bak.yaml
