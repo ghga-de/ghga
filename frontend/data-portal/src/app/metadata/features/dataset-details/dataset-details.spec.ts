@@ -33,8 +33,8 @@ class MockMetadataService {
 }
 
 import { ActivatedRoute } from '@angular/router';
-import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
 import { ConfigService } from '@app/shared/services/config';
@@ -43,7 +43,7 @@ import { screen } from '@testing-library/angular';
 /**
  * Mock a basic version of the auth service
  */
-export class MockAuthService {
+class MockAuthService {
   fullName = () => 'Dr. John Doe';
   email = () => 'doe@home.org';
   roles = () => ['data_steward'];
@@ -53,7 +53,7 @@ export class MockAuthService {
 /**
  * Mock a basic version of the well-known value service
  */
-export class MockWellKnownValueService {
+class MockWellKnownValueService {
   storageLabels = {
     value: () => ({ storage_labels: { TUE01: 'Tübingen', TUE02: 'Tübingen' } }),
     isLoading: () => false,

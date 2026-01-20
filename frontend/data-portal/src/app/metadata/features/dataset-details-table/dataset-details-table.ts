@@ -16,7 +16,11 @@ import {
   ViewChild,
   ViewChildren,
 } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -37,7 +41,11 @@ import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
   selector: 'app-dataset-details-table',
   imports: [
     DetailsDataRendererPipe,
+    MatButtonModule,
     MatExpansionModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
     MatTableModule,
     MatPaginatorModule,
     MatSortModule,
@@ -64,8 +72,30 @@ export class DatasetDetailsTableComponent implements AfterViewInit {
   });
 
   protected tooltipDisabled = signal(false);
+  protected filterValue = signal('');
 
   #hoverHeaderTime: number = 0;
+
+  /**
+   * Apply filter to the data source
+   * @param event The input event
+   */
+  applyFilter(event: Event) {
+    const value = (event.target as HTMLInputElement).value ?? '';
+    const normalized = value.trim().toLowerCase();
+    this.filterValue.set(normalized);
+    this.dataSource.filter = normalized;
+  }
+
+  /**
+   * Clear filter and reset input field
+   * @param input The input element
+   */
+  clearFilter(input: HTMLInputElement) {
+    input.value = '';
+    this.filterValue.set('');
+    this.dataSource.filter = '';
+  }
 
   /**
    * When entering the tooltip, memorize start time

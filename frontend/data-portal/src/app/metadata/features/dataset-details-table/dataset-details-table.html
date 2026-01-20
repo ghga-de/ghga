@@ -10,6 +10,32 @@
     >{{ header() }}</mat-expansion-panel-header
   ><ng-template matExpansionPanelContent
     ><div class="overflow-auto">
+      @if (data().length > 0 || filterValue()) {
+        <mat-form-field
+          appearance="outline"
+          subscriptSizing="dynamic"
+          class="my-2 -mr-[5%] origin-left scale-90"
+        >
+          <input
+            matInput
+            (keyup)="applyFilter($event)"
+            placeholder="Filter by ..."
+            #input
+          /><mat-icon matPrefix fontIcon="filter_alt"></mat-icon>
+
+          @if (filterValue()) {
+            <button
+              matSuffix
+              mat-icon-button
+              type="button"
+              aria-label="Clear filter"
+              (click)="clearFilter(input)"
+            >
+              <mat-icon fontIcon="close"></mat-icon>
+            </button>
+          }
+        </mat-form-field>
+      }
       <table
         mat-table
         class="bold-table-headers w-full min-w-[1280px]"
@@ -17,9 +43,7 @@
         matSort
       >
         <caption class="cdk-visually-hidden">
-          {{
-            caption()
-          }}
+          {{ caption() }}
         </caption>
         @for (col of columns(); track col) {
           <ng-container [matColumnDef]="col.columnDef">
@@ -46,6 +70,15 @@
 
         <tr mat-header-row *matHeaderRowDef="displayCols()"></tr>
         <tr mat-row *matRowDef="let row; columns: displayCols()"></tr>
+        <tr *matNoDataRow>
+          <td class="mat-cell" [attr.colspan]="displayCols().length">
+            @if (data().length === 0) {
+              No data available.
+            } @else {
+              No results match “{{ filterValue() }}”.
+            }
+          </td>
+        </tr>
       </table>
 
       @if (numItems() > 10) {
