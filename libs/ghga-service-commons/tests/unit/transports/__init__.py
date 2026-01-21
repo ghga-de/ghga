@@ -13,27 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Pluggable, custom and composable logic around HTTP calls."""
-
-from .config import CompositeCacheConfig, CompositeConfig
-from .factory import (
-    AsyncCacheTransport,
-    AsyncRateLimitingTransport,
-    AsyncRetryTransport,
-    CompositeTransportFactory,
-)
-from .proxy_handling import (
-    cached_ratelimiting_retry_proxies,
-    ratelimiting_retry_proxies,
-)
-
-__all__ = [
-    "AsyncCacheTransport",
-    "AsyncRateLimitingTransport",
-    "AsyncRetryTransport",
-    "CompositeCacheConfig",
-    "CompositeConfig",
-    "CompositeTransportFactory",
-    "cached_ratelimiting_retry_proxies",
-    "ratelimiting_retry_proxies",
-]
+"""Package containing unit tests."""
