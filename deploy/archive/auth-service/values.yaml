@@ -11,7 +11,7 @@ apiBasePath: /auth-ext/
 mongodb:
   dbName: auth-service
 # This parameter is used as Kafka's group id
-serviceName: auth-consumer
+serviceName: auth-service
 
 config:
   mongo_dsn: null
