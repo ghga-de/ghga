@@ -19,7 +19,10 @@ from contextlib import asynccontextmanager
 import hishel
 import httpx
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
-from ghga_service_commons.transports import CompositeTransportFactory
+from ghga_service_commons.transports import (
+    CompositeTransportFactory,
+    cached_ratelimiting_retry_proxies,
+)
 
 from ghga_connector.config import get_config
 from ghga_connector.constants import TIMEOUT
@@ -39,28 +42,18 @@ def get_cache_transport(
     )
 
 
-def get_mounts(
-    base_transport: httpx.AsyncHTTPTransport | None = None,
-    limits: httpx.Limits | None = None,
-) -> dict[str, httpx.AsyncBaseTransport]:
-    """Return a dict of mounts for the cache transport."""
-    return {
-        "all://": get_cache_transport(base_transport=base_transport, limits=limits),
-    }
-
-
 @asynccontextmanager
 async def async_client():
     """Yields a context manager async httpx client and closes it afterward"""
     config = get_config()
+    limits = httpx.Limits(
+        max_connections=config.max_concurrent_downloads,
+        max_keepalive_connections=config.max_concurrent_downloads,
+    )
+    transport = get_cache_transport(limits=limits)
+    proxies = cached_ratelimiting_retry_proxies(config=config, limits=limits)
     async with httpx.AsyncClient(
-        timeout=TIMEOUT,
-        mounts=get_mounts(
-            limits=httpx.Limits(
-                max_connections=config.max_concurrent_downloads,
-                max_keepalive_connections=config.max_concurrent_downloads,
-            )
-        ),
+        timeout=TIMEOUT, transport=transport, mounts=proxies
     ) as client:
         attach_correlation_id_to_requests(client)
         yield client

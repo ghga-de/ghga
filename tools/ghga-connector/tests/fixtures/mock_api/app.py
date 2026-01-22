@@ -37,6 +37,7 @@ from fastapi.responses import JSONResponse
 from ghga_service_commons.api.api import ApiConfigBase, configure_app
 from ghga_service_commons.api.di import DependencyDummy
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
+from ghga_service_commons.transports import CompositeCacheConfig
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pydantic import BaseModel
 
@@ -361,6 +362,7 @@ configure_app(mock_external_app, config)
 
 
 def get_test_mounts(
+    config: CompositeCacheConfig,
     base_transport: httpx.AsyncHTTPTransport | None = None,
     limits: httpx.Limits | None = None,
 ):
@@ -384,4 +386,6 @@ def get_test_mounts(
 @pytest.fixture(scope="function")
 def mock_external_calls(monkeypatch):
     """Monkeypatch the async_client so it only intercepts calls to the mock app"""
-    monkeypatch.setattr("ghga_connector.core.client.get_mounts", get_test_mounts)
+    monkeypatch.setattr(
+        "ghga_connector.core.client.cached_ratelimiting_retry_proxies", get_test_mounts
+    )

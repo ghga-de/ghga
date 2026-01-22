@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_connector"
-version = "2.0.0-rc1"
+version = "2.0.0"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
 dependencies = [
     "typer~=0.19",
     "crypt4gh>=1.6, <2",
-    "ghga-service-commons[crypt, transports]>=6.0.1",
+    "ghga-service-commons[crypt, transports]>=6.1",
     "hexkit[s3]>=7.1",
     "rich>=14.0, <15",
 ]
