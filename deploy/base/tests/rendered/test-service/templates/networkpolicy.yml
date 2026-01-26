@@ -8,8 +8,8 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-    app.kubernetes.io/name: test-service
-    app.kubernetes.io/instance: test-service
+      app.kubernetes.io/name: test-service
+      app.kubernetes.io/instance: test-service
   policyTypes:
   - Ingress
   ingress:

@@ -7,7 +7,7 @@ metadata:
   namespace: {{ include "common.names.namespace" . | quote }}
 spec:
   podSelector:
-    matchLabels: {{- include "common.labels.matchLabels" . | nindent 4 }}
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
   policyTypes:
   - Ingress
   ingress:
