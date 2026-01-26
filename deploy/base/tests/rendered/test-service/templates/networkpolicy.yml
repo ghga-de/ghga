@@ -8,17 +8,18 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      role: test-service
+    app.kubernetes.io/name: test-service
+    app.kubernetes.io/instance: test-service
   policyTypes:
   - Ingress
   ingress:
   - from:
     - namespaceSelector:
         matchLabels:
-          project: "test"
+          kubernetes.io/metadata.name: "test"
     - namespaceSelector:
         matchLabels:
-          project: "istio-ingress"
+          kubernetes.io/metadata.name: "istio-ingress"
     ports:
     - port: 8080
       protocol: TCP

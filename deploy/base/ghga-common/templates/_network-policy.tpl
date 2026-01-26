@@ -7,18 +7,17 @@ metadata:
   namespace: {{ include "common.names.namespace" . | quote }}
 spec:
   podSelector:
-    matchLabels:
-      role: {{ include "common.names.fullname" . }}
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 4 }}
   policyTypes:
   - Ingress
   ingress:
   - from:
     - namespaceSelector:
         matchLabels:
-          project: {{ include "common.names.namespace" . | quote }}
+          kubernetes.io/metadata.name: {{ include "common.names.namespace" . | quote }}
     - namespaceSelector:
         matchLabels:
-          project: {{ .Values.networkPolicy.ingressNamespace | quote }}
+          kubernetes.io/metadata.name: {{ .Values.networkPolicy.ingressNamespace | quote }}
     {{- if .Values.ports.enabled }}
     ports:
     {{- range .Values.service.ports }}
