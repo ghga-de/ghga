@@ -258,6 +258,10 @@ exports:
       hostname: default.ghga.dev
 
     healthEndpoint: "/health"
+    
+    networkPolicy:
+      enabled: false
+      ingressNamespace: "istio-ingress"
 
     vaultAgent:
       enabled: false

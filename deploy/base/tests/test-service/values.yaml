@@ -64,6 +64,9 @@ mapping:
   enabled: true
   hostname: my.test.com
 
+networkPolicy:
+  enabled: true
+
 httpRoute:
   enabled: true
   hostnames:
