@@ -5,7 +5,7 @@
  */
 
 import { Component, computed, input, output, signal } from '@angular/core';
-import { Field, form } from '@angular/forms/signals';
+import { form, FormField } from '@angular/forms/signals';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -30,8 +30,8 @@ const MAX_OPTIONS_BEFORE_FILTERING = 6;
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
-    Field,
     UnderscoreToSpace,
+    FormField,
   ],
   templateUrl: './facet-expansion-panel.html',
 })

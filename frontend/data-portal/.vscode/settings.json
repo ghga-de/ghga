@@ -34,6 +34,8 @@
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "markdown.extension.toc.updateOnSave": false,
+  "markdown.extension.toc.levels": "2..6",
   "eslint.options": {
     "overrideConfigFile": "/workspace/eslint.config.js"
   },

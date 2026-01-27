@@ -37,6 +37,42 @@
           }
         }
       }
+    },
+    {
+      "label": "test: unit (pnpm test)",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["test"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "test: watch (pnpm test:watch)",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["test:watch"],
+      "isBackground": true,
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "test: ui (pnpm test:ui)",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["test:ui"],
+      "isBackground": true,
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
     }
   ]
 }

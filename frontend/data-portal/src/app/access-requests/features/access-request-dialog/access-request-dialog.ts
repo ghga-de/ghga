@@ -4,11 +4,10 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, input, model, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
-  FormsModule,
   ReactiveFormsModule,
   ValidationErrors,
   Validators,
@@ -40,7 +39,6 @@ import { DATE_INPUT_FORMAT_HINT, timeZoneToUTC } from '@app/shared/utils/date-fo
     MatLabel,
     MatFormField,
     MatInputModule,
-    FormsModule,
     ReactiveFormsModule,
     MatDialogModule,
     MatButtonModule,
@@ -59,8 +57,6 @@ export class AccessRequestDialogComponent {
   readonly descriptionFormControl = new FormControl(this.data.description, [
     Validators.required,
   ]);
-  fromDate = model(this.data.fromDate);
-  untilDate = model(this.data.untilDate);
   todayMidnight = new Date();
   minFromDate = new Date();
   minUntilDate = new Date();
@@ -82,17 +78,22 @@ export class AccessRequestDialogComponent {
 
   constructor() {
     this.todayMidnight.setHours(0, 0, 0, 0);
-    this.fromDate.set(new Date(this.todayMidnight));
+    const defaultFromDate = new Date(this.todayMidnight);
 
     let d = new Date(this.todayMidnight);
     d.setHours(23, 59, 59, 999);
     this.minUntilDate.setDate(d.getDate() + this.#config.accessGrantMinDays);
 
     d.setDate(d.getDate() + this.#config.defaultAccessDurationDays - 1);
-    this.untilDate.set(d);
+    const defaultUntilDate = d;
 
-    this.updateUntilRangeForFromValue(new Date(this.todayMidnight));
-    this.updateFromRangeForUntilValue(d);
+    this.updateUntilRangeForFromValue(defaultFromDate);
+    this.updateFromRangeForUntilValue(defaultUntilDate);
+
+    this.fromFormControl.setValue(defaultFromDate);
+    this.untilFormControl.setValue(defaultUntilDate);
+    this.fromFormControl.updateValueAndValidity();
+    this.untilFormControl.updateValueAndValidity();
   }
 
   /**
@@ -123,23 +124,25 @@ export class AccessRequestDialogComponent {
    * @returns a validation error or null
    */
   #dateValidator = (
-    control: AbstractControl<Date, Date>,
+    control: AbstractControl<Date | null, Date | null>,
     isFromDate: boolean,
   ): ValidationErrors | null => {
     const [min, max, field, name] = isFromDate
       ? [this.minFromDate, this.maxFromDate, this.fromDateErrorMessage, 'start']
       : [this.minUntilDate, this.maxUntilDate, this.untilDateErrorMessage, 'end'];
-    const ret = this.#validateDateAgainstMinAndMax(control.value, min, max);
+    const ret = control.value
+      ? this.#validateDateAgainstMinAndMax(control.value, min, max)
+      : { invalid: true };
     field.set(this.getErrorMessageForValidationState(name, ret));
     return ret;
   };
 
-  readonly fromFormControl = new FormControl('', [
+  readonly fromFormControl = new FormControl<Date | null>(null, [
     Validators.required,
     (control) => this.#dateValidator(control, true),
   ]);
 
-  readonly untilFormControl = new FormControl('', [
+  readonly untilFormControl = new FormControl<Date | null>(null, [
     Validators.required,
     (control) => this.#dateValidator(control, false),
   ]);
@@ -185,6 +188,7 @@ export class AccessRequestDialogComponent {
   fromDateChanged($event: MatDatepickerInputEvent<Date, string>) {
     if ($event.value) {
       this.updateUntilRangeForFromValue($event.value);
+      this.untilFormControl.updateValueAndValidity();
     }
   }
 
@@ -195,6 +199,7 @@ export class AccessRequestDialogComponent {
   untilDateChanged($event: MatDatepickerInputEvent<Date, string>) {
     if ($event.value) {
       this.updateFromRangeForUntilValue($event.value);
+      this.fromFormControl.updateValueAndValidity();
     }
   }
 
@@ -272,8 +277,9 @@ export class AccessRequestDialogComponent {
   submit(): void {
     const description = this.descriptionFormControl.value;
     const email = this.emailFormControl.value;
-    const from = this.fromDate()!;
-    const until = this.untilDate()!;
+    const from = this.fromFormControl.value;
+    const until = this.untilFormControl.value;
+    if (!from || !until) return;
     const fromDate = timeZoneToUTC(from.getFullYear(), from.getMonth(), from.getDate());
     const untilDate = timeZoneToUTC(
       until.getFullYear(),

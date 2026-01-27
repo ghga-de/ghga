@@ -1,7 +1,9 @@
 onlyBuiltDependencies:
   - '@compodoc/compodoc'
+  - '@parcel/watcher'
   - '@tailwindcss/oxide'
   - esbuild
   - lmdb
+  - msgpackr-extract
   - msw
   - unrs-resolver

@@ -6,7 +6,7 @@
 
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
-import { Field, form } from '@angular/forms/signals';
+import { form, FormField } from '@angular/forms/signals';
 import {
   MatAutocompleteModule,
   MatAutocompleteSelectedEvent,
@@ -49,7 +49,7 @@ import { highlightMatchingText } from '@app/shared/utils/highlight-matching-text
     StencilComponent,
     ReactiveFormsModule,
     MatAccordion,
-    Field,
+    FormField,
   ],
   templateUrl: './metadata-browser-filter.html',
 })

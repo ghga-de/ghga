@@ -18,7 +18,6 @@ import {
 import {
   AbstractControl,
   FormControl,
-  FormsModule,
   ReactiveFormsModule,
   ValidationErrors,
   Validators,
@@ -49,7 +48,6 @@ import {
     MatChipsModule,
     MatIconModule,
     MatInputModule,
-    FormsModule,
     DatePipe,
     ReactiveFormsModule,
   ],
@@ -109,8 +107,8 @@ export class AccessRequestDurationEditComponent implements OnInit {
     return midnightDefault;
   });
 
-  fromFormControl: FormControl = new FormControl();
-  untilFormControl: FormControl = new FormControl();
+  fromFormControl: FormControl<Date | null> = new FormControl<Date | null>(null);
+  untilFormControl: FormControl<Date | null> = new FormControl<Date | null>(null);
 
   constructor() {
     this.todayStart.setHours(0, 0, 0, 0);
@@ -134,14 +132,20 @@ export class AccessRequestDurationEditComponent implements OnInit {
     this.updateAccessStartRanges(new Date(this.untilField() ?? new Date()));
     this.updateAccessEndRanges(new Date(this.fromField() ?? new Date()));
 
-    this.fromFormControl = new FormControl('', [
+    const initialFrom = this.fromField() ?? this.#defaultFromDate();
+    const initialUntil = this.untilField() ?? this.#defaultUntilDate();
+
+    this.fromFormControl = new FormControl<Date | null>(initialFrom, [
       Validators.required,
       (control) => this.#fromDateValidator(control),
     ]);
-    this.untilFormControl = new FormControl('', [
+    this.untilFormControl = new FormControl<Date | null>(initialUntil, [
       Validators.required,
       (control) => this.#untilDateValidator(control),
     ]);
+
+    this.fromFormControl.updateValueAndValidity();
+    this.untilFormControl.updateValueAndValidity();
   }
 
   /**
@@ -278,14 +282,20 @@ export class AccessRequestDurationEditComponent implements OnInit {
         selectedLocalDate.setHours(0, 0, 0, 0);
         this.updateAccessEndRanges(selectedLocalDate);
         this.fromField.set(selectedLocalDate);
+        this.fromFormControl.setValue(selectedLocalDate);
+        this.untilFormControl.updateValueAndValidity();
       } else {
         selectedLocalDate.setHours(23, 59, 59, 999);
         this.updateAccessStartRanges(selectedLocalDate);
         this.untilField.set(selectedLocalDate);
+        this.untilFormControl.setValue(selectedLocalDate);
+        this.fromFormControl.updateValueAndValidity();
       }
       this.changed();
     } else {
       this.fromField.set(this.#defaultFromDate());
+      this.fromFormControl.setValue(this.fromField() ?? null);
+      this.untilFormControl.updateValueAndValidity();
       this.changed();
     }
   };

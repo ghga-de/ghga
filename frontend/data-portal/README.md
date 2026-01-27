@@ -1,10 +1,11 @@
 # GHGA Data Portal
 
-This repository contains the Angular 19 front-end application for the GHGA data portal.
+This repository contains the front-end application for the GHGA data portal.
 
 <!-- toc -->
 
-- [Local testing](#local-testing)
+- [Technology stack](#technology-stack)
+- [Local development](#local-development)
   - [API requests & the backend](#api-requests--the-backend)
   - [Authentication](#authentication)
 - [Code scaffolding](#code-scaffolding)
@@ -12,17 +13,29 @@ This repository contains the Angular 19 front-end application for the GHGA data 
 - [Package Manager](#package-manager)
 - [Linter, Commits, and Documentation](#linter-commits-and-documentation)
   - [Ease of use](#ease-of-use)
-- [Testing](#testing)
+- [Automated tests](#automated-tests)
   - [Unit-tests](#unit-tests)
   - [End-to-End tests](#end-to-end-tests)
     - [Issues relating to headed execution](#issues-relating-to-headed-execution)
 - [The Architecture Matrix](#the-architecture-matrix)
+- [AI assisted coding](#ai-assisted-coding)
 - [References](#references)
 - [License](#license)
 
 <!-- tocstop -->
 
-## Local testing
+## Technology stack
+
+This project is a single Angular application designed as a modularized frontend monolith. Major building blocks:
+
+- Angular (version 21)
+- Angular Material
+- Tailwind CSS (version 4)
+- Unit testing: Vitest
+- E2E testing: Playwright
+- API mocking in development: Mock Service Worker (MSW)
+
+## Local development
 
 To start a local development server, run:
 
@@ -142,19 +155,19 @@ To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix 
 
 For comfort, we are adding these shorthands: `pnpm run lint`, `pnpm run lf` (for `lint --fix`), and `pnpm run docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
 
-## Testing
+## Automated tests
 
 ### Unit-tests
 
 We are using [Vitest](https://vitest.dev/) for unit testing in this project. If possible, the queries and matchers from the [Testing Library](https://testing-library.com/) should be used. See the documentation for the [Angular Testing Library](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/). Note that jest-dom also supports Vitest, not just Jest.
 
-The unit tests are not included in the linting process and can be executed separately by running `npm run test`. These three variants of running the tests are provided:
+The unit tests are not included in the linting process and can be executed separately. The following variants of running the tests are provided:
 
-- `npm run test:coverage` - also collect and report test coverage information
-- `npm run test:parallel` - use parallel processes (currently slower, probably due to inefficient transpilation)
-- `npm run test:watch` - continually watch files for changes and rerun tests related to changed files
+- `pnpm test` - run unit tests once
+- `pnpm test:watch` - watch mode
+- `pnpm test:ui` - interactive tests in the browser
 
-You can also use the VS Code extension for Vitest to run tests interactively using the test explorer in the side bar.
+Note: the VS Code Vitest extension runs plain `vitest` directly, which does not work for Angular component tests in this repository (external `templateUrl`/`styleUrl` and Angular TestBed setup are handled by the Angular test builder). Use `pnpm test` / `pnpm test:ui` instead. See also [this issue](https://github.com/angular/angular-cli/issues/31734).
 
 Note that modernizing the unit testing tooling is on the roadmap of the Angular team for 2025. We may need to change some parts of the tooling when the official solution is provided.
 
@@ -205,6 +218,14 @@ To create a clean architecture, the following rules are checked when importing m
 - Additionally, the three bottom layers of the _auth_ slice may be used in other slices.
 - Each module is only allowed to use modules from the layers below it.
 - An exception is that the _ui_ layer may not use modules from the _services_ layer.
+
+## AI assisted coding
+
+This project is designed to be used with VS Code and GitHub Copilot.
+
+- If you use the Angular CLI MCP server integration (for example via Copilot Chat tools), it can help with Angular-specific guidance and code generation.
+- After updating Angular dependencies, it can be useful to run `MCP: Reset Cached Tools` once so the MCP tool metadata is refreshed for the new Angular/CLI version.
+- Keep `.github/copilot-instructions.md` up to date when you change major tooling (Angular, Angular Material, Tailwind, testing/build scripts), so AI-assisted changes stay consistent with project conventions.
 
 ## References
 
