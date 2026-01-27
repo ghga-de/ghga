@@ -262,7 +262,7 @@ exports:
     networkPolicy:
       enabled: false
       ingress:
-        from:
+        - from:
           - namespaceSelector:
               matchLabels:
                 ghga-ingress: allow

@@ -11,7 +11,7 @@ spec:
   policyTypes:
   - Ingress
   ingress: 
-    from: {{ include "common.tplvalues.render" (dict "value" .Values.networkPolicy.ingress.from "context" $) | nindent 4 }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.ingress "context" $) | nindent 2 }}
     {{- if .Values.service.ports }}
     ports:
     {{- range .Values.service.ports }}
