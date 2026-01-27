@@ -12,14 +12,11 @@ spec:
       app.kubernetes.io/instance: test-service
   policyTypes:
   - Ingress
-  ingress:
-  - from:
+  ingress: 
+    from: 
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: "test"
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: "istio-ingress"
+          ghga-ingress: allow
     ports:
     - port: 8080
       protocol: TCP
