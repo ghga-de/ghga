@@ -261,7 +261,12 @@ exports:
     
     networkPolicy:
       enabled: false
-      ingressNamespace: "istio-ingress"
+      ingress:
+        from:
+          - namespaceSelector:
+              matchLabels:
+                ghga-ingress: allow
+
 
     vaultAgent:
       enabled: false
