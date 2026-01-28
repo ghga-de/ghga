@@ -20,7 +20,7 @@
 - name: {{ $container.name | default (printf "init-%d" $index) }}
   image: {{ $container.image | default (include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart)) }}
   imagePullPolicy: {{ $container.imagePullPolicy | default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }} 
-  {{- include "ghga-common.command-args" (list $ $container.args $.Values.command) | nindent 2 }}
+  {{- include "ghga-common.command-args" (list $ $container.args $container.cmd) | nindent 2 }}
   {{- if $container.env }}
   env: {{- toYaml $container.env | nindent 4 }}
   {{- end }}

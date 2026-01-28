@@ -5,6 +5,7 @@ prepends it with a failsafe routine that injects all existing secrets from vault
 @param The original command to run the microservice
 */}}
 {{- define "ghga-common.command-args" -}}
+{{- if and (index . 1) (index . 2) }}
 {{- $argsList := (kindOf (index . 1) | eq "string") | ternary (list (index . 1)) (index . 1) }}
 {{- dict "command" (index . 2) | toYaml }}
 {{- if (index . 0).Values.vaultAgent.enabled -}}
@@ -16,4 +17,5 @@ prepends it with a failsafe routine that injects all existing secrets from vault
 {{- end }}
 {{- end }}
 {{ dict "args" $argsList | toYaml }}
+{{- end -}}
 {{- end -}}

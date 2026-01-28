@@ -29,7 +29,7 @@ config:
   db_name: test-database # That should be omitted and set dynamically to release name
   service_instance_id: test-id
 
-cmd: test
+#cmd: test
 
 ports:
   enabled: true

@@ -62,7 +62,7 @@ exports:
     migrationInitContainer:
       enabled: false
       image: ""
-      cmd: ["sh", "-c"]
+      cmd: []
       args: []
       env: []
       resources: {}
@@ -104,7 +104,7 @@ exports:
 
     # This is the actual Kubernetes `args` passed as string into array
     # TODO: rename to a better name
-    cmd: /bin/sh
+    cmd: ""
 
     ports:
       enabled: false
