@@ -10,7 +10,7 @@ cronjob:
 configPrefix: ""
 
 configMap:
-  mountPath: /app/.datahub-monitor.yaml
+  mountPath: /app/config.yaml
   envVar:
     enabled: false
 
