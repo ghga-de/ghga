@@ -62,7 +62,7 @@ exports:
     migrationInitContainer:
       enabled: false
       image: ""
-      cmd: []
+      cmd: ["sh", "-c"]
       args: []
       env: []
       resources: {}
