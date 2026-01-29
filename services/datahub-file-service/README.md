@@ -49,8 +49,95 @@ dhfs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- <a id="properties/object_storages"></a>**`object_storages`** *(object, required)*: Can contain additional properties.
-  - <a id="properties/object_storages/additionalProperties"></a>**Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
+- <a id="properties/data_hub_crypt4gh_private_key_path"></a>**`data_hub_crypt4gh_private_key_path`** *(string, format: path, required)*: Path to the Data Hub's Crypt4GH private key file.
+
+  Examples:
+  ```json
+  "./key.sec"
+  ```
+
+- <a id="properties/crypt4gh_private_key_passphrase"></a>**`crypt4gh_private_key_passphrase`**: Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. Default: `null`.
+  - **Any of**
+    - <a id="properties/crypt4gh_private_key_passphrase/anyOf/0"></a>*string*
+    - <a id="properties/crypt4gh_private_key_passphrase/anyOf/1"></a>*null*
+- <a id="properties/client_cache_capacity"></a>**`client_cache_capacity`** *(integer)*: Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached. Exclusive minimum: `0`. Default: `128`.
+- <a id="properties/client_cache_ttl"></a>**`client_cache_ttl`** *(integer)*: Number of seconds after which a stored response is considered stale. Minimum: `0`. Default: `60`.
+- <a id="properties/client_cacheable_methods"></a>**`client_cacheable_methods`** *(array)*: HTTP methods for which responses are allowed to be cached. Default: `["POST", "GET"]`.
+  - <a id="properties/client_cacheable_methods/items"></a>**Items** *(string)*
+- <a id="properties/client_cacheable_status_codes"></a>**`client_cacheable_status_codes`** *(array)*: HTTP response status code for which responses are allowed to be cached. Default: `[200, 201]`.
+  - <a id="properties/client_cacheable_status_codes/items"></a>**Items** *(integer)*
+- <a id="properties/client_exponential_backoff_max"></a>**`client_exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. Minimum: `0`. Default: `60`.
+- <a id="properties/client_num_retries"></a>**`client_num_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `3`.
+- <a id="properties/client_retry_status_codes"></a>**`client_retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 429, 500, 502, 503, 504]`.
+  - <a id="properties/client_retry_status_codes/items"></a>**Items** *(integer)*: Minimum: `0`.
+- <a id="properties/client_reraise_from_retry_error"></a>**`client_reraise_from_retry_error`** *(boolean)*: Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. Default: `true`.
+- <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request. Minimum: `0`. Default: `0.0`.
+- <a id="properties/retry_after_applicable_for_num_requests"></a>**`retry_after_applicable_for_num_requests`** *(integer)*: Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. Exclusive minimum: `0`. Default: `1`.
+- <a id="properties/central_api_crypt4gh_public_key"></a>**`central_api_crypt4gh_public_key`** *(string, required)*: The Crypt4GH public key used by the Central API.
+- <a id="properties/central_api_url"></a>**`central_api_url`** *(string, format: uri, required)*: The base URL used to connect to to the GHGA Central API. Length must be between 1 and 2083 (inclusive).
+- <a id="properties/data_hub_signing_key"></a>**`data_hub_signing_key`** *(string, format: password, required and write-only)*: The Data Hub's private JWK for signing JWT auth tokens.
+
+  Examples:
+  ```json
+  "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\", \"d\": \"...\"}"
+  ```
+
+- <a id="properties/storage_alias"></a>**`storage_alias`** *(string, required)*: An alias identifying the Data Hub at which this instance of DHFS is running. This value should be set in coordination with GHGA Central.
+
+  Examples:
+  ```json
+  "HD"
+  ```
+
+  ```json
+  "TUE"
+  ```
+
+  ```json
+  "B"
+  ```
+
+- <a id="properties/s3_endpoint_url"></a>**`s3_endpoint_url`** *(string, required)*: URL to the S3 API.
+
+  Examples:
+  ```json
+  "http://localhost:4566"
+  ```
+
+- <a id="properties/s3_access_key_id"></a>**`s3_access_key_id`** *(string, required)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
+
+  Examples:
+  ```json
+  "my-access-key-id"
+  ```
+
+- <a id="properties/s3_secret_access_key"></a>**`s3_secret_access_key`** *(string, format: password, required and write-only)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
+
+  Examples:
+  ```json
+  "my-secret-access-key"
+  ```
+
+- <a id="properties/s3_session_token"></a>**`s3_session_token`**: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html. Default: `null`.
+  - **Any of**
+    - <a id="properties/s3_session_token/anyOf/0"></a>*string, format: password*
+    - <a id="properties/s3_session_token/anyOf/1"></a>*null*
+
+  Examples:
+  ```json
+  "my-session-token"
+  ```
+
+- <a id="properties/aws_config_ini"></a>**`aws_config_ini`**: Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file. Default: `null`.
+  - **Any of**
+    - <a id="properties/aws_config_ini/anyOf/0"></a>*string, format: path*
+    - <a id="properties/aws_config_ini/anyOf/1"></a>*null*
+
+  Examples:
+  ```json
+  "~/.aws/config"
+  ```
+
 - <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
 - <a id="properties/service_name"></a>**`service_name`** *(string)*: Short name of this service. Default: `"dhfs"`.
 - <a id="properties/service_instance_id"></a>**`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
@@ -75,70 +162,8 @@ The service requires the following configuration parameters:
   ```
 
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
-## Definitions
-
-- <a id="%24defs/S3Config"></a>**`S3Config`** *(object)*: S3-specific config params.
-Inherit your config class from this class if you need
-to talk to an S3 service in the backend.<br>  Args:
-    s3_endpoint_url (str): The URL to the S3 endpoint.
-    s3_access_key_id (str):
-        Part of credentials for login into the S3 service. See:
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
-    s3_secret_access_key (str):
-        Part of credentials for login into the S3 service. See:
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
-    s3_session_token (str | None):
-        Optional part of credentials for login into the S3 service. See:
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
-    aws_config_ini (Path | None):
-        Path to a config file for specifying more advanced S3 parameters.
-        This should follow the format described here:
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file
-        Defaults to None. Cannot contain additional properties.
-  - <a id="%24defs/S3Config/properties/s3_endpoint_url"></a>**`s3_endpoint_url`** *(string, required)*: URL to the S3 API.
-
-    Examples:
-    ```json
-    "http://localhost:4566"
-    ```
-
-  - <a id="%24defs/S3Config/properties/s3_access_key_id"></a>**`s3_access_key_id`** *(string, required)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
-
-    Examples:
-    ```json
-    "my-access-key-id"
-    ```
-
-  - <a id="%24defs/S3Config/properties/s3_secret_access_key"></a>**`s3_secret_access_key`** *(string, format: password, required and write-only)*: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html.
-
-    Examples:
-    ```json
-    "my-secret-access-key"
-    ```
-
-  - <a id="%24defs/S3Config/properties/s3_session_token"></a>**`s3_session_token`**: Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html. Default: `null`.
-    - **Any of**
-      - <a id="%24defs/S3Config/properties/s3_session_token/anyOf/0"></a>*string, format: password*
-      - <a id="%24defs/S3Config/properties/s3_session_token/anyOf/1"></a>*null*
-
-    Examples:
-    ```json
-    "my-session-token"
-    ```
-
-  - <a id="%24defs/S3Config/properties/aws_config_ini"></a>**`aws_config_ini`**: Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file. Default: `null`.
-    - **Any of**
-      - <a id="%24defs/S3Config/properties/aws_config_ini/anyOf/0"></a>*string, format: path*
-      - <a id="%24defs/S3Config/properties/aws_config_ini/anyOf/1"></a>*null*
-
-    Examples:
-    ```json
-    "~/.aws/config"
-    ```
-
-- <a id="%24defs/S3ObjectStorageNodeConfig"></a>**`S3ObjectStorageNodeConfig`** *(object)*: Configuration for one specific object storage node and one bucket in it.<br>  The bucket is the main bucket that the service is responsible for. Cannot contain additional properties.
-  - <a id="%24defs/S3ObjectStorageNodeConfig/properties/bucket"></a>**`bucket`** *(string, required)*
-  - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`** *(required)*: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
+- <a id="properties/min_run_interval_seconds"></a>**`min_run_interval_seconds`** *(integer)*: The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation. Default: `60`.
+- <a id="properties/interrogation_bucket_id"></a>**`interrogation_bucket_id`** *(string)*: The name for the S3 'interrogation' bucket. Default: `"interrogation"`.
 
 ### Usage:
 

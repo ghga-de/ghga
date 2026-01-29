@@ -1,22 +1,37 @@
+aws_config_ini: null
+central_api_crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
+central_api_url: http://127.0.0.1:8000/central
+client_cache_capacity: 128
+client_cache_ttl: 60
+client_cacheable_methods:
+- POST
+- GET
+client_cacheable_status_codes:
+- 200
+- 201
+client_exponential_backoff_max: 60
+client_num_retries: 3
+client_reraise_from_retry_error: true
+client_retry_status_codes:
+- 408
+- 429
+- 502
+- 503
+- 504
+crypt4gh_private_key_passphrase: null
+data_hub_crypt4gh_private_key_path: key.sec
+data_hub_signing_key: '**********'
+interrogation_bucket_id: interrogation
 log_format: null
 log_level: INFO
 log_traceback: true
-object_storages:
-  inbox:
-    bucket: inbox
-    credentials:
-      aws_config_ini: null
-      s3_access_key_id: test
-      s3_endpoint_url: http://dcs:4566
-      s3_secret_access_key: '**********'
-      s3_session_token: null
-  interrogation:
-    bucket: interrogation
-    credentials:
-      aws_config_ini: null
-      s3_access_key_id: test
-      s3_endpoint_url: http://dcs:4566
-      s3_secret_access_key: '**********'
-      s3_session_token: null
+min_run_interval_seconds: 60
+per_request_jitter: 0.0
+retry_after_applicable_for_num_requests: 1
+s3_access_key_id: test
+s3_endpoint_url: http://localstack:4566
+s3_secret_access_key: '**********'
+s3_session_token: null
 service_instance_id: '1'
 service_name: dhfs
+storage_alias: TESTHUB

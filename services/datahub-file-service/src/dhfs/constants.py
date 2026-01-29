@@ -13,24 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Constants to use for the DHFS"""
 
-import asyncio
+__all__ = [
+    "AUTH_TAG_LENGTH",
+    "AUTH_TOKEN_VALID_SECONDS",
+    "DOWNLOAD_URL_CACHE_TIME",
+    "DOWNLOAD_URL_LIFESPAN",
+    "ENCRYPTION_SECRET_LENGTH",
+    "HTTPX_TIMEOUT",
+    "JWT_AUD",
+    "JWT_ISS",
+    "NONCE_LENGTH",
+]
 
-import typer
-
-from dhfs.main import perform_cleanup, run_interrogator
-
-cli = typer.Typer()
-
-
-@cli.command(name="interrogate")
-def sync_interrogate(forever: bool = True):
-    """Run the file interrogation and re-encryption process."""
-    asyncio.run(run_interrogator(forever=forever))
-
-
-@cli.command(name="cleanup")
-def sync_run_cleanup():
-    """Run the S3 'interrogation' bucket cleanup routine."""
-    asyncio.run(perform_cleanup())
+AUTH_TOKEN_VALID_SECONDS = 60
+JWT_ISS = "GHGA"
+JWT_AUD = "GHGA"
+NONCE_LENGTH = 12
+AUTH_TAG_LENGTH = 16
+ENCRYPTION_SECRET_LENGTH = 32
+DOWNLOAD_URL_LIFESPAN = 300  # five minutes
+DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - 5
+URL_CACHE_SIZE = 250
+HTTPX_TIMEOUT = 60.0

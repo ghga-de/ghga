@@ -13,9 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test dummy."""
-
-
-def test_dummy():
-    """A very simple example test."""
-    assert True
+"""Integration tests"""

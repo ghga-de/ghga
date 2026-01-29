@@ -14,17 +14,31 @@
 # limitations under the License.
 """Service configuration and execution"""
 
+from asyncio import sleep
+
 from hexkit.log import configure_logging
+from hexkit.utils import now_utc_ms_prec
 
 from dhfs.config import Config
+from dhfs.inject import prepare_interrogation_bucket_cleaner, prepare_interrogator
 
 
-async def run_interrogator():
+async def run_interrogator(forever: bool = True):
     """Run the file interrogation and re-encryption process."""
     config = Config()  # type: ignore
     configure_logging(config=config)
-
-    raise NotImplementedError()
+    async with prepare_interrogator(config=config) as interrogator:
+        if forever:
+            while True:
+                start = now_utc_ms_prec()
+                await interrogator.interrogate_new_files()
+                stop = now_utc_ms_prec()
+                if (
+                    timediff := (stop - start).seconds
+                ) < config.min_run_interval_seconds:
+                    await sleep(config.min_run_interval_seconds - timediff)
+        else:
+            await interrogator.interrogate_new_files()
 
 
 async def perform_cleanup():
@@ -32,4 +46,5 @@ async def perform_cleanup():
     config = Config()  # type: ignore
     configure_logging(config=config)
 
-    raise NotImplementedError()
+    async with prepare_interrogation_bucket_cleaner(config=config) as cleaner:
+        await cleaner.scan_and_clean()

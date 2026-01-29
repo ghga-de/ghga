@@ -15,18 +15,59 @@
 
 """Config Parameter Modeling and Parsing."""
 
-from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
+from pathlib import Path
+
+from ghga_service_commons.transports import CompositeCacheConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.providers.s3 import S3Config
 from pydantic import Field
+from pydantic_settings import BaseSettings
+
+from dhfs.adapters.outbound.central import CentralClientConfig
 
 SERVICE_NAME: str = "dhfs"
 
 
+class Crypt4GHConfig(BaseSettings):
+    """Service specific configuration"""
+
+    data_hub_crypt4gh_private_key_path: Path = Field(
+        default=...,
+        examples=["./key.sec"],
+        description="Path to the Data Hub's Crypt4GH private key file",
+    )
+    crypt4gh_private_key_passphrase: str | None = Field(
+        default=None,
+        description=(
+            "Passphrase needed to read the content of the private key file. "
+            + "Only needed if the private key is encrypted."
+        ),
+    )
+
+
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(LoggingConfig, S3ObjectStoragesConfig):
+class Config(
+    LoggingConfig,
+    S3Config,
+    CentralClientConfig,
+    CompositeCacheConfig,
+    Crypt4GHConfig,
+):
     """Config parameters and their defaults."""
 
+    min_run_interval_seconds: int = Field(
+        default=60,
+        description=(
+            "The minimum number of seconds to wait before asking the CentralAPI"
+            + " about new files for interrogation."
+        ),
+    )
+
+    interrogation_bucket_id: str = Field(
+        default="interrogation",
+        description="The name for the S3 'interrogation' bucket",
+    )
     service_name: str = Field(
         default=SERVICE_NAME, description="Short name of this service"
     )

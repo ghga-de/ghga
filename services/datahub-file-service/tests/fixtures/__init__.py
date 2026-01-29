@@ -14,3 +14,24 @@
 # limitations under the License.
 
 """Fixtures that are used in both integration and unit tests."""
+
+from jwcrypto.jwk import JWK
+
+from dhfs.config import Config
+
+__all__ = ["ConfigFixture"]
+
+
+class ConfigFixture:
+    config: Config
+    jwk: JWK
+
+    def __init__(self, *, config: Config, jwk: JWK):
+        self.config = config
+        self.jwk = jwk
+
+    def update(self, **kwargs) -> Config:
+        """Override specified values"""
+        new_config = self.config.model_copy(update=kwargs)
+        self.config = new_config
+        return self.config

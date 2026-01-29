@@ -13,24 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
-
-import asyncio
-
-import typer
-
-from dhfs.main import perform_cleanup, run_interrogator
-
-cli = typer.Typer()
-
-
-@cli.command(name="interrogate")
-def sync_interrogate(forever: bool = True):
-    """Run the file interrogation and re-encryption process."""
-    asyncio.run(run_interrogator(forever=forever))
-
-
-@cli.command(name="cleanup")
-def sync_run_cleanup():
-    """Run the S3 'interrogation' bucket cleanup routine."""
-    asyncio.run(perform_cleanup())
+"""Outbound port definitions"""
