@@ -69,3 +69,18 @@ def snake_case_list(value: str) -> list[str]:
 def to_snake_case_list() -> Callable:
     """Returns a function that converts a semicolon separated string into a list of snake-cased strings"""
     return snake_case_list
+
+
+def to_boolean(value: bool | str) -> bool:
+    """Converts common string boolean values to bool.
+
+    Accepts: true/false in any casing (e.g., "true", "False", "TRUE").
+    """
+    if isinstance(value, bool):
+        return value
+    normalized = value.strip().casefold()
+    if normalized == "true":
+        return True
+    if normalized == "false":
+        return False
+    raise ValueError(f"Invalid boolean string: {value!r}")

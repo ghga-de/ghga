@@ -30,6 +30,9 @@ worksheets:
   - settings:
       end_column: 7
       name: analysis_method_supporting_files
+      transformations:
+        included_in_submission:
+          !!python/name:ghga_transpiler.transformations.to_boolean
     sheet_name: AnalysisMethodSupportingFile
   - settings:
       end_column: 7
@@ -66,6 +69,9 @@ worksheets:
   - settings:
       end_column: 7
       name: individual_supporting_files
+      transformations:
+        included_in_submission:
+          !!python/name:ghga_transpiler.transformations.to_boolean
     sheet_name: IndividualSupportingFile
   - settings:
       end_column: 21
@@ -127,6 +133,9 @@ worksheets:
   - settings:
       end_column: 7
       name: experiment_method_supporting_files
+      transformations:
+        included_in_submission:
+          !!python/name:ghga_transpiler.transformations.to_boolean
     sheet_name: ExperimentMethodSupportingFile
   - settings:
       end_column: 8
@@ -142,10 +151,15 @@ worksheets:
           !!python/object/apply:ghga_transpiler.transformations.to_snake_case []
         sequencing_lane_id:
           !!python/name:ghga_transpiler.transformations.to_string
+        included_in_submission:
+          !!python/name:ghga_transpiler.transformations.to_boolean
     sheet_name: ResearchDataFile
   - settings:
       end_column: 7
       name: process_data_files
+      transformations:
+        included_in_submission:
+          !!python/name:ghga_transpiler.transformations.to_boolean
     sheet_name: ProcessDataFile
   - settings:
       end_column: 7

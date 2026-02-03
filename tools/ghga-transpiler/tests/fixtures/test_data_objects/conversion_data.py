@@ -25,6 +25,7 @@ EXPECTED_CONVERSION = {
             "isbn": "9780679720218",
             "genre": ["PHILOSOPHICAL_NOVEL", "ABSURDIST_NOVEL"],
             "set_in": "FRENCH_ALGERIA",
+            "happy_ending": False,
         },
         {
             "writer_name": "George Orwell",
@@ -32,6 +33,7 @@ EXPECTED_CONVERSION = {
             "isbn": "9783548234106",
             "genre": ["DYSTOPIAN_NOVEL", "CAUTIONARY_TALE"],
             "set_in": "UNITED_KINGDOM",
+            "happy_ending": False,
         },
     ],
     "publisher": [
