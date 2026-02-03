@@ -31,6 +31,14 @@ config:
 
 #cmd: test
 
+destinationRule:
+  enabled: true
+  spec:
+    trafficPolicy:
+      connectionPool:
+        http:
+          idleTimeout: 4s
+
 ports:
   enabled: true
 
