@@ -292,7 +292,7 @@ async def test_post_user_without_session_and_basic_auth(
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.headers["WWW-Authenticate"] == 'Basic realm="GHGA Data Portal"'
-    assert response.text == "GHGA Data Portal: Invalid authentication credentials"
+    assert response.text == "GHGA Data Portal: Not authenticated"
 
     # valid basic auth, still no session
     auth = b64encode(credentials.encode("UTF-8")).decode("ASCII")

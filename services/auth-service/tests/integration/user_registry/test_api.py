@@ -294,7 +294,7 @@ async def test_post_user_unauthenticated(bare_client: BareClient):
     """Test that registering a user without authentication does not work."""
     response = await bare_client.post("/users", json=MAX_USER_DATA)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error["detail"] == "Not authenticated"
 
@@ -409,7 +409,7 @@ async def test_put_user_unauthenticated(bare_client: BareClient):
     """Test that updating a user without authentication does not work."""
     response = await bare_client.put(f"/users/{ID_OF_JOHN}", json=MAX_USER_DATA)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error["detail"] == "Not authenticated"
 
@@ -530,7 +530,7 @@ async def test_get_user_unauthenticated(bare_client: BareClient):
     """Test requesting a user without authentication."""
     response = await bare_client.get(f"/users/{ID_OF_JOHN}")
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error == {"detail": "Not authenticated"}
 
@@ -606,7 +606,7 @@ async def test_get_users_unauthenticated(bare_client: BareClient):
     """Test requesting the user list without authentication."""
     response = await bare_client.get("/users")
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error == {"detail": "Not authenticated"}
 
@@ -834,7 +834,7 @@ async def test_patch_user_unauthenticated(bare_client: BareClient):
     update_data = {"title": "Prof."}
     response = await bare_client.patch(f"/users/{ID_OF_JOHN}", json=update_data)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error == {"detail": "Not authenticated"}
 
@@ -922,7 +922,7 @@ async def test_delete_user_unauthenticated(bare_client: BareClient):
     """Test that deleting a user without authentication does not work."""
     response = await bare_client.delete(f"/users/{ID_OF_JOHN}")
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error == {"detail": "Not authenticated"}
 
@@ -1010,7 +1010,7 @@ async def test_get_ivas_when_not_a_data_steward(
 ):
     """Test getting all IVAs when not a data steward."""
     response = await full_client.get("ivas")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error == {"detail": "Not authenticated"}
     response = await full_client.get("ivas", headers=user_headers)
@@ -1770,11 +1770,7 @@ async def test_user_iva_operations_without_authorization(
     """Test that IVA operations fail if the user is not authorized."""
     # Request code
     response = await bare_client.post(f"/rpc/ivas/{SOME_IVA_ID}/request-code")
-    # Note: This should actually return status code 401.
-    # This is a known issue in FastAPI and should be fixed there,
-    # or a workaround should be implemented in service-commons.
-    # See https://github.com/tiangolo/fastapi/discussions/9130
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error == {"detail": "Not authenticated"}
     # Validate code
@@ -1782,7 +1778,7 @@ async def test_user_iva_operations_without_authorization(
     response = await bare_client.post(
         f"/rpc/ivas/{SOME_IVA_ID}/validate-code", json=data
     )
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     error = response.json()
     assert error == {"detail": "Not authenticated"}
 

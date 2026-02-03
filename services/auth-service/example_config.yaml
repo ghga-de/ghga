@@ -86,6 +86,7 @@ service_name: auth_service
 session_id_bytes: 24
 session_max_lifetime_seconds: 43200
 session_timeout_seconds: 3600
+timeout_keep_alive: 90
 totp_algorithm: sha1
 totp_attempts_per_code: 3
 totp_digits: 6

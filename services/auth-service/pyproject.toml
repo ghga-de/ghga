@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "auth_service"
-version = "8.2.0"
+version = "8.3.0"
 description = "Authentication adapter and services used for the GHGA data portal"
 dependencies = [
     "ghga-event-schemas~=11.1.1",
-    "ghga-service-commons[api,auth]>=6.0.2,<7",
-    "hexkit[mongodb,akafka,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=7.2.1, <8",
+    "ghga-service-commons[api,auth]>=7,<8",
+    "hexkit[mongodb,akafka,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=8, <9",
     "pynacl>=1.6,<2",
     "pyotp>=2.9,<3",
     "httpx>=0.28,<0.29",
