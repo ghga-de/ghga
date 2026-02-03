@@ -269,3 +269,15 @@ class InvalidEmbeddingProfileError(BaseError, ValueError):
         {"some_relation": {"nested_relation": False}}
         {"some_relation": {"nested_relation": {"another_nested_relation": True}}}
     """
+
+
+class InequivalentSchemapacks(Exception):
+    """Base exception for schemapacks that are not semantically equivalent."""
+
+
+class InequivalentContentSchemas(InequivalentSchemapacks):
+    """Raised when two content schemas are not semantically equivalent."""
+
+
+class ComparisonError(Exception):
+    """Raised when an error occurs during schemapack comparison."""

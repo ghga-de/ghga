@@ -30,10 +30,11 @@ VALID_DATAPACK_DIR = DATAPACK_DIR / "valid"
 INVALID_DATAPACK_DIR = DATAPACK_DIR / "invalid"
 DENORMALIZED_DEEP_EMBEDDING_DIR = EXAMPLES_DIR / "denormalized" / "deep_embedding"
 DENORMALIZED_CUSTOM_EMBEDDING_DIR = EXAMPLES_DIR / "denormalized" / "custom_embedding"
+COMPARISON_SCHEMAPACK_DIR = EXAMPLES_DIR / "comparison_schemapacks"
 
 schemapack_suffix = ".schemapack.yaml"
 datapack_suffix = ".datapack.yaml"
-denomalizated_suffix = ".denormalized.yaml"
+denormalized_suffix = ".denormalized.yaml"
 erd_suffix = ".mm.txt"
 
 
@@ -101,7 +102,7 @@ def list_denormalized_in_dir(dir: Path) -> dict[str, Path]:
     Returns:
         A dict of {example_name: path}.
     """
-    return list_examples_in_nested_dir(dir, suffix=denomalizated_suffix)
+    return list_examples_in_nested_dir(dir, suffix=denormalized_suffix)
 
 
 DENORMALIZED_DEEP_EMBEDDING_PATHS = list_denormalized_in_dir(
@@ -122,3 +123,34 @@ def list_erds_in_dir(dir: Path) -> dict[str, Path]:
 
 
 ERD_PATHS = list_erds_in_dir(ERD_DIR)
+
+
+def list_example_pairs_in_nested_dir(
+    dir: Path, *, suffix: str
+) -> list[tuple[str, Path, Path]]:
+    """List all example files with the given suffix contained in the sub-directories
+    inside the provided dictionary.
+    Returns:
+        A list of tuples of (case_name, path1, path2).
+    """
+    return [
+        (f"{subdir.name}", path1, path2)
+        for subdir in dir.iterdir()
+        if not subdir.is_file()
+        for path1, path2 in [
+            tuple(list_examples_in_dir(subdir, suffix=suffix).values())
+        ]
+    ]
+
+
+def list_comparison_schemapacks_in_dir(dir: Path) -> list[tuple[str, Path, Path]]:
+    """List all comparison schemapack files in the given dir.
+    Returns:
+        A list of tuples of (case_name, path1, path2).
+    """
+    return list_example_pairs_in_nested_dir(dir, suffix=schemapack_suffix)
+
+
+COMPARISON_SCHEMAPACK_PATHS = list_comparison_schemapacks_in_dir(
+    COMPARISON_SCHEMAPACK_DIR
+)

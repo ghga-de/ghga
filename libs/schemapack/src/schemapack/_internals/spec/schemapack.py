@@ -134,7 +134,7 @@ class ClassRelation(_FrozenNoExtraBaseModel):
     """A model for describing a schemapack relation definition."""
 
     description: str | None = Field(
-        None,
+        default=None,
         description="A description of the relation.",
     )
     targetClass: str = Field(  # noqa: N815 - align with the schemapack naming scheme
@@ -174,7 +174,7 @@ class IDSpec(_FrozenNoExtraBaseModel):
         ),
     )
     description: str | None = Field(
-        None,
+        default=None,
         description="A description of the ID property.",
     )
 
@@ -183,7 +183,7 @@ class ClassDefinition(_FrozenNoExtraBaseModel):
     """A model for describing a schemapack class definition."""
 
     description: str | None = Field(
-        None,
+        default=None,
         description=("A description of the class definition."),
     )
     id: IDSpec = Field(
@@ -199,7 +199,7 @@ class ClassDefinition(_FrozenNoExtraBaseModel):
         ),
     )
     relations: FrozenDict[RelationPropertyName, ClassRelation] = Field(
-        immutabledict(),
+        default=immutabledict(),
         description=(
             "A mapping of relation names to relation definitions. Relation names"
             + " should use snake_case and may only contain alphanumeric characters and"
@@ -353,7 +353,7 @@ class SchemaPack(_FrozenNoExtraBaseModel):
         ),
     )
     description: str | None = Field(
-        None,
+        default=None,
         description=("A description of the schemapack definition."),
     )
     classes: FrozenDict[ClassName, ClassDefinition] = Field(
@@ -366,7 +366,7 @@ class SchemaPack(_FrozenNoExtraBaseModel):
     )
 
     rootClass: ClassName | None = Field(  # noqa: N815 - following JSON conventions
-        None,
+        default=None,
         description=(
             "Optionally, define the name of a class that should acting as the root of"
             + " the schemapack."

@@ -1,0 +1,34 @@
+schemapack: 4.0.0
+description: a schemapack with a anyOf annotation for property 'a'
+classes:
+  A:
+    id:
+      propertyName: alias
+    content:
+      {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "description": "Matching any object.",
+        "type": "object",
+        "properties": { "a": {
+                "anyOf":
+                  [
+                    { "type": "string" },
+                    { "type": "integer" },
+                    { "type": "boolean" },
+                  ],
+              } }, # <-
+      }
+    relations:
+      b:
+        targetClass: B
+        mandatory:
+          origin: false
+          target: true
+        multiple:
+          origin: true
+          target: false
+  B:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
