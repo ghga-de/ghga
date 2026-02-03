@@ -33,7 +33,7 @@ For setting up the development environment, we rely on the
 [devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode.
 
 To use it, you have to have Docker as well as vscode with its "Remote - Containers"
-extension (`ms-vscode-remote.remote-containers`) extension installed.
+extension (`ms-vscode-remote.remote-containers`) installed.
 Then, you just have to open this repo in vscode and run the command
 `Remote-Containers: Reopen in Container` from the vscode "Command Palette".
 
