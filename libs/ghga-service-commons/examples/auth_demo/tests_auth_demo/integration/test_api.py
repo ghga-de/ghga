@@ -122,7 +122,7 @@ async def test_reception(client):
 async def test_lobby(client):
     """Test the lobby endpoint."""
     response = await client.get("/lobby")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not authenticated"}
 
     response = await client.get("/users")
@@ -138,7 +138,7 @@ async def test_lobby(client):
 async def test_lounge(client):
     """Test the lounge endpoint."""
     response = await client.get("/lounge")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not authenticated"}
 
     response = await client.get("/users")

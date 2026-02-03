@@ -15,9 +15,10 @@
 
 """Pluggable, custom and composable logic around HTTP calls."""
 
+from hishel.httpx import AsyncCacheTransport
+
 from .config import CompositeCacheConfig, CompositeConfig
 from .factory import (
-    AsyncCacheTransport,
     AsyncRateLimitingTransport,
     AsyncRetryTransport,
     CompositeTransportFactory,

@@ -91,7 +91,7 @@ async def test_get_auth_authenticated(client):
 async def test_require_auth_unauthenticated(client):
     """Test the require_auth endpoint unauthenticated."""
     response = await client.get("/require_auth")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not authenticated"}
 
 
@@ -117,7 +117,7 @@ async def test_require_auth_authenticated(client):
 async def test_require_admin_unauthenticated(client):
     """Test the require_admin endpoint unauthenticated."""
     response = await client.get("/require_admin")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not authenticated"}
 
 

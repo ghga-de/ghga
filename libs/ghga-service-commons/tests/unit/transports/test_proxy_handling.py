@@ -21,7 +21,7 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
-from hishel import AsyncCacheTransport
+from hishel.httpx import AsyncCacheTransport
 
 from ghga_service_commons.transports.config import CompositeCacheConfig, CompositeConfig
 from ghga_service_commons.transports.proxy_handling import (

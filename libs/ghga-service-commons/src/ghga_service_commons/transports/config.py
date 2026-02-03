@@ -37,10 +37,6 @@ class CacheTransportConfig(BaseSettings):
         default=["POST", "GET"],
         description="HTTP methods for which responses are allowed to be cached.",
     )
-    client_cacheable_status_codes: list[int] = Field(
-        default=[200, 201],
-        description="HTTP response status code for which responses are allowed to be cached.",
-    )
 
 
 class RateLimitingTransportConfig(BaseSettings):

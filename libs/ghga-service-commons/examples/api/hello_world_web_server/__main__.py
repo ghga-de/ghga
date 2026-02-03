@@ -20,8 +20,10 @@ import asyncio
 from ghga_service_commons.api import run_server
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 
-from .api import app  # noqa: F401
+from .api import app
 from .config import get_config
+
+__all__ = ["app", "run"]
 
 
 def run():

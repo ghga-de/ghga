@@ -15,7 +15,8 @@
 
 """Provides factories for different flavors of httpx.AsyncHTTPTransport."""
 
-from hishel import AsyncCacheTransport, AsyncInMemoryStorage, Controller
+from hishel import AsyncSqliteStorage, FilterPolicy
+from hishel.httpx import AsyncCacheTransport
 from httpx import AsyncBaseTransport, AsyncHTTPTransport, Limits
 
 from .config import CompositeCacheConfig, CompositeConfig
@@ -85,13 +86,10 @@ class CompositeTransportFactory:
         retry_transport = cls._create_common_transport_layers(
             config, base_transport=base_transport, limits=limits
         )
-        controller = Controller(
-            cacheable_methods=config.client_cacheable_methods,
-            cacheable_status_codes=config.client_cacheable_status_codes,
-        )
-        storage = AsyncInMemoryStorage(
-            ttl=config.client_cache_ttl, capacity=config.client_cache_capacity
-        )
+        policy = FilterPolicy()
+        storage = AsyncSqliteStorage(default_ttl=config.client_cache_ttl)
         return AsyncCacheTransport(
-            controller=controller, transport=retry_transport, storage=storage
+            next_transport=retry_transport,
+            storage=storage,
+            policy=policy,
         )
