@@ -17,6 +17,7 @@
 """Outbound HTTP calls"""
 
 import logging
+import reprlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -35,6 +36,8 @@ __all__ = ["AccessCheckAdapter", "AccessCheckConfig"]
 log = logging.getLogger(__name__)
 
 TIMEOUT = 60
+
+short_repr = reprlib.Repr().repr  # this shortens long strings in reprs
 
 
 class AccessCheckConfig(BaseSettings):
@@ -70,26 +73,51 @@ class AccessCheckAdapter(AccessCheckPort):
     async def check_download_access(
         self, user_id: UUID, dataset_id: str
     ) -> UTCDatetime | None:
-        """Check until when the given user has download access for the given dataset."""
+        """Check until when the given user has download access for the given dataset.
+
+        Raises AccessCheckError on failure.
+        """
         url = f"{self._download_url}/users/{user_id}/datasets/{dataset_id}"
         response = await self._client.get(url)
-        if response.status_code == httpx.codes.OK:
-            valid_until = response.json()
-            if not valid_until:
-                return None
-            try:
-                return datetime.fromisoformat(valid_until)
-            except (ValueError, TypeError) as error:
-                log.error(
-                    "There was an error extracting the access expiration date from"
-                    + " the response from the Access API.",
-                    exc_info=True,
-                    extra={"user_id": user_id, "dataset_id": dataset_id},
-                )
-                raise self.AccessCheckError from error
-        if response.status_code == httpx.codes.NOT_FOUND:
+        status_code = response.status_code
+        if status_code == httpx.codes.NOT_FOUND:
             return None
-        raise self.AccessCheckError
+        if status_code != httpx.codes.OK:
+            reason_phrase = response.reason_phrase
+            msg = "Unexpected response when checking download access for a dataset"
+            log.error(
+                f"{msg}: %s",
+                short_repr(response.text),
+                extra={
+                    "user_id": user_id,
+                    "dataset_id": dataset_id,
+                    "error": status_code,
+                    "reason": reason_phrase,
+                },
+            )
+            raise self.AccessCheckError(f"{msg}: {status_code} {reason_phrase}")
+        try:
+            valid_until = response.json()
+        except Exception as error:
+            msg = "Invalid response when checking download access for a dataset"
+            log.error(
+                f"{msg}: %s",
+                short_repr(response.text),
+                extra={"user_id": user_id, "dataset_id": dataset_id},
+            )
+            raise self.AccessCheckError(msg) from error
+        if not valid_until:
+            return None
+        try:
+            return datetime.fromisoformat(valid_until)
+        except Exception as error:
+            msg = "Invalid date in response when checking download access for a dataset"
+            log.error(
+                f"{msg}: %s",
+                short_repr(valid_until),
+                extra={"user_id": user_id, "dataset_id": dataset_id},
+            )
+            raise self.AccessCheckError(msg) from error
 
     @TRACER.start_as_current_span(
         "AccessCheckAdapter.get_accessible_datasets_with_expiration"
@@ -100,59 +128,107 @@ class AccessCheckAdapter(AccessCheckPort):
         """Get all datasets that the given user is allowed to download.
 
         This method returns a mapping from dataset IDs to access expiration dates.
+
+        Raises AccessCheckError on failure.
         """
         url = f"{self._download_url}/users/{user_id}/datasets"
         response = await self._client.get(url)
-        if response.status_code == httpx.codes.OK:
-            dataset_ids = response.json()
-            extra = {"user_id": user_id}
-            accessible_datasets: dict[str, UTCDatetime] = {}
-            for dataset_id, valid_until in dataset_ids.items():
-                try:
-                    converted_datetime = datetime.fromisoformat(valid_until)
-                    accessible_datasets[dataset_id] = converted_datetime
-                except (ValueError, TypeError) as err:
-                    log.error(
-                        "There was an error converting a datetime (%s) from the access API.",
-                        valid_until,
-                        extra=extra,
-                    )
-                    raise self.AccessCheckError from err
-            return accessible_datasets
-        if response.status_code == httpx.codes.NOT_FOUND:
+        status_code = response.status_code
+        if status_code == httpx.codes.NOT_FOUND:
             return {}
-        raise self.AccessCheckError
+        if status_code != httpx.codes.OK:
+            reason_phrase = response.reason_phrase
+            msg = "Unexpected response when fetching download access list"
+            log.error(
+                f"{msg}: %s",
+                short_repr(response.text),
+                extra={
+                    "user_id": user_id,
+                    "error": status_code,
+                    "reason": reason_phrase,
+                },
+            )
+            raise self.AccessCheckError(f"{msg}: {status_code} {reason_phrase}")
+        try:
+            dataset_ids = response.json()
+            if not (
+                isinstance(dataset_ids, dict)
+                and all(
+                    isinstance(k, str) and isinstance(v, str)
+                    for k, v in dataset_ids.items()
+                )
+            ):
+                raise TypeError("Expected a mapping from strings to dates")
+        except Exception as error:
+            msg = "Invalid response when fetching download access list"
+            log.error(
+                f"{msg}: %s", short_repr(response.text), extra={"user_id": user_id}
+            )
+            raise self.AccessCheckError(msg) from error
+        accessible_datasets: dict[str, UTCDatetime] = {}
+        for dataset_id, valid_until in dataset_ids.items():
+            try:
+                converted_datetime = datetime.fromisoformat(valid_until)
+            except Exception as err:
+                msg = "Invalid date when fetching download access list"
+                log.error(
+                    f"{msg}: %s",
+                    short_repr(valid_until),
+                    extra={"user_id": user_id, "dataset_id": dataset_id},
+                )
+                raise self.AccessCheckError(msg) from err
+            accessible_datasets[dataset_id] = converted_datetime
+        return accessible_datasets
 
     @TRACER.start_as_current_span("AccessCheckAdapter.check_upload_access")
     async def check_upload_access(
         self, user_id: UUID, box_id: UUID
     ) -> UTCDatetime | None:
-        """Check until when the given user has upload access for the given box."""
+        """Check until when the given user has upload access for the given box.
+
+        Raises AccessCheckError on failure.
+        """
         url = f"{self._upload_url}/users/{user_id}/boxes/{box_id}"
         response = await self._client.get(url)
         status_code = response.status_code
         if status_code == httpx.codes.NOT_FOUND:
             return None
-        elif status_code != httpx.codes.OK:
-            log.error("Call to the access API failed with code %i", status_code)
-            raise self.AccessCheckError()
-        valid_until = response.json()
+        if status_code != httpx.codes.OK:
+            reason_phrase = response.reason_phrase
+            msg = "Unexpected response when checking upload access to a box"
+            log.error(
+                f"{msg}: %s",
+                short_repr(response.text),
+                extra={
+                    "user_id": user_id,
+                    "box_id": box_id,
+                    "error": status_code,
+                    "reason": reason_phrase,
+                },
+            )
+            raise self.AccessCheckError(f"{msg}: {status_code} {reason_phrase}")
+        try:
+            valid_until = response.json()
+        except Exception as error:
+            msg = "Invalid response when checking upload access to a box"
+            log.error(
+                f"{msg}: %s",
+                short_repr(response.text),
+                extra={"user_id": user_id, "box_id": box_id},
+            )
+            raise self.AccessCheckError(msg) from error
         if not valid_until:
             return None
         try:
             return datetime.fromisoformat(valid_until)
-        except (ValueError, TypeError) as err:
+        except Exception as error:
+            msg = "Invalid date in response when checking upload access to a box"
             log.error(
-                "There was an error converting the response (%s) from the access"
-                + " API to a datetime.",
-                valid_until,
-                extra={
-                    "valid_until": valid_until,
-                    "user_id": user_id,
-                    "box_id": box_id,
-                },
+                f"{msg}: %s",
+                short_repr(valid_until),
+                extra={"user_id": user_id, "box_id": box_id},
             )
-            raise self.AccessCheckError from err
+            raise self.AccessCheckError(msg) from error
 
     @TRACER.start_as_current_span(
         "AccessCheckAdapter.get_accessible_boxes_with_expiration"
@@ -163,42 +239,60 @@ class AccessCheckAdapter(AccessCheckPort):
         """Get all upload boxes that the given user is allowed to upload to.
 
         This method returns a mapping from box IDs to access expiration dates.
+
+        Raises AccessCheckError on failure.
         """
         url = f"{self._upload_url}/users/{user_id}/boxes"
         response = await self._client.get(url)
         status_code = response.status_code
         if status_code == httpx.codes.NOT_FOUND:
             return {}
-        elif status_code != httpx.codes.OK:
-            log.error("Call to the access API failed with code %i", status_code)
-            raise self.AccessCheckError()
-        box_ids = response.json()
+        if status_code != httpx.codes.OK:
+            reason_phrase = response.reason_phrase
+            msg = "Unexpected response when fetching upload access list"
+            log.error(
+                f"{msg}: %s",
+                short_repr(response.text),
+                extra={
+                    "user_id": user_id,
+                    "error": status_code,
+                    "reason": reason_phrase,
+                },
+            )
+            raise self.AccessCheckError(f"{msg}: {status_code} {reason_phrase}")
+        try:
+            box_ids = response.json()
+            if not (
+                isinstance(box_ids, dict)
+                and all(
+                    isinstance(k, str) and isinstance(v, str)
+                    for k, v in box_ids.items()
+                )
+            ):
+                raise TypeError("Expected a mapping from strings to dates")
+        except Exception as error:
+            msg = "Invalid response when fetching upload access list"
+            log.error(
+                f"{msg}: %s", short_repr(response.text), extra={"user_id": user_id}
+            )
+            raise self.AccessCheckError(msg) from error
         accessible_boxes: dict[UUID4, UTCDatetime] = {}
         for box_id, valid_until in box_ids.items():
-            extra = {
-                "valid_until": valid_until,
-                "user_id": user_id,
-                "box_id": box_id,
-            }
-            try:
-                converted_datetime = datetime.fromisoformat(valid_until)
-            except (ValueError, TypeError) as err:
-                log.error(
-                    "There was an error converting a datetime (%s) from the access API.",
-                    valid_until,
-                    extra=extra,
-                )
-                raise self.AccessCheckError from err
-
             try:
                 converted_box_id = UUID(box_id)
             except (ValueError, TypeError) as err:
+                msg = "Invalid UUID when fetching upload access list"
+                log.error(f"{msg}: %s", short_repr(box_id), extra={"user_id": user_id})
+                raise self.AccessCheckError(msg) from err
+            try:
+                converted_datetime = datetime.fromisoformat(valid_until)
+            except (ValueError, TypeError) as err:
+                msg = "Invalid date when fetching upload access list"
                 log.error(
-                    "There was an error converting a box ID (%s) to a UUID from the access API.",
-                    box_id,
-                    extra=extra,
+                    f"{msg}: %s",
+                    short_repr(valid_until),
+                    extra={"user_id": user_id, "box_id": box_id},
                 )
-                raise self.AccessCheckError from err
-
+                raise self.AccessCheckError(msg) from err
             accessible_boxes[converted_box_id] = converted_datetime
         return accessible_boxes

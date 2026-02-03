@@ -72,6 +72,31 @@ async def test_check_download_access(
     )
     assert await check_access(TEST_USER_ID, "no-data-id") is None
 
+    # Test other error status codes
+    httpx_mock.add_response(
+        method="GET",
+        url=f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/some-data-id",
+        status_code=500,
+    )
+    with pytest.raises(
+        AccessCheckAdapter.AccessCheckError,
+        match="Unexpected response when checking download access for a dataset:"
+        " 500 Internal Server Error",
+    ):
+        await check_access(TEST_USER_ID, "some-data-id")
+
+    # Test invalid datetime as retrieved value
+    httpx_mock.add_response(
+        method="GET",
+        url=f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/some-data-id",
+        json="Not a valid date",
+    )
+    with pytest.raises(
+        AccessCheckAdapter.AccessCheckError,
+        match="Invalid date in response when checking download access for a dataset",
+    ):
+        await check_access(TEST_USER_ID, "some-data-id")
+
 
 async def test_get_download_datasets(
     access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
@@ -98,6 +123,19 @@ async def test_get_download_datasets(
         status_code=404,
     )
     assert await get_datasets(no_user_id) == {}
+
+    # Test for other status translation
+    httpx_mock.add_response(
+        method="GET",
+        url=f"{DOWNLOAD_ACCESS_URL}/users/{no_user_id}/datasets",
+        status_code=500,
+    )
+    with pytest.raises(
+        AccessCheckAdapter.AccessCheckError,
+        match="Unexpected response when fetching download access list:"
+        " 500 Internal Server Error",
+    ):
+        await get_datasets(no_user_id)
 
 
 async def test_get_accessible_boxes_with_expiration(
@@ -137,7 +175,11 @@ async def test_get_accessible_boxes_with_expiration(
         url=f"{UPLOAD_ACCESS_URL}/users/{no_user_id}/boxes",
         status_code=500,
     )
-    with pytest.raises(AccessCheckAdapter.AccessCheckError):
+    with pytest.raises(
+        AccessCheckAdapter.AccessCheckError,
+        match="Unexpected response when fetching upload access list:"
+        " 500 Internal Server Error",
+    ):
         await get_boxes(no_user_id)
 
 
@@ -156,7 +198,10 @@ async def test_get_accessible_boxes_invalid_response_id(
             "invalid-id": VALID_UNTIL2.isoformat(),
         },
     )
-    with pytest.raises(AccessCheckAdapter.AccessCheckError):
+    with pytest.raises(
+        AccessCheckAdapter.AccessCheckError,
+        match="Invalid UUID when fetching upload access list",
+    ):
         await get_boxes(TEST_USER_ID)
 
 
@@ -218,7 +263,11 @@ async def test_check_upload_access(
         url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes/{error_box_id}",
         status_code=500,
     )
-    with pytest.raises(AccessCheckAdapter.AccessCheckError):
+    with pytest.raises(
+        AccessCheckAdapter.AccessCheckError,
+        match="Unexpected response when checking upload access to a box:"
+        " 500 Internal Server Error",
+    ):
         await check_access(TEST_USER_ID, error_box_id)
 
     # Test invalid datetime as retrieved value
@@ -227,5 +276,8 @@ async def test_check_upload_access(
         url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes/{BOX_ID2}",
         json="Not a valid date",
     )
-    with pytest.raises(AccessCheckAdapter.AccessCheckError):
+    with pytest.raises(
+        AccessCheckAdapter.AccessCheckError,
+        match="Invalid date in response when checking upload access to a box",
+    ):
         await check_access(TEST_USER_ID, BOX_ID2)

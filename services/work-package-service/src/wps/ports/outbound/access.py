@@ -34,7 +34,10 @@ class AccessCheckPort(ABC):
     async def check_download_access(
         self, user_id: UUID4, dataset_id: str
     ) -> UTCDatetime | None:
-        """Check until when the given user has download access for the given dataset."""
+        """Check until when the given user has download access for the given dataset.
+
+        Raises AccessCheckError on failure.
+        """
 
     @abstractmethod
     async def get_accessible_datasets_with_expiration(
@@ -43,13 +46,18 @@ class AccessCheckPort(ABC):
         """Get all datasets that the given user is allowed to download.
 
         This method returns a mapping from dataset IDs to access expiration dates.
+
+        Raises AccessCheckError on failure.
         """
 
     @abstractmethod
     async def check_upload_access(
         self, user_id: UUID4, box_id: UUID4
     ) -> UTCDatetime | None:
-        """Check until when the given user has upload access for the given box."""
+        """Check until when the given user has upload access for the given box.
+
+        Raises AccessCheckError on failure.
+        """
 
     @abstractmethod
     async def get_accessible_boxes_with_expiration(
@@ -58,4 +66,6 @@ class AccessCheckPort(ABC):
         """Get all upload boxes that the given user is allowed to upload to.
 
         This method returns a mapping from box IDs to access expiration dates.
+
+        Raises AccessCheckError on failure.
         """

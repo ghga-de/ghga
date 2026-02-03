@@ -26,7 +26,12 @@ from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
 
-from tests.fixtures.access import BOXES_WITH_UPLOAD_ACCESS, USERS_WITH_UPLOAD_ACCESS
+from tests.fixtures.access import (
+    BOXES_WITH_UPLOAD_ACCESS,
+    USER_FOR_ACCESS_CHECK_ERROR,
+    USERS_WITH_DOWNLOAD_ACCESS,
+    USERS_WITH_UPLOAD_ACCESS,
+)
 from wps.config import Config
 from wps.core.models import (
     BoxWithExpiration,
@@ -71,6 +76,18 @@ async def test_work_package_and_token_creation(
         file_ids=None,
         user_public_crypt4gh_key=user_public_crypt4gh_key,
     )
+
+    # first try with broken network
+    with pytest.raises(
+        repository.WorkPackageAccessError,
+        match="Failed to check dataset access permission",
+    ):
+        await repository.create(
+            creation_data=creation_data,
+            auth_context=auth_context.model_copy(
+                update={"id": str(USER_FOR_ACCESS_CHECK_ERROR)}
+            ),
+        )
 
     creation_response = await repository.create(
         creation_data=creation_data, auth_context=auth_context
@@ -237,14 +254,16 @@ async def test_checking_accessible_datasets(
     with pytest.raises(repository.DatasetNotFoundError):
         await repository.get_dataset("some-dataset_id")
 
-    assert await repository.get_datasets(auth_context=auth_context) == []
+    assert await repository.get_datasets(user_id=USERS_WITH_DOWNLOAD_ACCESS[0]) == []
 
     # announce dataset
     await repository.register_dataset(DATASET)
 
     assert await repository.get_dataset("some-dataset-id") == DATASET
 
-    datasets_with_expiration = await repository.get_datasets(auth_context=auth_context)
+    datasets_with_expiration = await repository.get_datasets(
+        user_id=USERS_WITH_DOWNLOAD_ACCESS[0]
+    )
     assert len(datasets_with_expiration) == 1
     dataset_with_expiration = datasets_with_expiration[0]
 
@@ -253,6 +272,13 @@ async def test_checking_accessible_datasets(
 
     dataset = Dataset(**dataset_with_expiration.model_dump(exclude={"expires"}))
     assert dataset == DATASET
+
+    # test with broken network
+    with pytest.raises(
+        repository.WorkPackageAccessError,
+        match="Failed to fetch accessible datasets with expiration",
+    ):
+        await repository.get_datasets(user_id=USER_FOR_ACCESS_CHECK_ERROR)
 
 
 async def test_deletion_of_datasets(
@@ -387,7 +413,11 @@ async def test_box_crud_error_handling(
     assert inserted[0]["_id"] == box_id
 
 
-async def test_get_boxes(repository: WorkPackageRepository, mongodb: MongoDbFixture):
+async def test_get_boxes(
+    repository: WorkPackageRepository,
+    mongodb: MongoDbFixture,
+    auth_context: AuthContext,
+):
     """Test retrieving multiple boxes based on user ID."""
     # Insert some boxes
     box_ids = BOXES_WITH_UPLOAD_ACCESS
@@ -405,17 +435,23 @@ async def test_get_boxes(repository: WorkPackageRepository, mongodb: MongoDbFixt
     for box in boxes:
         await repository.register_upload_box(box)
 
-    # Mock the access API to tell us the test user has access to those boxes
-    user_id = USERS_WITH_UPLOAD_ACCESS[0]
-
-    # Try with random user ID - should get an empty list
+    # Try with the normal user - we should get an empty list
     boxes_with_expiration: list[BoxWithExpiration] = await repository.get_upload_boxes(
-        user_id=uuid4()
+        user_id=UUID(auth_context.id)
     )
     assert not boxes_with_expiration
 
-    # Try for real
-    boxes_with_expiration = await repository.get_upload_boxes(user_id=user_id)
+    # Try again with a user that has upload access - should now get the boxes
+    boxes_with_expiration = await repository.get_upload_boxes(
+        user_id=USERS_WITH_UPLOAD_ACCESS[0]
+    )
     assert boxes_with_expiration
     assert len(boxes_with_expiration) == 2
     boxes_with_expiration.sort(key=lambda x: x.id)
+
+    # test with broken network
+    with pytest.raises(
+        repository.WorkPackageAccessError,
+        match="Failed to fetch accessible upload boxes with expiration",
+    ):
+        await repository.get_upload_boxes(user_id=USER_FOR_ACCESS_CHECK_ERROR)

@@ -118,22 +118,25 @@ class WorkPackageRepositoryPort(ABC):
 
     @abstractmethod
     async def delete_dataset(self, dataset_id: str) -> None:
-        """Delete a dataset with all of its files."""
+        """Delete a dataset with all of its files.
+
+        If no such dataset exists, a DatasetNotFoundError will be raised.
+        """
 
     @abstractmethod
     async def get_dataset(self, dataset_id: str) -> Dataset:
         """Get a registered dataset using the given ID.
 
-        If the dataset does not exist, a DatasetNotFoundError will be raised.
+        If no such dataset exists, a DatasetNotFoundError will be raised.
         """
 
     @abstractmethod
-    async def get_datasets(
-        self, *, auth_context: AuthContext
-    ) -> list[DatasetWithExpiration]:
-        """Get the list of all datasets accessible to the authenticated user.
+    async def get_datasets(self, user_id: UUID4) -> list[DatasetWithExpiration]:
+        """Get the list of all datasets accessible to the specified user.
 
         The returned datasets also have an expiration date until when access is granted.
+
+        Raises WorkPackageAccessError on failure.
         """
 
     @abstractmethod
@@ -144,17 +147,23 @@ class WorkPackageRepositoryPort(ABC):
 
     @abstractmethod
     async def delete_upload_box(self, box_id: UUID4) -> None:
-        """Delete an upload box with the given ID."""
+        """Delete an upload box with the given ID.
+
+        If no such box exists, an UploadBoxNotFoundError will be raised.
+        """
 
     @abstractmethod
     async def get_upload_box(self, box_id: UUID4) -> ResearchDataUploadBoxBasics:
         """Get a registered upload box using the given ID.
 
-        Raises an `UploadBoxNotFoundError` if no doc with the box_id exists.
+        If no such box exists, an UploadBoxNotFoundError will be raised.
         """
 
     @abstractmethod
-    async def get_upload_boxes(self, *, user_id: UUID4) -> list[BoxWithExpiration]:
-        """Get the list of all upload boxes accessible to the authenticated user
-        along with access expiry.
+    async def get_upload_boxes(self, user_id: UUID4) -> list[BoxWithExpiration]:
+        """Get the list of all upload boxes accessible to the specified user.
+
+        The returned boxes also have an expiration date until when access is granted.
+
+        Raises WorkPackageAccessError on failure.
         """

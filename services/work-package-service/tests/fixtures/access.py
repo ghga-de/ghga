@@ -32,6 +32,7 @@ BOXES_WITH_UPLOAD_ACCESS = [
     UUID("e47f4b8a-3f2c-4e8b-9a1c-7d4e5f6a7b8c"),
     UUID("f58e5c9b-4e3d-4f9c-ab2d-8e5f6a7b8c9d"),
 ]
+USER_FOR_ACCESS_CHECK_ERROR = UUID("144ae997-2edd-45b7-a9b1-7ea8c1c73c69")
 
 __all__ = ["AccessCheckMock"]
 
@@ -45,6 +46,8 @@ class AccessCheckMock(AccessCheckPort):
         self, user_id: UUID, dataset_id: str
     ) -> UTCDatetime | None:
         """Check whether the given user has download access for the given dataset."""
+        if user_id == USER_FOR_ACCESS_CHECK_ERROR:
+            raise AccessCheckPort.AccessCheckError("Simulated access check error")
         if (
             user_id not in USERS_WITH_DOWNLOAD_ACCESS
             or dataset_id not in DATASETS_WITH_DOWNLOAD_ACCESS
@@ -56,6 +59,8 @@ class AccessCheckMock(AccessCheckPort):
         self, user_id: UUID
     ) -> dict[str, UTCDatetime]:
         """Get all datasets that the given user is allowed to download."""
+        if user_id == USER_FOR_ACCESS_CHECK_ERROR:
+            raise AccessCheckPort.AccessCheckError("Simulated access check error")
         if user_id not in USERS_WITH_DOWNLOAD_ACCESS:
             return {}
         expires = now_utc_ms_prec() + self.validity_period
@@ -69,6 +74,8 @@ class AccessCheckMock(AccessCheckPort):
         self, user_id: UUID, box_id: UUID
     ) -> UTCDatetime | None:
         """Check whether the given user has upload access for the given box."""
+        if user_id == USER_FOR_ACCESS_CHECK_ERROR:
+            raise AccessCheckPort.AccessCheckError("Simulated access check error")
         if (
             user_id not in USERS_WITH_UPLOAD_ACCESS
             or box_id not in BOXES_WITH_UPLOAD_ACCESS
@@ -80,6 +87,8 @@ class AccessCheckMock(AccessCheckPort):
         self, user_id: UUID
     ) -> dict[UUID4, UTCDatetime]:
         """Get all upload boxes that the given user is allowed to upload to."""
+        if user_id == USER_FOR_ACCESS_CHECK_ERROR:
+            raise AccessCheckPort.AccessCheckError("Simulated access check error")
         if user_id not in USERS_WITH_UPLOAD_ACCESS:
             return {}
         expires = now_utc_ms_prec() + self.validity_period
