@@ -98,5 +98,8 @@ This repository is part of the [Epic Planning and Marathon SOP](https://ghga.pag
 - (79) [Miniature Horse](./79-miniature-horse/technical_specification.md): Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs
 - (80) [Hedgehog Seahorse](./80-hedgehog-seahorse/technical_specification.md): GHGA Connector refactoring/rewrite and upload path implementation
 - (81) [Laotian Rock Rat](./81-laotian-rock-rat/technical_specification.md): Client Retry Logic Refactoring for Ratelimiting
+- (82) [Scissor Grinder Cicada](./82-scissor-grinder-cicada/technical_specification.md): Notification Service Update
 - (83) [Question Mark Chrysalis](./83-question-mark-chrysalis/technical_specification.md): Preliminary Experimental Metadata (EM) Transformation Service
- 
+- (84) [Sarcastic Fringehead](./84-sarcastic-fringehead/technical_specification.md): File Upload Path Part 2
+- (85) [Tasselled Wobbegong](./85-tasselled-wobbegong/technical_specification.md): Support for Key-Value-Store in Hexkit
+- (86) [Archaeopteryx](./86-archaeopteryx/technical_specification.md): Basic Research Data Upload Box Frontend
