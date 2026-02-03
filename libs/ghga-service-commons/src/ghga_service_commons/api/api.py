@@ -79,6 +79,16 @@ class ApiConfigBase(BaseSettings):
         ),
     )
     workers: int = Field(default=1, description="Number of workers processes to run.")
+    timeout_keep_alive: int = Field(
+        default=90,
+        description=(
+            "The time in seconds to keep an idle connection open for subsequent"
+            + " requests before closing it. This value should be higher than the"
+            + " timeout used by any client or reverse proxy to avoid premature"
+            + " connection closures."
+        ),
+        examples=[5, 90, 5400],
+    )
     api_root_path: str = Field(
         default="",
         description=(
@@ -406,6 +416,7 @@ async def run_server(app: FastAPI | str, config: ApiConfigBase):
         log_config=None,
         reload=config.auto_reload,
         workers=config.workers,
+        timeout_keep_alive=config.timeout_keep_alive,
         ws="websockets-sansio",
     )
 
