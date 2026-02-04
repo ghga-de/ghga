@@ -39,8 +39,7 @@ COPY --from=builder /service/lock/requirements.txt /service
 RUN pip install --no-cache-dir --no-deps -r requirements.txt && \
     rm requirements.txt
 COPY --from=builder /service/dist/ /service
-RUN pip install --no-cache-dir --no-deps *.whl && \
-    rm *.whl
+RUN pip install --no-cache-dir --no-deps *.whl && rm *.whl
 # switch to non-root user
 WORKDIR /home/appuser
 USER appuser
