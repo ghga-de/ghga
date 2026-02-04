@@ -49,4 +49,5 @@ searchable_classes:
       name: Title
 service_instance_id: '001'
 service_name: mass
+timeout_keep_alive: 90
 workers: 1

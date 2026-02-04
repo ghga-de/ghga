@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 from contextlib import asynccontextmanager
 
 from hexkit.custom_types import JsonObject
-from hexkit.providers.mongodb.provider import ConfiguredMongoClient, MongoDbConfig
+from hexkit.providers.mongodb import ConfiguredMongoClient, MongoDbConfig
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import OperationFailure
