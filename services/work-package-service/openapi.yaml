@@ -318,6 +318,8 @@ paths:
                 title: Response 200 Get Upload Boxes
                 type: array
           description: Upload boxes have been fetched.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to get upload boxes.
         '422':
@@ -351,6 +353,8 @@ paths:
                 title: Response 200 Get Datasets
                 type: array
           description: Datasets have been fetched.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to get datasets.
         '422':
@@ -378,6 +382,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkPackageCreationResponse'
           description: Work package was successfully created.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to create a work package.
         '422':
@@ -406,6 +412,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkPackageDetails'
           description: Work package details have been found.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to get the work package.
         '422':
@@ -482,6 +490,8 @@ paths:
             application/json:
               schema: {}
           description: Work order token has been created.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to create the work order token.
         '422':
