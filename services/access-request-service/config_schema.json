@@ -403,6 +403,17 @@
       "title": "Workers",
       "type": "integer"
     },
+    "timeout_keep_alive": {
+      "default": 90,
+      "description": "The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures.",
+      "examples": [
+        5,
+        90,
+        5400
+      ],
+      "title": "Timeout Keep Alive",
+      "type": "integer"
+    },
     "api_root_path": {
       "default": "",
       "description": "Root path at which the API is reachable. This is relative to the specified host and port.",

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-## creating building container
-FROM python:3.13-slim-bookworm AS builder
+# creating building container
+FROM python:3.13-slim-trixie AS builder
 # update and install dependencies
-RUN apt update
-RUN apt upgrade -y
+RUN apt-get update && apt-get upgrade -y
 RUN pip install build
 # copy code
 COPY . /service
@@ -26,20 +25,23 @@ WORKDIR /service
 RUN python -m build
 
 # creating running container
-FROM python:3.13-slim-bookworm
+FROM python:3.13-slim-trixie
 # update and install dependencies
-RUN apt update
-RUN apt upgrade -y
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+# create new user first
+RUN useradd --create-home appuser
 # copy and install requirements and wheel
 WORKDIR /service
 COPY --from=builder /service/lock/requirements.txt /service
-RUN pip install --no-deps -r requirements.txt
-RUN rm requirements.txt
+RUN pip install --no-cache-dir --no-deps -r requirements.txt && \
+    rm requirements.txt
 COPY --from=builder /service/dist/ /service
-RUN pip install --no-deps *.whl
-RUN rm *.whl
-# create new user and execute as that user
-RUN useradd --create-home appuser
+RUN pip install --no-cache-dir --no-deps *.whl && \
+    rm *.whl
+# switch to non-root user
 WORKDIR /home/appuser
 USER appuser
 # set environment

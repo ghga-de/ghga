@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.9",
+    "setuptools>=80.10",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,14 +21,14 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ars"
-version = "6.1.2"
+version = "6.2.0"
 description = "Access Request Service"
 dependencies = [
-    "ghga-event-schemas ~= 11.1.1",
-    "ghga-service-commons[api,auth] >= 6, <7",
-    "hexkit[mongodb,akafka] >= 7.2, <8",
-    "httpx >= 0.28",
-    "typer >= 0.20",
+    "ghga-event-schemas~=11.1.1",
+    "ghga-service-commons[api,auth]>=7.0,<8",
+    "hexkit[mongodb,akafka]>=8.1,<9",
+    "httpx>=0.28",
+    "typer>=0.21",
 ]
 
 [project.license]
@@ -147,7 +147,7 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.4"
+minversion = "9.0"
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 

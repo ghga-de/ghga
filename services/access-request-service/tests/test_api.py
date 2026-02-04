@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -252,7 +252,7 @@ async def test_get_access_request_unauthorized(rest: RestFixture):
     client = rest.rest_client
     # test unauthenticated
     response = await client.get(f"/access-requests/{uuid4()}")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 async def test_create_access_request_unauthorized(
@@ -262,7 +262,7 @@ async def test_create_access_request_unauthorized(
     client = rest.rest_client
     # test without authentication
     response = await client.post("/access-requests", json=CREATION_DATA)
-    assert response.status_code == 403
+    assert response.status_code == 401
 
     # test creating an access request for another user
     response = await client.post(
@@ -389,7 +389,7 @@ async def test_get_access_requests_unauthorized(rest: RestFixture):
     client = rest.rest_client
     # test unauthenticated
     response = await client.get("/access-requests")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 async def test_filter_access_requests(
@@ -629,7 +629,7 @@ async def test_must_be_data_steward_to_patch_access_request(
         f"/access-requests/{access_request_id}",
         json={"status": "allowed"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
     # set status to allowed as the same user
     response = await client.patch(
         f"/access-requests/{access_request_id}",
@@ -1159,7 +1159,7 @@ async def test_get_access_grants_unauthorized(
 
     # test without authentication
     response = await client.get("/access-grants")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
     # test getting access grants for another user
     response = await client.get(

@@ -322,7 +322,7 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 6.1.2
+  version: 6.2.0
 openapi: 3.1.0
 paths:
   /access-grants:
@@ -382,6 +382,8 @@ paths:
                 title: Response 200 Get Access Grants
                 type: array
           description: Access grants have been fetched.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to get access grants.
         '422':
@@ -408,6 +410,8 @@ paths:
       responses:
         '204':
           description: The data access grant has been revoked.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to revoke a data access grant.
         '404':
@@ -465,6 +469,8 @@ paths:
                 title: Response 200 Get Access Requests
                 type: array
           description: Access requests have been fetched.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to get access requests.
         '422':
@@ -491,6 +497,8 @@ paths:
                 title: Response 201 Create Access Request
                 type: string
           description: Access request was successfully created
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to create an access request.
         '404':
@@ -523,6 +531,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccessRequest'
           description: Access request has been fetched.
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to get access request.
         '404':
@@ -557,6 +567,8 @@ paths:
       responses:
         '204':
           description: Access request was successfully changed
+        '401':
+          description: Not authenticated.
         '403':
           description: Not authorized to change access request.
         '404':

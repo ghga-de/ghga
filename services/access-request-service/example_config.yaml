@@ -53,4 +53,5 @@ openapi_url: /openapi.json
 port: 8080
 service_instance_id: '1'
 service_name: ars
+timeout_keep_alive: 90
 workers: 1

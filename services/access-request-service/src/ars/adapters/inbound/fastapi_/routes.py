@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,6 +62,7 @@ async def health():
             "model": str,
             "description": "Access request was successfully created",
         },
+        401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to create an access request."},
         404: {"description": "Dataset not found"},
         422: {"description": "Validation error in submitted data."},
@@ -103,6 +104,7 @@ async def create_access_request(
             "model": list[AccessRequest],
             "description": "Access requests have been fetched.",
         },
+        401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to get access requests."},
         422: {"description": "Validation error in submitted parameters."},
     },
@@ -164,6 +166,7 @@ async def get_access_requests(
             "model": AccessRequest,
             "description": "Access request has been fetched.",
         },
+        401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to get access request."},
         404: {"description": "Access request does not exist."},
         422: {"description": "Validation error in submitted data."},
@@ -203,6 +206,7 @@ async def get_access_request(
     description="Endpoint used to set the status or modify other fields of an access request",
     responses={
         204: {"description": "Access request was successfully changed"},
+        401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to change access request."},
         404: {"description": "Access request does not exist."},
         422: {"description": "Validation error in submitted data."},
@@ -255,6 +259,7 @@ async def patch_access_request(
             "model": list[AccessGrant],
             "description": "Access grants have been fetched.",
         },
+        401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to get access grants."},
         422: {"description": "Validation error in submitted parameters."},
     },
@@ -328,6 +333,7 @@ async def get_access_grants(  # noqa: PLR0913
         204: {
             "description": "The data access grant has been revoked.",
         },
+        401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to revoke a data access grant."},
         404: {"description": "The data access grant was not found."},
         422: {"description": "Validation error in submitted data."},
