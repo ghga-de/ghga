@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,7 +75,7 @@ async def test_create_work_package_unauthorized(
 ):
     """Test that creating a work package needs authorization."""
     response = await client.post("/work-packages", json=DATASET_CREATION_DATA)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
     response = await client.post(
         "/work-packages", json=DATASET_CREATION_DATA, headers=bad_auth_headers
     )
@@ -85,7 +85,7 @@ async def test_create_work_package_unauthorized(
 async def test_get_work_package_unauthorized(client: AsyncTestClient):
     """Test that getting a work package needs authorization."""
     response = await client.get("/work-packages/some-work-package-id")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
@@ -132,7 +132,7 @@ async def test_make_download_work_order_token(
 
     # try to get the work package without authorization
     response = await client.get(f"/work-packages/{work_package_id}")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     # try to get a non-existing work package with authorization and malformed ID
     response = await client.get(
@@ -173,7 +173,7 @@ async def test_make_download_work_order_token(
     response = await client.post(
         f"/work-packages/{work_package_id}/files/file-id-1/work-order-tokens"
     )
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     # try to get a work order token for a non-existing work package with authorization
     response = await client.post(
@@ -404,7 +404,7 @@ async def test_make_upload_work_order_token(
 async def test_get_datasets_unauthenticated(client: AsyncTestClient):
     """Test that the list of accessible datasets cannot be fetched unauthenticated."""
     response = await client.get("/users/a86f8281-e18a-429e-88a9-a5c8ea0cf754/datasets")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 async def test_get_datasets_for_another_user(
