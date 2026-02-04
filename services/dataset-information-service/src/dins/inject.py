@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -101,7 +101,7 @@ async def prepare_rest_app(
     async with prepare_core_with_override(
         config=config, information_service_override=information_service_override
     ) as information_service:
-        app.dependency_overrides[dummies.information_service_port] = (
-            lambda: information_service
+        app.dependency_overrides[dummies.information_service_port] = lambda: (
+            information_service
         )
         yield app
