@@ -113,12 +113,7 @@ export default [
                 [
                   'features',
                   {
-                    context: [
-                      'metadata',
-                      'verification-addresses',
-                      'access-requests',
-                      'auth',
-                    ],
+                    context: ['metadata', 'ivas', 'access-requests', 'auth'],
                   },
                 ],
               ],
@@ -127,19 +122,19 @@ export default [
             {
               from: [['features', { context: 'access-requests' }]],
               allow: [
-                ['service', { context: 'verification-addresses' }],
-                ['model', { context: 'verification-addresses' }],
-                ['pipe', { context: 'verification-addresses' }],
+                ['service', { context: 'ivas' }],
+                ['model', { context: 'ivas' }],
+                ['pipe', { context: 'ivas' }],
               ],
             },
             // auth context may import from verification addresses context
             {
               from: [['features', { context: 'auth' }]],
               allow: [
-                ['service', { context: 'verification-addresses' }],
-                ['model', { context: 'verification-addresses' }],
-                ['pipe', { context: 'verification-addresses' }],
-                ['features', { context: 'verification-addresses' }],
+                ['service', { context: 'ivas' }],
+                ['model', { context: 'ivas' }],
+                ['pipe', { context: 'ivas' }],
+                ['features', { context: 'ivas' }],
               ],
             },
             // auth context may import from access request context

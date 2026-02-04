@@ -11,8 +11,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActiveAccessGrantsListComponent } from '@app/access-requests/features/active-access-grants-list/active-access-grants-list';
 import { PendingAccessRequestsListComponent } from '@app/access-requests/features/pending-access-requests-list/pending-access-requests-list';
 import { AuthService } from '@app/auth/services/auth';
+import { UserIvaListComponent } from '@app/ivas/features/user-iva-list/user-iva-list';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
-import { UserIvaListComponent } from '@app/verification-addresses/features/user-iva-list/user-iva-list';
 
 /**
  * This Component shows data about the current user and allows managing their IVAs.

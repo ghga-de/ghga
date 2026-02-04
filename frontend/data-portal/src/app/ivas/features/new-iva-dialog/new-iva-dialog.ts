@@ -25,8 +25,8 @@ import {
 } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { IvaType } from '@app/verification-addresses/models/iva';
-import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type-pipe';
+import { IvaType } from '@app/ivas/models/iva';
+import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
 import { map, startWith } from 'rxjs';
 

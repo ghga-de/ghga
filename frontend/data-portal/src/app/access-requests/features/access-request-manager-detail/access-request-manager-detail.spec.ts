@@ -7,7 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { allIvasOfDoe } from '@app/../mocks/data';
-import { IvaService } from '@app/verification-addresses/services/iva';
+import { IvaService } from '@app/ivas/services/iva';
 import { AccessRequestManagerDetailComponent } from './access-request-manager-detail';
 
 import { provideHttpClient } from '@angular/common/http';

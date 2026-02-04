@@ -23,8 +23,8 @@ import {
 } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
-import { IvaService } from '@app/verification-addresses/services/iva';
 
 /**
  * Dialog for entering the IVA verification code

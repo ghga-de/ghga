@@ -19,15 +19,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
+import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
+import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
+import { IvaService } from '@app/ivas/services/iva';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state-pipe';
-import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type-pipe';
-import { IvaService } from '@app/verification-addresses/services/iva';
 import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation-dialog/access-grant-revocation-dialog';
 
 /**

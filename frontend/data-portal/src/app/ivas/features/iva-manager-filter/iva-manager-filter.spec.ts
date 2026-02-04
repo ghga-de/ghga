@@ -6,11 +6,11 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { IvaService } from '@app/verification-addresses/services/iva';
+import { IvaService } from '@app/ivas/services/iva';
 import { IvaManagerFilterComponent } from './iva-manager-filter';
 
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { IvaState } from '@app/verification-addresses/models/iva';
+import { IvaState } from '@app/ivas/models/iva';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 

@@ -13,10 +13,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { IvaState } from '@app/ivas/models/iva';
+import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
+import { IvaService } from '@app/ivas/services/iva';
 import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
-import { IvaState } from '@app/verification-addresses/models/iva';
-import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state-pipe';
-import { IvaService } from '@app/verification-addresses/services/iva';
 
 /**
  * IVA Manager Filter component.

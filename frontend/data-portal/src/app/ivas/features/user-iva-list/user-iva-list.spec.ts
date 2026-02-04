@@ -6,7 +6,7 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { IvaService } from '@app/verification-addresses/services/iva';
+import { IvaService } from '@app/ivas/services/iva';
 import { UserIvaListComponent } from './user-iva-list';
 
 /**

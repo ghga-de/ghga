@@ -27,6 +27,9 @@ import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { UserStatus } from '@app/auth/models/user';
 import { DisplayUser, UserService } from '@app/auth/services/user';
+import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
+import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
+import { IvaService } from '@app/ivas/services/iva';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
@@ -35,9 +38,6 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { IvaStatePipe } from '@app/verification-addresses/pipes/iva-state-pipe';
-import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type-pipe';
-import { IvaService } from '@app/verification-addresses/services/iva';
 import { DeletionConfirmationDialogComponent } from '../deletion-confirmation-dialog/deletion-confirmation-dialog';
 
 /**

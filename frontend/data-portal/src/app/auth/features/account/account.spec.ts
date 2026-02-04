@@ -12,8 +12,8 @@ import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
+import { IvaService } from '@app/ivas/services/iva';
 import { ConfigService } from '@app/shared/services/config';
-import { IvaService } from '@app/verification-addresses/services/iva';
 import { provideHttpCache } from '@ngneat/cashew';
 import { AccountComponent } from './account';
 

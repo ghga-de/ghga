@@ -11,9 +11,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink, RouterModule } from '@angular/router';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AuthService } from '@app/auth/services/auth';
+import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
+import { IvaService } from '@app/ivas/services/iva';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
-import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type-pipe';
-import { IvaService } from '@app/verification-addresses/services/iva';
 import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil';
 
 /**

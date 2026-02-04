@@ -9,11 +9,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
+import { Iva, IvaState, IvaType } from '@app/ivas/models/iva';
+import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
+import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NotificationService } from '@app/shared/services/notification';
-import { Iva, IvaState, IvaType } from '@app/verification-addresses/models/iva';
-import { IvaTypePipe } from '@app/verification-addresses/pipes/iva-type-pipe';
-import { IvaService } from '@app/verification-addresses/services/iva';
 import { NewIvaDialogComponent } from '../new-iva-dialog/new-iva-dialog';
 import { VerificationDialogComponent } from '../verification-dialog/verification-dialog';
 

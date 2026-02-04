@@ -90,7 +90,7 @@ export const routes: Routes = [
     path: 'iva-manager',
     canActivate: [() => inject(AuthService).guardDataSteward()],
     loadComponent: () =>
-      import('./verification-addresses/features/iva-manager/iva-manager').then(
+      import('./ivas/features/iva-manager/iva-manager').then(
         (m) => m.IvaManagerComponent,
       ),
     title: 'IVA Manager',

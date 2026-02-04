@@ -6,6 +6,7 @@
 
 import { AccessGrant } from '@app/access-requests/models/access-requests';
 import { RegisteredUser, UserStatus } from '@app/auth/models/user';
+import { IvaState, IvaType, UserWithIva } from '@app/ivas/models/iva';
 import { DatasetDetailsRaw } from '@app/metadata/models/dataset-details';
 import { DatasetInformation } from '@app/metadata/models/dataset-information';
 import { DatasetSummary } from '@app/metadata/models/dataset-summary';
@@ -13,7 +14,6 @@ import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
 import { Study } from '@app/metadata/models/study';
 import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
-import { IvaState, IvaType, UserWithIva } from '@app/verification-addresses/models/iva';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
 

@@ -9,7 +9,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { allIvas } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { IvaService } from '@app/verification-addresses/services/iva';
+import { IvaService } from '@app/ivas/services/iva';
 import { IvaManagerListComponent } from './iva-manager-list';
 
 /**

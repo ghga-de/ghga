@@ -12,8 +12,8 @@ import { allIvasOfDoe } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { UserService } from '@app/auth/services/user';
+import { IvaService } from '@app/ivas/services/iva';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { IvaService } from '@app/verification-addresses/services/iva';
 import { UserManagerComponent } from '../user-manager/user-manager';
 import { UserManagerDetailComponent } from './user-manager-detail';
 

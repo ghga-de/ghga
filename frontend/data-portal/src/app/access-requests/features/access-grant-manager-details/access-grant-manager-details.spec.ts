@@ -11,7 +11,7 @@ import { accessGrants, allIvasOfDoe } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
-import { IvaService } from '@app/verification-addresses/services/iva';
+import { IvaService } from '@app/ivas/services/iva';
 import { AccessGrantManagerDetailsComponent } from './access-grant-manager-details';
 
 /**

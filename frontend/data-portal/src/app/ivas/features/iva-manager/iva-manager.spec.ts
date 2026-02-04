@@ -8,7 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { IvaManagerComponent } from './iva-manager';
 
-import { IvaService } from '@app/verification-addresses/services/iva';
+import { IvaService } from '@app/ivas/services/iva';
 
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { ActivatedRoute } from '@angular/router';

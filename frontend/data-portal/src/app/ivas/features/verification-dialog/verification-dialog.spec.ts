@@ -7,7 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { IvaService } from '@app/verification-addresses/services/iva';
+import { IvaService } from '@app/ivas/services/iva';
 import { VerificationDialogComponent } from './verification-dialog';
 
 describe('VerificationDialogComponent', () => {

@@ -5,11 +5,7 @@
  */
 
 import { Pipe, PipeTransform } from '@angular/core';
-import {
-  IvaState,
-  IvaStateClass,
-  IvaStatePrintable,
-} from '@app/verification-addresses/models/iva';
+import { IvaState, IvaStateClass, IvaStatePrintable } from '@app/ivas/models/iva';
 
 /**
  * This pipe is used to provide state-specific display names and classes for IVAs.

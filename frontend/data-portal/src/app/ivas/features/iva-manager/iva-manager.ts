@@ -5,7 +5,7 @@
  */
 
 import { Component, inject, OnInit } from '@angular/core';
-import { IvaService } from '@app/verification-addresses/services/iva';
+import { IvaService } from '@app/ivas/services/iva';
 import { IvaManagerFilterComponent } from '../iva-manager-filter/iva-manager-filter';
 import { IvaManagerListComponent } from '../iva-manager-list/iva-manager-list';
 
