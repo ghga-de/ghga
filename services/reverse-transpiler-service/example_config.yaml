@@ -52,4 +52,5 @@ sheet_names:
   research_data_files: ResearchDataFile
   samples: Sample
   studies: Study
+timeout_keep_alive: 90
 workers: 1
