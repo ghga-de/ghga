@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
-from hexkit.providers.mongodb.provider import MongoDbDaoFactory
+from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from ns.adapters.inbound.event_sub import EventSubTranslator
 from ns.adapters.outbound.dao import get_event_id_dao

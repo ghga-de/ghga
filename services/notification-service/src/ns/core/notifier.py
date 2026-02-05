@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 import html
 import logging
 from email.message import EmailMessage
-from enum import Enum
+from enum import StrEnum
 from string import Template
 
 from ghga_event_schemas import pydantic_ as event_schemas
@@ -32,7 +32,7 @@ from ns.ports.outbound.smtp_client import SmtpClientPort
 log = logging.getLogger(__name__)
 
 
-class EmailTemplateType(str, Enum):
+class EmailTemplateType(StrEnum):
     """Enumeration for the types of email template."""
 
     PLAINTEXT = "plaintext"
