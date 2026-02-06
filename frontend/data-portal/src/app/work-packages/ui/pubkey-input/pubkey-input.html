@@ -1,12 +1,22 @@
-<mat-form-field class="container max-w-5xl">
+<mat-form-field class="container max-w-5xl" subscriptSizing="dynamic">
   <mat-label>{{ label() }}</mat-label>
-  <input matInput type="text" [value]="value()" (input)="onInput($event)" />
-  <mat-hint class="-mt-2 mb-4">
-    <p>{{ hint() }}</p>
-    @if (value() && error()) {
-      <mat-error class="-mt-4 mb-4"
-        ><p>{{ error() }}</p></mat-error
-      >
-    }
-  </mat-hint>
+  <input
+    matInput
+    type="text"
+    [(ngModel)]="value"
+    [formControl]="formControl"
+    [errorStateMatcher]="errorStateMatcher"
+    maxlength="150"
+  />
+  @if (value() && invalid()) {
+    <mat-error class="-mt-2 mb-3">
+      @for (error of errors(); track $index) {
+        <div>{{ error.message }}</div>
+      }
+    </mat-error>
+  } @else {
+    <mat-hint class="-mt-2 mb-3"
+      ><div>{{ hint() }}</div></mat-hint
+    >
+  }
 </mat-form-field>

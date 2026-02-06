@@ -70,15 +70,6 @@ export const routes: Routes = [
   },
   // routes that need user authentication
   {
-    path: 'work-package',
-    canActivate: [() => inject(AuthService).guardAuthenticated()],
-    loadComponent: () =>
-      import('./work-packages/features/work-package/work-package').then(
-        (m) => m.WorkPackageComponent,
-      ),
-    title: 'Download or Upload Datasets',
-  },
-  {
     path: 'account',
     canActivate: [() => inject(AuthService).guardAuthenticated()],
     loadComponent: () =>

@@ -4,6 +4,8 @@
  * @license Apache-2.0
  */
 
+import { Iva } from '@app/ivas/models/iva';
+
 export enum AccessRequestStatus {
   allowed = 'allowed',
   denied = 'denied',
@@ -88,6 +90,10 @@ export interface AccessGrant {
   iva_id: string | null;
   status?: AccessGrantStatus;
   daysRemaining?: number;
+}
+
+export interface AccessGrantWithIva extends AccessGrant {
+  iva?: Iva;
 }
 
 export interface AccessGrantFilter {

@@ -28,7 +28,7 @@ export class WorkPackageService {
   #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
 
   /**
-   * Resource for loading datasets
+   * Resource for loading downloadable datasets
    */
   datasets = httpResource<DatasetWithExpiration[]>(
     () => {
@@ -37,9 +37,7 @@ export class WorkPackageService {
     },
     {
       parse: (raw) =>
-        (raw as DatasetWithExpiration[]).filter(
-          ({ stage }) => stage === 'upload' || stage === 'download',
-        ),
+        (raw as DatasetWithExpiration[]).filter(({ stage }) => stage === 'download'),
       defaultValue: [],
     },
   ).asReadonly();

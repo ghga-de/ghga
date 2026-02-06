@@ -7,146 +7,170 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  computed,
+  effect,
   input,
   model,
-  output,
-  signal,
 } from '@angular/core';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormValueControl,
+  schema,
+  validate,
+  ValidationError,
+} from '@angular/forms/signals';
+import { ErrorStateMatcher } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 /**
- * Reusable component for entering a Crypt4GH public key
+ * Trim Crypt4GH public key headers/footers and fix Base64 padding
+ * @param key Raw key string to trim
+ * @returns Trimmed and padded key
+ */
+function trimKey(key: string): string {
+  // Remove Crypt4GH headers, whitespace, and surrounding dashes
+  key = key
+    .replace(/-----(BEGIN|END) CRYPT4GH PUBLIC KEY-----/g, '')
+    .replace(/\s/g, '')
+    .replace(/^-+/, '')
+    .replace(/[-=]+$/, '');
+
+  // Fix Base64 padding
+  const paddingNeeded = key.length % 4;
+  if (paddingNeeded) {
+    key += '='.repeat(4 - paddingNeeded);
+  }
+  return key;
+}
+
+/**
+ * Check if two Uint8Array objects are equal
+ * @param arr1 First array
+ * @param arr2 Second array
+ * @returns True if arrays are equal
+ */
+function arraysEqual(arr1: Uint8Array, arr2: Uint8Array): boolean {
+  return arr1.length === arr2.length && arr1.every((val, i) => val === arr2[i]);
+}
+
+/**
+ * Validate Crypt4GH public key
+ * @param key Key string to validate
+ * @returns 0 if valid, otherwise an error code: 1=empty, 2=private key, 3=invalid format
+ */
+function validatePubKey(key: string): number {
+  // Check for private key patterns
+  if (key.match(/-.*PRIVATE.*-/)) {
+    return 2;
+  }
+
+  // Trim and check if empty
+  key = trimKey(key);
+  if (!key) {
+    return 1;
+  }
+
+  // Decode Base64
+  let binKey: Uint8Array;
+  try {
+    const binStr = atob(key);
+    binKey = Uint8Array.from(binStr, (char) => char.charCodeAt(0));
+  } catch {
+    return 3;
+  }
+
+  // Validate key length (32 bytes for Crypt4GH public key)
+  if (binKey.length !== 32) {
+    // Check if it's a private key (starts with 'c4gh-' prefix)
+    const privateKeyPrefix = new TextEncoder().encode('c4gh-');
+    if (arraysEqual(binKey.subarray(0, 5), privateKeyPrefix)) {
+      return 2;
+    }
+    return 3;
+  }
+
+  return 0;
+}
+
+/**
+ * Reusable form control component for entering a Crypt4GH public key
  */
 @Component({
   selector: 'app-pubkey-input',
-  imports: [MatFormFieldModule, MatInputModule],
+  imports: [MatFormFieldModule, MatInputModule, FormsModule, ReactiveFormsModule],
   templateUrl: './pubkey-input.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PubkeyInputComponent {
-  /** Label for the input field */
-  label = input<string>('Your public Crypt4GH key');
+export class PubkeyFieldComponent implements FormValueControl<string> {
+  /**
+   * Validation schema for Crypt4GH public keys
+   * Apply to form fields using: apply(fieldPath, PubkeyFieldComponent.schema)
+   */
+  static schema = schema<string>((fieldPath) => {
+    validate(fieldPath, ({ value }) => {
+      const errorCode = validatePubKey(value() as string);
 
-  /** Hint text to display below the input */
-  hint = input<string>(
+      if (errorCode !== 0) {
+        const messages: Record<number, string> = {
+          1: 'The key is empty.',
+          2: 'Please do not paste your private key here!',
+          3: 'This does not seem to be a Base64 encoded Crypt4GH key.',
+        };
+        return { kind: 'invalidKey', message: messages[errorCode] ?? '' };
+      }
+      return null;
+    });
+  });
+  /** Input field label */
+  label = input('Your public Crypt4GH key');
+
+  /** Hint text displayed below input */
+  hint = input(
     'Please enter your public Crypt4GH key (in Base64 encoded format) above, so that we can encrypt your data.',
   );
 
-  /** The public key value */
-  value = model<string>('');
+  /** Current value (required by FormValueControl) */
+  value = model.required<string>();
 
-  /** Error message for invalid keys */
-  error = signal<string>('');
+  /** Validation errors from parent form */
+  errors = input<readonly ValidationError.WithOptionalField[]>([]);
 
-  /** Whether the key is valid */
-  isValid = computed(() => !this.error() && this.value().length > 0);
+  /** Invalid state from parent form */
+  invalid = input(false);
 
-  /** Event emitted when the key changes */
-  valueChange = output<string>();
+  /** Internal FormControl for Material form field integration */
+  #formControl = new FormControl('');
 
-  /** Event emitted when the key validity changes */
-  validityChange = output<boolean>();
+  /** Shows errors when field has value and is invalid */
+  errorStateMatcher: ErrorStateMatcher = {
+    isErrorState: () => !!this.value() && this.invalid(),
+  };
 
   /**
-   * Remove headers and fix padding of the given base64 encoded key
-   * @param key - the key to be trimmed
-   * @returns the trimmed key
+   * Expose formControl for template
+   * @returns Internal FormControl instance
    */
-  #trimKey(key: string): string {
-    // allow and trim headers and footers for public keys
-    key = key
-      .replace(/-----(BEGIN|END) CRYPT4GH PUBLIC KEY-----/g, '')
-      .replace(/\s/g, '')
-      .replace(/^-+/, '')
-      .replace(/[-=]+$/, '');
-    const fix = key.length % 4;
-    if (fix) {
-      key += '='.repeat(4 - fix);
+  get formControl() {
+    return this.#formControl;
+  }
+
+  /**
+   * Trimmed key value ready for submission
+   * @returns Processed key without headers/footers and with correct padding
+   */
+  get trimmedKey(): string {
+    return trimKey(this.value());
+  }
+
+  #validateEffect = effect(() => {
+    if (this.invalid()) {
+      this.#formControl.setErrors({ invalid: true });
+    } else {
+      this.#formControl.setErrors(null);
     }
-    return key;
-  }
+  });
 
-  /**
-   * Check whether the given key is a valid public key.
-   * @param key - the key in question
-   * @returns an internal error code
-   */
-  #checkPubKey(key: string): number {
-    if (key.match(/-.*PRIVATE.*-/)) {
-      return 2; // if any kind of private key has been posted
-    }
-    // allow and trim headers and footers for public keys
-    key = this.#trimKey(key);
-    if (!key) {
-      return 1; // key is empty after trimming
-    }
-    // Base64 decode the key
-    let binKey: Uint8Array;
-    try {
-      const binStr = atob(key);
-      binKey = new Uint8Array(binStr.length);
-      for (let i = 0; i < binStr.length; i++) {
-        binKey[i] = binStr.charCodeAt(i);
-      }
-    } catch {
-      return 3; // key is not a valid Base64 string
-    }
-    if (binKey.length !== 32) {
-      // key does not have the right length for a Crypt4GH public key
-      const prefix = new TextEncoder().encode('c4gh-');
-      if (this.#compareUint8Arrays(binKey.subarray(0, 5), prefix)) {
-        return 2; // key is actually a Base64 encoded Crypt4GH private key
-      }
-      return 3; // key is something else
-    }
-    return 0; // key seems to be ok
-  }
-
-  /**
-   * Compare two Uint8Array objects for equality
-   * @param arr1 - the first array
-   * @param arr2 - the second array
-   * @returns true if the arrays are equal, false otherwise
-   */
-  #compareUint8Arrays(arr1: Uint8Array, arr2: Uint8Array): boolean {
-    return (
-      arr1.length === arr2.length && arr1.every((value, index) => value === arr2[index])
-    );
-  }
-
-  /**
-   * Handle input events and update the model
-   * @param event - the input event
-   */
-  onInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.value.set(input.value);
-    this.checkPubKey();
-  }
-
-  /**
-   * Check whether the entered public key is valid
-   * and set error accordingly.
-   */
-  checkPubKey(): void {
-    const errorCode = this.#checkPubKey(this.value());
-    const errorMessage =
-      {
-        1: 'The key is empty.',
-        2: 'Please do not paste your private key here!',
-        3: 'This does not seem to be a Base64 encoded Crypt4GH key.',
-      }[errorCode] ?? '';
-    this.error.set(errorMessage);
-    this.validityChange.emit(this.isValid());
-  }
-
-  /**
-   * Get the trimmed public key value
-   * @returns the trimmed key or empty string if invalid
-   */
-  getTrimmedKey(): string {
-    return this.error() ? '' : this.#trimKey(this.value());
-  }
+  #valueEffect = effect(() => {
+    this.#formControl.setValue(this.value(), { emitEvent: false });
+  });
 }

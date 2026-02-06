@@ -1,0 +1,181 @@
+<h1 mat-dialog-title>Create a Download Token</h1>
+<div mat-dialog-content>
+  @if (datasetLoading()) {
+    <div class="flex items-center gap-3 py-4">
+      <mat-spinner [diameter]="24"></mat-spinner>
+      <p class="text-base">Loading dataset...</p>
+    </div>
+  } @else if (!dataset()) {
+    <div class="py-4">
+      <p class="text-base text-red-600">This dataset could not be loaded.</p>
+    </div>
+  } @else {
+    <div class="mb-4">
+      <mat-card appearance="outlined" class="text-primary mb-4">
+        <mat-card-header>
+          <mat-card-title>Dataset</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="mt-2"><strong>Dataset ID:</strong> {{ dataset()!.id }}</p>
+          <p class="mt-1"><strong>Title:</strong> {{ dataset()!.title }}</p>
+          <app-paragraphs
+            [text]="dataset()!.description"
+            label="Description"
+            pClasses="text-sm mb-0.5"
+          />
+          <p class="mt-3"
+            >This dataset has
+            <strong>{{ (dataset()!.files || []).length }}</strong> downloadable
+            files.</p
+          >
+        </mat-card-content>
+      </mat-card>
+      <p class="w-full">
+        You have been granted download access to this dataset from
+        {{ grant.valid_from | date: friendlyDateFormat }} to
+        {{ grant.valid_until | date: friendlyDateFormat }} &ndash;
+        {{ grant.daysRemaining }} days left.
+      </p>
+      @if (iva === undefined) {
+        <p class="flex items-center">
+          <span class="text-error"
+            ><mat-icon fontIcon="error" class="me-2 mt-1 shrink-0"></mat-icon></span
+          ><span class="text-error">Missing IVA</span>
+        </p>
+        <p>
+          We could not find an independent verification address (IVA) associated with
+          this grant. Please contact the helpdesk for assistance with this issue.
+        </p>
+      } @else if (iva.state !== 'Verified') {
+        <p class="flex items-center">
+          <span class="text-warning"
+            ><mat-icon fontIcon="warning" class="me-2 mt-1 shrink-0"></mat-icon
+          ></span>
+          <span
+            ><span class="text-warning">Unverified IVA:</span>
+            {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}</span
+          >
+        </p>
+        <p
+          >In order to download data using this access grant, the above independent
+          verification address (IVA) must still be verified. You can create an IVA and
+          request verification here on your user account page.</p
+        >
+      } @else if (tokenIsLoading()) {
+        <div class="mt-6 mb-3 flex items-center gap-3">
+          <mat-spinner [diameter]="24"></mat-spinner>
+          <p class="text-base">Creating your download token...</p>
+        </div>
+      } @else if (tokenError()) {
+        <p class="mt-6 mb-3 font-bold text-red-600">{{ tokenError() }}</p>
+        <p>
+          Please
+          <button type="button" class="cursor-pointer underline" (click)="resetToken()"
+            >try again</button
+          >
+          later or
+          <a
+            class="cursor-pointer underline"
+            href="https://www.ghga.de/about-us/contact"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-umami-event="Download Token Creation Contact Us Clicked"
+            >contact us</a
+          >
+          for support.
+        </p>
+      } @else if (token()) {
+        <p class="mt-6 mb-3 font-bold text-green-600"
+          >Your download token has been created.</p
+        >
+        <mat-card appearance="outlined" class="text-primary mb-4">
+          <mat-card-header>
+            <mat-card-title>Download token</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <button
+              mat-fab
+              class="float-right mt-6 ml-4"
+              (click)="copyToken()"
+              title="Copy token to clipboard"
+              data-umami-event="Download Token Creation Copy Token Clicked"
+            >
+              <mat-icon fontIcon="content_copy"></mat-icon>
+            </button>
+            <p class="mt-4"
+              >Please use the following token to download the selected dataset:</p
+            >
+            <pre
+              class="mb-3 whitespace-pre-wrap"
+            ><span class="text-sm break-all text-green-900">{{ token() }}</span></pre>
+            <p class="mt-4"
+              ><strong
+                >Make sure to copy the token now as you will not be able to see this
+                again!</strong
+              ></p
+            >
+            <p class="mt-4">
+              Your token expires on {{ tokenExpiration() | date: friendlyDateFormat }}.
+            </p>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <p class="mb-6">
+          To download datasets, you need to use the GHGA connector with a token that you
+          can create in the following step.
+        </p>
+
+        <div class="mt-4 mb-2">
+          <mat-form-field class="container max-w-5xl" subscriptSizing="dynamic">
+            <mat-label>File IDs</mat-label>
+            <textarea
+              matInput
+              placeholder="file-id-1, file-id-2, ..."
+              [formField]="downloadForm.files"
+            ></textarea>
+            <mat-hint class="-mt-2 mb-3">
+              <p>
+                You can restrict the download to certain files only. To do so, enter the
+                desired file IDs above, separated by whitespace or commas.
+              </p>
+              <p>
+                Otherwise, leave the field above empty in order to download all files
+                belonging to the dataset.
+              </p>
+            </mat-hint>
+          </mat-form-field>
+
+          <app-pubkey-input [formField]="downloadForm.pubkey" />
+        </div>
+      }
+    </div>
+  }
+</div>
+<div mat-dialog-actions>
+  <button
+    mat-button
+    (click)="onClose()"
+    data-umami-event="Download Work Package Dialog Close Clicked"
+  >
+    Close
+  </button>
+  @if (
+    dataset() &&
+    grant.iva &&
+    grant.iva.state === 'Verified' &&
+    !token() &&
+    !tokenError() &&
+    !tokenIsLoading()
+  ) {
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="onCreateToken()"
+      [disabled]="!downloadForm().valid()"
+      data-umami-event="Download Work Package Dialog Generate Token Clicked"
+    >
+      <mat-icon fontIcon="download"></mat-icon>
+      Generate download token
+    </button>
+  }
+</div>

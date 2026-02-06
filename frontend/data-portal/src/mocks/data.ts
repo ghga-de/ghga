@@ -893,7 +893,7 @@ export const accessGrants: AccessGrant[] = [
     user_name: 'John Doe',
     user_title: 'Dr.',
     user_email: 'doe@home.org',
-    dataset_title: 'Test dataset for details',
+    dataset_title: 'Test dataset 1 ready for download',
     dac_alias: 'SOME-DAC',
     dac_email: 'dac-main@some.org',
     iva_id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
@@ -901,14 +901,14 @@ export const accessGrants: AccessGrant[] = [
   {
     id: 'grant-ghga-8c4b9d5a1f0b',
     user_id: 'doe@test.dev',
-    dataset_id: 'GHGAD12345678901234',
+    dataset_id: 'GHGAD12345678901235',
     created: '2025-07-20T10:00:00Z',
     valid_from: '2025-08-01T00:00:00Z',
     valid_until: '2026-08-01T00:00:00Z',
     user_name: 'John Doe',
     user_title: 'Dr.',
     user_email: 'doe@home.org',
-    dataset_title: 'Test dataset for details',
+    dataset_title: 'Test dataset 2 with an unverified IVA',
     dac_alias: 'SOME-DAC',
     dac_email: 'dac-main@some.org',
     iva_id: 'fc3c0ad8-01a4-4eb1-b8f3-40b04bb4bcb2',
@@ -916,14 +916,15 @@ export const accessGrants: AccessGrant[] = [
   {
     id: 'grant-ghga-8c4b9d5a1f0c',
     user_id: 'doe@test.dev',
-    dataset_id: 'GHGAD12345678901234',
+    dataset_id: 'GHGAD12345678901236',
     created: '2025-07-20T10:00:00Z',
     valid_from: '2025-08-01T00:00:00Z',
     valid_until: '2026-08-01T00:00:00Z',
     user_name: 'John Doe',
     user_title: 'Dr.',
     user_email: 'doe@home.org',
-    dataset_title: 'Test dataset for details',
+    dataset_title:
+      'Test dataset 3 for download with a long title and a broken IVA which should never happen',
     dac_alias: 'SOME-DAC',
     dac_email: 'dac-main@some.org',
     iva_id: '347368b5-718e-49ba-80ad-bc128e83b609',
@@ -931,14 +932,14 @@ export const accessGrants: AccessGrant[] = [
   {
     id: 'grant-ghga-8c4b9d5a1f0d',
     user_id: 'doe@test.dev',
-    dataset_id: 'GHGAD12345678901235',
+    dataset_id: 'GHGAD12345678901237',
     created: '2023-05-19T12:00:00Z',
     valid_from: '2025-01-05T00:00:00Z',
     valid_until: '2025-01-10T00:00:00Z',
     user_name: 'John Doe',
     user_title: 'Dr.',
     user_email: 'doe@home.org',
-    dataset_title: 'Test dataset for details',
+    dataset_title: 'Test dataset 4 for download',
     dac_alias: 'SOME-DAC',
     dac_email: 'dac-main@some.org',
     iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
@@ -946,14 +947,14 @@ export const accessGrants: AccessGrant[] = [
   {
     id: 'grant-ghga-8c4b9d5a1f0e',
     user_id: 'roe@test.dev',
-    dataset_id: 'GHGAD12345678901236',
+    dataset_id: 'GHGAD12345678901234',
     created: '2025-07-20T10:00:00Z',
     valid_from: '2027-08-01T00:00:00Z',
     valid_until: '2028-08-01T00:00:00Z',
     user_name: 'Jane Doe',
     user_title: 'Prof.',
     user_email: 'roe@home.org',
-    dataset_title: 'Test dataset for details',
+    dataset_title: 'Test dataset 1 for download',
     dac_alias: 'SOME-DAC',
     dac_email: 'dac-main@some.org',
     iva_id: '0063effb-2c43-4948-ba6f-f15425cb72d7',
@@ -1047,18 +1048,22 @@ export const datasetInformation: DatasetInformation = {
 export const datasets: DatasetWithExpiration[] = [
   {
     id: 'GHGAD12345678901234',
-    title: 'Some dataset to upload',
+    title: 'Some dataset to download',
     description:
       'This is a very interesting dataset that can be used' +
-      ' to test the upload functionality of the Data Portal.' +
+      ' to test the download functionality of the Data Portal.' +
       ' Note that the description can be longer than the title.',
-    stage: 'upload',
-    files: [],
+    stage: 'download',
+    files: [
+      { extension: 'txt', id: 'GHGAF12345678901234' },
+      { extension: 'csv', id: 'GHGAF12345678901235' },
+      { extension: 'pdf', id: 'GHGAF12345678901236' },
+    ],
     expires: access_ends,
   },
   {
     id: 'GHGAD12345678901235',
-    title: 'Some dataset to download',
+    title: 'Another dataset to download',
     description:
       'This is a very interesting dataset that can be used' +
       ' to test the download functionality of the Data Portal.' +
@@ -1069,7 +1074,7 @@ export const datasets: DatasetWithExpiration[] = [
   },
   {
     id: 'GHGAD12345678901236',
-    title: 'Another dataset to download',
+    title: 'A third dataset to download',
     description:
       'This is another todally ineresting dataset that can be used' +
       ' to test the download functionality of the Data Portal.' +
@@ -1080,7 +1085,7 @@ export const datasets: DatasetWithExpiration[] = [
   },
   {
     id: 'GHGAD12345678901237',
-    title: 'Another dataset to download',
+    title: 'A fourth dataset to download',
     description:
       'This is another todally ineresting dataset that can be used' +
       ' to test the download functionality of the Data Portal.' +
@@ -1091,7 +1096,7 @@ export const datasets: DatasetWithExpiration[] = [
   },
   {
     id: 'GHGAD12345678901238',
-    title: 'Another dataset to download',
+    title: 'A fifth dataset to download',
     description:
       'This is another todally ineresting dataset that can be used' +
       ' to test the download functionality of the Data Portal.' +

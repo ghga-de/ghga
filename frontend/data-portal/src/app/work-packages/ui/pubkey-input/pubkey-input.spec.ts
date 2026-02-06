@@ -4,20 +4,27 @@
  * @license Apache-2.0
  */
 
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { PubkeyInputComponent } from './pubkey-input';
+import { apply, form } from '@angular/forms/signals';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { PubkeyFieldComponent } from './pubkey-input';
 
-describe('PubkeyInputComponent', () => {
-  let component: PubkeyInputComponent;
-  let fixture: ComponentFixture<PubkeyInputComponent>;
+describe('PubkeyFieldComponent', () => {
+  let component: PubkeyFieldComponent;
+  let fixture: ComponentFixture<PubkeyFieldComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PubkeyInputComponent],
+      imports: [PubkeyFieldComponent, NoopAnimationsModule],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(PubkeyInputComponent);
+    fixture = TestBed.createComponent(PubkeyFieldComponent);
     component = fixture.componentInstance;
+
+    // Initialize the value signal as required by FormValueControl
+    component.value.set('');
+
     fixture.detectChanges();
   });
 
@@ -25,105 +32,150 @@ describe('PubkeyInputComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize with empty value and no error', () => {
-    expect(component.value()).toBe('');
-    expect(component.error()).toBe('');
-    expect(component.isValid()).toBe(false);
-  });
-
-  it('should detect empty key after trimming', () => {
-    component.value.set('   ');
-    component.checkPubKey();
-    expect(component.error()).toBe('The key is empty.');
-    expect(component.isValid()).toBe(false);
-  });
-
-  it('should detect private key', () => {
-    component.value.set('-----BEGIN CRYPT4GH PRIVATE KEY-----');
-    component.checkPubKey();
-    expect(component.error()).toBe('Please do not paste your private key here!');
-    expect(component.isValid()).toBe(false);
-  });
-
-  it('should detect invalid base64', () => {
-    component.value.set('not-valid-base64!!!');
-    component.checkPubKey();
-    expect(component.error()).toBe(
-      'This does not seem to be a Base64 encoded Crypt4GH key.',
-    );
-    expect(component.isValid()).toBe(false);
-  });
-
-  it('should accept valid 32-byte key', () => {
+  it('should provide trimmedKey getter', () => {
     component.value.set('MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI');
-    component.checkPubKey();
-    expect(component.error()).toBe('');
-    expect(component.isValid()).toBe(true);
-  });
-
-  it('should reject key that is too short (16 bytes)', () => {
-    component.value.set('MTIzNDU2Nzg5MDEyMzQ1Ng==');
-    component.checkPubKey();
-    expect(component.error()).toBe(
-      'This does not seem to be a Base64 encoded Crypt4GH key.',
-    );
-    expect(component.isValid()).toBe(false);
-  });
-
-  it('should reject key that is too long (64 bytes)', () => {
-    component.value.set(
-      'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Ng==',
-    );
-    component.checkPubKey();
-    expect(component.error()).toBe(
-      'This does not seem to be a Base64 encoded Crypt4GH key.',
-    );
-    expect(component.isValid()).toBe(false);
+    expect(component.trimmedKey).toBe('MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=');
   });
 
   it('should trim headers and footers', () => {
-    component.value.set(
-      `-----BEGIN CRYPT4GH PUBLIC KEY-----
+    const keyWithHeaders = `-----BEGIN CRYPT4GH PUBLIC KEY-----
 MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
------END CRYPT4GH PUBLIC KEY-----`,
-    );
-    component.checkPubKey();
-    expect(component.error()).toBe('');
-    // The trimmed key has padding added to make length divisible by 4
-    expect(component.getTrimmedKey()).toBe(
-      'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-    );
+-----END CRYPT4GH PUBLIC KEY-----`;
+    component.value.set(keyWithHeaders);
+    expect(component.trimmedKey).toBe('MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=');
   });
 
   it('should fix base64 padding', () => {
     const keyWithoutPadding = 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMT';
     component.value.set(keyWithoutPadding);
-    const trimmed = component.getTrimmedKey();
-    // Should add one '=' for padding
+    const trimmed = component.trimmedKey;
     expect(trimmed.endsWith('=')).toBe(true);
   });
 
-  it('should detect encoded private key', () => {
-    // Create a key that starts with 'c4gh-' prefix when decoded
-    const privateKeyEncoded = btoa('c4gh-test-private-key-content-here');
-    component.value.set(privateKeyEncoded);
-    component.checkPubKey();
-    expect(component.error()).toBe('Please do not paste your private key here!');
-  });
+  describe('validation schema', () => {
+    it('should detect empty key', () => {
+      TestBed.runInInjectionContext(() => {
+        const model = signal({ pubkey: '' });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
 
-  it('should return empty string for invalid key when getting trimmed key', () => {
-    component.value.set('invalid');
-    component.checkPubKey();
-    expect(component.getTrimmedKey()).toBe('');
-  });
+        expect(testForm().valid()).toBe(false);
+        expect(testForm.pubkey().errors().length).toBeGreaterThan(0);
+        expect(testForm.pubkey().errors()[0].message).toBe('The key is empty.');
+      });
+    });
 
-  it('should emit validity change event', () => {
-    const validitySpy = vitest.fn();
-    component.validityChange.subscribe(validitySpy);
+    it('should detect empty key after trimming', () => {
+      TestBed.runInInjectionContext(() => {
+        const model = signal({ pubkey: '   ' });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
 
-    component.value.set('MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI');
-    component.checkPubKey();
+        expect(testForm().valid()).toBe(false);
+        expect(testForm.pubkey().errors()[0].message).toBe('The key is empty.');
+      });
+    });
 
-    expect(validitySpy).toHaveBeenCalledWith(true);
+    it('should detect private key by header', () => {
+      TestBed.runInInjectionContext(() => {
+        const model = signal({ pubkey: '-----BEGIN CRYPT4GH PRIVATE KEY-----' });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
+
+        expect(testForm().valid()).toBe(false);
+        expect(testForm.pubkey().errors()[0].message).toBe(
+          'Please do not paste your private key here!',
+        );
+      });
+    });
+
+    it('should detect invalid base64', () => {
+      TestBed.runInInjectionContext(() => {
+        const model = signal({ pubkey: 'not-valid-base64!!!' });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
+
+        expect(testForm().valid()).toBe(false);
+        expect(testForm.pubkey().errors()[0].message).toBe(
+          'This does not seem to be a Base64 encoded Crypt4GH key.',
+        );
+      });
+    });
+
+    it('should accept valid 32-byte key', () => {
+      TestBed.runInInjectionContext(() => {
+        const model = signal({ pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI' });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
+
+        expect(testForm().valid()).toBe(true);
+      });
+    });
+
+    it('should reject key that is too short (16 bytes)', () => {
+      TestBed.runInInjectionContext(() => {
+        const model = signal({ pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Ng==' });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
+
+        expect(testForm().valid()).toBe(false);
+        expect(testForm.pubkey().errors()[0].message).toBe(
+          'This does not seem to be a Base64 encoded Crypt4GH key.',
+        );
+      });
+    });
+
+    it('should reject key that is too long (64 bytes)', () => {
+      TestBed.runInInjectionContext(() => {
+        const model = signal({
+          pubkey:
+            'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Ng==',
+        });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
+
+        expect(testForm().valid()).toBe(false);
+        expect(testForm.pubkey().errors()[0].message).toBe(
+          'This does not seem to be a Base64 encoded Crypt4GH key.',
+        );
+      });
+    });
+
+    it('should accept key with headers and footers', () => {
+      TestBed.runInInjectionContext(() => {
+        const model = signal({
+          pubkey: `-----BEGIN CRYPT4GH PUBLIC KEY-----
+MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
+-----END CRYPT4GH PUBLIC KEY-----`,
+        });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
+
+        expect(testForm().valid()).toBe(true);
+      });
+    });
+
+    it('should detect encoded private key', () => {
+      TestBed.runInInjectionContext(() => {
+        const privateKeyEncoded = btoa('c4gh-test-private-key-content-here');
+        const model = signal({ pubkey: privateKeyEncoded });
+        const testForm = form(model, (p) => {
+          apply(p.pubkey, PubkeyFieldComponent.schema);
+        });
+
+        expect(testForm().valid()).toBe(false);
+        expect(testForm.pubkey().errors()[0].message).toBe(
+          'Please do not paste your private key here!',
+        );
+      });
+    });
   });
 });

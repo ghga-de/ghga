@@ -127,6 +127,10 @@ export default [
                 ['pipe', { context: 'ivas' }],
               ],
             },
+            {
+              from: [['model', { context: 'access-requests' }]],
+              allow: [['model', { context: 'ivas' }]],
+            },
             // auth context may import from verification addresses context
             {
               from: [['features', { context: 'auth' }]],
@@ -242,6 +246,7 @@ export default [
               from: ['features', 'service', 'model', 'mock'],
               allow: [['model', { context: 'auth' }]],
             },
+
             // Mock module may only import models
             {
               from: ['mock'],
