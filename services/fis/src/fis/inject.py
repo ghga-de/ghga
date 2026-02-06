@@ -123,12 +123,12 @@ async def prepare_rest_app(
     ):
         app.dependency_overrides[dummies.config_dummy] = lambda: config
 
-        app.dependency_overrides[dummies.upload_processor_port] = (
-            lambda: upload_metadata_processor
+        app.dependency_overrides[dummies.upload_processor_port] = lambda: (
+            upload_metadata_processor
         )
 
-        app.dependency_overrides[dummies.legacy_upload_processor] = (
-            lambda: legacy_upload_metadata_processor
+        app.dependency_overrides[dummies.legacy_upload_processor] = lambda: (
+            legacy_upload_metadata_processor
         )
 
         yield app
