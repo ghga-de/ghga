@@ -2,7 +2,7 @@ image:
   repository: ghga/datahub-monitor
   pullPolicy: IfNotPresent
 
-cronSchedule: "0 15 * * *"
+cronSchedule: "0 * * * *"
 
 cronjob:
   enabled: true
@@ -10,7 +10,7 @@ cronjob:
 configPrefix: ""
 
 configMap:
-  mountPath: /app/config.yaml
+  mountPath: /app/.config.yaml
   envVar:
     enabled: false
 
