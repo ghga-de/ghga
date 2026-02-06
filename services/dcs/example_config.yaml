@@ -76,4 +76,5 @@ retry_after_min: 5
 service_instance_id: '001'
 service_name: dcs
 staging_speed: 100
+timeout_keep_alive: 90
 workers: 1
