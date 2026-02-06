@@ -26,13 +26,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/purge-controller-service):
 ```bash
-docker pull ghga/purge-controller-service:5.0.5
+docker pull ghga/purge-controller-service:5.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/purge-controller-service:5.0.5 .
+docker build -t ghga/purge-controller-service:5.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -40,7 +40,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/purge-controller-service:5.0.5 --help
+docker run -p 8080:8080 ghga/purge-controller-service:5.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -411,6 +411,26 @@ The service requires the following configuration parameters:
 - <a id="properties/auto_reload"></a>**`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 
 - <a id="properties/workers"></a>**`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+
+- <a id="properties/timeout_keep_alive"></a>**`timeout_keep_alive`** *(integer)*: The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures. Default: `90`.
+
+
+  Examples:
+
+  ```json
+  5
+  ```
+
+
+  ```json
+  90
+  ```
+
+
+  ```json
+  5400
+  ```
+
 
 - <a id="properties/api_root_path"></a>**`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
 

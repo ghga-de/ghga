@@ -38,6 +38,7 @@ otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '1'
 service_name: pcs
+timeout_keep_alive: 90
 token_hashes:
 - abcdef
 - ghijkl
