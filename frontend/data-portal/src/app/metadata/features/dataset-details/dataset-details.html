@@ -101,7 +101,9 @@
                   ><mat-icon inline fontIcon="book_2"></mat-icon></span
                 ><span>Study</span>
               </h2>
-              <p class="text-base"><strong>ID:</strong> {{ study().accession }}</p>
+              <p class="text-base"><strong>ID: </strong>
+                <a routerLink="/study/{{ study().accession }}"
+                  data-umami-event="Dataset Details Study Accession Clicked">{{ study().accession }}</a></p>
               @if (study().ega_accession) {
                 <p class="text-base">
                   <strong>EGA ID:</strong> {{ study().ega_accession }}

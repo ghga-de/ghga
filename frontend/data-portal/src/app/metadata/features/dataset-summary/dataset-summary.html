@@ -49,18 +49,35 @@
             <mat-icon inline fontIcon="book_2"></mat-icon>
           </div>
           <div class="*:mb-0.5">
-            <p>
-              <strong>Part of study: </strong>
-            </p>
-            <p>
-              {{ studiesSummary().count > 0 ? studiesSummaryStats().title : 'None' }}
-            </p>
-            <p>
-              <strong>Accession ID: </strong>
-            </p>
-            <p>
-              {{ studiesSummary().count > 0 ? studiesSummaryStats().accession : 'N/A' }}
-            </p>
+            @if(studiesSummary().count > 0) {
+              <p>
+                <strong>Part of study: </strong>
+              </p>
+              <p>
+                <a
+                  routerLink="/study/{{ studiesSummaryStats().accession }}"
+                  data-umami-event="Dataset Summary Study Title Clicked"
+                  >{{  studiesSummaryStats().title }}</a>
+              </p>
+              <p>
+                <strong>Accession ID: </strong>
+              </p>
+              <p>
+                <a
+                  routerLink="/study/{{ studiesSummaryStats().accession }}"
+                  data-umami-event="Dataset Summary Study Accession Clicked"
+                  >{{  studiesSummaryStats().accession }}</a>
+              </p>
+            } @else {
+              <p>
+                <strong>Part of study: </strong>
+              </p>
+              <p>None</p>
+              <p>
+                <strong>Accession ID: </strong>
+              </p>
+              <p>N/A</p>
+            }
           </div>
         </div>
 
