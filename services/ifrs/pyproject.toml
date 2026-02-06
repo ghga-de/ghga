@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=80.9"]
+requires = ["setuptools>=80.10"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ifrs"
-version = "6.0.7"
+version = "6.1.0"
 description = "Internal File Registry Service - This service acts as a registry for the internal location and representation of files."
 readme = "README.md"
 authors = [
