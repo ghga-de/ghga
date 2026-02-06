@@ -49,6 +49,7 @@ otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '001'
 service_name: ucs
+timeout_keep_alive: 90
 uos_auth_config:
   auth_algs:
   - ES256

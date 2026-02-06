@@ -66,6 +66,7 @@ async def consume_events(run_forever: bool = True):
         await event_subscriber.run(forever=run_forever)
 
 
+# TODO: In the actual UCS ticket, move index creation to the .get_dao() call
 async def initialize() -> None:
     """Operations to be run in an init container before service startup."""
     config = Config()

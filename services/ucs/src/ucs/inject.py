@@ -108,11 +108,11 @@ async def prepare_rest_app(
         ) as upload_controller,
     ):
         auth_provider_bundle = JWTAuthContextProviderBundle(config=config)
-        app.dependency_overrides[dummies.auth_provider_bundle] = (
-            lambda: auth_provider_bundle
+        app.dependency_overrides[dummies.auth_provider_bundle] = lambda: (
+            auth_provider_bundle
         )
-        app.dependency_overrides[dummies.upload_controller_port] = (
-            lambda: upload_controller
+        app.dependency_overrides[dummies.upload_controller_port] = lambda: (
+            upload_controller
         )
         yield app
 

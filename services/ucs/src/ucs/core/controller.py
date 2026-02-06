@@ -26,7 +26,7 @@ from ghga_event_schemas.pydantic_ import (
     FileUploadState,
 )
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
-from hexkit.protocols.dao import ResourceAlreadyExistsError
+from hexkit.protocols.dao import UniqueConstraintViolationError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
@@ -107,7 +107,7 @@ class UploadController(UploadControllerPort):
 
             await self._file_upload_dao.insert(file_upload)
             return file_id
-        except ResourceAlreadyExistsError as err:
+        except UniqueConstraintViolationError as err:
             error = self.FileUploadAlreadyExists(alias=alias)
             log.error(
                 error,
