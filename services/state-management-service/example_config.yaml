@@ -52,6 +52,7 @@ port: 8080
 service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
 service_instance_id: '1'
 service_name: sms
+timeout_keep_alive: 90
 token_hashes:
 - 7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e
 vault_auth_mount_point: null
