@@ -203,12 +203,12 @@ describe('IvaService', () => {
     testBed.tick();
     const req = httpMock.expectOne('http://mock.dev/auth/ivas');
     expect(req.request.method).toBe('GET');
-    req.flush('Mock Error', { status: 401, statusText: 'Server Error' });
+    req.flush('Mock Error', { status: 500, statusText: 'Server Error' });
     await Promise.resolve(); // wait for loader to return
     expect(service.allIvas.isLoading()).toBe(false);
     const error = service.allIvas.error() as HttpErrorResponse;
     expect(error).toBeDefined();
-    expect(error.status).toBe(401);
+    expect(error.status).toBe(500);
     expect(error.statusText).toBe('Server Error');
     expect(() => service.allIvas.value()).toThrow();
   });
