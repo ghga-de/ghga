@@ -24,6 +24,7 @@ storage_aliases:
 storage_labels:
   storage1: Heidelberg
   storage2: "T\xFCbingen"
+timeout_keep_alive: 90
 ucs_api_url: http://127.0.0.1/upload
 workers: 1
 wps_api_url: http://127.0.0.1

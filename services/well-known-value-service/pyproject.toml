@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.9",
+    "setuptools>=80.10",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,10 +21,10 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wkvs"
-version = "2.0.0"
+version = "2.1.0"
 description = "Well-Known-Value-Service - Provides access to common values via API"
 dependencies = [
-    "ghga-service-commons[api]>=6.0",
+    "ghga-service-commons[api]>=7.0",
     "hexkit>=7.2",
     "typer>=0.20",
 ]
@@ -145,7 +145,7 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.4"
+minversion = "9.0"
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 
