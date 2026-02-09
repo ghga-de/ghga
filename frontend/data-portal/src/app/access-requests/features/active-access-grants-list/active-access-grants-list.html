@@ -39,6 +39,9 @@
               <button
                 mat-stroked-button
                 (click)="openDownloadDialog(grant)"
+                [attr.aria-label]="
+                  'Create a download token for dataset ' + grant.dataset_id
+                "
                 data-umami-event="Granted Access Requests List Download Token Clicked"
                 class="w-full sm:w-64"
               >

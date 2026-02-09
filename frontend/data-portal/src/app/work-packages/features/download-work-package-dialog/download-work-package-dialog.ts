@@ -128,7 +128,7 @@ export class DownloadWorkPackageDialogComponent {
 
     const workPackage: WorkPackage = {
       dataset_id: dataset.id,
-      // if no files have been specified, null indicate to download all
+      // if no files have been specified, null indicates to download all
       file_ids: fileIds.length ? fileIds : null,
       type: dataset.stage,
       user_public_crypt4gh_key: this.pubkeyField().trimmedKey,
