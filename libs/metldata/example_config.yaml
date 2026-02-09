@@ -237,4 +237,5 @@ resource_deletion_type: searchable_resource_deleted
 resource_upsertion_type: searchable_resource_upserted
 service_instance_id: '001'
 service_name: metldata
+timeout_keep_alive: 90
 workers: 1
