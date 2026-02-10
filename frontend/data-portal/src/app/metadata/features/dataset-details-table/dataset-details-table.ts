@@ -24,7 +24,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatTooltip } from '@angular/material/tooltip';
 import {
   datasetDetailsTableColumns,
   dataSortingDataAccessor,
@@ -50,7 +49,6 @@ import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
     MatPaginatorModule,
     MatSortModule,
     WithCopyButton,
-    MatTooltip,
   ],
   templateUrl: './dataset-details-table.html',
   styleUrl: './dataset-details-table.scss',
@@ -71,10 +69,7 @@ export class DatasetDetailsTableComponent implements AfterViewInit {
     return `${header})`;
   });
 
-  protected tooltipDisabled = signal(false);
   protected filterValue = signal('');
-
-  #hoverHeaderTime: number = 0;
 
   /**
    * Apply filter to the data source
@@ -95,26 +90,6 @@ export class DatasetDetailsTableComponent implements AfterViewInit {
     input.value = '';
     this.filterValue.set('');
     this.dataSource.filter = '';
-  }
-
-  /**
-   * When entering the tooltip, memorize start time
-   */
-  startHoverHeader(): void {
-    this.#hoverHeaderTime = Date.now();
-  }
-
-  /**
-   * After leaving the tooltip, disable if it was shown long enough
-   */
-  endHoverHeader(): void {
-    if (Date.now() - this.#hoverHeaderTime < 1000) return;
-    const key = `hint.${this.tableName()}.details.shown`;
-    if (!sessionStorage.getItem(key)) {
-      sessionStorage.setItem(key, 'true');
-      this.tooltipDisabled.set(true);
-    }
-    this.#hoverHeaderTime = 0;
   }
 
   protected numItems = computed(() => this.data().length);
@@ -164,8 +139,5 @@ export class DatasetDetailsTableComponent implements AfterViewInit {
     this.matPaginators.changes.subscribe(() => {
       if (this.paginator) this.dataSource.paginator = this.paginator;
     });
-
-    const key = `hint.${this.tableName()}.details.shown`;
-    if (sessionStorage.getItem(key)) this.tooltipDisabled.set(true);
   }
 }
