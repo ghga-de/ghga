@@ -115,7 +115,7 @@ export class VerificationDialogComponent {
               break;
             case 429:
               this.#notify.showError(
-                'Too many attempts at entering a code. Contact address has been reverted to unverified.',
+                'Too many attempts at entering a code. IVA has been reverted to unverified.',
               );
               break;
             default:

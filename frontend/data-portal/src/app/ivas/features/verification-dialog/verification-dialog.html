@@ -1,8 +1,9 @@
-<h1 mat-dialog-title>Contact address verification</h1>
+<h1 mat-dialog-title>IVA verification</h1>
 <div mat-dialog-content>
   <p class="mb-5 max-w-md">
-    We sent a verification code to your contact address
-    <strong>{{ address() }}</strong>. Please enter it here:
+    We sent a verification code to your IVA
+    <strong>{{ address() }}</strong
+    >. Please enter it here:
   </p>
   <form defaultButton="submit-code" (ngSubmit)="onSubmit()">
     <mat-form-field class="w-full sm:w-auto">
@@ -16,10 +17,9 @@
         (input)="onInput($event)"
       />
     </mat-form-field>
-    <mat-error
-      >{{ verificationError() ? 'Verification failed. Please try again.' : ''
-      }}</mat-error
-    >
+    <mat-error>{{
+      verificationError() ? 'Verification failed. Please try again.' : ''
+    }}</mat-error>
   </form>
 </div>
 <div mat-dialog-actions cdkTrapFocus>

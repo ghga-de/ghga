@@ -38,8 +38,6 @@ describe('UserIvaListComponent', () => {
 
   it('should say that there are no user IVAs', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain(
-      'You have not yet created any contact addresses.',
-    );
+    expect(compiled.textContent).toContain('You have not yet created any IVAs.');
   });
 });

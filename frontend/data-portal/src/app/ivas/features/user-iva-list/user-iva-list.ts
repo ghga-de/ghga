@@ -158,7 +158,7 @@ export class UserIvaListComponent implements OnInit {
       },
       error: (err) => {
         console.debug(err);
-        this.#notify.showError('Address could not be deleted');
+        this.#notify.showError('IVA could not be deleted');
       },
     });
   }
@@ -170,7 +170,7 @@ export class UserIvaListComponent implements OnInit {
   deleteWhenConfirmed(iva: Iva): void {
     const address = this.#ivaAddress(iva);
     this.#confirm.confirm({
-      title: 'Confirm deletion of contact address',
+      title: 'Confirm deletion of IVA',
       message:
         `<p>Please confirm deleting the ${address}.` +
         '</p><p><strong>Remember that you will lose access to any datasets' +
@@ -191,11 +191,11 @@ export class UserIvaListComponent implements OnInit {
   add(type: IvaType, value: string): void {
     this.#ivaService.createIva({ type, value }).subscribe({
       next: () => {
-        this.#notify.showSuccess('Contact address has been added');
+        this.#notify.showSuccess('IVA has been added');
       },
       error: (err) => {
         console.debug(err);
-        this.#notify.showError('Contact address could not be added');
+        this.#notify.showError('IVA could not be added');
       },
     });
   }

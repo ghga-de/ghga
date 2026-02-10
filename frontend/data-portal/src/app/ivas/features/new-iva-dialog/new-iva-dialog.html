@@ -1,10 +1,10 @@
-<h1 mat-dialog-title>Add contact address</h1>
+<h1 mat-dialog-title>Add an IVA</h1>
 <div mat-dialog-content cdkTrapFocus>
   <form [formGroup]="form" (ngSubmit)="onSubmit()">
-    <p class="mb-3">Please select one of the following contact address types:</p>
+    <p class="mb-3">Please select one of the following IVA types:</p>
     <div class="text-center">
       <mat-button-toggle-group
-        aria-label="Contact address type"
+        aria-label="IVA type"
         formControlName="type"
         class="[&_mat-button-toggle]:w-31 sm:[&_mat-button-toggle]:w-40"
       >

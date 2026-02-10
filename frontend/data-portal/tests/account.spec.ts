@@ -45,7 +45,7 @@ test('show account page when logged in', async ({ loggedInPage }) => {
     'We will communicate with you via this email address: doe@home.org',
   );
 
-  await expect(main).toContainText('Contact addresses for account verification');
+  await expect(main).toContainText('Independent Verification Addresses (IVAs)');
   await expect(main).toContainText('SMS: +441234567890004');
 
   await expect(main).toContainText('Dataset Access');

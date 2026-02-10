@@ -1,114 +1,119 @@
 @if (ivasAreLoading()) {
-<p class="text-base">Loading your contact addresses..</p>
+  <p class="text-base">Loading your IVAs...</p>
 } @else if (ivasError()) {
-<p class="font-bold text-red-600">
-  Your contact addresses could not be loaded. Please try again later.
-</p>
-} @else { @if (!ivas().length) {
-<p class="text-base">
-  You have not yet created any contact addresses. This is needed if you wish to download
-  research data.
-</p>
-}
-<p class="text-base">
-  Adding new contact addresses is done via the button at the end of this section. After
-  a new address is added, you must request verification of the address using the button
-  next to the address. Removing a contact address is done through the deletion button to
-  the right, but you will lose access to any datasets whose access was linked to that
-  address.
-</p>
-@if (ivas().length) {
-<div
-  class="border-outline-dark mb-4 grid grid-cols-1 border-t [&_button>mat-icon]:-translate-y-0.75"
->
-  @for (iva of ivas(); track iva.id) {
-  <div
-    class="border-outline-dark grid grid-cols-12 items-center gap-2 border-b py-2 text-black"
-  >
+  <p class="font-bold text-red-600">
+    Your IVAs could not be loaded. Please try again later.
+  </p>
+} @else {
+  @if (!ivas().length) {
+    <p class="text-base">
+      You have not yet created any IVAs. This is needed if you wish to download research
+      data.
+    </p>
+  }
+  <p class="text-base">
+    Adding new IVAs is done via the button at the end of this section. After a new IVA
+    is added, you must request verification of the address using the button next to the
+    address. Removing an IVA is done through the deletion button to the right, but you
+    will lose access to any datasets whose access was linked to that IVA.
+  </p>
+  @if (ivas().length) {
     <div
-      class="col-span-11 flex min-h-12 items-center md:col-span-6 lg:col-span-4 lg:row-span-1 lg:pe-4 xl:col-span-4 xl:pe-4 2xl:col-span-5"
-      [class.md:row-span-2]="iva.state !== 'Verified'"
+      class="border-outline-dark mb-4 grid grid-cols-1 border-t [&_button>mat-icon]:-translate-y-0.75"
     >
-      <div>{{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}</div>
-    </div>
-    <div
-      mat-cell
-      class="order-3 col-span-12 flex h-full items-center justify-center md:order-0 md:col-span-5 lg:col-span-3 xl:col-span-3 2xl:col-span-2"
-    >
-      <div class="min-w-64 text-center lg:text-start">
-        @switch (iva.state) { @case ('Verified') {
-        <div class="text-bold text-success text-base">
-          Address has been verified
-          <mat-icon class="align-bottom" fontIcon="verified_user"></mat-icon>
+      @for (iva of ivas(); track iva.id) {
+        <div
+          class="border-outline-dark grid grid-cols-12 items-center gap-2 border-b py-2 text-black"
+        >
+          <div
+            class="col-span-11 flex min-h-12 items-center md:col-span-6 lg:col-span-4 lg:row-span-1 lg:pe-4 xl:col-span-4 xl:pe-4 2xl:col-span-5"
+            [class.md:row-span-2]="iva.state !== 'Verified'"
+          >
+            <div>{{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}</div>
+          </div>
+          <div
+            mat-cell
+            class="order-3 col-span-12 flex h-full items-center justify-center md:order-0 md:col-span-5 lg:col-span-3 xl:col-span-3 2xl:col-span-2"
+          >
+            <div class="min-w-64 text-center lg:text-start">
+              @switch (iva.state) {
+                @case ('Verified') {
+                  <div class="text-bold text-success text-base">
+                    Address has been verified
+                    <mat-icon class="align-bottom" fontIcon="verified_user"></mat-icon>
+                  </div>
+                }
+                @case ('Unverified') {
+                  <div class="text-bold text-error text-base">
+                    Needs verification
+                    <mat-icon class="align-bottom" fontIcon="gpp_bad"></mat-icon>
+                  </div>
+                }
+                @case ('CodeTransmitted') {
+                  <div class="text-bold text-warning text-base">
+                    Code has been sent
+                    <mat-icon class="align-bottom" fontIcon="pin"></mat-icon>
+                  </div>
+                }
+                @default {
+                  <div class="text-bold text-info text-base">
+                    Waiting for verification
+                    <mat-icon class="align-bottom" fontIcon="pending"></mat-icon>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+          <div
+            mat-cell
+            class="order-4 col-span-12 my-2 min-w-48 text-center md:order-3 md:col-span-5 md:col-start-7 md:my-0 lg:order-3 lg:col-span-4 lg:block xl:col-span-3 2xl:col-span-2"
+            [class.md:hidden]="iva.state === 'Verified'"
+          >
+            @if (iva.state === 'Unverified') {
+              <button
+                (click)="requestVerification(iva)"
+                class="w-full sm:w-64"
+                mat-stroked-button
+                data-umami-event="User IVA list Request Verification Clicked"
+              >
+                <mat-icon fontIcon="pin"></mat-icon> Request verification
+              </button>
+            } @else if (iva.state !== 'Verified') {
+              <button
+                (click)="enterVerificationCode(iva)"
+                [disabled]="checkingIvaId()"
+                class="w-full sm:w-64"
+                mat-stroked-button
+                data-umami-event="User IVA list Enter Verification Code Clicked"
+              >
+                <mat-icon fontIcon="dialpad"></mat-icon> Enter verification code
+              </button>
+            }
+          </div>
+
+          <div
+            class="order-2 flex h-12 items-center md:order-3 lg:order-4 lg:row-span-1 2xl:ps-6"
+            [class.md:row-span-2]="iva.state !== 'Verified'"
+          >
+            <button
+              (click)="deleteWhenConfirmed(iva)"
+              mat-icon-button
+              aria-label="Delete"
+              data-umami-event="User IVA list Delete Clicked"
+            >
+              <mat-icon fontIcon="delete"></mat-icon>
+            </button>
+          </div>
         </div>
-        } @case ('Unverified') {
-        <div class="text-bold text-error text-base">
-          Needs verification
-          <mat-icon class="align-bottom" fontIcon="gpp_bad"></mat-icon>
-        </div>
-        } @case ('CodeTransmitted') {
-        <div class="text-bold text-warning text-base">
-          Code has been sent
-          <mat-icon class="align-bottom" fontIcon="pin"></mat-icon>
-        </div>
-        } @default {
-        <div class="text-bold text-info text-base">
-          Waiting for verification
-          <mat-icon class="align-bottom" fontIcon="pending"></mat-icon>
-        </div>
-        } }
-      </div>
-    </div>
-    <div
-      mat-cell
-      class="order-4 col-span-12 my-2 min-w-48 text-center md:order-3 md:col-span-5 md:col-start-7 md:my-0 lg:order-3 lg:col-span-4 lg:block xl:col-span-3 2xl:col-span-2"
-      [class.md:hidden]="iva.state === 'Verified'"
-    >
-      @if (iva.state === 'Unverified') {
-      <button
-        (click)="requestVerification(iva)"
-        class="w-full sm:w-64"
-        mat-stroked-button
-        data-umami-event="User IVA list Request Verification Clicked"
-      >
-        <mat-icon fontIcon="pin"></mat-icon> Request verification
-      </button>
-      } @else if (iva.state !== 'Verified') {
-      <button
-        (click)="enterVerificationCode(iva)"
-        [disabled]="checkingIvaId()"
-        class="w-full sm:w-64"
-        mat-stroked-button
-        data-umami-event="User IVA list Enter Verification Code Clicked"
-      >
-        <mat-icon fontIcon="dialpad"></mat-icon> Enter verification code
-      </button>
       }
     </div>
-
-    <div
-      class="order-2 flex h-12 items-center md:order-3 lg:order-4 lg:row-span-1 2xl:ps-6"
-      [class.md:row-span-2]="iva.state !== 'Verified'"
-    >
-      <button
-        (click)="deleteWhenConfirmed(iva)"
-        mat-icon-button
-        aria-label="Delete"
-        data-umami-event="User IVA list Delete Clicked"
-      >
-        <mat-icon fontIcon="delete"></mat-icon>
-      </button>
-    </div>
-  </div>
   }
-</div>
-}
-<button
-  (click)="enterNew()"
-  mat-raised-button
-  class="button-quaternary mt-4"
-  data-umami-event="User IVA list Add Contact Clicked"
->
-  <mat-icon fontIcon="add"></mat-icon>Add contact address
-</button>
+  <button
+    (click)="enterNew()"
+    mat-raised-button
+    class="button-quaternary mt-4"
+    data-umami-event="User IVA list Add IVA Clicked"
+  >
+    <mat-icon fontIcon="add"></mat-icon>Add an IVA
+  </button>
 }
