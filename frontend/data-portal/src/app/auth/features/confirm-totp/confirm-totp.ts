@@ -5,13 +5,7 @@
  */
 
 import { Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  FormControl,
-  FormsModule,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { form, FormField, maxLength, pattern, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -23,13 +17,7 @@ import { NotificationService } from '@app/shared/services/notification';
  */
 @Component({
   selector: 'app-confirm-totp',
-  imports: [
-    FormsModule,
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-  ],
+  imports: [FormField, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './confirm-totp.html',
   styleUrl: './confirm-totp.scss',
 })
@@ -37,49 +25,59 @@ export class ConfirmTotpComponent {
   #notify = inject(NotificationService);
   #authService = inject(AuthService);
 
-  protected disabled = computed(
-    () => this.#validInput() !== 'VALID' || this.#isProcessing(),
-  );
+  protected totpModel = signal<{ code: string }>({
+    code: '',
+  });
 
-  #previousSubmission: string | undefined = undefined;
+  protected totpForm = form(this.totpModel, (schemaPath) => {
+    required(schemaPath.code);
+    maxLength(schemaPath.code, 6);
+    pattern(schemaPath.code, /^\d{6}$/);
+  });
+
+  #previousSubmission = signal('');
 
   #isProcessing = signal(false);
-
-  protected codeControl = new FormControl<string>('', [
-    Validators.required,
-    Validators.pattern(/^\d{6}$/),
-  ]);
-  #validInput = toSignal(this.codeControl.statusChanges, {
-    initialValue: this.codeControl.status,
-  });
 
   protected verificationError = signal(false);
 
   allowNavigation = false; // used by canDeactivate guard
+
+  protected disabled = computed<boolean>(
+    () =>
+      !this.totpForm.code().value() ||
+      this.totpForm.code().invalid() ||
+      this.#isProcessing() ||
+      this.totpForm.code().value() === this.#previousSubmission(),
+  );
 
   /**
    * Input handler for the TOTP code
    * @param event The input event object
    */
   onInput(event: Event): void {
-    event.preventDefault();
     const target = event.target as HTMLInputElement;
-    target.value = target.value.replace(/\D/g, '').slice(0, 6);
-    this.codeControl.setValue(target.value);
-    if (!this.codeControl.valid) return;
-    if (this.codeControl.value === this.#previousSubmission) return;
-    this.onSubmit();
+    const sanitized = target.value.replace(/\D/g, '').slice(0, 6);
+    target.value = sanitized;
+    this.totpForm.code().value.set(sanitized);
+    // Reset error state when user starts typing
+    this.verificationError.set(false);
+    // Auto-submit only once
+    if (!this.#previousSubmission()) {
+      this.onSubmit();
+    }
   }
 
   /**
    * Submit authentication code
+   * @param event the form submit event object
    */
-  async onSubmit(): Promise<void> {
+  async onSubmit(event?: Event): Promise<void> {
+    event?.preventDefault();
     if (this.disabled()) return;
-    const code = this.codeControl.value;
-    if (!code || !this.codeControl.valid) return;
     this.#isProcessing.set(true);
-    this.#previousSubmission = code;
+    const code = this.totpForm.code().value();
+    this.#previousSubmission.set(code);
     const verified = await this.#authService.verifyTotpCode(code);
     if (verified) {
       this.#notify.showSuccess('Successfully authenticated.');

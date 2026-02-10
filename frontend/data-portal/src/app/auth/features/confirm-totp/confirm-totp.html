@@ -5,17 +5,19 @@
 </p>
 
 <form
+  novalidate
   defaultButton="submit-auth"
   class="mb-3 flex flex-wrap items-center gap-2"
-  (ngSubmit)="onSubmit()"
+  (submit)="onSubmit($event)"
 >
   <mat-form-field class="grow sm:grow-0">
     <mat-label>Authentication code</mat-label>
     <input
       type="text"
+      inputmode="numeric"
       class="totp-input-style text-center sm:text-left"
       matInput
-      [formControl]="codeControl"
+      [formField]="totpForm.code"
       (input)="onInput($event)"
       autocomplete="one-time-code"
       aria-required="true"
@@ -47,5 +49,5 @@
 </p>
 
 @if (verificationError()) {
-<mat-error>The submitted authentication code is invalid.</mat-error>
+  <mat-error class="mt-6">The submitted authentication code is invalid.</mat-error>
 }
