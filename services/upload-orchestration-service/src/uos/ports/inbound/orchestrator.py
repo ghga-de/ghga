@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,19 +17,19 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_event_schemas.pydantic_ import (
-    FileUpload,
-    FileUploadBox,
-    ResearchDataUploadBox,
-)
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4
 
 from uos.core.models import (
+    AccessionMapRequest,
     BoxRetrievalResults,
+    FileUploadBox,
+    FileUploadWithAccession,
     GrantWithBoxInfo,
+    ResearchDataUploadBox,
     UpdateUploadBoxRequest,
+    UploadBoxState,
 )
 
 
@@ -47,10 +47,33 @@ class UploadOrchestratorPort(ABC):
             super().__init__(msg)
 
     class GrantNotFoundError(RuntimeError):
-        """Raise when unable to revoke a grant because it doesn't exist."""
+        """Raised when unable to revoke a grant because it doesn't exist."""
 
         def __init__(self, *, grant_id: UUID4) -> None:
             msg = f"Failed to revoke grant {grant_id} because it doesn't exist."
+            super().__init__(msg)
+
+    class AccessionMapError(RuntimeError):
+        """Raised when an operation fails for a reason directly related to the accession map."""
+
+    class ArchivalPrereqsError(RuntimeError):
+        """Raised when the pre-requisites for box archival are not met."""
+
+    class VersionError(RuntimeError):
+        """Raised when changes to a resource can't be made because the request
+        references a version of the resource that is not current.
+        """
+
+    class StateChangeError(RuntimeError):
+        """Raised when there is an attempt to make an invalid state change for
+        a Research Data Upload Box.
+        """
+
+        def __init__(self, *, old_state: UploadBoxState, new_state: UploadBoxState):
+            msg = (
+                f"Research Data Upload Boxes cannot be changed from '{old_state}'"
+                + f" to '{new_state}'."
+            )
             super().__init__(msg)
 
     @abstractmethod
@@ -73,7 +96,7 @@ class UploadOrchestratorPort(ABC):
             The UUID of the newly created research data upload box
 
         Raises:
-            OperationError: if there's a problem creating a corresponding FileUploadBox.
+            OperationError: If there's a problem creating a corresponding FileUploadBox.
         """
         ...
 
@@ -90,7 +113,11 @@ class UploadOrchestratorPort(ABC):
         Raises:
             BoxNotFoundError: If the research data upload box doesn't exist.
             BoxAccessError: If the user doesn't have access to the research data upload box.
-            OperationError: if there's a problem updating the corresponding FileUploadBox.
+            VersionError: If the requested ResearchDataUploadBox version is outdated or
+                the FileUploadBox version is outdated when updating the FileUploadBox.
+            StateChangeError: If the requested state transition is invalid.
+            OperationError: If there's a problem updating the corresponding FileUploadBox.
+            ArchivalPrereqsError: If trying to archive the box and prerequisites aren't met.
         """
         ...
 
@@ -136,7 +163,7 @@ class UploadOrchestratorPort(ABC):
         Results are sorted by validity, user ID, IVA ID, box ID, and grant ID.
 
         Raises:
-            AccessAPIError: if there's a problem communicating with the access API.
+            AccessAPIError: If there's a problem communicating with the access API.
         """
         ...
 
@@ -146,15 +173,15 @@ class UploadOrchestratorPort(ABC):
         *,
         box_id: UUID4,
         auth_context: AuthContext,
-    ) -> list[FileUpload]:
+    ) -> list[FileUploadWithAccession]:
         """Get list of file uploads for a research data upload box.
 
-        Returns a list of file uploads in the upload box
+        Returns a list of file uploads in the upload box.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.
             BoxAccessError: If the user doesn't have access to the box.
-            OperationError: if there's a problem querying the file box service.
+            OperationError: If there's a problem querying the file box service.
             AccessAPIError: If there's a problem querying the access api
         """
         ...
@@ -189,16 +216,52 @@ class UploadOrchestratorPort(ABC):
         auth_context: AuthContext,
         skip: int | None = None,
         limit: int | None = None,
-        locked: bool | None = None,
+        state: UploadBoxState | None = None,
     ) -> BoxRetrievalResults:
         """Retrieve all Research Data Upload Boxes, optionally paginated.
 
         For data stewards, returns all boxes. For regular users, only returns boxes
         they have access to according to the Access API.
 
-        Results are sorted first by locked status (unlocked first), then by most
-        recently changed, and then by box ID.
+        Results are sorted first by state ("open" first), then by most
+        recently changed, and then by box ID. Results can also be filtered to show boxes
+        with a chosen state.
 
         Returns a BoxRetrievalResults instance with the boxes and unpaginated count.
+        """
+        ...
+
+    @abstractmethod
+    async def update_accession_map(
+        self, *, box_id: UUID4, request: AccessionMapRequest
+    ) -> None:
+        """Update the file accession map for a given box and publish an outbox event.
+        This results in a version increment for the ResearchDataUploadBox.
+
+        **Files with a state of *cancelled* or *failed* are ignored.**
+
+        Check the specified ResearchDataUploadBox to verify it exists, that the version
+        stated in the request is current, and that the box has not already been archived.
+
+        Next, checked the mapping to verify that every file ID is specified exactly
+        once (and thus mapping is 1:1).
+
+        Then retrieve the latest list of files in the box from the File Box API to
+        verify that:
+        - each file ID in the mapping exists in the retrieved list of files
+        - all file IDs in the box are included in the mapping
+
+        Finally, store the mapping in the DB and publish an outbox event containing
+        the mapping field content.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist
+            VersionError: If the requested ResearchDataUploadBox version is outdated
+            AccessionMapError: If
+            - the box is already archived, or
+            - the accession map includes a file ID that doesn't exist in the box, or
+            - any files are specified more than once, or
+            - any files in the box are left unmapped, or
+            - an unexpected database error occurs while upserting the accession map.
         """
         ...

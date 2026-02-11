@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,10 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_event_schemas.pydantic_ import FileUpload
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4
 
-from uos.core.models import UploadGrant
+from uos.core.models import FileUploadWithAccession, UploadGrant
 
 
 class AccessClientPort(ABC):
@@ -103,6 +102,9 @@ class FileBoxClientPort(ABC):
     class OperationError(RuntimeError):
         """Raised when there's an error while communicating with the service"""
 
+    class FUBVersionError(RuntimeError):
+        """Raised when the requested version of a FileUploadBox is out of date."""
+
     @abstractmethod
     async def create_file_upload_box(self, *, storage_alias: str) -> UUID4:
         """Create a new FileUploadBox in owning service.
@@ -131,10 +133,22 @@ class FileBoxClientPort(ABC):
         ...
 
     @abstractmethod
-    async def get_file_upload_list(self, *, box_id: UUID4) -> list[FileUpload]:
+    async def get_file_upload_list(
+        self, *, box_id: UUID4
+    ) -> list[FileUploadWithAccession]:
         """Get list of file uploads in a FileUploadBox.
 
         Raises:
             OperationError if there's a problem with the operation.
+        """
+        ...
+
+    @abstractmethod
+    async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
+        """Archive a FileUploadBox in the owning service.
+
+        Raises:
+            FUBVersionError if the remote box version differs from `version`.
+            OperationError if there's any other problem with the operation.
         """
         ...

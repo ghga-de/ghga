@@ -1,4 +1,5 @@
 access_url: http://127.0.0.1/access
+accession_map_topic: accession-maps
 api_root_path: ''
 audit_record_topic: audit-records
 audit_record_type: audit_record_logged
@@ -48,6 +49,7 @@ port: 8080
 research_data_upload_box_topic: research-data-upload-boxes
 service_instance_id: '1'
 service_name: uos
+timeout_keep_alive: 90
 ucs_url: http://127.0.0.1/upload
 work_order_signing_key: '**********'
 workers: 1

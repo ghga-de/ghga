@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,22 +19,22 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-from ghga_event_schemas.pydantic_ import (
-    FileUpload,
-    FileUploadState,
-    ResearchDataUploadBox,
-)
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from hexkit.utils import now_utc_ms_prec
 
 from tests.fixtures import ConfigFixture
-from uos.core.models import BoxRetrievalResults, GrantWithBoxInfo
+from uos.core.models import (
+    BoxRetrievalResults,
+    FileUploadWithAccession,
+    GrantWithBoxInfo,
+    ResearchDataUploadBox,
+)
 from uos.inject import prepare_rest_app
 from uos.ports.inbound.orchestrator import UploadOrchestratorPort
 from uos.ports.outbound.http import FileBoxClientPort
 
-pytestmark = pytest.mark.asyncio()
+pytestmark = pytest.mark.asyncio
 TEST_DS_ID = UUID("f698158d-8417-4368-bb45-349277bc45ee")
 TEST_BOX_ID = UUID("bf344cd4-0c1b-434a-93d1-36a11b6b02d9")
 INVALID_HEADER: dict[str, str] = {"Authorization": "Bearer ab12"}
@@ -104,7 +104,7 @@ async def test_get_research_data_upload_box(
         # unauthenticated
         url = f"/boxes/{TEST_BOX_ID}"
         response = await rest_client.get(url)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         # bad credentials
         response = await rest_client.get(url, headers=bad_auth_headers)
@@ -112,6 +112,7 @@ async def test_get_research_data_upload_box(
 
         # normal response (patch mock)
         box = ResearchDataUploadBox(
+            version=0,
             state="open",
             title="test",
             description="desc",
@@ -119,6 +120,8 @@ async def test_get_research_data_upload_box(
             changed_by=TEST_DS_ID,
             id=TEST_BOX_ID,
             file_upload_box_id=uuid4(),
+            file_upload_box_version=0,
+            file_upload_box_state="open",
             storage_alias="HD",
         )
         orchestrator.get_research_data_upload_box.return_value = box
@@ -169,7 +172,7 @@ async def test_create_research_data_upload_box(
 
         # unauthenticated
         response = await rest_client.post(url, json=request_data)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         # bad credentials
         response = await rest_client.post(
@@ -224,11 +227,15 @@ async def test_update_research_data_upload_box(
         AsyncTestClient(app=app) as rest_client,
     ):
         url = f"/boxes/{TEST_BOX_ID}"
-        request_data = {"title": "Updated Title", "description": "Updated description"}
+        request_data = {
+            "version": 0,
+            "title": "Updated Title",
+            "description": "Updated description",
+        }
 
         # unauthenticated
         response = await rest_client.patch(url, json=request_data)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         # bad credentials
         response = await rest_client.patch(
@@ -271,6 +278,28 @@ async def test_update_research_data_upload_box(
         )
         assert response.status_code == 404
 
+        # handle version error from core
+        orchestrator.reset_mock()
+        orchestrator.update_research_data_upload_box.side_effect = (
+            UploadOrchestratorPort.VersionError()
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=user_auth_headers
+        )
+        assert response.status_code == 409
+
+        # handle state change error from core
+        orchestrator.reset_mock()
+        orchestrator.update_research_data_upload_box.side_effect = (
+            UploadOrchestratorPort.StateChangeError(
+                old_state="archived", new_state="open"
+            )
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=user_auth_headers
+        )
+        assert response.status_code == 409
+
         # handle file box service error from core
         orchestrator.reset_mock()
         orchestrator.update_research_data_upload_box.side_effect = (
@@ -312,7 +341,7 @@ async def test_grant_upload_access(
 
         # unauthenticated
         response = await rest_client.post(url, json=request_data)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         # bad credentials
         response = await rest_client.post(
@@ -358,7 +387,7 @@ async def test_list_upload_box_files(
 
         # unauthenticated
         response = await rest_client.get(url)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         # bad credentials
         response = await rest_client.get(url, headers=bad_auth_headers)
@@ -366,14 +395,17 @@ async def test_list_upload_box_files(
 
         # normal response with user auth
         file_list = [
-            FileUpload(
+            FileUploadWithAccession(
                 id=uuid4(),
                 box_id=TEST_BOX_ID,
+                storage_alias="HD01",
+                bucket_id="inbox",
                 alias=f"test{i}",
-                checksum=f"checksum{i}",
-                size=1000 + i * 100,
-                state=FileUploadState.ARCHIVED,
-                completed=True,
+                decrypted_sha256=f"checksum{i}",
+                decrypted_size=1000 + i * 100,
+                part_size=100,
+                state="archived",
+                state_updated=now_utc_ms_prec(),
             )
             for i in range(3)
         ]
@@ -429,7 +461,7 @@ async def test_revoke_upload_access_grant(
 
         # unauthenticated
         response = await rest_client.delete(url)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         # bad credentials
         response = await rest_client.delete(url, headers=bad_auth_headers)
@@ -474,7 +506,7 @@ async def test_get_upload_access_grants(
 
         # unauthenticated
         response = await rest_client.get(url)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         # bad credentials
         response = await rest_client.get(url, headers=bad_auth_headers)
@@ -533,6 +565,7 @@ async def test_get_boxes(
     # Create test boxes
     test_boxes = [
         ResearchDataUploadBox(
+            version=0,
             id=uuid4(),
             state="open",
             title="Box A",
@@ -540,9 +573,12 @@ async def test_get_boxes(
             last_changed=now_utc_ms_prec(),
             changed_by=TEST_DS_ID,
             file_upload_box_id=uuid4(),
+            file_upload_box_version=0,
+            file_upload_box_state="open",
             storage_alias="HD01",
         ),
         ResearchDataUploadBox(
+            version=0,
             id=uuid4(),
             state="open",
             title="Box B",
@@ -550,6 +586,8 @@ async def test_get_boxes(
             last_changed=now_utc_ms_prec(),
             changed_by=TEST_DS_ID,
             file_upload_box_id=uuid4(),
+            file_upload_box_version=0,
+            file_upload_box_state="open",
             storage_alias="HD01",
         ),
     ]
@@ -592,16 +630,16 @@ async def test_get_boxes(
             count=1, boxes=[locked_box]
         )
         response = await rest_client.get(
-            url, headers=ds_auth_headers, params={"locked": "true"}
+            url, headers=ds_auth_headers, params={"state": "locked"}
         )
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["count"] == 1
         assert len(response_data["boxes"]) == 1
 
-        # Verify orchestrator was called with locked=True
+        # Verify orchestrator was called with state="locked"
         call_args = orchestrator.get_research_data_upload_boxes.call_args
-        assert call_args.kwargs["locked"] is True
+        assert call_args.kwargs["state"] == "locked"
 
         # Test locked=false parameter
         orchestrator.reset_mock()
@@ -610,11 +648,11 @@ async def test_get_boxes(
             count=1, boxes=[unlocked_box]
         )
         response = await rest_client.get(
-            url, headers=ds_auth_headers, params={"locked": "false"}
+            url, headers=ds_auth_headers, params={"state": "open"}
         )
         assert response.status_code == 200
         call_args = orchestrator.get_research_data_upload_boxes.call_args
-        assert call_args.kwargs["locked"] is False
+        assert call_args.kwargs["state"] == "open"
 
         # Test other exception
         orchestrator.reset_mock()
@@ -646,3 +684,133 @@ async def test_get_boxes_bad_parameters(config: ConfigFixture, ds_auth_headers, 
         url = "/boxes"
         response = await rest_client.get(url, headers=ds_auth_headers, params=params)
         assert response.status_code == 422
+
+
+async def test_archive_via_update_endpoint(
+    config: ConfigFixture, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test archiving a box through the PATCH /boxes/{box_id} endpoint"""
+    orchestrator = AsyncMock()
+    async with (
+        prepare_rest_app(
+            config=config.config, upload_orchestrator_override=orchestrator
+        ) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/boxes/{TEST_BOX_ID}"
+        request_data = {"version": 1, "state": "archived"}
+
+        # unauthenticated
+        response = await rest_client.patch(url, json=request_data)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.patch(
+            url, json=request_data, headers=bad_auth_headers
+        )
+        assert response.status_code == 401
+
+        # normal response but user is not a data steward (regular users can't archive)
+        orchestrator.update_research_data_upload_box.side_effect = (
+            UploadOrchestratorPort.BoxAccessError()
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=user_auth_headers
+        )
+        assert response.status_code == 403
+
+        # normal response with data steward role
+        orchestrator.reset_mock()
+        orchestrator.update_research_data_upload_box.side_effect = None
+        orchestrator.update_research_data_upload_box.return_value = None
+        response = await rest_client.patch(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 204
+
+        # handle archival prerequisites error from core
+        orchestrator.reset_mock()
+        orchestrator.update_research_data_upload_box.side_effect = (
+            UploadOrchestratorPort.ArchivalPrereqsError()
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 409
+
+        # handle other exception
+        orchestrator.reset_mock()
+        orchestrator.update_research_data_upload_box.side_effect = TypeError()
+        response = await rest_client.patch(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 500
+
+
+async def test_submit_accession_map(
+    config: ConfigFixture, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test the PATCH /boxes/{box_id}/accessions endpoint"""
+    orchestrator = AsyncMock()
+    async with (
+        prepare_rest_app(
+            config=config.config, upload_orchestrator_override=orchestrator
+        ) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/boxes/{TEST_BOX_ID}/accessions"
+        request_data = {
+            "version": 0,
+            "mapping": {"GHGA001": str(uuid4()), "GHGA002": str(uuid4())},
+        }
+
+        # unauthenticated
+        response = await rest_client.patch(url, json=request_data)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.patch(
+            url, json=request_data, headers=bad_auth_headers
+        )
+        assert response.status_code == 401
+
+        # normal response but user is not a data steward (no data_steward role)
+        response = await rest_client.patch(
+            url, json=request_data, headers=user_auth_headers
+        )
+        assert response.status_code == 403
+
+        # normal response with data steward role
+        orchestrator.update_accession_map.return_value = None
+        response = await rest_client.patch(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 204
+
+        # handle accession map error from core
+        orchestrator.reset_mock()
+        orchestrator.update_accession_map.side_effect = (
+            UploadOrchestratorPort.AccessionMapError()
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 400
+
+        # handle box not found error from core
+        orchestrator.reset_mock()
+        orchestrator.update_accession_map.side_effect = (
+            UploadOrchestratorPort.BoxNotFoundError(box_id=TEST_BOX_ID)
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 404
+
+        # handle other exception
+        orchestrator.reset_mock()
+        orchestrator.update_accession_map.side_effect = TypeError()
+        response = await rest_client.patch(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 500

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,12 @@
 
 """DAO Port definition"""
 
-from ghga_event_schemas.pydantic_ import ResearchDataUploadBox
 from hexkit.protocols.dao import Dao
+from hexkit.protocols.daopub import DaoPublisher
 
-__all__ = ["BoxDao"]
+from uos.core.models import AccessionMap, ResearchDataUploadBox
+
+__all__ = ["AccessionMapDao", "BoxDao"]
 
 BoxDao = Dao[ResearchDataUploadBox]
+AccessionMapDao = DaoPublisher[AccessionMap]

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,9 @@
 
 """Data models for the Upload Orchestration Service."""
 
-from typing import Literal
+from typing import Annotated, Literal
+from uuid import uuid4
 
-from ghga_event_schemas.pydantic_ import (
-    ResearchDataUploadBox,
-    ResearchDataUploadBoxState,
-)
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
     UUID4,
@@ -28,9 +25,52 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    StringConstraints,
     ValidationInfo,
     field_validator,
 )
+
+UploadBoxState = Literal["open", "locked", "archived"]
+
+
+class ResearchDataUploadBox(BaseModel):
+    """A class representing a ResearchDataUploadBox."""
+
+    id: UUID4 = Field(
+        default_factory=uuid4,
+        description="Unique identifier for the research data upload box",
+    )
+    version: int = Field(..., description="A counter indicating resource version")
+    state: UploadBoxState = Field(
+        ..., description="Current state of the research data upload box"
+    )
+    title: str = Field(..., description="Short meaningful name for the box")
+    description: str = Field(..., description="Describes the upload box in more detail")
+    last_changed: UTCDatetime = Field(..., description="Timestamp of the latest change")
+    changed_by: UUID4 = Field(
+        ..., description="ID of the user who performed the latest change"
+    )
+    file_upload_box_id: UUID4 = Field(..., description="The ID of the file upload box.")
+    file_upload_box_version: int = Field(
+        ..., description="A counter indicating resource version"
+    )
+    file_upload_box_state: UploadBoxState = Field(
+        ..., description="Current state of the file upload box"
+    )
+    file_count: int = Field(default=0, description="The number of files in the box")
+    size: int = Field(default=0, description="The total size of all files in the box")
+    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
+
+
+class FileUploadBox(BaseModel):
+    """A class representing a FileUploadBox"""
+
+    id: UUID4 = Field(..., description="The ID of the box.")
+    version: int = Field(..., description="A counter indicating resource version")
+    state: UploadBoxState = Field(..., description="Current state of the box")
+    file_count: int = Field(..., description="The number of files in the box")
+    size: int = Field(..., description="The total size of all files in the box")
+    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
 
 
 class BaseWorkOrderToken(BaseModel):
@@ -49,7 +89,7 @@ class CreateFileBoxWorkOrder(BaseWorkOrderToken):
 class ChangeFileBoxWorkOrder(BaseWorkOrderToken):
     """Work order token for changing FileUploadBox state."""
 
-    work_type: Literal["lock", "unlock"]
+    work_type: Literal["lock", "unlock", "archive"]
     box_id: UUID4 = Field(..., description="ID of the box to change")
 
 
@@ -82,11 +122,10 @@ class CreateUploadBoxResponse(BaseModel):
 class UpdateUploadBoxRequest(BaseModel):
     """Request model for updating a research data upload box."""
 
+    version: int = Field(..., description="A counter indicating resource version")
     title: str | None = Field(default=None, description="Updated title")
     description: str | None = Field(default=None, description="Updated description")
-    state: ResearchDataUploadBoxState | None = Field(
-        default=None, description="Updated state"
-    )
+    state: UploadBoxState | None = Field(default=None, description="Updated state")
 
 
 class GrantAccessRequest(BaseModel):
@@ -150,4 +189,73 @@ class BoxRetrievalResults(BaseModel):
     count: int = Field(..., description="The total number of unpaginated results")
     boxes: list[ResearchDataUploadBox] = Field(
         ..., description="The retrieved research data upload boxes"
+    )
+
+
+Accession = Annotated[str, StringConstraints(pattern=r"^GHGA.+")]
+
+
+class AccessionMapRequest(BaseModel):
+    """The request body schema for submitting accession maps"""
+
+    version: int = Field(
+        ..., description="A counter indicating research data upload box version"
+    )
+    mapping: dict[Accession, UUID4] = Field(
+        default=..., description="Map of accessions to file IDs"
+    )
+
+
+class AccessionMap(BaseModel):
+    """A map of file IDs to accession numbers for a box"""
+
+    box_id: UUID4 = Field(..., description="ID of the RDUB this accession map is for")
+    mapping: dict[Accession, UUID4] = Field(
+        default=..., description="Map of accessions to file IDs"
+    )
+
+
+FileUploadState = Literal[
+    "init",
+    "inbox",
+    "failed",
+    "cancelled",
+    "interrogated",
+    "awaiting_archival",
+    "archived",
+]
+
+
+class FileUploadWithAccession(BaseModel):
+    """A FileUpload with its accession"""
+
+    id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    box_id: UUID4
+    alias: str
+    state: FileUploadState = Field(
+        default="init", description="The state of the FileUpload"
+    )
+    state_updated: UTCDatetime = Field(
+        ..., description="Timestamp of when state was updated"
+    )
+    storage_alias: str = Field(
+        ..., description="The storage alias of the Data Hub housing the file"
+    )
+    bucket_id: str = Field(
+        ..., description="The name of the bucket where the file is currently stored"
+    )
+    decrypted_sha256: str | None = Field(
+        default=None,
+        description="SHA-256 checksum of the entire unencrypted file content",
+    )
+    decrypted_size: int = Field(..., description="The size of the unencrypted file")
+    encrypted_size: int | None = Field(
+        default=None, description="The encrypted size of the file before re-encryption"
+    )
+    part_size: int = Field(
+        ...,
+        description="The number of bytes in each file part (last part is likely smaller)",
+    )
+    accession: str | None = Field(
+        default=None, description="The accession number assigned to this file."
     )

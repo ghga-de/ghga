@@ -56,6 +56,17 @@ The service requires the following configuration parameters:
   "research-data-upload-boxes"
   ```
 
+- <a id="properties/accession_map_topic"></a>**`accession_map_topic`** *(string, required)*: The name of the topic used for file accession map outbox events.
+
+  Examples:
+  ```json
+  "accession-maps"
+  ```
+
+  ```json
+  "file-accession-maps"
+  ```
+
 - <a id="properties/file_upload_box_topic"></a>**`file_upload_box_topic`** *(string, required)*: Topic containing published FileUploadBox outbox events.
 
   Examples:
@@ -303,6 +314,21 @@ The service requires the following configuration parameters:
 - <a id="properties/port"></a>**`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 - <a id="properties/auto_reload"></a>**`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
 - <a id="properties/workers"></a>**`workers`** *(integer)*: Number of workers processes to run. Default: `1`.
+- <a id="properties/timeout_keep_alive"></a>**`timeout_keep_alive`** *(integer)*: The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures. Default: `90`.
+
+  Examples:
+  ```json
+  5
+  ```
+
+  ```json
+  90
+  ```
+
+  ```json
+  5400
+  ```
+
 - <a id="properties/api_root_path"></a>**`api_root_path`** *(string)*: Root path at which the API is reachable. This is relative to the specified host and port. Default: `""`.
 - <a id="properties/openapi_url"></a>**`openapi_url`** *(string)*: Path to get the openapi specification in JSON format. This is relative to the specified host and port. Default: `"/openapi.json"`.
 - <a id="properties/docs_url"></a>**`docs_url`** *(string)*: Path to host the swagger documentation. This is relative to the specified host and port. Default: `"/docs"`.

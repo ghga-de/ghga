@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,3 +22,10 @@ TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
 BOX_COLLECTION = "boxes"
 AUDIT_COLLECTION = "auditLogs"
 WORK_ORDER_TOKEN_VALID_SECONDS = 30
+ACCESSION_MAPS_COLLECTION = "accessionMaps"
+HTTPX_TIMEOUT = 60
+VALID_STATE_TRANSITIONS = [
+    ("open", "locked"),
+    ("locked", "open"),
+    ("locked", "archived"),
+]

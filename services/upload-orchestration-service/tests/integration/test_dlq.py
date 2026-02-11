@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,13 +26,14 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from tests.fixtures.config import get_config
 from uos.inject import prepare_event_subscriber
 
-pytestmark = pytest.mark.asyncio()
+pytestmark = pytest.mark.asyncio
 UPSERTED = "upserted"
 
 TEST_FILE_UPLOAD_BOX_ID = UUID("f139ab68-56cc-4ca1-8866-2ffc8f297728")
 TEST_PAYLOAD: dict[str, Any] = {
     "id": str(TEST_FILE_UPLOAD_BOX_ID),
-    "locked": False,
+    "version": 0,
+    "state": "open",
     "file_count": 0,
     "size": 0,
     "storage_alias": "test-alias",

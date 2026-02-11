@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +16,12 @@
 
 from typing import Literal
 
-from ghga_event_schemas.pydantic_ import AuditRecord, ResearchDataUploadBox
+from ghga_event_schemas.pydantic_ import AuditRecord
 from hexkit.correlation import get_correlation_id
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
+from uos.core.models import ResearchDataUploadBox
 from uos.ports.outbound.audit import AuditRepositoryPort
 from uos.ports.outbound.event_pub import EventPublisherPort
 

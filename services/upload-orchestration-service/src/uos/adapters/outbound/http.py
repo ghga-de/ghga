@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,23 +20,22 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from ghga_event_schemas.pydantic_ import FileUpload
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from jwcrypto import jwk
 from pydantic import UUID4, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
+from uos.constants import HTTPX_TIMEOUT
 from uos.core.models import (
     BaseWorkOrderToken,
     ChangeFileBoxWorkOrder,
     CreateFileBoxWorkOrder,
+    FileUploadWithAccession,
     UploadGrant,
     ViewFileBoxWorkOrder,
 )
 from uos.core.tokens import sign_work_order_token
 from uos.ports.outbound.http import AccessClientPort, FileBoxClientPort
-
-TIMEOUT = 60
 
 log = logging.getLogger(__name__)
 
@@ -70,8 +69,9 @@ class FileBoxClientConfig(BaseSettings):
 class AccessClient(AccessClientPort):
     """An adapter for interacting with the access API to manage upload access grants"""
 
-    def __init__(self, *, config: AccessApiConfig):
+    def __init__(self, *, config: AccessApiConfig, httpx_client: httpx.AsyncClient):
         self._access_url = config.access_url
+        self._client = httpx_client
 
     async def grant_upload_access(
         self,
@@ -96,7 +96,7 @@ class AccessClient(AccessClientPort):
             "valid_until": valid_until.isoformat(),
         }
 
-        response = httpx.post(url, json=body)
+        response = await self._client.post(url, json=body, timeout=HTTPX_TIMEOUT)
         if response.status_code != 200:
             log.error(
                 "Failed to grant upload access for user %s to box %s.",
@@ -122,13 +122,13 @@ class AccessClient(AccessClientPort):
             AccessAPIError: if there's a problem during the operation.
         """
         url = f"{self._access_url}/upload-access/grants/{grant_id}"
-        response = httpx.delete(url)
+        response = await self._client.delete(url, timeout=HTTPX_TIMEOUT)
         if response.status_code == 204:
             return
 
         if response.status_code == 404:
             raise self.GrantNotFoundError()
-        elif response.status_code != 204:
+        else:
             log.error(
                 "Failed to revoke upload access for grant ID %s.",
                 grant_id,
@@ -161,7 +161,7 @@ class AccessClient(AccessClientPort):
         }
 
         url = f"{self._access_url}/upload-access/grants"
-        response = httpx.get(url, params=params)
+        response = await self._client.get(url, params=params, timeout=HTTPX_TIMEOUT)
         if response.status_code != 200:
             msg = "Failed to retrieve upload access grants."
             log.error(
@@ -189,7 +189,7 @@ class AccessClient(AccessClientPort):
             AccessAPIError: if there's a problem during the operation.
         """
         url = f"{self._access_url}/upload-access/users/{user_id}/boxes"
-        response = httpx.get(url)
+        response = await self._client.get(url, timeout=HTTPX_TIMEOUT)
         status_code = response.status_code
         if status_code == httpx.codes.NOT_FOUND:
             return []
@@ -221,7 +221,7 @@ class AccessClient(AccessClientPort):
         url = f"{self._access_url}/upload-access/users/{user_id}/boxes/{box_id}"
 
         try:
-            response = httpx.get(url)
+            response = await self._client.get(url, timeout=HTTPX_TIMEOUT)
 
             # 200 means user has access, 403/404 means no access
             if response.status_code == 200:
@@ -258,8 +258,9 @@ class FileBoxClient(FileBoxClientPort):
     This class is responsible for WOT generation and all pertinent error handling.
     """
 
-    def __init__(self, *, config: FileBoxClientConfig):
+    def __init__(self, *, config: FileBoxClientConfig, httpx_client: httpx.AsyncClient):
         self._ucs_url = config.ucs_url
+        self._client = httpx_client
         self._signing_key = jwk.JWK.from_json(
             config.work_order_signing_key.get_secret_value()
         )
@@ -281,7 +282,9 @@ class FileBoxClient(FileBoxClientPort):
         """
         headers = self._auth_header(CreateFileBoxWorkOrder())
         body = {"storage_alias": storage_alias}
-        response = httpx.post(f"{self._ucs_url}/boxes", headers=headers, json=body)
+        response = await self._client.post(
+            f"{self._ucs_url}/boxes", headers=headers, json=body, timeout=HTTPX_TIMEOUT
+        )
         if response.status_code != 201:
             log.error(
                 "Error creating new FileUploadBox in external service with storage alias %s.",
@@ -291,7 +294,13 @@ class FileBoxClient(FileBoxClientPort):
                     "response_text": response.text,
                 },
             )
+            if response.status_code == 400:
+                # Make error text more specific if it's a storage alias problem
+                raise self.OperationError(
+                    f"{storage_alias} is not a valid storage alias."
+                )
             raise self.OperationError("Failed to create new FileUploadBox.")
+
         try:
             box_id = response.json()
             return UUID(box_id)
@@ -309,8 +318,11 @@ class FileBoxClient(FileBoxClientPort):
         wot = ChangeFileBoxWorkOrder(work_type="lock", box_id=box_id)
         headers = self._auth_header(wot)
         body = {"lock": True}
-        response = httpx.patch(
-            f"{self._ucs_url}/boxes/{box_id}", headers=headers, json=body
+        response = await self._client.patch(
+            f"{self._ucs_url}/boxes/{box_id}",
+            headers=headers,
+            json=body,
+            timeout=HTTPX_TIMEOUT,
         )
         if response.status_code != 204:
             log.error(
@@ -333,8 +345,11 @@ class FileBoxClient(FileBoxClientPort):
 
         headers = self._auth_header(wot)
         body = {"lock": False}
-        response = httpx.patch(
-            f"{self._ucs_url}/boxes/{box_id}", headers=headers, json=body
+        response = await self._client.patch(
+            f"{self._ucs_url}/boxes/{box_id}",
+            headers=headers,
+            json=body,
+            timeout=HTTPX_TIMEOUT,
         )
         if response.status_code != 204:
             log.error(
@@ -347,7 +362,9 @@ class FileBoxClient(FileBoxClientPort):
             )
             raise self.OperationError("Failed to unlock FileUploadBox.")
 
-    async def get_file_upload_list(self, *, box_id: UUID4) -> list[FileUpload]:
+    async def get_file_upload_list(
+        self, *, box_id: UUID4
+    ) -> list[FileUploadWithAccession]:
         """Get list of file uploads in a FileUploadBox.
 
         Raises:
@@ -355,12 +372,17 @@ class FileBoxClient(FileBoxClientPort):
         """
         wot = ViewFileBoxWorkOrder(box_id=box_id)
         headers = self._auth_header(wot)
-        response = httpx.get(f"{self._ucs_url}/boxes/{box_id}/uploads", headers=headers)
+        response = await self._client.get(
+            f"{self._ucs_url}/boxes/{box_id}/uploads",
+            headers=headers,
+            timeout=HTTPX_TIMEOUT,
+        )
         if response.status_code != 200:
             log.error(
-                "Error unlocking FileUploadBox ID %s in external service.",
+                "Error getting file list for FileUploadBox %s.",
                 box_id,
                 extra={
+                    "file_upload_box_id": box_id,
                     "status_code": response.status_code,
                     "response_body": response.json(),
                 },
@@ -369,8 +391,49 @@ class FileBoxClient(FileBoxClientPort):
 
         try:
             files = response.json()
-            return [FileUpload(**file) for file in files]
+            return [FileUploadWithAccession(**file) for file in files]
         except Exception as err:
             msg = "Failed to extract list of file IDs from response body."
             log.error(msg, exc_info=True)
             raise self.OperationError(msg) from err
+
+    async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
+        """Archive a FileUploadBox in the owning service.
+
+        Raises:
+            FUBVersionError if the remote box version differs from `version`.
+            OperationError if there's any other problem with the operation.
+        """
+        wot = ChangeFileBoxWorkOrder(work_type="archive", box_id=box_id)
+        headers = self._auth_header(wot)
+        body = {"version": version}
+        response = await self._client.patch(
+            f"{self._ucs_url}/boxes/{box_id}",
+            headers=headers,
+            json=body,
+            timeout=HTTPX_TIMEOUT,
+        )
+        if response.status_code == 409:
+            log.error(
+                "Failed to archive FileUploadBox %s because the version specified"
+                + " in the request is out of date.",
+                box_id,
+                extra={
+                    "box_id": box_id,
+                    "version": version,
+                    "response_text": response.text,
+                },
+            )
+            raise self.FUBVersionError(
+                "Requested FileUploadBox version is out of date."
+            )
+        elif response.status_code != 204:
+            log.error(
+                "Error archiving FileUploadBox ID %s in external service.",
+                box_id,
+                extra={
+                    "status_code": response.status_code,
+                    "response_text": response.text,
+                },
+            )
+            raise self.OperationError("Failed to archive FileUploadBox.")

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,9 @@
 # limitations under the License.
 """Set up session-scope fixtures for tests."""
 
+from collections.abc import AsyncGenerator
+
+import httpx
 import pytest
 import pytest_asyncio
 from ghga_service_commons.utils import jwt_helpers
@@ -50,3 +53,10 @@ def config_fixture() -> ConfigFixture:
 async def cid_fixture():  # noqa: D103
     async with set_new_correlation_id() as cid:
         yield cid
+
+
+@pytest_asyncio.fixture()
+async def httpx_client() -> AsyncGenerator[httpx.AsyncClient]:
+    """Yields an AsyncClient"""
+    async with httpx.AsyncClient() as client:
+        yield client

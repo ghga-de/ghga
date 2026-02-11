@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,12 +23,6 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from ghga_event_schemas.pydantic_ import (
-    FileUpload,
-    FileUploadBox,
-    FileUploadState,
-    ResearchDataUploadBox,
-)
 from ghga_service_commons.auth.context import AuthContext
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.utils import now_utc_ms_prec
@@ -39,7 +33,7 @@ from uos.core import models
 from uos.core.orchestrator import UploadOrchestrator
 from uos.ports.outbound.http import AccessClientPort, FileBoxClientPort
 
-pytestmark = pytest.mark.asyncio()
+pytestmark = pytest.mark.asyncio
 
 TEST_FILE_UPLOAD_BOX_ID = UUID("2735c960-5e15-45dc-b27a-59162fbb2fd7")
 TEST_DS_ID = UUID("f698158d-8417-4368-bb45-349277bc45ee")
@@ -54,7 +48,10 @@ USER1_AUTH_CONTEXT = Mock(spec=AuthContext)
 USER1_AUTH_CONTEXT.id = str(TEST_USER_ID1)
 USER1_AUTH_CONTEXT.roles = []
 
-InMemBoxDao = new_mock_dao_class(dto_model=ResearchDataUploadBox, id_field="id")
+InMemBoxDao = new_mock_dao_class(dto_model=models.ResearchDataUploadBox, id_field="id")
+InMemAccessionMapDao = new_mock_dao_class(
+    dto_model=models.AccessionMap, id_field="box_id"
+)
 
 
 @dataclass
@@ -62,7 +59,8 @@ class JointRig:
     """Test fixture containing all components needed for controller testing."""
 
     config: Config
-    box_dao: BaseInMemDao[ResearchDataUploadBox]
+    box_dao: BaseInMemDao[models.ResearchDataUploadBox]
+    accession_map_dao: BaseInMemDao[models.AccessionMap]
     file_upload_box_client: FileBoxClientPort
     access_client: AccessClientPort
     controller: UploadOrchestrator
@@ -83,6 +81,7 @@ def rig(config: ConfigFixture) -> JointRig:
 
     controller = UploadOrchestrator(
         box_dao=(box_dao := InMemBoxDao()),  # type: ignore
+        accession_map_dao=(accession_map_dao := InMemAccessionMapDao()),  # type: ignore
         file_upload_box_client=file_box_client_mock,
         access_client=access_client_mock,
         audit_repository=AsyncMock(),
@@ -91,6 +90,7 @@ def rig(config: ConfigFixture) -> JointRig:
     return JointRig(
         config=_config,
         box_dao=box_dao,
+        accession_map_dao=accession_map_dao,
         file_upload_box_client=file_box_client_mock,
         access_client=access_client_mock,
         controller=controller,
@@ -109,7 +109,7 @@ async def populate_boxes(rig: JointRig):
             storage_alias="HD01",
             data_steward_id=TEST_DS_ID,
         )
-        await sleep(0.001)  # insert pause to ensure different timestamps for sortings
+        await sleep(0.001)  # insert pause to ensure different timestamps for sorting
         box_ids.append(box_id)
     return box_ids
 
@@ -133,8 +133,8 @@ async def test_create_research_data_upload_box(rig: JointRig):
     assert box.size == 0
     assert isinstance(box.file_upload_box_id, UUID)
     assert box.last_changed - now_utc_ms_prec() < timedelta(seconds=5)
-    assert box.locked == False
     assert box.state == "open"
+    assert box.file_upload_box_state == "open"
 
 
 async def test_update_research_data_upload_box_happy(
@@ -144,13 +144,16 @@ async def test_update_research_data_upload_box_happy(
     # Mock the access client to return that the user has access
     rig.access_client.check_box_access.return_value = True  # type: ignore
 
+    # Get the box to get its current version
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
     # Create an update request
     update_request = models.UpdateUploadBoxRequest(
-        title="Updated Title", description="Updated Description"
+        version=box.version, title="Updated Title", description="Updated Description"
     )
 
     # Call the update method
-    box_id = populated_boxes[0]
     await rig.controller.update_research_data_upload_box(
         box_id=box_id, request=update_request, auth_context=DATA_STEWARD_AUTH_CONTEXT
     )
@@ -177,12 +180,14 @@ async def test_update_research_data_upload_box_unauthorized(
     rig.access_client.check_box_access.return_value = True  # type: ignore
 
     # Create an update request
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
     update_request = models.UpdateUploadBoxRequest(
-        title="Updated Title", description="Updated Description"
+        version=box.version, title="Updated Title", description="Updated Description"
     )
 
     # Call the update method
-    box_id = populated_boxes[0]
     with pytest.raises(rig.controller.BoxAccessError):
         await rig.controller.update_research_data_upload_box(
             box_id=box_id,
@@ -198,7 +203,7 @@ async def test_update_research_data_upload_box_not_found(rig: JointRig):
 
     # Create an update request
     update_request = models.UpdateUploadBoxRequest(
-        title="Updated Title", description="Updated Description"
+        version=0, title="Updated Title", description="Updated Description"
     )
 
     # Try to update a non-existent box ID
@@ -217,14 +222,17 @@ async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[U
     """Test the normal path of getting a list of FileUpload objects for a box from the file box service."""
     # Mock the file box client to return a list of FileUpload objects
     test_file_uploads = [
-        FileUpload(
+        models.FileUploadWithAccession(
             id=uuid4(),
             box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
             alias=f"test{i}",
-            checksum=f"checksum{i}",
-            size=1000 + i * 100,
-            state=FileUploadState.ARCHIVED,
-            completed=True,
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000 + i * 100,
+            part_size=100,
+            state="archived",
+            state_updated=now_utc_ms_prec(),
         )
         for i in range(3)
     ]
@@ -297,13 +305,16 @@ async def test_upsert_file_upload_box_happy(rig: JointRig, populated_boxes: list
     initial_box = await rig.box_dao.get_by_id(box_id)
     assert initial_box.file_count == 0
     assert initial_box.size == 0
-    assert initial_box.locked == False
+    assert initial_box.version == 0
+    assert initial_box.file_upload_box_version == 0
+    assert initial_box.file_upload_box_state == "open"
     file_upload_box_id = initial_box.file_upload_box_id
 
     # Create a FileUploadBox with updated data
-    updated_file_upload_box = FileUploadBox(
+    updated_file_upload_box = models.FileUploadBox(
         id=file_upload_box_id,  # This should match the file_upload_box_id in our research box
-        locked=True,
+        version=1,
+        state="locked",
         file_count=5,
         size=1024000,
         storage_alias="HD01",
@@ -314,9 +325,11 @@ async def test_upsert_file_upload_box_happy(rig: JointRig, populated_boxes: list
 
     # Verify the research data upload box was updated
     updated_box = await rig.box_dao.get_by_id(box_id)
+    assert updated_box.version == 1
     assert updated_box.file_count == 5
     assert updated_box.size == 1024000
-    assert updated_box.locked == True
+    assert updated_box.file_upload_box_version == 1
+    assert updated_box.file_upload_box_state == "locked"
 
     # Verify other fields remain unchanged
     assert updated_box.title == "Box A"
@@ -327,9 +340,10 @@ async def test_upsert_file_upload_box_happy(rig: JointRig, populated_boxes: list
 async def test_upsert_file_upload_box_not_found(rig: JointRig):
     """Test the edge case where a matching Research Data Upload Box doesn't exist."""
     # Create a FileUploadBox with a random ID
-    orphaned_file_upload_box = FileUploadBox(
+    orphaned_file_upload_box = models.FileUploadBox(
         id=uuid4(),
-        locked=False,
+        version=0,
+        state="open",
         file_count=3,
         size=512000,
         storage_alias="HD02",
@@ -567,9 +581,10 @@ async def test_get_boxes_sorting(rig: JointRig, populated_boxes: list[UUID]):
     locked_box_ids = [populated_boxes[1], populated_boxes[3]]
     for box_id in locked_box_ids:
         await sleep(0.001)
+        box = await rig.box_dao.get_by_id(box_id)
         await rig.controller.update_research_data_upload_box(
             box_id=box_id,
-            request=models.UpdateUploadBoxRequest(state="locked"),
+            request=models.UpdateUploadBoxRequest(version=box.version, state="locked"),
             auth_context=DATA_STEWARD_AUTH_CONTEXT,
         )
 
@@ -588,15 +603,15 @@ async def test_get_boxes_sorting(rig: JointRig, populated_boxes: list[UUID]):
 
     # Filter by locked
     locked_results = await rig.controller.get_research_data_upload_boxes(
-        auth_context=DATA_STEWARD_AUTH_CONTEXT, locked=True
+        auth_context=DATA_STEWARD_AUTH_CONTEXT, state="locked"
     )
     assert locked_results.count == 2
     locked_results_ids = [box.id for box in locked_results.boxes]
     assert locked_results_ids == [populated_boxes[3], populated_boxes[1]]
 
-    # Filter by unlocked
+    # Filter by open
     unlocked_results = await rig.controller.get_research_data_upload_boxes(
-        auth_context=DATA_STEWARD_AUTH_CONTEXT, locked=False
+        auth_context=DATA_STEWARD_AUTH_CONTEXT, state="open"
     )
     assert unlocked_results.count == 3
     unlocked_results_ids = [box.id for box in unlocked_results.boxes]
@@ -636,3 +651,457 @@ async def test_get_boxes_pagination(rig: JointRig, populated_boxes: list[UUID]):
     )
     assert results.count == 5
     assert len(results.boxes) == 5
+
+
+async def test_update_accession_map_happy(rig: JointRig, populated_boxes: list[UUID]):
+    """Test the normal path of updating an accession map.
+
+    This test also checks for the BoxNotFoundError case, since that is small enough
+    to include here.
+    """
+    box_id = populated_boxes[0]
+
+    # Create test file uploads
+    test_file_ids = [uuid4() for _ in range(3)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000 + i * 100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate(test_file_ids)
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Create an accession map
+    accession_map = models.AccessionMapRequest(
+        version=0,
+        mapping={
+            "GHGA001": test_file_ids[0],
+            "GHGA002": test_file_ids[1],
+            "GHGA003": test_file_ids[2],
+        },
+    )
+
+    # Verify that a BoxNotFoundError is raised for a non-existent box
+    with pytest.raises(rig.controller.BoxNotFoundError):
+        await rig.controller.update_accession_map(box_id=uuid4(), request=accession_map)
+
+    # Verify file box client was not called
+    rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
+
+    # Get current box ID
+    box = await rig.box_dao.get_by_id(box_id)
+    version_pre_update = box.version
+
+    # Call the method with the valid map now
+    await rig.controller.update_accession_map(box_id=box_id, request=accession_map)
+
+    # Verify the accession map was stored
+    stored_map = await rig.accession_map_dao.get_by_id(box_id)
+    assert stored_map.box_id == box_id
+    assert len(stored_map.mapping) == 3
+
+    # Verify the research data upload box version was incremented
+    box = await rig.box_dao.get_by_id(box_id)
+    assert box.version - version_pre_update == 1
+
+    # Verify file box client was called
+    rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
+
+
+async def test_update_accession_map_invalid_or_unmapped_file_ids(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that invalid file IDs in an accession map or leaving any box files unmapped
+    triggers an AccessionMapError.
+    """
+    box_id = populated_boxes[0]
+
+    # Create test file uploads
+    test_file_ids = [uuid4() for _ in range(2)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate(test_file_ids)
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Create an accession map with a file ID that doesn't exist in the box
+    invalid_file_id = uuid4()
+    accession_map = models.AccessionMapRequest(
+        version=0, mapping={"GHGA001": test_file_ids[0], "GHGA002": invalid_file_id}
+    )
+
+    # Should raise AccessionMapError
+    with pytest.raises(rig.controller.AccessionMapError, match="not in the box"):
+        await rig.controller.update_accession_map(box_id=box_id, request=accession_map)
+
+    # Verify file box client was called
+    rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
+
+    # Create an accession map that omits a file
+    accession_map = models.AccessionMapRequest(
+        version=0, mapping={"GHGA001": test_file_ids[0]}
+    )
+
+    # Should raise AccessionMapError
+    with pytest.raises(
+        rig.controller.AccessionMapError, match="still need to be mapped"
+    ):
+        await rig.controller.update_accession_map(box_id=box_id, request=accession_map)
+
+
+async def test_update_accession_map_filters_cancelled_and_failed(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that cancelled and failed files are filtered out when validating accession map."""
+    box_id = populated_boxes[0]
+
+    # Create test file uploads including cancelled and failed ones
+    test_file_ids = [uuid4() for _ in range(4)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=test_file_ids[0],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias="test0",
+            decrypted_sha256="checksum0",
+            decrypted_size=1000,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        ),
+        models.FileUploadWithAccession(
+            id=test_file_ids[1],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias="test1",
+            decrypted_sha256="checksum1",
+            decrypted_size=1000,
+            part_size=100,
+            state="cancelled",  # This should be filtered out
+            state_updated=now_utc_ms_prec(),
+        ),
+        models.FileUploadWithAccession(
+            id=test_file_ids[2],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias="test2",
+            decrypted_sha256="checksum2",
+            decrypted_size=1000,
+            part_size=100,
+            state="failed",  # This should be filtered out
+            state_updated=now_utc_ms_prec(),
+        ),
+        models.FileUploadWithAccession(
+            id=test_file_ids[3],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias="test3",
+            decrypted_sha256="checksum3",
+            decrypted_size=1000,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        ),
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Create an accession map for only the valid files
+    request = models.AccessionMapRequest(
+        version=0, mapping={"GHGA001": test_file_ids[0], "GHGA004": test_file_ids[3]}
+    )
+
+    # This should succeed because cancelled and failed files are ignored
+    await rig.controller.update_accession_map(box_id=box_id, request=request)
+
+    # Verify the accession map was stored
+    stored_map = await rig.accession_map_dao.get_by_id(box_id)
+    assert len(stored_map.mapping) == 2
+
+
+async def test_archive_research_data_upload_box_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the normal path of archiving a research data upload box."""
+    box_id = populated_boxes[0]
+
+    # Lock the box first
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    box.version = 1
+    await rig.box_dao.update(box)
+
+    # Create test file uploads
+    test_file_ids = [uuid4() for _ in range(2)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate(test_file_ids)
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.archive_file_upload_box = AsyncMock()  # type: ignore
+
+    # Create an accession map
+    accession_map = models.AccessionMap(
+        box_id=box_id,
+        mapping={"GHGA001": test_file_ids[0], "GHGA002": test_file_ids[1]},
+    )
+    await rig.accession_map_dao.insert(accession_map)
+
+    # Archive the box via update
+    update_request = models.UpdateUploadBoxRequest(version=1, state="archived")
+
+    await rig.controller.update_research_data_upload_box(
+        box_id=box_id,
+        request=update_request,
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    # Verify the box was updated
+    updated_box = await rig.box_dao.get_by_id(box_id)
+    assert updated_box.state == "archived"
+    assert updated_box.version == 2
+    assert updated_box.file_upload_box_state == "archived"
+    assert updated_box.file_upload_box_version == 1
+    assert updated_box.changed_by == TEST_DS_ID
+
+    # Verify file box client was called to archive
+    rig.file_upload_box_client.archive_file_upload_box.assert_called_once()
+
+
+async def test_archive_via_update_box_not_found(rig: JointRig):
+    """Test that archiving a non-existent box raises BoxNotFoundError."""
+    non_existent_box_id = uuid4()
+
+    update_request = models.UpdateUploadBoxRequest(version=0, state="archived")
+
+    # This should raise BoxNotFoundError
+    with pytest.raises(rig.controller.BoxNotFoundError):
+        await rig.controller.update_research_data_upload_box(
+            box_id=non_existent_box_id,
+            request=update_request,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_update_box_outdated_version(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that updating with outdated version info raises VersionError."""
+    box_id = populated_boxes[0]
+
+    # Update the box version in the database
+    box = await rig.box_dao.get_by_id(box_id)
+    box.version = 5
+    await rig.box_dao.update(box)
+
+    # Try to update with outdated version
+    update_request = models.UpdateUploadBoxRequest(
+        version=3,  # Outdated!
+        title="New Title",
+    )
+
+    with pytest.raises(rig.controller.VersionError, match="has changed"):
+        await rig.controller.update_research_data_upload_box(
+            box_id=box_id,
+            request=update_request,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_archive_box_not_locked(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that archiving an unlocked box raises StateChangeError."""
+    box_id = populated_boxes[0]
+
+    # Get the box (should be in 'open' state)
+    box = await rig.box_dao.get_by_id(box_id)
+    assert box.state == "open"
+
+    # Try to archive without locking first (invalid state transition)
+    update_request = models.UpdateUploadBoxRequest(
+        version=box.version, state="archived"
+    )
+
+    with pytest.raises(
+        rig.controller.StateChangeError,
+        match="cannot be changed from 'open' to 'archived'",
+    ):
+        await rig.controller.update_research_data_upload_box(
+            box_id=box_id,
+            request=update_request,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_archive_box_no_accession_map(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that archiving without an accession map raises ArchivalPrereqsError."""
+    box_id = populated_boxes[0]
+
+    # Lock the box
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    # Try to archive without creating an accession map
+    update_request = models.UpdateUploadBoxRequest(
+        version=box.version, state="archived"
+    )
+
+    with pytest.raises(rig.controller.ArchivalPrereqsError, match="not been assigned"):
+        await rig.controller.update_research_data_upload_box(
+            box_id=box_id,
+            request=update_request,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_archive_box_missing_accessions(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that archiving with missing accessions raises ArchivalPrereqsError."""
+    box_id = populated_boxes[0]
+
+    # Lock the box
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    # Create 3 test file uploads
+    test_file_ids = [uuid4() for _ in range(3)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate(test_file_ids)
+    ]
+
+    # Mock the file box client to return the file uploads
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Create an incomplete accession map (missing the third file)
+    accession_map = models.AccessionMap(
+        box_id=box_id,
+        mapping={"GHGA001": test_file_ids[0], "GHGA002": test_file_ids[1]},
+    )
+    await rig.accession_map_dao.insert(accession_map)
+
+    # Try to archive with missing accessions
+    update_request = models.UpdateUploadBoxRequest(
+        version=box.version, state="archived"
+    )
+
+    with pytest.raises(
+        rig.controller.ArchivalPrereqsError, match="missing an accession"
+    ):
+        await rig.controller.update_research_data_upload_box(
+            box_id=box_id,
+            request=update_request,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_archive_box_file_upload_box_version_error(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a FileUploadBox version error during archival raises VersionError and rolls back."""
+    box_id = populated_boxes[0]
+
+    # Lock the box
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    original_version = box.version
+    await rig.box_dao.update(box)
+
+    # Create test file uploads
+    test_file_ids = [uuid4()]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=test_file_ids[0],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            alias="test0",
+            decrypted_sha256="checksum0",
+            decrypted_size=1000,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.archive_file_upload_box = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.FUBVersionError("Version mismatch")
+    )
+
+    # Create an accession map
+    accession_map = models.AccessionMap(
+        box_id=box_id, mapping={"GHGA001": test_file_ids[0]}
+    )
+    await rig.accession_map_dao.insert(accession_map)
+
+    # Try to archive - should raise VersionError due to FUB version mismatch
+    update_request = models.UpdateUploadBoxRequest(
+        version=box.version, state="archived"
+    )
+
+    with pytest.raises(rig.controller.VersionError, match="out of date"):
+        await rig.controller.update_research_data_upload_box(
+            box_id=box_id,
+            request=update_request,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    # Verify the box state was rolled back
+    unchanged_box = await rig.box_dao.get_by_id(box_id)
+    assert unchanged_box.state == "locked"  # Still locked, not archived
+    assert unchanged_box.version == original_version  # Version rolled back

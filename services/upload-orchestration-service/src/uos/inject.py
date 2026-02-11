@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
+import httpx
 from fastapi import FastAPI
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from hexkit.providers.akafka.provider import (
@@ -35,7 +36,7 @@ from uos.adapters.inbound.event_sub import OutboxSubTranslator
 from uos.adapters.inbound.fastapi_ import dummies
 from uos.adapters.inbound.fastapi_.configure import get_configured_app
 from uos.adapters.outbound.audit import AuditRepository
-from uos.adapters.outbound.dao import get_box_dao
+from uos.adapters.outbound.dao import get_accession_map_dao, get_box_dao
 from uos.adapters.outbound.event_pub import EventPubTranslator
 from uos.adapters.outbound.http import AccessClient, FileBoxClient
 from uos.config import Config
@@ -64,6 +65,7 @@ async def get_persistent_publisher(
         PersistentKafkaPublisher.construct(
             config=config,
             dao_factory=_dao_factory,
+            compacted_topics={config.accession_map_topic},
             collection_name="uosPersistedEvents",
         ) as persistent_publisher,
     ):
@@ -82,6 +84,7 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[UploadOrchestratorPo
         get_persistent_publisher(
             config=config, dao_factory=dao_factory
         ) as persistent_pub_provider,
+        httpx.AsyncClient() as httpx_client,
     ):
         event_publisher = EventPubTranslator(
             config=config, provider=persistent_pub_provider
@@ -92,11 +95,15 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[UploadOrchestratorPo
         box_dao = await get_box_dao(
             config=config, dao_publisher_factory=dao_publisher_factory
         )
-        access_client = AccessClient(config=config)
-        file_upload_box_client = FileBoxClient(config=config)
+        accession_map_dao = await get_accession_map_dao(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
+        access_client = AccessClient(config=config, httpx_client=httpx_client)
+        file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
 
         yield UploadOrchestrator(
             box_dao=box_dao,
+            accession_map_dao=accession_map_dao,
             audit_repository=audit_repository,
             access_client=access_client,
             file_upload_box_client=file_upload_box_client,
@@ -131,15 +138,15 @@ async def prepare_rest_app(
     async with (
         prepare_core_with_override(
             config=config, upload_orchestrator_override=upload_orchestrator_override
-        ) as reverse_transpiler,
+        ) as upload_orchestrator,
         GHGAAuthContextProvider.construct(
             config=config,
             context_class=AuthContext,
         ) as auth_context,
     ):
         app.dependency_overrides[dummies.auth_provider] = lambda: auth_context
-        app.dependency_overrides[dummies.upload_orchestrator_port] = (
-            lambda: reverse_transpiler
+        app.dependency_overrides[dummies.upload_orchestrator_port] = lambda: (
+            upload_orchestrator
         )
         yield app
 

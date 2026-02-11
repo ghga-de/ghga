@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,10 +21,6 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from ghga_event_schemas.pydantic_ import (
-    ResearchDataUploadBox,
-    ResearchDataUploadBoxState,
-)
 from hexkit.correlation import get_correlation_id
 from hexkit.providers.testing.eventpub import (
     Event,
@@ -37,8 +33,9 @@ from hexkit.utils import now_utc_ms_prec
 from tests.fixtures import ConfigFixture
 from uos.adapters.outbound.audit import AuditRepository
 from uos.adapters.outbound.event_pub import EventPubTranslator
+from uos.core.models import ResearchDataUploadBox
 
-pytestmark = pytest.mark.asyncio()
+pytestmark = pytest.mark.asyncio
 
 
 AuditFixture = tuple[AuditRepository, InMemEventStore]
@@ -94,12 +91,15 @@ async def test_log_box_created():
 
     # Create a test ResearchDataUploadBox
     box = ResearchDataUploadBox(
-        state=ResearchDataUploadBoxState.OPEN,
+        version=0,
+        state="open",
         title="Test Box Title",
         description="Test box description",
         last_changed=now_utc_ms_prec(),
         changed_by=(user_id := uuid4()),
         file_upload_box_id=uuid4(),
+        file_upload_box_version=0,
+        file_upload_box_state="open",
         storage_alias="HD01",
     )
 
@@ -122,12 +122,16 @@ async def test_log_box_updated():
 
     # Create a test ResearchDataUploadBox
     box = ResearchDataUploadBox(
-        state=ResearchDataUploadBoxState.OPEN,
+        version=0,
+        state="open",
         title="Test Box Title",
         description="Test box description",
         last_changed=now_utc_ms_prec(),
         changed_by=(user_id := uuid4()),
         file_upload_box_id=uuid4(),
+        file_upload_box_version=0,
+        file_upload_box_state="open",
+        size=10000,
         storage_alias="HD01",
     )
 

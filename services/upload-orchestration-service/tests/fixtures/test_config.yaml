@@ -11,3 +11,4 @@ audit_record_type: audit_record_logged
 file_upload_box_topic: file-upload-boxes
 work_order_signing_key: "{}"
 research_data_upload_box_topic: research-data-upload-boxes
+accession_map_topic: accession-maps

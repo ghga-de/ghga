@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,9 +18,9 @@
 import logging
 
 from ghga_event_schemas.configs import FileUploadBoxEventsConfig
-from ghga_event_schemas.pydantic_ import FileUploadBox
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 
+from uos.core.models import FileUploadBox
 from uos.ports.inbound.orchestrator import UploadOrchestratorPort
 
 log = logging.getLogger(__name__)
