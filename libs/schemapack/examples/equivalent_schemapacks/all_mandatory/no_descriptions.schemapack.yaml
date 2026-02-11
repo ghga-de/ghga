@@ -1,5 +1,4 @@
 schemapack: 4.0.0
-description: a schemapack with a many-to-one relation that is mandatory at both ends
 classes:
   A:
     id:
@@ -13,7 +12,7 @@ classes:
           target: true
         multiple:
           origin: true
-          target: false # <-
+          target: true
   B:
     id:
       propertyName: alias

@@ -1,5 +1,5 @@
 schemapack: 4.0.0
-description: a schemapack with a many-to-many relation that is mandatory at both ends
+description: a schemapack with a many-to-many relation that is mandatory at both ends # <-
 classes:
   A:
     id:
@@ -7,13 +7,14 @@ classes:
     content: ../../content_schemas/AnyObject.schema.json
     relations:
       b:
+        description: the relation from A to B # <-
         targetClass: B
         mandatory:
           origin: true
           target: true
         multiple:
           origin: true
-          target: true # <-
+          target: true
   B:
     id:
       propertyName: alias

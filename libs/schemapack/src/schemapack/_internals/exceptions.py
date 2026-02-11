@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,12 +18,12 @@
 
 from abc import ABC
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 import pydantic_core
 
 
-class SpecType(str, Enum):
+class SpecType(StrEnum):
     """An enumeration of the types of specs."""
 
     SCHEMAPACK = "schemapack"

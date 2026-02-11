@@ -1,0 +1,31 @@
+schemapack: 3.0.0
+description: A schema used to describe relationships between team members.
+classes:
+  Person:
+    id:
+      propertyName: name
+    content:
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+      description: Any object (alternative form).
+      type: object
+      properties: {}
+      additionalProperties: {}
+    relations:
+      teammates:
+        targetClass: Person
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: true
+      manager:
+        targetClass: Person
+        mandatory:
+          origin: false
+          target: false
+        multiple:
+          origin: true
+          target: false
+
+rootClass: Person

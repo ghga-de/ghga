@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,10 +81,10 @@ def test_isolate(
     """Test the isolate function."""
     datapack_path = VALID_DATAPACK_PATHS[datapack_name]
     expected_rooted_datapack_path = VALID_DATAPACK_PATHS[rooted_datapack_name]
-    schemapack_name = datapack_name.split(".")[0]
+    schemapack_name = datapack_name.split(".", 1)[0]
     schemapack_path = VALID_SCHEMAPACK_PATHS[schemapack_name]
-    rooted_schempack_name = rooted_datapack_name.split(".")[0]
-    expected_rooted_schemapack_path = VALID_SCHEMAPACK_PATHS[rooted_schempack_name]
+    rooted_schemapack_name = rooted_datapack_name.split(".", 1)[0]
+    expected_rooted_schemapack_path = VALID_SCHEMAPACK_PATHS[rooted_schemapack_name]
 
     datapack = load_datapack(datapack_path)
     expected_rooted_datapack = load_datapack(expected_rooted_datapack_path)

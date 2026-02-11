@@ -1,24 +1,23 @@
 schemapack: 4.0.0
-description: a schemapack with a many-to-one relation that is optional at the target end
+description: a schemapack with a many-to-many relation that is mandatory at both ends # <-
 classes:
   A:
     id:
       propertyName: alias
+      description: the alias of A # <-
     content: ../../content_schemas/AnyObject.schema.json
     relations:
       b:
+        description: the relation from A to B # <-
         targetClass: B
         mandatory:
           origin: true
-          target: false
+          target: true
         multiple:
           origin: true
-          target: false
+          target: true
   B:
     id:
       propertyName: alias
-    content: ../../content_schemas/AnyObject.schema.json
-  C:
-    id:
-      propertyName: alias
+      description: the alias of B # <-
     content: ../../content_schemas/AnyObject.schema.json
