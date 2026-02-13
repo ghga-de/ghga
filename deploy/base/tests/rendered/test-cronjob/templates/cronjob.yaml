@@ -87,6 +87,13 @@ spec:
               seccompProfile:
                 type: RuntimeDefault
             name: test-cronjob
+            resources:
+              limits:
+                cpu: 1500m
+                memory: 2048M
+              requests:
+                cpu: 1000m
+                memory: 1024M
             volumeMounts:
               - mountPath: /home/appuser/config.yaml
                 name: config

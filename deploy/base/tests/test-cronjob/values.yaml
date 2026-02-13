@@ -38,3 +38,11 @@ extraVolumes:
 extraVolumeMounts:
   - name: test
     mountPath: /tmp/test
+
+resources:
+  limits:
+    cpu: 1500m
+    memory: 2048M
+  requests:
+    cpu: 1000m
+    memory: 1024M

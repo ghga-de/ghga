@@ -75,7 +75,7 @@ spec:
             {{- end }}
             name: {{ .Release.Name }}
             {{- if .Values.resources }}
-            resources: {{- toYaml .Values.resources | nindent 12 }}
+            resources: {{- toYaml .Values.resources | nindent 14 }}
             {{- end }}
             volumeMounts:
             {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 14 }}
