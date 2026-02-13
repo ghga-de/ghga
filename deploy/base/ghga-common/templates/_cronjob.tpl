@@ -74,6 +74,9 @@ spec:
             securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 14 }}
             {{- end }}
             name: {{ .Release.Name }}
+            {{- if .Values.resources }}
+            resources: {{- toYaml .Values.resources | nindent 12 }}
+            {{- end }}
             volumeMounts:
             {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 14 }}
             {{- if .Values.kafkaUser.enabled }}
