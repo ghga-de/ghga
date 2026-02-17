@@ -16,7 +16,7 @@
 """Tests typical user journeys"""
 
 import logging
-from uuid import uuid4
+from uuid import UUID
 
 import ghga_event_schemas.pydantic_ as event_schemas
 import pytest
@@ -26,26 +26,31 @@ from hexkit.utils import now_utc_ms_prec
 from dins.core import models
 from tests.fixtures.joint import JointFixture
 
-FILE_ID_1 = "test-file"
-FILE_ID_2 = "test-file-2"
-FILE_ID_3 = "test-file-3"
+pytestmark = pytest.mark.asyncio
+
+FILE_ID_1 = UUID("6157d248-4baa-4f86-b1b9-b5476a55c12a")
+FILE_ID_2 = UUID("753d3b20-eb18-4379-9874-1171cfa24831")
+FILE_ID_3 = UUID("8eba8ab1-6e86-4d65-9c45-1586f73950fa")
+ACCESSION1 = "GHGA001"
+ACCESSION2 = "GHGA002"
+ACCESSION3 = "GHGA003"
 DECRYPTED_SHA256 = "fake-checksum"
 DECRYPTED_SIZE = 12345678
 
 
 FILE_1 = event_schemas.MetadataDatasetFile(
-    accession=FILE_ID_1, description="Test File", file_extension=".zip"
+    accession=ACCESSION1, description="Test File 1", file_extension=".zip"
 )
 FILE_2 = event_schemas.MetadataDatasetFile(
-    accession=FILE_ID_2, description="Test File", file_extension=".zip"
+    accession=ACCESSION2, description="Test File 2", file_extension=".zip"
 )
 FILE_3 = event_schemas.MetadataDatasetFile(
-    accession=FILE_ID_3, description="Test File", file_extension=".zip"
+    accession=ACCESSION3, description="Test File 3", file_extension=".zip"
 )
 
 
 INCOMING_DATASET_PAYLOAD = event_schemas.MetadataDatasetOverview(
-    accession="test-dataset",
+    accession="GHGAtest-dataset",
     description="Test dataset",
     title="Dataset for testing",
     stage=event_schemas.MetadataDatasetStage.UPLOAD,
@@ -59,46 +64,48 @@ UPDATE_DATASET_PAYLOAD = INCOMING_DATASET_PAYLOAD.model_copy(
 )
 
 
-INCOMING_FILE_PAYLOAD = event_schemas.FileInternallyRegistered(
-    s3_endpoint_alias="test-node",
+INCOMING_FILE_PAYLOAD = models.FileInternallyRegistered(
     file_id=FILE_ID_1,
-    object_id=uuid4(),
-    bucket_id="test-bucket",
-    upload_date=now_utc_ms_prec(),
+    accession=ACCESSION1,
+    archive_date=now_utc_ms_prec(),
+    storage_alias="test-node",
+    bucket_id="permanent",
+    secret_id="some-secret",
     decrypted_size=DECRYPTED_SIZE,
-    decrypted_sha256=DECRYPTED_SHA256,
     encrypted_size=123456789,
-    encrypted_part_size=1,
+    decrypted_sha256=DECRYPTED_SHA256,
     encrypted_parts_md5=["some", "checksum"],
     encrypted_parts_sha256=["some", "checksum"],
-    content_offset=1234,
-    decryption_secret_id="some-secret",
+    part_size=10000,
 )
 
 INCOMING_FILE_PAYLOAD_2 = INCOMING_FILE_PAYLOAD.model_copy(
-    update={"file_id": FILE_ID_2, "s3_endpoint_alias": "test-node-2"}
+    update={
+        "file_id": FILE_ID_2,
+        "accession": ACCESSION2,
+        "storage_alias": "test-node-2",
+    }
 )
 INCOMING_FILE_PAYLOAD_3 = INCOMING_FILE_PAYLOAD.model_copy(
-    update={"file_id": FILE_ID_3, "s3_endpoint_alias": "test-node-3"}
+    update={
+        "file_id": FILE_ID_3,
+        "accession": ACCESSION3,
+        "storage_alias": "test-node-3",
+    }
 )
 
 FILE_INFORMATION = models.FileInformation(
-    accession=FILE_ID_1,
+    accession=ACCESSION1,
     sha256_hash=DECRYPTED_SHA256,
     size=DECRYPTED_SIZE,
     storage_alias="test-node",
 )
 
-pytestmark = pytest.mark.asyncio()
 
-
-async def test_file_information_journey(
-    joint_fixture: JointFixture,
-    caplog,
-):
+async def test_file_information_journey(joint_fixture: JointFixture, caplog):
     """Simulates a typical file information API journey."""
     # Test population path
-    file_id = INCOMING_FILE_PAYLOAD.file_id
+    accession = INCOMING_FILE_PAYLOAD.accession
 
     await joint_fixture.kafka.publish_event(
         payload=INCOMING_FILE_PAYLOAD.model_dump(),
@@ -107,11 +114,11 @@ async def test_file_information_journey(
     )
     await joint_fixture.event_subscriber.run(forever=False)
 
-    file_information = await joint_fixture.file_information_dao.get_by_id(file_id)
+    file_information = await joint_fixture.file_information_dao.get_by_id(accession)
     assert file_information == FILE_INFORMATION
 
     # Test reregistration of identical content
-    expected_message = f"Found existing information for file {file_id}."
+    expected_message = f"Found existing information for file {accession}."
 
     caplog.clear()
     with caplog.at_level(level=logging.DEBUG, logger="dins.core.information_service"):
@@ -125,7 +132,10 @@ async def test_file_information_journey(
         assert expected_message in caplog.messages
 
     # Test reregistration of mismatching content
-    mismatch_message = f"Mismatching information for the file with ID {file_id} has already been registered."
+    mismatch_message = (
+        f"Mismatching information for the file with accession {accession} has already"
+        + " been registered."
+    )
     mismatch_mock = INCOMING_FILE_PAYLOAD.model_copy(
         update={"decrypted_sha256": "other-fake-checksum"}
     )
@@ -144,7 +154,7 @@ async def test_file_information_journey(
 
     # Test requesting existing file information
     base_url = f"{joint_fixture.config.api_root_path}/file_information"
-    url = f"{base_url}/{file_id}"
+    url = f"{base_url}/{accession}"
     response = await joint_fixture.rest_client.get(url)
     assert response.status_code == 200
     assert models.FileInformation(**response.json()) == FILE_INFORMATION
@@ -155,7 +165,7 @@ async def test_file_information_journey(
     assert response.status_code == 404
 
     # request deletion
-    deletion_requested = event_schemas.FileDeletionRequested(file_id=file_id)
+    deletion_requested = event_schemas.FileDeletionRequested(file_id=ACCESSION1)
 
     await joint_fixture.kafka.publish_event(
         payload=deletion_requested.model_dump(),
@@ -166,9 +176,7 @@ async def test_file_information_journey(
 
     # assert information is gone
     with pytest.raises(ResourceNotFoundError):
-        file_information = await joint_fixture.file_information_dao.get_by_id(
-            id_=file_id
-        )
+        file_information = await joint_fixture.file_information_dao.get_by_id(accession)
 
 
 async def test_dataset_information_journey(
@@ -198,8 +206,8 @@ async def test_dataset_information_journey(
     dataset_information = response.json()
     assert dataset_information["accession"] == dataset_accession
     assert dataset_information["file_information"] == [
-        {"accession": FILE_ID_1},
-        {"accession": FILE_ID_2},
+        {"accession": ACCESSION1},
+        {"accession": ACCESSION2},
     ]
 
     # register actual file information
@@ -223,13 +231,13 @@ async def test_dataset_information_journey(
     assert dataset_information["accession"] == dataset_accession
     assert dataset_information["file_information"] == [
         {
-            "accession": FILE_ID_1,
+            "accession": ACCESSION1,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
             "storage_alias": "test-node",
         },
         {
-            "accession": FILE_ID_2,
+            "accession": ACCESSION2,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
             "storage_alias": "test-node-2",
@@ -254,19 +262,19 @@ async def test_dataset_information_journey(
     assert dataset_information["accession"] == dataset_accession
     assert dataset_information["file_information"] == [
         {
-            "accession": FILE_ID_1,
+            "accession": ACCESSION1,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
             "storage_alias": "test-node",
         },
         {
-            "accession": FILE_ID_2,
+            "accession": ACCESSION2,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
             "storage_alias": "test-node-2",
         },
         {
-            "accession": FILE_ID_3,
+            "accession": ACCESSION3,
             "size": DECRYPTED_SIZE,
             "sha256_hash": DECRYPTED_SHA256,
             "storage_alias": "test-node-3",
@@ -274,8 +282,8 @@ async def test_dataset_information_journey(
     ]
 
     # delete file information
-    for file_id in (FILE_ID_1, FILE_ID_2, FILE_ID_3):
-        deletion_requested = event_schemas.FileDeletionRequested(file_id=file_id)
+    for accession in (ACCESSION1, ACCESSION2, ACCESSION3):
+        deletion_requested = event_schemas.FileDeletionRequested(file_id=accession)
 
         await joint_fixture.kafka.publish_event(
             payload=deletion_requested.model_dump(),
@@ -291,9 +299,9 @@ async def test_dataset_information_journey(
     dataset_information = response.json()
     assert dataset_information["accession"] == dataset_accession
     assert dataset_information["file_information"] == [
-        {"accession": FILE_ID_1},
-        {"accession": FILE_ID_2},
-        {"accession": FILE_ID_3},
+        {"accession": ACCESSION1},
+        {"accession": ACCESSION2},
+        {"accession": ACCESSION3},
     ]
 
     # delete dataset

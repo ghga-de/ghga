@@ -125,11 +125,11 @@ components:
       type: object
     HttpInformationNotFoundErrorData:
       properties:
-        file_id:
-          title: File Id
+        accession:
+          title: Accession
           type: string
       required:
-      - file_id
+      - accession
       title: HttpInformationNotFoundErrorData
       type: object
     ValidationError:
@@ -193,16 +193,16 @@ paths:
       summary: Return public file information for the given dataset id/accession.
       tags:
       - DatasetInformationService
-  /file_information/{file_id}:
+  /file_information/{accession}:
     get:
       description: Retrieve and serve stored file information.
       operationId: getFileInformation
       parameters:
       - in: path
-        name: file_id
+        name: accession
         required: true
         schema:
-          title: File Id
+          title: Accession
           type: string
       responses:
         '200':
@@ -211,7 +211,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/FileInformation'
           description:
-          - File information consisting of file id/accession, sha256 checksum of the
+          - File information consisting of file accession, sha256 checksum of the
             unencryptedfile content and file size of the unencrypted file in bytes.
         '404':
           content:
@@ -220,14 +220,14 @@ paths:
                 $ref: '#/components/schemas/HttpInformationNotFoundError'
           description: 'Exceptions by ID:
 
-            - informationNotFound: No information registered for the given file ID.'
+            - informationNotFound: No information registered for the given file accession.'
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-      summary: Return public file information for the given file id/accession.
+      summary: Return public file information for the given file accession.
       tags:
       - DatasetInformationService
   /health:

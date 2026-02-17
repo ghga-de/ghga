@@ -25,6 +25,7 @@ from dins.core.models import (
     DatasetFileInformation,
     FileAccession,
     FileInformation,
+    FileInternallyRegistered,
 )
 from dins.ports.inbound.information_service import InformationServicePort
 
@@ -46,26 +47,28 @@ class InformationService(InformationServicePort):
         self._file_information_dao = file_information_dao
 
     async def delete_dataset_information(self, dataset_id: str):
-        """Delete dataset to file ID mapping when the corresponding dataset is deleted."""
+        """Delete dataset to file accession mapping when the corresponding dataset is deleted."""
         try:
-            await self._dataset_dao.get_by_id(id_=dataset_id)
+            await self._dataset_dao.get_by_id(dataset_id)
         except ResourceNotFoundError:
             log.info("Mapping for dataset with id %s does not exist.", dataset_id)
             return
 
-        await self._dataset_dao.delete(id_=dataset_id)
+        await self._dataset_dao.delete(dataset_id)
         log.info("Successfully deleted mapping for dataset with id %s.", dataset_id)
 
-    async def delete_file_information(self, file_id: str):
-        """Handle deletion requests for information associated with the given file ID."""
+    async def delete_file_information(self, accession: str):
+        """Handle deletion requests for information associated with the given accession."""
         try:
-            await self._file_information_dao.get_by_id(id_=file_id)
+            await self._file_information_dao.get_by_id(accession)
         except ResourceNotFoundError:
-            log.info("Information for file with id %s does not exist.", file_id)
+            log.info(
+                "Information for file with accession %s does not exist.", accession
+            )
             return
 
-        await self._file_information_dao.delete(id_=file_id)
-        log.info("Successfully deleted entries for file with id %s.", file_id)
+        await self._file_information_dao.delete(accession)
+        log.info("Successfully deleted entries for file with accession %s.", accession)
 
     async def register_dataset_information(
         self, dataset: event_schemas.MetadataDatasetOverview
@@ -80,33 +83,30 @@ class InformationService(InformationServicePort):
 
         await self._dataset_dao.upsert(dataset_file_accessions)
 
-    async def register_file_information(
-        self, file: event_schemas.FileInternallyRegistered
-    ):
+    async def register_file_information(self, file: FileInternallyRegistered):
         """Store information for a file newly registered with the Internal File Registry."""
         file_information = FileInformation(
-            accession=file.file_id,
+            accession=file.accession,
             size=file.decrypted_size,
             sha256_hash=file.decrypted_sha256,
-            storage_alias=file.s3_endpoint_alias,
+            storage_alias=file.storage_alias,
         )
-        file_id = file_information.accession
+        accession = file_information.accession
 
         # inverted logic due to raw pymongo exception exposed by hexkit
         try:
-            existing_information = await self._file_information_dao.get_by_id(
-                id_=file_id
-            )
-            log.debug("Found existing information for file %s.", file_id)
+            existing_information = await self._file_information_dao.get_by_id(accession)
+        except ResourceNotFoundError:
+            await self._file_information_dao.insert(file_information)
+            log.debug("Successfully inserted information for file %s.", accession)
+        else:
+            log.debug("Found existing information for file %s.", accession)
             # Only log if information to be inserted is a mismatch
             if existing_information != file_information:
                 information_exists = self.MismatchingFileInformationAlreadyRegistered(
-                    file_id=file_id
+                    accession=accession
                 )
                 log.error(information_exists)
-        except ResourceNotFoundError:
-            await self._file_information_dao.insert(file_information)
-            log.debug("Successfully inserted information for file %s.", file_id)
 
     async def serve_dataset_information(
         self, dataset_id: str
@@ -148,13 +148,13 @@ class InformationService(InformationServicePort):
 
         return DatasetFileInformation(accession=dataset_id, file_information=combined)
 
-    async def serve_file_information(self, file_id: str) -> FileInformation:
-        """Retrieve stored public information for the given file ID to be served by the API."""
+    async def serve_file_information(self, accession: str) -> FileInformation:
+        """Retrieve stored public information for the given file accession to be served by the API."""
         try:
-            file_information = await self._file_information_dao.get_by_id(file_id)
-            log.debug("Found information for file %s.", file_id)
+            file_information = await self._file_information_dao.get_by_id(accession)
+            log.debug("Found information for file %s.", accession)
         except ResourceNotFoundError as error:
-            information_not_found = self.InformationNotFoundError(file_id=file_id)
+            information_not_found = self.InformationNotFoundError(accession=accession)
             log.debug(information_not_found)
             raise information_not_found from error
 

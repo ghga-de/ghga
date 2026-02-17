@@ -37,14 +37,14 @@ RESPONSES = {
     },
     "fileInformation": {
         "description": (
-            "File information consisting of file id/accession, sha256 checksum of the unencrypted"
+            "File information consisting of file accession, sha256 checksum of the unencrypted"
             "file content and file size of the unencrypted file in bytes.",
         ),
         "model": models.FileInformation,
     },
     "informationNotFound": {
         "description": (
-            "Exceptions by ID:\n- informationNotFound: No information registered for the given file ID."
+            "Exceptions by ID:\n- informationNotFound: No information registered for the given file accession."
         ),
         "model": http_exceptions.HttpInformationNotFoundError.get_body_model(),
     },
@@ -68,7 +68,11 @@ async def health():
     operation_id="getDatasetInformation",
     tags=["DatasetInformationService"],
     status_code=status.HTTP_200_OK,
-    response_description="File information consisting of file id, sha256 checksum of the unencrypted file content and file size of the unencrypted file in bytes for all files in a dataset.",
+    response_description=(
+        "File information consisting of file accession, sha256 checksum of the"
+        + " unencrypted file content and file size of the unencrypted file in bytes for"
+        + " all files in a dataset."
+    ),
     responses={
         status.HTTP_200_OK: RESPONSES["datasetInformation"],
         status.HTTP_404_NOT_FOUND: RESPONSES["datasetNotFound"],
@@ -94,19 +98,22 @@ async def get_dataset_information(
 
 
 @router.get(
-    "/file_information/{file_id}",
-    summary="Return public file information for the given file id/accession.",
+    "/file_information/{accession}",
+    summary="Return public file information for the given file accession.",
     operation_id="getFileInformation",
     tags=["DatasetInformationService"],
     status_code=status.HTTP_200_OK,
-    response_description="File information consisting of file id, sha256 checksum of the unencrypted file content and file size of the unencrypted file in bytes.",
+    response_description=(
+        "File information consisting of file accession, sha256 checksum of the"
+        + " unencrypted file content and file size of the unencrypted file in bytes."
+    ),
     responses={
         status.HTTP_200_OK: RESPONSES["fileInformation"],
         status.HTTP_404_NOT_FOUND: RESPONSES["informationNotFound"],
     },
 )
 async def get_file_information(
-    file_id: str,
+    accession: str,
     information_service: Annotated[
         InformationServicePort, Depends(dummies.information_service_port)
     ],
@@ -114,9 +121,11 @@ async def get_file_information(
     """Retrieve and serve stored file information."""
     try:
         file_information = await information_service.serve_file_information(
-            file_id=file_id
+            accession=accession
         )
     except information_service.InformationNotFoundError as error:
-        raise http_exceptions.HttpInformationNotFoundError(file_id=file_id) from error
+        raise http_exceptions.HttpInformationNotFoundError(
+            accession=accession
+        ) from error
 
     return http_responses.HttpFileInformationResponse(file_information=file_information)

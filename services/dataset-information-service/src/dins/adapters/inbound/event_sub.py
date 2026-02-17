@@ -28,6 +28,7 @@ from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import UUID4
 
+from dins.core.models import FileInternallyRegistered
 from dins.ports.inbound.information_service import InformationServicePort
 
 log = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         """
         validated_payload = get_validated_payload(
             payload=payload,
-            schema=event_schemas.FileInternallyRegistered,
+            schema=FileInternallyRegistered,
         )
 
         await self._information_service.register_file_information(
@@ -139,5 +140,5 @@ class EventSubTranslator(EventSubscriberProtocol):
             schema=event_schemas.FileDeletionRequested,
         )
         await self._information_service.delete_file_information(
-            file_id=validated_payload.file_id
+            accession=validated_payload.file_id
         )

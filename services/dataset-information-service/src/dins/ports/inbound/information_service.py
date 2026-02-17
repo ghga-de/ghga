@@ -18,7 +18,11 @@ from abc import ABC, abstractmethod
 
 import ghga_event_schemas.pydantic_ as event_schemas
 
-from dins.core.models import DatasetFileInformation, FileInformation
+from dins.core.models import (
+    DatasetFileInformation,
+    FileInformation,
+    FileInternallyRegistered,
+)
 
 
 class InformationServicePort(ABC):
@@ -29,8 +33,8 @@ class InformationServicePort(ABC):
     class MismatchingFileInformationAlreadyRegistered(RuntimeError):
         """Raised when the given file ID is already registered but the info doesn't match."""
 
-        def __init__(self, *, file_id: str):
-            message = f"Mismatching information for the file with ID {file_id} has already been registered."
+        def __init__(self, *, accession: str):
+            message = f"Mismatching information for the file with accession {accession} has already been registered."
             super().__init__(message)
 
     class DatasetNotFoundError(RuntimeError):
@@ -43,28 +47,26 @@ class InformationServicePort(ABC):
     class InformationNotFoundError(RuntimeError):
         """Raised when information for a given file ID is not registered."""
 
-        def __init__(self, *, file_id: str):
-            message = f"Information for the file with ID {file_id} is not registered."
+        def __init__(self, *, accession: str):
+            message = f"Information for the file with accession {accession} is not registered."
             super().__init__(message)
 
     @abstractmethod
     async def delete_dataset_information(self, dataset_id: str):
-        """Delete dataset to file ID mapping when the corresponding dataset is deleted."""
+        """Delete dataset to file accession mapping when the corresponding dataset is deleted."""
 
     @abstractmethod
-    async def delete_file_information(self, file_id: str):
-        """Handle deletion requests for information associated with the given file ID."""
+    async def delete_file_information(self, accession: str):
+        """Handle deletion requests for information associated with the given accession."""
 
     @abstractmethod
     async def register_dataset_information(
         self, dataset: event_schemas.MetadataDatasetOverview
     ):
-        """Extract dataset to file ID mapping and store it."""
+        """Extract dataset to file accession mapping and store it."""
 
     @abstractmethod
-    async def register_file_information(
-        self, file: event_schemas.FileInternallyRegistered
-    ):
+    async def register_file_information(self, file: FileInternallyRegistered):
         """Store information for a file newly registered with the Internal File Registry."""
 
     @abstractmethod
@@ -74,5 +76,5 @@ class InformationServicePort(ABC):
         """Retrieve stored public information for the given dataset ID to be served by the API."""
 
     @abstractmethod
-    async def serve_file_information(self, file_id: str) -> FileInformation:
-        """Retrieve stored public information for the given file ID to be served by the API."""
+    async def serve_file_information(self, accession: str) -> FileInformation:
+        """Retrieve stored public information for the given file accession to be served by the API."""

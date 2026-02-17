@@ -46,14 +46,14 @@ class HttpInformationNotFoundError(HttpCustomExceptionBase):
     class DataModel(BaseModel):
         """Model for exception data"""
 
-        file_id: str
+        accession: str
 
-    def __init__(self, *, file_id: str, status_code: int = 404):
+    def __init__(self, *, accession: str, status_code: int = 404):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
             description=(
-                f"Information for the file with ID {file_id} is not registered."
+                f"Information for the file with accession {accession} is not registered."
             ),
-            data={"file_id": file_id},
+            data={"accession": accession},
         )
