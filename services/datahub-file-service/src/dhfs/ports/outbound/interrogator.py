@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,8 +33,8 @@ class InterrogatorPort(ABC):
     class FileNotFoundError(CantCompleteError):
         """Raised when a file isn't found in the inbox"""
 
-        def __init__(self, *, file_id: UUID4):
-            msg = f"The file {file_id} was not found in the inbox"
+        def __init__(self, *, file_id: UUID4, object_id: UUID4):
+            msg = f"The file {file_id}, under object ID {object_id} was not found in the inbox"
             super().__init__(msg)
 
     class ReencryptionError(CantCompleteError):
@@ -102,11 +102,12 @@ class InterrogatorPort(ABC):
         ...
 
     @abstractmethod
-    async def report_success(
+    async def report_success(  # noqa: PLR0913
         self,
         *,
         file_id: UUID4,
         bucket_id: str,
+        object_id: UUID4,
         secret: SecretBytes,
         encrypted_parts_md5: list[bytes],
         encrypted_parts_sha256: list[bytes],

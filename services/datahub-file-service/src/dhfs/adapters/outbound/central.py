@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +25,10 @@ from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto.jwk import JWK
 from pydantic import Field, HttpUrl, SecretStr, ValidationError
 from pydantic_settings import BaseSettings
+from tenacity import RetryError
 
 from dhfs import models
+from dhfs.adapters.outbound.http import check_for_request_errors
 from dhfs.constants import AUTH_TOKEN_VALID_SECONDS, JWT_AUD, JWT_ISS
 from dhfs.ports.outbound.central import CentralClientPort
 
@@ -93,7 +95,7 @@ class CentralClient(CentralClientPort):
         """Create an authorization header with a bearer token containing a fresh JWT"""
         return {"Authorization": f"Bearer {self._make_jwt()}"}
 
-    def _response_to_file_id_list(self, response: httpx.Response) -> list[str]:
+    def _response_to_object_id_list(self, response: httpx.Response) -> list[str]:
         """Returns a list of strings from an httpx Response.
 
         Raises:
@@ -101,8 +103,8 @@ class CentralClient(CentralClientPort):
         """
         try:
             body = response.json()
-            if not isinstance(body, list) and all(
-                isinstance(value, str) for value in body
+            if not (
+                isinstance(body, list) and all(isinstance(value, str) for value in body)
             ):
                 raise TypeError("Response did not contain a list of strings")
         except (JSONDecodeError, TypeError) as err:
@@ -135,7 +137,13 @@ class CentralClient(CentralClientPort):
         """
         url = f"{self._base_url}/storages/{self._storage_alias}/uploads"
 
-        response = await self._httpx_client.get(url=url, headers=self._auth_headers())
+        try:
+            response = await self._httpx_client.get(
+                url=url, headers=self._auth_headers()
+            )
+        except RetryError as retry_error:
+            check_for_request_errors(retry_error, url)
+            response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 200:
             error = self.CentralAPIError(url=url, status_code=status_code)
@@ -144,26 +152,30 @@ class CentralClient(CentralClientPort):
 
         return self._response_to_file_upload_list(response)
 
-    async def get_removable_files(self, *, file_ids: list[str]) -> list[str]:
-        """Ask the GHGA Central API if the objects corresponding to the given file IDs
+    async def get_removable_files(self, *, object_ids: list[str]) -> list[str]:
+        """Ask the GHGA Central API if the objects corresponding to the given object IDs
         can be removed from `interrogation` bucket.
 
-        Returns a list of file IDs that may be removed from the bucket.
+        Returns a list of object IDs that may be removed from the bucket.
 
         Raises:
         - CentralAPIError if the request to the central API fails.
         """
         url = f"{self._base_url}/storages/{self._storage_alias}/uploads/can_remove"
-        response = await self._httpx_client.post(
-            url=url, json=file_ids, headers=self._auth_headers()
-        )
+        try:
+            response = await self._httpx_client.post(
+                url=url, json=object_ids, headers=self._auth_headers()
+            )
+        except RetryError as retry_error:
+            check_for_request_errors(retry_error, url)
+            response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 200:
             error = self.CentralAPIError(url=url, status_code=status_code)
             log.error(error)
             raise error
 
-        return self._response_to_file_id_list(response)
+        return self._response_to_object_id_list(response)
 
     async def submit_interrogation_report(
         self, *, report: models.InterrogationReport
@@ -182,9 +194,13 @@ class CentralClient(CentralClientPort):
             encoded_secret = base64.urlsafe_b64encode(secret).decode("utf-8")
             body["secret"] = encrypt(encoded_secret, key=self._central_public_key)
 
-        response = await self._httpx_client.post(
-            url=url, headers=self._auth_headers(), json=body
-        )
+        try:
+            response = await self._httpx_client.post(
+                url=url, headers=self._auth_headers(), json=body
+            )
+        except RetryError as retry_error:
+            check_for_request_errors(retry_error, url)
+            response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 201:
             error = self.CentralAPIError(url=url, status_code=status_code)

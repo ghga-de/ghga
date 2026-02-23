@@ -6,12 +6,9 @@ client_cache_ttl: 60
 client_cacheable_methods:
 - POST
 - GET
-client_cacheable_status_codes:
-- 200
-- 201
 client_exponential_backoff_max: 60
 client_num_retries: 3
-client_reraise_from_retry_error: true
+client_reraise_from_retry_error: false
 client_retry_status_codes:
 - 408
 - 429
@@ -21,6 +18,7 @@ client_retry_status_codes:
 crypt4gh_private_key_passphrase: null
 data_hub_crypt4gh_private_key_path: key.sec
 data_hub_signing_key: '**********'
+http_request_timeout_seconds: 60.0
 interrogation_bucket_id: interrogation
 log_format: null
 log_level: INFO

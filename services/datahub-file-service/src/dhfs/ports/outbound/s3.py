@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 from abc import ABC, abstractmethod
 
-from pydantic import UUID4
+from dhfs.models import FileUpload
 
 
 class S3ClientPort(ABC):
@@ -86,7 +86,7 @@ class S3ClientPort(ABC):
         """Raised when an upload or download URL is rejected with a 403 error"""
 
     @abstractmethod
-    async def get_is_file_in_inbox(self, *, bucket_id: str, file_id: UUID4) -> bool:
+    async def get_is_file_in_inbox(self, *, file: FileUpload) -> bool:
         """Return a bool indicating whether the file exists in the inbox"""
 
     @abstractmethod
@@ -147,7 +147,7 @@ class S3ClientPort(ABC):
         Raises:
         - BadPartMD5Error if the specified MD5 doesn't match the MD5 calculated by S3.
         - BucketNotFoundError if the interrogation bucket is missing.
-        - UploadError if any other error causes the part upload to fail.
+        - UploadPartError if any other error causes the part upload to fail.
         """
         ...
 

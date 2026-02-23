@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for the S3 interrogation bucket cleanup logic"""
+"""Unit tests for the CentralClient"""
 
 import base64
 import json
@@ -34,7 +34,10 @@ from pydantic import BaseModel, SecretBytes
 from pytest_httpx import HTTPXMock
 
 from dhfs.adapters.outbound.central import CentralClient
-from dhfs.adapters.outbound.http import get_configured_httpx_client
+from dhfs.adapters.outbound.http import (
+    ConnectionFailedError,
+    get_configured_httpx_client,
+)
 from dhfs.config import Config
 from dhfs.models import InterrogationReport
 from tests.fixtures.utils import CENTRAL_CRYPT4GH_PRIVATE_KEY, DHFS_JWK
@@ -47,6 +50,8 @@ def make_interrogation_success_report(storage_alias: str) -> InterrogationReport
     return InterrogationReport(
         file_id=uuid4(),
         storage_alias=storage_alias,
+        bucket_id="interrogation",
+        object_id=uuid4(),
         interrogated_at=now_utc_ms_prec(),
         passed=True,
         secret=SecretBytes(os.urandom(32)),
@@ -84,15 +89,15 @@ async def configured_central_client(config: Config) -> AsyncGenerator[CentralCli
 
 
 async def test_central_api_unavailable(config: Config, central_client):
-    """Ensure an httpx.ConnectError gets raised if the central api is unavailable"""
+    """Ensure a ConnectionFailedError gets raised if the central api is unavailable"""
     # Test the different public methods exposed by the CentralClient
-    with pytest.raises(httpx.ConnectError):
+    with pytest.raises(ConnectionFailedError):
         await central_client.fetch_new_uploads()
 
-    with pytest.raises(httpx.ConnectError):
-        await central_client.get_removable_files(file_ids=["abc123"])
+    with pytest.raises(ConnectionFailedError):
+        await central_client.get_removable_files(object_ids=["abc123"])
 
-    with pytest.raises(httpx.ConnectError):
+    with pytest.raises(ConnectionFailedError):
         report = make_interrogation_success_report(config.storage_alias)
         await central_client.submit_interrogation_report(report=report)
 
@@ -122,17 +127,14 @@ async def test_jwt_formation(config: Config, httpx_mock: HTTPXMock):
         assert context.iat - now_utc_ms_prec() < timedelta(seconds=3)
         return callback_return_value
 
-    # Register the callback
+    # Register the callback (see callback_return_value defined above for the response)
     httpx_mock.add_callback(callback=callback)
 
     # Test the different methods from the CentralClient
     async with get_configured_httpx_client(config=config) as httpx_client:
         central_client = CentralClient(config=config, httpx_client=httpx_client)
-
-        # Register the callback (see callback_return_value defined above for the response)
-        httpx_mock.add_callback(callback=callback)
         await central_client.fetch_new_uploads()
-        await central_client.get_removable_files(file_ids=[])
+        await central_client.get_removable_files(object_ids=[])
 
         # Update the return value for this other call
         callback_return_value = httpx.Response(201)
@@ -151,7 +153,7 @@ async def test_responses_with_bad_format(central_client, httpx_mock: HTTPXMock):
 
     httpx_mock.add_response(status_code=200, json={"Not correct": "At all"})
     with pytest.raises(CentralClient.ResponseFormatError):
-        await central_client.get_removable_files(file_ids=[])
+        await central_client.get_removable_files(object_ids=[])
 
 
 @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
@@ -164,7 +166,7 @@ async def test_500_response_handling(
         await central_client.fetch_new_uploads()
 
     with pytest.raises(CentralClient.CentralAPIError):
-        await central_client.get_removable_files(file_ids=[])
+        await central_client.get_removable_files(object_ids=[])
 
     with pytest.raises(CentralClient.CentralAPIError):
         report = make_interrogation_success_report(config.storage_alias)

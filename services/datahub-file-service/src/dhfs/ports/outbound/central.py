@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,11 +52,11 @@ class CentralClientPort(ABC):
         ...
 
     @abstractmethod
-    async def get_removable_files(self, *, file_ids: list[str]) -> list[str]:
-        """Ask the GHGA Central API if the objects corresponding to the given file IDs
+    async def get_removable_files(self, *, object_ids: list[str]) -> list[str]:
+        """Ask the GHGA Central API if the objects corresponding to the given object IDs
         can be removed from `interrogation` bucket.
 
-        Returns a list of file IDs that may be removed from the bucket.
+        Returns a list of object IDs that may be removed from the bucket.
 
         Raises:
         - CentralAPIError if the request to the central API fails.

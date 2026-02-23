@@ -18,13 +18,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/datahub-file-service):
 ```bash
-docker pull ghga/datahub-file-service:0.1.0
+docker pull ghga/datahub-file-service:1.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/datahub-file-service:0.1.0 .
+docker build -t ghga/datahub-file-service:1.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -32,7 +32,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/datahub-file-service:0.1.0 --help
+docker run -p 8080:8080 ghga/datahub-file-service:1.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -49,6 +49,18 @@ dhfs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- <a id="properties/client_cache_capacity"></a>**`client_cache_capacity`** *(integer)*: Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached. Exclusive minimum: `0`. Default: `128`.
+- <a id="properties/client_cache_ttl"></a>**`client_cache_ttl`** *(integer)*: Number of seconds after which a stored response is considered stale. Minimum: `0`. Default: `60`.
+- <a id="properties/client_cacheable_methods"></a>**`client_cacheable_methods`** *(array)*: HTTP methods for which responses are allowed to be cached. Default: `["POST", "GET"]`.
+  - <a id="properties/client_cacheable_methods/items"></a>**Items** *(string)*
+- <a id="properties/client_exponential_backoff_max"></a>**`client_exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. Minimum: `0`. Default: `60`.
+- <a id="properties/client_num_retries"></a>**`client_num_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `3`.
+- <a id="properties/client_retry_status_codes"></a>**`client_retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 429, 500, 502, 503, 504]`.
+  - <a id="properties/client_retry_status_codes/items"></a>**Items** *(integer)*: Minimum: `0`.
+- <a id="properties/client_reraise_from_retry_error"></a>**`client_reraise_from_retry_error`** *(boolean)*: Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. Default: `true`.
+- <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request. Minimum: `0`. Default: `0.0`.
+- <a id="properties/retry_after_applicable_for_num_requests"></a>**`retry_after_applicable_for_num_requests`** *(integer)*: Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. Exclusive minimum: `0`. Default: `1`.
+- <a id="properties/http_request_timeout_seconds"></a>**`http_request_timeout_seconds`** *(number)*: Request timeout setting in seconds. Default: `60.0`.
 - <a id="properties/data_hub_crypt4gh_private_key_path"></a>**`data_hub_crypt4gh_private_key_path`** *(string, format: path, required)*: Path to the Data Hub's Crypt4GH private key file.
 
   Examples:
@@ -60,19 +72,6 @@ The service requires the following configuration parameters:
   - **Any of**
     - <a id="properties/crypt4gh_private_key_passphrase/anyOf/0"></a>*string*
     - <a id="properties/crypt4gh_private_key_passphrase/anyOf/1"></a>*null*
-- <a id="properties/client_cache_capacity"></a>**`client_cache_capacity`** *(integer)*: Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached. Exclusive minimum: `0`. Default: `128`.
-- <a id="properties/client_cache_ttl"></a>**`client_cache_ttl`** *(integer)*: Number of seconds after which a stored response is considered stale. Minimum: `0`. Default: `60`.
-- <a id="properties/client_cacheable_methods"></a>**`client_cacheable_methods`** *(array)*: HTTP methods for which responses are allowed to be cached. Default: `["POST", "GET"]`.
-  - <a id="properties/client_cacheable_methods/items"></a>**Items** *(string)*
-- <a id="properties/client_cacheable_status_codes"></a>**`client_cacheable_status_codes`** *(array)*: HTTP response status code for which responses are allowed to be cached. Default: `[200, 201]`.
-  - <a id="properties/client_cacheable_status_codes/items"></a>**Items** *(integer)*
-- <a id="properties/client_exponential_backoff_max"></a>**`client_exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. Minimum: `0`. Default: `60`.
-- <a id="properties/client_num_retries"></a>**`client_num_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `3`.
-- <a id="properties/client_retry_status_codes"></a>**`client_retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 429, 500, 502, 503, 504]`.
-  - <a id="properties/client_retry_status_codes/items"></a>**Items** *(integer)*: Minimum: `0`.
-- <a id="properties/client_reraise_from_retry_error"></a>**`client_reraise_from_retry_error`** *(boolean)*: Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. Default: `true`.
-- <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request. Minimum: `0`. Default: `0.0`.
-- <a id="properties/retry_after_applicable_for_num_requests"></a>**`retry_after_applicable_for_num_requests`** *(integer)*: Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. Exclusive minimum: `0`. Default: `1`.
 - <a id="properties/central_api_crypt4gh_public_key"></a>**`central_api_crypt4gh_public_key`** *(string, required)*: The Crypt4GH public key used by the Central API.
 - <a id="properties/central_api_url"></a>**`central_api_url`** *(string, format: uri, required)*: The base URL used to connect to to the GHGA Central API. Length must be between 1 and 2083 (inclusive).
 - <a id="properties/data_hub_signing_key"></a>**`data_hub_signing_key`** *(string, format: password, required and write-only)*: The Data Hub's private JWK for signing JWT auth tokens.

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 import io
 import logging
 import os
+from uuid import UUID, uuid4
 
 import crypt4gh.header
 import crypt4gh.lib
@@ -54,7 +55,7 @@ class Interrogator(InterrogatorPort):
     ):
         """Initialize the Interrogator"""
         self._storage_alias = config.storage_alias
-        self._interrogation_bucket_name = config.interrogation_bucket_id
+        self._interrogation_bucket_id = config.interrogation_bucket_id
         self._central_client = central_client
         self._data_hub_private_key = SecretBytes(
             get_private_key(
@@ -77,10 +78,10 @@ class Interrogator(InterrogatorPort):
         for file in new_files:
             try:
                 # Verify that the file exists in the inbox before proceeding
-                if not await self._s3_client.get_is_file_in_inbox(
-                    bucket_id=file.bucket_id, file_id=file.id
-                ):
-                    raise self.FileNotFoundError(file_id=file.id)
+                if not await self._s3_client.get_is_file_in_inbox(file=file):
+                    raise self.FileNotFoundError(
+                        file_id=file.id, object_id=file.object_id
+                    )
                 await self.interrogate_file(file)
             except self.InterrogationError as err:
                 await self.report_failure(file_id=file.id, reason=str(err))
@@ -97,7 +98,7 @@ class Interrogator(InterrogatorPort):
         """
         envelope = await self._s3_client.fetch_file_content_range(
             bucket_id=file_upload.bucket_id,
-            object_id=str(file_upload.id),
+            object_id=str(file_upload.object_id),
             start=0,
             stop=file_upload.offset,
         )
@@ -115,7 +116,7 @@ class Interrogator(InterrogatorPort):
         session_keys, _ = crypt4gh.header.deconstruct(
             infile=envelope_stream, keys=keys, sender_pubkey=None
         )
-        if count := len(session_keys) != 1:
+        if (count := len(session_keys)) != 1:
             raise ValueError(f"Expected session key count to be 1, not {count}")
         return SecretBytes(session_keys[0])
 
@@ -190,6 +191,7 @@ class Interrogator(InterrogatorPort):
         self,
         *,
         file_upload: FileUpload,
+        new_object_id: str,
         upload_id: str,
         old_secret: SecretBytes,
         new_secret: SecretBytes,
@@ -211,19 +213,26 @@ class Interrogator(InterrogatorPort):
         """
         # Establish Checksums object to track decrypted and encrypted content checksums
         checksums = Checksums()
-        object_id = str(file_upload.id)
+        file_id = file_upload.id
+        inbox_object_id = str(file_upload.object_id)
         upload_buffer = bytearray()
         uploaded_part_number = 1
 
+        log_extra = {  # only for logging purposes
+            "file_id": file_id,
+            "inbox_object_id": inbox_object_id,
+            "interrogation_object_id": new_object_id,
+        }
+
         # Download, re-encrypt, and upload object part-by-part
         for part_no, part_range in enumerate(file_upload.calc_encrypted_part_ranges()):
-            log.debug("Processing part %s for file %s", part_no, object_id)
+            log.debug("Processing part %s for file %s", part_no, file_id)
 
             # Initial decryption
             try:
                 decrypted_part = await self._fetch_and_decrypt_part(
                     bucket_id=file_upload.bucket_id,
-                    object_id=object_id,
+                    object_id=inbox_object_id,
                     part_range=part_range,
                     secret=old_secret,
                 )
@@ -231,8 +240,9 @@ class Interrogator(InterrogatorPort):
                 log.error(
                     "Failed initial decryption of chunk number %i of file %s",
                     part_no,
-                    object_id,
+                    file_id,
                     exc_info=True,
+                    extra=log_extra,
                 )
                 raise self.DecryptionError() from err
 
@@ -245,8 +255,9 @@ class Interrogator(InterrogatorPort):
                 log.error(
                     "Failed to re-encrypt part number %i for file %s.",
                     part_no,
-                    object_id,
+                    file_id,
                     exc_info=True,
+                    extra=log_extra,
                 )
                 raise self.ReencryptionError() from err
 
@@ -259,8 +270,9 @@ class Interrogator(InterrogatorPort):
                 log.error(
                     "Failed confirmatory decryption of chunk number %i of file %s",
                     part_no,
-                    object_id,
+                    file_id,
                     exc_info=True,
+                    extra=log_extra,
                 )
                 raise self.DecryptionError() from err
 
@@ -277,7 +289,7 @@ class Interrogator(InterrogatorPort):
                 try:
                     await self._s3_client.upload_file_part(
                         upload_id=upload_id,
-                        object_id=object_id,
+                        object_id=new_object_id,
                         part_no=uploaded_part_number,
                         part_md5=checksums.encrypted_md5[-1],
                         part=part_to_upload,
@@ -298,7 +310,7 @@ class Interrogator(InterrogatorPort):
             try:
                 await self._s3_client.upload_file_part(
                     upload_id=upload_id,
-                    object_id=object_id,
+                    object_id=new_object_id,
                     part_no=uploaded_part_number,
                     part_md5=checksums.encrypted_md5[-1],
                     part=remaining_bytes,
@@ -331,10 +343,20 @@ class Interrogator(InterrogatorPort):
             raise envelope_error from err
 
         # Initiate multipart upload
-        object_id = str(file_upload.id)
+        new_object_id = str(uuid4())
+        log.info(
+            "Generated %s as the new object ID for file %s.",
+            new_object_id,
+            file_upload.id,
+            extra={
+                "file_id": file_upload.id,
+                "inbox_object_id": file_upload.object_id,
+                "interrogation_object_id": new_object_id,
+            },
+        )
         try:
             upload_id = await self._s3_client.init_interrogation_bucket_upload(
-                object_id=object_id
+                object_id=new_object_id
             )
         except S3ClientPort.InconclusiveError as err:
             raise self.CantCompleteError() from err
@@ -347,18 +369,23 @@ class Interrogator(InterrogatorPort):
             #  and re-encrypted content
             checksums = await self._process_file_parts(
                 file_upload=file_upload,
+                new_object_id=new_object_id,
                 upload_id=upload_id,
                 old_secret=old_secret,
                 new_secret=new_secret,
             )
         except Exception:  # all exceptions require aborting the upload, just re-raise
-            await self._s3_client.abort_upload(upload_id=upload_id, object_id=object_id)
+            await self._s3_client.abort_upload(
+                upload_id=upload_id, object_id=new_object_id
+            )
             log.warning("Upload with ID %s was aborted - cleanup complete.", upload_id)
             raise
 
         # Compare final decrypted content checksum with the user-reported value
         if checksums.unencrypted_sha256.hexdigest() != file_upload.decrypted_sha256:
-            await self._s3_client.abort_upload(upload_id=upload_id, object_id=object_id)
+            await self._s3_client.abort_upload(
+                upload_id=upload_id, object_id=new_object_id
+            )
             log.warning("Upload with ID %s was aborted - cleanup complete.", upload_id)
             sha256_error = self.DecryptedChecksumMismatchError(file_id=file_upload.id)
             log.error(sha256_error)
@@ -368,15 +395,19 @@ class Interrogator(InterrogatorPort):
         try:
             actual_etag = await self._s3_client.complete_upload(
                 upload_id=upload_id,
-                object_id=object_id,
+                object_id=new_object_id,
                 part_count=len(checksums.encrypted_md5),
             )
         except S3ClientPort.InconclusiveError as err:
-            await self._s3_client.abort_upload(upload_id=upload_id, object_id=object_id)
+            await self._s3_client.abort_upload(
+                upload_id=upload_id, object_id=new_object_id
+            )
             log.warning("Upload with ID %s was aborted - cleanup complete.", upload_id)
             raise self.CantCompleteError() from err
         except S3ClientPort.ConclusiveError as err:
-            await self._s3_client.abort_upload(upload_id=upload_id, object_id=object_id)
+            await self._s3_client.abort_upload(
+                upload_id=upload_id, object_id=new_object_id
+            )
             log.warning("Upload with ID %s was aborted - cleanup complete.", upload_id)
             raise self.InterrogationError() from err
 
@@ -384,28 +415,37 @@ class Interrogator(InterrogatorPort):
         expected_etag = checksums.encrypted_checksum_for_s3()
         if expected_etag != actual_etag:
             md5_error = self.EncryptedChecksumMismatchError(file_id=file_upload.id)
-            log.error(md5_error, extra={"object_id": object_id})
-            await self._s3_client.remove_file(object_id=object_id)
+            log.error(
+                md5_error,
+                extra={
+                    "file_id": file_upload.id,
+                    "inbox_object_id": file_upload.object_id,
+                    "interrogation_object_id": new_object_id,
+                },
+            )
+            await self._s3_client.remove_file(object_id=new_object_id)
             log.warning(
                 "File %s removed from interrogation bucket - cleanup complete.",
-                object_id,
+                new_object_id,
             )
             raise md5_error
 
         # Issue report to Central API containing new encryption secret and checksums
         await self.report_success(
             file_id=file_upload.id,
-            bucket_id=self._interrogation_bucket_name,
+            bucket_id=self._interrogation_bucket_id,
+            object_id=UUID(new_object_id),
             secret=new_secret,
             encrypted_parts_md5=checksums.encrypted_md5,
             encrypted_parts_sha256=checksums.encrypted_sha256,
         )
 
-    async def report_success(
+    async def report_success(  # noqa: PLR0913
         self,
         *,
         file_id: UUID4,
         bucket_id: str,
+        object_id: UUID4,
         secret: SecretBytes,
         encrypted_parts_md5: list[bytes],
         encrypted_parts_sha256: list[bytes],
@@ -419,6 +459,7 @@ class Interrogator(InterrogatorPort):
             file_id=file_id,
             storage_alias=self._storage_alias,
             bucket_id=bucket_id,
+            object_id=object_id,
             interrogated_at=now_utc_ms_prec(),
             passed=True,
             secret=secret,
@@ -428,7 +469,7 @@ class Interrogator(InterrogatorPort):
         try:
             await self._central_client.submit_interrogation_report(report=report)
         except CentralClientPort.CentralAPIError:
-            await self._s3_client.remove_file(object_id=str(file_id))
+            await self._s3_client.remove_file(object_id=str(object_id))
             log.warning(
                 "Interrogation report submission failed for file %s, so the file"
                 + " was removed from the interrogation bucket. Interrogation will have"

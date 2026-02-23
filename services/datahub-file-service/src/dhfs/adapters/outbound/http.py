@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,12 +24,12 @@ from ghga_service_commons.transports import (
     CompositeTransportFactory,
     ratelimiting_retry_proxies,
 )
+from pydantic import Field
 from tenacity import RetryError
-
-from dhfs.constants import HTTPX_TIMEOUT
 
 __all__ = [
     "ConnectionFailedError",
+    "HttpClientConfig",
     "RequestFailedError",
     "check_for_request_errors",
     "get_configured_httpx_client",
@@ -37,9 +37,17 @@ __all__ = [
 ]
 
 
+class HttpClientConfig(CompositeCacheConfig):
+    """Configuration for HTTP Client functionality in the DHFS"""
+
+    http_request_timeout_seconds: float = Field(
+        default=60.0, description="Request timeout setting in seconds."
+    )
+
+
 @asynccontextmanager
 async def get_configured_httpx_client(
-    *, config: CompositeCacheConfig
+    *, config: HttpClientConfig
 ) -> AsyncGenerator[httpx.AsyncClient]:
     """Produce an httpx AsyncClient with configured rate limiting behavior"""
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
@@ -47,7 +55,7 @@ async def get_configured_httpx_client(
     )
     proxies = ratelimiting_retry_proxies(config=config)
     async with httpx.AsyncClient(
-        timeout=HTTPX_TIMEOUT, transport=transport, mounts=proxies
+        timeout=config.http_request_timeout_seconds, transport=transport, mounts=proxies
     ) as client:
         yield client
 

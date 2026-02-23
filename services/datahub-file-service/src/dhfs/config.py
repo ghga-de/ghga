@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,14 @@
 
 from pathlib import Path
 
-from ghga_service_commons.transports import CompositeCacheConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.s3 import S3Config
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 from dhfs.adapters.outbound.central import CentralClientConfig
+from dhfs.adapters.outbound.http import HttpClientConfig
 
 SERVICE_NAME: str = "dhfs"
 
@@ -51,8 +51,8 @@ class Config(
     LoggingConfig,
     S3Config,
     CentralClientConfig,
-    CompositeCacheConfig,
     Crypt4GHConfig,
+    HttpClientConfig,
 ):
     """Config parameters and their defaults."""
 
@@ -71,6 +71,14 @@ class Config(
     service_name: str = Field(
         default=SERVICE_NAME, description="Short name of this service"
     )
+
+    @field_validator("client_reraise_from_retry_error")
+    @classmethod
+    def enforce_client_reraise_from_retry_error_false(cls, value: bool) -> bool:
+        """Enforce the False setting for client_reraise_from_retry_error"""
+        if value:
+            raise ValueError("client_reraise_from_retry_error must be set to False")
+        return value
 
 
 CONFIG = Config()  # type: ignore

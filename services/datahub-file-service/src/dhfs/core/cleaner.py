@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,7 @@ class S3Cleaner(S3CleanerPort):
         central_client: CentralClientPort,
         s3_client: S3ClientPort,
     ):
-        self._client = central_client
+        self._central_client = central_client
         self._s3_client = s3_client
         self._interrogation_storage_alias = config.interrogation_bucket_id
 
@@ -67,12 +67,12 @@ class S3Cleaner(S3CleanerPort):
             log.info("No files to clean up, exiting.")
             return
 
-        # No need to convert file IDs to UUID here because they are serialized to string
+        # No need to convert obj IDs to UUID here because they are serialized to string
         #  in the outbound request, and S3 expects strings. In short, we don't need the
         #  UUID properties, even for validation.
         try:
-            removable_objects = await self._client.get_removable_files(
-                file_ids=object_ids
+            removable_objects = await self._central_client.get_removable_files(
+                object_ids=object_ids
             )
         except Exception as exc:
             log.error(

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,9 @@
 from math import ceil
 
 import crypt4gh.lib
+import pytest
 
+from tests.fixtures.config import get_config
 from tests.fixtures.utils import get_encrypted_object, make_file_upload
 
 
@@ -163,3 +165,13 @@ def test_adjusted_part_size_big_file():
     encrypted_content_size = encrypted_size - f_large.offset
     if ceil(encrypted_content_size / basic_adjusted_part_size) >= 10_000:
         assert f_large.adjusted_part_size > basic_adjusted_part_size
+
+
+def test_config_validator():
+    """Test the validator for client_reraise_from_retry_error"""
+    # Error when True:
+    with pytest.raises(ValueError):
+        _ = get_config(client_reraise_from_retry_error=True)
+
+    # No error when False:
+    _ = get_config(client_reraise_from_retry_error=False)

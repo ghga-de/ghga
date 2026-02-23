@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +44,7 @@ class PartRange:
 class FileUpload(BaseModel):
     """Represents a file that needs to be interrogated and re-encrypted"""
 
-    id: UUID4 = Field(..., description="The unique identifier of the file")
+    id: UUID4 = Field(default=..., description="The unique identifier of the file")
     storage_alias: str = Field(
         default=...,
         description="The storage alias indicating the data hub the file is housed at",
@@ -52,6 +52,9 @@ class FileUpload(BaseModel):
     bucket_id: str = Field(
         default=...,
         description="The name of the inbox bucket from which DHFS should fetch the file",
+    )
+    object_id: UUID4 = Field(
+        default=..., description="The ID of the file object in the inbox bucket."
     )
     decrypted_sha256: str = Field(
         default=..., description="The SHA256 checksum of the unencrypted file content."
@@ -150,6 +153,13 @@ class InterrogationReport(BaseModel):
         description=(
             "The name of the interrogation bucket the file is stored"
             + " in, if interrogation was successful"
+        ),
+    )
+    object_id: UUID4 | None = Field(
+        default=None,
+        description=(
+            "The ID of the file specific to its S3 bucket, if the interrogation was"
+            + " successful."
         ),
     )
     interrogated_at: UTCDatetime = Field(

@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ from hexkit.providers.s3.testutils import temp_file_object
 from dhfs.adapters.outbound.http import get_configured_httpx_client
 from dhfs.adapters.outbound.s3 import S3Client
 from tests.fixtures.joint import JointFixture
-from tests.fixtures.utils import INBOX, upload_dummy_data
+from tests.fixtures.utils import INBOX, make_file_upload, upload_dummy_data
 
 pytestmark = pytest.mark.asyncio()
 
@@ -47,17 +47,19 @@ async def _s3_client(joint_fixture: JointFixture) -> AsyncGenerator[S3Client]:
 async def test_get_is_file_in_inbox(joint_fixture: JointFixture, s3_client: S3Client):
     """Test the functionality of `S3Client.get_is_file_in_inbox()`"""
     # Generate a file ID and verify that it doesn't exist yet
-    file_id = uuid4()
-    is_in_inbox = await s3_client.get_is_file_in_inbox(bucket_id=INBOX, file_id=file_id)
+    file = make_file_upload(decrypted_size=100000, encrypted_size=1001000)
+    is_in_inbox = await s3_client.get_is_file_in_inbox(file=file)
     assert isinstance(is_in_inbox, bool)
     assert not is_in_inbox
 
     # Add an object to the inbox bucket with the generated file ID
-    with temp_file_object(bucket_id=INBOX, object_id=str(file_id)) as file_object:
+    with temp_file_object(
+        bucket_id=INBOX, object_id=str(file.object_id)
+    ) as file_object:
         await joint_fixture.s3.populate_file_objects([file_object])
 
     # Assert that the object now exists
-    assert await s3_client.get_is_file_in_inbox(bucket_id=INBOX, file_id=file_id)
+    assert await s3_client.get_is_file_in_inbox(file=file)
 
 
 async def test_list_files_in_interrogation_bucket(
@@ -66,18 +68,18 @@ async def test_list_files_in_interrogation_bucket(
     """Test the functionality of `S3Client.list_files_in_interrogation_bucket()`"""
     # Get file list before creating the bucket
     with pytest.raises(s3_client.BucketNotFoundError):
-        files = await s3_client.list_files_in_interrogation_bucket()
+        objects = await s3_client.list_files_in_interrogation_bucket()
 
     # Create the bucket
     interrogation = joint_fixture.config.interrogation_bucket_id
     await joint_fixture.s3.storage.create_bucket(interrogation)
 
     # Get the file list -- this time should get no error - should get an empty list
-    files = await s3_client.list_files_in_interrogation_bucket()
-    assert isinstance(files, list)
-    assert not files
+    objects = await s3_client.list_files_in_interrogation_bucket()
+    assert isinstance(objects, list)
+    assert not objects
 
-    # Now generate some file IDs and upload a dummy object for each one
+    # Now generate some object IDs and upload a dummy object for each one
     object_ids = [str(uuid4()) for _ in range(3)]
     for object_id in object_ids:
         await upload_dummy_data(
@@ -87,8 +89,8 @@ async def test_list_files_in_interrogation_bucket(
         )
 
     # Get the file list again and verify that this time it's correct
-    files = await s3_client.list_files_in_interrogation_bucket()
-    assert set(files) == set(object_ids)
+    objects = await s3_client.list_files_in_interrogation_bucket()
+    assert set(objects) == set(object_ids)
 
 
 async def test_fetch_file_content_range(

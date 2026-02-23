@@ -2,28 +2,6 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
-    "data_hub_crypt4gh_private_key_path": {
-      "description": "Path to the Data Hub's Crypt4GH private key file",
-      "examples": [
-        "./key.sec"
-      ],
-      "format": "path",
-      "title": "Data Hub Crypt4Gh Private Key Path",
-      "type": "string"
-    },
-    "crypt4gh_private_key_passphrase": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted.",
-      "title": "Crypt4Gh Private Key Passphrase"
-    },
     "client_cache_capacity": {
       "default": 128,
       "description": "Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached.",
@@ -48,18 +26,6 @@
         "type": "string"
       },
       "title": "Client Cacheable Methods",
-      "type": "array"
-    },
-    "client_cacheable_status_codes": {
-      "default": [
-        200,
-        201
-      ],
-      "description": "HTTP response status code for which responses are allowed to be cached.",
-      "items": {
-        "type": "integer"
-      },
-      "title": "Client Cacheable Status Codes",
       "type": "array"
     },
     "client_exponential_backoff_max": {
@@ -112,6 +78,34 @@
       "exclusiveMinimum": 0,
       "title": "Retry After Applicable For Num Requests",
       "type": "integer"
+    },
+    "http_request_timeout_seconds": {
+      "default": 60.0,
+      "description": "Request timeout setting in seconds.",
+      "title": "Http Request Timeout Seconds",
+      "type": "number"
+    },
+    "data_hub_crypt4gh_private_key_path": {
+      "description": "Path to the Data Hub's Crypt4GH private key file",
+      "examples": [
+        "./key.sec"
+      ],
+      "format": "path",
+      "title": "Data Hub Crypt4Gh Private Key Path",
+      "type": "string"
+    },
+    "crypt4gh_private_key_passphrase": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted.",
+      "title": "Crypt4Gh Private Key Passphrase"
     },
     "central_api_crypt4gh_public_key": {
       "description": "The Crypt4GH public key used by the Central API",

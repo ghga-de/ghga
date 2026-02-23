@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,10 +71,11 @@ async def test_interrogate_new_files(
         )
         file_uploads.append(
             FileUpload(
-                id=UUID(object_id),
+                id=uuid4(),
                 decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
                 storage_alias=config.storage_alias,
                 bucket_id=INBOX,
+                object_id=UUID(object_id),
                 decrypted_size=encrypted_object.unencrypted_size,
                 encrypted_size=encrypted_object.encrypted_size,
                 part_size=PART_SIZE,
@@ -114,9 +115,10 @@ async def test_interrogate_new_files(
 
     # Check the interrogation bucket
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
-    interrogation_files = await s3_client.list_files_in_interrogation_bucket()
+    interrogation_files = set(await s3_client.list_files_in_interrogation_bucket())
 
-    assert interrogation_files == object_ids, "Interrogation bucket contents differed"
+    assert interrogation_files.isdisjoint(object_ids)
+    assert interrogation_files.isdisjoint(f.id for f in file_uploads)
 
     # Verify that we received reports for all files
     assert len(received_reports) == 2, (
@@ -203,10 +205,11 @@ async def test_api_down_during_report_submission(
         encrypted_object=encrypted_object,
     )
     file_upload = FileUpload(
-        id=UUID(object_id),
+        id=uuid4(),
         decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
         storage_alias=config.storage_alias,
         bucket_id=INBOX,
+        object_id=UUID(object_id),
         decrypted_size=encrypted_object.unencrypted_size,
         encrypted_size=encrypted_object.encrypted_size,
         part_size=PART_SIZE,
@@ -256,6 +259,7 @@ async def test_file_not_in_inbox(joint_fixture: JointFixture, httpx_mock: HTTPXM
         decrypted_sha256="abc123",
         storage_alias=config.storage_alias,
         bucket_id=INBOX,
+        object_id=uuid4(),
         decrypted_size=1024,
         encrypted_size=1228,
         part_size=PART_SIZE,
@@ -318,10 +322,11 @@ async def test_file_decryption_error(
     )
 
     file_upload = FileUpload(
-        id=UUID(object_id),
+        id=uuid4(),
         decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
         storage_alias=config.storage_alias,
         bucket_id=INBOX,
+        object_id=UUID(object_id),
         decrypted_size=encrypted_object.unencrypted_size,
         encrypted_size=encrypted_object.encrypted_size,
         part_size=PART_SIZE,
@@ -396,10 +401,11 @@ async def test_etag_doesnt_match_local_md5(
         encrypted_object=encrypted_object,
     )
     file_upload = FileUpload(
-        id=UUID(object_id),
+        id=uuid4(),
         decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
         storage_alias=config.storage_alias,
         bucket_id=INBOX,
+        object_id=UUID(object_id),
         decrypted_size=encrypted_object.unencrypted_size,
         encrypted_size=encrypted_object.encrypted_size,
         part_size=PART_SIZE,
