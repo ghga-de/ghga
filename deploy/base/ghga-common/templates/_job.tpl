@@ -22,6 +22,12 @@ metadata:
     {{- if .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
     {{- end }}
+    {{- if .Values.vaultAgent.enabled }}
+    {{- include "ghga-common.vaultAgentAnnotations" . | nindent 12 }}
+    {{- end }}
+    {{- if .Values.podAnnotations }}
+    {{- .Values.podAnnotations | toYaml | nindent 12}}
+    {{- end }}
 spec:
   template:
     metadata:
@@ -58,33 +64,33 @@ spec:
           env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: config
-              mountPath: /home/{{ .Values.config.appuser | default "appuser" }}/.{{ .Values.configPrefix }}.yaml
-              subPath: .{{ .Values.configPrefix }}.yaml
-              readOnly: true
-            {{- if .Values.extraVolumeMounts }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
-            {{- end }}
-            {{- if .Values.kafkaUser.enabled }}
+          {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 14 }}
+          {{- if .Values.kafkaUser.enabled }}
             - mountPath: "/kafka-secrets/"
               name: kafka-secret
               readOnly: true
             - mountPath:  "/cluster-ca-cert/"
               name: cluster-ca-cert
               readOnly: true
-            {{- end }}
-      volumes:
+          {{- end }}
+          {{- if .Values.extraVolumeMounts }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 14 }}
+          {{- end }}
+        volumes:
         {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 12 }}
-        {{- if .Values.kafkaUser.enabled }}
-        - name: kafka-secret
-          secret:
-            secretName: {{ include "common.names.fullname" . }}
-            optional: false
-        - name: cluster-ca-cert
-          secret:
-            secretName: {{ .Values.kafkaUser.caCertSecretName }}
-            optional: false
+        {{- if .Values.extraVolumes }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 12 }}
         {{- end }}
+        {{- if .Values.kafkaUser.enabled }}
+          - name: kafka-secret
+            secret:
+              secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
+              optional: false
+          - name: cluster-ca-cert
+            secret:
+              secretName: {{ .Values.kafkaUser.caCertSecretName }}
+              optional: false
+          {{- end }}
         {{- if .Values.extraVolumes }}
         {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 12 }}
         {{- end }}
