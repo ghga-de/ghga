@@ -8,3 +8,8 @@ metadata:
 data:
   config: |
     foo: bar
+    kafka_security_protocol: SSL
+    kafka_ssl_cafile: /cluster-ca-cert/ca.crt
+    kafka_ssl_certfile: /kafka-secrets/user.crt
+    kafka_ssl_keyfile: /kafka-secrets/user.key
+    kafka_ssl_password: ""

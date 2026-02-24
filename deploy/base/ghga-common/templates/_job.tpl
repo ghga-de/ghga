@@ -22,19 +22,16 @@ metadata:
     {{- if .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
     {{- end }}
-    {{- if .Values.vaultAgent.enabled }}
-    {{- include "ghga-common.vaultAgentAnnotations" . | nindent 12 }}
-    {{- end }}
-    {{- if .Values.podAnnotations }}
-    {{- .Values.podAnnotations | toYaml | nindent 12}}
-    {{- end }}
 spec:
   template:
     metadata:
       annotations:
         configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
         {{- if .Values.podAnnotations }}
-        {{- .Values.podAnnotations | toYaml | nindent 8 }}
+        {{- .Values.podAnnotations | toYaml | nindent 8}}
+        {{- end }}
+        {{- if .Values.vaultAgent.enabled }}
+        {{- include "ghga-common.vaultAgentAnnotations" . | nindent 8 }}
         {{- end }}
         helm.sh/revision: {{ .Release.Revision | quote }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
@@ -64,7 +61,7 @@ spec:
           env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
           {{- end }}
           volumeMounts:
-          {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 14 }}
+          {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 12 }}
           {{- if .Values.kafkaUser.enabled }}
             - mountPath: "/kafka-secrets/"
               name: kafka-secret
@@ -74,25 +71,25 @@ spec:
               readOnly: true
           {{- end }}
           {{- if .Values.extraVolumeMounts }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 14 }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
           {{- end }}
-        volumes:
-        {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 12 }}
+      volumes:
+        {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 8 }}
         {{- if .Values.extraVolumes }}
-        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 12 }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
         {{- if .Values.kafkaUser.enabled }}
-          - name: kafka-secret
-            secret:
-              secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
-              optional: false
-          - name: cluster-ca-cert
-            secret:
-              secretName: {{ .Values.kafkaUser.caCertSecretName }}
-              optional: false
+        - name: kafka-secret
+          secret:
+            secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
+            optional: false
+        - name: cluster-ca-cert
+          secret:
+            secretName: {{ .Values.kafkaUser.caCertSecretName }}
+            optional: false
           {{- end }}
         {{- if .Values.extraVolumes }}
-        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 12 }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
 {{- end -}}
 {{- end -}}

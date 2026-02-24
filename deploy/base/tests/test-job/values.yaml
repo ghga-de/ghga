@@ -12,11 +12,14 @@ config:
   foo: bar
 
 configMap:
+  mountPath: /home/appuser/config.yaml
+  subPath: config.yaml
   envVar:
-    enabled: true
+    enabled: false
 
 cmd: sleep 100000000
-
+kafkaUser:
+  enabled: true
 vaultAgent:
   enabled: true
   secrets:
@@ -34,3 +37,11 @@ extraVolumes:
 extraVolumeMounts:
   - name: test
     mountPath: /tmp/test
+
+resources:
+  limits:
+    cpu: 1500m
+    memory: 2048M
+  requests:
+    cpu: 1000m
+    memory: 1024M

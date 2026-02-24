@@ -13,12 +13,36 @@ metadata:
     app.kubernetes.io/version: "0.0.0"
     app: test-job
   annotations:
-    configmap-hash: 9620dc98951be381437a8ba53f76b0fe7acbdd9e6f0cf1ddb749d6440137420f
+    configmap-hash: ea6b2fb015d8bc4a1c5f7cb28a95f10c9a8290a23ff90badacc897529e5addb5
 spec:
   template:
     metadata:
       annotations:
-        configmap-hash: 9620dc98951be381437a8ba53f76b0fe7acbdd9e6f0cf1ddb749d6440137420f
+        configmap-hash: ea6b2fb015d8bc4a1c5f7cb28a95f10c9a8290a23ff90badacc897529e5addb5
+        vault.hashicorp.com/agent-cache-enable: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "false"
+        vault.hashicorp.com/agent-run-as-same-user: "true"
+        vault.hashicorp.com/tls-skip-verify: "false"
+        vault.hashicorp.com/role: "test-job"
+        vault.hashicorp.com/agent-inject-command-mongodb-connection-string: |
+          kill -TERM $(pgrep python)
+        vault.hashicorp.com/agent-inject-secret-mongodb-connection-string: default-mongodb-mongodb/creds/test-job
+        vault.hashicorp.com/agent-inject-template-mongodb-connection-string: |
+          {{- with secret "default-mongodb-mongodb/creds/test-job" -}}
+          export TEST_DB="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
+          export DB_CONNECTION_STR=$TEST_DB
+          export MONGO_DSN=$TEST_DB
+          {{- end -}}
+        vault.hashicorp.com/agent-inject-command-service-secrets: |
+          kill -TERM $(pgrep python)
+        vault.hashicorp.com/agent-inject-secret-service-secrets: operational-secrets/data/unique/apps/archive/default/test-job
+        vault.hashicorp.com/agent-inject-template-service-secrets: |
+          {{ with secret "operational-secrets/data/unique/apps/archive/default/test-job" -}}
+          {{ if .Data.data }}{{- range $k, $v := .Data.data }}
+          export {{ $k }}='{{ $v }}'
+          {{- end }}{{- end }}{{- end }}
         helm.sh/revision: "1"
       labels:
         app.kubernetes.io/name: test-job
@@ -54,23 +78,37 @@ spec:
           args:
           - if [ -d "/vault/secrets" ]; then for f in /vault/secrets/*; do if [ -f "$f" ]; then
             . "$f"; fi; done; fi; sleep 100000000;
-          env:
-            - name: _CONFIG_YAML
-              value: /etc/config.yaml
           volumeMounts:
-            - name: config
-              mountPath: /home/appuser/..yaml
-              subPath: ..yaml
+            - mountPath: /home/appuser/config.yaml
+              name: config
+              readOnly: true
+              subPath: config.yaml
+            - mountPath: "/kafka-secrets/"
+              name: kafka-secret
+              readOnly: true
+            - mountPath:  "/cluster-ca-cert/"
+              name: cluster-ca-cert
               readOnly: true
             - mountPath: /tmp/test
               name: test
       volumes:
-            - configMap:
-                items:
-                - key: config
-                  path: config.yaml
-                name: test-job
-              name: config
-            - emptyDir:
-                sizeLimit: 5Gi
-              name: test
+        - configMap:
+            items:
+            - key: config
+              path: config.yaml
+            name: test-job
+          name: config
+        - emptyDir:
+            sizeLimit: 5Gi
+          name: test
+        - name: kafka-secret
+          secret:
+            secretName: test-test-job
+            optional: false
+        - name: cluster-ca-cert
+          secret:
+            secretName: kafka-cluster-ca-cert
+            optional: false
+        - emptyDir:
+            sizeLimit: 5Gi
+          name: test
