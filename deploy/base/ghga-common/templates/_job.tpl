@@ -88,8 +88,5 @@ spec:
             secretName: {{ .Values.kafkaUser.caCertSecretName }}
             optional: false
           {{- end }}
-        {{- if .Values.extraVolumes }}
-        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
-        {{- end }}
 {{- end -}}
 {{- end -}}
