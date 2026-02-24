@@ -30,7 +30,7 @@ from dhfs.constants import (
     DOWNLOAD_URL_LIFESPAN,
     URL_CACHE_SIZE,
 )
-from dhfs.models import FileUpload
+from dhfs.core.models import FileUpload
 from dhfs.ports.outbound.s3 import S3ClientPort
 
 log = logging.getLogger(__name__)

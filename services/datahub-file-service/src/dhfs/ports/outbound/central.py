@@ -17,7 +17,7 @@
 
 from abc import ABC, abstractmethod
 
-from dhfs.models import FileUpload, InterrogationReport
+from dhfs.core.models import FileUpload, InterrogationReport
 
 __all__ = ["CentralClientPort"]
 

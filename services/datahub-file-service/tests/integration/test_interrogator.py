@@ -23,7 +23,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from dhfs.adapters.outbound.s3 import S3Client
-from dhfs.models import FileUpload
+from dhfs.core.models import FileUpload
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from tests.fixtures.joint import JointFixture

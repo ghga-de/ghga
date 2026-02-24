@@ -27,9 +27,9 @@ from pydantic import Field, HttpUrl, SecretStr, ValidationError
 from pydantic_settings import BaseSettings
 from tenacity import RetryError
 
-from dhfs import models
 from dhfs.adapters.outbound.http import check_for_request_errors
 from dhfs.constants import AUTH_TOKEN_VALID_SECONDS, JWT_AUD, JWT_ISS
+from dhfs.core import models
 from dhfs.ports.outbound.central import CentralClientPort
 
 log = logging.getLogger(__name__)

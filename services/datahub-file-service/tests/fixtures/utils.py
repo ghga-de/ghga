@@ -35,7 +35,7 @@ from pydantic import SecretBytes, SecretStr
 
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH
 from dhfs.core.checksums import Checksums
-from dhfs.models import FileUpload
+from dhfs.core.models import FileUpload
 
 BASE_DIR = Path(__file__).parent.resolve()
 DHFS_CRYPT4GH_PRIVATE_KEY_PATH = BASE_DIR / "keys/dhfs_key.sec"

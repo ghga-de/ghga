@@ -66,7 +66,8 @@ class FileUpload(BaseModel):
         default=...,
         description=(
             "The size of the encrypted file content. When in the inbox, this"
-            + " includes the Crypt4GH envelope."
+            + " includes the Crypt4GH envelope. Once interrogated, the size is reduced"
+            + " because the encrypted content no longer contains the envelope."
         ),
     )
     part_size: int = Field(
@@ -183,6 +184,13 @@ class InterrogationReport(BaseModel):
         description=(
             "A list of the SHA256 checksums converted from digest bytes to hex"
             + " string representation"
+        ),
+    )
+    encrypted_size: int | None = Field(
+        default=None,
+        description=(
+            "The size of the encrypted file content without envelope, if interrogation"
+            + " is successful."
         ),
     )
     reason: str | None = Field(

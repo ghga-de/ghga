@@ -35,7 +35,7 @@ from pydantic import UUID4, SecretBytes
 from dhfs.config import Config
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH
 from dhfs.core.checksums import Checksums
-from dhfs.models import FileUpload, InterrogationReport, PartRange
+from dhfs.core.models import FileUpload, InterrogationReport, PartRange
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from dhfs.ports.outbound.s3 import S3ClientPort
@@ -84,7 +84,8 @@ class Interrogator(InterrogatorPort):
                     )
                 await self.interrogate_file(file)
             except self.InterrogationError as err:
-                await self.report_failure(file_id=file.id, reason=str(err))
+                reason = getattr(err, "reason", None) or "Unexpected error"
+                await self.report_failure(file_id=file.id, reason=reason)
 
     async def _fetch_original_secret(self, *, file_upload: FileUpload) -> SecretBytes:
         """Fetch the original file encryption secret.
@@ -438,6 +439,7 @@ class Interrogator(InterrogatorPort):
             secret=new_secret,
             encrypted_parts_md5=checksums.encrypted_md5,
             encrypted_parts_sha256=checksums.encrypted_sha256,
+            encrypted_size=file_upload.encrypted_size - file_upload.offset,
         )
 
     async def report_success(  # noqa: PLR0913
@@ -449,6 +451,7 @@ class Interrogator(InterrogatorPort):
         secret: SecretBytes,
         encrypted_parts_md5: list[bytes],
         encrypted_parts_sha256: list[bytes],
+        encrypted_size: int,
     ) -> None:
         """Submit an InterrogationReport for a successful interrogation.
 
@@ -465,6 +468,7 @@ class Interrogator(InterrogatorPort):
             secret=secret,
             encrypted_parts_md5=[h.hex() for h in encrypted_parts_md5],
             encrypted_parts_sha256=[h.hex() for h in encrypted_parts_sha256],
+            encrypted_size=encrypted_size,
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)

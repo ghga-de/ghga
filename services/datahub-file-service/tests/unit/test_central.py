@@ -39,7 +39,7 @@ from dhfs.adapters.outbound.http import (
     get_configured_httpx_client,
 )
 from dhfs.config import Config
-from dhfs.models import InterrogationReport
+from dhfs.core.models import InterrogationReport
 from tests.fixtures.utils import CENTRAL_CRYPT4GH_PRIVATE_KEY, DHFS_JWK
 
 pytestmark = pytest.mark.asyncio()
@@ -57,6 +57,7 @@ def make_interrogation_success_report(storage_alias: str) -> InterrogationReport
         secret=SecretBytes(os.urandom(32)),
         encrypted_parts_md5=["abc123", "def456", "ghi789"],
         encrypted_parts_sha256=["123abc", "456def", "789ghi"],
+        encrypted_size=1000,
     )
 
 
@@ -190,13 +191,18 @@ async def test_report_submission(config: Config, central_client, httpx_mock: HTT
             secret = decrypt(body["secret"], CENTRAL_CRYPT4GH_PRIVATE_KEY)
             decoded_secret = base64.urlsafe_b64decode(secret)
             assert decoded_secret == success_report.secret.get_secret_value()  # type: ignore
-            assert body["encrypted_parts_md5"]
-            assert body["encrypted_parts_sha256"]
+            assert isinstance(body["encrypted_parts_md5"], list)
+            assert all(isinstance(c, str) for c in body["encrypted_parts_md5"])
+            assert isinstance(body["encrypted_parts_sha256"], list)
+            assert all(isinstance(c, str) for c in body["encrypted_parts_sha256"])
+            assert body["encrypted_size"]
+            assert isinstance(body["encrypted_size"], int)
             assert not body["reason"]
         else:
             assert not body["secret"]
             assert not body["encrypted_parts_md5"]
             assert not body["encrypted_parts_sha256"]
+            assert not body["encrypted_size"]
             assert body["reason"] == fail_report.reason
         return httpx.Response(201)
 
