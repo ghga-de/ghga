@@ -964,6 +964,11 @@ components:
       type: object
     ValidationError:
       properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
         loc:
           items:
             anyOf:
@@ -1007,7 +1012,7 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 8.3.1
+  version: 8.3.2
 openapi: 3.1.0
 paths:
   /download-access/grants:

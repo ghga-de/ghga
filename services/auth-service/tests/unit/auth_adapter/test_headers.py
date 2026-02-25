@@ -93,7 +93,8 @@ def test_session_to_header_non_ascii():
         last_used=NOW,
     )
     assert session_to_header(session) == (
-        '{"ext_id":"john@aai.org","name":"Svante Pääbo","email":"svante@home.se",'
+        '{"ext_id":"john@aai.org","name":'
+        '"Svante P\\u00e4\\u00e4bo","email":"svante@home.se",'
         '"state":"NeedsRegistration","csrf":"a-csrf-token",'
         f'"id":"{SOME_USER_ID}","roles":[]'
         "}"

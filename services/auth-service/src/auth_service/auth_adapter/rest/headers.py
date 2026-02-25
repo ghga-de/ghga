@@ -60,7 +60,9 @@ def session_to_header(
         timeout_soft, timeout_hard = timeouts(session)
         session_dict["timeout"] = timeout_soft
         session_dict["extends"] = timeout_hard
-    return json.dumps(session_dict, ensure_ascii=False, separators=(",", ":"))
+    # The header value must be a latin-1-encodable string,
+    # so we serialize the session dict to JSON using ensure_ascii=True:
+    return json.dumps(session_dict, ensure_ascii=True, separators=(",", ":"))
 
 
 def pass_auth_response(request: Request, authorization: str | None = None) -> Response:
