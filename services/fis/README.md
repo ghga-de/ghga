@@ -1,6 +1,6 @@
 # File Ingest Service
 
-A lightweight service to propagate file upload metadata to the GHGA file backend services
+A service to liaise between Central File Services and Data Hubs for file inspection.
 
 ## Description
 
@@ -15,13 +15,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/file-ingest-service):
 ```bash
-docker pull ghga/file-ingest-service:9.1.0
+docker pull ghga/file-ingest-service:10.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/file-ingest-service:9.1.0 .
+docker build -t ghga/file-ingest-service:10.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -29,7 +29,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/file-ingest-service:9.1.0 --help
+docker run -p 8080:8080 ghga/file-ingest-service:10.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -46,6 +46,55 @@ fis --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- <a id="properties/client_cache_capacity"></a>**`client_cache_capacity`** *(integer)*: Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached. Exclusive minimum: `0`. Default: `128`.
+
+- <a id="properties/client_cache_ttl"></a>**`client_cache_ttl`** *(integer)*: Number of seconds after which a stored response is considered stale. Minimum: `0`. Default: `60`.
+
+- <a id="properties/client_cacheable_methods"></a>**`client_cacheable_methods`** *(array)*: HTTP methods for which responses are allowed to be cached. Default: `["POST", "GET"]`.
+
+  - <a id="properties/client_cacheable_methods/items"></a>**Items** *(string)*
+
+- <a id="properties/client_exponential_backoff_max"></a>**`client_exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. Minimum: `0`. Default: `60`.
+
+- <a id="properties/client_num_retries"></a>**`client_num_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `3`.
+
+- <a id="properties/client_retry_status_codes"></a>**`client_retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 429, 500, 502, 503, 504]`.
+
+  - <a id="properties/client_retry_status_codes/items"></a>**Items** *(integer)*: Minimum: `0`.
+
+- <a id="properties/client_reraise_from_retry_error"></a>**`client_reraise_from_retry_error`** *(boolean)*: Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. Default: `true`.
+
+- <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request. Minimum: `0`. Default: `0.0`.
+
+- <a id="properties/retry_after_applicable_for_num_requests"></a>**`retry_after_applicable_for_num_requests`** *(integer)*: Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. Exclusive minimum: `0`. Default: `1`.
+
+- <a id="properties/http_request_timeout_seconds"></a>**`http_request_timeout_seconds`** *(number)*: Request timeout setting in seconds. Default: `60.0`.
+
+- <a id="properties/ekss_api_url"></a>**`ekss_api_url`** *(string, format: uri, required)*: The base URL for the EKSS API. Length must be between 1 and 2083 (inclusive).
+
+
+  Examples:
+
+  ```json
+  "http://127.0.0.1/ekss"
+  ```
+
+
+- <a id="properties/file_upload_topic"></a>**`file_upload_topic`** *(string, required)*: Topic containing published FileUpload outbox events.
+
+
+  Examples:
+
+  ```json
+  "file-uploads"
+  ```
+
+
+  ```json
+  "file-upload-topic"
+  ```
+
+
 - <a id="properties/enable_opentelemetry"></a>**`enable_opentelemetry`** *(boolean)*: If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation. Default: `false`.
 
 - <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. Minimum: `0`. Maximum: `1`. Default: `1.0`.
@@ -87,134 +136,6 @@ The service requires the following configuration parameters:
 
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 
-- <a id="properties/vault_url"></a>**`vault_url`** *(string, required)*: URL of the vault instance to connect to.
-
-
-  Examples:
-
-  ```json
-  "http://127.0.0.1.8200"
-  ```
-
-
-- <a id="properties/vault_role_id"></a>**`vault_role_id`**: Vault role ID to access a specific prefix. Default: `null`.
-
-  - **Any of**
-
-    - <a id="properties/vault_role_id/anyOf/0"></a>*string, format: password*
-
-    - <a id="properties/vault_role_id/anyOf/1"></a>*null*
-
-
-  Examples:
-
-  ```json
-  "example_role"
-  ```
-
-
-- <a id="properties/vault_secret_id"></a>**`vault_secret_id`**: Vault secret ID to access a specific prefix. Default: `null`.
-
-  - **Any of**
-
-    - <a id="properties/vault_secret_id/anyOf/0"></a>*string, format: password*
-
-    - <a id="properties/vault_secret_id/anyOf/1"></a>*null*
-
-
-  Examples:
-
-  ```json
-  "example_secret"
-  ```
-
-
-- <a id="properties/vault_verify"></a>**`vault_verify`**: SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification. Default: `true`.
-
-  - **Any of**
-
-    - <a id="properties/vault_verify/anyOf/0"></a>*boolean*
-
-    - <a id="properties/vault_verify/anyOf/1"></a>*string*
-
-
-  Examples:
-
-  ```json
-  "/etc/ssl/certs/my_bundle.pem"
-  ```
-
-
-- <a id="properties/vault_path"></a>**`vault_path`** *(string, required)*: Path without leading or trailing slashes where secrets should be stored in the vault.
-
-- <a id="properties/vault_secrets_mount_point"></a>**`vault_secrets_mount_point`** *(string)*: Name used to address the secret engine under a custom mount path. Default: `"secret"`.
-
-
-  Examples:
-
-  ```json
-  "secret"
-  ```
-
-
-- <a id="properties/vault_kube_role"></a>**`vault_kube_role`**: Vault role name used for Kubernetes authentication. Default: `null`.
-
-  - **Any of**
-
-    - <a id="properties/vault_kube_role/anyOf/0"></a>*string*
-
-    - <a id="properties/vault_kube_role/anyOf/1"></a>*null*
-
-
-  Examples:
-
-  ```json
-  "file-ingest-role"
-  ```
-
-
-- <a id="properties/vault_auth_mount_point"></a>**`vault_auth_mount_point`**: Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. Default: `null`.
-
-  - **Any of**
-
-    - <a id="properties/vault_auth_mount_point/anyOf/0"></a>*string*
-
-    - <a id="properties/vault_auth_mount_point/anyOf/1"></a>*null*
-
-
-  Examples:
-
-  ```json
-  null
-  ```
-
-
-  ```json
-  "approle"
-  ```
-
-
-  ```json
-  "kubernetes"
-  ```
-
-
-- <a id="properties/service_account_token_path"></a>**`service_account_token_path`** *(string, format: path)*: Path to service account token used by kube auth adapter. Default: `"/var/run/secrets/kubernetes.io/serviceaccount/token"`.
-
-- <a id="properties/private_key_path"></a>**`private_key_path`** *(string, format: path, required)*: Path to the Crypt4GH private key file of the keypair whose public key is used to encrypt the payload.
-
-- <a id="properties/private_key_passphrase"></a>**`private_key_passphrase`**: Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. Default: `null`.
-
-  - **Any of**
-
-    - <a id="properties/private_key_passphrase/anyOf/0"></a>*string*
-
-    - <a id="properties/private_key_passphrase/anyOf/1"></a>*null*
-
-- <a id="properties/token_hashes"></a>**`token_hashes`** *(array, required)*: List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.
-
-  - <a id="properties/token_hashes/items"></a>**Items** *(string)*
-
 - <a id="properties/file_interrogations_topic"></a>**`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
 
 
@@ -231,7 +152,17 @@ The service requires the following configuration parameters:
   Examples:
 
   ```json
-  "file_interrogation_success"
+  "interrogation_success"
+  ```
+
+
+- <a id="properties/interrogation_failure_type"></a>**`interrogation_failure_type`** *(string, required)*: The type used for events informing about failed file validations.
+
+
+  Examples:
+
+  ```json
+  "interrogation_failed"
   ```
 
 
@@ -647,13 +578,18 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/file_validations_collection"></a>**`file_validations_collection`** *(string)*: The name of the collection used to store FileUploadValidationSuccess events. Default: `"fileValidations"`.
+- <a id="properties/data_hub_auth_keys"></a>**`data_hub_auth_keys`** *(object, required)*: Mapping of storage (data hub) aliases to their public token signature validation keys. Can contain additional properties.
+
+  - <a id="properties/data_hub_auth_keys/additionalProperties"></a>**Additional properties** *(string)*
 
 
   Examples:
 
   ```json
-  "fileValidations"
+  {
+      "HD": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}",
+      "TU": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+  }
   ```
 
 

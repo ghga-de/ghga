@@ -2,6 +2,109 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "client_cache_capacity": {
+      "default": 128,
+      "description": "Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached.",
+      "exclusiveMinimum": 0,
+      "title": "Client Cache Capacity",
+      "type": "integer"
+    },
+    "client_cache_ttl": {
+      "default": 60,
+      "description": "Number of seconds after which a stored response is considered stale.",
+      "minimum": 0,
+      "title": "Client Cache Ttl",
+      "type": "integer"
+    },
+    "client_cacheable_methods": {
+      "default": [
+        "POST",
+        "GET"
+      ],
+      "description": "HTTP methods for which responses are allowed to be cached.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Client Cacheable Methods",
+      "type": "array"
+    },
+    "client_exponential_backoff_max": {
+      "default": 60,
+      "description": "Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly.",
+      "minimum": 0,
+      "title": "Client Exponential Backoff Max",
+      "type": "integer"
+    },
+    "client_num_retries": {
+      "default": 3,
+      "description": "Number of times to retry failed API calls.",
+      "minimum": 0,
+      "title": "Client Num Retries",
+      "type": "integer"
+    },
+    "client_retry_status_codes": {
+      "default": [
+        408,
+        429,
+        500,
+        502,
+        503,
+        504
+      ],
+      "description": "List of status codes that should trigger retrying a request.",
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Client Retry Status Codes",
+      "type": "array"
+    },
+    "client_reraise_from_retry_error": {
+      "default": true,
+      "description": "Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is.",
+      "title": "Client Reraise From Retry Error",
+      "type": "boolean"
+    },
+    "per_request_jitter": {
+      "default": 0.0,
+      "description": "Max amount of jitter (in seconds) to add to each request.",
+      "minimum": 0,
+      "title": "Per Request Jitter",
+      "type": "number"
+    },
+    "retry_after_applicable_for_num_requests": {
+      "default": 1,
+      "description": "Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession.",
+      "exclusiveMinimum": 0,
+      "title": "Retry After Applicable For Num Requests",
+      "type": "integer"
+    },
+    "http_request_timeout_seconds": {
+      "default": 60.0,
+      "description": "Request timeout setting in seconds.",
+      "title": "Http Request Timeout Seconds",
+      "type": "number"
+    },
+    "ekss_api_url": {
+      "description": "The base URL for the EKSS API",
+      "examples": [
+        "http://127.0.0.1/ekss"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Ekss Api Url",
+      "type": "string"
+    },
+    "file_upload_topic": {
+      "description": "Topic containing published FileUpload outbox events",
+      "examples": [
+        "file-uploads",
+        "file-upload-topic"
+      ],
+      "title": "File Upload Topic",
+      "type": "string"
+    },
     "enable_opentelemetry": {
       "default": false,
       "description": "If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation.",
@@ -66,148 +169,6 @@
       "title": "Log Traceback",
       "type": "boolean"
     },
-    "vault_url": {
-      "description": "URL of the vault instance to connect to",
-      "examples": [
-        "http://127.0.0.1.8200"
-      ],
-      "title": "Vault Url",
-      "type": "string"
-    },
-    "vault_role_id": {
-      "anyOf": [
-        {
-          "format": "password",
-          "type": "string",
-          "writeOnly": true
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Vault role ID to access a specific prefix",
-      "examples": [
-        "example_role"
-      ],
-      "title": "Vault Role Id"
-    },
-    "vault_secret_id": {
-      "anyOf": [
-        {
-          "format": "password",
-          "type": "string",
-          "writeOnly": true
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Vault secret ID to access a specific prefix",
-      "examples": [
-        "example_secret"
-      ],
-      "title": "Vault Secret Id"
-    },
-    "vault_verify": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "string"
-        }
-      ],
-      "default": true,
-      "description": "SSL certificates (CA bundle) used to verify the identity of the vault, or True to use the default CAs, or False for no verification.",
-      "examples": [
-        "/etc/ssl/certs/my_bundle.pem"
-      ],
-      "title": "Vault Verify"
-    },
-    "vault_path": {
-      "description": "Path without leading or trailing slashes where secrets should be stored in the vault.",
-      "title": "Vault Path",
-      "type": "string"
-    },
-    "vault_secrets_mount_point": {
-      "default": "secret",
-      "description": "Name used to address the secret engine under a custom mount path.",
-      "examples": [
-        "secret"
-      ],
-      "title": "Vault Secrets Mount Point",
-      "type": "string"
-    },
-    "vault_kube_role": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Vault role name used for Kubernetes authentication",
-      "examples": [
-        "file-ingest-role"
-      ],
-      "title": "Vault Kube Role"
-    },
-    "vault_auth_mount_point": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used.",
-      "examples": [
-        null,
-        "approle",
-        "kubernetes"
-      ],
-      "title": "Vault Auth Mount Point"
-    },
-    "service_account_token_path": {
-      "default": "/var/run/secrets/kubernetes.io/serviceaccount/token",
-      "description": "Path to service account token used by kube auth adapter.",
-      "format": "path",
-      "title": "Service Account Token Path",
-      "type": "string"
-    },
-    "private_key_path": {
-      "description": "Path to the Crypt4GH private key file of the keypair whose public key is used to encrypt the payload.",
-      "format": "path",
-      "title": "Private Key Path",
-      "type": "string"
-    },
-    "private_key_passphrase": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted.",
-      "title": "Private Key Passphrase"
-    },
-    "token_hashes": {
-      "description": "List of token hashes corresponding to the tokens that can be used to authenticate calls to this service.",
-      "items": {
-        "type": "string"
-      },
-      "title": "Token Hashes",
-      "type": "array"
-    },
     "file_interrogations_topic": {
       "description": "The name of the topic use to publish file interrogation outcome events.",
       "examples": [
@@ -219,9 +180,17 @@
     "interrogation_success_type": {
       "description": "The type used for events informing about successful file validations.",
       "examples": [
-        "file_interrogation_success"
+        "interrogation_success"
       ],
       "title": "Interrogation Success Type",
+      "type": "string"
+    },
+    "interrogation_failure_type": {
+      "description": "The type used for events informing about failed file validations.",
+      "examples": [
+        "interrogation_failed"
+      ],
+      "title": "Interrogation Failure Type",
       "type": "string"
     },
     "host": {
@@ -594,29 +563,34 @@
       ],
       "title": "Migration Max Wait Sec"
     },
-    "file_validations_collection": {
-      "default": "fileValidations",
-      "description": "The name of the collection used to store FileUploadValidationSuccess events.",
+    "data_hub_auth_keys": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Mapping of storage (data hub) aliases to their public token signature validation keys",
       "examples": [
-        "fileValidations"
+        {
+          "HD": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}",
+          "TU": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+        }
       ],
-      "title": "File Validations Collection",
-      "type": "string"
+      "title": "Data Hub Auth Keys",
+      "type": "object"
     }
   },
   "required": [
+    "ekss_api_url",
+    "file_upload_topic",
     "service_instance_id",
-    "vault_url",
-    "vault_path",
-    "private_key_path",
-    "token_hashes",
     "file_interrogations_topic",
     "interrogation_success_type",
+    "interrogation_failure_type",
     "kafka_servers",
     "mongo_dsn",
     "db_name",
     "db_version_collection",
-    "migration_wait_sec"
+    "migration_wait_sec",
+    "data_hub_auth_keys"
   ],
   "title": "ModSettings",
   "type": "object"

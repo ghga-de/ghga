@@ -15,117 +15,116 @@
 #
 """Bundle test fixtures together"""
 
-import os
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from pathlib import Path
-from tempfile import mkstemp
-from uuid import UUID
+from unittest.mock import AsyncMock
 
 import httpx
+import pytest
 import pytest_asyncio
-from crypt4gh.keys import get_private_key, get_public_key
-from crypt4gh.keys.c4gh import generate as generate_keypair
 from ghga_service_commons.api.testing import AsyncTestClient
-from ghga_service_commons.utils.crypt import KeyPair
-from ghga_service_commons.utils.simple_token import generate_token_and_hash
+from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.testing.dao import new_mock_dao_class
+from hexkit.providers.testing.eventpub import InMemEventPublisher, InMemEventStore
 
+from fis.adapters.outbound.event_pub import EventPubTranslator
 from fis.config import Config
-from fis.core.models import UploadMetadataBase
-from fis.inject import prepare_core, prepare_rest_app
-from fis.ports.inbound.ingest import (
-    LegacyUploadMetadataProcessorPort,
-    UploadMetadataProcessorPort,
-)
+from fis.core.interrogation import InterrogationHandler
+from fis.core.models import FileUnderInterrogation, InterrogationReport
+from fis.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
+from fis.ports.inbound.interrogation import InterrogationHandlerPort
+from fis.ports.outbound.dao import FileDao, InterrogationReportDao
+from fis.ports.outbound.event_pub import EventPubTranslatorPort
+from fis.ports.outbound.secrets import SecretsClientPort
 from tests_fis.fixtures.config import get_config
 
-__all__ = ["TEST_PAYLOAD", "JointFixture", "joint_fixture"]
+__all__ = ["JointFixture", "joint_fixture"]
 
-TEST_OBJECT_ID = UUID("794fa7ab-fa80-493b-a08d-a6be41a07cde")
+InMemFileDao: type[FileDao] = new_mock_dao_class(
+    dto_model=FileUnderInterrogation, id_field="id"
+)
 
-TEST_PAYLOAD = UploadMetadataBase(
-    file_id="abc",
-    bucket_id="staging",
-    object_id=TEST_OBJECT_ID,
-    part_size=16 * 1024**2,
-    unencrypted_size=50 * 1024**2,
-    encrypted_size=50 * 1024**2 + 128,
-    unencrypted_checksum="def",
-    encrypted_md5_checksums=["a", "b", "c"],
-    encrypted_sha256_checksums=["a", "b", "c"],
-    storage_alias="staging",
+InMemInterrogationReportDao: type[InterrogationReportDao] = new_mock_dao_class(
+    dto_model=InterrogationReport, id_field="file_id"
 )
 
 
 @dataclass
 class JointFixture:
-    """Holds generated test keypair and configured container"""
+    """A test class that holds the main components of the service for testing"""
 
     config: Config
-    keypair: KeyPair
-    token: str
     kafka: KafkaFixture
-    mongodb: MongoDbFixture
+    file_dao: FileDao
     rest_client: httpx.AsyncClient
-    upload_metadata_processor: UploadMetadataProcessorPort
-    legacy_upload_metadata_processor: LegacyUploadMetadataProcessorPort
+    outbox_consumer: KafkaEventSubscriber
+    interrogation_handler: InterrogationHandlerPort
 
 
 @pytest_asyncio.fixture
 async def joint_fixture(
     kafka: KafkaFixture, mongodb: MongoDbFixture
 ) -> AsyncGenerator[JointFixture]:
-    """Generate keypair for testing and setup container with updated config"""
+    """Set up fixture with testcontainer config spliced in"""
     config = get_config(sources=[kafka.config, mongodb.config])
-    assert config.private_key_passphrase is not None
 
-    sk_file, sk_path = mkstemp(prefix="private", suffix=".sec")
-    pk_file, pk_path = mkstemp(prefix="public", suffix=".pub")
-    # Crypt4GH does not reset the umask it sets, so we need to deal with it
-    original_umask = os.umask(0o022)
-    generate_keypair(
-        seckey=sk_file,
-        pubkey=pk_file,
-        passphrase=config.private_key_passphrase.encode(),
-    )
-    public_key = get_public_key(pk_path)
-    private_key = get_private_key(sk_path, lambda: config.private_key_passphrase)
-    os.umask(original_umask)
-
-    keypair = KeyPair(private=private_key, public=public_key)
-    token, token_hash = generate_token_and_hash()
-
-    # cannot update inplace, copy and update instead
-    config = config.model_copy(
-        update={
-            "private_key_path": sk_path,
-            "token_hashes": [token_hash],
-        }
-    )
     async with (
-        prepare_core(config=config) as (
-            upload_metadata_processor,
-            legacy_upload_metadata_processor,
-        ),
-        prepare_rest_app(
-            config=config,
-            core_override=(upload_metadata_processor, legacy_upload_metadata_processor),
-        ) as app,
+        prepare_core(config=config) as interrogation_handler,
+        prepare_rest_app(config=config, core_override=interrogation_handler) as app,
+        prepare_event_subscriber(
+            config=config, core_override=interrogation_handler
+        ) as outbox_consumer,
         AsyncTestClient(app=app) as rest_client,
     ):
         yield JointFixture(
             config=config,
-            keypair=keypair,
-            token=token,
             kafka=kafka,
-            mongodb=mongodb,
+            file_dao=interrogation_handler._file_dao,
             rest_client=rest_client,
-            upload_metadata_processor=upload_metadata_processor,
-            legacy_upload_metadata_processor=legacy_upload_metadata_processor,
+            outbox_consumer=outbox_consumer,
+            interrogation_handler=interrogation_handler,
         )
 
-    # cleanup
-    Path(pk_path).unlink()
-    Path(sk_path).unlink()
+
+@dataclass
+class JointRig:
+    """A smaller version of JointFixture designed for unit testing"""
+
+    config: Config
+    file_dao: FileDao
+    interrogation_report_dao: InterrogationReportDao
+    secrets_client: AsyncMock
+    publisher: EventPubTranslatorPort
+    event_store: InMemEventStore
+    interrogation_handler: InterrogationHandlerPort
+
+
+@pytest.fixture
+def rig(config: Config) -> JointRig:
+    """Produce a populated JointRig instance"""
+    event_store = InMemEventStore()
+    file_dao = InMemFileDao()
+    interrogation_report_dao = InMemInterrogationReportDao()
+    secrets_client = AsyncMock(spec=SecretsClientPort)
+    secrets_client.deposit_secret.return_value = "mock-secret-id"
+    publisher = EventPubTranslator(
+        config=config, provider=InMemEventPublisher(event_store)
+    )
+    interrogation_handler = InterrogationHandler(
+        config=config,
+        file_dao=file_dao,
+        interrogation_report_dao=interrogation_report_dao,
+        event_publisher=publisher,
+        secrets_client=secrets_client,
+    )
+    return JointRig(
+        config=config,
+        file_dao=file_dao,
+        interrogation_report_dao=interrogation_report_dao,
+        secrets_client=secrets_client,
+        publisher=publisher,
+        event_store=event_store,
+        interrogation_handler=interrogation_handler,
+    )

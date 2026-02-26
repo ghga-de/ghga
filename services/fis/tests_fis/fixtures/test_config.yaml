@@ -1,22 +1,16 @@
 service_name: fis
-private_key_path: ./test_placeholder.sec
-private_key_passphrase: test
-token_hashes: [abcdef, ghijkl]
-
 file_interrogations_topic: file-interrogations
-interrogation_success_type: file_interrogation_success
-
+interrogation_success_type: interrogation_success
+interrogation_failure_type: interrogation_failed
+file_upload_topic: file-uploads
 service_instance_id: '1'
 kafka_servers: ["kafka:9092"]
-
-vault_url: "http://127.0.0.1:8200"
-vault_role_id: dummy-role
-vault_secret_id: dummy-secret
-vault_verify: True
-vault_path: ekss
-vault_secrets_mount_point: secret
-vault_kube_role: dummy-role
+kafka_enable_dlq: True
 mongo_dsn: "mongodb://mongodb:27017"
 db_name: "dev"
 migration_wait_sec: 10
 db_version_collection: fisDbVersions
+ekss_api_url: http://127.0.0.1/ekss
+data_hub_auth_keys:  # overridden by config fixture
+  HD: '{"crv":"P-256","kty":"EC","x":"nix0eRNBLpSOQqEa63MB48FwKinZYpPL2G9QZEEAFGQ","y":"UEQBvFFSJmS95tBZCR1paF97jnwOZUyjKaE4aY6aaCk"}'
+  TU: '{"crv":"P-256","kty":"EC","x":"1XAs84RlUVBlMlE8l_4rTTlSYWDeQiLH21iTDLKTIM8","y":"cySDIURnb35Z6kv5FaidwIiwMcpFCnwKVausc9o8BRs"}'

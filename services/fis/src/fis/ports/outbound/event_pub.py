@@ -17,15 +17,38 @@
 
 from abc import ABC, abstractmethod
 
-from fis.core import models
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from pydantic import UUID4
 
 
 class EventPubTranslatorPort(ABC):
     """Abstract definition of an event publisher class"""
 
     @abstractmethod
-    async def publish_file_interrogation_success(
-        self, *, upload_metadata: models.UploadMetadataBase, secret_id: str
+    async def publish_interrogation_success(  # noqa: PLR0913
+        self,
+        *,
+        file_id: UUID4,
+        secret_id: str,
+        storage_alias: str,
+        bucket_id: str,
+        object_id: UUID4,
+        interrogated_at: UTCDatetime,
+        encrypted_parts_md5: list[str],
+        encrypted_parts_sha256: list[str],
+        encrypted_size: int,
     ):
         """Publish a file interrogation success event"""
+        ...
+
+    @abstractmethod
+    async def publish_interrogation_failed(
+        self,
+        *,
+        file_id: UUID4,
+        storage_alias: str,
+        interrogated_at: UTCDatetime,
+        reason: str,
+    ):
+        """Publish a file interrogation failure event"""
         ...

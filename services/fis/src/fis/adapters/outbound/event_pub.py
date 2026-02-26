@@ -14,17 +14,39 @@
 # limitations under the License.
 """Adapter for publishing events to other services."""
 
-from ghga_event_schemas.configs import FileInterrogationSuccessEventsConfig
-from ghga_event_schemas.pydantic_ import FileUploadValidationSuccess
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from hexkit.utils import now_utc_ms_prec
+from pydantic import UUID4, Field
+from pydantic_settings import BaseSettings
 
 from fis.core import models
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 
 
-class EventPubTranslatorConfig(FileInterrogationSuccessEventsConfig):
-    """Configuration for publishing events"""
+class EventPubConfig(BaseSettings):
+    """Topic & type information for event publishing"""
+
+    file_interrogations_topic: str = Field(
+        default=...,
+        description=(
+            "The name of the topic use to publish file interrogation outcome events."
+        ),
+        examples=["file-interrogations"],
+    )
+    interrogation_success_type: str = Field(
+        default=...,
+        description=(
+            "The type used for events informing about successful file validations."
+        ),
+        examples=["interrogation_success"],
+    )
+    interrogation_failure_type: str = Field(
+        default=...,
+        description=(
+            "The type used for events informing about failed file validations."
+        ),
+        examples=["interrogation_failed"],
+    )
 
 
 class EventPubTranslator(EventPubTranslatorPort):
@@ -33,37 +55,63 @@ class EventPubTranslator(EventPubTranslatorPort):
     def __init__(
         self,
         *,
-        config: EventPubTranslatorConfig,
+        config: EventPubConfig,
         provider: EventPublisherProtocol,
     ) -> None:
         """Configure with provider for the DaoFactoryProtocol"""
         self._provider = provider
         self._config = config
 
-    async def publish_file_interrogation_success(
+    async def publish_interrogation_success(  # noqa: PLR0913
         self,
         *,
-        upload_metadata: models.UploadMetadataBase,
+        file_id: UUID4,
         secret_id: str,
+        storage_alias: str,
+        bucket_id: str,
+        object_id: UUID4,
+        interrogated_at: UTCDatetime,
+        encrypted_parts_md5: list[str],
+        encrypted_parts_sha256: list[str],
+        encrypted_size: int,
     ):
-        """Send FileUploadValidationSuccess event to downstream services"""
-        payload = FileUploadValidationSuccess(
-            upload_date=now_utc_ms_prec(),
-            file_id=upload_metadata.file_id,
-            object_id=upload_metadata.object_id,
-            bucket_id=upload_metadata.bucket_id,
-            s3_endpoint_alias=upload_metadata.storage_alias,
-            decrypted_size=upload_metadata.unencrypted_size,
-            decryption_secret_id=secret_id,
-            content_offset=0,
-            encrypted_part_size=upload_metadata.part_size,
-            encrypted_parts_md5=upload_metadata.encrypted_md5_checksums,
-            encrypted_parts_sha256=upload_metadata.encrypted_sha256_checksums,
-            decrypted_sha256=upload_metadata.unencrypted_checksum,
+        """Publish a file interrogation success event"""
+        payload = models.InterrogationSuccess(
+            file_id=file_id,
+            secret_id=secret_id,
+            storage_alias=storage_alias,
+            bucket_id=bucket_id,
+            object_id=object_id,
+            interrogated_at=interrogated_at,
+            encrypted_parts_md5=encrypted_parts_md5,
+            encrypted_parts_sha256=encrypted_parts_sha256,
+            encrypted_size=encrypted_size,
         )
         await self._provider.publish(
-            payload=payload.model_dump(),
+            payload=payload.model_dump(mode="json"),
             type_=self._config.interrogation_success_type,
-            key=payload.file_id,
             topic=self._config.file_interrogations_topic,
+            key=str(file_id),
+        )
+
+    async def publish_interrogation_failed(
+        self,
+        *,
+        file_id: UUID4,
+        storage_alias: str,
+        interrogated_at: UTCDatetime,
+        reason: str,
+    ):
+        """Publish a file interrogation failure event"""
+        payload = models.InterrogationFailure(
+            file_id=file_id,
+            storage_alias=storage_alias,
+            interrogated_at=interrogated_at,
+            reason=reason,
+        )
+        await self._provider.publish(
+            payload=payload.model_dump(mode="json"),
+            type_=self._config.interrogation_failure_type,
+            topic=self._config.file_interrogations_topic,
+            key=str(file_id),
         )

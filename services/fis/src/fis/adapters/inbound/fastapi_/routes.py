@@ -14,24 +14,19 @@
 # limitations under the License.
 """FastAPI routes for S3 upload metadata ingest"""
 
+import logging
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Response, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Body, HTTPException, status
+from pydantic import UUID4
 
 from fis.adapters.inbound.fastapi_ import dummies
-from fis.adapters.inbound.fastapi_.http_authorization import (
-    IngestTokenAuthContext,
-    require_token,
-)
+from fis.adapters.inbound.fastapi_.http_authorization import JWT, require_data_hub_jwt
 from fis.constants import TRACER
-from fis.core.models import EncryptedPayload, UploadMetadata
-from fis.ports.inbound.ingest import (
-    DecryptionError,
-    VaultCommunicationError,
-    WrongDecryptedFormatError,
-)
+from fis.core import models
+from fis.ports.inbound.interrogation import InterrogationHandlerPort
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -47,137 +42,91 @@ async def health():
     return {"status": "OK"}
 
 
-@router.post(
-    "/legacy/ingest",
-    summary="Processes encrypted output data from the S3 upload script and ingests it "
-    + "into the Encryption Key Store, Internal File Registry and Download Controller.",
-    operation_id="ingestLegacyFileUploadMetadata",
-    tags=["FileIngestService"],
-    status_code=status.HTTP_202_ACCEPTED,
-    response_description="Received and decrypted data successfully.",
-    deprecated=True,
-    responses={
-        status.HTTP_409_CONFLICT: {
-            "description": "Metadata for the given file ID has already been processed."
-        },
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {
-            "description": "Either the payload is malformed or could not be decrypted.",
-            "content": {
-                "application/json": {
-                    "schema": {"$ref": "#/components/schemas/HTTPValidationError"}
-                }
-            },
-        },
-    },
-)
-@TRACER.start_as_current_span("routes.ingest_legacy_metadata")
-async def ingest_legacy_metadata(
-    encrypted_payload: EncryptedPayload,
-    upload_metadata_processor: dummies.LegacyUploadProcessor,
-    _token: Annotated[IngestTokenAuthContext, require_token],
-):
-    """Decrypt payload, process metadata, file secret and send success event"""
-    try:
-        decrypted_metadata = await upload_metadata_processor.decrypt_payload(
-            encrypted=encrypted_payload
-        )
-    except (DecryptionError, WrongDecryptedFormatError) as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
-
-    file_id = decrypted_metadata.file_id
-    if await upload_metadata_processor.has_already_been_processed(file_id=file_id):
-        return JSONResponse(
-            status_code=409,
-            content={
-                "error": f"Metadata for file {file_id} has already been processed."
-            },
-        )
-
-    file_secret = decrypted_metadata.file_secret
-
-    try:
-        secret_id = await upload_metadata_processor.store_secret(
-            file_secret=file_secret
-        )
-    except VaultCommunicationError as error:
-        raise HTTPException(status_code=500, detail=str(error)) from error
-
-    await upload_metadata_processor.populate_by_event(
-        upload_metadata=decrypted_metadata, secret_id=secret_id
-    )
-
-    return Response(status_code=202)
-
-
-@router.post(
-    "/federated/ingest_metadata",
-    summary="Processes encrypted output data from the S3 upload script and ingests it "
-    + "into the Encryption Key Store, Internal File Registry and Download Controller.",
-    operation_id="ingestFileUploadMetadata",
-    tags=["FileIngestService"],
-    status_code=status.HTTP_202_ACCEPTED,
-    response_description="Received and decrypted data successfully.",
-    responses={
-        status.HTTP_409_CONFLICT: {
-            "description": "Metadata for the given file ID has already been processed."
-        }
-    },
-)
-@TRACER.start_as_current_span("routes.ingest_metadata")
-async def ingest_metadata(
-    payload: UploadMetadata,
-    upload_metadata_processor: dummies.UploadProcessorPort,
-    _token: Annotated[IngestTokenAuthContext, require_token],
-):
-    """Process metadata, file secret id and send success event"""
-    secret_id = payload.secret_id
-    file_id = payload.file_id
-    if await upload_metadata_processor.has_already_been_processed(file_id=file_id):
-        return JSONResponse(
-            status_code=409,
-            content={
-                "error": f"Metadata for file {file_id} has already been processed."
-            },
-        )
-
-    await upload_metadata_processor.populate_by_event(
-        upload_metadata=payload, secret_id=secret_id
-    )
-
-    return Response(status_code=202)
-
-
-@router.post(
-    "/federated/ingest_secret",
-    summary="Store file encryption/decryption secret and return secret ID.",
-    operation_id="ingestSecret",
+@router.get(
+    "/storages/{storage_alias}/uploads",
+    summary="Serve a list of new file uploads (yet to be interrogated)",
+    operation_id="listUploads",
     tags=["FileIngestService"],
     status_code=status.HTTP_200_OK,
-    response_description="Received and stored secret successfully.",
+)
+@TRACER.start_as_current_span("routes.list_uploads")
+async def list_uploads(
+    storage_alias: str,
+    interrogator: dummies.InterrogatorPort,
+    _token: Annotated[JWT, require_data_hub_jwt],
+) -> list[models.BaseFileInformation]:
+    """Return a list of not-yet-interrogated files for a Data Hub (storage_alias)"""
+    try:
+        return await interrogator.get_files_not_yet_interrogated(
+            storage_alias=storage_alias
+        )
+    except Exception as err:
+        error = HTTPException(status_code=500, detail="Something went wrong.")
+        log.error(error, exc_info=True)
+        raise error from err
+
+
+@router.post(
+    "/storages/{storage_alias}/uploads/can_remove",
+    summary="Returns a list of IDs indicating which objects can be removed from the interrogation bucket",
+    operation_id="getRemovableFiles",
+    tags=["FileIngestService"],
+    status_code=status.HTTP_200_OK,
+)
+@TRACER.start_as_current_span("routes.get_removable_files")
+async def get_removable_files(
+    storage_alias: str,
+    interrogator: dummies.InterrogatorPort,
+    _token: Annotated[JWT, require_data_hub_jwt],
+    object_ids: list[UUID4] = Body(),
+) -> list[UUID4]:
+    """Returns a subset of the provided object ID list containing the IDs of all S3
+    objects which may be now removed from the interrogation bucket.
+    """
+    try:
+        return [
+            o for o in object_ids if await interrogator.check_if_removable(object_id=o)
+        ]
+    except Exception as err:
+        error = HTTPException(status_code=500, detail="Something went wrong.")
+        log.error(error, exc_info=True)
+        raise error from err
+
+
+@router.post(
+    "/storages/{storage_alias}/interrogation-reports",
+    summary="Accepts an InterrogationReport for a file",
+    operation_id="postInterrogationReport",
+    tags=["FileIngestService"],
+    status_code=status.HTTP_201_CREATED,
     responses={
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {
-            "description": "Either the payload is malformed or could not be decrypted.",
-            "content": {
-                "application/json": {
-                    "schema": {"$ref": "#/components/schemas/HTTPValidationError"}
-                }
-            },
-        },
+        status.HTTP_404_NOT_FOUND: {"description": "No such file exists"},
+        status.HTTP_409_CONFLICT: {"description": "Report conflicts with database"},
     },
 )
-@TRACER.start_as_current_span("routes.ingest_secret")
-async def ingest_secret(
-    encrypted_payload: EncryptedPayload,
-    upload_metadata_processor: dummies.UploadProcessorPort,
-    _token: Annotated[IngestTokenAuthContext, require_token],
-):
-    """Decrypt payload and deposit file secret in exchange for a secret id"""
+@TRACER.start_as_current_span("routes.post_interrogation_report")
+async def post_interrogation_report(
+    storage_alias: str,
+    interrogator: dummies.InterrogatorPort,
+    _token: Annotated[JWT, require_data_hub_jwt],
+    report: models.InterrogationReportWithSecret = Body(),
+) -> None:
+    """Post an InterrogationReport"""
     try:
-        file_secret = await upload_metadata_processor.decrypt_secret(
-            encrypted=encrypted_payload
-        )
-    except DecryptionError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
-
-    secret_id = await upload_metadata_processor.store_secret(file_secret=file_secret)
-    return {"secret_id": secret_id}
+        await interrogator.handle_interrogation_report(report=report)
+    except InterrogationHandlerPort.FileNotFoundError as err:
+        raise HTTPException(
+            status_code=404, detail=f"File {report.file_id} not found."
+        ) from err
+    except InterrogationHandlerPort.InterrogationReportConflict as err:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Already received an InterrogationReport for file {report.file_id}"
+                + " and this one does not match."
+            ),
+        ) from err
+    except Exception as err:
+        error = HTTPException(status_code=500, detail="Something went wrong.")
+        log.error(error, exc_info=True, extra={"file_id": report.file_id})
+        raise error from err

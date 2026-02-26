@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Short description of package"""
+"""A service to liaise between Central File Services and Data Hubs for file inspection."""
 
 from importlib.metadata import version
 

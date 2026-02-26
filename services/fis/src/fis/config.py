@@ -22,10 +22,11 @@ from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 from pydantic import Field
 
-from fis.adapters.outbound.event_pub import EventPubTranslatorConfig
-from fis.adapters.outbound.vault import VaultConfig
+from fis.adapters.inbound.event_sub import OutboxSubConfig
+from fis.adapters.outbound.event_pub import EventPubConfig
+from fis.adapters.outbound.http import HttpClientConfig
+from fis.adapters.outbound.secrets import SecretsClientConfig
 from fis.constants import SERVICE_NAME
-from fis.core.ingest import ServiceConfig
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
@@ -33,21 +34,27 @@ class Config(
     MongoKafkaConfig,
     MigrationConfig,
     ApiConfigBase,
-    EventPubTranslatorConfig,
-    ServiceConfig,
-    VaultConfig,
+    EventPubConfig,
     LoggingConfig,
     OpenTelemetryConfig,
+    OutboxSubConfig,
+    SecretsClientConfig,
+    HttpClientConfig,
 ):
     """Config parameters and their defaults."""
 
     service_name: str = SERVICE_NAME
 
-    # Remove this parameter once the v2 migration has been run in production
-    file_validations_collection: str = Field(
-        default="fileValidations",
+    data_hub_auth_keys: dict[str, str] = Field(
+        default=...,
         description=(
-            "The name of the collection used to store FileUploadValidationSuccess events."
+            "Mapping of storage (data hub) aliases to their public token signature"
+            + " validation keys"
         ),
-        examples=["fileValidations"],
+        examples=[
+            {
+                "HD": '{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}',
+                "TU": '{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}',
+            }
+        ],
     )

@@ -1,22 +1,43 @@
 api_root_path: ''
 auto_reload: false
+client_cache_capacity: 128
+client_cache_ttl: 60
+client_cacheable_methods:
+- POST
+- GET
+client_exponential_backoff_max: 60
+client_num_retries: 3
+client_reraise_from_retry_error: true
+client_retry_status_codes:
+- 408
+- 429
+- 500
+- 502
+- 503
+- 504
 cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 cors_exposed_headers: null
+data_hub_auth_keys:
+  HD: '{"crv":"P-256","kty":"EC","x":"nix0eRNBLpSOQqEa63MB48FwKinZYpPL2G9QZEEAFGQ","y":"UEQBvFFSJmS95tBZCR1paF97jnwOZUyjKaE4aY6aaCk"}'
+  TU: '{"crv":"P-256","kty":"EC","x":"1XAs84RlUVBlMlE8l_4rTTlSYWDeQiLH21iTDLKTIM8","y":"cySDIURnb35Z6kv5FaidwIiwMcpFCnwKVausc9o8BRs"}'
 db_name: dev
 db_version_collection: fisDbVersions
 docs_url: /docs
+ekss_api_url: http://127.0.0.1/ekss
 enable_opentelemetry: false
 file_interrogations_topic: file-interrogations
-file_validations_collection: fileValidations
+file_upload_topic: file-uploads
 generate_correlation_id: true
 host: 127.0.0.1
-interrogation_success_type: file_interrogation_success
+http_request_timeout_seconds: 60.0
+interrogation_failure_type: interrogation_failed
+interrogation_success_type: interrogation_success
 kafka_compression_type: null
 kafka_dlq_topic: dlq
-kafka_enable_dlq: false
+kafka_enable_dlq: true
 kafka_max_message_size: 1048576
 kafka_max_retries: 0
 kafka_retry_backoff: 0
@@ -36,22 +57,10 @@ mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json
 otel_trace_sampling_rate: 1.0
+per_request_jitter: 0.0
 port: 8080
-private_key_passphrase: null
-private_key_path: placeholder.sec
-service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
+retry_after_applicable_for_num_requests: 1
 service_instance_id: '1'
 service_name: fis
 timeout_keep_alive: 90
-token_hashes:
-- abcdef
-- ghijkl
-vault_auth_mount_point: null
-vault_kube_role: dummy-role
-vault_path: ekss
-vault_role_id: '**********'
-vault_secret_id: '**********'
-vault_secrets_mount_point: secret
-vault_url: http://127.0.0.1:8200
-vault_verify: true
 workers: 1

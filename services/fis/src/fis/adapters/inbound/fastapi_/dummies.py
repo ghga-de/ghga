@@ -22,22 +22,9 @@ from typing import Annotated
 from fastapi import Depends
 from ghga_service_commons.api.di import DependencyDummy
 
-from fis.config import Config
-from fis.ports.inbound.ingest import (
-    LegacyUploadMetadataProcessorPort,
-    UploadMetadataProcessorPort,
-)
+from fis.ports.inbound.interrogation import InterrogationHandlerPort
 
-config_dummy = DependencyDummy("config_dummy")
-upload_processor_port = DependencyDummy("upload_processor_port")
-legacy_upload_processor = DependencyDummy("legacy_upload_processor")
+interrogator_dummy = DependencyDummy("interrogator_port")
+auth_providers_dummy = DependencyDummy("auth_providers_dummy")
 
-ConfigDummy = Annotated[Config, Depends(config_dummy)]
-
-UploadProcessorPort = Annotated[
-    UploadMetadataProcessorPort, Depends(upload_processor_port)
-]
-
-LegacyUploadProcessor = Annotated[
-    LegacyUploadMetadataProcessorPort, Depends(legacy_upload_processor)
-]
+InterrogatorPort = Annotated[InterrogationHandlerPort, Depends(interrogator_dummy)]

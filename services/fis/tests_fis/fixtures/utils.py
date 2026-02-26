@@ -16,5 +16,28 @@
 """Utils for Fixture handling"""
 
 from pathlib import Path
+from uuid import uuid4
+
+from hexkit.utils import now_utc_ms_prec
+
+from fis.core.models import FileUnderInterrogation
 
 BASE_DIR = Path(__file__).parent.resolve()
+
+
+def create_file_under_interrogation(storage_alias: str):
+    """Generate some dummy data for the specified storage_alias"""
+    file = FileUnderInterrogation(
+        id=uuid4(),
+        storage_alias=storage_alias,
+        bucket_id="inbox1",
+        object_id=uuid4(),
+        decrypted_sha256="",
+        decrypted_size=123456789,
+        encrypted_size=123466789,
+        part_size=12345,
+        state="inbox",
+        state_updated=now_utc_ms_prec(),
+        can_remove=False,
+    )
+    return file

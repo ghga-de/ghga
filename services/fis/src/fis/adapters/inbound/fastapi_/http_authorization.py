@@ -14,51 +14,72 @@
 # limitations under the License.
 """Authorization specific code for FastAPI"""
 
-from fastapi import Depends, Security
+from typing import Annotated
+
+from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from ghga_service_commons.auth.context import AuthContextProtocol
-from ghga_service_commons.auth.policies import require_auth_context_using_credentials
-from ghga_service_commons.utils.simple_token import check_token
+from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import BaseModel, Field
 
 from fis.adapters.inbound.fastapi_ import dummies
+from fis.constants import GHGA
 
-__all__ = ["require_token"]
-
-
-class IngestTokenAuthContext(BaseModel):
-    """Auth context holding the ingest token."""
-
-    token: str = Field(
-        default=...,
-        description="A simple alphanumeric token to authenticate the ingest of "
-        + "file upload metadata.",
-    )
+__all__ = ["AuthProviders", "require_data_hub_jwt"]
 
 
-class IngestTokenAuthProvider(AuthContextProtocol[IngestTokenAuthContext]):
-    """Provider for the ingest token auth context"""
+class JWT(BaseModel):
+    """A JSON Web Token model"""
 
-    def __init__(self, *, token_hashes: list[str]):
-        self._token_hashes = token_hashes
-
-    async def get_context(self, token: str) -> IngestTokenAuthContext:
-        """Get ingest token auth context"""
-        if not check_token(token=token, token_hashes=self._token_hashes):
-            raise self.AuthContextValidationError("Invalid Token")
-
-        return IngestTokenAuthContext(token=token)
+    iss: str = Field(default=..., title="Issuer")
+    aud: str = Field(default=..., title="Audience")
+    sub: str = Field(default=..., title="Subject")
+    iat: UTCDatetime = Field(default=..., title="Issued at")
+    exp: UTCDatetime = Field(default=..., title="Expiration time")
 
 
-async def require_token_context(
-    service_config: dummies.ConfigDummy,
+AuthProviders = dict[str, JWTAuthContextProvider[JWT]]
+
+
+async def _require_data_hub_jwt(
+    storage_alias: str,
+    auth_providers: Annotated[AuthProviders, Depends(dummies.auth_providers_dummy)],
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=True)),
-) -> IngestTokenAuthContext:
-    """Require a VIP authentication and authorization context using FastAPI."""
-    return await require_auth_context_using_credentials(
-        credentials=credentials,
-        auth_provider=IngestTokenAuthProvider(token_hashes=service_config.token_hashes),
-    )
+) -> JWT:
+    """Require a JWT signed by the Data Hub (storage_alias) making the request."""
+    provider = auth_providers.get(storage_alias)
+    token = credentials.credentials if credentials else None
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
+
+    if provider is None:
+        raise RuntimeError(f"No auth provider found for storage_alias {storage_alias}")
+
+    try:
+        context = await provider.get_context(token)
+    except JWTAuthContextProvider.AuthContextValidationError as err:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized"
+        ) from err
+
+    if not context:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
+
+    if (
+        context.exp < context.iat
+        or context.iss != GHGA
+        or context.aud != GHGA
+        or context.sub != storage_alias
+        or context.exp <= now_as_utc()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized"
+        )
+    return context
 
 
-require_token = Security(require_token_context)
+require_data_hub_jwt = Security(_require_data_hub_jwt)

@@ -20,7 +20,7 @@ from typing import Annotated
 
 import typer
 
-from fis.main import publish_events, run_rest
+from fis.main import consume_events, migrate_db, publish_events, run_rest
 
 cli = typer.Typer()
 
@@ -39,3 +39,15 @@ def sync_run_publish_events(
 ):
     """Publish pending events."""
     asyncio.run(publish_events(all=all))
+
+
+@cli.command(name="consume-events")
+def sync_consume_events(run_forever: bool = True):
+    """Run an event consumer listening to the specified topic."""
+    asyncio.run(consume_events(run_forever=run_forever))
+
+
+@cli.command(name="migrate-db")
+def sync_migrate_db():
+    """Run database migrations."""
+    asyncio.run(migrate_db())

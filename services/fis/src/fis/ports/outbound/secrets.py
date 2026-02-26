@@ -12,8 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Module containing HashiCorp vault related functionality"""
 
-from fis.adapters.outbound.vault.client import VaultAdapter, VaultConfig
+"""SecretsClient port definition"""
 
-__all__ = ["VaultAdapter", "VaultConfig"]
+from abc import ABC, abstractmethod
+
+from pydantic import SecretBytes
+
+
+class SecretsClientPort(ABC):
+    """A class that interfaces with the Secrets API"""
+
+    class SecretsApiError(RuntimeError):
+        """Raised upon failure to deposit or delete a file encryption secret."""
+
+    @abstractmethod
+    async def deposit_secret(self, *, secret: SecretBytes) -> str:
+        """Deposit an encrypted file encryption secret with the Secrets API"""
+
+    @abstractmethod
+    async def delete_secret(self, *, secret_id: str) -> None:
+        """Delete a file encryption secret from the Secrets API"""

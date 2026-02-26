@@ -12,22 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Ports for vault interaction"""
 
-from abc import ABC, abstractmethod
-
-from pydantic import SecretStr
-
-
-class VaultAdapterPort(ABC):
-    """Port for vault adapter"""
-
-    class SecretInsertionError(RuntimeError):
-        """Wrapper for errors encountered on secret insertion"""
-
-    @abstractmethod
-    def store_secret(self, *, secret: SecretStr) -> str:
-        """
-        Store a secret under a subpath of the given prefix.
-        Generates a UUID4 as key, uses it for the subpath and returns it.
-        """
+"""Integration tests for the FIS"""

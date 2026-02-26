@@ -18,3 +18,5 @@ from opentelemetry import trace
 
 SERVICE_NAME = "fis"
 TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
+AUTH_CHECK_CLAIMS = ["iss", "aud", "iat", "exp", "sub"]
+GHGA = "GHGA"

@@ -20,20 +20,26 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
+from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
+from hexkit.providers.akafka import (
+    ComboTranslator,
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+)
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
+from fis.adapters.inbound.event_sub import OutboxSubTranslator
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.configure import get_configured_app
-from fis.adapters.outbound.dao import get_file_dao
+from fis.adapters.inbound.fastapi_.http_authorization import JWT
+from fis.adapters.outbound.dao import get_file_dao, get_interrogation_report_dao
 from fis.adapters.outbound.event_pub import EventPubTranslator
-from fis.adapters.outbound.vault import VaultAdapter
+from fis.adapters.outbound.http import get_configured_httpx_client
+from fis.adapters.outbound.secrets import SecretsClient
 from fis.config import Config
-from fis.core.ingest import LegacyUploadMetadataProcessor, UploadMetadataProcessor
-from fis.ports.inbound.ingest import (
-    LegacyUploadMetadataProcessorPort,
-    UploadMetadataProcessorPort,
-)
+from fis.constants import AUTH_CHECK_CLAIMS
+from fis.core.interrogation import InterrogationHandler, InterrogationHandlerPort
 
 
 @asynccontextmanager
@@ -58,45 +64,36 @@ async def get_persistent_publisher(
 
 
 @asynccontextmanager
-async def prepare_core(
-    *, config: Config
-) -> AsyncGenerator[
-    tuple[UploadMetadataProcessorPort, LegacyUploadMetadataProcessorPort]
-]:
+async def prepare_core(*, config: Config) -> AsyncGenerator[InterrogationHandlerPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
-    vault_adapter = VaultAdapter(config=config)
-
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
         get_persistent_publisher(
             config=config, dao_factory=dao_factory
         ) as persistent_publisher,
+        get_configured_httpx_client(config=config) as httpx_client,
     ):
         file_dao = await get_file_dao(dao_factory=dao_factory)
+        interrogation_report_dao = await get_interrogation_report_dao(
+            dao_factory=dao_factory
+        )
         event_publisher = EventPubTranslator(
             config=config, provider=persistent_publisher
         )
-        yield (
-            UploadMetadataProcessor(
-                config=config,
-                event_publisher=event_publisher,
-                vault_adapter=vault_adapter,
-                file_dao=file_dao,
-            ),
-            LegacyUploadMetadataProcessor(
-                config=config,
-                event_publisher=event_publisher,
-                vault_adapter=vault_adapter,
-                file_dao=file_dao,
-            ),
+        secrets_client = SecretsClient(config=config, httpx_client=httpx_client)
+        yield InterrogationHandler(
+            config=config,
+            file_dao=file_dao,
+            interrogation_report_dao=interrogation_report_dao,
+            event_publisher=event_publisher,
+            secrets_client=secrets_client,
         )
 
 
 def prepare_core_with_override(
     *,
     config: Config,
-    core_override: tuple[UploadMetadataProcessorPort, LegacyUploadMetadataProcessorPort]
-    | None = None,
+    core_override: InterrogationHandlerPort | None = None,
 ):
     """Resolve the prepare_core context manager based on config and override (if any)."""
     return nullcontext(core_override) if core_override else prepare_core(config=config)
@@ -106,8 +103,7 @@ def prepare_core_with_override(
 async def prepare_rest_app(
     *,
     config: Config,
-    core_override: tuple[UploadMetadataProcessorPort, LegacyUploadMetadataProcessorPort]
-    | None = None,
+    core_override: InterrogationHandlerPort | None = None,
 ) -> AsyncGenerator[FastAPI]:
     """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
@@ -117,18 +113,49 @@ async def prepare_rest_app(
 
     async with prepare_core_with_override(
         config=config, core_override=core_override
-    ) as (
-        upload_metadata_processor,
-        legacy_upload_metadata_processor,
-    ):
-        app.dependency_overrides[dummies.config_dummy] = lambda: config
+    ) as interrogator:
+        app.dependency_overrides[dummies.interrogator_dummy] = lambda: interrogator
 
-        app.dependency_overrides[dummies.upload_processor_port] = lambda: (
-            upload_metadata_processor
-        )
+        # Configure JWT auth provider for each known data hub
+        auth_providers = {}
+        for hub, auth_key in config.data_hub_auth_keys.items():
+            auth_config = JWTAuthConfig(
+                auth_key=auth_key,
+                auth_check_claims=dict.fromkeys(AUTH_CHECK_CLAIMS),
+            )
+            provider = JWTAuthContextProvider(config=auth_config, context_class=JWT)
+            auth_providers[hub] = provider
 
-        app.dependency_overrides[dummies.legacy_upload_processor] = lambda: (
-            legacy_upload_metadata_processor
-        )
+        app.dependency_overrides[dummies.auth_providers_dummy] = lambda: auth_providers
 
         yield app
+
+
+@asynccontextmanager
+async def prepare_event_subscriber(
+    *,
+    config: Config,
+    core_override: InterrogationHandlerPort | None = None,
+) -> AsyncGenerator[KafkaEventSubscriber]:
+    """Construct and initialize an event subscriber with all its dependencies.
+    By default, the core dependencies are automatically prepared but you can also
+    provide them using the override parameter.
+    """
+    async with prepare_core_with_override(
+        config=config, core_override=core_override
+    ) as interrogation_handler:
+        file_upload_translator = OutboxSubTranslator(
+            config=config,
+            interrogation_handler=interrogation_handler,
+        )
+        combo_translator = ComboTranslator(translators=[file_upload_translator])
+
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config,
+                translator=combo_translator,
+                dlq_publisher=dlq_publisher,
+            ) as event_subscriber,
+        ):
+            yield event_subscriber
