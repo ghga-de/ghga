@@ -18,3 +18,8 @@
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
+
+INTERROGATION_BUCKET = "interrogation"
+PERMANENT_BUCKET = "permanent"
+DOWNLOAD_BUCKET = "download"
+STORAGE_ALIASES = ("HD01", "TUE01", "KL01")

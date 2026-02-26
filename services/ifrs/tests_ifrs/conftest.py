@@ -15,7 +15,6 @@
 """Set up session-scope fixtures for tests."""
 
 import pytest
-import pytest_asyncio
 from hexkit.correlation import correlation_id_var, new_correlation_id
 from hexkit.providers.akafka.testutils import (
     kafka_container_fixture,  # noqa: F401
@@ -27,38 +26,19 @@ from hexkit.providers.mongodb.testutils import (
 )
 from hexkit.providers.mongokafka.testutils import MongoKafkaFixture  # noqa: F401
 from hexkit.providers.s3.testutils import (  # noqa: F401
-    S3Fixture,
-    s3_container_fixture,
-    s3_fixture,
+    FederatedS3Fixture,
+    federated_s3_fixture,
+    s3_multi_container_fixture,
 )
 
 from tests_ifrs.fixtures.joint import (  # noqa: F401
-    OUTBOX_BUCKET,
+    DOWNLOAD_BUCKET,
+    INTERROGATION_BUCKET,
     PERMANENT_BUCKET,
-    STAGING_BUCKET,
+    STORAGE_ALIASES,
     JointFixture,
     joint_fixture,
 )
-
-
-async def _populate_s3_buckets(s3: S3Fixture):
-    await s3.populate_buckets(
-        buckets=[
-            OUTBOX_BUCKET,
-            STAGING_BUCKET,
-            PERMANENT_BUCKET,
-        ]
-    )
-
-
-def get_populate_s3_buckets_fixture(name: str = "populate_s3_buckets"):
-    """Populate the S3 instance buckets"""
-    return pytest_asyncio.fixture(
-        _populate_s3_buckets, scope="function", name=name, autouse=True
-    )
-
-
-populate_s3_buckets = get_populate_s3_buckets_fixture()
 
 
 @pytest.fixture(autouse=True)
@@ -68,3 +48,12 @@ def use_correlation_id():
     token = correlation_id_var.set(correlation_id)
     yield
     correlation_id_var.reset(token)
+
+
+@pytest.fixture(scope="session")
+def storage_aliases():
+    """Defines the names of the storage aliases for the federated s3 storage.
+
+    This fixture is expected by hexkit.
+    """
+    return STORAGE_ALIASES

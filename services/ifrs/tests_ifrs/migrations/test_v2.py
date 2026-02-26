@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for migration logic"""
+"""Tests for V2 migration logic"""
 
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -23,11 +23,11 @@ from uuid import UUID, uuid1, uuid4
 import pytest
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
-
-from ifrs.migrations import run_db_migrations
 from tests_ifrs.fixtures.config import get_config
 
-pytestmark = pytest.mark.asyncio()
+from ifrs.migrations import run_db_migrations
+
+pytestmark = pytest.mark.asyncio
 
 
 async def test_v2_migration(mongodb: MongoDbFixture):

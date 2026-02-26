@@ -15,78 +15,203 @@
 
 """Defines dataclasses for holding business-logic data"""
 
+from typing import Literal
+
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, BaseModel, Field
+from pydantic import UUID4, BaseModel, ConfigDict, Field
+
+FileUploadState = Literal[
+    "init",
+    "inbox",
+    "failed",
+    "cancelled",
+    "interrogated",
+    "awaiting_archival",
+    "archived",
+]
 
 
-class FileMetadataBase(BaseModel):
-    """A model containing metadata on a registered file."""
+class CoreFileMetadata(BaseModel):
+    """The core file upload properties"""
 
-    file_id: str = Field(
-        ..., description="The public ID of the file as present in the metadata catalog."
+    id: UUID4 = Field(default=..., description="Unique identifier for the file upload")
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
     )
-    upload_date: UTCDatetime = Field(
-        ...,
-        description="The date and time when this file was ingested into the system.",
+    bucket_id: str = Field(
+        default=...,
+        description="The name of the bucket where the file is currently stored",
     )
-    decrypted_size: int = Field(
-        ...,
-        description="The size of the entire decrypted file content in bytes.",
+    object_id: UUID4 = Field(
+        ..., description="The ID of the file specific to its S3 bucket."
     )
-    decryption_secret_id: str = Field(
-        ...,
-        description=(
-            "The ID of the symmetic file encryption/decryption secret."
-            + " Please note, this is not the secret itself."
-        ),
+    decrypted_size: int = Field(..., description="The size of the unencrypted file")
+    part_size: int = Field(
+        default=...,
+        description="The number of bytes in each file part (last part is likely smaller)",
     )
-    content_offset: int = Field(
-        ...,
-        description=(
-            "The offset in bytes at which the encrypted content starts (excluding the"
-            + " crypt4GH envelope)."
-        ),
+
+
+class FileUpload(CoreFileMetadata):
+    """Information pertaining to a single given file upload.
+
+    This form of the data might or might not have the following fields populated.
+    """
+
+    box_id: UUID4 = Field(
+        default=..., description="The ID of the FileUploadBox this file belongs to."
     )
-    encrypted_part_size: int = Field(
-        ...,
-        description=(
-            "The size of the file parts of the encrypted content (excluding the"
-            + " crypt4gh envelope) as used for the encrypted_parts_md5 and the"
-            + " encrypted_parts_sha256 in bytes. The same part size is recommended for"
-            + " moving that content."
-        ),
+    state: FileUploadState = Field(
+        default="init", description="The state of the FileUpload"
+    )
+    state_updated: UTCDatetime = Field(
+        default=..., description="Timestamp of when state was updated"
+    )
+    secret_id: str | None = Field(
+        default=None, description="The ID of the file decryption secret."
+    )
+    encrypted_size: int | None = Field(
+        default=None, description="The encrypted size of the file."
+    )
+    decrypted_sha256: str | None = Field(
+        default=None,
+        description="SHA-256 checksum of the entire unencrypted file content",
+    )
+    encrypted_parts_md5: list[str] | None = Field(
+        default=None, description="The MD5 checksum of each encrypted file part"
+    )
+    encrypted_parts_sha256: list[str] | None = Field(
+        default=None, description="The SHA-256 checksum of each encrypted file part"
+    )
+
+
+class ArchivableFileUpload(CoreFileMetadata):
+    """A view of a FileUpload event which contains all the information necessary to
+    archive a file
+    """
+
+    secret_id: str = Field(
+        default=..., description="The ID of the file decryption secret."
+    )
+    encrypted_size: int = Field(
+        default=...,
+        description="The encrypted size of the file after re-encryption, without envelope.",
+    )
+    decrypted_sha256: str = Field(
+        default=...,
+        description="SHA-256 checksum of the entire unencrypted file content",
     )
     encrypted_parts_md5: list[str] = Field(
-        ...,
-        description=(
-            "MD5 checksums of file parts of the encrypted content (excluding the"
-            + " crypt4gh envelope)."
-        ),
+        default=..., description="The MD5 checksum of each encrypted file part"
     )
     encrypted_parts_sha256: list[str] = Field(
+        default=..., description="The SHA-256 checksum of each encrypted file part"
+    )
+
+
+class FileMetadata(ArchivableFileUpload):
+    """An ArchivableFileUpload with an archival timestamp"""
+
+    archive_date: UTCDatetime = Field(
+        default=..., description="The date and time when this file was archived."
+    )
+
+
+class FileInternallyRegistered(BaseModel):
+    """An event schema communicating that a file has been copied into permanent storage.
+
+    This local definition will be replaced by the `ghga-event-schemas` definition
+    once implemented there.
+    """
+
+    file_id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    archive_date: UTCDatetime = Field(
         ...,
-        description=(
-            "SHA-256 checksums of file parts of the encrypted content (excluding the"
-            + " crypt4gh envelope)."
-        ),
+        description="The date and time when this file was archived.",
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    bucket_id: str = Field(
+        ..., description="The ID/name of the S3 bucket used to store the file."
+    )
+    secret_id: str = Field(
+        default=..., description="The ID of the file decryption secret."
+    )
+    decrypted_size: int = Field(..., description="The size of the unencrypted file")
+    encrypted_size: int = Field(
+        default=..., description="The encrypted size of the file before re-encryption"
+    )
+    decrypted_sha256: str = Field(
+        default=...,
+        description="SHA-256 checksum of the entire unencrypted file content",
+    )
+    encrypted_parts_md5: list[str] = Field(
+        default=..., description="The MD5 checksum of each encrypted file part"
+    )
+    encrypted_parts_sha256: list[str] = Field(
+        default=..., description="The SHA-256 checksum of each encrypted file part"
+    )
+    part_size: int = Field(
+        default=...,
+        description="The number of bytes in each file part (last part is likely smaller)",
+    )
+
+
+class NonStagedFileRequested(BaseModel):
+    """
+    This event type is triggered when a user requests to download a file that is not
+    yet present in the download bucket and needs to be staged.
+
+    This local definition will be replaced by the `ghga-event-schemas` definition
+    once implemented there.
+    """
+
+    file_id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    target_bucket_id: str = Field(
+        ...,
+        description="The ID of the S3 bucket to which the object should be copied.",
+    )
+    target_object_id: UUID4 = Field(
+        ..., description="The ID to use for the file in the download bucket."
     )
     decrypted_sha256: str = Field(
         ...,
         description="The SHA-256 checksum of the entire decrypted file content.",
     )
-    storage_alias: str = Field(
-        ...,
-        description="Alias for the object storage location where the given object is stored.",
-    )
+    model_config = ConfigDict(title="non_staged_file_requested")
 
 
-class FileMetadata(FileMetadataBase):
-    """The file metadata plus a object storage ID generated upon registration"""
+class FileStagedForDownload(NonStagedFileRequested):
+    """This event type is triggered when a file is staged to the download bucket.
 
-    object_id: UUID4 = Field(
-        ..., description="A UUID to identify the file in object storage"
-    )
-    object_size: int = Field(
-        ...,
-        description="The size of the file content in bytes as stored in the permanent storage.",
-    )
+    This local definition will be replaced by the `ghga-event-schemas` definition
+    once implemented there.
+    """
+
+    model_config = ConfigDict(title="file_staged_for_download")
+
+
+class FileDeletionRequested(BaseModel):
+    """
+    This event is emitted when a request to delete a certain file from the file
+    backend has been made.
+
+    This local definition will be replaced by the `ghga-event-schemas` definition
+    once implemented there.
+    """
+
+    file_id: UUID4 = Field(..., description="Unique identifier for the file")
+
+
+class FileDeletionSuccess(FileDeletionRequested):
+    """
+    This event is emitted when a service has deleted a file from its database as well
+    as the S3 buckets it controls.
+
+    This local definition will be replaced by the `ghga-event-schemas` definition
+    once implemented there.
+    """

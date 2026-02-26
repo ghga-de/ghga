@@ -13,11 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""DAO interface for accessing the database."""
+"""Migration definitions for the IFRS"""
 
-from hexkit.protocols.dao import Dao, ResourceNotFoundError  # noqa: F401
+from .v2 import V2Migration
+from .v3 import V3Migration
 
-from ifrs.core.models import FileMetadata
-
-# port described by a type alias:
-FileMetadataDao = Dao[FileMetadata]
+__all__ = ["V2Migration", "V3Migration"]

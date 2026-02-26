@@ -19,11 +19,18 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.akafka import (
+    ComboTranslator,
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+)
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
-from ifrs.adapters.inbound.event_sub import EventSubTranslator
+from ifrs.adapters.inbound.event_sub import (
+    EventSubTranslator,
+    FileUploadOutboxTranslator,
+)
 from ifrs.adapters.outbound import dao
 from ifrs.adapters.outbound.event_pub import EventPubTranslator
 from ifrs.config import Config
@@ -67,7 +74,7 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[FileRegistryPort]:
             config=config, dao_factory=dao_factory
         ) as persistent_kafka_publisher,
     ):
-        file_metadata_dao = await dao.get_file_metadata_dao(dao_factory=dao_factory)
+        file_metadata_dao = await dao.get_file_dao(dao_factory=dao_factory)
         event_publisher = EventPubTranslator(
             config=config, provider=persistent_kafka_publisher
         )
@@ -102,7 +109,18 @@ async def prepare_event_subscriber(
     async with prepare_core_with_override(
         config=config, core_override=core_override
     ) as file_registry:
-        translator = EventSubTranslator(config=config, file_registry=file_registry)
+        event_sub_translator = EventSubTranslator(
+            config=config, file_registry=file_registry
+        )
+        file_upload_outbox_translator = FileUploadOutboxTranslator(
+            config=config, file_registry=file_registry
+        )
+        translator = ComboTranslator(
+            translators=[
+                event_sub_translator,
+                file_upload_outbox_translator,
+            ]
+        )
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,
             KafkaEventSubscriber.construct(

@@ -15,19 +15,41 @@
 
 """Example data used for testing."""
 
+from datetime import timedelta
 from uuid import uuid4
 
 from hexkit.utils import now_utc_ms_prec
 
-from ifrs.core import models
+from ifrs.core.models import ArchivableFileUpload, FileUpload
+from tests_ifrs.fixtures.joint import INTERROGATION_BUCKET
 
-EXAMPLE_METADATA_BASE = models.FileMetadataBase(
-    file_id="examplefile001",
-    upload_date=now_utc_ms_prec(),
-    decryption_secret_id="some-secret-id",
+EXAMPLE_FILE_UPLOAD_INBOX = FileUpload(
+    id=uuid4(),
+    box_id=uuid4(),
+    alias="testfile",
+    storage_alias="HD01",
+    bucket_id="inbox",
+    object_id=uuid4(),
+    state="inbox",
+    state_updated=now_utc_ms_prec() - timedelta(hours=1),
     decrypted_size=64 * 1024**2,
-    encrypted_part_size=16 * 1024**2,
-    content_offset=16 * 1024**2,
+    encrypted_size=64 * 1024**2 + 1234567,
+    part_size=16 * 1024**2,
+)
+
+# This is the event received by the outbox subscriber when the file is ready
+EXAMPLE_AWAITING_ARCHIVAL = FileUpload(
+    id=EXAMPLE_FILE_UPLOAD_INBOX.id,
+    box_id=uuid4(),
+    storage_alias=EXAMPLE_FILE_UPLOAD_INBOX.storage_alias,
+    state="awaiting_archival",
+    state_updated=now_utc_ms_prec() - timedelta(hours=1),
+    bucket_id=INTERROGATION_BUCKET,
+    object_id=uuid4(),
+    secret_id="some-secret-id",
+    decrypted_size=EXAMPLE_FILE_UPLOAD_INBOX.decrypted_size,
+    encrypted_size=EXAMPLE_FILE_UPLOAD_INBOX.encrypted_size + 1000,
+    part_size=EXAMPLE_FILE_UPLOAD_INBOX.part_size,
     # The checksums are only examples, they don't correspond to a particular file:
     decrypted_sha256="0677de3685577a06862f226bb1bfa8f889e96e59439d915543929fb4f011d096",
     encrypted_parts_md5=[
@@ -40,11 +62,6 @@ EXAMPLE_METADATA_BASE = models.FileMetadataBase(
         "62c298fd987a6bac2066e4dbed274879247b3edd816c8351dc22ada6d37b24b0",
         "45cccbdfc4bfe2aa7f17428a087282d71be917ef059cac15a161284340840957",
     ],
-    storage_alias="test",
 )
 
-EXAMPLE_METADATA = models.FileMetadata(
-    **EXAMPLE_METADATA_BASE.model_dump(),
-    object_id=uuid4(),
-    object_size=64 * 1024**2 + 1234567,  #  dummy value
-)
+EXAMPLE_ARCHIVABLE_FILE = ArchivableFileUpload(**EXAMPLE_AWAITING_ARCHIVAL.model_dump())

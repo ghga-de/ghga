@@ -1,6 +1,18 @@
 object_storages:
-  test:
-    bucket: test-permanent
+  HD01:
+    bucket: permanent
+    credentials:
+      s3_endpoint_url: http://ifrs:4566
+      s3_access_key_id: test
+      s3_secret_access_key: test
+  TUE01:
+    bucket: interrogation
+    credentials:
+      s3_endpoint_url: http://ifrs:4566
+      s3_access_key_id: test
+      s3_secret_access_key: test
+  KL01:
+    bucket: interrogation
     credentials:
       s3_endpoint_url: http://ifrs:4566
       s3_access_key_id: test
@@ -23,5 +35,6 @@ file_staged_topic: file-stagings
 file_staged_type: file_staged_for_download
 file_deleted_topic: file-deletions
 file_deleted_type: file_deleted
+file_upload_topic: file-uploads
 migration_wait_sec: 2
 db_version_collection: ifrsDbVersions

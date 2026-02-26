@@ -20,7 +20,7 @@ from typing import Annotated
 
 import typer
 
-from ifrs.main import consume_events, publish_events
+from ifrs.main import consume_events, migrate_db, publish_events
 
 cli = typer.Typer()
 
@@ -40,3 +40,9 @@ def sync_run_publish_events(
 ):
     """Publish pending events."""
     asyncio.run(publish_events(all=all))
+
+
+@cli.command(name="migrate-db")
+def sync_migrate_db():
+    """Run database migrations."""
+    asyncio.run(migrate_db())

@@ -168,6 +168,15 @@
       "title": "Object Storages",
       "type": "object"
     },
+    "file_upload_topic": {
+      "description": "Topic containing published FileUpload outbox events",
+      "examples": [
+        "file-uploads",
+        "file-upload-topic"
+      ],
+      "title": "File Upload Topic",
+      "type": "string"
+    },
     "file_internally_registered_topic": {
       "description": "Name of the topic used for events indicating that a file has been registered for download.",
       "examples": [
@@ -486,6 +495,7 @@
   "required": [
     "service_instance_id",
     "object_storages",
+    "file_upload_topic",
     "file_internally_registered_topic",
     "file_internally_registered_type",
     "file_deleted_topic",

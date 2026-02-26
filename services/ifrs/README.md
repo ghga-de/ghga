@@ -36,13 +36,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/internal-file-registry-service):
 ```bash
-docker pull ghga/internal-file-registry-service:6.1.0
+docker pull ghga/internal-file-registry-service:7.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/internal-file-registry-service:6.1.0 .
+docker build -t ghga/internal-file-registry-service:7.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -50,7 +50,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/internal-file-registry-service:6.1.0 --help
+docker run -p 8080:8080 ghga/internal-file-registry-service:7.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -111,6 +111,21 @@ The service requires the following configuration parameters:
 - <a id="properties/object_storages"></a>**`object_storages`** *(object, required)*: Can contain additional properties.
 
   - <a id="properties/object_storages/additionalProperties"></a>**Additional properties**: Refer to *[#/$defs/S3ObjectStorageNodeConfig](#%24defs/S3ObjectStorageNodeConfig)*.
+
+- <a id="properties/file_upload_topic"></a>**`file_upload_topic`** *(string, required)*: Topic containing published FileUpload outbox events.
+
+
+  Examples:
+
+  ```json
+  "file-uploads"
+  ```
+
+
+  ```json
+  "file-upload-topic"
+  ```
+
 
 - <a id="properties/file_internally_registered_topic"></a>**`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
 

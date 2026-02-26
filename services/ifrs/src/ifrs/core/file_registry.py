@@ -16,17 +16,19 @@
 """Main business-logic of this service"""
 
 import logging
-import uuid
 from contextlib import suppress
+from uuid import uuid4
 
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
+from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from ifrs.config import Config
 from ifrs.constants import TRACER
 from ifrs.core import models
 from ifrs.ports.inbound.file_registry import FileRegistryPort
-from ifrs.ports.outbound.dao import FileMetadataDaoPort, ResourceNotFoundError
+from ifrs.ports.outbound.dao import FileMetadataDao
 from ifrs.ports.outbound.event_pub import EventPublisherPort
 
 log = logging.getLogger(__name__)
@@ -38,7 +40,7 @@ class FileRegistry(FileRegistryPort):
     def __init__(
         self,
         *,
-        file_metadata_dao: FileMetadataDaoPort,
+        file_metadata_dao: FileMetadataDao,
         event_publisher: EventPublisherPort,
         object_storages: ObjectStorages,
         config: Config,
@@ -49,9 +51,7 @@ class FileRegistry(FileRegistryPort):
         self._object_storages = object_storages
         self._config = config
 
-    async def _is_file_registered(
-        self, *, file_without_object_id: models.FileMetadataBase
-    ) -> bool:
+    async def _is_file_registered(self, *, file: models.ArchivableFileUpload) -> bool:
         """Checks if the specified file is already registered. There are three possible
         outcomes:
             - Yes, the file has been registered with metadata that is identical to the
@@ -60,51 +60,39 @@ class FileRegistry(FileRegistryPort):
             - No, the file has not been registered, yet => returns `False`
         """
         try:
-            registered_file = await self._file_metadata_dao.get_by_id(
-                file_without_object_id.file_id
-            )
+            registered_file = await self._file_metadata_dao.get_by_id(file.id)
         except ResourceNotFoundError:
             return False
 
-        # object ID is a UUID generated upon registration, so cannot compare those
-        registered_file_without_object_id = registered_file.model_dump(
-            exclude={"object_id", "object_size"}
-        )
-
-        if file_without_object_id.model_dump() == registered_file_without_object_id:
+        # Exclude archive date because `file` doesn't have that field yet, and exclude
+        #  object_id because for `file` it refers to the interrogation bucket object ID,
+        #  but for `registered_file` it refers to the permanent bucket object ID.
+        if file.model_dump(exclude={"object_id"}) == registered_file.model_dump(
+            exclude={"archive_date", "object_id"}
+        ):
             return True
 
-        raise self.FileUpdateError(file_id=file_without_object_id.file_id)
+        raise self.FileUpdateError(file_id=file.id)
 
     @TRACER.start_as_current_span("FileRegistry.register_file")
-    async def register_file(
-        self,
-        *,
-        file_without_object_id: models.FileMetadataBase,
-        staging_object_id: UUID4,
-        staging_bucket_id: str,
-    ) -> None:
-        """Registers a file and moves its content from the staging into the permanent
-        storage. If the file with that exact metadata has already been registered,
-        nothing is done.
-
-        Args:
-            file_without_object_id: metadata on the file to register.
-            staging_object_id:
-                The UUID4 S3 object ID for the staging bucket.
-            staging_bucket_id:
-                The S3 bucket ID for staging.
+    async def register_file(self, *, file: models.ArchivableFileUpload) -> None:
+        """Registers a file and moves its content from the interrogation bucket into
+        permanent storage. If the file with that exact metadata has already been
+        registered, nothing is done.
 
         Raises:
-            self.FileContentNotInStagingError:
-                When the file content is not present in the storage staging.
+            self.FileNotInInterrogationError:
+                When the file content is not present in the interrogation bucket.
+            self.SizeMismatchError:
+                When the file size on the received metadata doesn't match the actual
+                object size in the interrogation bucket.
             ValueError:
                 When the configuration for the storage alias is not found.
             self.CopyOperationError:
                 When an error occurs while attempting to copy the object to the
                 permanent storage bucket.
         """
-        storage_alias = file_without_object_id.storage_alias
+        storage_alias = file.storage_alias
 
         try:
             permanent_bucket_id, object_storage = self._object_storages.for_alias(
@@ -122,14 +110,9 @@ class FileRegistry(FileRegistryPort):
             raise alias_not_configured from error
 
         try:
-            if await self._is_file_registered(
-                file_without_object_id=file_without_object_id
-            ):
+            if await self._is_file_registered(file=file):
                 # There is nothing to do:
-                log.info(
-                    "File with ID '%s' is already registered.",
-                    file_without_object_id.file_id,
-                )
+                log.info("File with ID '%s' is already registered.", file.id)
                 return
         except self.FileUpdateError as error:
             # trying to re-register with different metadata should not crash the consumer
@@ -138,87 +121,107 @@ class FileRegistry(FileRegistryPort):
             log.warning(error)
             return
 
-        # Generate & assign object ID to metadata
-        log.info(
-            "File with ID '%s' is not yet registered. Generating object ID.",
-            file_without_object_id.file_id,
-        )
-        object_id = uuid.uuid4()
-
-        # Copy the file from staging to permanent storage
+        # Validate the file size against the expected value
         try:
-            await object_storage.copy_object(
-                source_bucket_id=staging_bucket_id,
-                source_object_id=str(staging_object_id),
-                dest_bucket_id=permanent_bucket_id,
-                dest_object_id=str(object_id),
+            actual_size = await object_storage.get_object_size(
+                bucket_id=file.bucket_id, object_id=str(file.object_id)
             )
-        except object_storage.ObjectAlreadyExistsError:
-            # the content is already where it should go, there is nothing to do
-            log.info(
-                "Object corresponding to file ID '%s' is already in permanent storage.",
-                file_without_object_id.file_id,
-            )
-            return
+            if actual_size != file.encrypted_size:
+                raise self.SizeMismatchError(
+                    file_id=file.id,
+                    expected_size=file.encrypted_size,
+                    actual_size=actual_size,
+                )
         except object_storage.ObjectNotFoundError as exc:
-            # The object does not exist in the source bucket (staging)
-            # copy_object fetches the source object size, which checks for existence first
-            content_not_in_staging = self.FileContentNotInStagingError(
-                file_id=file_without_object_id.file_id
-            )
+            # The object does not exist in the interrogation bucket.
+            content_not_in_staging = self.FileNotInInterrogationError(file_id=file.id)
             log.error(
                 content_not_in_staging,
-                extra={"file_id": file_without_object_id.file_id},
+                extra={"file_id": file.id, "object_id": file.object_id},
                 exc_info=True,
             )
             raise content_not_in_staging from exc
+
+        # Copy the file from interrogation to permanent storage
+        permanent_object_id = uuid4()
+        try:
+            await object_storage.copy_object(
+                source_bucket_id=file.bucket_id,
+                source_object_id=str(file.object_id),
+                dest_bucket_id=permanent_bucket_id,
+                dest_object_id=str(permanent_object_id),
+            )
+        except object_storage.ObjectAlreadyExistsError as object_exists_err:
+            # the content is already where it should go, there is nothing to do
+            log.critical(
+                "Just generated object ID %s for file %s, but it appears to already"
+                + " exist in the % bucket.",
+                permanent_object_id,
+                file.id,
+                permanent_bucket_id,
+                extra={
+                    "file_id": file.id,
+                    "bucket_id": permanent_bucket_id,
+                    "generated_object_id": permanent_object_id,
+                },
+            )
+            raise RuntimeError(
+                "Unexpected object ID collision - is this a time loop?"
+            ) from object_exists_err
         except Exception as exc:
             # Irreconcilable object error -- event needs investigation
             obj_error = self.CopyOperationError(
-                file_id=file_without_object_id.file_id,
+                file_id=file.id,
                 dest_bucket_id=permanent_bucket_id,
                 exc_text=str(exc),
             )
-            log.critical(obj_error, exc_info=True)
+            log.critical(
+                obj_error,
+                exc_info=True,
+                extra={
+                    "file_id": file.id,
+                    "interrogation_bucket_id": file.bucket_id,
+                    "interrogation_object_id": file.object_id,
+                    "permanent_bucket_id": permanent_bucket_id,
+                    "permanent_object_id": permanent_object_id,
+                },
+            )
             raise obj_error from exc
 
-        object_size = await object_storage.get_object_size(
-            bucket_id=permanent_bucket_id, object_id=str(object_id)
+        # Create the full file metadata object w/ archive timestamp and bucket/object ID
+        file_metadata = models.FileMetadata(
+            archive_date=now_utc_ms_prec(),
+            bucket_id=permanent_bucket_id,
+            object_id=permanent_object_id,
+            **file.model_dump(exclude={"bucket_id", "object_id"}),
         )
-        file = models.FileMetadata(
-            **file_without_object_id.model_dump(),
-            object_id=object_id,
-            object_size=object_size,
-        )
-        # Log the registration and publish an event
-        log.info("Inserting file with file ID '%s'.", file.file_id)
-        await self._file_metadata_dao.insert(file)
 
-        await self._event_publisher.file_internally_registered(
-            file=file, bucket_id=permanent_bucket_id
-        )
+        # Log the registration and publish an event
+        log.info("Inserting file with file ID '%s'.", file.id)
+        await self._file_metadata_dao.insert(file_metadata)
+        await self._event_publisher.file_internally_registered(file=file_metadata)
 
     @TRACER.start_as_current_span("FileRegistry.stage_registered_file")
     async def stage_registered_file(
         self,
         *,
-        file_id: str,
+        file_id: UUID4,
         decrypted_sha256: str,
-        outbox_object_id: UUID4,
-        outbox_bucket_id: str,
+        download_object_id: UUID4,
+        download_bucket_id: str,
     ) -> None:
-        """Stage a registered file to the outbox.
+        """Stage a registered file to the download bucket.
 
         Args:
             file_id:
-                The identifier of the file.
+                The unique identifier for the file that needs to be staged.
             decrypted_sha256:
                 The checksum of the decrypted content. This is used to make sure that
                 this service and the outside client are talking about the same file.
-            outbox_object_id:
-                The UUID4 S3 object ID for the outbox bucket.
-            outbox_bucket_id:
-                The S3 bucket ID for the outbox.
+            download_object_id:
+                The UUID4 S3 object ID for the download bucket.
+            download_bucket_id:
+                The S3 bucket ID for the download bucket.
 
         Raises:
             self.ChecksumMismatchError:
@@ -228,15 +231,14 @@ class FileRegistry(FileRegistryPort):
                 the permanent storage. This is an internal service error, which should
                 not happen, and not the fault of the client.
             self.CopyOperationError:
-                When an error occurs while attempting to copy the object to the outbox.
+                When an error occurs while attempting to copy the object to the download
+                bucket.
         """
         try:
             file = await self._file_metadata_dao.get_by_id(file_id)
         except ResourceNotFoundError:
-            file_not_in_registry_error = self.FileNotInRegistryError(file_id=file_id)
-            log.error(
-                file_not_in_registry_error, extra={"file_id": file_id}, exc_info=True
-            )
+            file_not_registered_error = self.FileNotInRegistryError(file_id=file_id)
+            log.error(file_not_registered_error, extra={"file_id": file_id})
             return
 
         if decrypted_sha256 != file.decrypted_sha256:
@@ -252,7 +254,6 @@ class FileRegistry(FileRegistryPort):
                     "provided_checksum": decrypted_sha256,
                     "expected_checksum": file.decrypted_sha256,
                 },
-                exc_info=True,
             )
             raise checksum_error
 
@@ -260,19 +261,24 @@ class FileRegistry(FileRegistryPort):
             file.storage_alias
         )
 
-        # Copy the file from permanent storage bucket to the outbox (download) bucket
+        # Copy the file from permanent storage bucket to the download bucket
         try:
             await object_storage.copy_object(
                 source_bucket_id=permanent_bucket_id,
                 source_object_id=str(file.object_id),
-                dest_bucket_id=outbox_bucket_id,
-                dest_object_id=str(outbox_object_id),
+                dest_bucket_id=download_bucket_id,
+                dest_object_id=str(download_object_id),
             )
         except object_storage.ObjectAlreadyExistsError:
             # the content is already where it should go, there is nothing to do
             log.info(
-                "Object corresponding to file ID '%s' is already in the outbox.",
+                "File with ID '%s' is already in the download bucket.",
                 file_id,
+                extra={
+                    "file_id": file_id,
+                    "download_bucket_id": download_bucket_id,
+                    "download_object_id": download_object_id,
+                },
             )
             return
         except object_storage.ObjectNotFoundError as exc:
@@ -282,43 +288,63 @@ class FileRegistry(FileRegistryPort):
                 file_id=file_id
             )
             log.critical(
-                msg=not_in_storage_error, extra={"file_id": file_id}, exc_info=True
+                msg=not_in_storage_error,
+                extra={
+                    "file_id": file_id,
+                    "object_id": file.object_id,
+                    "bucket_id": permanent_bucket_id,
+                },
             )
             raise not_in_storage_error from exc
         except Exception as exc:
             # Irreconcilable object error -- event needs investigation
             obj_error = self.CopyOperationError(
-                file_id=file_id, dest_bucket_id=outbox_bucket_id, exc_text=str(exc)
+                file_id=file_id, dest_bucket_id=download_bucket_id, exc_text=str(exc)
             )
-            log.critical(obj_error, exc_info=True)
+            log.critical(
+                obj_error,
+                exc_info=True,
+                extra={
+                    "file_id": file_id,
+                    "bucket_id": permanent_bucket_id,
+                    "object_id": file.object_id,
+                    "download_bucket_id": download_bucket_id,
+                    "download_object_id": download_object_id,
+                },
+            )
             raise obj_error from exc
-
-        log.info(
-            "Object corresponding to file ID '%s' has been staged to the outbox.",
-            file_id,
-        )
 
         await self._event_publisher.file_staged_for_download(
             file_id=file_id,
-            decrypted_sha256=decrypted_sha256,
-            target_object_id=outbox_object_id,
-            target_bucket_id=outbox_bucket_id,
             storage_alias=file.storage_alias,
+            target_bucket_id=download_bucket_id,
+            target_object_id=download_object_id,
+            decrypted_sha256=file.decrypted_sha256,
+        )
+        log.info(
+            "File with ID '%s' has been staged to the download bucket with"
+            + " the object ID '%s'.",
+            file_id,
+            download_object_id,
+            extra={
+                "file_id": file_id,
+                "download_bucket_id": download_bucket_id,
+                "download_object_id": download_object_id,
+            },
         )
 
     @TRACER.start_as_current_span("FileRegistry.delete_file")
-    async def delete_file(self, *, file_id: str) -> None:
+    async def delete_file(self, *, file_id: UUID4) -> None:
         """Deletes a file from the permanent storage and the internal database.
-        If no file with that id exists, do nothing.
+        If no file with that ID exists, do nothing.
 
         Args:
             file_id:
-                id for the file to delete.
+                The unique identifier for the file that needs to be deleted.
         """
         try:
             file = await self._file_metadata_dao.get_by_id(file_id)
         except ResourceNotFoundError:
-            # resource not in database, nothing to do
             log.info(
                 "File with ID '%s' was not found in the database. Deletion cancelled.",
                 file_id,
@@ -326,14 +352,13 @@ class FileRegistry(FileRegistryPort):
             return
 
         # Get object ID and storage instance
-        object_id = file.object_id
         bucket_id, object_storage = self._object_storages.for_alias(file.storage_alias)
 
         # Try to remove file from S3
         with suppress(object_storage.ObjectNotFoundError):
             # If file does not exist anyways, we are done.
             await object_storage.delete_object(
-                bucket_id=bucket_id, object_id=str(object_id)
+                bucket_id=bucket_id, object_id=str(file.object_id)
             )
 
         # Try to remove file from database
@@ -342,6 +367,21 @@ class FileRegistry(FileRegistryPort):
             await self._file_metadata_dao.delete(id_=file_id)
 
         log.info(
-            "Finished object storage and metadata deletion for file ID '%s'", file_id
+            "Finished object storage and metadata deletion for '%s'",
+            file_id,
+            extra={"file_id": file_id, "bucket_id": bucket_id},
         )
         await self._event_publisher.file_deleted(file_id=file_id)
+
+    async def handle_file_upload(self, *, file_upload: models.FileUpload) -> None:
+        """Decide what to do with a FileUpload"""
+        if file_upload.state != "awaiting_archival":
+            log.info(
+                "Ignoring FileUpload %s because the state is %s.",
+                file_upload.id,
+                file_upload.state,
+            )
+            return
+
+        file = models.ArchivableFileUpload(**file_upload.model_dump())
+        await self.register_file(file=file)

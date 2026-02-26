@@ -22,7 +22,7 @@ from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 
-from ifrs.adapters.inbound.event_sub import EventSubTranslatorConfig
+from ifrs.adapters.inbound.event_sub import EventSubTranslatorConfig, OutboxSubConfig
 from ifrs.adapters.outbound.event_pub import EventPubTranslatorConfig
 from ifrs.constants import SERVICE_NAME
 
@@ -33,6 +33,7 @@ class Config(
     KafkaConfig,
     EventSubTranslatorConfig,
     EventPubTranslatorConfig,
+    OutboxSubConfig,
     S3ObjectStoragesConfig,
     LoggingConfig,
     OpenTelemetryConfig,

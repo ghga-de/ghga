@@ -20,9 +20,9 @@ from hexkit.providers.mongodb.migrations import (
     MigrationMap,
 )
 
-from ifrs.migrations.definitions import V2Migration
+from ifrs.migrations.definitions import V2Migration, V3Migration
 
-MIGRATION_MAP = {2: V2Migration}
+MIGRATION_MAP = {2: V2Migration, 3: V3Migration}
 
 
 async def run_db_migrations(
@@ -45,6 +45,6 @@ async def run_db_migrations(
     async with MigrationManager(
         config=config,
         target_version=target_version,
-        migration_map=MIGRATION_MAP,
+        migration_map=migration_map,
     ) as mm:
         await mm.migrate_or_wait()

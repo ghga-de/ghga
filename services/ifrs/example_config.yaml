@@ -10,6 +10,7 @@ file_internally_registered_type: file_registered
 file_interrogations_topic: file-interrogations
 file_staged_topic: file-stagings
 file_staged_type: file_staged_for_download
+file_upload_topic: file-uploads
 files_to_stage_topic: file-downloads
 files_to_stage_type: file_staging_requested
 generate_correlation_id: true

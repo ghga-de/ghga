@@ -16,7 +16,7 @@
 
 """DB Migration logic"""
 
-from .definitions import V2Migration
+from .definitions import V2Migration, V3Migration
 from .entry import run_db_migrations
 
-__all__ = ["V2Migration", "run_db_migrations"]
+__all__ = ["V2Migration", "V3Migration", "run_db_migrations"]

@@ -26,26 +26,24 @@ class EventPublisherPort(ABC):
     """A port through which service-internal events are communicated with the outside."""
 
     @abstractmethod
-    async def file_internally_registered(
-        self, *, file: models.FileMetadata, bucket_id: str
-    ) -> None:
+    async def file_internally_registered(self, *, file: models.FileMetadata) -> None:
         """Communicates the event that a new file has been internally registered."""
+        ...
+
+    @abstractmethod
+    async def file_deleted(self, *, file_id: UUID4) -> None:
+        """Communicates the event that a file has been successfully deleted."""
         ...
 
     @abstractmethod
     async def file_staged_for_download(
         self,
         *,
-        file_id: str,
-        decrypted_sha256: str,
-        target_object_id: UUID4,
-        target_bucket_id: str,
+        file_id: UUID4,
         storage_alias: str,
+        target_bucket_id: str,
+        target_object_id: UUID4,
+        decrypted_sha256: str,
     ) -> None:
         """Communicates the event that a file has been staged for download"""
-        ...
-
-    @abstractmethod
-    async def file_deleted(self, *, file_id: str) -> None:
-        """Communicates the event that a file has been successfully deleted."""
         ...

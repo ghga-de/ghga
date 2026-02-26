@@ -17,19 +17,20 @@
 
 import logging
 
-from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     FileDeletionRequestEventsConfig,
     FileInterrogationSuccessEventsConfig,
     FileStagingRequestedEventsConfig,
+    FileUploadEventsConfig,
 )
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
+from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import UUID4
 
 from ifrs.constants import TRACER
-from ifrs.core.models import FileMetadataBase
+from ifrs.core.models import FileDeletionRequested, FileUpload, NonStagedFileRequested
 from ifrs.ports.inbound.file_registry import FileRegistryPort
 
 log = logging.getLogger(__name__)
@@ -64,71 +65,69 @@ class EventSubTranslator(EventSubscriberProtocol):
 
     @TRACER.start_as_current_span("EventSubTranslator._consume_file_staging_request")
     async def _consume_file_staging_request(self, *, payload: JsonObject):
-        """Consume an event requesting a file to be staged to the outbox bucket"""
-        validated_payload = get_validated_payload(
-            payload, event_schemas.NonStagedFileRequested
-        )
+        """Consume an event requesting a file to be staged to the download bucket"""
+        validated_payload = get_validated_payload(payload, NonStagedFileRequested)
 
         await self._file_registry.stage_registered_file(
             file_id=validated_payload.file_id,
             decrypted_sha256=validated_payload.decrypted_sha256,
-            outbox_object_id=validated_payload.target_object_id,
-            outbox_bucket_id=validated_payload.target_bucket_id,
+            download_object_id=validated_payload.target_object_id,
+            download_bucket_id=validated_payload.target_bucket_id,
         )
 
     @TRACER.start_as_current_span("EventSubTranslator._consume_file_deletion_request")
     async def _consume_file_deletion_request(self, *, payload: JsonObject):
         """Consume an event requesting a file to be deleted"""
-        validated_payload = get_validated_payload(
-            payload, event_schemas.FileDeletionRequested
-        )
+        validated_payload = get_validated_payload(payload, FileDeletionRequested)
         await self._file_registry.delete_file(file_id=validated_payload.file_id)
-
-    @TRACER.start_as_current_span(
-        "EventSubTranslator._consume_file_interrogation_success"
-    )
-    async def _consume_file_interrogation_success(self, *, payload: JsonObject):
-        """Consume an event indicating that a file has passed validation"""
-        validated_payload = get_validated_payload(
-            payload, event_schemas.FileUploadValidationSuccess
-        )
-        file_without_object_id = FileMetadataBase(
-            file_id=validated_payload.file_id,
-            decrypted_sha256=validated_payload.decrypted_sha256,
-            decrypted_size=validated_payload.decrypted_size,
-            upload_date=validated_payload.upload_date,
-            decryption_secret_id=validated_payload.decryption_secret_id,
-            encrypted_part_size=validated_payload.encrypted_part_size,
-            encrypted_parts_md5=validated_payload.encrypted_parts_md5,
-            encrypted_parts_sha256=validated_payload.encrypted_parts_sha256,
-            content_offset=validated_payload.content_offset,
-            storage_alias=validated_payload.s3_endpoint_alias,
-        )
-
-        await self._file_registry.register_file(
-            file_without_object_id=file_without_object_id,
-            staging_object_id=validated_payload.object_id,
-            staging_bucket_id=validated_payload.bucket_id,
-        )
 
     async def _consume_validated(
         self, *, payload: JsonObject, type_: str, topic: str, key: str, event_id: UUID4
     ):
         """Process an inbound event"""
-        if (
-            topic == self._config.files_to_stage_topic
-            and type_ == self._config.files_to_stage_type
-        ):
-            await self._consume_file_staging_request(payload=payload)
-        elif (
-            topic == self._config.file_deletion_request_topic
-            and type_ == self._config.file_deletion_request_type
-        ):
-            await self._consume_file_deletion_request(payload=payload)
-        elif (
-            topic == self._config.file_interrogations_topic
-            and type_ == self._config.interrogation_success_type
-        ):
-            await self._consume_file_interrogation_success(payload=payload)
-        else:
-            raise RuntimeError(f"Unexpected event of type: {type_}")
+        cfg = self._config
+        match (topic, type_):
+            case (cfg.files_to_stage_topic, cfg.files_to_stage_type):
+                await self._consume_file_staging_request(payload=payload)
+            case (cfg.file_deletion_request_topic, cfg.file_deletion_request_type):
+                await self._consume_file_deletion_request(payload=payload)
+            case _:
+                raise RuntimeError(f"Unexpected event of type: {type_}")
+
+
+class OutboxSubConfig(FileUploadEventsConfig):
+    """Configuration for the outbox sub translator"""
+
+
+class FileUploadOutboxTranslator(DaoSubscriberProtocol[FileUpload]):
+    """An outbox subscriber event translator for FileUpload outbox events.
+
+    FileUpload events will be received all throughout the FileUpload lifecycle,
+    including initialization, upload, interrogation, and so on. IFRS is only interested
+    in the events once they acquire the state of 'awaiting_archival'.
+    """
+
+    event_topic: str
+    dto_model = FileUpload
+
+    def __init__(self, *, config: OutboxSubConfig, file_registry: FileRegistryPort):
+        """Initialize the outbox subscriber"""
+        self.event_topic = config.file_upload_topic
+        self._file_registry = file_registry
+
+    @TRACER.start_as_current_span("FileUploadOutboxTranslator.changed")
+    async def changed(self, resource_id: str, update: FileUpload) -> None:
+        """Process a FileUpload event if the state is 'awaiting_archival'."""
+        await self._file_registry.handle_file_upload(file_upload=update)
+
+    @TRACER.start_as_current_span("FileUploadOutboxTranslator.deleted")
+    async def deleted(self, resource_id: str) -> None:
+        """This should not be hit.
+
+        FileUploads are not deleted. Instead, their state is set to 'cancelled' or
+        'failed'. If we receive a deletion event for a FileUpload, there is an
+        inconsistency in implementation between services. The event should be sent
+        to the DLQ.
+        """
+        log.error("Received deletion outbox event for FileUpload %s.", resource_id)
+        raise RuntimeError(f"Unexpected deletion event for FileUpload {resource_id}.")

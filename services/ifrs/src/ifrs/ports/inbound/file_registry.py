@@ -38,10 +38,10 @@ class FileRegistryPort(ABC):
         handled, but let the application terminate.
         """
 
-    class FileContentNotInStagingError(InvalidRequestError):
+    class FileNotInInterrogationError(InvalidRequestError):
         """Thrown when the content of a file is unexpectedly not in the staging storage."""
 
-        def __init__(self, file_id: str):
+        def __init__(self, file_id: UUID4):
             message = (
                 f"The content of the file with id '{file_id}' does not exist in the"
                 + " staging storage."
@@ -51,7 +51,7 @@ class FileRegistryPort(ABC):
     class FileUpdateError(InvalidRequestError):
         """Thrown when attempting to update metadata of an existing file."""
 
-        def __init__(self, file_id: str):
+        def __init__(self, file_id: UUID4):
             message = (
                 f"The file with the ID '{file_id}' has already been registered and the "
                 + " provided metadata is not identical to the existing one. Updates are"
@@ -65,7 +65,7 @@ class FileRegistryPort(ABC):
         """
 
         def __init__(
-            self, file_id: str, provided_checksum: str, expected_checksum: str
+            self, file_id: UUID4, provided_checksum: str, expected_checksum: str
         ):
             message = (
                 "The checksum of the decrypted content of the file with the ID"
@@ -74,11 +74,24 @@ class FileRegistryPort(ABC):
             )
             super().__init__(message)
 
+    class SizeMismatchError(InvalidRequestError):
+        """Thrown when the size of the object in storage does not match the expected size
+        specified in the FileUpload object.
+        """
+
+        def __init__(self, file_id: UUID4, expected_size: int, actual_size: int):
+            message = (
+                f"The size of the object for file with the ID '{file_id}' does not"
+                + f" match the expected size: expected {expected_size} bytes but"
+                + f" actual size is {actual_size} bytes."
+            )
+            super().__init__(message)
+
     class FileNotInRegistryError(InvalidRequestError):
         """Thrown when a file is requested that has not (yet) been registered."""
 
-        def __init__(self, file_id: str):
-            message = f"The file with the ID '{file_id}' has not (yet) been registered."
+        def __init__(self, file_id: UUID4):
+            message = f"No file with the ID '{file_id}' has yet been registered."
             super().__init__(message)
 
     class FileInRegistryButNotInStorageError(FatalError):
@@ -86,7 +99,7 @@ class FileRegistryPort(ABC):
         content is not present in the permanent storage.
         """
 
-        def __init__(self, file_id: str):
+        def __init__(self, file_id: UUID4):
             message = (
                 f"The file with the ID '{file_id}' has been registered but its content"
                 + " does not exist in the permanent object storage."
@@ -96,7 +109,7 @@ class FileRegistryPort(ABC):
     class CopyOperationError(FatalError):
         """Thrown if an unresolvable error occurs while copying a file between buckets."""
 
-        def __init__(self, file_id: str, dest_bucket_id: str, exc_text: str):
+        def __init__(self, file_id: UUID4, dest_bucket_id: str, exc_text: str):
             message = (
                 f"Fatal error occurred while copying file with the ID '{file_id}'"
                 + f" to the bucket '{dest_bucket_id}'. The exception is: {exc_text}"
@@ -104,29 +117,22 @@ class FileRegistryPort(ABC):
             super().__init__(message)
 
     @abstractmethod
-    async def register_file(
-        self,
-        *,
-        file_without_object_id: models.FileMetadataBase,
-        staging_object_id: UUID4,
-        staging_bucket_id: str,
-    ) -> None:
-        """Registers a file and moves its content from the staging into the permanent
-        storage. If the file with that exact metadata has already been registered,
-        nothing is done.
-
-        Args:
-            file_without_object_id: metadata on the file to register.
-            staging_object_id:
-                The UUID4 S3 object ID for the staging bucket.
-            staging_bucket_id:
-                The S3 bucket ID for staging.
+    async def register_file(self, *, file: models.ArchivableFileUpload) -> None:
+        """Registers a file and moves its content from the interrogation bucket into
+        permanent storage. If the file with that exact metadata has already been
+        registered, nothing is done.
 
         Raises:
-            self.FileContentNotInStagingError:
-                When the file content is not present in the storage staging.
+            self.FileNotInInterrogationError:
+                When the file content is not present in the interrogation bucket.
+            self.SizeMismatchError:
+                When the file size on the received metadata doesn't match the actual
+                object size in the interrogation bucket.
             ValueError:
                 When the configuration for the storage alias is not found.
+            self.CopyOperationError:
+                When an error occurs while attempting to copy the object to the
+                permanent storage bucket.
         """
         ...
 
@@ -134,42 +140,49 @@ class FileRegistryPort(ABC):
     async def stage_registered_file(
         self,
         *,
-        file_id: str,
+        file_id: UUID4,
         decrypted_sha256: str,
-        outbox_object_id: UUID4,
-        outbox_bucket_id: str,
+        download_object_id: UUID4,
+        download_bucket_id: str,
     ) -> None:
-        """Stage a registered file to the outbox.
+        """Stage a registered file to the download bucket.
 
         Args:
             file_id:
-                The identifier of the file.
+                The unique identifier for the file that needs to be staged.
             decrypted_sha256:
                 The checksum of the decrypted content. This is used to make sure that
                 this service and the outside client are talking about the same file.
-            outbox_object_id:
-                The UUID4 S3 object ID for the outbox bucket.
-            outbox_bucket_id:
-                The S3 bucket ID for the outbox.
+            download_object_id:
+                The UUID4 object ID to use when copying the file to the download bucket.
+            download_bucket_id:
+                The S3 bucket ID for the download bucket.
 
         Raises:
             self.ChecksumMismatchError:
                 When the provided checksum did not match the expectations.
             self.FileInRegistryButNotInStorageError:
                 When encountering inconsistency between the registry (the database) and
-                the permanent storage. This a fatal error.
+                the permanent storage. This is an internal service error, which should
+                not happen, and not the fault of the client.
             self.CopyOperationError:
-                When an error occurs while attempting to copy the object to the outbox.
+                When an error occurs while attempting to copy the object to the download
+                bucket.
         """
         ...
 
     @abstractmethod
-    async def delete_file(self, *, file_id: str) -> None:
+    async def delete_file(self, *, file_id: UUID4) -> None:
         """Deletes a file from the permanent storage and the internal database.
-        If no file with that id exists, do nothing.
+        If no file with that ID exists, do nothing.
 
         Args:
             file_id:
-                id for the file to delete.
+                The unique identifier for the file that needs to be deleted.
         """
+        ...
+
+    @abstractmethod
+    async def handle_file_upload(self, *, file_upload: models.FileUpload) -> None:
+        """Decide what to do with a FileUpload"""
         ...

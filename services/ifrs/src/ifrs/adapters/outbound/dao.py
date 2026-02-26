@@ -18,15 +18,13 @@
 from hexkit.protocols.dao import DaoFactoryProtocol
 
 from ifrs.core.models import FileMetadata
-from ifrs.ports.outbound.dao import FileMetadataDaoPort
+from ifrs.ports.outbound.dao import FileMetadataDao
 
 
-async def get_file_metadata_dao(
-    *, dao_factory: DaoFactoryProtocol
-) -> FileMetadataDaoPort:
+async def get_file_dao(*, dao_factory: DaoFactoryProtocol) -> FileMetadataDao:
     """Setup the DAOs using the specified provider of the DaoFactoryProtocol."""
     return await dao_factory.get_dao(
         name="file_metadata",
         dto_model=FileMetadata,
-        id_field="file_id",
+        id_field="id",
     )

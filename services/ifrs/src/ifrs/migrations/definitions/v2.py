@@ -17,6 +17,7 @@
 
 from uuid import UUID, uuid4
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
@@ -27,12 +28,28 @@ from hexkit.providers.mongodb.migrations.helpers import (
     convert_uuids_and_datetimes_v6,
 )
 from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
-
-from ifrs.core.models import FileMetadata
+from pydantic import UUID4, BaseModel
 
 # Collection names defined as constants
 IFRS_PERSISTED_EVENTS = "ifrsPersistedEvents"
 FILE_METADATA = "file_metadata"
+
+
+class FileMetadata(BaseModel):
+    """Legacy FileMetadata model"""
+
+    file_id: str
+    upload_date: UTCDatetime
+    decrypted_size: int
+    decryption_secret_id: str
+    content_offset: int
+    encrypted_part_size: int
+    encrypted_parts_md5: list[str]
+    encrypted_parts_sha256: list[str]
+    decrypted_sha256: str
+    storage_alias: str
+    object_id: UUID4
+    object_size: int
 
 
 class V2Migration(MigrationDefinition, Reversible):
