@@ -179,7 +179,12 @@
                       <p class="text-base"><strong>Year:</strong> {{ pub.year }}</p>
                     }
                     <p class="text-base">
-                      <strong>DOI:</strong> {{ pub.doi | validateDOI }}
+                      <strong>DOI: </strong>
+                      <a
+                        appExtLink
+                        [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
+                        >{{ pub.doi | validateDOI }}</a
+                      >
                     </p>
                     @if (pub.abstract) {
                       <app-paragraphs
