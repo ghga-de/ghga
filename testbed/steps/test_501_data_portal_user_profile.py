@@ -88,19 +88,6 @@ def check_homepage_for_user(full_name: str, fixtures: JointFixture):
     expect(profile_menu_items.nth(2)).to_contain_text("Log out")
 
 
-@when("I navigate to the user account page")
-def open_account_page(fixtures: JointFixture):
-    """Open the user account page from the homepage."""
-    page = fixtures.playwright.page
-    profile_button = page.get_by_role("button", name="Account")
-    expect(profile_button).to_be_visible()
-    profile_button.click()
-    profile_menu_items = page.get_by_role("menuitem")
-    expect(profile_menu_items.nth(0)).to_contain_text("Your GHGA account page")
-    profile_menu_items.nth(0).click()
-    page.wait_for_load_state()
-
-
 @then(parse('I get the user profile page of "{full_name}"'))
 def validate_profile_page(fixtures: JointFixture, full_name: str):
     """Validate the user profile page."""
@@ -125,7 +112,7 @@ def validate_profile_page(fixtures: JointFixture, full_name: str):
     )
 
     expect(profile_components.nth(1)).to_contain_text(
-        "Contact addresses for account verification"
+        "Independent Verification Addresses (IVAs)"
     )
     expect(profile_components.nth(2)).to_contain_text("Dataset Access")
     expect(profile_components.nth(3)).to_contain_text("Pending Access Requests")
@@ -153,7 +140,7 @@ def check_granted_access(fixtures: JointFixture, num: str, active_user: str):
     except KeyError:
         num_expected = int(num)
 
-    component = page.locator("mat-card").nth(2)
+    component = page.locator("app-granted-access-grants-list")
 
     if num_expected == 0:
         # Expect no datasets on UI
@@ -168,16 +155,17 @@ def check_granted_access(fixtures: JointFixture, num: str, active_user: str):
         )
         assert session, "User session not found"
         user_datasets = fixtures.state.get_state("datasets users can access")
-        datasets_on_ui = component.locator("ul li")
+        datasets_on_ui = component.locator("a")
         expect(datasets_on_ui).to_have_count(num_expected, timeout=TIMEOUT)
         ui_texts = datasets_on_ui.all_inner_texts()
         for dataset_id in user_datasets.values():
             assert any(dataset_id in text for text in ui_texts), (
                 f"Dataset ID {dataset_id} not found in UI items: {ui_texts}"
             )
+
         expect(
-            component.get_by_role("button", name="Set up a download token")
-        ).to_be_visible(timeout=TIMEOUT)
+            component.get_by_role("button").get_by_text("Create Token")
+        ).to_have_count(2, timeout=TIMEOUT)
 
 
 @then("I have no pending access requests")
@@ -197,12 +185,14 @@ def add_new_iva(playwright: PlaywrightFixture, iva_type: str, iva_value: str):
         raise ValueError(f"Unsupported IVA type: {iva_type}")
     page = playwright.page
 
-    iva_add_button = page.get_by_role("button", name="Add contact address")
+    iva_add_button = page.get_by_role("button", name="Add an IVA")
     expect(iva_add_button).to_be_visible(timeout=TIMEOUT)
     iva_add_button.click()
 
     iva_dialog = page.locator("app-new-iva-dialog").first
-    expect(iva_dialog).to_contain_text("Add contact address", timeout=TIMEOUT)
+    expect(iva_dialog).to_contain_text(
+        "Please select one of the following IVA types", timeout=TIMEOUT
+    )
 
     radio_group = iva_dialog.locator("mat-button-toggle-group")
     expect(radio_group).to_be_visible(timeout=TIMEOUT)

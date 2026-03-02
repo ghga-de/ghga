@@ -166,6 +166,7 @@ class Config(BaseSettings):
     totp_interval: int = 30
     totp_max_failed_attempts: int = 3
     totp_tolerance: int = 1
+    max_ivas: int = 5
 
     # wkvs
     wkvs_url: str = "wkvs"

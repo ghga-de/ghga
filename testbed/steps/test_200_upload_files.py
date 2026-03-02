@@ -127,18 +127,26 @@ def call_data_steward_kit_batch_upload(
 
 
 def call_data_steward_kit_ingest(
-    ingest_config_path: str, token_path: Path, token: str, check_output: bool = True
+    ingest_config_path: str,
+    token_path: Path,
+    token: str,
+    submission_id: str | None,
+    check_output: bool = True,
 ) -> subprocess.CompletedProcess:
     """Call DSKit file_ingest command to ingest file"""
     with temporary_file(token_path, token) as _:
+        cmd = [
+            "ghga-datasteward-kit",
+            "files",
+            "ingest-upload-metadata",
+            "--config-path",
+            ingest_config_path,
+        ]
+        if submission_id is not None:
+            cmd += ["--submission-id", submission_id]
+
         completed_ingest = subprocess.run(  # nosec B607, B603
-            [
-                "ghga-datasteward-kit",
-                "files",
-                "ingest-upload-metadata",
-                "--config-path",
-                ingest_config_path,
-            ],
+            cmd,
             capture_output=True,
             check=False,
             encoding="utf-8",
@@ -293,6 +301,7 @@ def check_uploaded_files_in_storage(
 )
 def ingest_file_metadata(fixtures: JointFixture, storage_name: str) -> IngestConfig:
     storage_config = fixtures.s3.get_storage_config(storage_name)
+    submission_id = fixtures.state.get_state("submission id")
     ingest_config = IngestConfig(
         file_ingest_baseurl=fixtures.config.fis_url,
         file_ingest_pubkey=fixtures.config.fis_pubkey,
@@ -301,6 +310,7 @@ def ingest_file_metadata(fixtures: JointFixture, storage_name: str) -> IngestCon
         map_files_fields=list(fixtures.dsk.config.metadata_file_fields),
         selected_storage_alias=storage_config.storage_alias,
         fallback_bucket_id=storage_config.buckets.staging,
+        wkvs_api_url=fixtures.config.wkvs_url,
     )
 
     ingest_config_path = ingest_config_as_file(config=ingest_config)
@@ -309,6 +319,7 @@ def ingest_file_metadata(fixtures: JointFixture, storage_name: str) -> IngestCon
         ingest_config_path=ingest_config_path,
         token_path=fixtures.config.dsk_token_path,
         token=fixtures.config.upload_token,
+        submission_id=submission_id,
     )
 
     return ingest_config
@@ -323,6 +334,7 @@ def check_metadata_documents(
 ) -> set[str]:
     accessions: set[str] = set()
     file_information = fixtures.state.get_state("all file information") or {}
+    submission_id = fixtures.state.get_state("submission id")
     file_metadata_dir = fixtures.dsk.config.file_metadata_dir
     for metadata_file_path in file_metadata_dir.iterdir():
         if metadata_file_path.suffix == ".json":
@@ -331,6 +343,7 @@ def check_metadata_documents(
                 alias=alias,
                 map_fields=ingest_config.map_files_fields,
                 submission_store=SubmissionStore(config=ingest_config),
+                submission_id=submission_id,
             )
             accessions.add(accession)
             file_metadata = json.loads(metadata_file_path.read_text())

@@ -64,3 +64,17 @@ Feature: 31 User Verification
 
     When "Dr. John Doe" retrieves the list of "verified" IVAs
     Then the expected item count is "2"
+
+    When "Dr. John Doe" retrieves their user data
+    Then the number of IVAs created today is "2"
+
+  Scenario: User tries to create too many IVAs
+
+    Given I am logged in as "Prof. Mary Doe"
+    And I am authenticated as "Prof. Mary Doe"
+
+    When "Prof. Mary Doe" creates all the IVAs up to the limit
+
+    When "Prof. Mary Doe" tries to add a new IVA
+    Then the response status code is "429"
+    And the response error message is "Too many IVAs have been created."

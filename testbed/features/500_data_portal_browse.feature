@@ -37,5 +37,15 @@ Feature: 400 Data Portal Browsing
     Then the details of the "DS_A" dataset are displayed
     And the summary tables for the "DS_A" dataset are displayed
 
+  Scenario: Datasets study page
+
+    When I navigate to the dataset browsing page
+
+    When I select the "DS_A" dataset
+    And I open the details of "DS_A" dataset
+
+    When I click the "study" link of the "DS_A"
+    Then the "study" page of the "DS_A" is loaded
+
   # TODO Scenario: Request access - You must be logged in to perform this action
   # TODO Scenario: Metadata download

@@ -138,3 +138,16 @@ def open_admin_page(fixtures: JointFixture, admin_page: str):
     page.wait_for_load_state()
     main = page.locator("main")
     expect(main).to_contain_text(ADMIN_PAGES[admin_page][1])
+
+
+@when("I navigate to the user account page")
+def open_account_page(fixtures: JointFixture):
+    """Open the user account page from the homepage."""
+    page = fixtures.playwright.page
+    profile_button = page.get_by_role("button", name="Account")
+    expect(profile_button).to_be_visible()
+    profile_button.click()
+    profile_menu_items = page.get_by_role("menuitem")
+    expect(profile_menu_items.nth(0)).to_contain_text("Your GHGA account page")
+    profile_menu_items.nth(0).click()
+    page.wait_for_load_state()

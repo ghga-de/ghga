@@ -56,7 +56,11 @@ EXPECTED_NOTIFICATIONS = {
     "iva_code_transmitted": "Contact Address Verification Code Transmitted",
 }
 
-IVA_TYPE_NAMES = {"Phone": "SMS", "InPerson": "In Person"}
+IVA_TYPE_NAMES = {
+    "Phone": "SMS",
+    "InPerson": "In Person",
+    "PostalAddress": "PostalAddress",
+}
 
 ADMIN_PAGES = {
     "Access Request Manager": ["access-request-manager", "Access Request Management"],
@@ -91,6 +95,7 @@ def ingest_config_as_file(config: IngestConfig):
         "map_files_fields": config.map_files_fields,
         "selected_storage_alias": config.selected_storage_alias,
         "fallback_bucket_id": config.fallback_bucket_id,
+        "wkvs_api_url": config.wkvs_api_url,
     }
 
     return write_data_to_yaml(data=ingest_config)

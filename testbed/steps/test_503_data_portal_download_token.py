@@ -15,6 +15,8 @@
 
 """Step definitions for testing the data portal UI."""
 
+import re
+
 from playwright.sync_api import expect
 
 from .conftest import (
@@ -82,24 +84,25 @@ def select_available_dataset(fixtures: JointFixture, dataset_alias: str):
     assert dataset_alias in datasets, f"Dataset '{dataset_alias}' not found"
     dataset = datasets[dataset_alias]
     page = fixtures.playwright.page
-    main = page.locator("main")
 
-    # only a select box for available datasets
-    select_box = page.locator("mat-form-field")
-    select_box.first.click()
+    component = page.locator("app-granted-access-grants-list")
+    button_for_dataset = component.get_by_role(
+        "button", name=re.compile(dataset["accession"])
+    )
+    expect(button_for_dataset).to_contain_text(
+        "create token", timeout=TIMEOUT, ignore_case=True
+    )
+    expect(button_for_dataset).to_be_enabled(timeout=TIMEOUT)
+    button_for_dataset.click()
 
-    options = page.get_by_role(role="option")
-    dataset_option = options.get_by_text(dataset["accession"])
-    expect(dataset_option).to_have_count(1, timeout=TIMEOUT)
-    dataset_option.first.click()
-    page.wait_for_load_state()
-    expect(main).to_contain_text(dataset["details"]["description"], ignore_case=True)
+    dialog = page.locator("app-download-work-package-dialog")
+    expect(dialog).to_contain_text("Create a Download Token", ignore_case=True)
+    expect(dialog).to_contain_text(dataset["details"]["description"], ignore_case=True)
 
-    # locate again for new form fields appeared after selection
-    form_fields = page.locator("mat-form-field")
-    expect(form_fields).to_have_count(3, timeout=TIMEOUT)
-    expect(form_fields.nth(1)).to_contain_text("File IDs", ignore_case=True)
-    expect(form_fields.nth(2)).to_contain_text("Crypt4GH key", ignore_case=True)
+    form_fields = dialog.locator("mat-form-field")
+    expect(form_fields).to_have_count(2, timeout=TIMEOUT)
+    expect(form_fields.nth(0)).to_contain_text("File IDs", ignore_case=True)
+    expect(form_fields.nth(1)).to_contain_text("Crypt4GH key", ignore_case=True)
 
 
 @when(
@@ -112,8 +115,8 @@ def create_download_token(fixtures: JointFixture, file_scope: str, dataset_alias
     assert dataset_alias in datasets, f"Dataset '{dataset_alias}' not found"
     dataset_char = dataset_alias.replace("DS_", "")
     page = fixtures.playwright.page
-    main = page.locator("main")
-    form_fields = page.locator("mat-form-field")
+    dialog = page.locator("app-download-work-package-dialog")
+    form_fields = dialog.locator("mat-form-field")
 
     file_ids = None
     if file_scope in ["vcf", "fastq"]:
@@ -129,21 +132,19 @@ def create_download_token(fixtures: JointFixture, file_scope: str, dataset_alias
 
     # fill file IDs
     if file_ids is not None:
-        file_ids_field = form_fields.nth(1).locator("textarea")
+        file_ids_field = form_fields.nth(0).locator("textarea")
         file_ids_field.fill(",".join(file_ids))
 
     # fill public key
-    crypt4gh_field = form_fields.nth(2).locator("input")
+    crypt4gh_field = form_fields.nth(1).locator("input")
     crypt4gh_field.fill(fixtures.config.user_public_crypt4gh_key)
 
-    submit_button = main.get_by_role(
-        role="button", name="Generate an access token for download"
-    )
+    submit_button = dialog.get_by_role(role="button", name="Generate download token")
     expect(submit_button).to_be_enabled(timeout=TIMEOUT)
     submit_button.click()
     page.wait_for_load_state()
 
-    expect(main).to_contain_text(
+    expect(dialog).to_contain_text(
         "Your download token has been created", ignore_case=True
     )
     download_token = page.locator("mat-card").locator("pre").inner_text()

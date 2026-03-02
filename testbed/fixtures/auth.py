@@ -18,9 +18,8 @@
 
 import hashlib
 import json
-import random
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from time import sleep
 from urllib.parse import parse_qs, urlparse
@@ -29,7 +28,7 @@ import pyotp
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from httpx import Response
 from jwcrypto import jwk
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 from pyparsing import Any
 from pytest import fixture
 
@@ -46,6 +45,8 @@ DEFAULT_USER_STATUS = "active"
 
 class Session(BaseModel):
     """Session object that is passed to the client."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     user_id: str | None = Field(None, alias="id")
     session_id: str
@@ -70,11 +71,8 @@ class Session(BaseModel):
             self.user_id = self.ext_id
         return self
 
-    class Config:
-        populate_by_name = True
 
-
-class TOTPAlgorithm(str, Enum):
+class TOTPAlgorithm(StrEnum):
     """Hash algorithm used for TOTP code generation"""
 
     SHA1 = "sha1"

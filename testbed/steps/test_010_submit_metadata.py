@@ -106,3 +106,11 @@ def submission_registry_exists(num: str, fixtures: JointFixture):
     assert num_found == num_expected, (
         f"{num_found} submission JSON files found in '{submission_store}'"
     )
+    # Currently, the Archive Test Bed supports only one active test submission.
+    # Below, the code assumes that the stored ID belongs to the submission.
+    if num_expected == 1:
+        fixtures.state.set_state("submission id", Path(json_files[0]).stem)
+    else:
+        print(
+            f"Cannot store submission ID: expected submissions {num_expected}, found {num_found}."
+        )

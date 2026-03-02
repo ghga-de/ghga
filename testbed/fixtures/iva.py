@@ -41,11 +41,22 @@ class IVAFixture:
     config: Config
     http: HttpClient
 
-    def create(self, iva_type: str, iva_value: str, user_id: str, headers: dict) -> IVA:
+    def create(
+        self,
+        iva_type: str,
+        iva_value: str,
+        user_id: str,
+        headers: dict,
+        return_response: bool = False,
+    ) -> IVA | Response:
         """Create a new IVA for the given user"""
         data = {"type": iva_type, "value": iva_value}
         url = f"{self.config.ums_url}/users/{user_id}/ivas"
         response = self.http.post(url, json=data, headers=headers)
+
+        if return_response:
+            return response
+
         assert response.status_code == 201, f"Failed to create IVA: {response.text}"
         return IVA(type=iva_type, value=iva_value, **response.json())
 

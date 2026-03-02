@@ -14,13 +14,13 @@ Feature: 300 User Registration
   Scenario: Attempt to access user data without login
     Given the user "Dr. John Doe" is not yet registered
     When "Dr. John Doe" retrieves their user data
-    Then the response status code is "403"
+    Then the response status code is "401"
 
   Scenario: Attempt to access user data when not fully authenticated
     Given the user "Dr. John Doe" is not yet registered
     And I am logged in as "Dr. John Doe"
     When "Dr. John Doe" retrieves their user data
-    Then the response status code is "403"
+    Then the response status code is "401"
 
   Scenario: Successful registration of a new user
     Given I am logged in as "Dr. John Doe"
@@ -54,7 +54,7 @@ Feature: 300 User Registration
 
   Scenario: Trying to change the title without authentication
     When "Dr. John Doe" changes the title to "Prof."
-    Then the response status code is "403"
+    Then the response status code is "401"
 
   Scenario: The user creates a new TOTP token
     Given I am logged in as "Dr. John Doe"
@@ -123,6 +123,13 @@ Feature: 300 User Registration
     And I am authenticated as "Data Steward"
     When "Data Steward" retrieves the user data of "Dr. John Doe"
     Then the response status code is "200"
+
+  Scenario: Register a new test user
+    Given the user "Prof. Mary Doe" is not yet registered
+    And I am logged in as "Prof. Mary Doe"
+    When "Prof. Mary Doe" registers as a new user
+    Then the response status code is "201"
+    And the expected user data of "Prof. Mary Doe" is returned
 
   Scenario: Finishing the registration
     Then set the state to "user registration is completed"

@@ -37,6 +37,8 @@ EXPECTED_STATS = {
     "Files": 14,
 }
 
+TIMEOUT = 3000
+
 
 @then("the global statistics are available")
 def check_global_statistics(playwright: PlaywrightFixture):
@@ -193,3 +195,40 @@ def check_files_summary(
         expect(main).to_contain_text(summary[1])
         for item in summary[2]:
             expect(main).to_contain_text(item)
+
+
+@when(parse('I click the "{item}" link of the "{dataset_alias}"'))
+def click_items_with_accession(
+    item: str, dataset_alias: str, fixtures: JointFixture, playwright: PlaywrightFixture
+):
+    """Click on an item."""
+    all_datasets = fixtures.state.get_state("all available datasets")
+    dataset = all_datasets[dataset_alias]
+
+    assert item in dataset["details"], f"{item} not found in dataset details"
+    assert "accession" in dataset["details"][item], f"accession not found for {item}"
+    accession = dataset["details"][item]["accession"]
+
+    page = playwright.page
+    link = page.get_by_role("link", name=accession)
+    expect(link).to_be_visible()
+    link.click()
+
+
+@then(parse('the "{item}" page of the "{dataset_alias}" is loaded'))
+def check_item_page(
+    item: str, dataset_alias: str, fixtures: JointFixture, playwright: PlaywrightFixture
+):
+    """Check the item page."""
+    all_datasets = fixtures.state.get_state("all available datasets")
+    dataset = all_datasets[dataset_alias]
+
+    assert item in dataset["details"], f"{item} not found in dataset details"
+    assert "accession" in dataset["details"][item], f"accession not found for {item}"
+    accession = dataset["details"][item]["accession"]
+
+    page = playwright.page
+    main = page.locator("main")
+
+    expect(page).to_have_url(re.compile(rf"/study/{accession}$"))
+    expect(main).to_contain_text(dataset["details"]["study"]["description"])

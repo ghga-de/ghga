@@ -1,10 +1,10 @@
 # All your requirements go here. Please adapt as needed:
 
 ghga-connector==1.8.0
-ghga-datasteward-kit==5.1.0
+ghga-datasteward-kit==5.3.0
 
 ghga-event-schemas>=9.2,<10
-ghga-service-commons[auth,crypt]>=5.3,<6
+ghga-service-commons[auth,crypt]>=6,<7
 hexkit[all]>=7.2,<8
 openpyxl >= 3.0.0,<4
 
@@ -20,7 +20,7 @@ pytest-cov>=5.0.0,<6
 pyotp>=2.9,<3
 
 click>=8.1.7,<9
-typer>=0.12.3,<1
+typer>=0.19.1
 httpx>=0.27,<0.28
 
 hvac>=2.2.0,<3

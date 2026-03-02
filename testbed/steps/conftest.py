@@ -16,6 +16,8 @@
 
 """Shared steps and fixtures"""
 
+import re
+import subprocess
 from time import sleep
 from typing import Any, NamedTuple
 
@@ -57,8 +59,8 @@ from pytest_bdd import (  # noqa: RUF100
     when,
 )
 
-from steps.conftest_3x import *  # noqa: F403
-from steps.conftest_4x import *  # noqa: F403
+from steps.conftest_1x import *  # noqa: F403
+from steps.conftest_5x import *  # noqa: F403
 from steps.utils import (
     EXPECTED_NOTIFICATIONS,
     parse,
@@ -386,3 +388,40 @@ def claims_repository_is_empty(fixtures: JointFixture):
         ],
     )
     restore_data_stewardship(saved_data_steward, fixtures)
+
+
+@then(parse('the command line message is "{expected_error_message}"'))
+def check_cli_error(
+    expected_error_message: str, completed_process: subprocess.CompletedProcess
+):
+    """Check that the CLI output contains the expected message.
+
+    The tools are not standardized in their exit codes and outputs. E.g. DSKit does not
+    exit with a non-zero code when a single ingest fails; instead, it returns a report.
+    Therefore, neither a specific exit code nor stdout/stderr alone is reliable.
+
+    This method only checks whether the expected message appears in stdout or stderr.
+    """
+
+    # Normalize minor formatting differences
+    def _normalize_cli_text(text: str) -> str:
+        """Normalize output for comparison."""
+        text = re.sub(r"\x1b\[[0-9;]*m", "", text)  # remove ANSI
+        text = text.replace("\r\n", "\n")
+        text = "\n".join(line.rstrip() for line in text.split("\n"))
+        text = re.sub(r"\s+", " ", text)  # Collapse whitespace
+        return text.strip().lower()
+
+    stderr = completed_process.stderr.strip()
+    stdout = completed_process.stdout.strip()
+    combined_output = f"{stdout}\n{stderr}"
+    normalized_expected = _normalize_cli_text(expected_error_message)
+    normalized_output = _normalize_cli_text(combined_output)
+
+    assert (
+        expected_error_message in combined_output
+        or normalized_expected in normalized_output
+    ), (
+        f'Expected error message "{expected_error_message}" not found in output:\n'
+        f"{combined_output}"
+    )

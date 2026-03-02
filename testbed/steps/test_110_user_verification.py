@@ -16,12 +16,16 @@
 """Step definitions for testing independent verification addresses"""
 
 import json
+import random
 import re
 import time
 from datetime import timedelta
+from string import ascii_letters, digits
 
 from fixtures.iva import IVA
 from ghga_service_commons.utils.utc_dates import now_as_utc
+
+from steps.utils import IVA_TYPE_NAMES
 
 from .conftest import (
     JointFixture,
@@ -80,6 +84,7 @@ def user_adds_an_iva(full_name: str, iva_type: str, fixtures: JointFixture) -> I
     iva = fixtures.iva.create(
         iva_type=iva_type, iva_value=iva_value, user_id=session.user_id, headers=headers
     )
+    assert isinstance(iva, IVA)
     fixtures.state.set_state(f"{iva_type} iva", iva.model_dump())
     return iva
 
@@ -217,3 +222,76 @@ def check_sms_received(
     fixtures.state.set_state(
         "Phone iva_verification_code", verification_code
     )  # no need to use dynamic iva_type here, SMS is only sent for Phone IVA
+
+
+@then(parse('the number of IVAs created today is "{expected_count}"'))
+def check_ivas_created_today(
+    expected_count: str, fixtures: JointFixture, response: Response
+):
+    """Check number of IVAs created today in user data"""
+    user_data = response.json()
+    assert isinstance(user_data, dict)
+    assert "ivas_created_today" in user_data
+    ivas_created_today = int(user_data["ivas_created_today"]["count"])
+    assert ivas_created_today == int(expected_count)
+
+
+@when(parse('"{full_name}" creates all the IVAs up to the limit'))
+def add_ivas_until_limit(full_name: str, fixtures: JointFixture):
+    max_ivas = fixtures.config.max_ivas
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, "User session not found"
+    assert session.user_id, "User ID not found"
+
+    url = f"{fixtures.config.ums_url}/users/{session.user_id}"
+    headers = fixtures.auth.headers(session)
+    response = fixtures.http.get(url, headers=headers)
+    user_data = response.json()
+    assert user_data
+
+    # Default value is zero when there is no information
+    ivas_created_today = 0
+    iva_stats = user_data.get("ivas_created_today")
+    # If the information exists, use the actual count
+    if iva_stats:
+        ivas_created_today = int(iva_stats.get("count", 0))
+
+    iva_type = "PostalAddress"
+    headers = fixtures.auth.headers(session=session)
+    ivas_to_be_created = max_ivas - ivas_created_today
+    print(f"{ivas_to_be_created} IVAs will be created for {full_name}")
+    for _ in range(ivas_to_be_created):
+        iva_value = "".join(random.choices(ascii_letters + digits, k=20))
+        iva = fixtures.iva.create(
+            iva_type=IVA_TYPE_NAMES[iva_type],
+            iva_value=iva_value,
+            user_id=session.user_id,
+            headers=headers,
+        )
+        assert isinstance(iva, IVA)
+        assert iva.id, "IVA ID not found"
+
+
+@when(parse('"{full_name}" tries to add a new IVA'), target_fixture="response")
+def check_iva_creation_response(full_name: str, fixtures: JointFixture):
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, "User session not found"
+    assert session.user_id, "User ID not found"
+
+    iva_type = "PostalAddress"
+    iva_value = "".join(random.choices(ascii_letters + digits, k=20))  # random
+    headers = fixtures.auth.headers(session=session)
+    iva_response = fixtures.iva.create(
+        iva_type=IVA_TYPE_NAMES[iva_type],
+        iva_value=iva_value,
+        user_id=session.user_id,
+        headers=headers,
+        return_response=True,
+    )
+    assert not isinstance(iva_response, IVA)
+    assert isinstance(iva_response, Response)
+    return iva_response
