@@ -11,14 +11,16 @@ Metldata is a framework for handling the entire lifetime of metadata by addressi
 a complex combination of challenges that makes it suitable especially for public
 archives for sensitive data:
 
-![Schematic reprensentation of challenges.](./images/challenges.png)
+![Schematic representation of challenges.](./images/challenges.png)
 **Figure 1| Overview of the combination of challenges during metadata handling.**
 
 ### Immutability
+
 It is guaranteed that data entries do not change over time making reproducibility
 possible without having to rely on local snapshots.
 
 ### Accessibility
+
 A stable accession is assigned to each resource. Together with the immutability
 property, this guarantees that you will always get the same data when querying with the
 same accession.
@@ -58,13 +60,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/metldata):
 ```bash
-docker pull ghga/metldata:4.0.6
+docker pull ghga/metldata:4.0.7
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/metldata:4.0.6 .
+docker build -t ghga/metldata:4.0.7 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -72,7 +74,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/metldata:4.0.6 --help
+docker run -p 8080:8080 ghga/metldata:4.0.7 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
