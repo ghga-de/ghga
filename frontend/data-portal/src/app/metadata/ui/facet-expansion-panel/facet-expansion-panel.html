@@ -36,7 +36,7 @@
           ><span class="flex w-full flex-nowrap gap-x-2"
             ><span class="grow">
               <span class="cdk-visually-hidden">{{ option.value }}</span>
-              @for (text of option.withHighlights; track text) {
+              @for (text of option.withHighlights; track $index) {
                 <span [class.bg-yellow-300]="text.highlighted" aria-hidden="true">{{
                   text.text | underscoreToSpace
                 }}</span>

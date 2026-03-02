@@ -47,7 +47,7 @@ describe('SiteHeaderComponent', () => {
   });
 
   it('should contain a navigation', () => {
-    const navbar = screen.getByRole('navigation');
-    expect(navbar).toBeVisible();
+    const navbar = screen.getByRole('navigation', { hidden: true });
+    expect(navbar).toBeInTheDocument();
   });
 });

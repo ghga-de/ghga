@@ -78,6 +78,7 @@ describe('AccessRequestManagerFilterComponent', () => {
     expect(accessRequestService.setAllAccessRequestsFilter).toHaveBeenCalledWith({
       dataset: undefined,
       requester: 'Doe',
+      dac: undefined,
       fromDate: undefined,
       toDate: undefined,
       status: undefined,
