@@ -25,11 +25,13 @@ __all__ = ["ConfigFixture"]
 
 class ConfigFixture:
     config: Config
-    jwk: JWK
+    auth_jwk: JWK
+    signing_jwk: JWK
 
-    def __init__(self, *, config: Config, jwk: JWK):
+    def __init__(self, *, config: Config, auth_jwk: JWK, signing_jwk: JWK):
         self.config = config
-        self.jwk = jwk
+        self.auth_jwk = auth_jwk
+        self.signing_jwk = signing_jwk
 
     def update(self, **kwargs) -> Config:
         """Override specified values"""

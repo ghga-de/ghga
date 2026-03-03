@@ -27,42 +27,43 @@ from pydantic_settings import BaseSettings
 
 from uos.constants import HTTPX_TIMEOUT
 from uos.core.models import (
+    PID,
+    AccessionMap,
     BaseWorkOrderToken,
     ChangeFileBoxWorkOrder,
     CreateFileBoxWorkOrder,
     FileUploadWithAccession,
+    SubmitAccessionMapWorkOrder,
     UploadGrant,
     ViewFileBoxWorkOrder,
 )
 from uos.core.tokens import sign_work_order_token
-from uos.ports.outbound.http import AccessClientPort, FileBoxClientPort
+from uos.ports.outbound.http import (
+    AccessClientPort,
+    AccessionClientPort,
+    FileBoxClientPort,
+)
 
 log = logging.getLogger(__name__)
+
+
+class WOTSigningConfig(BaseSettings):
+    """Base config for JWT use"""
+
+    work_order_signing_key: SecretStr = Field(
+        default=...,
+        description="The private key for signing work order tokens and other JWTs",
+        examples=['{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}'],
+    )
 
 
 class AccessApiConfig(BaseSettings):
     """Config parameters for managing upload access grants."""
 
     access_url: HttpUrl = Field(
-        ...,
+        default=...,
         description="URL pointing to the internal access API.",
         examples=["http://127.0.0.1/access"],
-    )
-
-
-class FileBoxClientConfig(BaseSettings):
-    """Config parameters for interacting with the service owning FileUploadBoxes."""
-
-    ucs_url: HttpUrl = Field(
-        ...,
-        description="URL pointing to the API of the service that owns FileUploadBoxes"
-        + " (currently the UCS).",
-        examples=["http://127.0.0.1/upload"],
-    )
-    work_order_signing_key: SecretStr = Field(
-        ...,
-        description="The private key for signing work order tokens",
-        examples=['{"crv": "P-256", "kty": "EC", "x": "...", "y": "..."}'],
     )
 
 
@@ -252,6 +253,17 @@ class AccessClient(AccessClientPort):
             raise self.AccessAPIError("Failed to check box access.") from err
 
 
+class FileBoxClientConfig(WOTSigningConfig):
+    """Config parameters for interacting with the service owning FileUploadBoxes."""
+
+    ucs_url: HttpUrl = Field(
+        default=...,
+        description="URL pointing to the API of the service that owns FileUploadBoxes"
+        + " (currently the UCS).",
+        examples=["http://127.0.0.1/upload"],
+    )
+
+
 class FileBoxClient(FileBoxClientPort):
     """An adapter for interacting with the service that owns FileUploadBoxes.
 
@@ -271,8 +283,7 @@ class FileBoxClient(FileBoxClientPort):
 
     def _auth_header(self, wot: BaseWorkOrderToken) -> dict[str, str]:
         signed_wot = sign_work_order_token(wot, self._signing_key)
-        headers = {"Authorization": f"Bearer {signed_wot}"}
-        return headers
+        return {"Authorization": f"Bearer {signed_wot}"}
 
     async def create_file_upload_box(self, *, storage_alias: str) -> UUID4:
         """Create a new FileUploadBox in owning service.
@@ -437,3 +448,70 @@ class FileBoxClient(FileBoxClientPort):
                 },
             )
             raise self.OperationError("Failed to archive FileUploadBox.")
+
+
+class AccessionClientConfig(WOTSigningConfig):
+    """Config parameters for interacting with the service that manages accession numbers."""
+
+    accession_url: HttpUrl = Field(
+        default=...,
+        description=(
+            "URL pointing to the API of the service that manages accession"
+            + " numbers (currently the study registry service)."
+        ),
+        examples=["http://127.0.0.1/accessions"],
+    )
+
+
+class AccessionClient(AccessionClientPort):
+    """An adapter for interacting with the service that manages accession numbers."""
+
+    def __init__(
+        self, *, config: AccessionClientConfig, httpx_client: httpx.AsyncClient
+    ):
+        self._client = httpx_client
+        self._accession_url = config.accession_url
+        self._signing_key = jwk.JWK.from_json(
+            config.work_order_signing_key.get_secret_value()
+        )
+        if not self._signing_key.has_private:
+            value_error = ValueError("No private token-signing key found.")
+            log.error(value_error)
+            raise value_error
+
+    def _auth_header(self, wot: BaseWorkOrderToken) -> dict[str, str]:
+        signed_wot = sign_work_order_token(wot, self._signing_key)
+        return {"Authorization": f"Bearer {signed_wot}"}
+
+    async def submit_accession_map(
+        self, *, accession_map: AccessionMap, study_pid: PID, user_id: UUID4
+    ) -> None:
+        """Submit a map of accession numbers to file IDs.
+
+        The study_pid is a passthrough value required by SRS but not interpreted by UOS.
+
+        Raises:
+            OperationError: if there's a problem during the operation.
+        """
+        wot = SubmitAccessionMapWorkOrder(user_id=user_id, study_pid=study_pid)
+        json_mapping = accession_map.model_dump(mode="json")["mapping"]
+        body = {"study_pid": study_pid, "mapping": json_mapping}
+        response = await self._client.post(
+            f"{self._accession_url}/file-ids/{study_pid}",
+            headers=self._auth_header(wot),
+            json=body,
+            timeout=HTTPX_TIMEOUT,
+        )
+        if response.status_code != 204:
+            log.error(
+                "Failed to submit accession map for ResearchDataUploadBox ID %s.",
+                accession_map.box_id,
+                extra={
+                    "research_data_upload_box_id": accession_map.box_id,
+                    "status_code": response.status_code,
+                    "response_text": response.text,
+                },
+            )
+            raise self.OperationError("Failed to submit accession map.")
+        else:
+            log.info("Submitted accession map for box %s.", accession_map.box_id)

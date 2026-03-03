@@ -58,14 +58,14 @@ def headers_for_token(token: str) -> dict[str, str]:
 @pytest.fixture(name="user_auth_headers")
 def fixture_user_auth_headers(config: ConfigFixture) -> dict[str, str]:
     """Get auth headers for testing"""
-    token = sign_and_serialize_token(USER_AUTH_CLAIMS, config.jwk)
+    token = sign_and_serialize_token(USER_AUTH_CLAIMS, config.auth_jwk)
     return headers_for_token(token)
 
 
 @pytest.fixture(name="ds_auth_headers")
 def fixture_ds_auth_headers(config: ConfigFixture) -> dict[str, str]:
     """Get auth headers for testing"""
-    token = sign_and_serialize_token(DS_AUTH_CLAIMS, config.jwk)
+    token = sign_and_serialize_token(DS_AUTH_CLAIMS, config.auth_jwk)
     return headers_for_token(token)
 
 
@@ -74,7 +74,7 @@ def fixture_bad_auth_headers(config: ConfigFixture) -> dict[str, str]:
     """Get a invalid auth headers for testing"""
     claims = DS_AUTH_CLAIMS.copy()
     del claims["id"]
-    token = sign_and_serialize_token(claims, config.jwk)
+    token = sign_and_serialize_token(claims, config.auth_jwk)
     return headers_for_token(token)
 
 
@@ -762,6 +762,7 @@ async def test_submit_accession_map(
         request_data = {
             "version": 0,
             "mapping": {"GHGA001": str(uuid4()), "GHGA002": str(uuid4())},
+            "study_pid": "GHGA-STUDY-001",
         }
 
         # unauthenticated

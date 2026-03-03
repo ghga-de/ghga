@@ -39,7 +39,11 @@ from uos.core.models import (
 from uos.ports.inbound.orchestrator import UploadOrchestratorPort
 from uos.ports.outbound.audit import AuditRepositoryPort
 from uos.ports.outbound.dao import AccessionMapDao, BoxDao
-from uos.ports.outbound.http import AccessClientPort, FileBoxClientPort
+from uos.ports.outbound.http import (
+    AccessClientPort,
+    AccessionClientPort,
+    FileBoxClientPort,
+)
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +58,7 @@ def is_data_steward(auth_context: AuthContext) -> bool:
 class UploadOrchestrator(UploadOrchestratorPort):
     """A class for orchestrating upload operations."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         box_dao: BoxDao,
@@ -62,12 +66,14 @@ class UploadOrchestrator(UploadOrchestratorPort):
         audit_repository: AuditRepositoryPort,
         file_upload_box_client: FileBoxClientPort,
         access_client: AccessClientPort,
+        accession_client: AccessionClientPort,
     ):
         self._box_dao = box_dao
         self._accession_map_dao = accession_map_dao
         self._audit_repository = audit_repository
         self._file_upload_box_client = file_upload_box_client
         self._access_client = access_client
+        self._accession_client = accession_client
 
     async def create_research_data_upload_box(
         self,
@@ -217,7 +223,10 @@ class UploadOrchestrator(UploadOrchestratorPort):
             raise self.StateChangeError(old_state=old_state, new_state=new_state)
 
     async def _handle_state_change(
-        self, *, old_box: ResearchDataUploadBox, updated_box: ResearchDataUploadBox
+        self,
+        *,
+        old_box: ResearchDataUploadBox,
+        updated_box: ResearchDataUploadBox,
     ) -> None:
         """Handle state change for a Research Data Upload Box and the corresponding
         FileUploadBox.
@@ -236,7 +245,8 @@ class UploadOrchestrator(UploadOrchestratorPort):
                 # Use old box data because `updated_box` has already been, well, updated
                 try:
                     await self._file_upload_box_client.archive_file_upload_box(
-                        box_id=fub_id, version=old_box.file_upload_box_version
+                        box_id=fub_id,
+                        version=old_box.file_upload_box_version,
                     )
                 except FileBoxClientPort.FUBVersionError as version_err:
                     log.error(
@@ -432,7 +442,7 @@ class UploadOrchestrator(UploadOrchestratorPort):
 
         # Get file list from file box service
         file_uploads = await self._file_upload_box_client.get_file_upload_list(
-            box_id=upload_box.file_upload_box_id,
+            box_id=upload_box.file_upload_box_id
         )
 
         # Get accessions from database
@@ -595,7 +605,11 @@ class UploadOrchestrator(UploadOrchestratorPort):
         return BoxRetrievalResults(count=count, boxes=boxes)
 
     async def update_accession_map(
-        self, *, box_id: UUID4, request: AccessionMapRequest
+        self,
+        *,
+        box_id: UUID4,
+        request: AccessionMapRequest,
+        user_id: UUID4,
     ) -> None:
         """Update the file accession map for a given box and publish an outbox event.
         This results in a version increment for the ResearchDataUploadBox.
@@ -613,12 +627,13 @@ class UploadOrchestrator(UploadOrchestratorPort):
         - each file ID in the mapping exists in the retrieved list of files
         - all file IDs in the box are included in the mapping
 
-        Finally, store the mapping in the DB and publish an outbox event containing
-        the mapping field content.
+        Finally, submit the accession map to the Accession API and store it in the DB.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist
             VersionError: If the requested ResearchDataUploadBox version is outdated
+            OperationError: If there's a problem submitting the accession map to the
+                Accession API
             AccessionMapError: If
             - the box is already archived, or
             - the accession map includes a file ID that doesn't exist in the box, or
@@ -710,9 +725,16 @@ class UploadOrchestrator(UploadOrchestratorPort):
                 f" {', '.join(map(str, unmapped_ids))}."
             )
 
+        # Submit the data to the Accession API
+        accession_mapping = AccessionMap(box_id=box_id, mapping=request.mapping)
+        await self._accession_client.submit_accession_map(
+            accession_map=accession_mapping,
+            study_pid=request.study_pid,
+            user_id=user_id,
+        )
+
         try:
-            # Store the data and publish an outbox event
-            accession_mapping = AccessionMap(box_id=box_id, mapping=request.mapping)
+            # Store the data
             await self._accession_map_dao.upsert(accession_mapping)
             log.info("Accession map upserted for RDUB %s", box_id)
         except DaoError as err:

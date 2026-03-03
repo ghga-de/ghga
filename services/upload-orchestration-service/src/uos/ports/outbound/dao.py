@@ -22,5 +22,5 @@ from uos.core.models import AccessionMap, ResearchDataUploadBox
 
 __all__ = ["AccessionMapDao", "BoxDao"]
 
-BoxDao = Dao[ResearchDataUploadBox]
-AccessionMapDao = DaoPublisher[AccessionMap]
+BoxDao = DaoPublisher[ResearchDataUploadBox]
+AccessionMapDao = Dao[AccessionMap]

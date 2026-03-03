@@ -451,7 +451,9 @@ async def submit_accession_map(
 ) -> None:
     """Update a ResearchDataUploadBox."""
     try:
-        await upload_service.update_accession_map(box_id=box_id, request=request)
+        await upload_service.update_accession_map(
+            box_id=box_id, request=request, user_id=UUID(auth_context.id)
+        )
     except UploadOrchestratorPort.AccessionMapError as err:
         raise HTTPException(status_code=400, detail=str(err)) from err
     except UploadOrchestratorPort.BoxNotFoundError as err:

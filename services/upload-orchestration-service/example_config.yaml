@@ -1,5 +1,5 @@
 access_url: http://127.0.0.1/access
-accession_map_topic: accession-maps
+accession_url: http://127.0.0.1/accession
 api_root_path: ''
 audit_record_topic: audit-records
 audit_record_type: audit_record_logged

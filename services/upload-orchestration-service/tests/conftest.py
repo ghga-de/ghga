@@ -42,11 +42,14 @@ from tests.fixtures.joint import joint_fixture  # noqa: F401
 @pytest.fixture(name="config")
 def config_fixture() -> ConfigFixture:
     """Generate config from test yaml along with an auth key and JWK"""
-    jwk = jwt_helpers.generate_jwk()
-    auth_key = jwk.export(private_key=False)
-    signing_key = jwt_helpers.generate_jwk().export_private()
-    config = get_config(auth_key=auth_key, work_order_signing_key=signing_key)
-    return ConfigFixture(config=config, jwk=jwk)
+    auth_jwk = jwt_helpers.generate_jwk()
+    auth_key = auth_jwk.export(private_key=False)
+    signing_jwk = jwt_helpers.generate_jwk()
+    work_order_signing_key = signing_jwk.export_private()
+    config = get_config(
+        auth_key=auth_key, work_order_signing_key=work_order_signing_key
+    )
+    return ConfigFixture(config=config, auth_jwk=auth_jwk, signing_jwk=signing_jwk)
 
 
 @pytest_asyncio.fixture(autouse=True)

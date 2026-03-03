@@ -31,7 +31,11 @@ from tests.fixtures import ConfigFixture
 from uos.config import Config
 from uos.core import models
 from uos.core.orchestrator import UploadOrchestrator
-from uos.ports.outbound.http import AccessClientPort, FileBoxClientPort
+from uos.ports.outbound.http import (
+    AccessClientPort,
+    AccessionClientPort,
+    FileBoxClientPort,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -63,6 +67,7 @@ class JointRig:
     accession_map_dao: BaseInMemDao[models.AccessionMap]
     file_upload_box_client: FileBoxClientPort
     access_client: AccessClientPort
+    accession_client: AccessionClientPort
     controller: UploadOrchestrator
 
 
@@ -78,12 +83,14 @@ def rig(config: ConfigFixture) -> JointRig:
     file_box_client_mock = AsyncMock()
     file_box_client_mock.create_file_upload_box = file_upload_box_id_generator
     access_client_mock = AsyncMock()
+    accession_client_mock = AsyncMock()
 
     controller = UploadOrchestrator(
         box_dao=(box_dao := InMemBoxDao()),  # type: ignore
         accession_map_dao=(accession_map_dao := InMemAccessionMapDao()),  # type: ignore
         file_upload_box_client=file_box_client_mock,
         access_client=access_client_mock,
+        accession_client=accession_client_mock,
         audit_repository=AsyncMock(),
     )
 
@@ -93,6 +100,7 @@ def rig(config: ConfigFixture) -> JointRig:
         accession_map_dao=accession_map_dao,
         file_upload_box_client=file_box_client_mock,
         access_client=access_client_mock,
+        accession_client=accession_client_mock,
         controller=controller,
     )
 
@@ -690,11 +698,17 @@ async def test_update_accession_map_happy(rig: JointRig, populated_boxes: list[U
             "GHGA002": test_file_ids[1],
             "GHGA003": test_file_ids[2],
         },
+        study_pid="GHGA-STUDY-001",
     )
 
     # Verify that a BoxNotFoundError is raised for a non-existent box
     with pytest.raises(rig.controller.BoxNotFoundError):
-        await rig.controller.update_accession_map(box_id=uuid4(), request=accession_map)
+        await rig.controller.update_accession_map(
+            box_id=uuid4(), request=accession_map, user_id=TEST_DS_ID
+        )
+
+    # Verify that the accession client was not called
+    rig.accession_client.submit_accession_map.assert_not_called()  # type: ignore
 
     # Verify file box client was not called
     rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
@@ -704,7 +718,9 @@ async def test_update_accession_map_happy(rig: JointRig, populated_boxes: list[U
     version_pre_update = box.version
 
     # Call the method with the valid map now
-    await rig.controller.update_accession_map(box_id=box_id, request=accession_map)
+    await rig.controller.update_accession_map(
+        box_id=box_id, request=accession_map, user_id=TEST_DS_ID
+    )
 
     # Verify the accession map was stored
     stored_map = await rig.accession_map_dao.get_by_id(box_id)
@@ -714,6 +730,9 @@ async def test_update_accession_map_happy(rig: JointRig, populated_boxes: list[U
     # Verify the research data upload box version was incremented
     box = await rig.box_dao.get_by_id(box_id)
     assert box.version - version_pre_update == 1
+
+    # Verify that the accession client was called
+    rig.accession_client.submit_accession_map.assert_called_once()  # type: ignore
 
     # Verify file box client was called
     rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
@@ -751,26 +770,32 @@ async def test_update_accession_map_invalid_or_unmapped_file_ids(
     # Create an accession map with a file ID that doesn't exist in the box
     invalid_file_id = uuid4()
     accession_map = models.AccessionMapRequest(
-        version=0, mapping={"GHGA001": test_file_ids[0], "GHGA002": invalid_file_id}
+        version=0,
+        mapping={"GHGA001": test_file_ids[0], "GHGA002": invalid_file_id},
+        study_pid="GHGA-STUDY-001",
     )
 
     # Should raise AccessionMapError
     with pytest.raises(rig.controller.AccessionMapError, match="not in the box"):
-        await rig.controller.update_accession_map(box_id=box_id, request=accession_map)
+        await rig.controller.update_accession_map(
+            box_id=box_id, request=accession_map, user_id=TEST_DS_ID
+        )
 
     # Verify file box client was called
     rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
 
     # Create an accession map that omits a file
     accession_map = models.AccessionMapRequest(
-        version=0, mapping={"GHGA001": test_file_ids[0]}
+        version=0, mapping={"GHGA001": test_file_ids[0]}, study_pid="GHGA-STUDY-001"
     )
 
     # Should raise AccessionMapError
     with pytest.raises(
         rig.controller.AccessionMapError, match="still need to be mapped"
     ):
-        await rig.controller.update_accession_map(box_id=box_id, request=accession_map)
+        await rig.controller.update_accession_map(
+            box_id=box_id, request=accession_map, user_id=TEST_DS_ID
+        )
 
 
 async def test_update_accession_map_filters_cancelled_and_failed(
@@ -837,11 +862,15 @@ async def test_update_accession_map_filters_cancelled_and_failed(
 
     # Create an accession map for only the valid files
     request = models.AccessionMapRequest(
-        version=0, mapping={"GHGA001": test_file_ids[0], "GHGA004": test_file_ids[3]}
+        version=0,
+        mapping={"GHGA001": test_file_ids[0], "GHGA004": test_file_ids[3]},
+        study_pid="GHGA-STUDY-001",
     )
 
     # This should succeed because cancelled and failed files are ignored
-    await rig.controller.update_accession_map(box_id=box_id, request=request)
+    await rig.controller.update_accession_map(
+        box_id=box_id, request=request, user_id=TEST_DS_ID
+    )
 
     # Verify the accession map was stored
     stored_map = await rig.accession_map_dao.get_by_id(box_id)

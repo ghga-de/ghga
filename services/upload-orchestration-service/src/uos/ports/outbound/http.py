@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4
 
-from uos.core.models import FileUploadWithAccession, UploadGrant
+from uos.core.models import PID, AccessionMap, FileUploadWithAccession, UploadGrant
 
 
 class AccessClientPort(ABC):
@@ -150,5 +150,23 @@ class FileBoxClientPort(ABC):
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
+        """
+        ...
+
+
+class AccessionClientPort(ABC):
+    """An adapter for interacting with the service that manages accession numbers."""
+
+    class OperationError(RuntimeError):
+        """Raised when there's an error while communicating with the service."""
+
+    @abstractmethod
+    async def submit_accession_map(
+        self, *, accession_map: AccessionMap, study_pid: PID, user_id: UUID4
+    ) -> None:
+        """Submit a map of accession numbers to file IDs.
+
+        Raises:
+            OperationError: if there's a problem during the operation.
         """
         ...

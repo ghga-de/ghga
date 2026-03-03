@@ -25,7 +25,11 @@ from hexkit.providers.mongokafka import MongoKafkaConfig
 from uos.adapters.inbound.event_sub import OutboxSubConfig
 from uos.adapters.outbound.dao import OutboxPubConfig
 from uos.adapters.outbound.event_pub import EventPubConfig
-from uos.adapters.outbound.http import AccessApiConfig, FileBoxClientConfig
+from uos.adapters.outbound.http import (
+    AccessApiConfig,
+    AccessionClientConfig,
+    FileBoxClientConfig,
+)
 from uos.constants import SERVICE_NAME
 
 __all__ = ["Config"]
@@ -40,6 +44,7 @@ class Config(
     MongoKafkaConfig,
     AccessApiConfig,
     FileBoxClientConfig,
+    AccessionClientConfig,
     EventPubConfig,
     OutboxSubConfig,
     OutboxPubConfig,

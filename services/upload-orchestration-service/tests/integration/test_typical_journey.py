@@ -207,7 +207,6 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert box_after_lock.state == box_after_lock.file_upload_box_state == "locked"
     assert box_after_lock.version == 3
 
-    # Submit accession map
     # Create test file IDs for files in the box
     file_id_1 = uuid4()
     file_id_2 = uuid4()
@@ -259,23 +258,21 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     )
 
     # Submit an accession map
+    study_pid = "GHGA-STUDY-001"
     accession_map = AccessionMapRequest(
         version=box_after_lock.version,
         mapping={"GHGA001": file_id_1, "GHGA002": file_id_2, "GHGA003": file_id_3},
+        study_pid=study_pid,
     )
-    async with joint_fixture.kafka.record_events(
-        in_topic=joint_fixture.config.accession_map_topic
-    ) as accession_event_recorder:
-        await orchestrator.update_accession_map(box_id=box_id, request=accession_map)
-
-    # Verify the updated accession map was published
-    assert accession_event_recorder.recorded_events
-    assert len(accession_event_recorder.recorded_events) == 1
-    accession_map_event = accession_event_recorder.recorded_events[0]
-    assert accession_map_event.type_ == "upserted"
-    assert accession_map_event.key == str(box_id)
-    assert (
-        accession_map_event.payload == accession_map.model_dump(mode="json")["mapping"]
+    # Mock the endpoint of the Accession API
+    accession_url = joint_fixture.config.accession_url
+    httpx_mock.add_response(
+        method="POST",
+        url=f"{accession_url}/file-ids/{study_pid}",
+        status_code=204,
+    )
+    await orchestrator.update_accession_map(
+        box_id=box_id, request=accession_map, user_id=ds_user_id
     )
 
     # Make sure the RDUB version was bumped by the accession map update

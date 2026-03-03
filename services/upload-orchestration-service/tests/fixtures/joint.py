@@ -43,7 +43,7 @@ class JointFixture:
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     rest_client: AsyncTestClient
-    jwk: JWK
+    auth_jwk: JWK
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -80,5 +80,5 @@ async def joint_fixture(
             kafka=kafka,
             mongodb=mongodb,
             rest_client=rest_client,
-            jwk=config.jwk,
+            auth_jwk=config.auth_jwk,
         )

@@ -10,15 +10,6 @@
       "title": "Research Data Upload Box Topic",
       "type": "string"
     },
-    "accession_map_topic": {
-      "description": "The name of the topic used for file accession map outbox events",
-      "examples": [
-        "accession-maps",
-        "file-accession-maps"
-      ],
-      "title": "Accession Map Topic",
-      "type": "string"
-    },
     "file_upload_box_topic": {
       "description": "Topic containing published FileUploadBox outbox events",
       "examples": [
@@ -44,6 +35,27 @@
       "title": "Audit Record Type",
       "type": "string"
     },
+    "work_order_signing_key": {
+      "description": "The private key for signing work order tokens and other JWTs",
+      "examples": [
+        "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+      ],
+      "format": "password",
+      "title": "Work Order Signing Key",
+      "type": "string",
+      "writeOnly": true
+    },
+    "accession_url": {
+      "description": "URL pointing to the API of the service that manages accession numbers (currently the study registry service).",
+      "examples": [
+        "http://127.0.0.1/accessions"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Accession Url",
+      "type": "string"
+    },
     "ucs_url": {
       "description": "URL pointing to the API of the service that owns FileUploadBoxes (currently the UCS).",
       "examples": [
@@ -54,16 +66,6 @@
       "minLength": 1,
       "title": "Ucs Url",
       "type": "string"
-    },
-    "work_order_signing_key": {
-      "description": "The private key for signing work order tokens",
-      "examples": [
-        "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
-      ],
-      "format": "password",
-      "title": "Work Order Signing Key",
-      "type": "string",
-      "writeOnly": true
     },
     "access_url": {
       "description": "URL pointing to the internal access API.",
@@ -517,12 +519,12 @@
   },
   "required": [
     "research_data_upload_box_topic",
-    "accession_map_topic",
     "file_upload_box_topic",
     "audit_record_topic",
     "audit_record_type",
-    "ucs_url",
     "work_order_signing_key",
+    "accession_url",
+    "ucs_url",
     "access_url",
     "service_instance_id",
     "kafka_servers",

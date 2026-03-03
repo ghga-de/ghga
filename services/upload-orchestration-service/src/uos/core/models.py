@@ -21,6 +21,7 @@ from uuid import uuid4
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
     UUID4,
+    AfterValidator,
     BaseModel,
     ConfigDict,
     EmailStr,
@@ -31,6 +32,17 @@ from pydantic import (
 )
 
 UploadBoxState = Literal["open", "locked", "archived"]
+
+
+def _ascii_only(v: str) -> str:
+    if not v.isascii():
+        raise ValueError("must contain only ASCII characters")
+    return v
+
+
+PID = Annotated[
+    str, StringConstraints(min_length=1, max_length=256), AfterValidator(_ascii_only)
+]
 
 
 class ResearchDataUploadBox(BaseModel):
@@ -98,6 +110,14 @@ class ViewFileBoxWorkOrder(BaseWorkOrderToken):
 
     work_type: Literal["view"] = "view"
     box_id: UUID4 = Field(..., description="ID of the box to view")
+
+
+class SubmitAccessionMapWorkOrder(BaseWorkOrderToken):
+    """Work order token for submitting an accession map."""
+
+    work_type: Literal["map"] = "map"
+    user_id: UUID4
+    study_pid: PID
 
 
 # API Request/Response models
@@ -199,10 +219,14 @@ class AccessionMapRequest(BaseModel):
     """The request body schema for submitting accession maps"""
 
     version: int = Field(
-        ..., description="A counter indicating research data upload box version"
+        default=..., description="A counter indicating research data upload box version"
     )
     mapping: dict[Accession, UUID4] = Field(
         default=..., description="Map of accessions to file IDs"
+    )
+    study_pid: PID = Field(
+        default=...,
+        description="Identifier of the study to which the file accessions belong.",
     )
 
 
