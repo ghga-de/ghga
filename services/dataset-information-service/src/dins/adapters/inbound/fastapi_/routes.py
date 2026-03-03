@@ -12,13 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""FastAPI routes for S3 upload metadata ingest"""
+"""FastAPI routes for serving information about datasets and files"""
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 
 from dins.adapters.inbound.fastapi_ import dummies, http_exceptions, http_responses
+from dins.constants import TRACER
 from dins.core import models
 from dins.ports.inbound.information_service import InformationServicePort
 
@@ -37,8 +38,8 @@ RESPONSES = {
     },
     "fileInformation": {
         "description": (
-            "File information consisting of file accession, sha256 checksum of the unencrypted"
-            "file content and file size of the unencrypted file in bytes.",
+            "File information consisting of file accession, sha256 checksum of the "
+            + "unencrypted file content and file size of the unencrypted file in bytes."
         ),
         "model": models.FileInformation,
     },
@@ -57,6 +58,7 @@ RESPONSES = {
     tags=["DatasetInformationService"],
     status_code=200,
 )
+@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}
@@ -78,6 +80,7 @@ async def health():
         status.HTTP_404_NOT_FOUND: RESPONSES["datasetNotFound"],
     },
 )
+@TRACER.start_as_current_span("routes.get_dataset_information")
 async def get_dataset_information(
     dataset_id: str,
     information_service: Annotated[
@@ -112,6 +115,7 @@ async def get_dataset_information(
         status.HTTP_404_NOT_FOUND: RESPONSES["informationNotFound"],
     },
 )
+@TRACER.start_as_current_span("routes.get_file_information")
 async def get_file_information(
     accession: str,
     information_service: Annotated[

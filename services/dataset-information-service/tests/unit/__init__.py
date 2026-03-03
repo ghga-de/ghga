@@ -13,18 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Pytest fixture setup"""
-
-from hexkit.providers.akafka.testutils import (  # noqa: F401
-    kafka_container_fixture,
-    kafka_fixture,
-)
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    mongodb_container_fixture,
-    mongodb_fixture,
-)
-
-from tests.fixtures.joint import (
-    joint_fixture,  # noqa: F401
-    rig,  # noqa: F401
-)
+"""Unit tests that don't require testcontainers to run"""

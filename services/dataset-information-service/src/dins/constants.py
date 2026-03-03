@@ -12,19 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Non-configurable values used in multiple modules"""
 
-"""Pytest fixture setup"""
+from opentelemetry import trace
 
-from hexkit.providers.akafka.testutils import (  # noqa: F401
-    kafka_container_fixture,
-    kafka_fixture,
-)
-from hexkit.providers.mongodb.testutils import (  # noqa: F401
-    mongodb_container_fixture,
-    mongodb_fixture,
-)
-
-from tests.fixtures.joint import (
-    joint_fixture,  # noqa: F401
-    rig,  # noqa: F401
-)
+SERVICE_NAME = "dins"
+TRACER = trace.get_tracer(SERVICE_NAME)

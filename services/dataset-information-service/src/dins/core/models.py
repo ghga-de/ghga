@@ -74,37 +74,54 @@ class DatasetFileInformation(BaseModel):
 Accession = Annotated[str, StringConstraints(pattern=r"^GHGA.+")]
 
 
-class FileInternallyRegistered(BaseModel):
+class FileAccessionMap(BaseModel):
+    """A class used to associate a file ID with an accession number"""
+
+    accession: Accession = Field(
+        default=..., description="The accession number assigned to this file."
+    )
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
+    )
+
+
+class PendingFileInfo(BaseModel):
+    """Temporarily stored file registration data awaiting the corresponding accession map."""
+
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
+    )
+    decrypted_size: int = Field(
+        default=..., description="The size of the unencrypted file"
+    )
+    decrypted_sha256: str = Field(
+        default=...,
+        description="SHA-256 checksum of the entire unencrypted file content",
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+
+
+class FileInternallyRegistered(PendingFileInfo):
     """An event schema communicating that a file has been copied into permanent storage.
 
     This local definition will be replaced by the `ghga-event-schemas` definition
     once implemented there.
     """
 
-    file_id: UUID4 = Field(..., description="Unique identifier for the file upload")
-    accession: Accession = Field(
-        default=..., description="The accession number assigned to this file."
-    )
     archive_date: UTCDatetime = Field(
-        ...,
+        default=...,
         description="The date and time when this file was archived.",
     )
-    storage_alias: str = Field(
-        default=..., description="The storage alias of the Data Hub housing the file"
-    )
     bucket_id: str = Field(
-        ..., description="The ID/name of the S3 bucket used to store the file."
+        default=..., description="The ID/name of the S3 bucket used to store the file."
     )
     secret_id: str = Field(
         default=..., description="The ID of the file decryption secret."
     )
-    decrypted_size: int = Field(..., description="The size of the unencrypted file")
     encrypted_size: int = Field(
         default=..., description="The encrypted size of the file before re-encryption"
-    )
-    decrypted_sha256: str = Field(
-        default=...,
-        description="SHA-256 checksum of the entire unencrypted file content",
     )
     encrypted_parts_md5: list[str] = Field(
         default=..., description="The MD5 checksum of each encrypted file part"
@@ -116,3 +133,25 @@ class FileInternallyRegistered(BaseModel):
         default=...,
         description="The number of bytes in each file part (last part is likely smaller)",
     )
+
+
+class FileDeletionRequested(BaseModel):
+    """
+    This event is emitted when a request to delete a certain file from the file
+    backend has been made.
+
+    This local definition will be replaced by the `ghga-event-schemas` definition
+    once implemented there.
+    """
+
+    file_id: UUID4 = Field(default=..., description="Unique identifier for the file")
+
+
+class FileDeletionSuccess(FileDeletionRequested):
+    """
+    This event is emitted when a service has deleted a file from its database as well
+    as the S3 buckets it controls.
+
+    This local definition will be replaced by the `ghga-event-schemas` definition
+    once implemented there.
+    """

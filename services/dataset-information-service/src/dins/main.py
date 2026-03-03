@@ -31,7 +31,7 @@ async def run_rest():
 
 
 async def consume_events(run_forever: bool = True):
-    """Consume events"""
+    """Consume events."""
     config = Config()  # type: ignore [call-arg]
     configure_logging(config=config)
 

@@ -20,10 +20,17 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.akafka import (
+    ComboTranslator,
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+)
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from dins.adapters.inbound.event_sub import EventSubTranslator
+from dins.adapters.inbound.event_sub import (
+    AccessionMapOutboxTranslator,
+    EventSubTranslator,
+)
 from dins.adapters.inbound.fastapi_ import dummies
 from dins.adapters.inbound.fastapi_.configure import get_configured_app
 from dins.adapters.outbound import dao
@@ -36,13 +43,22 @@ from dins.ports.inbound.information_service import InformationServicePort
 async def prepare_core(*, config: Config) -> AsyncGenerator[InformationServicePort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     async with MongoDbDaoFactory.construct(config=config) as dao_factory:
+        accession_map_dao = await dao.get_file_accession_map_dao(
+            dao_factory=dao_factory
+        )
         dataset_dao = await dao.get_dataset_dao(dao_factory=dao_factory)
         file_information_dao = await dao.get_file_information_dao(
             dao_factory=dao_factory
         )
+        pending_file_info_dao = await dao.get_pending_file_info_dao(
+            dao_factory=dao_factory
+        )
 
         yield InformationService(
-            dataset_dao=dataset_dao, file_information_dao=file_information_dao
+            accession_map_dao=accession_map_dao,
+            dataset_dao=dataset_dao,
+            file_information_dao=file_information_dao,
+            pending_file_info_dao=pending_file_info_dao,
         )
 
 
@@ -75,11 +91,18 @@ async def prepare_event_subscriber(
         event_sub_translator = EventSubTranslator(
             config=config, information_service=information_service
         )
+        accession_map_subscriber = AccessionMapOutboxTranslator(
+            config=config,
+            information_service=information_service,
+        )
+        translator = ComboTranslator(
+            translators=[event_sub_translator, accession_map_subscriber]
+        )
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,
             KafkaEventSubscriber.construct(
                 config=config,
-                translator=event_sub_translator,
+                translator=translator,
                 dlq_publisher=dlq_publisher,
             ) as event_subscriber,
         ):
@@ -92,7 +115,7 @@ async def prepare_rest_app(
     config: Config,
     information_service_override: InformationServicePort | None = None,
 ) -> AsyncGenerator[FastAPI]:
-    """Construct and initialize an REST API app along with all its dependencies.
+    """Construct and initialize a REST API app along with all its dependencies.
     By default, the core dependencies are automatically prepared but you can also
     provide them using the information_service_override parameter.
     """

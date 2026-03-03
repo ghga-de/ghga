@@ -1,3 +1,4 @@
+accession_map_topic: accession-maps
 api_root_path: ''
 auto_reload: false
 cors_allow_credentials: null
@@ -10,6 +11,7 @@ dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
 db_name: dev
 docs_url: /docs
+enable_opentelemetry: false
 file_deletion_request_topic: file-deletion-requests
 file_deletion_request_type: file_deletion_requested
 file_internally_registered_topic: internal_file_registry
@@ -35,6 +37,7 @@ log_traceback: true
 mongo_dsn: '**********'
 mongo_timeout: null
 openapi_url: /openapi.json
+otel_trace_sampling_rate: 1.0
 port: 8080
 service_instance_id: '1'
 service_name: dins

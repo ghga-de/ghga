@@ -23,9 +23,6 @@ from ghga_service_commons.api import ApiConfigBase, configure_app
 
 from dins import __version__
 from dins.adapters.inbound.fastapi_.routes import router
-from dins.config import Config
-
-config = Config()  # type: ignore [call-arg]
 
 
 def get_openapi_schema(app: FastAPI) -> dict[str, Any]:

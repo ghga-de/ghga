@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A collextion of http exceptions."""
+"""A collection of http exceptions."""
 
 from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import BaseModel
 
 
 class HttpDatasetNotFoundError(HttpCustomExceptionBase):
-    """Raised when a file with given ID could not be found."""
+    """Raised when a Dataset with the given ID could not be found."""
 
     exception_id = "datasetNotFound"
 
@@ -39,7 +39,7 @@ class HttpDatasetNotFoundError(HttpCustomExceptionBase):
 
 
 class HttpInformationNotFoundError(HttpCustomExceptionBase):
-    """Raised when a file with given ID could not be found."""
+    """Raised when a file with the given accession could not be found."""
 
     exception_id = "informationNotFound"
 

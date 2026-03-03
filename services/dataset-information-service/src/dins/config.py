@@ -17,19 +17,21 @@
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 
-from dins.adapters.inbound.event_sub import EventSubTranslatorConfig
-
-SERVICE_NAME = "dins"
+from dins.adapters.inbound.event_sub import EventSubTranslatorConfig, OutboxSubConfig
+from dins.constants import SERVICE_NAME
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     ApiConfigBase,
     EventSubTranslatorConfig,
+    OutboxSubConfig,
     MongoKafkaConfig,
     LoggingConfig,
+    OpenTelemetryConfig,
 ):
     """Config parameters and their defaults."""
 
