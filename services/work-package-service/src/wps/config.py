@@ -25,7 +25,7 @@ from hexkit.providers.mongodb.migrations import MigrationConfig
 
 from wps.adapters.inbound.event_sub import (
     EventSubTranslatorConfig,
-    OutboxSubTranslatorConfig,
+    OutboxSubConfig,
 )
 from wps.adapters.outbound.http import AccessCheckConfig
 from wps.constants import SERVICE_NAME
@@ -38,7 +38,7 @@ class Config(
     AuthConfig,
     AccessCheckConfig,
     EventSubTranslatorConfig,
-    OutboxSubTranslatorConfig,
+    OutboxSubConfig,
     KafkaConfig,
     MigrationConfig,
     WorkPackageConfig,

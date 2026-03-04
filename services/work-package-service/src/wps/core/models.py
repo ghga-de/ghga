@@ -18,7 +18,8 @@ in the API.
 """
 
 from enum import StrEnum
-from typing import Literal
+from typing import Annotated, Literal
+from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import UUID4Field
@@ -28,6 +29,7 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    StringConstraints,
     field_validator,
     model_validator,
 )
@@ -39,7 +41,14 @@ __all__ = [
     "BoxWithExpiration",
     "CloseFileWorkOrder",
     "CreateFileWorkOrder",
+    "Dataset",
+    "DatasetFile",
+    "DatasetWithExpiration",
     "DeleteFileWorkOrder",
+    "DownloadWorkOrder",
+    "FileAccession",
+    "FileAccessionMapping",
+    "ResearchDataUploadBox",
     "ResearchDataUploadBoxBasics",
     "UploadFileWorkOrder",
     "UploadPathType",
@@ -48,9 +57,12 @@ __all__ = [
     "WorkPackage",
     "WorkPackageCreationData",
     "WorkPackageCreationResponse",
+    "WorkPackageDetails",
     "WorkPackageType",
     "WorkType",
 ]
+
+FileAccession = Annotated[str, StringConstraints(pattern=r"^GHGAF.+")]
 
 
 class BaseDto(BaseModel):
@@ -69,8 +81,10 @@ class WorkPackageType(StrEnum):
 class DatasetFile(BaseDto):
     """A file as that is part of a dataset."""
 
-    id: str = Field(..., description="The file ID.")
-    extension: str = Field(..., description="The file extension with a leading dot.")
+    accession: FileAccession = Field(default=..., description="The file accession.")
+    extension: str = Field(
+        default=..., description="The file extension with a leading dot."
+    )
 
 
 class Dataset(BaseDto):
@@ -81,8 +95,12 @@ class Dataset(BaseDto):
         default=..., description="Current stage of this dataset."
     )
     title: str = Field(default=..., description="The title of the dataset.")
-    description: str | None = Field(..., description="The description of the dataset.")
-    files: list[DatasetFile] = Field(..., description="Files contained in the dataset.")
+    description: str | None = Field(
+        default=..., description="The description of the dataset."
+    )
+    files: list[DatasetFile] = Field(
+        default=..., description="Files contained in the dataset."
+    )
 
 
 class DatasetWithExpiration(Dataset):
@@ -114,7 +132,8 @@ class DownloadWorkOrder(BaseWorkOrderToken):
     """WOT schema authorizing a user to download a file from a dataset"""
 
     work_type: DownloadPathType = "download"
-    file_id: str  # should be the file accession, as opposed to UUID4 used for uploads
+    file_id: UUID4
+    accession: FileAccession
 
 
 class ViewFileBoxWorkOrder(BaseWorkOrderToken):
@@ -160,6 +179,48 @@ class DeleteFileWorkOrder(BaseWorkOrderToken, _FileUploadToken):
     work_type: DeleteType = "delete"
 
 
+class ResearchDataUploadBox(BaseModel):
+    """A class representing a ResearchDataUploadBox.
+
+    This will be replaced with the ghga-event-schemas implementation soon.
+    """
+
+    id: UUID4 = Field(
+        default_factory=uuid4,
+        description="Unique identifier for the research data upload box",
+    )
+    version: int = Field(
+        default=..., description="A counter indicating resource version"
+    )
+    state: Literal["open", "locked", "archived"] = Field(
+        default=..., description="Current state of the research data upload box"
+    )
+    title: str = Field(default=..., description="Short meaningful name for the box")
+    description: str = Field(
+        default=..., description="Describes the upload box in more detail"
+    )
+    last_changed: UTCDatetime = Field(
+        default=..., description="Timestamp of the latest change"
+    )
+    changed_by: UUID4 = Field(
+        default=..., description="ID of the user who performed the latest change"
+    )
+    file_upload_box_id: UUID4 = Field(
+        default=..., description="The ID of the file upload box."
+    )
+    file_upload_box_version: int = Field(
+        default=..., description="A counter indicating resource version"
+    )
+    file_upload_box_state: Literal["open", "locked", "archived"] = Field(
+        default=..., description="Current state of the file upload box"
+    )
+    file_count: int = Field(default=0, description="The number of files in the box")
+    size: int = Field(default=0, description="The total size of all files in the box")
+    storage_alias: str = Field(
+        default=..., description="S3 storage alias to use for uploads"
+    )
+
+
 class ResearchDataUploadBoxBasics(BaseDto):
     """A model describing an upload box that groups file uploads.
 
@@ -168,17 +229,17 @@ class ResearchDataUploadBoxBasics(BaseDto):
     """
 
     id: UUID4 = Field(
-        ...,
+        default=...,
         description="The ID of the full research data upload box."
         + " This is the ID tied to upload claims.",
     )
     file_upload_box_id: UUID4 = Field(
-        ...,
+        default=...,
         description="The ID of the file upload box. This is the ID referenced by the Connector.",
     )
-    title: str = Field(..., description="The title of the upload box.")
+    title: str = Field(default=..., description="The title of the upload box.")
     description: str | None = Field(
-        None, description="The description of the upload box."
+        default=None, description="The description of the upload box."
     )
 
 
@@ -217,7 +278,7 @@ class WorkPackageCreationData(BaseDto):
     box_id: UUID4 | None = Field(
         default=None, description="ID of the upload box (for upload work packages)"
     )
-    type: WorkPackageType
+    type: WorkPackageType = Field(default=..., description="The work package type")
     file_ids: list[str] | None = Field(
         default=None,
         description="IDs of all included files."
@@ -258,12 +319,12 @@ class WorkPackageCreationResponse(BaseModel):
 class WorkPackageDetails(BaseModel):
     """Details about the work package that can be requested."""
 
-    type: WorkPackageType
+    type: WorkPackageType = Field(default=..., description="The work package type")
     files: dict[str, str] | None = Field(
         default=None,
         description="IDs of all included files mapped to their file extensions (None"
         + " for upload work packages)",
-        examples=[{"file-id-1": ".json", "file-id-2": ".csv"}],
+        examples=[{"GHGAF01": ".json", "GHGAF02": ".csv"}],
     )
     box_id: UUID4 | None = Field(
         default=None, description="ID of the upload box (for upload work packages)"
@@ -286,7 +347,7 @@ class WorkPackage(WorkPackageDetails):
     box_id: UUID4 | None = Field(
         default=None, description="ID of the upload box (for upload work packages)"
     )
-    user_id: UUID4
+    user_id: UUID4 = Field(default=..., description="The unique ID for the user")
     full_user_name: str = Field(
         default=...,
         description="The user's full name including academic title",
@@ -312,13 +373,14 @@ class UploadWorkOrderTokenRequest(BaseModel):
     """Request model for creating upload-path work order tokens."""
 
     work_type: UploadPathType = Field(
-        ..., description="The type of work order token to create"
+        default=..., description="The type of work order token to create"
     )
     alias: str | None = Field(
-        None, description="File alias (required for CREATE work type)"
+        default=None, description="File alias (required for CREATE work type)"
     )
     file_id: UUID4 | None = Field(
-        None, description="File ID (required for UPLOAD, CLOSE, DELETE work types)"
+        default=None,
+        description="File ID (required for UPLOAD, CLOSE, DELETE work types)",
     )
 
     @model_validator(mode="after")
@@ -329,7 +391,16 @@ class UploadWorkOrderTokenRequest(BaseModel):
         if self.work_type == "create" and not self.alias:
             raise ValueError("File alias is required for CREATE work type")
         elif self.work_type != "create" and not self.file_id:
-            raise ValueError(
-                "File alias is required for UPLOAD, CLOSE, DELETE work types"
-            )
+            raise ValueError("File ID is required for UPLOAD, CLOSE, DELETE work types")
         return self
+
+
+class FileAccessionMapping(BaseModel):
+    """A class used to associate a file ID with an accession number"""
+
+    accession: FileAccession = Field(
+        default=..., description="The accession number assigned to this file."
+    )
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
+    )

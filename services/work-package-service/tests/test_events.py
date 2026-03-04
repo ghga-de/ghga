@@ -23,20 +23,24 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from ghga_event_schemas.pydantic_ import ResearchDataUploadBox
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
 
 from wps.config import Config
-from wps.core.models import ResearchDataUploadBoxBasics
+from wps.core.models import ResearchDataUploadBox, ResearchDataUploadBoxBasics
 from wps.prepare import Consumer, prepare_consumer
 
 from .fixtures import (  # noqa: F401
     fixture_config,
     fixture_repository,
 )
-from .fixtures.datasets import DATASET, DATASET_DELETION_EVENT, DATASET_UPSERTION_EVENT
+from .fixtures.datasets import (
+    DATASET,
+    DATASET_DELETION_EVENT,
+    DATASET_UPSERTION_EVENT,
+    FILE_ACCESSION_MAPS,
+)
 
 pytestmark = pytest.mark.asyncio()
 
@@ -233,20 +237,25 @@ async def test_consume_from_retry(
         assert False, "dataset cannot be retrieved"
 
 
-async def test_outbox_consumer(config: Config, kafka: KafkaFixture):
+async def test_rudb_outbox_consumer(config: Config, kafka: KafkaFixture):
     """Test consuming an 'upserted' & 'deleted' upload box event in the outbox consumer."""
     # Create a test upload box
     research_data_upload_box_id = uuid4()
     file_upload_box_id = uuid4()
     test_event = ResearchDataUploadBox(
         id=research_data_upload_box_id,
+        version=0,
+        state="open",
         title="Test Upload Box",
         description="A test upload box for testing outbox events",
-        state="open",
-        file_upload_box_id=file_upload_box_id,
-        storage_alias="test",
-        changed_by=uuid4(),
         last_changed=now_utc_ms_prec(),
+        changed_by=uuid4(),
+        file_upload_box_id=file_upload_box_id,
+        file_upload_box_version=0,
+        file_upload_box_state="open",
+        file_count=0,
+        size=0,
+        storage_alias="test",
     )
 
     test_box = ResearchDataUploadBoxBasics(
@@ -293,4 +302,48 @@ async def test_outbox_consumer(config: Config, kafka: KafkaFixture):
         # Verify that delete_upload_box was called with the correct upload box ID
         mock_repository.delete_upload_box.assert_called_once_with(
             research_data_upload_box_id
+        )
+
+
+async def test_accession_outbox_consumer(config: Config, kafka: KafkaFixture):
+    """Test consuming an 'upserted' & 'deleted' accession map event in the outbox consumer."""
+    # Create a mock repository to track calls
+    mock_repository = AsyncMock()
+    accession_map_event_payload = FILE_ACCESSION_MAPS[0].model_dump(mode="json")
+    # Create a consumer with the mock repository
+    async with prepare_consumer(
+        config=config, work_package_repo_override=mock_repository
+    ) as consumer:
+        subscriber = consumer.event_subscriber
+
+        # Publish an outbox 'upserted' event for an accession map
+        await kafka.publish_event(
+            payload=accession_map_event_payload,
+            topic=config.accession_map_topic,
+            type_="upserted",
+            key="",
+        )
+
+        # Process the event
+        await asyncio.wait_for(subscriber.run(forever=False), timeout=TIMEOUT)
+
+        # Verify that store_accession_map was called with the correct argument
+        mock_repository.store_accession_map.assert_called_once_with(
+            accession_map=FILE_ACCESSION_MAPS[0]
+        )
+
+        # Publish an outbox 'deleted' event
+        await kafka.publish_event(
+            payload={},
+            topic=config.accession_map_topic,
+            type_="deleted",
+            key="GHGAF01",
+        )
+
+        # Process the event
+        await asyncio.wait_for(subscriber.run(forever=False), timeout=TIMEOUT)
+
+        # Verify that delete_accession_map was called with the correct accession
+        mock_repository.delete_accession_map.assert_called_once_with(
+            accession="GHGAF01"
         )

@@ -25,6 +25,7 @@ from wps.core.models import (
     BoxWithExpiration,
     Dataset,
     DatasetWithExpiration,
+    FileAccessionMapping,
     ResearchDataUploadBoxBasics,
     UploadPathType,
     WorkPackage,
@@ -73,19 +74,20 @@ class WorkPackageRepositoryPort(ABC):
         self,
         *,
         work_package_id: UUID4,
-        file_id: str,
+        accession: str,
         check_valid: bool = True,
         work_package_access_token: str | None = None,
     ) -> str:
-        """Create a work order token for a given work package and file.
+        """Create a download work order token for a given work package and file.
 
         In the following cases, a WorkPackageAccessError is raised:
         - if a work package with the given work_package_id does not exist
-        - if the file_id is not contained in the work package
+        - if the accession is not contained in the work package
         - if check_valid is set and the work package has expired
         - if the work package type is not DOWNLOAD
         - if a work_package_access_token is specified and it does not match
           the token hash that is stored in the work package
+        - if the accession is not mapped to a file ID
         """
 
     @abstractmethod
@@ -167,3 +169,11 @@ class WorkPackageRepositoryPort(ABC):
 
         Raises WorkPackageAccessError on failure.
         """
+
+    @abstractmethod
+    async def store_accession_map(self, *, accession_map: FileAccessionMapping) -> None:
+        """Store an accession map in the database"""
+
+    @abstractmethod
+    async def delete_accession_map(self, *, accession: str) -> None:
+        """Delete the mapping for a given accession"""

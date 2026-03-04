@@ -1,4 +1,6 @@
 access_url: http://127.0.0.1:8080/
+accession_map_topic: accession-maps
+accession_maps_collection: accessionMaps
 api_root_path: ''
 auth_algs:
 - ES256

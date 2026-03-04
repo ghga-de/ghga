@@ -33,6 +33,8 @@ from wps.constants import TRACER
 from wps.core.models import (
     Dataset,
     DatasetFile,
+    FileAccessionMapping,
+    ResearchDataUploadBox,
     ResearchDataUploadBoxBasics,
     WorkPackageType,
 )
@@ -41,8 +43,8 @@ from wps.ports.inbound.repository import WorkPackageRepositoryPort
 __all__ = [
     "EventSubTranslator",
     "EventSubTranslatorConfig",
-    "OutboxSubTranslator",
-    "OutboxSubTranslatorConfig",
+    "OutboxSubConfig",
+    "RDUBOutboxTranslator",
 ]
 
 log = logging.getLogger(__name__)
@@ -52,7 +54,7 @@ class EventSubTranslatorConfig(DatasetEventsConfig):
     """Config for dataset creation related events."""
 
 
-class OutboxSubTranslatorConfig(BaseSettings):
+class OutboxSubConfig(BaseSettings):
     """Config for listening to events carrying state updates for UploadBox objects
 
     The event types are hardcoded by `hexkit`.
@@ -61,8 +63,13 @@ class OutboxSubTranslatorConfig(BaseSettings):
     # TODO: Replace this with standardized config from ghga-event-schemas when available
     upload_box_topic: str = Field(
         ...,
-        description="Name of the event topic containing upload box events",
-        examples=["upload-boxes"],
+        description="Name of the event topic containing research data upload box events",
+        examples=["research-data-upload-boxes", "rdu-boxes", "rdubs"],
+    )
+    accession_map_topic: str = Field(
+        default=...,
+        description="The name of the topic used for file accession map events",
+        examples=["accession-maps", "file-accession-maps"],
     )
 
 
@@ -107,7 +114,7 @@ class EventSubTranslator(EventSubscriberProtocol):
 
         files = [
             DatasetFile(
-                id=payload_file.accession,
+                accession=payload_file.accession,
                 extension=payload_file.file_extension,
                 # we don't need the file description here for now
             )
@@ -156,24 +163,22 @@ class EventSubTranslator(EventSubscriberProtocol):
             await self._handle_deletion(payload)
 
 
-class OutboxSubTranslator(DaoSubscriberProtocol):
-    """Outbox-style event subscriber for UploadBox events"""
+class RDUBOutboxTranslator(DaoSubscriberProtocol):
+    """Outbox-style event subscriber for ResearchDataUploadBox events"""
 
     event_topic: str
-    dto_model = event_schemas.ResearchDataUploadBox
+    dto_model = ResearchDataUploadBox
 
     def __init__(
         self,
         *,
-        config: OutboxSubTranslatorConfig,
+        config: OutboxSubConfig,
         work_package_repository: WorkPackageRepositoryPort,
     ):
         self.event_topic = config.upload_box_topic
         self._repository = work_package_repository
 
-    async def changed(
-        self, resource_id: str, update: event_schemas.ResearchDataUploadBox
-    ) -> None:
+    async def changed(self, resource_id: str, update: ResearchDataUploadBox) -> None:
         """Consume a change event (created or updated) for the research data upload box
         with the given ID.
         """
@@ -191,3 +196,38 @@ class OutboxSubTranslator(DaoSubscriberProtocol):
         """
         with suppress(self._repository.UploadBoxNotFoundError):  # if already deleted
             await self._repository.delete_upload_box(UUID(resource_id))
+
+
+class AccessionMapOutboxTranslator(DaoSubscriberProtocol[FileAccessionMapping]):
+    """An outbox subscriber event translator for AccessionMap outbox events."""
+
+    event_topic: str
+    dto_model = FileAccessionMapping
+
+    def __init__(
+        self,
+        *,
+        config: OutboxSubConfig,
+        work_package_repository: WorkPackageRepositoryPort,
+    ):
+        """Initialize the outbox subscriber"""
+        self.event_topic = config.accession_map_topic
+        self._repository = work_package_repository
+
+    @TRACER.start_as_current_span("AccessionMapOutboxTranslator.changed")
+    async def changed(self, resource_id: str, update: FileAccessionMapping) -> None:
+        """Process an AccessionMap event."""
+        log.info(
+            "Received upsertion outbox event for AccessionMap for accession %s.",
+            update.accession,
+        )
+        await self._repository.store_accession_map(accession_map=update)
+
+    @TRACER.start_as_current_span("AccessionMapOutboxTranslator.deleted")
+    async def deleted(self, resource_id: str) -> None:
+        """Delete the mapping for a given accession"""
+        log.info(
+            "Received deletion outbox event for accession %s",
+            resource_id,
+        )
+        await self._repository.delete_accession_map(accession=resource_id)

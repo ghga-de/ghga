@@ -17,6 +17,7 @@
 """A repository for work packages."""
 
 import logging
+from contextlib import suppress
 from datetime import timedelta
 from uuid import UUID
 
@@ -36,6 +37,7 @@ from wps.core.models import (
     DatasetWithExpiration,
     DeleteFileWorkOrder,
     DownloadWorkOrder,
+    FileAccessionMapping,
     ResearchDataUploadBoxBasics,
     UploadFileWorkOrder,
     UploadPathType,
@@ -53,6 +55,7 @@ from wps.core.tokens import (
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 from wps.ports.outbound.access import AccessCheckPort
 from wps.ports.outbound.dao import (
+    AccessionMapDaoPort,
     DatasetDaoPort,
     ResourceNotFoundError,
     UploadBoxDaoPort,
@@ -77,6 +80,10 @@ class WorkPackageConfig(BaseSettings):
         "workPackages",
         description="The name of the database collection for work packages",
     )
+    accession_maps_collection: str = Field(
+        "accessionMaps",
+        description="The name of the database collection for file accession maps",
+    )
     work_package_valid_days: int = Field(
         30,
         description="How many days a work package (and its access token) stays valid",
@@ -99,11 +106,12 @@ WORK_TYPE_TO_MODEL: dict[str, type[FileUploadToken]] = {
 class WorkPackageRepository(WorkPackageRepositoryPort):
     """A repository for work packages."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         config: WorkPackageConfig,
         access_check: AccessCheckPort,
+        accession_map_dao: AccessionMapDaoPort,
         dataset_dao: DatasetDaoPort,
         upload_box_dao: UploadBoxDaoPort,
         work_package_dao: WorkPackageDaoPort,
@@ -118,6 +126,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             log.error(key_error)
             raise key_error
         self._access = access_check
+        self._accession_map_dao = accession_map_dao
         self._dataset_dao = dataset_dao
         self._upload_box_dao = upload_box_dao
         self._dao = work_package_dao
@@ -196,7 +205,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             log.error(access_error, extra=extra)
             raise access_error from error
 
-        file_ids = [file.id for file in dataset.files]
+        file_ids = [file.accession for file in dataset.files]
         if creation_data.file_ids is not None:
             # if file_ids is not passed as None, restrict the file set
             file_id_set = set(creation_data.file_ids)
@@ -210,7 +219,9 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
         file_id_set = set(file_ids)
         files = {
-            file.id: file.extension for file in dataset.files if file.id in file_id_set
+            file.accession: file.extension
+            for file in dataset.files
+            if file.accession in file_id_set
         }
 
         return await self._create_work_package_record(
@@ -373,7 +384,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         self,
         *,
         work_package_id: UUID4,
-        file_id: str,
+        accession: str,
         check_valid: bool = True,
         work_package_access_token: str | None = None,
     ) -> str:
@@ -381,15 +392,16 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
         In the following cases, a WorkPackageAccessError is raised:
         - if a work package with the given work_package_id does not exist
-        - if the file_id is not contained in the work package
+        - if the accession is not contained in the work package
         - if check_valid is set and the work package has expired
         - if the work package type is not DOWNLOAD
         - if a work_package_access_token is specified and it does not match
           the token hash that is stored in the work package
+        - if the accession is not mapped to a file ID
         """
         extra = {  # only used for logging
             "work_package_id": work_package_id,
-            "file_id": file_id,
+            "accession": accession,
             "check_valid": check_valid,
         }
 
@@ -408,16 +420,28 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             log.error(access_error, extra=extra)
             raise access_error
 
-        # For Download-type work packages, the file ID must be in the list of files
-        if file_id not in (work_package.files or {}):
+        # For Download-type work packages, the accession must be in the list of files
+        if accession not in (work_package.files or {}):
             access_error = self.WorkPackageAccessError(
                 "File is not contained in work package"
             )
             log.error(access_error, extra=extra)
             raise access_error
 
+        try:
+            accession_map = await self._accession_map_dao.get_by_id(accession)
+        except ResourceNotFoundError as err:
+            mapping_error = self.WorkPackageAccessError(
+                "File not available for download"
+            )
+            log.error(mapping_error, extra=extra)
+            raise mapping_error from err
+        else:
+            file_id = accession_map.file_id
+
         wot = DownloadWorkOrder(
             file_id=file_id,
+            accession=accession,
             user_public_crypt4gh_key=work_package.user_public_crypt4gh_key,
         )
         signed_wot = sign_work_order_token(wot, self._signing_key)
@@ -512,7 +536,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         If no such dataset exists, a DatasetNotFoundError will be raised.
         """
         try:
-            await self._dataset_dao.delete(id_=dataset_id)
+            await self._dataset_dao.delete(dataset_id)
         except ResourceNotFoundError as error:
             dataset_not_found_error = self.DatasetNotFoundError("Dataset not found")
             log.error(dataset_not_found_error, extra={"dataset_id": dataset_id})
@@ -580,7 +604,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         If no such box exists, an UploadBoxNotFoundError will be raised.
         """
         try:
-            await self._upload_box_dao.delete(id_=box_id)
+            await self._upload_box_dao.delete(box_id)
             log.info("Deleted UploadBox with ID %s", box_id)
         except ResourceNotFoundError:
             log.info(
@@ -635,3 +659,18 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             )
             upload_boxes_with_expiration.append(box_with_expiration)
         return upload_boxes_with_expiration
+
+    async def store_accession_map(self, *, accession_map: FileAccessionMapping) -> None:
+        """Store an accession map in the database"""
+        await self._accession_map_dao.upsert(accession_map)
+        log.info(
+            "Upserted accession map for accession %s, file ID %s.",
+            accession_map.accession,
+            accession_map.file_id,
+        )
+
+    async def delete_accession_map(self, *, accession: str) -> None:
+        """Delete the mapping for a given accession"""
+        with suppress(ResourceNotFoundError):
+            await self._accession_map_dao.delete(accession)
+            log.info("Accession mapping deleted for accession %s", accession)

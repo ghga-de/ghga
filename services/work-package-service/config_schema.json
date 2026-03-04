@@ -84,6 +84,12 @@
       "title": "Work Packages Collection",
       "type": "string"
     },
+    "accession_maps_collection": {
+      "default": "accessionMaps",
+      "description": "The name of the database collection for file accession maps",
+      "title": "Accession Maps Collection",
+      "type": "string"
+    },
     "work_package_valid_days": {
       "default": 30,
       "description": "How many days a work package (and its access token) stays valid",
@@ -315,11 +321,22 @@
       "type": "integer"
     },
     "upload_box_topic": {
-      "description": "Name of the event topic containing upload box events",
+      "description": "Name of the event topic containing research data upload box events",
       "examples": [
-        "upload-boxes"
+        "research-data-upload-boxes",
+        "rdu-boxes",
+        "rdubs"
       ],
       "title": "Upload Box Topic",
+      "type": "string"
+    },
+    "accession_map_topic": {
+      "description": "The name of the topic used for file accession map events",
+      "examples": [
+        "accession-maps",
+        "file-accession-maps"
+      ],
+      "title": "Accession Map Topic",
       "type": "string"
     },
     "dataset_change_topic": {
@@ -560,6 +577,7 @@
     "migration_wait_sec",
     "kafka_servers",
     "upload_box_topic",
+    "accession_map_topic",
     "dataset_change_topic",
     "dataset_deletion_type",
     "dataset_upsertion_type",

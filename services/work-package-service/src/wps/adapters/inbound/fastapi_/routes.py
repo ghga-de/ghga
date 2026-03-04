@@ -129,7 +129,7 @@ async def get_work_package(
 
 
 @router.post(
-    "/work-packages/{work_package_id}/files/{file_id}/work-order-tokens",
+    "/work-packages/{work_package_id}/files/{accession}/work-order-tokens",
     operation_id="create_download_work_order_token",
     tags=["WorkPackages", "download"],
     summary="Create a work order token for file download operations",
@@ -147,18 +147,18 @@ async def get_work_package(
 @TRACER.start_as_current_span("routes.create_download_work_order_token")
 async def create_download_work_order_token(
     work_package_id: UUID4,
-    file_id: str,
+    accession: str,
     repository: WorkPackageRepositoryDummy,
     work_package_access_token: WorkPackageAccessToken,
 ) -> JSONResponse:
     """Get an encrypted work order token using a work package access token."""
     try:
-        if not (work_package_id and file_id and work_package_access_token):
+        if not (work_package_id and accession and work_package_access_token):
             raise repository.WorkPackageAccessError
 
         wot = await repository.get_download_wot(
             work_package_id=work_package_id,
-            file_id=file_id,
+            accession=accession,
             check_valid=True,
             work_package_access_token=work_package_access_token,
         )
@@ -193,7 +193,7 @@ async def create_upload_work_order_token(
     wot_request: UploadWorkOrderTokenRequest,
     repository: WorkPackageRepositoryDummy,
     work_package_access_token: WorkPackageAccessToken,
-):
+) -> JSONResponse:
     try:
         if not (
             work_package_id and box_id and wot_request and work_package_access_token

@@ -52,7 +52,7 @@ from .fixtures import (  # noqa: F401
     fixture_repository,
 )
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
-from .fixtures.datasets import DATASET
+from .fixtures.datasets import DATASET, FILE_ACCESSION_MAP_DOCS, FILE_ACCESSION_MAPS
 
 pytestmark = pytest.mark.asyncio()
 
@@ -124,9 +124,9 @@ async def test_work_package_and_token_creation(
     assert package.dataset_id == "some-dataset-id"
     assert package.type == WorkPackageType.DOWNLOAD
     assert package.files == {
-        "file-id-1": ".json",
-        "file-id-2": ".csv",
-        "file-id-3": ".bam",
+        "GHGAF01": ".json",
+        "GHGAF02": ".csv",
+        "GHGAF03": ".bam",
     }
     assert package.user_public_crypt4gh_key == user_public_crypt4gh_key
     assert package.user_id == UUID(auth_context.id)
@@ -139,27 +139,39 @@ async def test_work_package_and_token_creation(
     with pytest.raises(repository.WorkPackageAccessError):
         await repository.get_download_wot(
             work_package_id=uuid4(),
-            file_id="file-id-1",
+            accession="GHGAF01",
             work_package_access_token=wpat,
         )
 
     with pytest.raises(repository.WorkPackageAccessError):
         await repository.get_download_wot(
             work_package_id=work_package_id,
-            file_id="invalid-file-id",
+            accession="invalid-accession",
             work_package_access_token=wpat,
         )
 
     with pytest.raises(repository.WorkPackageAccessError):
         await repository.get_download_wot(
             work_package_id=work_package_id,
-            file_id="file-id-1",
+            accession="GHGAF01",
             work_package_access_token="invalid-token",
         )
 
+    # Valid args, but the accession map is still absent
+    with pytest.raises(repository.WorkPackageAccessError):
+        wot = await repository.get_download_wot(
+            work_package_id=work_package_id,
+            accession="GHGAF03",
+            work_package_access_token=wpat,
+        )
+
+    # Add the example accession maps, then try again
+    for accession_map in FILE_ACCESSION_MAPS:
+        await repository.store_accession_map(accession_map=accession_map)
+
     wot = await repository.get_download_wot(
         work_package_id=work_package_id,
-        file_id="file-id-3",
+        accession="GHGAF03",
         work_package_access_token=wpat,
     )
     assert wot is not None
@@ -170,7 +182,8 @@ async def test_work_package_and_token_creation(
     assert wot_claims.pop("exp") - wot_claims.pop("iat") == valid_days
     assert wot_claims == {
         "work_type": package.type.value,
-        "file_id": "file-id-3",
+        "file_id": str(FILE_ACCESSION_MAPS[2].file_id),
+        "accession": "GHGAF03",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
     }
 
@@ -178,7 +191,7 @@ async def test_work_package_and_token_creation(
     creation_data = WorkPackageCreationData(
         dataset_id="some-dataset-id",
         type=WorkPackageType.DOWNLOAD,
-        file_ids=["file-id-1", "file-id-3", "non-existing-file"],
+        file_ids=["GHGAF01", "GHGAF03", "non-existing-file"],
         user_public_crypt4gh_key=user_public_crypt4gh_key,
     )
 
@@ -195,20 +208,20 @@ async def test_work_package_and_token_creation(
     with pytest.raises(repository.WorkPackageAccessError):
         await repository.get_download_wot(
             work_package_id=work_package_id,
-            file_id="non-existing-file",
+            accession="non-existing-file",
             work_package_access_token=wpat,
         )
 
     with pytest.raises(repository.WorkPackageAccessError):
         await repository.get_download_wot(
             work_package_id=work_package_id,
-            file_id="file-id-2",
+            accession="GHGAF02",
             work_package_access_token=wpat,
         )
 
     wot = await repository.get_download_wot(
         work_package_id=work_package_id,
-        file_id="file-id-1",
+        accession="GHGAF01",
         work_package_access_token=wpat,
     )
     assert wot is not None
@@ -219,7 +232,8 @@ async def test_work_package_and_token_creation(
     assert wot_claims.pop("exp") - wot_claims.pop("iat") == valid_days
     assert wot_claims == {
         "work_type": package.type.value,
-        "file_id": "file-id-1",
+        "file_id": str(FILE_ACCESSION_MAPS[0].file_id),
+        "accession": "GHGAF01",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
     }
 
@@ -238,7 +252,7 @@ async def test_work_package_and_token_creation(
         with pytest.raises(repository.WorkPackageAccessError):
             await repository.get_download_wot(
                 work_package_id=work_package_id,
-                file_id="file-id-1",
+                accession="GHGAF01",
                 work_package_access_token=wpat,
             )
     finally:
@@ -455,3 +469,38 @@ async def test_get_boxes(
         match="Failed to fetch accessible upload boxes with expiration",
     ):
         await repository.get_upload_boxes(user_id=USER_FOR_ACCESS_CHECK_ERROR)
+
+
+async def test_accession_maps(
+    config: Config, repository: WorkPackageRepository, mongodb: MongoDbFixture
+):
+    """Test storing and deleting accession maps"""
+    collection = mongodb.client[config.db_name][config.accession_maps_collection]
+
+    # First verify nothing is in the collection
+    assert not collection.find().to_list()
+
+    # Store example accession maps
+    for accession_map in FILE_ACCESSION_MAPS:
+        await repository.store_accession_map(accession_map=accession_map)
+
+    # Check the DB again
+    stored_accessions = collection.find().sort("_id").to_list()
+    expected_accessions = FILE_ACCESSION_MAP_DOCS.copy()
+    assert stored_accessions == expected_accessions
+
+    # Repeat the call and verify DB contents are unchanged. Should not raise an error.
+    await repository.store_accession_map(accession_map=FILE_ACCESSION_MAPS[0])
+    stored_accessions = collection.find().sort("_id").to_list()
+    assert stored_accessions == expected_accessions
+
+    # Delete an accession that doesn't exist. Should not raise an error.
+    await repository.delete_accession_map(accession="GHGAF09")
+    stored_accessions = collection.find().sort("_id").to_list()
+    assert stored_accessions == expected_accessions
+
+    # Delete an accession that does exist, then verify that it's no longer in the DB.
+    await repository.delete_accession_map(accession="GHGAF03")
+    stored_accessions = collection.find().sort("_id").to_list()
+    del expected_accessions[-1]
+    assert stored_accessions == expected_accessions

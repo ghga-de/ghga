@@ -28,10 +28,15 @@ from hexkit.providers.akafka import (
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
-from wps.adapters.inbound.event_sub import EventSubTranslator, OutboxSubTranslator
+from wps.adapters.inbound.event_sub import (
+    AccessionMapOutboxTranslator,
+    EventSubTranslator,
+    RDUBOutboxTranslator,
+)
 from wps.adapters.inbound.fastapi_ import dummies
 from wps.adapters.inbound.fastapi_.configure import get_configured_app
 from wps.adapters.outbound.dao import (
+    get_accession_map_dao,
     get_dataset_dao,
     get_upload_box_dao,
     get_work_package_dao,
@@ -61,12 +66,16 @@ async def prepare_core(
         upload_box_dao = await get_upload_box_dao(
             config=config, dao_factory=dao_factory
         )
+        accession_map_dao = await get_accession_map_dao(
+            config=config, dao_factory=dao_factory
+        )
         yield WorkPackageRepository(
             config=config,
             access_check=download_access_checks,
             dataset_dao=dataset_dao,
             upload_box_dao=upload_box_dao,
             work_package_dao=work_package_dao,
+            accession_map_dao=accession_map_dao,
         )
 
 
@@ -136,11 +145,18 @@ async def prepare_consumer(
             work_package_repository=work_package_repository,
             config=config,
         )
-        outbox_sub_translator = OutboxSubTranslator(
+        rdub_outbox_translator = RDUBOutboxTranslator(
+            config=config, work_package_repository=work_package_repository
+        )
+        accession_map_outbox_translator = AccessionMapOutboxTranslator(
             config=config, work_package_repository=work_package_repository
         )
         translator = ComboTranslator(
-            translators=[event_sub_translator, outbox_sub_translator]
+            translators=[
+                event_sub_translator,
+                rdub_outbox_translator,
+                accession_map_outbox_translator,
+            ]
         )
 
         async with (

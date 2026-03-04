@@ -27,7 +27,7 @@ from pytest_httpx import HTTPXMock
 
 from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
 
-pytestmark = pytest.mark.asyncio()
+pytestmark = pytest.mark.asyncio
 
 BASE_ACCESS_URL = "http://test-access:1234"
 DOWNLOAD_ACCESS_URL = f"{BASE_ACCESS_URL}/download-access"

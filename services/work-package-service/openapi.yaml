@@ -78,16 +78,17 @@ components:
       additionalProperties: false
       description: A file as that is part of a dataset.
       properties:
+        accession:
+          description: The file accession.
+          pattern: ^GHGAF.+
+          title: Accession
+          type: string
         extension:
           description: The file extension with a leading dot.
           title: Extension
           type: string
-        id:
-          description: The file ID.
-          title: Id
-          type: string
       required:
-      - id
+      - accession
       - extension
       title: DatasetFile
       type: object
@@ -194,6 +195,7 @@ components:
           title: File Ids
         type:
           $ref: '#/components/schemas/WorkPackageType'
+          description: The work package type
         user_public_crypt4gh_key:
           description: The user's public Crypt4GH key in base64 encoding
           title: User Public Crypt4Gh Key
@@ -254,11 +256,12 @@ components:
           description: IDs of all included files mapped to their file extensions (None
             for upload work packages)
           examples:
-          - file-id-1: .json
-            file-id-2: .csv
+          - GHGAF01: .json
+            GHGAF02: .csv
           title: Files
         type:
           $ref: '#/components/schemas/WorkPackageType'
+          description: The work package type
       required:
       - type
       - created
@@ -279,7 +282,7 @@ components:
 info:
   description: A service managing work packages for the GHGA CLI
   title: Work Package Service
-  version: 7.2.1
+  version: 8.0.0
 openapi: 3.1.0
 paths:
   /health:
@@ -465,7 +468,7 @@ paths:
       tags:
       - WorkPackages
       - upload
-  /work-packages/{work_package_id}/files/{file_id}/work-order-tokens:
+  /work-packages/{work_package_id}/files/{accession}/work-order-tokens:
     post:
       description: Endpoint used to create a work order token for downloading a single
         file
@@ -479,10 +482,10 @@ paths:
           title: Work Package Id
           type: string
       - in: path
-        name: file_id
+        name: accession
         required: true
         schema:
-          title: File Id
+          title: Accession
           type: string
       responses:
         '201':

@@ -45,9 +45,9 @@ from .fixtures import (  # noqa: F401
     non_mocked_hosts,
 )
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
-from .fixtures.datasets import DATASET
+from .fixtures.datasets import DATASET, FILE_ACCESSION_MAPS
 
-pytestmark = pytest.mark.asyncio()
+pytestmark = pytest.mark.asyncio
 
 
 DOWNLOAD_ACCESS_URL = "http://access/download-access"
@@ -55,7 +55,7 @@ UPLOAD_ACCESS_URL = "http://access/upload-access"
 DATASET_CREATION_DATA = {
     "dataset_id": "some-dataset-id",
     "type": "download",
-    "file_ids": ["file-id-1", "file-id-3", "file-id-5"],
+    "file_ids": ["GHGAF01", "GHGAF03", "file-id-5"],
     "user_public_crypt4gh_key": user_public_crypt4gh_key,
 }
 
@@ -165,26 +165,26 @@ async def test_make_download_work_order_token(
     assert response_data.pop("created") < response_data.pop("expires")
     assert response_data == {
         "type": "download",
-        "files": {"file-id-1": ".json", "file-id-3": ".bam"},
+        "files": {"GHGAF01": ".json", "GHGAF03": ".bam"},
         "box_id": None,
     }
 
     # try to get a work order token without authorization
     response = await client.post(
-        f"/work-packages/{work_package_id}/files/file-id-1/work-order-tokens"
+        f"/work-packages/{work_package_id}/files/GHGAF01/work-order-tokens"
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     # try to get a work order token for a non-existing work package with authorization
     response = await client.post(
-        f"/work-packages/{uuid4()}/files/file-id-1/work-order-tokens",
+        f"/work-packages/{uuid4()}/files/GHGAF01/work-order-tokens",
         headers=headers_for_token(token),
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
     # try to get a work order token for a non-requested file with authorization
     response = await client.post(
-        f"/work-packages/{work_package_id}/files/file-id-2/work-order-tokens",
+        f"/work-packages/{work_package_id}/files/GHGAF02/work-order-tokens",
         headers=headers_for_token(token),
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -198,7 +198,7 @@ async def test_make_download_work_order_token(
 
     # get a work order token for an existing file with authorization
     response = await client.post(
-        f"/work-packages/{work_package_id}/files/file-id-3/work-order-tokens",
+        f"/work-packages/{work_package_id}/files/GHGAF03/work-order-tokens",
         headers=headers_for_token(token),
     )
     assert response.status_code == status.HTTP_201_CREATED
@@ -227,7 +227,8 @@ async def test_make_download_work_order_token(
     assert wot_dict.pop("exp") - wot_dict.pop("iat") == 30
     assert wot_dict == {
         "work_type": "download",
-        "file_id": "file-id-3",
+        "file_id": str(FILE_ACCESSION_MAPS[2].file_id),
+        "accession": "GHGAF03",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
     }
 
@@ -240,7 +241,7 @@ async def test_make_download_work_order_token(
 
     # try to fetch a work order token again
     response = await client.post(
-        f"/work-packages/{work_package_id}/files/file-id-3/work-order-tokens",
+        f"/work-packages/{work_package_id}/files/GHGAF03/work-order-tokens",
         headers=headers_for_token(token),
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN

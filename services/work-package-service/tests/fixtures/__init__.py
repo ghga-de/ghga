@@ -31,6 +31,7 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
 
 from wps.adapters.outbound.dao import (
+    get_accession_map_dao,
     get_dataset_dao,
     get_upload_box_dao,
     get_work_package_dao,
@@ -125,12 +126,16 @@ async def fixture_repository(
     )
     upload_box_dao = await get_upload_box_dao(config=config, dao_factory=dao_factory)
     dataset_dao = await get_dataset_dao(config=config, dao_factory=dao_factory)
+    accession_map_dao = await get_accession_map_dao(
+        config=config, dao_factory=dao_factory
+    )
     return WorkPackageRepository(
         config=config,
         access_check=AccessCheckMock(),
         dataset_dao=dataset_dao,
         upload_box_dao=upload_box_dao,
         work_package_dao=work_package_dao,
+        accession_map_dao=accession_map_dao,
     )
 
 
