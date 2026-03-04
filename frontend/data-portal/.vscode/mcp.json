@@ -3,6 +3,10 @@
     "angular-cli": {
       "command": "npx",
       "args": ["@angular/cli", "mcp"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp-server"]
     }
   }
 }

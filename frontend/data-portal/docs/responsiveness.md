@@ -23,7 +23,7 @@ However, some pages share certain features (e.g. dataset summary and dataset det
 This refers to _identical_ elements, rather than similar elements that are styled differently on two different pages (e.g. the dataset description styling in the dataset summary component vs. that in the dataset details page component), which do not necessarily have to have their responsiveness pattern implemented identically.
 An even better solution would be a reusable component, but lacking one, a shared text variable for the element classes, or a simple reimplementation would be necessary.
 Importantly, **responsiveness should not hinder the accessibility of the data portal**.
-All implementation of responsive design should comply with the guidelines set up in [our accessibility document and required regulation mentioned therein](./a11y_semantics.md).
+All implementation of responsive design should comply with the guidelines set up in [our accessibility document and required regulation mentioned therein](./a11y-semantics.md).
 
 For an _exemplary_ application of responsive design, we point to the browse page, in which all the components have complete responsiveness built in, including the dialog for creating a new access request, the search and filters, and the dataset summary.
 

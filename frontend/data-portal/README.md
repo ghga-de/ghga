@@ -221,11 +221,12 @@ To create a clean architecture, the following rules are checked when importing m
 
 ## AI assisted coding
 
-This project is designed to be used with VS Code and GitHub Copilot.
+This project is best supported in VS Code with GitHub Copilot, but tools like Claude Code can also be used.
 
+- `AGENTS.md` is the entrypoint for AI-specific instructions; agents should also follow this `README` and relevant guidance in `docs/`.
 - If you use the Angular CLI MCP server integration (for example via Copilot Chat tools), it can help with Angular-specific guidance and code generation.
 - After updating Angular dependencies, it can be useful to run `MCP: Reset Cached Tools` once so the MCP tool metadata is refreshed for the new Angular/CLI version.
-- Keep `.github/copilot-instructions.md` up to date when you change major tooling (Angular, Angular Material, Tailwind, testing/build scripts), so AI-assisted changes stay consistent with project conventions.
+- Keep `AGENTS.md` up to date when you change major tooling (Angular, Angular Material, Tailwind, testing/build scripts), so AI-assisted changes stay consistent with project conventions.
 
 ## References
 
