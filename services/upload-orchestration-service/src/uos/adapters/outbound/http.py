@@ -320,22 +320,37 @@ class FileBoxClient(FileBoxClientPort):
             log.error(msg, exc_info=True)
             raise self.OperationError(msg) from err
 
-    async def lock_file_upload_box(self, *, box_id: UUID4) -> None:
+    async def lock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Lock a FileUploadBox in the owning service.
 
         Raises:
+            FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
         wot = ChangeFileBoxWorkOrder(work_type="lock", box_id=box_id)
         headers = self._auth_header(wot)
-        body = {"lock": True}
+        body = {"version": version, "state": "locked"}
         response = await self._client.patch(
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
             timeout=HTTPX_TIMEOUT,
         )
-        if response.status_code != 204:
+        if response.status_code == 409:
+            log.error(
+                "Failed to archive FileUploadBox %s because the version specified"
+                + " in the request is out of date.",
+                box_id,
+                extra={
+                    "box_id": box_id,
+                    "version": version,
+                    "response_text": response.text,
+                },
+            )
+            raise self.FUBVersionError(
+                "Requested FileUploadBox version is out of date."
+            )
+        elif response.status_code != 204:
             log.error(
                 "Error locking FileUploadBox ID %s in external service.",
                 box_id,
@@ -346,23 +361,38 @@ class FileBoxClient(FileBoxClientPort):
             )
             raise self.OperationError("Failed to lock FileUploadBox.")
 
-    async def unlock_file_upload_box(self, *, box_id: UUID4) -> None:
+    async def unlock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Unlock a FileUploadBox in the owning service.
 
         Raises:
+            FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
         wot = ChangeFileBoxWorkOrder(work_type="unlock", box_id=box_id)
 
         headers = self._auth_header(wot)
-        body = {"lock": False}
+        body = {"version": version, "state": "open"}
         response = await self._client.patch(
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
             timeout=HTTPX_TIMEOUT,
         )
-        if response.status_code != 204:
+        if response.status_code == 409:
+            log.error(
+                "Failed to archive FileUploadBox %s because the version specified"
+                + " in the request is out of date.",
+                box_id,
+                extra={
+                    "box_id": box_id,
+                    "version": version,
+                    "response_text": response.text,
+                },
+            )
+            raise self.FUBVersionError(
+                "Requested FileUploadBox version is out of date."
+            )
+        elif response.status_code != 204:
             log.error(
                 "Error unlocking FileUploadBox ID %s in external service.",
                 box_id,
@@ -417,7 +447,7 @@ class FileBoxClient(FileBoxClientPort):
         """
         wot = ChangeFileBoxWorkOrder(work_type="archive", box_id=box_id)
         headers = self._auth_header(wot)
-        body = {"version": version}
+        body = {"version": version, "state": "archived"}
         response = await self._client.patch(
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,

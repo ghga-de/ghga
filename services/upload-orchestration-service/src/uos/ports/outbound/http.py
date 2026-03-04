@@ -115,19 +115,21 @@ class FileBoxClientPort(ABC):
         ...
 
     @abstractmethod
-    async def lock_file_upload_box(self, *, box_id: UUID4) -> None:
+    async def lock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Lock a FileUploadBox in the owning service.
 
         Raises:
+            FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
         ...
 
     @abstractmethod
-    async def unlock_file_upload_box(self, *, box_id: UUID4) -> None:
+    async def unlock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Unlock a FileUploadBox in the owning service.
 
         Raises:
+            FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
         ...

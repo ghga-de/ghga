@@ -15,6 +15,7 @@
 
 """Unit tests for the file box client"""
 
+import json
 from uuid import UUID, uuid4
 
 import httpx
@@ -62,13 +63,21 @@ async def test_lock_file_upload_box(
     )
     httpx_mock.add_response(204)
     await file_upload_box_client.lock_file_upload_box(
-        box_id=TEST_BOX_ID
+        box_id=TEST_BOX_ID, version=0
     )  # no error == success
+    assert json.loads(httpx_mock.get_requests()[0].content) == {
+        "version": 0,
+        "state": "locked",
+    }
+
+    httpx_mock.add_response(409, json="Box out of date")
+    with pytest.raises(FileBoxClient.FUBVersionError):
+        await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
 
     # Check off-normal status code
     httpx_mock.add_response(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
-        await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID)
+        await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
 
 
 async def test_unlock_file_upload_box(
@@ -80,13 +89,25 @@ async def test_unlock_file_upload_box(
     )
     httpx_mock.add_response(204)
     await file_upload_box_client.unlock_file_upload_box(
-        box_id=TEST_BOX_ID
+        box_id=TEST_BOX_ID, version=0
     )  # no error == success
+    assert json.loads(httpx_mock.get_requests()[0].content) == {
+        "version": 0,
+        "state": "open",
+    }
+
+    httpx_mock.add_response(409, json="Box out of date")
+    with pytest.raises(FileBoxClient.FUBVersionError):
+        await file_upload_box_client.unlock_file_upload_box(
+            box_id=TEST_BOX_ID, version=0
+        )
 
     # Check off-normal status code
     httpx_mock.add_response(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
-        await file_upload_box_client.unlock_file_upload_box(box_id=TEST_BOX_ID)
+        await file_upload_box_client.unlock_file_upload_box(
+            box_id=TEST_BOX_ID, version=0
+        )
 
 
 async def test_get_file_upload_list(
@@ -131,3 +152,33 @@ async def test_get_file_upload_list(
     httpx_mock.add_response(200, json=[])
     file_list = await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
     assert file_list == []
+
+
+async def test_archive_file_upload_box(
+    config: ConfigFixture, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+):
+    """Test the archive_file_upload_box function"""
+    file_upload_box_client = FileBoxClient(
+        config=config.config, httpx_client=httpx_client
+    )
+    httpx_mock.add_response(204)
+    await file_upload_box_client.archive_file_upload_box(
+        box_id=TEST_BOX_ID, version=0
+    )  # no error == success
+    assert json.loads(httpx_mock.get_requests()[0].content) == {
+        "version": 0,
+        "state": "archived",
+    }
+
+    httpx_mock.add_response(409, json="Box out of date")
+    with pytest.raises(FileBoxClient.FUBVersionError):
+        await file_upload_box_client.archive_file_upload_box(
+            box_id=TEST_BOX_ID, version=0
+        )
+
+    # Check off-normal status code
+    httpx_mock.add_response(500, json="Some error occurred.")
+    with pytest.raises(FileBoxClient.OperationError):
+        await file_upload_box_client.archive_file_upload_box(
+            box_id=TEST_BOX_ID, version=0
+        )
