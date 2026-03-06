@@ -20,7 +20,13 @@ from typing import Annotated
 
 import typer
 
-from dcs.main import consume_events, publish_events, run_outbox_cleanup, run_rest_app
+from dcs.main import (
+    consume_events,
+    migrate_db,
+    publish_events,
+    run_outbox_cleanup,
+    run_rest_app,
+)
 
 cli = typer.Typer()
 
@@ -51,3 +57,9 @@ def sync_run_publish_events(
 ):
     """Publish pending events."""
     asyncio.run(publish_events(all=all))
+
+
+@cli.command(name="migrate-db")
+def sync_migrate_db():
+    """Run database migrations."""
+    asyncio.run(migrate_db())

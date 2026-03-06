@@ -17,6 +17,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 from dcs.core import models
 
 
@@ -42,11 +44,11 @@ class EventPublisherPort(ABC):
         ...
 
     @abstractmethod
-    async def file_registered(self, *, drs_object: models.DrsObjectWithUri) -> None:
+    async def file_registered(self, *, drs_object: models.DrsObject) -> None:
         """Communicates the event that a file has been registered."""
         ...
 
     @abstractmethod
-    async def file_deleted(self, *, file_id: str) -> None:
+    async def file_deleted(self, *, file_id: UUID4) -> None:
         """Communicates the event that a file has been successfully deleted."""
         ...

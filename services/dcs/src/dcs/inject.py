@@ -32,6 +32,8 @@ from dcs.adapters.inbound.fastapi_ import dummies
 from dcs.adapters.inbound.fastapi_.configure import get_configured_app
 from dcs.adapters.outbound.dao import get_drs_dao
 from dcs.adapters.outbound.event_pub import EventPubTranslator
+from dcs.adapters.outbound.http.api_calls import get_configured_httpx_client
+from dcs.adapters.outbound.http.secrets import SecretsClient
 from dcs.config import Config
 from dcs.core.auth_policies import WorkOrderContext
 from dcs.core.data_repository import DataRepository
@@ -74,16 +76,20 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort]:
         get_persistent_publisher(
             config=config, dao_factory=dao_factory
         ) as persistent_pub_provider,
+        get_configured_httpx_client(config=config) as httpx_client,
     ):
         drs_object_dao = await get_drs_dao(dao_factory=dao_factory)
         event_publisher = EventPubTranslator(
             config=config, provider=persistent_pub_provider
         )
 
+        secrets_client = SecretsClient(config=config, httpx_client=httpx_client)
+
         yield DataRepository(
             drs_object_dao=drs_object_dao,
             object_storages=object_storages,
             event_publisher=event_publisher,
+            secrets_client=secrets_client,
             config=config,
         )
 

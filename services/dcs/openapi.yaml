@@ -211,7 +211,7 @@ info:
     \ Object Storage. \n\nThis is an implementation of the DRS standard from the Global\
     \ Alliance for Genomics and Health, please find more information at: https://github.com/ga4gh/data-repository-service-schemas"
   title: Download Controller Service
-  version: 8.1.0
+  version: 9.0.0
 openapi: 3.1.0
 paths:
   /health:
@@ -230,9 +230,9 @@ paths:
   /objects/{object_id}:
     get:
       description: 'Get info about a ``DrsObject``. The object_id parameter refers
-        to the file id
+        to the accession
 
-        and **not** the S3 object id.'
+        and **not** the S3 object id or file id.'
       operationId: getDrsObject
       parameters:
       - in: path
@@ -300,9 +300,9 @@ paths:
         on object id and
 
         URL safe base64 encoded public key. The object_id parameter refers to the
-        file id
+        accession
 
-        and **not** the S3 object id.'
+        and **not** the S3 object id or file id.'
       operationId: getEnvelope
       parameters:
       - in: path

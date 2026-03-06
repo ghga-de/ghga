@@ -29,6 +29,8 @@ from pydantic import Field
 from dcs.adapters.inbound.event_sub import EventSubTranslatorConfig
 from dcs.adapters.inbound.fastapi_.configure import DrsApiConfig
 from dcs.adapters.outbound.event_pub import EventPubTranslatorConfig
+from dcs.adapters.outbound.http.api_calls import HttpClientConfig
+from dcs.adapters.outbound.http.secrets import SecretsClientConfig
 from dcs.constants import SERVICE_NAME
 from dcs.core.data_repository import DataRepositoryConfig
 
@@ -56,6 +58,8 @@ class Config(
     S3ObjectStoragesConfig,
     LoggingConfig,
     OpenTelemetryConfig,
+    SecretsClientConfig,
+    HttpClientConfig,
 ):
     """Config parameters and their defaults."""
 

@@ -17,7 +17,7 @@
 from typing import Literal
 
 from ghga_service_commons.utils.crypt import decode_key
-from pydantic import BaseModel, Field, field_validator
+from pydantic import UUID4, BaseModel, Field, field_validator
 
 
 class WorkOrderContext(BaseModel):
@@ -26,10 +26,15 @@ class WorkOrderContext(BaseModel):
     work_type: Literal["download"] = Field(
         default=..., title="Type", description="Work type"
     )
-    file_id: str = Field(
+    accession: str = Field(
+        default=...,
+        title="Accession",
+        description="The accession assigned to the file that shall be downloaded.",
+    )
+    file_id: UUID4 = Field(
         default=...,
         title="File ID",
-        description="The ID of the file that shall be downloaded or uploaded",
+        description="The ID of the file that shall be downloaded.",
     )
     user_public_crypt4gh_key: str = Field(
         ..., description="Base64 encoded Crypt4GH public key of the user"

@@ -15,7 +15,6 @@
 
 """Adapter for publishing events to other services."""
 
-from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     DownloadServedEventsConfig,
     FileDeletedEventsConfig,
@@ -23,6 +22,7 @@ from ghga_event_schemas.configs import (
     FileStagingRequestedEventsConfig,
 )
 from hexkit.protocols.eventpub import EventPublisherProtocol
+from pydantic import UUID4
 
 from dcs.constants import TRACER
 from dcs.core import models
@@ -55,9 +55,9 @@ class EventPubTranslator(EventPublisherPort):
         self, *, drs_object: models.DrsObject, bucket_id: str
     ):
         """Publish an event to request staging of the corresponding file"""
-        payload = event_schemas.NonStagedFileRequested(
-            s3_endpoint_alias=drs_object.s3_endpoint_alias,
+        payload = models.NonStagedFileRequested(
             file_id=drs_object.file_id,
+            storage_alias=drs_object.storage_alias,
             target_object_id=drs_object.object_id,
             target_bucket_id=bucket_id,
             decrypted_sha256=drs_object.decrypted_sha256,
@@ -67,7 +67,7 @@ class EventPubTranslator(EventPublisherPort):
             payload=payload.model_dump(),
             topic=self._config.files_to_stage_topic,
             type_=self._config.files_to_stage_type,
-            key=drs_object.file_id,
+            key=str(drs_object.file_id),
         )
 
     @TRACER.start_as_current_span("EventPubTranslator.download_served")
@@ -80,11 +80,11 @@ class EventPubTranslator(EventPublisherPort):
         """Communicate the event of a download being served. This can be relevant for
         auditing purposes.
         """
-        payload = event_schemas.FileDownloadServed(
-            s3_endpoint_alias=drs_object.s3_endpoint_alias,
+        payload = models.FileDownloadServed(
             file_id=drs_object.file_id,
-            target_object_id=drs_object.object_id,
+            storage_alias=drs_object.storage_alias,
             target_bucket_id=target_bucket_id,
+            target_object_id=drs_object.object_id,
             decrypted_sha256=drs_object.decrypted_sha256,
             context="unknown",
         )
@@ -93,34 +93,33 @@ class EventPubTranslator(EventPublisherPort):
             payload=payload.model_dump(),
             type_=self._config.download_served_type,
             topic=self._config.download_served_topic,
-            key=drs_object.file_id,
+            key=str(drs_object.file_id),
         )
 
     @TRACER.start_as_current_span("EventPubTranslator.file_registered")
     async def file_registered(self, *, drs_object: models.DrsObjectWithUri) -> None:
         """Communicates the event that a file has been registered."""
-        payload = event_schemas.FileRegisteredForDownload(
+        payload = models.FileRegisteredForDownload(
             file_id=drs_object.file_id,
             decrypted_sha256=drs_object.decrypted_sha256,
-            upload_date=drs_object.creation_date,
-            drs_uri=drs_object.self_uri,
+            archive_date=drs_object.creation_date,
         )
 
         await self._provider.publish(
             payload=payload.model_dump(),
             type_=self._config.file_registered_for_download_type,
             topic=self._config.file_registered_for_download_topic,
-            key=drs_object.file_id,
+            key=str(drs_object.file_id),
         )
 
     @TRACER.start_as_current_span("EventPubTranslator.file_deleted")
-    async def file_deleted(self, *, file_id: str) -> None:
+    async def file_deleted(self, *, file_id: UUID4) -> None:
         """Communicates the event that a file has been successfully deleted."""
-        payload = event_schemas.FileDeletionSuccess(file_id=file_id)
+        payload = models.FileDeletionSuccess(file_id=file_id)
 
         await self._provider.publish(
             payload=payload.model_dump(),
             type_=self._config.file_deleted_type,
             topic=self._config.file_deleted_topic,
-            key=file_id,
+            key=str(file_id),
         )

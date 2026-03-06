@@ -29,9 +29,8 @@ class DataRepositoryPort(ABC):
     class APICommunicationError(RuntimeError):
         """Raised when communication with external API fails due to connection issues"""
 
-        def __init__(self, *, api_url: str):
-            message = f"Failed to communicate with API at {api_url}"
-            super().__init__(message)
+        def __init__(self):
+            super().__init__("Failed to communicate with the Secrets API")
 
     class CleanupError(RuntimeError):
         """
@@ -44,17 +43,17 @@ class DataRepositoryPort(ABC):
             super().__init__(message)
 
     class DrsObjectNotFoundError(RuntimeError):
-        """Raised when no DRS object was found with the specified DRS ID."""
+        """Raised when no DRS object was found corresponding to the given file ID."""
 
-        def __init__(self, *, drs_id: str):
-            message = f"No DRS object with the following ID exists: {drs_id}"
+        def __init__(self, *, file_id: UUID4):
+            message = f"No DRS object corresponding to the following file ID exists: {file_id}"
             super().__init__(message)
 
     class EnvelopeNotFoundError(RuntimeError):
         """Raised when an envelope for a given download was not found"""
 
-        def __init__(self, *, object_id: UUID4):
-            message = f"Envelope not found for object {object_id}"
+        def __init__(self, *, file_id: UUID4):
+            message = f"Envelope not found for file {file_id}."
             super().__init__(message)
 
     class RetryAccessLaterError(RuntimeError):
@@ -92,7 +91,9 @@ class DataRepositoryPort(ABC):
             super().__init__(message)
 
     @abstractmethod
-    async def access_drs_object(self, *, drs_id: str) -> models.DrsObjectResponseModel:
+    async def access_drs_object(
+        self, *, accession: str, file_id: UUID4
+    ) -> models.DrsObjectResponseModel:
         """
         Serve the specified DRS object with access information.
         If it does not exists in the outbox, yet, a RetryAccessLaterError is raised that
@@ -124,7 +125,7 @@ class DataRepositoryPort(ABC):
         ...
 
     @abstractmethod
-    async def serve_envelope(self, *, drs_id: str, public_key: str) -> str:
+    async def serve_envelope(self, *, file_id: UUID4, public_key: str) -> str:
         """
         Retrieve envelope for the object with the given DRS ID
 
@@ -133,12 +134,12 @@ class DataRepositoryPort(ABC):
         ...
 
     @abstractmethod
-    async def delete_file(self, *, file_id: str) -> None:
-        """Deletes a file from the outbox storage, the internal database and the
-        corresponding secret from the secrets store.
-        If no file or secret with that id exists, do nothing.
+    async def delete_file(self, *, file_id: UUID4) -> None:
+        """Delete a file from the download bucket and database, and the corresponding
+        secret from the secrets store. If no file or secret with that id exists,
+        does nothing.
 
         Args:
-            file_id: id for the file to delete.
+            file_id: The UUID4 used to identify the file to delete.
         """
         ...

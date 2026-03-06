@@ -72,17 +72,17 @@ class EventSubTranslator(EventSubscriberProtocol):
     async def _consume_files_to_register(self, *, payload: JsonObject) -> None:
         """Consume file registration events."""
         validated_payload = get_validated_payload(
-            payload=payload, schema=event_schemas.FileInternallyRegistered
+            payload=payload, schema=models.FileInternallyRegistered
         )
 
         file = models.DrsObjectBase(
             file_id=validated_payload.file_id,
-            decryption_secret_id=validated_payload.decryption_secret_id,
+            secret_id=validated_payload.secret_id,
             decrypted_sha256=validated_payload.decrypted_sha256,
             decrypted_size=validated_payload.decrypted_size,
             encrypted_size=validated_payload.encrypted_size,
-            creation_date=validated_payload.upload_date,
-            s3_endpoint_alias=validated_payload.s3_endpoint_alias,
+            creation_date=validated_payload.archive_date,
+            storage_alias=validated_payload.storage_alias,
         )
 
         await self._data_repository.register_new_file(file=file)

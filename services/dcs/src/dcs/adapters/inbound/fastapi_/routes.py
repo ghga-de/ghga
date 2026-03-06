@@ -103,16 +103,18 @@ async def get_drs_object(
     config: dummies.DataRepoConfigDependency,
 ):
     """
-    Get info about a ``DrsObject``. The object_id parameter refers to the file id
-    and **not** the S3 object id.
+    Get info about a ``DrsObject``. The object_id parameter refers to the accession
+    and **not** the S3 object id or file id.
     """
-    if not work_order_context.file_id == object_id:
+    if not work_order_context.accession == object_id:
         raise http_exceptions.HttpWrongFileAuthorizationError()
 
     expires_after = config.presigned_url_expires_after
     cache_control_header = {"Cache-Control": f"max-age={expires_after}, private"}
     try:
-        drs_object = await data_repository.access_drs_object(drs_id=object_id)
+        drs_object = await data_repository.access_drs_object(
+            accession=object_id, file_id=work_order_context.file_id
+        )
         return Response(
             content=drs_object.model_dump_json(), headers=cache_control_header
         )
@@ -157,17 +159,17 @@ async def get_envelope(
 ):
     """
     Retrieve the base64 encoded envelope for a given object based on object id and
-    URL safe base64 encoded public key. The object_id parameter refers to the file id
-    and **not** the S3 object id.
+    URL safe base64 encoded public key. The object_id parameter refers to the accession
+    and **not** the S3 object id or file id.
     """
-    if not work_order_context.file_id == object_id:
+    if not work_order_context.accession == object_id:
         raise http_exceptions.HttpWrongFileAuthorizationError()
 
     public_key = work_order_context.user_public_crypt4gh_key
 
     try:
         envelope = await data_repository.serve_envelope(
-            drs_id=object_id, public_key=public_key
+            file_id=work_order_context.file_id, public_key=public_key
         )
     except data_repository.DrsObjectNotFoundError as object_not_found_error:
         raise http_exceptions.HttpObjectNotFoundError(

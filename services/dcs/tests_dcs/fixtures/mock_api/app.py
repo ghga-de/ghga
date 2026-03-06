@@ -53,7 +53,7 @@ router = MockRouter(httpy_exception_handler)
 
 
 @router.get(
-    "/secrets/{secret_id}/envelopes/{receiver_public_key}",
+    "/ekss/secrets/{secret_id}/envelopes/{receiver_public_key}",
 )
 def ekss_get_envelope_mock(secret_id: str, receiver_public_key: str):
     """Mock API call to the EKSS to get the envelope"""
@@ -70,7 +70,7 @@ def ekss_get_envelope_mock(secret_id: str, receiver_public_key: str):
     return httpx.Response(status_code=status.HTTP_200_OK, json={"content": envelope})
 
 
-@router.delete("/secrets/{secret_id}")
+@router.delete("/ekss/secrets/{secret_id}")
 def ekss_delete_secret_mock(secret_id: str):
     """Mock API call to the EKSS to delete file secret"""
     valid_secret = "some-secret"

@@ -21,6 +21,7 @@ from typing import TypeAlias
 from ghga_service_commons.utils import jwt_helpers
 from ghga_service_commons.utils.crypt import encode_key, generate_key_pair
 from jwcrypto.jwk import JWK
+from pydantic import UUID4
 
 from dcs.core import auth_policies
 
@@ -32,7 +33,8 @@ SignedToken: TypeAlias = str
 
 def generate_work_order_token(
     *,
-    file_id: str,
+    file_id: UUID4,
+    accession: str,
     jwk: JWK,
     valid_seconds: int = 30,
 ) -> SignedToken:
@@ -43,9 +45,10 @@ def generate_work_order_token(
     wot = auth_policies.WorkOrderContext(
         work_type="download",
         file_id=file_id,
+        accession=accession,
         user_public_crypt4gh_key=user_pubkey,
     )
-    claims = wot.model_dump()
+    claims = wot.model_dump(mode="json")
 
     signed_token = jwt_helpers.sign_and_serialize_token(
         claims=claims, key=jwk, valid_seconds=valid_seconds

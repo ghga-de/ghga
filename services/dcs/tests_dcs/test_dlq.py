@@ -22,6 +22,7 @@ import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import KafkaFixture
 
+from dcs.core.models import FileInternallyRegistered
 from dcs.inject import prepare_event_subscriber
 from tests_dcs.fixtures.config import get_config
 from tests_dcs.fixtures.joint import JointFixture
@@ -63,20 +64,18 @@ async def test_consume_from_retry(joint_fixture: JointFixture):
     assert config.kafka_enable_dlq
     outbox_payload = event_schemas.FileDeletionRequested(file_id="123")
     upload_date = datetime.fromisoformat("2025-02-25T16:15:28.148287+00:00")
-    event_payload = event_schemas.FileInternallyRegistered(
+    event_payload = FileInternallyRegistered(
+        file_id=uuid4(),
         bucket_id="test",
-        upload_date=upload_date,
-        file_id="",
-        object_id=uuid4(),
-        s3_endpoint_alias="",
+        archive_date=upload_date,
+        storage_alias="",
         decrypted_size=12345678,
         decrypted_sha256="fake-checksum",
         encrypted_size=123456789,
-        encrypted_part_size=1,
+        part_size=1,
         encrypted_parts_md5=["some", "checksum"],
         encrypted_parts_sha256=["some", "checksum"],
-        content_offset=1234,
-        decryption_secret_id="some-secret",
+        secret_id="some-secret",
     )
 
     # Publish the outbox event

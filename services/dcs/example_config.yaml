@@ -11,6 +11,16 @@ auth_check_claims:
 auth_key: '{}'
 auth_map_claims: {}
 auto_reload: true
+client_exponential_backoff_max: 60
+client_num_retries: 3
+client_reraise_from_retry_error: true
+client_retry_status_codes:
+- 408
+- 429
+- 500
+- 502
+- 503
+- 504
 cors_allow_credentials: false
 cors_allowed_headers: []
 cors_allowed_methods: []
@@ -22,7 +32,7 @@ docs_url: /docs
 download_served_topic: file-downloads
 download_served_type: download_served
 drs_server_uri: drs://localhost:8080/
-ekss_base_url: http://ekss:8080/
+ekss_base_url: http://localhost:8000/ekss
 enable_opentelemetry: false
 file_deleted_topic: file-downloads
 file_deleted_type: file_deleted
@@ -36,7 +46,7 @@ files_to_stage_topic: staging-requests
 files_to_stage_type: file_staging_requested
 generate_correlation_id: true
 host: 127.0.0.1
-http_call_timeout: 3
+http_request_timeout_seconds: 60.0
 kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: true
@@ -69,8 +79,10 @@ object_storages:
 openapi_url: /openapi.json
 otel_trace_sampling_rate: 1.0
 outbox_cache_timeout: 7
+per_request_jitter: 0.0
 port: 8080
 presigned_url_expires_after: 30
+retry_after_applicable_for_num_requests: 1
 retry_after_max: 300
 retry_after_min: 5
 service_instance_id: '001'

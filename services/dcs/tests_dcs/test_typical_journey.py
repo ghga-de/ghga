@@ -15,35 +15,31 @@
 
 """Tests typical user journeys"""
 
-import json
 import logging
 import re
 
 import httpx
 import pytest
 from fastapi import status
-from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3.testutils import FileObject
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from tests_dcs.fixtures.joint import (
-    CleanupFixture,
-    PopulatedFixture,
-)
+from dcs.core.models import FileDownloadServed, NonStagedFileRequested
+from tests_dcs.fixtures.joint import CleanupFixture, PopulatedFixture
 from tests_dcs.fixtures.mock_api.app import router
 from tests_dcs.fixtures.utils import generate_work_order_token
 
-unintercepted_hosts: list[str] = ["localhost"]
+unintercepted_hosts: list[str] = ["localhost", "docker"]
 
-pytestmark = pytest.mark.asyncio()
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.httpx_mock(
+        should_mock=lambda request: request.url.path.startswith("/ekss"),
+    ),
+]
 
 
-@pytest.mark.httpx_mock(
-    assert_all_responses_were_requested=False,
-    can_send_already_matched_responses=True,
-    should_mock=lambda request: request.url.host not in unintercepted_hosts,
-)
 async def test_happy_journey(
     populated_fixture: PopulatedFixture,
     tmp_file: FileObject,
@@ -62,13 +58,14 @@ async def test_happy_journey(
     endpoint_alias = joint_fixture.endpoint_aliases.valid_node
     s3 = joint_fixture.s3
 
-    drs_id = example_file.file_id
-    drs_object = await populated_fixture.mongodb_dao.get_by_id(drs_id)
+    drs_object = await populated_fixture.mongodb_dao.get_by_id(example_file.file_id)
     object_id = drs_object.object_id
 
     # generate work order token
+    accession = "GHGA001"
     work_order_token = generate_work_order_token(
-        file_id=drs_id,
+        file_id=example_file.file_id,
+        accession=accession,
         jwk=joint_fixture.jwk,
         valid_seconds=120,
     )
@@ -82,23 +79,25 @@ async def test_happy_journey(
     # (An check that an event is published indicating that the file is not in
     # outbox yet.)
 
-    non_staged_requested_event = event_schemas.NonStagedFileRequested(
-        s3_endpoint_alias=endpoint_alias,
+    non_staged_requested_event = NonStagedFileRequested(
         file_id=example_file.file_id,
-        target_object_id=object_id,
+        storage_alias=endpoint_alias,
         target_bucket_id=joint_fixture.bucket_id,
+        target_object_id=object_id,
         decrypted_sha256=example_file.decrypted_sha256,
     )
     async with joint_fixture.kafka.expect_events(
         events=[
             ExpectedEvent(
-                payload=json.loads(non_staged_requested_event.model_dump_json()),
+                payload=non_staged_requested_event.model_dump(mode="json"),
                 type_=joint_fixture.config.files_to_stage_type,
             )
         ],
         in_topic=joint_fixture.config.files_to_stage_topic,
     ):
-        response = await joint_fixture.rest_client.get(f"/objects/{drs_id}", timeout=5)
+        response = await joint_fixture.rest_client.get(
+            f"/objects/{accession}", timeout=5
+        )
     assert response.status_code == status.HTTP_202_ACCEPTED
     assert "Cache-Control" in response.headers
     assert response.headers["Cache-Control"] == "no-store"
@@ -118,25 +117,27 @@ async def test_happy_journey(
     await s3.populate_file_objects([file_object])
 
     # retry the access request:
-    # (An check that an event is published indicating that a download was served.)
-    download_served_event = event_schemas.FileDownloadServed(
-        s3_endpoint_alias=endpoint_alias,
+    # (And check that an event is published indicating that a download was served.)
+    download_served_event = FileDownloadServed(
         file_id=example_file.file_id,
-        target_object_id=object_id,
+        storage_alias=endpoint_alias,
         target_bucket_id=joint_fixture.bucket_id,
+        target_object_id=object_id,
         decrypted_sha256=example_file.decrypted_sha256,
         context="unknown",
     )
     async with joint_fixture.kafka.expect_events(
         events=[
             ExpectedEvent(
-                payload=json.loads(download_served_event.model_dump_json()),
+                payload=download_served_event.model_dump(mode="json"),
                 type_=joint_fixture.config.download_served_type,
             )
         ],
         in_topic=joint_fixture.config.download_served_topic,
     ):
-        drs_object_response = await joint_fixture.rest_client.get(f"/objects/{drs_id}")
+        drs_object_response = await joint_fixture.rest_client.get(
+            f"/objects/{accession}"
+        )
 
     # Verify that the response contains the expected cache-control headers
     assert "Cache-Control" in drs_object_response.headers
@@ -147,12 +148,12 @@ async def test_happy_journey(
     # download file bytes:
     presigned_url = drs_object_response.json()["access_methods"][0]["access_url"]["url"]
     unintercepted_hosts.append(httpx.URL(presigned_url).host)
-    dowloaded_file = httpx.get(presigned_url, timeout=5)
-    dowloaded_file.raise_for_status()
-    assert dowloaded_file.content == file_object.content
+    downloaded_file = httpx.get(presigned_url, timeout=5)
+    downloaded_file.raise_for_status()
+    assert downloaded_file.content == file_object.content
 
     response = await joint_fixture.rest_client.get(
-        f"/objects/{drs_id}/envelopes", timeout=5
+        f"/objects/{accession}/envelopes", timeout=5
     )
     assert response.status_code == status.HTTP_200_OK
     assert "Cache-Control" in response.headers
@@ -164,16 +165,13 @@ async def test_happy_journey(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
     response = await joint_fixture.rest_client.get(
-        f"/objects/{drs_id}/envelopes",
+        f"/objects/{accession}/envelopes",
         timeout=5,
         headers={"Authorization": "Bearer invalid"},
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.httpx_mock(
-    assert_all_responses_were_requested=False, can_send_already_matched_responses=True
-)
 async def test_happy_deletion(
     populated_fixture: PopulatedFixture,
     tmp_file: FileObject,
@@ -182,14 +180,14 @@ async def test_happy_deletion(
     """Simulates a typical, successful journey for file deletion."""
     joint_fixture = populated_fixture.joint_fixture
 
-    # explicitly handle ekss API calls (and name unintercepted hosts above)
+    # explicitly handle ekss API calls
     httpx_mock.add_callback(
         callback=router.handle_request,
         url=re.compile(rf"^{joint_fixture.config.ekss_base_url}.*"),
     )
 
-    drs_id = populated_fixture.example_file.file_id
-    drs_object = await populated_fixture.mongodb_dao.get_by_id(drs_id)
+    file_id = populated_fixture.example_file.file_id
+    drs_object = await populated_fixture.mongodb_dao.get_by_id(file_id)
     object_id = str(drs_object.object_id)
 
     # place example content in the outbox bucket:
@@ -207,13 +205,13 @@ async def test_happy_deletion(
     async with joint_fixture.kafka.expect_events(
         events=[
             ExpectedEvent(
-                payload={"file_id": drs_id},
+                payload={"file_id": file_id},
                 type_=joint_fixture.config.file_deleted_type,
             )
         ],
         in_topic=joint_fixture.config.file_deleted_topic,
     ):
-        await data_repository.delete_file(file_id=drs_id)
+        await data_repository.delete_file(file_id=file_id)
 
     assert not await joint_fixture.s3.storage.does_object_exist(
         bucket_id=joint_fixture.bucket_id,

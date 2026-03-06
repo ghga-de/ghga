@@ -97,6 +97,71 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "client_exponential_backoff_max": {
+      "default": 60,
+      "description": "Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly.",
+      "minimum": 0,
+      "title": "Client Exponential Backoff Max",
+      "type": "integer"
+    },
+    "client_num_retries": {
+      "default": 3,
+      "description": "Number of times to retry failed API calls.",
+      "minimum": 0,
+      "title": "Client Num Retries",
+      "type": "integer"
+    },
+    "client_retry_status_codes": {
+      "default": [
+        408,
+        429,
+        500,
+        502,
+        503,
+        504
+      ],
+      "description": "List of status codes that should trigger retrying a request.",
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Client Retry Status Codes",
+      "type": "array"
+    },
+    "client_reraise_from_retry_error": {
+      "default": true,
+      "description": "Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is.",
+      "title": "Client Reraise From Retry Error",
+      "type": "boolean"
+    },
+    "per_request_jitter": {
+      "default": 0.0,
+      "description": "Max amount of jitter (in seconds) to add to each request.",
+      "minimum": 0,
+      "title": "Per Request Jitter",
+      "type": "number"
+    },
+    "retry_after_applicable_for_num_requests": {
+      "default": 1,
+      "description": "Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession.",
+      "exclusiveMinimum": 0,
+      "title": "Retry After Applicable For Num Requests",
+      "type": "integer"
+    },
+    "http_request_timeout_seconds": {
+      "default": 60.0,
+      "description": "Request timeout setting in seconds.",
+      "title": "Http Request Timeout Seconds",
+      "type": "number"
+    },
+    "ekss_base_url": {
+      "description": "URL containing host and port of the EKSS endpoint to retrieve personalized envelope from",
+      "examples": [
+        "http://ekss:8080/"
+      ],
+      "title": "EKSS base URL",
+      "type": "string"
+    },
     "enable_opentelemetry": {
       "default": false,
       "description": "If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation.",
@@ -521,14 +586,6 @@
       "title": "Maximum retry time in seconds when staging",
       "type": "integer"
     },
-    "ekss_base_url": {
-      "description": "URL containing host and port of the EKSS endpoint to retrieve personalized envelope from",
-      "examples": [
-        "http://ekss:8080/"
-      ],
-      "title": "EKSS base URL",
-      "type": "string"
-    },
     "presigned_url_expires_after": {
       "description": "Expiration time in seconds for presigned URLS. Positive integer required",
       "examples": [
@@ -537,18 +594,6 @@
       ],
       "exclusiveMinimum": 0,
       "title": "Presigned URL expiration time in seconds",
-      "type": "integer"
-    },
-    "http_call_timeout": {
-      "default": 3,
-      "description": "Time in seconds after which http calls from this service should timeout",
-      "examples": [
-        1,
-        5,
-        60
-      ],
-      "exclusiveMinimum": 0,
-      "title": "Http Call Timeout",
       "type": "integer"
     },
     "outbox_cache_timeout": {
@@ -763,6 +808,7 @@
     }
   },
   "required": [
+    "ekss_base_url",
     "service_instance_id",
     "object_storages",
     "file_deletion_request_topic",
@@ -783,7 +829,6 @@
     "db_version_collection",
     "migration_wait_sec",
     "drs_server_uri",
-    "ekss_base_url",
     "presigned_url_expires_after",
     "auth_key"
   ],

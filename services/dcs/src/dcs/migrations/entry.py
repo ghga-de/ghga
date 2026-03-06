@@ -46,6 +46,6 @@ async def run_db_migrations(
     async with MigrationManager(
         config=config,
         target_version=target_version,
-        migration_map=MIGRATION_MAP,
+        migration_map=migration_map,
     ) as mm:
         await mm.migrate_or_wait()

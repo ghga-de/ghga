@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Database migration logic for DCS"""
+"""Migration Definition for moving to DB version 2"""
 
 from uuid import UUID, uuid4
 

@@ -23,7 +23,7 @@ object_storages:
 mongo_dsn: "mongodb://mongodb:27017"
 db_name: "dev"
 
-ekss_base_url: http://ekss:8080/
+ekss_base_url: http://localhost:8000/ekss
 
 service_instance_id: "001"
 kafka_servers: ["kafka:9092"]
