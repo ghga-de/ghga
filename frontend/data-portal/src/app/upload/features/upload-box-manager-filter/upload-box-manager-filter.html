@@ -1,0 +1,97 @@
+@if (showFilter()) {
+  <div class="col-span-12 lg:hidden">
+    <button
+      mat-stroked-button
+      class="button-primary w-full font-bold"
+      (click)="displayFilters = !displayFilters"
+    >
+      <mat-icon fontIcon="filter_alt"></mat-icon>
+      @if (displayFilters) {
+        Close filters
+      } @else {
+        Filter upload boxes
+      }
+    </button>
+  </div>
+  <aside [class.hidden]="!displayFilters" class="mt-4 lg:block">
+    <mat-card appearance="outlined" class="max-w-[1800px] overflow-x-auto">
+      <mat-card-content class="min-w-sm">
+        <div class="flex gap-4">
+          <div class="hidden sm:block">
+            <mat-icon
+              aria-label="Filter"
+              class="large-icon"
+              fontIcon="filter_alt"
+            ></mat-icon>
+          </div>
+          <div class="grid grow grid-cols-1 gap-2 gap-x-8 lg:grid-cols-3">
+            <div class="flex items-baseline gap-2">
+              <mat-form-field class="grow">
+                <mat-label>Upload box title</mat-label>
+                <input matInput type="text" [(ngModel)]="title" />
+              </mat-form-field>
+              <button
+                mat-icon-button
+                aria-label="Remove filter for upload box title"
+                [class.invisible]="!this.title()"
+                (click)="this.title.set('')"
+              >
+                <mat-icon fontIcon="cancel"></mat-icon>
+              </button>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <mat-form-field class="grow">
+                <mat-label>
+                  @if (state()) {
+                    State
+                  } @else {
+                    All states
+                  }
+                </mat-label>
+                <mat-select [(ngModel)]="state">
+                  <mat-option [value]="undefined">All states</mat-option>
+                  @for (opt of stateOptions; track opt) {
+                    <mat-option [value]="opt">{{ opt | CapitalisePipe }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button
+                mat-icon-button
+                aria-label="Remove filter for upload box state"
+                [class.invisible]="!this.state()"
+                (click)="this.state.set(undefined)"
+              >
+                <mat-icon fontIcon="cancel"></mat-icon>
+              </button>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <mat-form-field class="grow">
+                <mat-label>
+                  @if (location()) {
+                    Location
+                  } @else {
+                    All locations
+                  }
+                </mat-label>
+                <mat-select [(ngModel)]="location">
+                  <mat-option [value]="undefined">All locations</mat-option>
+                  @for (opt of locationOptions(); track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button
+                mat-icon-button
+                aria-label="Remove filter for upload box location"
+                [class.invisible]="!this.location()"
+                (click)="this.location.set(undefined)"
+              >
+                <mat-icon fontIcon="cancel"></mat-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </aside>
+}

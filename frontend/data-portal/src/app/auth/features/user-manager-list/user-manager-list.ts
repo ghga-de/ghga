@@ -25,6 +25,7 @@ import { UserExtIdPipe } from '@app/auth/pipes/user-ext-id-pipe';
 import { UserStatusClassPipe } from '@app/auth/pipes/user-status-class-pipe';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
+import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
 
 const DEFAULT_EXT_ID_SUFFIX = '@lifescience-ri.eu';
 
@@ -47,7 +48,7 @@ const DEFAULT_EXT_ID_SUFFIX = '@lifescience-ri.eu';
     UserStatusClassPipe,
     UserExtIdPipe,
   ],
-  providers: [CommonDatePipe],
+  providers: [CommonDatePipe, providePaginatorIntl('Users per page')],
   templateUrl: './user-manager-list.html',
 })
 export class UserManagerListComponent implements AfterViewInit {

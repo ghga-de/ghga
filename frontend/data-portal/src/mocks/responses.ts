@@ -21,6 +21,7 @@ import {
   searchResults,
   storageLabels,
   studyData,
+  uploadBoxes,
   users,
   workPackageResponse,
 } from './data';
@@ -202,6 +203,13 @@ export const responses: { [endpoint: string]: ResponseValue } = {
    */
   // Download metadata for a study
   'GET /api/rts/studies/GHGAS12345678901234': 404,
+
+  /**
+   * UOS API
+   */
+
+  // All upload boxes
+  'GET /api/uos/boxes': uploadBoxes,
 
   /**
    * WKVS API

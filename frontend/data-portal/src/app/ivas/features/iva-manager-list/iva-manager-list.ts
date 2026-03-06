@@ -28,6 +28,7 @@ import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NotificationService } from '@app/shared/services/notification';
+import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
 import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creation-dialog';
 
 /**
@@ -49,7 +50,7 @@ import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creati
     IvaStatePipe,
     RouterLink,
   ],
-  providers: [IvaTypePipe],
+  providers: [IvaTypePipe, providePaginatorIntl('IVAs per page')],
   templateUrl: './iva-manager-list.html',
   styleUrl: './iva-manager-list.scss',
 })

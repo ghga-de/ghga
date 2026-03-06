@@ -47,6 +47,8 @@ Once the server is running, open your browser and navigate to `http://localhost:
 
 By default, this will not use a proxy configuration; the API will be provided via the mock service worker, and the authentication will be faked as well.
 
+The MSW handlers in `src/mocks` intentionally return static responses. We avoid adding complex backend logic to mocks to prevent duplicating server behaviors in the frontend codebase, which can differ or drift over time and produce misleading local test results.
+
 ### API requests & the backend
 
 If you want to test the application against the backend provided by the staging deployment, then run:
@@ -174,6 +176,8 @@ Note that modernizing the unit testing tooling is on the roadmap of the Angular 
 ### End-to-End tests
 
 We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/) for details.
+
+Comprehensive end-to-end tests for real backend behavior are maintained in the separate GHGA archive test bed repository. The e2e tests in this repository focus on frontend behavior and expected API contracts.
 
 - `npm run e2e` - run e2e-tests in headless mode
 - `npm run e2e:headed` - run e2e tests in headed mode

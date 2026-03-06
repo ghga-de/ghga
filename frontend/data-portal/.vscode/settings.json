@@ -44,5 +44,6 @@
   "files.trimFinalNewlines": true,
   "typescript.tsdk": "node_modules/typescript/lib",
   "vitest.nodeExecutable": "",
-  "vitest.cliArguments": ""
+  "vitest.cliArguments": "",
+  "vitest.applyDiagnostic": false
 }

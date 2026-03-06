@@ -14,6 +14,7 @@ interface Config {
   mass_url: string;
   metldata_url: string;
   rts_url: string;
+  uos_url: string;
   wps_url: string;
   wkvs_url: string | null;
   ribbon_text: string;
@@ -132,6 +133,14 @@ export class ConfigService {
    */
   get rtsUrl(): string {
     return sansEndSlash(this.#config.rts_url);
+  }
+
+  /**
+   * Gets the UOS URL from the config object.
+   * @returns the UOS URL sans end slash
+   */
+  get uosUrl(): string {
+    return sansEndSlash(this.#config.uos_url);
   }
 
   /**

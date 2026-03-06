@@ -14,6 +14,7 @@ import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
 import { Study } from '@app/metadata/models/study';
 import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
+import { BoxRetrievalResults, UploadBoxState } from '@app/upload/models/box';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
 
@@ -1037,6 +1038,52 @@ export const datasetInformation: DatasetInformation = {
       sha256_hash: '47b2e5a09936322db4ab1b921847d0f3b83027e0255cd24d7e58c420845286e5',
       size: 87654325,
       storage_alias: 'HD05',
+    },
+  ],
+};
+
+/**
+ * UOS API
+ */
+
+export const uploadBoxes: BoxRetrievalResults = {
+  count: 3,
+  boxes: [
+    {
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+      version: 1,
+      state: UploadBoxState.open,
+      title: 'Research Data Upload Box of John',
+      description: 'Upload box for RNA sequencing files of study GHGAS12345678901234',
+      last_changed: '2025-02-01T09:00:00Z',
+      changed_by: 'doe@test.dev',
+      file_count: 3,
+      size: 123456789,
+      storage_alias: 'TUE01',
+    },
+    {
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+      version: 4,
+      state: UploadBoxState.locked,
+      title: 'Research Data Upload Box of Jane',
+      description: 'Upload box pending data steward review before archival handover',
+      last_changed: '2025-02-02T10:00:00Z',
+      changed_by: 'roe@test.dev',
+      file_count: 12,
+      size: 987654321,
+      storage_alias: 'HD02',
+    },
+    {
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
+      version: 2,
+      state: UploadBoxState.archived,
+      title: 'Research Data Upload Box of Joan',
+      description: 'Archived upload box with finalized metadata and checksum review',
+      last_changed: '2025-02-03T11:00:00Z',
+      changed_by: 'mar@test.dev',
+      file_count: 28,
+      size: 1567890123,
+      storage_alias: 'TUE03',
     },
   ],
 };

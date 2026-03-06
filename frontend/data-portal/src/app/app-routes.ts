@@ -156,6 +156,15 @@ export const routes: Routes = [
       },
     ],
   },
+  {
+    path: 'upload-box-manager',
+    canActivate: [() => inject(AuthService).guardDataSteward()],
+    loadComponent: () =>
+      import('./upload/features/upload-box-manager/upload-box-manager').then(
+        (m) => m.UploadBoxManagerComponent,
+      ),
+    title: 'Upload Box Manager',
+  },
   // routes used in the authentication flows
   {
     path: 'oauth/callback',

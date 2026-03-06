@@ -19,6 +19,7 @@ dins_url: /api/dins
 mass_url: /api/mass
 metldata_url: /api/metldata
 rts_url: /api/rts
+uos_url: /api/uos
 wps_url: /api/wps
 wkvs_url: null
 

@@ -25,6 +25,7 @@ import { AccessGrant } from '@app/access-requests/models/access-requests';
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
+import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
@@ -50,7 +51,7 @@ import {
     MatIconModule,
     RouterLink,
   ],
-  providers: [CommonDatePipe],
+  providers: [CommonDatePipe, providePaginatorIntl('Access grants per page')],
   templateUrl: './access-grant-manager-list.html',
 })
 export class AccessGrantManagerListComponent implements AfterViewInit {

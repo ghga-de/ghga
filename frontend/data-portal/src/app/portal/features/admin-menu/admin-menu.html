@@ -11,6 +11,26 @@
   <ul>
     <li>
       <a
+        [class.active-sub-page]="isUserManagerRoute()"
+        mat-menu-item
+        routerLink="/user-manager"
+        class="mx-1"
+        data-umami-event="Admin Menu User Manager Clicked"
+        ><mat-icon fontIcon="people"></mat-icon> User Manager</a
+      >
+    </li>
+    <li>
+      <a
+        [class.active-sub-page]="isIvaManagerRoute()"
+        mat-menu-item
+        routerLink="/iva-manager"
+        class="mx-1"
+        data-umami-event="Admin Menu IVA Manager Clicked"
+        ><mat-icon fontIcon="contact_mail"></mat-icon> IVA Manager</a
+      >
+    </li>
+    <li>
+      <a
         [class.active-sub-page]="isAccessRequestsManagerRoute()"
         mat-menu-item
         routerLink="/access-request-manager"
@@ -31,22 +51,12 @@
     </li>
     <li>
       <a
-        [class.active-sub-page]="isIvaManagerRoute()"
+        [class.active-sub-page]="isUploadBoxManagerRoute()"
         mat-menu-item
-        routerLink="/iva-manager"
+        routerLink="/upload-box-manager"
         class="mx-1"
-        data-umami-event="Admin Menu IVA Manager Clicked"
-        ><mat-icon fontIcon="contact_mail"></mat-icon> IVA Manager</a
-      >
-    </li>
-    <li>
-      <a
-        [class.active-sub-page]="isUserManagerRoute()"
-        mat-menu-item
-        routerLink="/user-manager"
-        class="mx-1"
-        data-umami-event="Admin Menu User Manager Clicked"
-        ><mat-icon fontIcon="people"></mat-icon> User Manager</a
+        data-umami-event="Admin Menu Upload Box Manager Clicked"
+        ><mat-icon fontIcon="archive"></mat-icon> Upload Box Manager</a
       >
     </li>
   </ul>

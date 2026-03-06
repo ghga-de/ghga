@@ -27,6 +27,7 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 - State: Signals
 - Unit testing: Vitest
 - E2E testing: Playwright
+- API mocking in development: Mock Service Worker (MSW)
 - Lint/format: ESLint/Prettier
 
 ## Repo layout
@@ -34,6 +35,7 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 - `README`: project description
 - `docs`: developer documentation
 - `src/app`: the Angular application code
+- `src/mocks`: MSW handlers with static API/auth responses
 - `tests`: end-to-end tests
 
 ## Repo commands (pnpm)
@@ -51,9 +53,12 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
   - Test framework: Vitest (with Angular TestBed integration via the Angular test builder)
   - But do not run plain `vitest` directly; Angular component tests rely on the Angular test builder.
   - Test syntax: Use `vitest.fn()` for mocks, not `jasmine.createSpy()`.
+  - Run individual tests with `ng test --include FILENAME` / `ng test --filter TESTNAME`.
 - E2E tests (Playwright): `pnpm e2e` / `pnpm e2e:ui` / `pnpm e2e:headed` / `pnpm e2e:debug` / `pnpm e2e:report`
   - Default command for e2e tests is always `pnpm e2e`.
   - Test framework: Playwright
+  - Run individual tests with `playwright test TEST-FILTER`.
+  - You don’t need to start the app manually; Playwright starts it via config in `playwright.config.ts`.
 - Docs: `pnpm docs`
 - README table of contents: `pnpm toc` (updates the region between `<!-- toc -->` and `<!-- tocstop -->`)
 

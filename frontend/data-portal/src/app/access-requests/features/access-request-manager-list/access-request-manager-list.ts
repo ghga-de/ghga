@@ -27,6 +27,7 @@ import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { ConfigService } from '@app/shared/services/config';
+import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
@@ -51,7 +52,7 @@ import {
     MatIconModule,
     RouterLink,
   ],
-  providers: [CommonDatePipe],
+  providers: [CommonDatePipe, providePaginatorIntl('Access requests per page')],
   templateUrl: './access-request-manager-list.html',
 })
 export class AccessRequestManagerListComponent implements AfterViewInit {
