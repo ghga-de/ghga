@@ -19,14 +19,12 @@ import contextlib
 import logging
 import re
 import uuid
-from datetime import timedelta
 from time import perf_counter
 
 from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorages,
-    S3ObjectStoragesConfig,
 )
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
+from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4, Field, PositiveInt, field_validator
@@ -35,6 +33,7 @@ from pydantic_settings import BaseSettings
 from dcs.adapters.outbound.http import exceptions
 from dcs.constants import TRACER
 from dcs.core import models
+from dcs.core.errors import StorageAliasNotConfiguredError
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort
 from dcs.ports.outbound.event_pub import EventPublisherPort
@@ -55,21 +54,21 @@ class DataRepositoryConfig(BaseSettings):
     )
     staging_speed: int = Field(
         default=100,
-        description="When trying to access a DRS object that is not yet in the outbox,"
+        description="When trying to access a DRS object that is not yet in the download bucket,"
         + " assume that this many megabytes can be staged per second.",
         title="Staging speed in MB/s",
         examples=[100, 500],
     )
     retry_after_min: int = Field(
         default=5,
-        description="When trying to access a DRS object that is not yet in the outbox,"
+        description="When trying to access a DRS object that is not yet in the download bucket,"
         + " wait at least this number of seconds before trying again.",
         title="Minimum retry time in seconds when staging",
         examples=[5, 10],
     )
     retry_after_max: int = Field(
         default=300,
-        description="When trying to access a DRS object that is not yet in the outbox,"
+        description="When trying to access a DRS object that is not yet in the download bucket,"
         + " wait at most this number of seconds before trying again.",
         title="Maximum retry time in seconds when staging",
         examples=[30, 300],
@@ -79,13 +78,6 @@ class DataRepositoryConfig(BaseSettings):
         description="Expiration time in seconds for presigned URLS. Positive integer required",
         title="Presigned URL expiration time in seconds",
         examples=[30, 60],
-    )
-    outbox_cache_timeout: int = Field(
-        default=7,
-        description="Time in days since last access after which a file present in the "
-        + "outbox should be unstaged and has to be requested from permanent storage again "
-        + "for the next request.",
-        examples=[7, 30],
     )
 
     @field_validator("drs_server_uri")
@@ -160,8 +152,8 @@ class DataRepository(DataRepositoryPort):
     ) -> models.DrsObjectResponseModel:
         """
         Serve the specified DRS object with access information.
-        If it does not exists in the outbox, yet, a RetryAccessLaterError is raised that
-        instructs to retry the call after a specified amount of time.
+        If it does not exists in the download bucket, yet, a RetryAccessLaterError
+        is raised that instructs to retry the call after a specified amount of time.
         """
         log_extra = {"file_id": file_id, "accession": accession}
         # make sure that metadata for the DRS object exists in the database:
@@ -184,7 +176,7 @@ class DataRepository(DataRepositoryPort):
         try:
             bucket_id, object_storage = self._object_storages.for_alias(storage_alias)
         except KeyError as exc:
-            storage_alias_not_configured = self.StorageAliasNotConfiguredError(
+            storage_alias_not_configured = StorageAliasNotConfiguredError(
                 alias=storage_alias
             )
             log.critical(storage_alias_not_configured, extra=log_extra)
@@ -252,88 +244,6 @@ class DataRepository(DataRepositoryPort):
             drs_server_uri_base=self._config.drs_server_uri,
             accession=accession,
         )
-
-    async def cleanup_outbox_buckets(
-        self,
-        *,
-        object_storages_config: S3ObjectStoragesConfig,
-    ):
-        """Run cleanup task for all outbox buckets configured in the service config."""
-        for storage_alias in object_storages_config.object_storages:
-            await self.cleanup_outbox(storage_alias=storage_alias)
-
-    # TODO: future: Rename references to 'outbox/outbox bucket' as 'download bucket'
-    async def cleanup_outbox(self, *, storage_alias: str):
-        """
-        Check if files present in the outbox have outlived their allocated time and remove
-        all that do.
-        For each file in the outbox, its 'last_accessed' field is checked and compared
-        to the current datetime. If the threshold configured in the outbox_cache_timeout
-        option is met or exceeded, the corresponding file is removed from the outbox.
-        """
-        # Run on demand through CLI, so crashing should be ok if the alias is not configured
-        log.info(
-            f"Starting outbox cleanup for storage identified by alias {storage_alias}."
-        )
-        try:
-            bucket_id, object_storage = self._object_storages.for_alias(storage_alias)
-        except KeyError:
-            storage_alias_not_configured = self.StorageAliasNotConfiguredError(
-                alias=storage_alias
-            )
-            log.critical(storage_alias_not_configured)
-            log.warning(
-                f"Skipping outbox cleanup for storage {storage_alias} as it is not configured."
-            )
-            return
-
-        threshold = now_utc_ms_prec() - timedelta(
-            days=self._config.outbox_cache_timeout
-        )
-
-        # filter to get all files in outbox that should be removed
-        object_ids = [
-            uuid.UUID(x)
-            for x in await object_storage.list_all_object_ids(bucket_id=bucket_id)
-        ]
-        log.debug(
-            f"Retrieved list of deletion candidates for storage '{storage_alias}'"
-        )
-
-        for object_id in object_ids:
-            try:
-                drs_object = await self._drs_object_dao.find_one(
-                    mapping={"object_id": object_id}
-                )
-            except NoHitsFoundError as error:
-                cleanup_error = self.CleanupError(object_id=object_id, from_error=error)
-                log.critical(cleanup_error)
-                log.warning(
-                    f"Object with id {object_id} in storage {storage_alias} not found in database, skipping."
-                )
-                continue
-
-            # only remove file if last access is later than outbox_cache_timeout days ago
-            if drs_object.last_accessed <= threshold:
-                log.info(
-                    f"Deleting object {object_id} from bucket {bucket_id} in storage {storage_alias}."
-                )
-                try:
-                    await object_storage.delete_object(
-                        bucket_id=bucket_id, object_id=str(object_id)
-                    )
-                except (
-                    object_storage.ObjectError,
-                    object_storage.ObjectStorageProtocolError,
-                ) as error:
-                    cleanup_error = self.CleanupError(
-                        object_id=object_id, from_error=error
-                    )
-                    log.critical(cleanup_error)
-                    log.warning(
-                        f"Could not delete object with id {object_id} from storage {storage_alias}."
-                    )
-                    continue
 
     async def register_new_file(self, *, file: models.DrsObjectBase):
         """Register a file as a new DRS Object."""
@@ -433,9 +343,7 @@ class DataRepository(DataRepositoryPort):
         try:
             bucket_id, object_storage = self._object_storages.for_alias(alias)
         except KeyError as exc:
-            storage_alias_not_configured = self.StorageAliasNotConfiguredError(
-                alias=alias
-            )
+            storage_alias_not_configured = StorageAliasNotConfiguredError(alias=alias)
             log.critical(storage_alias_not_configured)
             raise storage_alias_not_configured from exc
 

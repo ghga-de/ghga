@@ -27,6 +27,7 @@ from dcs.adapters.inbound.fastapi_ import (
 )
 from dcs.constants import TRACER
 from dcs.core.auth_policies import WorkOrderContext
+from dcs.core.errors import StorageAliasNotConfiguredError
 from dcs.core.models import DrsObjectResponseModel
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 
@@ -46,7 +47,7 @@ RESPONSES = {
         ),
         "model": http_exceptions.HttpObjectNotFoundError.get_body_model(),
     },
-    "objectNotInOutbox": {
+    "objectNotInDownloadBucket": {
         "description": (
             "The operation is delayed and will continue asynchronously. "
             + "The client should retry this same request after the delay "
@@ -88,7 +89,7 @@ async def health():
     response_model=DrsObjectResponseModel,
     response_description="The DrsObject was found successfully.",
     responses={
-        status.HTTP_202_ACCEPTED: RESPONSES["objectNotInOutbox"],
+        status.HTTP_202_ACCEPTED: RESPONSES["objectNotInDownloadBucket"],
         status.HTTP_403_FORBIDDEN: RESPONSES["wrongFileAuthorizationError"],
         status.HTTP_404_NOT_FOUND: RESPONSES["noSuchObject"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: RESPONSES["internalServerError"],
@@ -120,7 +121,7 @@ async def get_drs_object(
         )
     except data_repository.RetryAccessLaterError as retry_later_error:
         # tell client to retry after 5 minutes
-        response = http_responses.HttpObjectNotInOutboxResponse(
+        response = http_responses.HttpObjectNotInDownloadBucketResponse(
             retry_after=retry_later_error.retry_after
         )
         response.headers["Cache-Control"] = "no-store"
@@ -131,7 +132,7 @@ async def get_drs_object(
             object_id=object_id
         ) from object_not_found_error
 
-    except data_repository.StorageAliasNotConfiguredError as configuration_error:
+    except StorageAliasNotConfiguredError as configuration_error:
         raise http_exceptions.HttpInternalServerError() from configuration_error
 
 

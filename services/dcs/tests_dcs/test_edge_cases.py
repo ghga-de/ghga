@@ -28,6 +28,7 @@ from pydantic import UUID4
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from dcs.core import models
+from dcs.core.errors import StorageAliasNotConfiguredError
 from dcs.ports.outbound.dao import DrsObjectDaoPort
 from tests_dcs.fixtures.joint import EXAMPLE_FILE, JointFixture, PopulatedFixture
 from tests_dcs.fixtures.mock_api.app import router
@@ -139,7 +140,7 @@ async def test_deletion_config_error(
     )
 
     data_repository = storage_unavailable_fixture.joint.data_repository
-    with pytest.raises(data_repository.StorageAliasNotConfiguredError):
+    with pytest.raises(StorageAliasNotConfiguredError):
         await data_repository.delete_file(file_id=storage_unavailable_fixture.file_id)
 
 

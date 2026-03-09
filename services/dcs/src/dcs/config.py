@@ -32,6 +32,7 @@ from dcs.adapters.outbound.event_pub import EventPubTranslatorConfig
 from dcs.adapters.outbound.http.api_calls import HttpClientConfig
 from dcs.adapters.outbound.http.secrets import SecretsClientConfig
 from dcs.constants import SERVICE_NAME
+from dcs.core.bucket_cleanup import BucketCleanupConfig
 from dcs.core.data_repository import DataRepositoryConfig
 
 
@@ -51,6 +52,7 @@ class Config(
     DrsApiConfig,
     WorkOrderTokenConfig,
     DataRepositoryConfig,
+    BucketCleanupConfig,
     MigrationConfig,
     KafkaConfig,
     EventPubTranslatorConfig,

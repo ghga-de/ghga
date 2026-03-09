@@ -22,10 +22,10 @@ described [here](./dcs/core/auth_policies.py).
 All files that can be requested are registered in a MongoDB database owned and
 controlled by this service. Registration of new events happens through a Kafka event.
 
-It serves pre-signed URLs to S3 objects located in a single so-called outbox bucket.
+It serves pre-signed URLs to S3 objects located in a single so-called download bucket.
 If the file is not already in the bucket when the user calls the object endpoint,
-an event is published to request staging the file to the outbox. The staging has to
-be carried out by a different service.
+an event is published to request staging the file to the download bucket. The staging 
+has to be carried out by a different service.
 
 For more details on the events consumed and produced by this service, see the
 configuration.
@@ -557,6 +557,21 @@ The service requires the following configuration parameters:
   ```
 
 
+- <a id="properties/download_bucket_cache_timeout"></a>**`download_bucket_cache_timeout`** *(integer)*: Time in days since last access after which a file present in the download bucket should be unstaged and has to be requested from permanent storage again for the next request. Default: `7`.
+
+
+  Examples:
+
+  ```json
+  7
+  ```
+
+
+  ```json
+  30
+  ```
+
+
 - <a id="properties/drs_server_uri"></a>**`drs_server_uri`** *(string, required)*: The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'.
 
 
@@ -567,7 +582,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/staging_speed"></a>**`staging_speed`** *(integer)*: When trying to access a DRS object that is not yet in the outbox, assume that this many megabytes can be staged per second. Default: `100`.
+- <a id="properties/staging_speed"></a>**`staging_speed`** *(integer)*: When trying to access a DRS object that is not yet in the download bucket, assume that this many megabytes can be staged per second. Default: `100`.
 
 
   Examples:
@@ -582,7 +597,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/retry_after_min"></a>**`retry_after_min`** *(integer)*: When trying to access a DRS object that is not yet in the outbox, wait at least this number of seconds before trying again. Default: `5`.
+- <a id="properties/retry_after_min"></a>**`retry_after_min`** *(integer)*: When trying to access a DRS object that is not yet in the download bucket, wait at least this number of seconds before trying again. Default: `5`.
 
 
   Examples:
@@ -597,7 +612,7 @@ The service requires the following configuration parameters:
   ```
 
 
-- <a id="properties/retry_after_max"></a>**`retry_after_max`** *(integer)*: When trying to access a DRS object that is not yet in the outbox, wait at most this number of seconds before trying again. Default: `300`.
+- <a id="properties/retry_after_max"></a>**`retry_after_max`** *(integer)*: When trying to access a DRS object that is not yet in the download bucket, wait at most this number of seconds before trying again. Default: `300`.
 
 
   Examples:
@@ -624,21 +639,6 @@ The service requires the following configuration parameters:
 
   ```json
   60
-  ```
-
-
-- <a id="properties/outbox_cache_timeout"></a>**`outbox_cache_timeout`** *(integer)*: Time in days since last access after which a file present in the outbox should be unstaged and has to be requested from permanent storage again for the next request. Default: `7`.
-
-
-  Examples:
-
-  ```json
-  7
-  ```
-
-
-  ```json
-  30
   ```
 
 

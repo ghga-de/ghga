@@ -16,10 +16,10 @@ described [here](./dcs/core/auth_policies.py).
 All files that can be requested are registered in a MongoDB database owned and
 controlled by this service. Registration of new events happens through a Kafka event.
 
-It serves pre-signed URLs to S3 objects located in a single so-called outbox bucket.
+It serves pre-signed URLs to S3 objects located in a single so-called download bucket.
 If the file is not already in the bucket when the user calls the object endpoint,
-an event is published to request staging the file to the outbox. The staging has to
-be carried out by a different service.
+an event is published to request staging the file to the download bucket. The staging 
+has to be carried out by a different service.
 
 For more details on the events consumed and produced by this service, see the
 configuration.

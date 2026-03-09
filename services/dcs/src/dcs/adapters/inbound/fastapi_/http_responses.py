@@ -28,10 +28,10 @@ class HttpEnvelopeResponse(JSONResponse):
         super().__init__(content=envelope, status_code=status_code)
 
 
-class HttpObjectNotInOutboxResponse(JSONResponse):
-    """Returned, when a file has not been staged to the outbox yet."""
+class HttpObjectNotInDownloadBucketResponse(JSONResponse):
+    """Returned, when a file has not been staged to the download bucket yet."""
 
-    response_id = "objectNotInOutbox"
+    response_id = "objectNotInDownloadBucket"
 
     def __init__(
         self,

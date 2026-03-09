@@ -12,7 +12,7 @@ staging_speed: 100
 presigned_url_expires_after: 30
 object_storages:
   test:
-    bucket: test-outbox
+    bucket: test-download
     credentials:
       s3_endpoint_url: http://dcs:4566
       s3_access_key_id: test

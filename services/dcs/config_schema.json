@@ -548,6 +548,16 @@
       ],
       "title": "Migration Max Wait Sec"
     },
+    "download_bucket_cache_timeout": {
+      "default": 7,
+      "description": "Time in days since last access after which a file present in the download bucket should be unstaged and has to be requested from permanent storage again for the next request.",
+      "examples": [
+        7,
+        30
+      ],
+      "title": "Download Bucket Cache Timeout",
+      "type": "integer"
+    },
     "drs_server_uri": {
       "description": "The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'.",
       "examples": [
@@ -558,7 +568,7 @@
     },
     "staging_speed": {
       "default": 100,
-      "description": "When trying to access a DRS object that is not yet in the outbox, assume that this many megabytes can be staged per second.",
+      "description": "When trying to access a DRS object that is not yet in the download bucket, assume that this many megabytes can be staged per second.",
       "examples": [
         100,
         500
@@ -568,7 +578,7 @@
     },
     "retry_after_min": {
       "default": 5,
-      "description": "When trying to access a DRS object that is not yet in the outbox, wait at least this number of seconds before trying again.",
+      "description": "When trying to access a DRS object that is not yet in the download bucket, wait at least this number of seconds before trying again.",
       "examples": [
         5,
         10
@@ -578,7 +588,7 @@
     },
     "retry_after_max": {
       "default": 300,
-      "description": "When trying to access a DRS object that is not yet in the outbox, wait at most this number of seconds before trying again.",
+      "description": "When trying to access a DRS object that is not yet in the download bucket, wait at most this number of seconds before trying again.",
       "examples": [
         30,
         300
@@ -594,16 +604,6 @@
       ],
       "exclusiveMinimum": 0,
       "title": "Presigned URL expiration time in seconds",
-      "type": "integer"
-    },
-    "outbox_cache_timeout": {
-      "default": 7,
-      "description": "Time in days since last access after which a file present in the outbox should be unstaged and has to be requested from permanent storage again for the next request.",
-      "examples": [
-        7,
-        30
-      ],
-      "title": "Outbox Cache Timeout",
       "type": "integer"
     },
     "auth_key": {

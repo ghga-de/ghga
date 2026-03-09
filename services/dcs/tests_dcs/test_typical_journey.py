@@ -17,16 +17,24 @@
 
 import logging
 import re
+from datetime import timedelta
+from uuid import uuid4
 
 import httpx
 import pytest
 from fastapi import status
 from hexkit.providers.akafka.testutils import ExpectedEvent
-from hexkit.providers.s3.testutils import FileObject
+from hexkit.providers.s3.testutils import FileObject, temp_file_object
+from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
+from dcs.core import models
+from dcs.core.errors import StorageAliasNotConfiguredError
 from dcs.core.models import FileDownloadServed, NonStagedFileRequested
-from tests_dcs.fixtures.joint import CleanupFixture, PopulatedFixture
+from tests_dcs.fixtures.joint import (
+    CleanupFixture,
+    PopulatedFixture,
+)
 from tests_dcs.fixtures.mock_api.app import router
 from tests_dcs.fixtures.utils import generate_work_order_token
 
@@ -77,7 +85,7 @@ async def test_happy_journey(
 
     # request access to the newly registered file:
     # (An check that an event is published indicating that the file is not in
-    # outbox yet.)
+    # download bucket yet.)
 
     non_staged_requested_event = NonStagedFileRequested(
         file_id=example_file.file_id,
@@ -105,7 +113,7 @@ async def test_happy_journey(
     # the example file is small, so we expect the minimum wait time
     assert retry_after == joint_fixture.config.retry_after_min
 
-    # place the requested file into the outbox bucket (it is not important here that
+    # place the requested file into the download bucket (it is not important here that
     # the file content does not match the announced decrypted_sha256 checksum):
     file_object = tmp_file.model_copy(
         update={
@@ -190,7 +198,7 @@ async def test_happy_deletion(
     drs_object = await populated_fixture.mongodb_dao.get_by_id(file_id)
     object_id = str(drs_object.object_id)
 
-    # place example content in the outbox bucket:
+    # place example content in the download bucket:
     file_object = tmp_file.model_copy(
         update={
             "bucket_id": joint_fixture.bucket_id,
@@ -220,40 +228,140 @@ async def test_happy_deletion(
 
 
 async def test_bucket_cleanup(cleanup_fixture: CleanupFixture, caplog):
-    """Test multiple outbox bucket cleanup handling."""
-    data_repository = cleanup_fixture.joint.data_repository
+    """Test multiple download buckets cleanup handling."""
+    bucket_cleaner = cleanup_fixture.bucket_cleaner
 
-    await data_repository.cleanup_outbox_buckets(
-        object_storages_config=cleanup_fixture.joint.config
+    await bucket_cleaner.cleanup_download_buckets(
+        object_storages_config=cleanup_fixture.config
     )
 
     cached_id = cleanup_fixture.cached_file_id
     expired_id = cleanup_fixture.expired_file_id
-    s3 = cleanup_fixture.joint.s3
+    s3 = cleanup_fixture.s3
 
     # check if object within threshold is still there
     cached_object = await cleanup_fixture.mongodb_dao.get_by_id(cached_id)
     assert await s3.storage.does_object_exist(
-        bucket_id=cleanup_fixture.joint.bucket_id,
+        bucket_id=cleanup_fixture.bucket_id,
         object_id=str(cached_object.object_id),
     )
 
-    # check if expired object has been removed from outbox
+    # check if expired object has been removed from download bucket
     expired_object = await cleanup_fixture.mongodb_dao.get_by_id(expired_id)
     assert not await s3.storage.does_object_exist(
-        bucket_id=cleanup_fixture.joint.bucket_id,
+        bucket_id=cleanup_fixture.bucket_id,
         object_id=str(expired_object.object_id),
     )
 
     with caplog.at_level(logging.ERROR):
-        await data_repository.cleanup_outbox(
-            storage_alias=cleanup_fixture.joint.endpoint_aliases.fake_node
+        await bucket_cleaner.cleanup_download_bucket(
+            storage_alias=cleanup_fixture.endpoint_aliases.fake_node
         )
 
     expected_message = str(
-        data_repository.StorageAliasNotConfiguredError(
-            alias=cleanup_fixture.joint.endpoint_aliases.fake_node
-        )
+        StorageAliasNotConfiguredError(alias=cleanup_fixture.endpoint_aliases.fake_node)
     )
 
     assert expected_message in caplog.records[0].message
+
+
+async def test_bucket_cleanup_dangling_objects(cleanup_fixture: CleanupFixture, caplog):
+    """Test that stale objects in the download bucket with no DB entry are handled.
+
+    Also verifies that objects with DB entries are handled correctly: expired objects
+    (last_accessed beyond the cache timeout) are removed, while objects within the
+    threshold are left in place.
+    """
+    s3 = cleanup_fixture.s3
+    bucket_id = cleanup_fixture.bucket_id
+    bucket_cleaner = cleanup_fixture.bucket_cleaner
+    storage_alias = cleanup_fixture.endpoint_aliases.valid_node
+    timeout_days = cleanup_fixture.config.download_bucket_cache_timeout
+    mongodb_dao = cleanup_fixture.mongodb_dao
+
+    # Object with DB entry, within expiration threshold
+    cached_object_id = uuid4()
+    cached_db_entry = models.AccessTimeDrsObject(
+        file_id=uuid4(),
+        object_id=cached_object_id,
+        decrypted_sha256="0" * 64,
+        creation_date=now_utc_ms_prec(),
+        decrypted_size=1,
+        secret_id="cached-secret",
+        encrypted_size=1,
+        storage_alias=storage_alias,
+        last_accessed=now_utc_ms_prec(),
+    )
+    await mongodb_dao.insert(cached_db_entry)
+    with temp_file_object(bucket_id=bucket_id, object_id=str(cached_object_id)) as f:
+        await s3.populate_file_objects([f])
+
+    # Object with DB entry, beyond expiration threshold
+    expired_object_id = uuid4()
+    expired_db_entry = models.AccessTimeDrsObject(
+        file_id=uuid4(),
+        object_id=expired_object_id,
+        decrypted_sha256="0" * 64,
+        creation_date=now_utc_ms_prec(),
+        decrypted_size=1,
+        secret_id="expired-secret",
+        encrypted_size=1,
+        storage_alias=storage_alias,
+        last_accessed=now_utc_ms_prec() - timedelta(days=timeout_days),
+    )
+    await mongodb_dao.insert(expired_db_entry)
+    with temp_file_object(bucket_id=bucket_id, object_id=str(expired_object_id)) as f:
+        await s3.populate_file_objects([f])
+
+    # Object with no DB entry
+    stale_object_id = uuid4()
+    with temp_file_object(
+        bucket_id=bucket_id,
+        object_id=str(stale_object_id),
+    ) as stale_file:
+        await s3.populate_file_objects([stale_file])
+
+    # first run without remove_dangling_objects
+    with caplog.at_level(logging.WARNING):
+        await bucket_cleaner.cleanup_download_buckets(
+            object_storages_config=cleanup_fixture.config
+        )
+
+    expected_warning = str(
+        bucket_cleaner.CleanupError(
+            object_id=stale_object_id,
+            storage_alias=storage_alias,
+            reason="Object not found in database, skipping.",
+        )
+    )
+    assert any(expected_warning in record.message for record in caplog.records)
+
+    # only expired object must have been removed, cached and dangling remain
+    assert await s3.storage.does_object_exist(
+        bucket_id=bucket_id,
+        object_id=str(cached_object_id),
+    )
+    assert not await s3.storage.does_object_exist(
+        bucket_id=bucket_id,
+        object_id=str(expired_object_id),
+    )
+    assert await s3.storage.does_object_exist(
+        bucket_id=bucket_id,
+        object_id=str(stale_object_id),
+    )
+
+    # second run with remove_dangling_objects
+    await bucket_cleaner.cleanup_download_buckets(
+        object_storages_config=cleanup_fixture.config,
+        remove_dangling_objects=True,
+    )
+
+    # stale object must have been removed, cached object must still be in place
+    assert not await s3.storage.does_object_exist(
+        bucket_id=bucket_id,
+        object_id=str(stale_object_id),
+    )
+    assert await s3.storage.does_object_exist(
+        bucket_id=bucket_id,
+        object_id=str(cached_object_id),
+    )

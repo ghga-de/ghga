@@ -29,6 +29,7 @@ cors_exposed_headers: null
 db_name: dev
 db_version_collection: dcsDbVersions
 docs_url: /docs
+download_bucket_cache_timeout: 7
 download_served_topic: file-downloads
 download_served_type: download_served
 drs_server_uri: drs://localhost:8080/
@@ -78,7 +79,6 @@ object_storages:
       s3_session_token: null
 openapi_url: /openapi.json
 otel_trace_sampling_rate: 1.0
-outbox_cache_timeout: 7
 per_request_jitter: 0.0
 port: 8080
 presigned_url_expires_after: 30

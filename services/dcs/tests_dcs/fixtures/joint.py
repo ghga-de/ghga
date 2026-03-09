@@ -16,6 +16,7 @@
 """Join the functionality of all fixtures for API-level integration testing."""
 
 __all__ = [
+    "CleanupFixture",
     "JointFixture",
     "PopulatedFixture",
     "cleanup_fixture",
@@ -49,7 +50,13 @@ from pydantic import UUID4
 from dcs.adapters.outbound.dao import get_drs_dao
 from dcs.config import Config, WorkOrderTokenConfig
 from dcs.core import models
-from dcs.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
+from dcs.inject import (
+    prepare_cleaner,
+    prepare_core,
+    prepare_event_subscriber,
+    prepare_rest_app,
+)
+from dcs.ports.inbound.bucket_cleanup import BucketCleanerPort
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort
 from tests_dcs.fixtures.config import get_config
@@ -112,7 +119,7 @@ async def joint_fixture(
     # merge configs from different sources with the default one:
     auth_config = WorkOrderTokenConfig(auth_key=auth_key)
 
-    bucket_id = "test-outbox"
+    bucket_id = "test-download"
 
     node_config = S3ObjectStorageNodeConfig(bucket=bucket_id, credentials=s3.config)
     endpoint_aliases = EndpointAliases()
@@ -217,30 +224,44 @@ async def populated_fixture(
 
 @dataclass
 class CleanupFixture:
-    """Fixture for cleanup test with DAO and test files"""
+    """Fixture for download bucket cleanup tests."""
 
+    config: Config
+    bucket_id: str
+    bucket_cleaner: BucketCleanerPort
+    s3: S3Fixture
+    endpoint_aliases: EndpointAliases
     mongodb_dao: DrsObjectDaoPort
-    joint: JointFixture
     cached_file_id: UUID4
     expired_file_id: UUID4
 
 
 @pytest_asyncio.fixture
 async def cleanup_fixture(
-    joint_fixture: JointFixture,
+    mongodb: MongoDbFixture,
+    s3: S3Fixture,
 ) -> AsyncGenerator[CleanupFixture]:
-    """Set up state for and populate CleanupFixture"""
-    # create common db dao to insert test data
-    mongodb_dao = await joint_fixture.mongodb.dao_factory.get_dao(
+    """Self-contained fixture for download bucket cleanup tests."""
+    bucket_id = "test-download"
+
+    endpoint_aliases = EndpointAliases()
+    node_config = S3ObjectStorageNodeConfig(bucket=bucket_id, credentials=s3.config)
+    object_storage_config = S3ObjectStoragesConfig(
+        object_storages={endpoint_aliases.valid_node: node_config}
+    )
+
+    config = get_config(sources=[mongodb.config, object_storage_config])
+
+    await s3.populate_buckets(buckets=[bucket_id])
+
+    # create db dao to insert test data
+    mongodb_dao = await mongodb.dao_factory.get_dao(
         name="drs_objects",
         dto_model=models.AccessTimeDrsObject,
         id_field="file_id",
     )
 
-    s3 = joint_fixture.s3
     file = EXAMPLE_FILE
-
-    # create AccessTimeDrsObjects for valid cached and expired cached file
 
     cached_file_id = uuid4()
     test_file_cached = file.model_copy(deep=True)
@@ -253,7 +274,7 @@ async def cleanup_fixture(
     test_file_expired.file_id = expired_file_id
     test_file_expired.object_id = EXPIRED_OBJECT_ID
     test_file_expired.last_accessed = utc_dates.now_as_utc() - timedelta(
-        days=joint_fixture.config.outbox_cache_timeout
+        days=config.download_bucket_cache_timeout
     )
 
     # populate DB entries
@@ -262,18 +283,23 @@ async def cleanup_fixture(
 
     # populate storage
     with temp_file_object(
-        bucket_id=joint_fixture.bucket_id,
+        bucket_id=bucket_id,
         object_id=str(test_file_cached.object_id),
     ) as cached_file:
         with temp_file_object(
-            bucket_id=joint_fixture.bucket_id,
+            bucket_id=bucket_id,
             object_id=str(test_file_expired.object_id),
         ) as expired_file:
             await s3.populate_file_objects([cached_file, expired_file])
 
-    yield CleanupFixture(
-        mongodb_dao=mongodb_dao,
-        joint=joint_fixture,
-        cached_file_id=cached_file_id,
-        expired_file_id=expired_file_id,
-    )
+    async with prepare_cleaner(config=config) as bucket_cleaner:
+        yield CleanupFixture(
+            config=config,
+            bucket_id=bucket_id,
+            bucket_cleaner=bucket_cleaner,
+            s3=s3,
+            endpoint_aliases=endpoint_aliases,
+            mongodb_dao=mongodb_dao,
+            cached_file_id=cached_file_id,
+            expired_file_id=expired_file_id,
+        )
