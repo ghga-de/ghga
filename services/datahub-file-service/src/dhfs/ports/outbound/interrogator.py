@@ -125,8 +125,9 @@ class InterrogatorPort(ABC):
     ) -> None:
         """Submit an InterrogationReport for a successful interrogation.
 
-        Raises:
-        - May raise errors from the Central API client if report submission fails.
+        Submission errors are logged but not raised; the re-encrypted file is
+        left in the interrogation bucket regardless of outcome so that it is not
+        re-processed with a different secret on the next invocation.
         """
         ...
 
@@ -134,7 +135,7 @@ class InterrogatorPort(ABC):
     async def report_failure(self, *, file_id: UUID4, reason: str) -> None:
         """Submit an InterrogationReport for an unsuccessful interrogation.
 
-        Raises:
-        - May raise errors from the Central API client if report submission fails.
+        Submission errors are logged but not raised so that processing of
+        remaining files in the batch is not interrupted.
         """
         ...

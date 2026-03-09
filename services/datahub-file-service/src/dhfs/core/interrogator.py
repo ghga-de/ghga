@@ -455,8 +455,9 @@ class Interrogator(InterrogatorPort):
     ) -> None:
         """Submit an InterrogationReport for a successful interrogation.
 
-        Raises:
-        - May raise errors from the Central API client if report submission fails.
+        Submission errors are logged but not raised; the re-encrypted file is
+        left in the interrogation bucket regardless of outcome so that it is not
+        re-processed with a different secret on the next invocation.
         """
         report = InterrogationReport(
             file_id=file_id,
@@ -472,21 +473,19 @@ class Interrogator(InterrogatorPort):
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)
-        except CentralClientPort.CentralAPIError:
-            await self._s3_client.remove_file(object_id=str(object_id))
-            log.warning(
-                "Interrogation report submission failed for file %s, so the file"
-                + " was removed from the interrogation bucket. Interrogation will have"
-                + " to be repeated.",
+        except Exception:
+            log.error(
+                "Failed to submit success interrogation report for file %s."
+                + " The re-encrypted file remains in the interrogation bucket.",
                 file_id,
+                exc_info=True,
             )
-            raise
 
     async def report_failure(self, *, file_id: UUID4, reason: str) -> None:
         """Submit an InterrogationReport for an unsuccessful interrogation.
 
-        Raises:
-        - May raise errors from the Central API client if report submission fails.
+        Submission errors are logged but not raised so that processing of
+        remaining files in the batch is not interrupted.
         """
         report = InterrogationReport(
             file_id=file_id,
@@ -495,4 +494,11 @@ class Interrogator(InterrogatorPort):
             passed=False,
             reason=reason,
         )
-        await self._central_client.submit_interrogation_report(report=report)
+        try:
+            await self._central_client.submit_interrogation_report(report=report)
+        except Exception:
+            log.warning(
+                "Failed to submit failure interrogation report for file %s.",
+                file_id,
+                exc_info=True,
+            )

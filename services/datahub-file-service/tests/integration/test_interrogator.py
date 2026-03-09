@@ -24,7 +24,6 @@ from pytest_httpx import HTTPXMock
 
 from dhfs.adapters.outbound.s3 import S3Client
 from dhfs.core.models import FileUpload
-from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
@@ -184,10 +183,11 @@ async def test_report_failure(joint_fixture: JointFixture, httpx_mock: HTTPXMock
 
 
 async def test_api_down_during_report_submission(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock
+    joint_fixture: JointFixture, httpx_mock: HTTPXMock, monkeypatch
 ):
-    """Test to make sure the Interrogator class performs cleanup if the call to
-    the central API to submit the report fails.
+    """Test that a failed report submission does not raise and leaves the
+    re-encrypted file in the interrogation bucket so it is not re-processed
+    with a different secret on the next invocation.
     """
     # Create the inbox bucket
     config = joint_fixture.config
@@ -231,18 +231,24 @@ async def test_api_down_during_report_submission(
 
     # Mock the report submission endpoint to fail (simulating API down)
     url_for_reports = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-    httpx_mock.add_response(url=url_for_reports, status_code=500)
+    httpx_mock.add_response(url=url_for_reports, status_code=503)
 
-    # Attempt to process files - this should fail but handle cleanup
-    with pytest.raises(CentralClientPort.CentralAPIError):
-        await joint_fixture.interrogator.interrogate_new_files()
+    # Generate a known value for the reencrypted object ID so we can check it later
+    interrogation_object_id = uuid4()
 
-    # Verify that the interrogation bucket is empty (cleanup occurred)
+    # Monkeypatch the uuid4 function so it produces the above ID
+    monkeypatch.setattr("dhfs.core.interrogator.uuid4", lambda: interrogation_object_id)
+
+    # Processing should complete without raising despite the failed submission
+    await joint_fixture.interrogator.interrogate_new_files()
+
+    # Verify the re-encrypted file is still in the interrogation bucket
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
     interrogation_files = await s3_client.list_files_in_interrogation_bucket()
 
-    assert interrogation_files == [], (
-        "Interrogation bucket should be empty after failed report submission"
+    assert interrogation_files == [str(interrogation_object_id)], (
+        "Re-encrypted file should remain in the interrogation bucket after a"
+        " failed report submission"
     )
 
 
