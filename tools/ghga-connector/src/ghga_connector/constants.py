@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,5 +22,11 @@ TIMEOUT_LONG = 5 * TIMEOUT + 10
 MAX_PART_NUMBER = 10000
 MAX_RETRIES = 5
 MAX_WAIT_TIME = 60 * 60
-CACHE_MIN_FRESH = 3
 C4GH = ".c4gh"
+CACHE_MIN_FRESH = 3
+DOWNLOAD_URL_LIFESPAN = 60  # 1 minute
+DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - CACHE_MIN_FRESH
+DOWNLOAD_URL_CACHE_SIZE = 250
+UPLOAD_WOT_LIFESPAN = 30  # The WPS default of 30 seconds
+UPLOAD_WOT_CACHE_TIME = UPLOAD_WOT_LIFESPAN - CACHE_MIN_FRESH
+UPLOAD_WOT_CACHE_SIZE = 250

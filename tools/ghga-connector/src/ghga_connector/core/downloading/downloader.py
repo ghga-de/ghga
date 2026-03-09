@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -140,7 +140,12 @@ class Downloader:
         """Retrieve the download URL.
 
         Uses the DownloadClient to get the DRS object from the Download API, then
-        extracts the presigned S3 download URL from the DRS object.
+        extracts the presigned S3 download URL from the DRS object. The DRS object
+        is cached for `DOWNLOAD_URL_CACHE_TIME` seconds. If `bust_cache` is True, then
+        the cached object will be invalidated in order to get a fresh URL.
+
+        Note that Download WOTs are not cached - they are fetched when the URL is
+        refreshed. Thus the reduction in frequency for WPS calls is achieved indirectly.
 
         Raises:
             NoS3AccessMethodError: If the DRS object for the file doesn't have an S3
@@ -149,10 +154,10 @@ class Downloader:
             UnexpectedRetryResponseError: If the file still isn't staged to the download
                 bucket in object storage even though it should be.
         """
+        if bust_cache:
+            self._download_client.get_drs_object.cache_invalidate(self._file_id)
         try:
-            drs_object = await self._download_client.get_drs_object(
-                self._file_id, bust_cache=bust_cache
-            )
+            drs_object = await self._download_client.get_drs_object(self._file_id)
         except exceptions.BadResponseCodeError as err:
             CLIMessageDisplay.failure(
                 f"The request for file {self._file_id} returned an unexpected HTTP status code: {err.response_code}."

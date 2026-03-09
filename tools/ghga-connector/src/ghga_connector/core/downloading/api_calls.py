@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,15 +19,17 @@ import base64
 from typing import Any
 
 import httpx
+from async_lru import alru_cache
 from tenacity import RetryError
 
 from ghga_connector import exceptions
 from ghga_connector.config import get_download_api_url
-from ghga_connector.constants import TIMEOUT_LONG
-from ghga_connector.core.api_calls.utils import (
-    is_service_healthy,
-    modify_headers_for_cache_refresh,
+from ghga_connector.constants import (
+    DOWNLOAD_URL_CACHE_SIZE,
+    DOWNLOAD_URL_CACHE_TIME,
+    TIMEOUT_LONG,
 )
+from ghga_connector.core.api_calls.utils import is_service_healthy
 from ghga_connector.core.work_package import WorkPackageClient
 
 from .structs import RetryResponse
@@ -50,22 +52,25 @@ class DownloadClient:
         self._work_package_client = work_package_client
         self._download_api_url = get_download_api_url()
 
+        # Per-instance cache so each instance (and its event loop) gets its own cache.
+        self.get_drs_object = alru_cache(
+            maxsize=DOWNLOAD_URL_CACHE_SIZE, typed=True, ttl=DOWNLOAD_URL_CACHE_TIME
+        )(self._get_drs_object)
+
     async def _get_drs_object_retrieval_auth_headers(
-        self, *, file_id: str, bust_cache: bool = False
+        self, *, file_id: str
     ) -> httpx.Headers:
         """Fetch work order token and headers to get object storage URL for file download"""
         decrypted_wot = await self._work_package_client.get_download_wot(
-            file_id=file_id, bust_cache=bust_cache
+            file_id=file_id
         )
-        headers = await self._work_package_client.make_auth_headers(decrypted_wot)
-        return headers
+        return await self._work_package_client.make_auth_headers(decrypted_wot)
 
     async def _retrieve_drs_object_using_params(
         self,
         *,
         url: str,
         headers: httpx.Headers,
-        bust_cache: bool = False,
     ) -> RetryResponse | DrsObject:
         """
         Perform a RESTful API call to retrieve a DRS Object from the Download API.
@@ -75,9 +80,6 @@ class DownloadClient:
         should try again. If the file is available for download, the DRS object is
         returned.
         """
-        if bust_cache:
-            modify_headers_for_cache_refresh(headers)
-
         try:
             response: httpx.Response = await self._client.get(
                 url=url,
@@ -162,10 +164,11 @@ class DownloadClient:
                     url=url, response_code=status_code
                 )
 
-    async def get_drs_object(
-        self, file_id: str, *, bust_cache: bool = False
-    ) -> DrsObject | RetryResponse:
+    async def _get_drs_object(self, file_id: str) -> DrsObject | RetryResponse:
         """Gets the DRS object for the requested file ID or possibly a Retry response.
+
+        Results from this method are cached and can be invalidated with:
+        `get_drs_object.cache_invalidate(**kwargs)`
 
         Step 1 - obtain work order token from the Work Package API.
         Step 2 - retrieve the DRS object from the Download API using the work order token.
@@ -176,15 +179,12 @@ class DownloadClient:
         url_to_get_download_url = f"{download_api_url}/objects/{file_id}"
 
         # Obtain work order token (headers) for the calling the Download API
-        headers = await self._get_drs_object_retrieval_auth_headers(
-            file_id=file_id, bust_cache=bust_cache
-        )
+        headers = await self._get_drs_object_retrieval_auth_headers(file_id=file_id)
         try:
             # Call the Download API to get the DRS object
             drs_object = await self._retrieve_drs_object_using_params(
                 url=url_to_get_download_url,
                 headers=headers,
-                bust_cache=bust_cache,
             )
         except exceptions.UnauthorizedAPICallError:
             # Retry the above two steps while explicitly refreshing the cache if we got
@@ -192,12 +192,10 @@ class DownloadClient:
             #  instead of potentially using a cached version of the most recent one.
             headers = await self._get_drs_object_retrieval_auth_headers(
                 file_id=file_id,
-                bust_cache=True,
             )
             drs_object = await self._retrieve_drs_object_using_params(
                 url=url_to_get_download_url,
                 headers=headers,
-                bust_cache=True,
             )
 
         return drs_object

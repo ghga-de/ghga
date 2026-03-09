@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,14 +77,6 @@ class RecordingClient(httpx.AsyncClient):
         response = await method_func(*args, **kwargs)
         self.calls.append(response)
         return response
-
-    def assert_last_call_from_cache(self):
-        """Assert that the last call was from the cache."""
-        assert self.calls[-1].extensions["from_cache"]
-
-    def assert_last_call_not_from_cache(self):
-        """Assert that the last call was not from the cache."""
-        assert not self.calls[-1].extensions["from_cache"]
 
     async def get(self, *args, **kwargs) -> httpx.Response:
         """Record GET calls."""

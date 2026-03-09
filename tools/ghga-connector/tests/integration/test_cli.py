@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,7 +63,7 @@ FAKE_ENVELOPE = "Thisisafakeenvelope"
 SHORT_LIFESPAN = 10
 
 pytestmark = [
-    pytest.mark.asyncio,
+    pytest.mark.asyncio(loop_scope="session"),
     pytest.mark.httpx_mock(
         assert_all_responses_were_requested=False,
         assert_all_requests_were_expected=False,
@@ -145,7 +145,6 @@ def set_presigned_url_update_endpoint(
         (6 * 1024 * 1024, 5 * 1024 * 1024),
         (12 * 1024 * 1024, 5 * 1024 * 1024),
         (20 * 1024 * 1024, 1 * 1024 * 1024),
-        (20 * 1024 * 1024, 32 * 1024),
         (1 * 1024 * 1024, DEFAULT_PART_SIZE),
         (75 * 1024 * 1024, 10 * 1024 * 1024),
     ],

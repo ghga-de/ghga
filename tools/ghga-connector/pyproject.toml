@@ -29,6 +29,7 @@ dependencies = [
     "ghga-service-commons[crypt, transports]>=6.1",
     "hexkit[s3]>=7.1",
     "rich>=14.0, <15",
+    "async-lru >= 2.1.0",
 ]
 
 [project.license]

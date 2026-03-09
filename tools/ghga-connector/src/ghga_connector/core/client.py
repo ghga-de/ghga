@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,28 +16,28 @@
 
 from contextlib import asynccontextmanager
 
-import hishel
 import httpx
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from ghga_service_commons.transports import (
+    AsyncRetryTransport,
     CompositeTransportFactory,
-    cached_ratelimiting_retry_proxies,
+    ratelimiting_retry_proxies,
 )
 
 from ghga_connector.config import get_config
 from ghga_connector.constants import TIMEOUT
 
 
-def get_cache_transport(
+def get_ratelimiting_retry_transport(
     base_transport: httpx.AsyncBaseTransport | None = None,
     limits: httpx.Limits | None = None,
-) -> hishel.AsyncCacheTransport:
-    """Construct an async cache transport with `hishel`.
+) -> AsyncRetryTransport:
+    """Construct an async rate-limiting retry transport.
 
     The `wrapped_transport` parameter can be used for testing to inject, for example,
     an httpx.ASGITransport pointing to a FastAPI app.
     """
-    return CompositeTransportFactory.create_cached_ratelimiting_retry_transport(
+    return CompositeTransportFactory.create_ratelimiting_retry_transport(
         get_config(), base_transport=base_transport, limits=limits
     )
 
@@ -50,8 +50,8 @@ async def async_client():
         max_connections=config.max_concurrent_downloads,
         max_keepalive_connections=config.max_concurrent_downloads,
     )
-    transport = get_cache_transport(limits=limits)
-    proxies = cached_ratelimiting_retry_proxies(config=config, limits=limits)
+    transport = get_ratelimiting_retry_transport(limits=limits)
+    proxies = ratelimiting_retry_proxies(config=config, limits=limits)
     async with httpx.AsyncClient(
         timeout=TIMEOUT, transport=transport, mounts=proxies
     ) as client:

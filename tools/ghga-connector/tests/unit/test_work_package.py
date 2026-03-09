@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,6 @@
 
 """Unit tests for Work Package operations"""
 
-import asyncio
-import base64
 from functools import partial
 
 import crypt4gh.keys
@@ -28,10 +26,8 @@ from ghga_connector import exceptions
 from ghga_connector.core.client import async_client
 from ghga_connector.core.work_package import WorkPackageClient
 from tests.fixtures import set_runtime_test_config  # noqa: F401
-from tests.fixtures.mock_api.app import create_caching_headers
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,
-    RecordingClient,
     mock_work_package_token,
     patch_work_package_functions,  # noqa: F401
 )
@@ -90,47 +86,3 @@ async def test_get_work_package_file_info(
         with pytest.raises(exceptions.InvalidWorkPackageResponseError):
             work_package_client = partial_work_pkg_client()
             response = await work_package_client.get_package_files()
-
-
-async def test_get_work_order_token_caching(
-    monkeypatch,
-    httpx_mock: HTTPXMock,
-    set_runtime_test_config,  # noqa: F811
-    patch_work_package_functions,  # noqa: F811
-):
-    """Test the caching of call to the Work Package API to get a work order token."""
-    # Patch the client to record calls
-    monkeypatch.setattr(
-        "ghga_connector.core.work_package.crypt.decrypt", lambda data, key: "test"
-    )
-    monkeypatch.setattr("ghga_connector.core.client.httpx.AsyncClient", RecordingClient)
-    async with async_client() as client:
-        assert isinstance(client, RecordingClient)
-        work_pkg_client = WorkPackageClient(
-            client=client,
-            my_private_key=SecretBytes(b""),
-            my_public_key=b"",
-        )
-        file_id = "file-id-1"
-        add_httpx_response = partial(
-            httpx_mock.add_response,
-            status_code=201,
-            json=base64.b64encode(b"1234567890" * 5).decode(),
-            headers=create_caching_headers(3),
-        )
-        add_httpx_response()
-        await work_pkg_client.get_download_wot(file_id=file_id)
-
-        # Verify that the call was made
-        assert client.calls
-        client.assert_last_call_not_from_cache()
-
-        # Make same call and verify that the response came from the cache instead
-        await work_pkg_client.get_download_wot(file_id=file_id)
-        client.assert_last_call_from_cache()
-
-        # Wait for the cache entry to expire, then make the call again
-        await asyncio.sleep(1)
-        add_httpx_response()
-        await work_pkg_client.get_download_wot(file_id=file_id)
-        client.assert_last_call_not_from_cache()

@@ -2,44 +2,6 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
-    "client_cache_capacity": {
-      "default": 128,
-      "description": "Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached.",
-      "exclusiveMinimum": 0,
-      "title": "Client Cache Capacity",
-      "type": "integer"
-    },
-    "client_cache_ttl": {
-      "default": 60,
-      "description": "Number of seconds after which a stored response is considered stale.",
-      "minimum": 0,
-      "title": "Client Cache Ttl",
-      "type": "integer"
-    },
-    "client_cacheable_methods": {
-      "default": [
-        "POST",
-        "GET"
-      ],
-      "description": "HTTP methods for which responses are allowed to be cached.",
-      "items": {
-        "type": "string"
-      },
-      "title": "Client Cacheable Methods",
-      "type": "array"
-    },
-    "client_cacheable_status_codes": {
-      "default": [
-        200,
-        201
-      ],
-      "description": "HTTP response status code for which responses are allowed to be cached.",
-      "items": {
-        "type": "integer"
-      },
-      "title": "Client Cacheable Status Codes",
-      "type": "array"
-    },
     "client_exponential_backoff_max": {
       "default": 60,
       "description": "Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly.",

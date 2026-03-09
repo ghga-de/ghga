@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -104,6 +104,8 @@ class UploadClient:
     async def create_file_upload(self, *, file_alias: str, file_size: int) -> UUID4:
         """Contact the Upload API to initiate a new upload for a file alias"""
         box_id = await self._work_package_client.get_package_box_id()
+
+        # Shouldn't need to worry about cache busting here
         create_file_wot = await self._work_package_client.get_upload_wot(
             work_type="create", box_id=box_id, file_id=None, alias=file_alias
         )
@@ -132,13 +134,30 @@ class UploadClient:
         file_id = UUID(response.json())
         return file_id
 
-    async def get_part_upload_url(self, *, file_id: UUID4, part_no: int) -> str:
+    async def get_part_upload_url(
+        self, *, file_id: UUID4, part_no: int, bust_cache: bool = False
+    ) -> str:
         """Get pre-signed S3 upload URL for a specific file part.
+
+        Upload WOTs are cached so that they can be reused for obtaining multiple URLs,
+        but if a 403 is received when trying to get the URL, we'll invalidate the cache
+        and try one more time. If it fails again with 403, we raise an error.
 
         Returns a pre-signed URL that can be used to upload the bytes for the specified
         part number of the specified file upload.
         """
         box_id = await self._work_package_client.get_package_box_id()  # cached
+
+        # Invalidate the upload WOT cache if indicated to do so
+        if bust_cache:
+            log.debug(
+                "Got a 403 when trying to obtain upload URL for part %i,"
+                + " so the upload WOT cache is being invalidated.",
+                part_no,
+            )
+            self._work_package_client.get_upload_wot.cache_invalidate(
+                work_type="upload", box_id=box_id, file_id=file_id, alias=None
+            )
         upload_file_wot = await self._work_package_client.get_upload_wot(
             work_type="upload", box_id=box_id, file_id=file_id, alias=None
         )
@@ -154,7 +173,13 @@ class UploadClient:
             _check_for_request_errors(retry_error, url)
             response = retry_error.last_attempt.result()
 
-        if response.status_code != 200:
+        # If this is the first time getting 403, try to bust cache and redo. Otherwise
+        #  let the class raise an error in _handle_bad_status_codes()
+        if response.status_code == 403 and not bust_cache:
+            return await self.get_part_upload_url(
+                file_id=file_id, part_no=part_no, bust_cache=True
+            )
+        elif response.status_code != 200:
             self._handle_bad_status_codes(
                 status_code=response.status_code,
                 response=response,
@@ -197,6 +222,8 @@ class UploadClient:
     ) -> None:
         """Complete a file upload"""
         box_id = await self._work_package_client.get_package_box_id()  # cached
+
+        # Shouldn't need to worry about cache busting here
         close_file_wot = await self._work_package_client.get_upload_wot(
             work_type="close", box_id=box_id, file_id=file_id, alias=None
         )
@@ -226,6 +253,8 @@ class UploadClient:
     async def delete_file(self, *, file_id: UUID4) -> None:
         """Delete a file upload"""
         box_id = await self._work_package_client.get_package_box_id()  # cached
+
+        # Shouldn't need to worry about cache busting here
         delete_file_wot = await self._work_package_client.get_upload_wot(
             work_type="delete", box_id=box_id, file_id=file_id, alias=None
         )

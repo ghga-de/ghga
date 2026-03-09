@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +41,7 @@ from ghga_service_commons.transports import CompositeCacheConfig
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from pydantic import BaseModel
 
-from ghga_connector.core.client import get_cache_transport
+from ghga_connector.core.client import get_ratelimiting_retry_transport
 
 WORK = "/work"
 UPLOAD = "/upload"
@@ -371,12 +371,12 @@ def get_test_mounts(
     Lets other traffic go out as usual, e.g. to the S3 testcontainer, while still using
     the same caching logic as the real client.
     """
-    mock_app_transport = get_cache_transport(
+    mock_app_transport = get_ratelimiting_retry_transport(
         base_transport=httpx.ASGITransport(app=mock_external_app), limits=limits
     )
     mounts = {
         "all://127.0.0.1": mock_app_transport,  # route traffic to the mock app
-        "all://host.docker.internal": get_cache_transport(
+        "all://host.docker.internal": get_ratelimiting_retry_transport(
             base_transport=base_transport, limits=limits
         ),  # let S3 traffic go out
     }
@@ -387,5 +387,5 @@ def get_test_mounts(
 def mock_external_calls(monkeypatch):
     """Monkeypatch the async_client so it only intercepts calls to the mock app"""
     monkeypatch.setattr(
-        "ghga_connector.core.client.cached_ratelimiting_retry_proxies", get_test_mounts
+        "ghga_connector.core.client.ratelimiting_retry_proxies", get_test_mounts
     )
