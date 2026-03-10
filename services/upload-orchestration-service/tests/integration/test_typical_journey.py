@@ -105,7 +105,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     httpx_mock.add_response(
         method="POST",
         url=f"{access_url}/upload-access/users/{regular_user_id}/ivas/{iva_id}/boxes/{box_id}",
-        status_code=200,
+        status_code=204,
     )
     valid_from = now_utc_ms_prec()
     valid_until = now_utc_ms_prec() + timedelta(days=7)

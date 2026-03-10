@@ -71,7 +71,7 @@ class AccessClient(AccessClientPort):
     """An adapter for interacting with the access API to manage upload access grants"""
 
     def __init__(self, *, config: AccessApiConfig, httpx_client: httpx.AsyncClient):
-        self._access_url = config.access_url
+        self._access_url = str(config.access_url).rstrip("/")
         self._client = httpx_client
 
     async def grant_upload_access(
@@ -98,7 +98,7 @@ class AccessClient(AccessClientPort):
         }
 
         response = await self._client.post(url, json=body, timeout=HTTPX_TIMEOUT)
-        if response.status_code != 200:
+        if response.status_code != 204:
             log.error(
                 "Failed to grant upload access for user %s to box %s.",
                 user_id,
@@ -271,7 +271,7 @@ class FileBoxClient(FileBoxClientPort):
     """
 
     def __init__(self, *, config: FileBoxClientConfig, httpx_client: httpx.AsyncClient):
-        self._ucs_url = config.ucs_url
+        self._ucs_url = str(config.ucs_url).rstrip("/")
         self._client = httpx_client
         self._signing_key = jwk.JWK.from_json(
             config.work_order_signing_key.get_secret_value()
@@ -500,7 +500,7 @@ class AccessionClient(AccessionClientPort):
         self, *, config: AccessionClientConfig, httpx_client: httpx.AsyncClient
     ):
         self._client = httpx_client
-        self._accession_url = config.accession_url
+        self._accession_url = str(config.accession_url).rstrip("/")
         self._signing_key = jwk.JWK.from_json(
             config.work_order_signing_key.get_secret_value()
         )

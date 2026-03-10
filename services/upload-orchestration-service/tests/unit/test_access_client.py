@@ -42,7 +42,7 @@ async def test_grant_upload_access(
     access_client = AccessClient(config=config.config, httpx_client=httpx_client)
 
     # Happy path
-    httpx_mock.add_response(200)
+    httpx_mock.add_response(204)
     await access_client.grant_upload_access(
         user_id=TEST_USER_ID,
         iva_id=TEST_IVA_ID,
