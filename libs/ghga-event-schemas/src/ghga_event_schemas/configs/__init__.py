@@ -15,17 +15,18 @@
 
 """Standardized topic/type configurations for Kafka events"""
 
-from .stateful import (  # noqa: F401
+from .stateful import (
     AccessRequestEventsConfig,
     ArtifactEventsConfig,
     DatasetEventsConfig,
+    FileAccessionMappingEventsConfig,
     FileUploadBoxEventsConfig,
     FileUploadEventsConfig,
     ResearchDataUploadBoxEventsConfig,
     ResourceEventsConfig,
     UserEventsConfig,
 )
-from .stateless import (  # noqa: F401
+from .stateless import (
     AuditEventsConfig,
     DownloadServedEventsConfig,
     FileDeletedEventsConfig,
@@ -38,8 +39,34 @@ from .stateless import (  # noqa: F401
     FileStagedEventsConfig,
     FileStagingRequestedEventsConfig,
     FileUploadReceivedEventsConfig,
-    FileUploadReportEventsConfig,
     IvaChangeEventsConfig,
     NotificationEventsConfig,
     SecondFactorRecreatedEventsConfig,
 )
+
+__all__ = [
+    "AccessRequestEventsConfig",
+    "ArtifactEventsConfig",
+    "AuditEventsConfig",
+    "DatasetEventsConfig",
+    "DownloadServedEventsConfig",
+    "FileAccessionMappingEventsConfig",
+    "FileDeletedEventsConfig",
+    "FileDeletionRequestEventsConfig",
+    "FileInternallyRegisteredEventsConfig",
+    "FileInterrogationFailureEventsConfig",
+    "FileInterrogationSuccessEventsConfig",
+    "FileMetadataEventsConfig",
+    "FileRegisteredForDownloadEventsConfig",
+    "FileStagedEventsConfig",
+    "FileStagingRequestedEventsConfig",
+    "FileUploadBoxEventsConfig",
+    "FileUploadEventsConfig",
+    "FileUploadReceivedEventsConfig",
+    "IvaChangeEventsConfig",
+    "NotificationEventsConfig",
+    "ResearchDataUploadBoxEventsConfig",
+    "ResourceEventsConfig",
+    "SecondFactorRecreatedEventsConfig",
+    "UserEventsConfig",
+]

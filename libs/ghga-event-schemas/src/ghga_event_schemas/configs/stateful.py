@@ -22,6 +22,7 @@ __all__ = [
     "AccessRequestEventsConfig",
     "ArtifactEventsConfig",
     "DatasetEventsConfig",
+    "FileAccessionMappingEventsConfig",
     "FileUploadBoxEventsConfig",
     "FileUploadEventsConfig",
     "ResearchDataUploadBoxEventsConfig",
@@ -118,7 +119,7 @@ class FileUploadBoxEventsConfig(BaseSettings):
     """
 
     file_upload_box_topic: str = Field(
-        ...,
+        default=...,
         description="Topic containing published FileUploadBox outbox events",
         examples=["file-upload-boxes", "file-upload-box-topic"],
     )
@@ -131,7 +132,7 @@ class FileUploadEventsConfig(BaseSettings):
     """
 
     file_upload_topic: str = Field(
-        ...,
+        default=...,
         description="Topic containing published FileUpload outbox events",
         examples=["file-uploads", "file-upload-topic"],
     )
@@ -144,7 +145,20 @@ class ResearchDataUploadBoxEventsConfig(BaseSettings):
     """
 
     research_data_upload_box_topic: str = Field(
-        ...,
+        default=...,
         description="Name of the event topic containing research data upload box events",
         examples=["research-data-upload-boxes"],
+    )
+
+
+class FileAccessionMappingEventsConfig(BaseSettings):
+    """Config for events communicating changes in FileAccessionMappings.
+
+    The event types are hardcoded by `hexkit`.
+    """
+
+    accession_map_topic: str = Field(
+        default=...,
+        description="The name of the topic used for file accession map events",
+        examples=["accession-maps", "file-accession-maps"],
     )

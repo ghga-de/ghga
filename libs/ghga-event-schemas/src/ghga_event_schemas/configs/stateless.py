@@ -31,7 +31,6 @@ __all__ = [
     "FileStagedEventsConfig",
     "FileStagingRequestedEventsConfig",
     "FileUploadReceivedEventsConfig",
-    "FileUploadReportEventsConfig",
     "IvaChangeEventsConfig",
     "NotificationEventsConfig",
     "SecondFactorRecreatedEventsConfig",
@@ -184,6 +183,8 @@ class FileDeletedEventsConfig(BaseSettings):
 
 
 class _FileInterrogationsConfig(BaseSettings):
+    """For events indicating that Data Hub file inspection is complete"""
+
     file_interrogations_topic: str = Field(
         default=...,
         description=(
@@ -201,7 +202,7 @@ class FileInterrogationSuccessEventsConfig(_FileInterrogationsConfig):
         description=(
             "The type used for events informing about successful file validations."
         ),
-        examples=["file_interrogation_success"],
+        examples=["interrogation_success"],
     )
 
 
@@ -213,7 +214,7 @@ class FileInterrogationFailureEventsConfig(_FileInterrogationsConfig):
         description=(
             "The type used for events informing about failed file validations."
         ),
-        examples=["file_interrogation_failed"],
+        examples=["interrogation_failed"],
     )
 
 
@@ -313,21 +314,4 @@ class AuditEventsConfig(BaseSettings):
         default=...,
         description="The type used for events conveying audit record information.",
         examples=["audit_record_logged"],
-    )
-
-
-class FileUploadReportEventsConfig(BaseSettings):
-    """For events indicating that Data Hub file inspection is complete"""
-
-    file_upload_reports_topic: str = Field(
-        ...,
-        description="Name of the topic used for events indicating that a Data Hub"
-        + " has completed re-encryption and inspection of a file.",
-        examples=["file-upload-reports"],
-    )
-    file_upload_reports_type: str = Field(
-        ...,
-        description="The type used for events indicating that a Data Hub has completed"
-        + " re-encryption and inspection of a file.",
-        examples=["file_upload_report_generated", "file_upload_report"],
     )

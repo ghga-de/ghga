@@ -24,7 +24,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field
 
 
 class MetadataDatasetStage(StrEnum):
@@ -124,15 +124,15 @@ class UploadDateModel(BaseModel):
     )
 
 
-class FileIdModel(BaseModel):
-    """Base model for events that contain a file ID."""
+class FileAccessionModel(BaseModel):
+    """Base model for events that contain a file accession."""
 
-    file_id: str = Field(
+    accession: str = Field(
         ..., description="The public ID of the file as present in the metadata catalog."
     )
 
 
-class MetadataSubmissionFiles(FileIdModel):
+class MetadataSubmissionFiles(FileAccessionModel):
     """
     Models files that are associated with or affected by a new or updated metadata
     submission.
@@ -162,167 +162,130 @@ class MetadataSubmissionUpserted(BaseModel):
     model_config = ConfigDict(title="metadata_submission_upserted")
 
 
-class FileUploadReceived(UploadDateModel, FileIdModel):
-    """This event is triggered when a new file upload is received."""
+class InterrogationSuccess(BaseModel):
+    """Event model informing services that file interrogation succeeded."""
 
-    object_id: UUID4 = Field(
-        ..., description="The ID of the file in the specific S3 bucket."
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
+    )
+    secret_id: str | None = Field(
+        default=None,
+        description="The internal ID of the Data Hub-generated decryption secret",
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
     )
     bucket_id: str = Field(
-        ..., description="The ID/name of the S3 bucket used to store the file."
+        default=...,
+        description="The name of the interrogation bucket the file is stored in",
     )
-    s3_endpoint_alias: str = Field(
-        ...,
-        description="Alias for the object storage location where the given object is stored."
-        + "This can be uniquely mapped to an endpoint configuration in the service.",
-    )
-    submitter_public_key: str = Field(
-        ...,
-        description="The public key of the submitter.",
-    )
-    decrypted_size: int = Field(
-        ...,
-        description="The size of the entire decrypted file content in bytes.",
-    )
-    expected_decrypted_sha256: str = Field(
-        ...,
-        description=(
-            "The expected SHA-256 checksum of the entire decrypted file content."
-            + " To be validated."
-        ),
-    )
-    model_config = ConfigDict(title="file_upload_received")
-
-
-class FileUploadValidationSuccess(UploadDateModel, FileIdModel):
-    """This event is triggered when an uploaded file is successfully validated."""
-
     object_id: UUID4 = Field(
-        ..., description="The ID of the file in the specific S3 bucket."
+        default=..., description="The ID of the file specific to its S3 bucket."
     )
-    bucket_id: str = Field(
-        ..., description="The ID/name of the S3 bucket used to store the file."
-    )
-    s3_endpoint_alias: str = Field(
-        ...,
-        description="Alias for the object storage location where the given object is stored."
-        + "This can be uniquely mapped to an endpoint configuration in the service.",
-    )
-    decrypted_size: int = Field(
-        ...,
-        description="The size of the entire decrypted file content in bytes.",
-    )
-    decryption_secret_id: str = Field(
-        ...,
-        description=(
-            "The ID of the symmetric file encryption/decryption secret."
-            + " Please note, this is not the secret itself."
-        ),
-    )
-    content_offset: int = Field(
-        ...,
-        description=(
-            "The offset in bytes at which the encrypted content starts (excluding the"
-            + " crypt4GH envelope)."
-        ),
-    )
-    encrypted_part_size: int = Field(
-        ...,
-        description=(
-            "The size of the file parts of the encrypted content (excluding the"
-            + " crypt4gh envelope) as used for the encrypted_parts_md5 and the"
-            + " encrypted_parts_sha256 in bytes. The same part size is recommended for"
-            + " moving that content."
-        ),
+    interrogated_at: UTCDatetime = Field(
+        default=..., description="Time that the report was generated"
     )
     encrypted_parts_md5: list[str] = Field(
-        ...,
-        description=(
-            "MD5 checksums of file parts of the encrypted content (excluding the"
-            + " crypt4gh envelope)."
-        ),
+        default=..., description="The MD5 checksum for each file part, in sequence"
     )
     encrypted_parts_sha256: list[str] = Field(
-        ...,
-        description=(
-            "SHA-256 checksums of file parts of the encrypted content (excluding the"
-            + " crypt4gh envelope)."
-        ),
+        default=..., description="The SHA256 checksum for each file part, in sequence"
     )
-    decrypted_sha256: str = Field(
-        ...,
-        description="The SHA-256 checksum of the entire decrypted file content.",
+    encrypted_size: int = Field(
+        default=...,
+        description=("The size of the encrypted file content without envelope."),
     )
-    model_config = ConfigDict(title="file_upload_validation_success")
 
 
-class FileUploadValidationFailure(UploadDateModel, FileIdModel):
-    """This event is triggered when an uploaded file failed to validate."""
+class InterrogationFailure(BaseModel):
+    """Event model informing services that file interrogation failed."""
 
-    object_id: UUID4 = Field(
-        ..., description="The ID of the file in the specific S3 bucket."
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
     )
-    bucket_id: str = Field(
-        ...,
-        description="The ID/name of the S3 bucket used to store the file.",
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
     )
-    s3_endpoint_alias: str = Field(
-        ...,
-        description="Alias for the object storage location where the given object is stored."
-        + "This can be uniquely mapped to an endpoint configuration in the service.",
+    interrogated_at: UTCDatetime = Field(
+        default=..., description="Time that the report was generated"
     )
     reason: str = Field(
-        ...,
-        description="The reason why the validation failed.",
+        default=...,
+        description="The text of the error that caused interrogation to fail",
     )
-    model_config = ConfigDict(title="file_upload_validation_failure")
 
 
-class FileInternallyRegistered(FileUploadValidationSuccess):
-    """This event is triggered when an newly uploaded file is internally registered."""
+class FileInternallyRegistered(BaseModel):
+    """An event schema communicating that a file has been copied into permanent storage."""
 
+    file_id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    archive_date: UTCDatetime = Field(
+        ...,
+        description="The date and time when this file was archived.",
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    bucket_id: str = Field(
+        ..., description="The ID/name of the S3 bucket used to store the file."
+    )
+    secret_id: str = Field(
+        default=..., description="The ID of the file decryption secret."
+    )
+    decrypted_size: int = Field(..., description="The size of the unencrypted file")
     encrypted_size: int = Field(
-        ...,
-        description="The size of the encrypted file content in bytes without the Crypt4GH envelope.",
+        default=..., description="The encrypted size of the file before re-encryption"
+    )
+    decrypted_sha256: str = Field(
+        default=...,
+        description="SHA-256 checksum of the entire unencrypted file content",
+    )
+    encrypted_parts_md5: list[str] = Field(
+        default=..., description="The MD5 checksum of each encrypted file part"
+    )
+    encrypted_parts_sha256: list[str] = Field(
+        default=..., description="The SHA-256 checksum of each encrypted file part"
+    )
+    part_size: int = Field(
+        default=...,
+        description="The number of bytes in each file part (last part is likely smaller)",
     )
 
-    model_config = ConfigDict(title="file_internally_registered")
 
-
-class FileRegisteredForDownload(UploadDateModel, FileIdModel):
+class FileRegisteredForDownload(BaseModel):
     """
     This event is triggered when a newly uploaded file becomes available for
     download via a GA4GH DRS-compatible API.
     """
 
+    file_id: UUID4 = Field(..., description="Unique identifier for the file")
     decrypted_sha256: str = Field(
         ...,
         description="The SHA-256 checksum of the entire decrypted file content.",
     )
-    drs_uri: str = Field(
+    archive_date: UTCDatetime = Field(
         ...,
-        description="A URI for accessing the file according to the GA4GH DRS standard.",
+        description="The date and time when this file was archived.",
     )
     model_config = ConfigDict(title="file_registered_for_download")
 
 
-class NonStagedFileRequested(FileIdModel):
+class NonStagedFileRequested(BaseModel):
     """
     This event type is triggered when a user requests to download a file that is not
-    yet present in the outbox and needs to be staged.
+    yet present in the download bucket and needs to be staged.
     """
 
-    target_object_id: UUID4 = Field(
-        ..., description="The ID of the file in the specific S3 bucket."
+    file_id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
     )
     target_bucket_id: str = Field(
         ...,
-        description="The ID/name of the S3 bucket in which the object was expected.",
+        description="The ID of the S3 bucket to which the object should be copied.",
     )
-    s3_endpoint_alias: str = Field(
-        ...,
-        description="Alias for the object storage location where the given object is stored."
-        + "This can be uniquely mapped to an endpoint configuration in the service.",
+    target_object_id: UUID4 = Field(
+        ..., description="The ID to use for the file in the download bucket."
     )
     decrypted_sha256: str = Field(
         ...,
@@ -390,18 +353,18 @@ class SmsNotification(BaseModel):
     model_config = ConfigDict(title="sms_notification")
 
 
-class FileDeletionRequested(FileIdModel):
+class FileDeletionRequested(BaseModel):
     """
     This event is emitted when a request to delete a certain file from the file
     backend has been made.
     """
 
+    file_id: UUID4 = Field(..., description="Unique identifier for the file")
     model_config = ConfigDict(title="file_deletion_requested")
 
 
 class FileDeletionSuccess(FileDeletionRequested):
-    """
-    This event is emitted when a service has deleted a file from its database as well
+    """This event is emitted when a service has deleted a file from its database as well
     as the S3 buckets it controls.
     """
 
@@ -535,26 +498,19 @@ class UserIvaCode(UserID):
     model_config = ConfigDict(title="iva_send_code")
 
 
-class ResearchDataUploadBoxState(StrEnum):
-    """The allowed states for a ResearchDataUploadBox instance."""
-
-    OPEN = "open"
-    LOCKED = "locked"
-    CLOSED = "closed"
+UploadBoxState = Literal["open", "locked", "archived"]
 
 
 class ResearchDataUploadBox(BaseModel):
-    """A class representing a ResearchDataUploadBox.
-
-    Contains all fields from the FileUploadBox.
-    """
+    """A class representing a ResearchDataUploadBox."""
 
     id: UUID4 = Field(
         default_factory=uuid4,
         description="Unique identifier for the research data upload box",
     )
-    state: ResearchDataUploadBoxState = Field(
-        ..., description="Current state of the upload box"
+    version: int = Field(..., description="A counter indicating resource version")
+    state: UploadBoxState = Field(
+        ..., description="Current state of the research data upload box"
     )
     title: str = Field(..., description="Short meaningful name for the box")
     description: str = Field(..., description="Describes the upload box in more detail")
@@ -563,68 +519,107 @@ class ResearchDataUploadBox(BaseModel):
         ..., description="ID of the user who performed the latest change"
     )
     file_upload_box_id: UUID4 = Field(..., description="The ID of the file upload box.")
-    locked: bool = Field(
-        default=False,
-        description="Whether or not changes to the files in the file upload box are allowed",
+    file_upload_box_version: int = Field(
+        ..., description="A counter indicating resource version"
+    )
+    file_upload_box_state: UploadBoxState = Field(
+        ..., description="Current state of the file upload box"
     )
     file_count: int = Field(default=0, description="The number of files in the box")
     size: int = Field(default=0, description="The total size of all files in the box")
     storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
+    model_config = ConfigDict(title="research_data_upload_box")
 
 
-class FileUploadState(StrEnum):
-    """The allowed states for a ResearchDataUploadBox instance.
-
-    init: file upload initiated, but not yet finished
-    inbox: file upload complete, file in inbox
-    archived: file moved out of inbox after completion
-    """
-
-    INIT = "init"
-    INBOX = "inbox"
-    ARCHIVED = "archived"
+FileUploadState = Literal[
+    "init",
+    "inbox",
+    "failed",
+    "cancelled",
+    "interrogated",
+    "awaiting_archival",
+    "archived",
+]
 
 
 class FileUpload(BaseModel):
-    """A File Upload."""
+    """A FileUpload.
 
-    id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    Contains all information required for a file's journey from upload initiation to
+    permanent archival.
+    """
+
+    id: UUID4 = Field(default=..., description="Unique identifier for the file upload")
     box_id: UUID4 = Field(
-        ..., description="The ID of the FileUploadBox this FileUpload belongs to"
-    )
-    completed: bool = Field(
-        default=False, description="Whether or not the file upload has finished"
-    )
-    state: FileUploadState = Field(
-        FileUploadState.INIT, description="The state of the FileUpload"
+        default=...,
+        description="The ID of the FileUploadBox this file is associated with",
     )
     alias: str = Field(
-        ..., description="The submitted alias from the metadata (unique within the box)"
+        default=...,
+        description="The submitted alias from the metadata (unique within the box)",
     )
-    checksum: str = Field(..., description="Unencrypted checksum")
-    size: int = Field(..., description="File size in bytes")
-
-    @model_validator(mode="after")
-    def validate_completed(self):
-        """Make sure `completed` and `state` are in sync."""
-        if self.completed != (self.state in ["inbox", "archived"]):
-            raise ValueError(
-                "Completed must be False if state is 'init' and True otherwise."
-            )
-        return self
+    state: FileUploadState = Field(
+        default="init", description="The state of the FileUpload"
+    )
+    state_updated: UTCDatetime = Field(
+        default=..., description="Timestamp of when state was updated"
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    bucket_id: str = Field(
+        default=...,
+        description="The name of the bucket where the file is currently stored",
+    )
+    object_id: UUID4 = Field(
+        default=..., description="The ID of the file specific to its S3 bucket"
+    )
+    secret_id: str | None = Field(
+        default=None,
+        description="The internal ID of the Data Hub-generated decryption secret",
+    )
+    decrypted_size: int = Field(
+        default=..., description="The size of the unencrypted file"
+    )
+    encrypted_size: int = Field(
+        default=...,
+        description=(
+            "The size of the encrypted file content. When the file is in the inbox, this"
+            + " includes the Crypt4GH envelope. After re-encryption, the file no longer"
+            + " contains an envelope, so the value is slightly smaller."
+        ),
+    )
+    decrypted_sha256: str | None = Field(
+        default=None,
+        description="SHA-256 checksum of the entire unencrypted file content",
+    )
+    encrypted_parts_md5: list[str] | None = Field(
+        default=None, description="The MD5 checksum for each file part, in sequence"
+    )
+    encrypted_parts_sha256: list[str] | None = Field(
+        default=None, description="The SHA256 checksum for each file part, in sequence"
+    )
+    part_size: int = Field(
+        default=...,
+        description="The number of bytes in each file part (last part is likely smaller)",
+    )
+    failure_reason: str | None = Field(
+        default=None,
+        description="The reason for upload or interrogation failure, if applicable.",
+    )
+    model_config = ConfigDict(title="file_upload")
 
 
 class FileUploadBox(BaseModel):
     """A class representing a box that bundles files belonging to the same upload."""
 
-    id: UUID4 = Field(..., description="Unique identifier for the instance")
-    locked: bool = Field(
-        default=False,
-        description="Whether or not changes to the files in the box are allowed",
-    )
-    file_count: int = Field(default=0, description="The number of files in the box")
-    size: int = Field(default=0, description="The total size of all files in the box")
+    id: UUID4 = Field(..., description="The ID of the box.")
+    version: int = Field(..., description="A counter indicating resource version")
+    state: UploadBoxState = Field(..., description="Current state of the box")
+    file_count: int = Field(..., description="The number of files in the box")
+    size: int = Field(..., description="The total size of all files in the box")
     storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
+    model_config = ConfigDict(title="file_upload_box")
 
 
 class AuditRecord(BaseModel):
@@ -652,37 +647,13 @@ class AuditRecord(BaseModel):
     )
     entity: str | None = Field(default=None, description="Type of entity affected")
     entity_id: str | None = Field(default=None, description="ID of the entity affected")
+    model_config = ConfigDict(title="audit_record")
 
 
-class FileUploadReport(BaseModel):
-    """A report that models the result of the Data Hub-side file inspection"""
+class FileAccessionMapping(FileAccessionModel):
+    """A class used to associate a file ID with an accession number"""
 
-    # Note, this model is subject to change; consider this a rough sketch for now
-    file_id: UUID4
-    secret_id: str
-    passed_inspection: bool
-
-
-# Lists event schemas (values) by event types (key):
-schema_registry: dict[str, type[BaseModel]] = {
-    "metadata_dataset_deleted": MetadataDatasetID,
-    "metadata_dataset_overview": MetadataDatasetOverview,
-    "metadata_submission_upserted": MetadataSubmissionUpserted,
-    "file_upload_received": FileUploadReceived,
-    "file_upload_validation_success": FileUploadValidationSuccess,
-    "file_upload_validation_failure": FileUploadValidationFailure,
-    "file_internally_registered": FileInternallyRegistered,
-    "file_registered_for_download": FileRegisteredForDownload,
-    "non_staged_file_requested": NonStagedFileRequested,
-    "file_staged_for_download": FileStagedForDownload,
-    "file_download_served": FileDownloadServed,
-    "email_notification": EmailNotification,
-    "sms_notification": SmsNotification,
-    "searchable_resource_deleted": SearchableResourceInfo,
-    "searchable_resource_upserted": SearchableResource,
-    "user_id": UserID,
-    "second_factor_recreated": UserID,
-    "access_request_details": AccessRequestDetails,
-    "iva_state_changed": UserIvaState,
-    "iva_send_code": UserIvaCode,
-}
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
+    )
+    model_config = ConfigDict(title="file_accession_mapping")
