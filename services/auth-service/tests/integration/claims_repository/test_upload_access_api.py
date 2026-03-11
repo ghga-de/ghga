@@ -131,7 +131,12 @@ async def test_grant_upload_access(full_client: FullClient):
         f"{URL_JOHN}/ivas/{VERIFIED_IVA_ID}/boxes/{box_id}",
         json=validity,
     )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
+    grant_id_obj = response.json()
+    assert isinstance(grant_id_obj, dict)
+    assert list(grant_id_obj) == ["id"]
+    grant_id = grant_id_obj["id"]
+    assert grant_id
 
     # Check that the claim was created, but check directly with a DAO
     claim = await claim_dao.find_one(mapping={"visa_type": VisaType.GHGA_UPLOAD})
@@ -148,7 +153,7 @@ async def test_check_upload_access(full_client: FullClient):
     # First grant upload access
     url = f"{URL_JOHN}/ivas/{VERIFIED_IVA_ID}/boxes/{TEST_BOX_ID}"
     response = await full_client.post(url, json=VALIDITY)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
 
     # Now check upload access
     url = f"{URL_JOHN}/boxes/{TEST_BOX_ID}"
@@ -178,7 +183,7 @@ async def test_get_boxes_with_upload_access(full_client: FullClient):
     for box_id in [box1, box2]:
         url = f"{URL_JOHN}/ivas/{VERIFIED_IVA_ID}/boxes/{box_id}"
         response = await full_client.post(url, json=VALIDITY)
-        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert response.status_code == status.HTTP_201_CREATED
 
     # Get list of accessible boxes
     response = await full_client.get(f"{URL_JOHN}/boxes")
@@ -199,7 +204,7 @@ async def test_get_upload_access_grants(full_client: FullClient):
     # Create an upload access claim
     url = f"{URL_JOHN}/ivas/{VERIFIED_IVA_ID}/boxes/{TEST_BOX_ID}"
     response = await full_client.post(url, json=VALIDITY)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
 
     # Get upload access grants
     response = await full_client.get("/upload-access/grants")
@@ -228,7 +233,7 @@ async def test_grant_upload_access_with_unverified_iva(full_client: FullClient):
         f"{URL_JOHN}/ivas/{UNVERIFIED_IVA_ID}/boxes/{TEST_BOX_ID}",
         json=VALIDITY,
     )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
 
     # Retrieve the test user's claims, which should have the one we just added
     response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
@@ -287,7 +292,7 @@ async def test_check_upload_access_with_unverified_iva(full_client: FullClient):
     # post valid upload access permission for UNVERIFIED_IVA_ID and TEST_BOX_ID
     url = f"{URL_JOHN}/ivas/{UNVERIFIED_IVA_ID}/boxes/{TEST_BOX_ID}"
     response = await full_client.post(url, json=VALIDITY)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
 
     # check that access is not given when the IVA is not verified
     response = await full_client.get(f"{URL_JOHN}/boxes/{TEST_BOX_ID}")
@@ -310,7 +315,7 @@ async def test_revoke_grant(full_client: FullClient):
 
     url = f"{URL_JOHN}/ivas/{VERIFIED_IVA_ID}/boxes/{TEST_BOX_ID}"
     response = await full_client.post(url, json=VALIDITY)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
 
     # Verify that the claim was added by looking for a claim with matching details
     claim = await claim_dao.find_one(mapping={"visa_type": VisaType.GHGA_UPLOAD})
@@ -382,7 +387,7 @@ async def test_with_past_or_future_validity(
     # Grant access using that validity period
     url = f"{URL_JOHN}/ivas/{VERIFIED_IVA_ID}/boxes/{TEST_BOX_ID}"
     response = await full_client.post(url, json=validity)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
 
     # Check boxes with upload access for the user - should be empty
     response = await full_client.get(f"{URL_JOHN}/boxes")

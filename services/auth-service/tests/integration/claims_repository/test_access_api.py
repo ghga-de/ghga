@@ -83,7 +83,12 @@ async def test_grant_download_access(full_client: FullClient):
         f"/download-access/users/{ID_OF_JOHN}/ivas/{SOME_IVA_ID}/datasets/DS0815",
         json=validity,
     )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
+    grant_id_obj = response.json()
+    assert isinstance(grant_id_obj, dict)
+    assert list(grant_id_obj) == ["id"]
+    grant_id = grant_id_obj["id"]
+    assert grant_id
 
     response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
     assert response.status_code == status.HTTP_200_OK
@@ -149,7 +154,7 @@ async def test_grant_download_access_with_unverified_iva(full_client: FullClient
         f"/download-access/users/{ID_OF_JOHN}/ivas/{SOME_IVA_ID}/datasets/DS0815",
         json=validity,
     )
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_201_CREATED
 
     response = await full_client.get(f"/users/{ID_OF_JOHN}/claims")
     assert response.status_code == status.HTTP_200_OK

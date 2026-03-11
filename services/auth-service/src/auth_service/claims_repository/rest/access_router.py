@@ -49,7 +49,13 @@ from ..core.claims import (
 )
 from ..core.utils import iva_is_verified, user_is_active, user_with_iva_exists
 from ..deps import ClaimDaoDependency
-from ..models.claims import Accession, ClaimValidity, DownloadGrant, UploadGrant
+from ..models.claims import (
+    Accession,
+    ClaimValidity,
+    DownloadGrant,
+    GrantId,
+    UploadGrant,
+)
 
 __all__ = ["router"]
 
@@ -230,11 +236,11 @@ async def revoke_download_access_grant(
     " so that it can be downloaded by the given user with the given IVA."
     " For internal use only.",
     responses={
-        204: {"description": "Download access has been granted."},
+        201: {"model": GrantId, "description": "Download access has been granted."},
         404: {"description": "The user or the IVA was not found."},
         422: {"description": "Validation error in submitted user IDs."},
     },
-    status_code=204,
+    status_code=201,
 )
 @TRACER.start_as_current_span("access_router.grant_download_access")
 async def grant_download_access(  # noqa: PLR0913
@@ -267,7 +273,7 @@ async def grant_download_access(  # noqa: PLR0913
     iva_dao: IvaDaoDependency,
     claim_dao: ClaimDaoDependency,
     # internal service, authorization without token via service mesh
-) -> Response:
+) -> GrantId:
     """Grant download access permission for a dataset to a user with the given IVA.
 
     Note that at this point the IVA needs to exist, but does not need to be verified.
@@ -289,7 +295,7 @@ async def grant_download_access(  # noqa: PLR0913
     )
     await claim_dao.insert(claim)
 
-    return Response(status_code=204)
+    return GrantId(id=claim.id)
 
 
 @router.get(
@@ -594,11 +600,11 @@ async def revoke_upload_access_grant(
     " so that it can be used for upload by the given user with the given IVA."
     " For internal use only.",
     responses={
-        204: {"description": "Upload access has been granted."},
+        201: {"model": GrantId, "description": "Upload access has been granted."},
         404: {"description": "The user or the IVA was not found."},
         422: {"description": "Validation error in submitted user IDs."},
     },
-    status_code=204,
+    status_code=201,
 )
 @TRACER.start_as_current_span("access_router.grant_upload_access")
 async def grant_upload_access(  # noqa: PLR0913
@@ -631,7 +637,7 @@ async def grant_upload_access(  # noqa: PLR0913
     iva_dao: IvaDaoDependency,
     claim_dao: ClaimDaoDependency,
     # internal service, authorization without token via service mesh
-) -> Response:
+) -> GrantId:
     """Grant upload access permission for an upload box to a user with the given IVA.
 
     Note that at this point the IVA needs to exist, but does not need to be verified.
@@ -652,7 +658,7 @@ async def grant_upload_access(  # noqa: PLR0913
     )
     await claim_dao.insert(claim)
 
-    return Response(status_code=204)
+    return GrantId(id=claim.id)
 
 
 @router.get(

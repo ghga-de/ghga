@@ -43,6 +43,7 @@ __all__ = [
     "ClaimValidity",
     "Condition",
     "DownloadGrant",
+    "GrantId",
     "Identity",
     "MatchClaim",
     "MatchType",
@@ -215,10 +216,15 @@ class Claim(ClaimCreation):
     )
 
 
-class BaseGrant(BaseDto):
-    """Fields common to both upload and download grants"""
+class GrantId(BaseDto):
+    """The ID of an upload or download grant"""
 
     id: UUID4 = Field(..., description="Internal grant ID (same as claim ID)")
+
+
+class BaseGrant(GrantId):
+    """Fields common to both upload and download grants"""
+
     user_id: UUID4 = Field(default=..., description="Internal user ID")
     iva_id: UUID4 | None = Field(
         default=None, description="ID of an IVA associated with this grant"
