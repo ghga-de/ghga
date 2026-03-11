@@ -242,7 +242,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         return requests
 
-    async def update(  # noqa: C901, PLR0915
+    async def update(  # noqa: C901, PLR0912, PLR0915
         self,
         access_request_id: UUID4,
         *,
@@ -328,13 +328,17 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if status == AccessRequestStatus.ALLOWED:
             # Try to register as download access grant
             try:
-                await self._access_grants.grant_download_access(
+                grant_id = await self._access_grants.grant_download_access(
                     user_id=request.user_id,
                     iva_id=cast(UUID4, iva_id),  # has already been checked above
                     dataset_id=request.dataset_id,
                     valid_from=access_starts,
                     valid_until=access_ends,
                 )
+                if not grant_id:
+                    raise self._access_grants.AccessGrantsError(
+                        "Access grant could not be created"
+                    )
             except self._access_grants.AccessGrantsError as error:
                 # roll back the status update
                 await self._request_dao.update(request)

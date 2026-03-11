@@ -19,6 +19,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
+from uuid import UUID
 
 import httpx
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -71,8 +72,10 @@ class AccessGrantsAdapter(AccessGrantsPort):
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
-    ) -> None:
+    ) -> UUID4:
         """Grant download access to a given user with an IVA for a given dataset.
+
+        Returns the ID of the created access grant.
 
         May raise an `AccessGrantsInvalidPeriodError` or a general `AccessGrantsError`.
         """
@@ -87,10 +90,17 @@ class AccessGrantsAdapter(AccessGrantsPort):
             response = await self._client.post(url, content=validity.model_dump_json())
         except httpx.RequestError as error:
             raise self.AccessGrantsError(f"HTTP request error: {error}") from error
-        if response.status_code != httpx.codes.NO_CONTENT:
+        if response.status_code != httpx.codes.CREATED:
             raise self.AccessGrantsError(
                 f"Unexpected response status code {response.status_code}"
             )
+        try:
+            grant_id = UUID(response.json()["id"])
+        except (ValueError, KeyError) as error:
+            raise self.AccessGrantsError(
+                f"Unexpected response data format: {error}"
+            ) from error
+        return grant_id
 
     async def get_download_access_grants(
         self,

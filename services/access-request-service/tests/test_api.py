@@ -27,6 +27,7 @@ from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock
 
 from tests.fixtures import RestFixture
+from tests.test_access_grants import GRANT_ID
 
 pytestmark = pytest.mark.asyncio()
 
@@ -472,7 +473,8 @@ async def test_patch_access_request_status(
     httpx_mock.add_response(
         method="POST",
         url=f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{SOME_IVA_ID}/datasets/DS001",
-        status_code=204,
+        status_code=201,
+        json={"id": str(GRANT_ID)},
     )
 
     client = rest.rest_client
@@ -571,7 +573,8 @@ async def test_patch_access_request_with_another_iva(
     httpx_mock.add_response(
         method="POST",
         url=f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{another_iva}/datasets/DS001",
-        status_code=204,
+        status_code=201,
+        json={"id": str(GRANT_ID)},
     )
 
     client = rest.rest_client
@@ -802,7 +805,8 @@ async def test_patch_access_duration_for_allowed_request(
     httpx_mock.add_response(
         method="POST",
         url=f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{SOME_IVA_ID}/datasets/DS001",
-        status_code=204,
+        status_code=201,
+        json={"id": str(GRANT_ID)},
     )
 
     client = rest.rest_client
@@ -884,7 +888,8 @@ async def test_patch_everything_when_allowing_request(
     httpx_mock.add_response(
         method="POST",
         url=f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{new_iva}/datasets/DS001",
-        status_code=204,
+        status_code=201,
+        json={"id": str(GRANT_ID)},
     )
 
     client = rest.rest_client

@@ -72,14 +72,19 @@ async def test_grant_download_access(
 ):
     """Test granting download access"""
     grant_access = grants_adapter.grant_download_access
-    httpx_mock.add_response(method="POST", url=GRANT_URL, status_code=204)
+    httpx_mock.add_response(
+        method="POST", url=GRANT_URL, status_code=201, json={"id": str(GRANT_ID)}
+    )
 
-    await grant_access(
-        user_id=USER_ID,
-        iva_id=IVA_ID,
-        dataset_id=DATASET_ID,
-        valid_from=VALID_FROM,
-        valid_until=VALID_UNTIL,
+    assert (
+        await grant_access(
+            user_id=USER_ID,
+            iva_id=IVA_ID,
+            dataset_id=DATASET_ID,
+            valid_from=VALID_FROM,
+            valid_until=VALID_UNTIL,
+        )
+        == GRANT_ID
     )
 
     request = httpx_mock.get_request()

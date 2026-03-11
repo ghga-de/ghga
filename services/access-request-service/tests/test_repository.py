@@ -304,7 +304,7 @@ class AccessGrantsDummy(AccessGrantsPort):
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
-    ) -> None:
+    ) -> UUID4:
         """Grant download access."""
         if self.simulate_error:
             self.last_grant = f"to {user_id} for {dataset_id} failed"
@@ -313,6 +313,7 @@ class AccessGrantsDummy(AccessGrantsPort):
             f"to {user_id} with {iva_id}"
             f" for {dataset_id} from {valid_from} until {valid_until}"
         )
+        return uuid4()
 
     async def get_download_access_grants(
         self,

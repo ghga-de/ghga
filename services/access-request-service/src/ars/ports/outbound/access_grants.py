@@ -46,8 +46,10 @@ class AccessGrantsPort(ABC):
         dataset_id: str,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
-    ) -> None:
+    ) -> UUID4:
         """Grant download access to a given user with an IVA for a given dataset.
+
+        Returns the ID of the created access grant.
 
         May raise an `AccessGrantsInvalidPeriodError` or a general `AccessGrantsError`.
         """

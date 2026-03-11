@@ -16,13 +16,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/access-request-service):
 ```bash
-docker pull ghga/access-request-service:6.2.0
+docker pull ghga/access-request-service:7.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/access-request-service:6.2.0 .
+docker build -t ghga/access-request-service:7.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -30,7 +30,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/access-request-service:6.2.0 --help
+docker run -p 8080:8080 ghga/access-request-service:7.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
