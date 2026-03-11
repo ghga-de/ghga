@@ -20,7 +20,13 @@ from abc import ABC, abstractmethod
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4
 
-from uos.core.models import PID, AccessionMap, FileUploadWithAccession, UploadGrant
+from uos.core.models import (
+    PID,
+    AccessionMap,
+    FileUploadWithAccession,
+    GrantId,
+    UploadGrant,
+)
 
 
 class AccessClientPort(ABC):
@@ -41,8 +47,10 @@ class AccessClientPort(ABC):
         box_id: UUID4,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
-    ) -> None:
+    ) -> GrantId:
         """Grant upload access to a user for a box.
+
+        Returns the created grant ID.
 
         Raises:
             AccessAPIError: if there's a problem during the operation.

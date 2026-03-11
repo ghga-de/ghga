@@ -25,6 +25,7 @@ from pytest_httpx import HTTPXMock
 
 from tests.fixtures import ConfigFixture
 from uos.adapters.outbound.http import AccessClient
+from uos.core.models import GrantId
 
 pytestmark = pytest.mark.asyncio
 
@@ -42,14 +43,27 @@ async def test_grant_upload_access(
     access_client = AccessClient(config=config.config, httpx_client=httpx_client)
 
     # Happy path
-    httpx_mock.add_response(204)
-    await access_client.grant_upload_access(
+    test_grant_id = uuid4()
+    httpx_mock.add_response(201, json={"id": str(test_grant_id)})
+    result = await access_client.grant_upload_access(
         user_id=TEST_USER_ID,
         iva_id=TEST_IVA_ID,
         box_id=TEST_BOX_ID,
         valid_from=VALID_FROM,
         valid_until=VALID_UNTIL,
-    )  # no error == success
+    )
+    assert result == GrantId(id=test_grant_id)
+
+    # Check bad response body (not a valid UUID)
+    httpx_mock.add_response(201, json={"id": "not-a-uuid"})
+    with pytest.raises(AccessClient.AccessAPIError):
+        await access_client.grant_upload_access(
+            user_id=TEST_USER_ID,
+            iva_id=TEST_IVA_ID,
+            box_id=TEST_BOX_ID,
+            valid_from=VALID_FROM,
+            valid_until=VALID_UNTIL,
+        )
 
     # Check off-normal status code
     httpx_mock.add_response(500, json={"error": "Some error occurred."})

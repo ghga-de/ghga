@@ -38,6 +38,7 @@ from uos.core.models import (
     CreateUploadBoxRequest,
     FileUploadWithAccession,
     GrantAccessRequest,
+    GrantId,
     GrantWithBoxInfo,
     ResearchDataUploadBox,
     UpdateUploadBoxRequest,
@@ -146,7 +147,7 @@ async def get_research_data_upload_box(
     box_id: UUID,
     upload_service: UploadOrchestratorDummy,
     auth_context: UserAuthContext,
-):
+) -> ResearchDataUploadBox:
     """Get details of a specific upload box. If the user doesn't have access to an
     existing box, this endpoint will return a 404.
     """
@@ -270,10 +271,10 @@ async def grant_upload_access(
     request: GrantAccessRequest,
     upload_service: UploadOrchestratorDummy,
     auth_context: StewardAuthContext,
-):
+) -> GrantId:
     """Grant upload access to a user. Requires Data Steward role."""
     try:
-        await upload_service.grant_upload_access(
+        return await upload_service.grant_upload_access(
             user_id=request.user_id,
             iva_id=request.iva_id,
             box_id=request.box_id,
@@ -281,7 +282,6 @@ async def grant_upload_access(
             valid_until=request.valid_until,
             granting_user_id=UUID(auth_context.id),
         )
-        return {"message": "Upload access granted successfully"}
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to grant upload access") from err

@@ -148,6 +148,12 @@ class UpdateUploadBoxRequest(BaseModel):
     state: UploadBoxState | None = Field(default=None, description="Updated state")
 
 
+class GrantId(BaseModel):
+    """The ID of an access grant."""
+
+    id: UUID4 = Field(..., description="Internal grant ID (same as claim ID)")
+
+
 class GrantAccessRequest(BaseModel):
     """Request model for granting upload access to a user."""
 
@@ -167,10 +173,9 @@ class GrantAccessRequest(BaseModel):
         return value
 
 
-class UploadGrant(BaseModel):
+class UploadGrant(GrantId):
     """An upload access grant."""
 
-    id: UUID4 = Field(..., description="Internal grant ID (same as claim ID)")
     user_id: UUID4 = Field(..., description="Internal user ID")
     iva_id: UUID4 | None = Field(
         default=None, description="ID of an IVA associated with this grant"

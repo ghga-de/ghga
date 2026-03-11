@@ -25,7 +25,7 @@ from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock
 
 from tests.fixtures.joint import JointFixture
-from uos.core.models import AccessionMapRequest, UpdateUploadBoxRequest
+from uos.core.models import AccessionMapRequest, GrantId, UpdateUploadBoxRequest
 
 pytestmark = pytest.mark.asyncio
 
@@ -102,14 +102,16 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert box_event_recorder.recorded_events[0].payload["id"] == str(box_id)
 
     # Grant a user access to said box
+    test_grant_id = uuid4()
     httpx_mock.add_response(
         method="POST",
         url=f"{access_url}/upload-access/users/{regular_user_id}/ivas/{iva_id}/boxes/{box_id}",
-        status_code=204,
+        status_code=201,
+        json={"id": str(test_grant_id)},
     )
     valid_from = now_utc_ms_prec()
     valid_until = now_utc_ms_prec() + timedelta(days=7)
-    await orchestrator.grant_upload_access(
+    grant_id = await orchestrator.grant_upload_access(
         user_id=regular_user_id,
         iva_id=iva_id,
         box_id=box_id,
@@ -117,6 +119,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
         valid_until=valid_until,
         granting_user_id=ds_user_id,
     )
+    assert grant_id == GrantId(id=test_grant_id)
 
     # Update the title or description of the box by a DS (this bumps version to 1)
     update_request = UpdateUploadBoxRequest(

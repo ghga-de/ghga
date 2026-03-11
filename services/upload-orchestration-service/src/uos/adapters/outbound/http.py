@@ -33,6 +33,7 @@ from uos.core.models import (
     ChangeFileBoxWorkOrder,
     CreateFileBoxWorkOrder,
     FileUploadWithAccession,
+    GrantId,
     SubmitAccessionMapWorkOrder,
     UploadGrant,
     ViewFileBoxWorkOrder,
@@ -82,8 +83,10 @@ class AccessClient(AccessClientPort):
         box_id: UUID4,
         valid_from: UTCDatetime,
         valid_until: UTCDatetime,
-    ) -> None:
+    ) -> GrantId:
         """Grant upload access to a user for a box.
+
+        Returns the created grant ID.
 
         Raises:
             AccessAPIError: if there's a problem during the operation.
@@ -98,7 +101,7 @@ class AccessClient(AccessClientPort):
         }
 
         response = await self._client.post(url, json=body, timeout=HTTPX_TIMEOUT)
-        if response.status_code != 204:
+        if response.status_code != 201:
             log.error(
                 "Failed to grant upload access for user %s to box %s.",
                 user_id,
@@ -114,6 +117,12 @@ class AccessClient(AccessClientPort):
                 },
             )
             raise self.AccessAPIError("Failed to grant upload access.")
+        try:
+            return GrantId(id=response.json()["id"])
+        except Exception as err:
+            msg = "Failed to extract the ID of the newly created access grant from the response body."
+            log.error(msg, exc_info=True)
+            raise self.AccessAPIError(msg) from err
 
     async def revoke_upload_access(self, *, grant_id: UUID4) -> None:
         """Revoke a user's access to an upload box.

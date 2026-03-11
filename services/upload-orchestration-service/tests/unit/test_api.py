@@ -27,6 +27,7 @@ from tests.fixtures import ConfigFixture
 from uos.core.models import (
     BoxRetrievalResults,
     FileUploadWithAccession,
+    GrantId,
     GrantWithBoxInfo,
     ResearchDataUploadBox,
 )
@@ -356,12 +357,13 @@ async def test_grant_upload_access(
         assert response.status_code == 403
 
         # normal response with data steward role
-        orchestrator.grant_upload_access.return_value = None
+        test_grant_id = uuid4()
+        orchestrator.grant_upload_access.return_value = GrantId(id=test_grant_id)
         response = await rest_client.post(
             url, json=request_data, headers=ds_auth_headers
         )
         assert response.status_code == 201
-        assert response.json() == {"message": "Upload access granted successfully"}
+        assert response.json() == {"id": str(test_grant_id)}
 
         # handle other exception
         orchestrator.reset_mock()
