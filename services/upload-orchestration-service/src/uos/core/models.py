@@ -16,8 +16,13 @@
 """Data models for the Upload Orchestration Service."""
 
 from typing import Annotated, Literal
-from uuid import uuid4
 
+from ghga_event_schemas.pydantic_ import (
+    FileUpload,
+    FileUploadBox,
+    ResearchDataUploadBox,
+    UploadBoxState,
+)
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
     UUID4,
@@ -31,7 +36,29 @@ from pydantic import (
     field_validator,
 )
 
-UploadBoxState = Literal["open", "locked", "archived"]
+# Note: shared classes re-exported to avoid importing from ghga_event_schemas everywhere
+__all__ = [
+    "AccessionMap",
+    "AccessionMapRequest",
+    "BaseWorkOrderToken",
+    "BoxRetrievalResults",
+    "ChangeFileBoxWorkOrder",
+    "CreateFileBoxWorkOrder",
+    "CreateUploadBoxRequest",
+    "CreateUploadBoxResponse",
+    "FileUpload",
+    "FileUploadBox",
+    "FileUploadWithAccession",
+    "GrantAccessRequest",
+    "GrantId",
+    "GrantWithBoxInfo",
+    "ResearchDataUploadBox",
+    "SubmitAccessionMapWorkOrder",
+    "UpdateUploadBoxRequest",
+    "UploadBoxState",
+    "UploadGrant",
+    "ViewFileBoxWorkOrder",
+]
 
 
 def _ascii_only(v: str) -> str:
@@ -43,46 +70,6 @@ def _ascii_only(v: str) -> str:
 PID = Annotated[
     str, StringConstraints(min_length=1, max_length=256), AfterValidator(_ascii_only)
 ]
-
-
-class ResearchDataUploadBox(BaseModel):
-    """A class representing a ResearchDataUploadBox."""
-
-    id: UUID4 = Field(
-        default_factory=uuid4,
-        description="Unique identifier for the research data upload box",
-    )
-    version: int = Field(..., description="A counter indicating resource version")
-    state: UploadBoxState = Field(
-        ..., description="Current state of the research data upload box"
-    )
-    title: str = Field(..., description="Short meaningful name for the box")
-    description: str = Field(..., description="Describes the upload box in more detail")
-    last_changed: UTCDatetime = Field(..., description="Timestamp of the latest change")
-    changed_by: UUID4 = Field(
-        ..., description="ID of the user who performed the latest change"
-    )
-    file_upload_box_id: UUID4 = Field(..., description="The ID of the file upload box.")
-    file_upload_box_version: int = Field(
-        ..., description="A counter indicating resource version"
-    )
-    file_upload_box_state: UploadBoxState = Field(
-        ..., description="Current state of the file upload box"
-    )
-    file_count: int = Field(default=0, description="The number of files in the box")
-    size: int = Field(default=0, description="The total size of all files in the box")
-    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
-
-
-class FileUploadBox(BaseModel):
-    """A class representing a FileUploadBox"""
-
-    id: UUID4 = Field(..., description="The ID of the box.")
-    version: int = Field(..., description="A counter indicating resource version")
-    state: UploadBoxState = Field(..., description="Current state of the box")
-    file_count: int = Field(..., description="The number of files in the box")
-    size: int = Field(..., description="The total size of all files in the box")
-    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
 
 
 class BaseWorkOrderToken(BaseModel):
@@ -244,47 +231,9 @@ class AccessionMap(BaseModel):
     )
 
 
-FileUploadState = Literal[
-    "init",
-    "inbox",
-    "failed",
-    "cancelled",
-    "interrogated",
-    "awaiting_archival",
-    "archived",
-]
-
-
-class FileUploadWithAccession(BaseModel):
+class FileUploadWithAccession(FileUpload):
     """A FileUpload with its accession"""
 
-    id: UUID4 = Field(..., description="Unique identifier for the file upload")
-    box_id: UUID4
-    alias: str
-    state: FileUploadState = Field(
-        default="init", description="The state of the FileUpload"
-    )
-    state_updated: UTCDatetime = Field(
-        ..., description="Timestamp of when state was updated"
-    )
-    storage_alias: str = Field(
-        ..., description="The storage alias of the Data Hub housing the file"
-    )
-    bucket_id: str = Field(
-        ..., description="The name of the bucket where the file is currently stored"
-    )
-    decrypted_sha256: str | None = Field(
-        default=None,
-        description="SHA-256 checksum of the entire unencrypted file content",
-    )
-    decrypted_size: int = Field(..., description="The size of the unencrypted file")
-    encrypted_size: int | None = Field(
-        default=None, description="The encrypted size of the file before re-encryption"
-    )
-    part_size: int = Field(
-        ...,
-        description="The number of bytes in each file part (last part is likely smaller)",
-    )
-    accession: str | None = Field(
+    accession: Accession | None = Field(
         default=None, description="The accession number assigned to this file."
     )

@@ -26,7 +26,7 @@ description = "Upload Orchestration Service - A service providing a web-accessib
 dependencies = [
     "typer >= 0.15",
     "ghga-service-commons[api,auth,crypt] >= 4.2",
-    "ghga-event-schemas ~= 10.1",
+    "ghga-event-schemas ~= 12.0.0",
     "hexkit[akafka,mongodb,opentelemetry] >= 8.1",
 ]
 

@@ -74,14 +74,17 @@ components:
       properties:
         accession:
           anyOf:
-          - type: string
+          - pattern: ^GHGA.+
+            type: string
           - type: 'null'
           description: The accession number assigned to this file.
           title: Accession
         alias:
+          description: The submitted alias from the metadata (unique within the box)
           title: Alias
           type: string
         box_id:
+          description: The ID of the FileUploadBox this file is associated with
           format: uuid4
           title: Box Id
           type: string
@@ -99,22 +102,55 @@ components:
           description: The size of the unencrypted file
           title: Decrypted Size
           type: integer
-        encrypted_size:
+        encrypted_parts_md5:
           anyOf:
-          - type: integer
+          - items:
+              type: string
+            type: array
           - type: 'null'
-          description: The encrypted size of the file before re-encryption
+          description: The MD5 checksum for each file part, in sequence
+          title: Encrypted Parts Md5
+        encrypted_parts_sha256:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: The SHA256 checksum for each file part, in sequence
+          title: Encrypted Parts Sha256
+        encrypted_size:
+          description: The size of the encrypted file content. When the file is in
+            the inbox, this includes the Crypt4GH envelope. After re-encryption, the
+            file no longer contains an envelope, so the value is slightly smaller.
           title: Encrypted Size
+          type: integer
+        failure_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The reason for upload or interrogation failure, if applicable.
+          title: Failure Reason
         id:
           description: Unique identifier for the file upload
           format: uuid4
           title: Id
+          type: string
+        object_id:
+          description: The ID of the file specific to its S3 bucket
+          format: uuid4
+          title: Object Id
           type: string
         part_size:
           description: The number of bytes in each file part (last part is likely
             smaller)
           title: Part Size
           type: integer
+        secret_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The internal ID of the Data Hub-generated decryption secret
+          title: Secret Id
         state:
           default: init
           description: The state of the FileUpload
@@ -144,9 +180,11 @@ components:
       - state_updated
       - storage_alias
       - bucket_id
+      - object_id
       - decrypted_size
+      - encrypted_size
       - part_size
-      title: FileUploadWithAccession
+      title: file_upload
       type: object
     GrantAccessRequest:
       description: Request model for granting upload access to a user.
@@ -361,7 +399,7 @@ components:
       - file_upload_box_version
       - file_upload_box_state
       - storage_alias
-      title: ResearchDataUploadBox
+      title: research_data_upload_box
       type: object
     UpdateUploadBoxRequest:
       description: Request model for updating a research data upload box.
