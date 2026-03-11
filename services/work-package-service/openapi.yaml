@@ -1,7 +1,6 @@
 components:
   schemas:
     BoxWithExpiration:
-      additionalProperties: false
       description: A model describing a research data upload box with an expiration
         date.
       properties:

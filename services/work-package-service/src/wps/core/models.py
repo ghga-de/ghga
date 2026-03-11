@@ -19,7 +19,6 @@ in the API.
 
 from enum import StrEnum
 from typing import Annotated, Literal
-from uuid import uuid4
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import UUID4Field
@@ -48,7 +47,6 @@ __all__ = [
     "DownloadWorkOrder",
     "FileAccession",
     "FileAccessionMapping",
-    "ResearchDataUploadBox",
     "ResearchDataUploadBoxBasics",
     "UploadFileWorkOrder",
     "UploadPathType",
@@ -179,49 +177,7 @@ class DeleteFileWorkOrder(BaseWorkOrderToken, _FileUploadToken):
     work_type: DeleteType = "delete"
 
 
-class ResearchDataUploadBox(BaseModel):
-    """A class representing a ResearchDataUploadBox.
-
-    This will be replaced with the ghga-event-schemas implementation soon.
-    """
-
-    id: UUID4 = Field(
-        default_factory=uuid4,
-        description="Unique identifier for the research data upload box",
-    )
-    version: int = Field(
-        default=..., description="A counter indicating resource version"
-    )
-    state: Literal["open", "locked", "archived"] = Field(
-        default=..., description="Current state of the research data upload box"
-    )
-    title: str = Field(default=..., description="Short meaningful name for the box")
-    description: str = Field(
-        default=..., description="Describes the upload box in more detail"
-    )
-    last_changed: UTCDatetime = Field(
-        default=..., description="Timestamp of the latest change"
-    )
-    changed_by: UUID4 = Field(
-        default=..., description="ID of the user who performed the latest change"
-    )
-    file_upload_box_id: UUID4 = Field(
-        default=..., description="The ID of the file upload box."
-    )
-    file_upload_box_version: int = Field(
-        default=..., description="A counter indicating resource version"
-    )
-    file_upload_box_state: Literal["open", "locked", "archived"] = Field(
-        default=..., description="Current state of the file upload box"
-    )
-    file_count: int = Field(default=0, description="The number of files in the box")
-    size: int = Field(default=0, description="The total size of all files in the box")
-    storage_alias: str = Field(
-        default=..., description="S3 storage alias to use for uploads"
-    )
-
-
-class ResearchDataUploadBoxBasics(BaseDto):
+class ResearchDataUploadBoxBasics(BaseModel):
     """A model describing an upload box that groups file uploads.
 
     This model contains a selected subset of the fields from the shared model

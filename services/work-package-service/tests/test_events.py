@@ -23,12 +23,13 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from ghga_event_schemas.pydantic_ import ResearchDataUploadBox
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
 
 from wps.config import Config
-from wps.core.models import ResearchDataUploadBox, ResearchDataUploadBoxBasics
+from wps.core.models import ResearchDataUploadBoxBasics
 from wps.prepare import Consumer, prepare_consumer
 
 from .fixtures import (  # noqa: F401
