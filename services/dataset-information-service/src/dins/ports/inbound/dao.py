@@ -14,11 +14,12 @@
 # limitations under the License.
 """DAO interfaces for database access."""
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import Dao
 
 from dins.core import models
 
 DatasetDaoPort = Dao[models.DatasetFileAccessions]
-FileAccessionMapDaoPort = Dao[models.FileAccessionMap]
+FileAccessionMapDaoPort = Dao[event_schemas.FileAccessionMapping]
 FileInformationDaoPort = Dao[models.FileInformation]
 PendingFileInfoDaoPort = Dao[models.PendingFileInfo]

@@ -41,9 +41,9 @@ def make_file_internally_registered(
     storage_alias: str = "HD01",
     decrypted_sha256: str = "a1b2c3",
     decrypted_size: int = DECRYPTED_SIZE,
-) -> models.FileInternallyRegistered:
+) -> event_schemas.FileInternallyRegistered:
     """Generate a FileInternallyRegistered object for testing"""
-    return models.FileInternallyRegistered(
+    return event_schemas.FileInternallyRegistered(
         file_id=file_id or uuid4(),
         archive_date=now_utc_ms_prec(),
         storage_alias=storage_alias,
@@ -86,9 +86,11 @@ def make_metadata_dataset_overview(
 def make_accession_map(
     accession: str = "GHGA001",
     file_id: UUID4 | None = None,
-) -> models.FileAccessionMap:
+) -> event_schemas.FileAccessionMapping:
     """Generate a FileAccessionMap object for testing"""
-    return models.FileAccessionMap(accession=accession, file_id=file_id or uuid4())
+    return event_schemas.FileAccessionMapping(
+        accession=accession, file_id=file_id or uuid4()
+    )
 
 
 def make_file_information(accession: str = "GHGA001") -> models.FileInformation:

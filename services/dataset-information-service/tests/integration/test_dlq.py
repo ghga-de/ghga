@@ -15,6 +15,8 @@
 
 """Test to make sure that the DLQ is correctly set up for this service."""
 
+from uuid import uuid4
+
 import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
 
@@ -58,7 +60,7 @@ async def test_consume_from_retry(joint_fixture: JointFixture):
     config = joint_fixture.config
     assert config.kafka_enable_dlq
 
-    payload = event_schemas.FileDeletionRequested(file_id="123")
+    payload = event_schemas.FileDeletionRequested(file_id=uuid4())
 
     # Publish the event
     await joint_fixture.kafka.publish_event(

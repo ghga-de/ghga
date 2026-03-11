@@ -14,10 +14,15 @@
 # limitations under the License.
 """Models for internal representation"""
 
-from typing import Annotated
+from pydantic import UUID4, BaseModel, Field, PositiveInt
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, BaseModel, Field, PositiveInt, StringConstraints
+__all__ = [
+    "DatasetFileAccessions",
+    "DatasetFileInformation",
+    "FileAccession",
+    "FileInformation",
+    "PendingFileInfo",
+]
 
 
 class FileAccession(BaseModel):
@@ -71,20 +76,6 @@ class DatasetFileInformation(BaseModel):
     )
 
 
-Accession = Annotated[str, StringConstraints(pattern=r"^GHGA.+")]
-
-
-class FileAccessionMap(BaseModel):
-    """A class used to associate a file ID with an accession number"""
-
-    accession: Accession = Field(
-        default=..., description="The accession number assigned to this file."
-    )
-    file_id: UUID4 = Field(
-        default=..., description="Unique identifier for the file upload"
-    )
-
-
 class PendingFileInfo(BaseModel):
     """Temporarily stored file registration data awaiting the corresponding accession map."""
 
@@ -101,57 +92,3 @@ class PendingFileInfo(BaseModel):
     storage_alias: str = Field(
         default=..., description="The storage alias of the Data Hub housing the file"
     )
-
-
-class FileInternallyRegistered(PendingFileInfo):
-    """An event schema communicating that a file has been copied into permanent storage.
-
-    This local definition will be replaced by the `ghga-event-schemas` definition
-    once implemented there.
-    """
-
-    archive_date: UTCDatetime = Field(
-        default=...,
-        description="The date and time when this file was archived.",
-    )
-    bucket_id: str = Field(
-        default=..., description="The ID/name of the S3 bucket used to store the file."
-    )
-    secret_id: str = Field(
-        default=..., description="The ID of the file decryption secret."
-    )
-    encrypted_size: int = Field(
-        default=..., description="The encrypted size of the file before re-encryption"
-    )
-    encrypted_parts_md5: list[str] = Field(
-        default=..., description="The MD5 checksum of each encrypted file part"
-    )
-    encrypted_parts_sha256: list[str] = Field(
-        default=..., description="The SHA-256 checksum of each encrypted file part"
-    )
-    part_size: int = Field(
-        default=...,
-        description="The number of bytes in each file part (last part is likely smaller)",
-    )
-
-
-class FileDeletionRequested(BaseModel):
-    """
-    This event is emitted when a request to delete a certain file from the file
-    backend has been made.
-
-    This local definition will be replaced by the `ghga-event-schemas` definition
-    once implemented there.
-    """
-
-    file_id: UUID4 = Field(default=..., description="Unique identifier for the file")
-
-
-class FileDeletionSuccess(FileDeletionRequested):
-    """
-    This event is emitted when a service has deleted a file from its database as well
-    as the S3 buckets it controls.
-
-    This local definition will be replaced by the `ghga-event-schemas` definition
-    once implemented there.
-    """

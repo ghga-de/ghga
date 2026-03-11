@@ -17,7 +17,11 @@
 import logging
 from contextlib import suppress
 
-import ghga_event_schemas.pydantic_ as event_schemas
+from ghga_event_schemas.pydantic_ import (
+    FileAccessionMapping,
+    FileInternallyRegistered,
+    MetadataDatasetOverview,
+)
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import UUID4
 
@@ -25,9 +29,7 @@ from dins.core.models import (
     DatasetFileAccessions,
     DatasetFileInformation,
     FileAccession,
-    FileAccessionMap,
     FileInformation,
-    FileInternallyRegistered,
     PendingFileInfo,
 )
 from dins.ports.inbound.dao import (
@@ -59,9 +61,7 @@ class InformationService(InformationServicePort):
         self._file_information_dao = file_information_dao
         self._pending_file_info_dao = pending_file_info_dao
 
-    async def register_dataset_information(
-        self, dataset: event_schemas.MetadataDatasetOverview
-    ):
+    async def register_dataset_information(self, dataset: MetadataDatasetOverview):
         """Extract dataset to file accession mapping and store it."""
         dataset_accession = dataset.accession
         file_accessions = [file.accession for file in dataset.files]
@@ -185,7 +185,7 @@ class InformationService(InformationServicePort):
                 log.error(mismatch)
                 raise mismatch
 
-    async def store_accession_map(self, *, accession_map: FileAccessionMap) -> None:
+    async def store_accession_map(self, *, accession_map: FileAccessionMapping) -> None:
         """Upsert an accession map, then merge any waiting PendingFileInfo into FileInformation.
 
         Raises MismatchingFileInformationAlreadyRegistered if the accession is already mapped

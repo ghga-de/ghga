@@ -17,11 +17,17 @@
 
 import logging
 
-from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     DatasetEventsConfig,
     FileDeletionRequestEventsConfig,
     FileInternallyRegisteredEventsConfig,
+)
+from ghga_event_schemas.pydantic_ import (
+    FileAccessionMapping,
+    FileDeletionRequested,
+    FileInternallyRegistered,
+    MetadataDatasetID,
+    MetadataDatasetOverview,
 )
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
@@ -31,11 +37,6 @@ from pydantic import UUID4, Field
 from pydantic_settings import BaseSettings
 
 from dins.constants import TRACER
-from dins.core.models import (
-    FileAccessionMap,
-    FileDeletionRequested,
-    FileInternallyRegistered,
-)
 from dins.ports.inbound.information_service import InformationServicePort
 
 log = logging.getLogger(__name__)
@@ -127,7 +128,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         """Consume newly registered dataset to store file accession mapping."""
         validated_payload = get_validated_payload(
             payload=payload,
-            schema=event_schemas.MetadataDatasetOverview,
+            schema=MetadataDatasetOverview,
         )
 
         await self._information_service.register_dataset_information(
@@ -139,7 +140,7 @@ class EventSubTranslator(EventSubscriberProtocol):
         """Delete information for registered dataset mappings when a dataset is deleted."""
         validated_payload = get_validated_payload(
             payload=payload,
-            schema=event_schemas.MetadataDatasetID,
+            schema=MetadataDatasetID,
         )
 
         await self._information_service.delete_dataset_information(
@@ -172,11 +173,11 @@ class OutboxSubConfig(BaseSettings):
     )
 
 
-class AccessionMapOutboxTranslator(DaoSubscriberProtocol[FileAccessionMap]):
+class AccessionMapOutboxTranslator(DaoSubscriberProtocol[FileAccessionMapping]):
     """An outbox subscriber event translator for AccessionMap outbox events."""
 
     event_topic: str
-    dto_model = FileAccessionMap
+    dto_model = FileAccessionMapping
 
     def __init__(
         self,
@@ -189,7 +190,7 @@ class AccessionMapOutboxTranslator(DaoSubscriberProtocol[FileAccessionMap]):
         self._information_service = information_service
 
     @TRACER.start_as_current_span("AccessionMapOutboxTranslator.changed")
-    async def changed(self, resource_id: str, update: FileAccessionMap) -> None:
+    async def changed(self, resource_id: str, update: FileAccessionMapping) -> None:
         """Process an AccessionMap event."""
         log.info(
             "Received upsertion outbox event for AccessionMap for accession %s.",

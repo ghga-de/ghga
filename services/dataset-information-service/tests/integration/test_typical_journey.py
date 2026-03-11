@@ -162,7 +162,7 @@ async def test_file_information_journey(joint_fixture: JointFixture, caplog):
     assert response.status_code == 404
 
     # Request deletion - file_id is the UUID, not the accession
-    deletion_requested = models.FileDeletionRequested(file_id=FILE_ID_1)
+    deletion_requested = event_schemas.FileDeletionRequested(file_id=FILE_ID_1)
 
     await joint_fixture.kafka.publish_event(
         payload=deletion_requested.model_dump(),
@@ -286,7 +286,7 @@ async def test_dataset_information_journey(
 
     # delete file information - use file_id (UUID), not accession
     for file_id in (FILE_ID_1, FILE_ID_2, FILE_ID_3):
-        deletion_requested = models.FileDeletionRequested(file_id=file_id)
+        deletion_requested = event_schemas.FileDeletionRequested(file_id=file_id)
 
         await joint_fixture.kafka.publish_event(
             payload=deletion_requested.model_dump(),
