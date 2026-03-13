@@ -146,7 +146,7 @@ async def login(  # noqa: C901, PLR0913
     if session:
         # We do not check the CSRF token here so that we can login
         # from a different browser tab which does not know the token.
-        # This is ok since it is an request that does not modify state.
+        # This is ok since it is a request that does not modify state.
         session_created = False
     else:
         access_token = get_bearer_token(authorization, x_authorization)
