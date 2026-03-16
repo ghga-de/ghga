@@ -28,7 +28,7 @@ from ghga_connector import exceptions
 from ghga_connector.config import set_runtime_config
 from ghga_connector.core.client import async_client
 from ghga_connector.core.main import upload_files
-from ghga_connector.core.uploading.structs import FileInfoForUpload
+from ghga_connector.core.uploading.structs import CoreFileInfo
 from ghga_connector.core.utils import modify_for_debug
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.app import mock_external_calls  # noqa: F401
@@ -41,6 +41,7 @@ from tests.fixtures.utils import (
 
 ALIAS = "test-file-1"
 SIZE = 10 * 1024 * 1024
+PART_SIZE = 5 * 1024**2
 FILE_ID = UUID("550e8400-e29b-41d4-a716-446655440002")
 SHORT_LIFESPAN = 10
 pytestmark = [
@@ -145,6 +146,7 @@ async def test_upload_journey(
     )
 
     upload_id_ref: list[str] = []
+    object_id_ref: list[str] = []
 
     set_init_upload_placeholder(
         monkeypatch, s3_fixture, bucket_id=bucket_id, upload_id_ref=upload_id_ref
@@ -156,17 +158,39 @@ async def test_upload_journey(
         upload_id_ref=upload_id_ref,
     )
 
-    # create 2 big temp files
+    async def capturing_init_upload(object_id: str):
+        object_id_ref.clear()
+        object_id_ref.append(object_id)
+        upload_id_ref.clear()
+        upload_id_ref.append(
+            await s3_fixture.storage.init_multipart_upload(
+                bucket_id=bucket_id, object_id=object_id
+            )
+        )
+
+    monkeypatch.setattr(
+        "tests.fixtures.mock_api.app.init_upload_placeholder", capturing_init_upload
+    )
+
+    # create a big temp file
     with big_temp_file(SIZE) as file:
-        file_info = FileInfoForUpload(ALIAS, Path(file.name), SIZE)
+        actual_size = Path(file.name).stat().st_size
+        file_info = CoreFileInfo(
+            alias=ALIAS, path=Path(file.name), decrypted_size=actual_size
+        )
         async with async_client() as client, set_runtime_config(client=client):
             await upload_files(
                 client=client,
-                file_info_list=[file_info],
+                core_file_info_list=[file_info],
                 my_public_key_path=PUBLIC_KEY_FILE,
                 my_private_key_path=PRIVATE_KEY_FILE,
                 passphrase=None,
             )
+        assert object_id_ref, "No object ID was captured during upload"
+        object_size = await s3_fixture.storage.get_object_size(
+            bucket_id=bucket_id, object_id=object_id_ref[0]
+        )
+        assert object_size == file_info.encrypted_size
 
 
 async def test_upload_bad_url(
@@ -179,12 +203,15 @@ async def test_upload_bad_url(
     # The intercepted health check API call will return the following mock response
     httpx_mock.add_exception(httpx.RequestError(""))
     with big_temp_file(SIZE) as file, pytest.raises(exceptions.ApiNotReachableError):
+        actual_size = Path(file.name).stat().st_size
         modify_for_debug(debug=True)
-        file_info = FileInfoForUpload(ALIAS, Path(file.name), SIZE)
+        file_info = CoreFileInfo(
+            alias=ALIAS, path=Path(file.name), decrypted_size=actual_size
+        )
         async with async_client() as client, set_runtime_config(client=client):
             await upload_files(
                 client=client,
-                file_info_list=[file_info],
+                core_file_info_list=[file_info],
                 my_public_key_path=PUBLIC_KEY_FILE,
                 my_private_key_path=PRIVATE_KEY_FILE,
                 passphrase=None,

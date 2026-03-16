@@ -57,6 +57,17 @@ class BadResponseCodeError(RuntimeError):
         super().__init__(message)
 
 
+class ChecksumMismatchError(RuntimeError):
+    """Raised when the checksums provided for an upload don't match what S3 calculated."""
+
+    def __init__(self):
+        msg = (
+            "The checksums provided for the uploaded file do not match the checksums"
+            " calculated by S3."
+        )
+        super().__init__(msg)
+
+
 class _FileUploadError(RuntimeError):
     """Base error class for top-level errors in file upload"""
 
@@ -116,14 +127,18 @@ class DownloadError(RuntimeError):
         super().__init__(message)
 
 
-class EncryptedSizeMismatch(RuntimeError):
-    """Thrown when the actual encrypted size of a file does not match the computed one"""
+class CiphertextSizeMismatch(RuntimeError):
+    """Thrown when the encrypted file content length differs from the computed one.
 
-    def __init__(self, *, actual_encrypted_size: int, expected_encrypted_size: int):
+    In this case, the concerned value should not include the envelope.
+    """
+
+    def __init__(self, *, actual_ciphertext_size: int, expected_ciphertext_size: int):
         message = (
-            "Mismatch between actual and theoretical encrypted part size:\n"
-            + f"Is: {actual_encrypted_size}\n"
-            + f"Should be: {expected_encrypted_size}"
+            "Mismatch between actual and calculated encrypted file size:\n"
+            + f"Is: {actual_ciphertext_size}\n"
+            + f"Should be: {expected_ciphertext_size}\nThis refers only to the"
+            + " encrypted file content without the Crypt4GH envelope."
         )
         super().__init__(message)
 

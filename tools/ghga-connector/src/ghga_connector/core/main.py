@@ -30,7 +30,7 @@ from ghga_connector.core.downloading.downloader import (
 )
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.batch_processing import upload_files_from_list
-from ghga_connector.core.uploading.structs import FileInfoForUpload
+from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
 from ghga_connector.core.work_package import WorkPackageClient
 
 from .. import exceptions
@@ -39,9 +39,9 @@ from .crypt import Crypt4GHDecryptor
 from .message_display import CLIMessageDisplay
 
 
-def parse_file_info_for_upload(file_info: list[str]) -> list[FileInfoForUpload]:
+def parse_file_info_for_upload(file_info: list[str]) -> list[CoreFileInfo]:
     """Given a list of strings, derive a file alias, path, and size from each item."""
-    items: list[FileInfoForUpload] = []
+    items: list[CoreFileInfo] = []
     for i, arg in enumerate(file_info, 1):
         if not arg:
             continue
@@ -58,8 +58,13 @@ def parse_file_info_for_upload(file_info: list[str]) -> list[FileInfoForUpload]:
         else:
             validated_path = utils.parse_file_upload_path(arg)
             alias = validated_path.name
-        size = validated_path.stat().st_size
-        items.append(FileInfoForUpload(alias=alias, path=validated_path, size=size))
+        items.append(
+            CoreFileInfo(
+                alias=alias,
+                path=validated_path,
+                decrypted_size=validated_path.stat().st_size,
+            )
+        )
 
     # Ensure unique aliases and file paths
     for field_name in ["alias", "path"]:
@@ -80,7 +85,7 @@ async def async_upload(
     async with async_client() as client, set_runtime_config(client=client):
         await upload_files(
             client=client,
-            file_info_list=parsed_file_info,
+            core_file_info_list=parsed_file_info,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
             passphrase=passphrase,
@@ -90,7 +95,7 @@ async def async_upload(
 async def upload_files(
     *,
     client: httpx.AsyncClient,
-    file_info_list: list[FileInfoForUpload],
+    core_file_info_list: list[CoreFileInfo],
     my_public_key_path: Path,
     my_private_key_path: Path,
     passphrase: str | None = None,
@@ -98,19 +103,23 @@ async def upload_files(
     """Core command to upload one or more files. Can be called by CLI, GUI, etc."""
     my_public_key = utils.get_public_key(my_public_key_path)
     my_private_key = utils.get_private_key(my_private_key_path, passphrase)
-
     work_package_client = WorkPackageClient(
         client=client, my_private_key=my_private_key, my_public_key=my_public_key
     )
     upload_client = UploadClient(client=client, work_package_client=work_package_client)
-    config = get_config()
 
-    CLIMessageDisplay.display(f"Preparing to upload {len(file_info_list)} files")
+    # Add part size to core file info - this enables us to calculate part ranges
+    config = get_config()
+    full_file_info = [
+        FileInfoForUpload(core_file_info=cfi, configured_part_size=config.part_size)
+        for cfi in core_file_info_list
+    ]
+
+    CLIMessageDisplay.display(f"Preparing to upload {len(core_file_info_list)} files")
     await upload_files_from_list(
         upload_client=upload_client,
-        file_info_list=file_info_list,
+        file_info_list=full_file_info,
         my_private_key=my_private_key,
-        configured_part_size=config.part_size,
         max_concurrent_uploads=config.max_concurrent_uploads,
     )
 

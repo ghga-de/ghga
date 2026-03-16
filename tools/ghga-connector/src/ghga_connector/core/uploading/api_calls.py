@@ -79,7 +79,10 @@ class UploadClient:
         work_package_id = self._work_package_client.package_id
         match status_code:
             case 400:
-                raise exceptions.S3StorageError(work_package_id=work_package_id)
+                _handle_400(
+                    exception_id=response.json()["exception_id"],
+                    work_package_id=work_package_id,
+                )
             case 401 | 403:
                 raise exceptions.AuthorizationError()
             case 404:
@@ -101,7 +104,14 @@ class UploadClient:
         msg = f"Upload API returned status code {status_code}"
         raise exceptions.UnexpectedError(msg)
 
-    async def create_file_upload(self, *, file_alias: str, file_size: int) -> UUID4:
+    async def create_file_upload(
+        self,
+        *,
+        file_alias: str,
+        decrypted_size: int,
+        encrypted_size: int,
+        part_size: int,
+    ) -> UUID4:
         """Contact the Upload API to initiate a new upload for a file alias"""
         box_id = await self._work_package_client.get_package_box_id()
 
@@ -113,7 +123,12 @@ class UploadClient:
         # contact Upload API to create file upload
         url = f"{self._upload_api_url}/boxes/{box_id}/uploads"
         headers = _form_authorization_headers(create_file_wot)
-        body = {"alias": file_alias, "size": file_size}
+        body = {
+            "alias": file_alias,
+            "decrypted_size": decrypted_size,
+            "encrypted_size": encrypted_size,
+            "part_size": part_size,
+        }
 
         try:
             log.debug("Requesting file upload creation at url %s", url)
@@ -217,8 +232,15 @@ class UploadClient:
                 status_code=response.status_code, response=response, file_id=file_id
             )
 
-    async def complete_file_upload(
-        self, *, file_id: UUID4, unencrypted_checksum: str, encrypted_checksum: str
+    async def complete_file_upload(  # noqa: PLR0913
+        self,
+        *,
+        file_id: UUID4,
+        file_alias: str,
+        decrypted_sha256: str,
+        encrypted_md5: str,
+        encrypted_parts_md5: list[str],
+        encrypted_parts_sha256: list[str],
     ) -> None:
         """Complete a file upload"""
         box_id = await self._work_package_client.get_package_box_id()  # cached
@@ -231,8 +253,10 @@ class UploadClient:
         url = f"{self._upload_api_url}/boxes/{box_id}/uploads/{file_id}"
         headers = _form_authorization_headers(close_file_wot)
         body = {
-            "unencrypted_checksum": unencrypted_checksum,
-            "encrypted_checksum": encrypted_checksum,
+            "decrypted_sha256": decrypted_sha256,
+            "encrypted_md5": encrypted_md5,
+            "encrypted_parts_md5": encrypted_parts_md5,
+            "encrypted_parts_sha256": encrypted_parts_sha256,
         }
 
         try:
@@ -247,10 +271,11 @@ class UploadClient:
                 status_code=response.status_code,
                 response=response,
                 box_id=box_id,
+                file_alias=file_alias,
                 file_id=file_id,
             )
 
-    async def delete_file(self, *, file_id: UUID4) -> None:
+    async def delete_file(self, *, file_id: UUID4, file_alias: str) -> None:
         """Delete a file upload"""
         box_id = await self._work_package_client.get_package_box_id()  # cached
 
@@ -274,8 +299,21 @@ class UploadClient:
                 status_code=response.status_code,
                 response=response,
                 box_id=box_id,
+                file_alias=file_alias,
                 file_id=file_id,
             )
+
+
+def _handle_400(*, exception_id: str, work_package_id: UUID4):
+    """Raise the proper error based on returned info about the 400.
+
+    Called from `UploadClient._handle_bad_status_codes()`.
+    """
+    match exception_id:
+        case "noSuchStorage":
+            raise exceptions.S3StorageError(work_package_id=work_package_id)
+        case "checksumMismatch":
+            raise exceptions.ChecksumMismatchError()
 
 
 def _handle_404(
@@ -318,7 +356,7 @@ def _handle_409(
     Called from `_handle_bad_status_codes()`.
     """
     match exception_id:
-        case "lockedBox":
+        case "boxStateError":
             raise exceptions.UploadBoxLockedError(work_package_id=work_package_id)
         case "fileUploadAlreadyExists":
             raise exceptions.UploadAlreadyExistsError(work_package_id=work_package_id)

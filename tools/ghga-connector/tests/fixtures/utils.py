@@ -24,13 +24,31 @@ import httpx
 import pytest
 from ghga_service_commons.utils import crypt
 
+from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
+
 BASE_DIR = Path(__file__).parent.resolve()
 KEY_DIR = BASE_DIR / "keypair"
 PUBLIC_KEY_FILE = KEY_DIR / "key.pub"
 PRIVATE_KEY_FILE = KEY_DIR / "key.sec"
 
 TEST_FILE_UPLOAD_BOX_ID = UUID("6ec579af-3918-45d2-8333-d2cdcfb53d1d")
+TEST_FILE_ID = UUID("550e8400-e29b-41d4-a716-446655440002")
 TEST_WORK_PACKAGE_ID = "2cc323e2-f2ba-4f52-aae3-57107ab8ff2f"
+
+DEFAULT_TEST_PART_SIZE = 5 * 1024 * 1024
+
+
+def make_file_info_for_upload(
+    *,
+    path: Path,
+    alias: str = "test-file",
+    decrypted_size: int = 100,
+) -> FileInfoForUpload:
+    """Create a FileInfoForUpload instance for use in unit tests."""
+    core = CoreFileInfo(alias=alias, path=path, decrypted_size=decrypted_size)
+    return FileInfoForUpload(
+        core_file_info=core, configured_part_size=DEFAULT_TEST_PART_SIZE
+    )
 
 
 @pytest.fixture()

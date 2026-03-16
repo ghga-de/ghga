@@ -25,7 +25,6 @@ from ghga_connector.core.progress_bar import UploadProgressBar
 from ghga_connector.core.tasks import TaskHandler
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.structs import FileInfoForUpload
-from ghga_connector.core.utils import calc_number_of_parts
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +38,6 @@ class Uploader:
         upload_client: UploadClient,
         encryptor: Crypt4GHEncryptor,
         file_info: FileInfoForUpload,
-        part_size: int,
         max_concurrent_uploads: int,
     ):
         """Instantiate the Uploader"""
@@ -47,13 +45,14 @@ class Uploader:
         self._file_alias = file_info.alias
         self._file_path = file_info.path
         self._encryptor = encryptor
-        self._part_size = part_size
-        self._file_size = file_info.size
+        self._file_info = file_info
         self._semaphore = asyncio.Semaphore(max_concurrent_uploads)
 
     def new_progress_bar(self) -> UploadProgressBar:
         """Create a new progress bar"""
-        return UploadProgressBar(file_name=self._file_alias, file_size=self._file_size)
+        return UploadProgressBar(
+            file_name=self._file_alias, file_size=self._file_info.decrypted_size
+        )
 
     async def initiate_file_upload(self) -> UUID4:
         """Initiate a file upload in the Upload API, exchanging the file alias for a
@@ -64,7 +63,10 @@ class Uploader:
         # Establish the file expectation and open the multipart upload
         try:
             self._file_id = await self._upload_client.create_file_upload(
-                file_alias=self._file_alias, file_size=self._file_size
+                file_alias=self._file_alias,
+                decrypted_size=self._file_info.decrypted_size,
+                encrypted_size=self._file_info.encrypted_size,
+                part_size=self._file_info.part_size,
             )
             return self._file_id
         except Exception as err:
@@ -78,14 +80,18 @@ class Uploader:
         Raises a `FileDeletionError` if there's a problem with the operation.
         """
         try:
-            await self._upload_client.delete_file(file_id=self._file_id)
+            await self._upload_client.delete_file(
+                file_id=self._file_id, file_alias=self._file_alias
+            )
         except Exception as err:
             raise exceptions.DeleteFileUploadError(
                 file_alias=self._file_alias, file_id=self._file_id, reason=str(err)
             ) from err
 
     async def _upload_file_part(self, file_processor: FileProcessor) -> None:
-        """Encrypt and upload a file part
+        """Encrypt and upload a file part.
+
+        Fetches the next part from the file_processor.
 
         Raises:
             UploadFileError: If there is a problem during content transfer.
@@ -121,9 +127,6 @@ class Uploader:
                 match the expected value.
             CompleteFileUploadError: If there's an error completing the file upload.
         """
-        num_parts = calc_number_of_parts(
-            self._encryptor.expected_encrypted_size, self._part_size
-        )
         self._in_sequence_part_number = 1
 
         # Encrypt and upload file parts in parallel
@@ -131,7 +134,7 @@ class Uploader:
         with self._file_path.open("rb") as file, self._progress_bar:
             file_processor = self._encryptor.process_file(file=file)
             task_handler = TaskHandler()
-            for _ in range(num_parts):
+            for _ in range(self._file_info.part_count):
                 task_handler.schedule(
                     self._upload_file_part(file_processor=file_processor)
                 )
@@ -139,14 +142,17 @@ class Uploader:
             await task_handler.gather()
 
         # Get the unencrypted checksum and tell the Upload API to conclude the S3 upload
-        unencrypted_checksum = self._encryptor.checksums.unencrypted_sha256.hexdigest()
-        encrypted_checksum = self._encryptor.checksums.encrypted_checksum_for_s3()
+        unencrypted_checksum = self._encryptor.checksums.decrypted_sha256.hexdigest()
+        encrypted_checksum = self._encryptor.checksums.get_encrypted_checksum_for_s3()
 
         try:
             await self._upload_client.complete_file_upload(
                 file_id=self._file_id,
-                unencrypted_checksum=unencrypted_checksum,
-                encrypted_checksum=encrypted_checksum,
+                file_alias=self._file_alias,
+                decrypted_sha256=unencrypted_checksum,
+                encrypted_md5=encrypted_checksum,
+                encrypted_parts_md5=self._encryptor.checksums.encrypted_parts_md5,
+                encrypted_parts_sha256=self._encryptor.checksums.encrypted_parts_sha256,
             )
             log.info("(4/4) Finished upload for %s.", self._file_id)
         except Exception as err:

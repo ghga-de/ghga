@@ -16,7 +16,6 @@
 """Various helper functions"""
 
 import logging
-import math
 import sys
 from functools import partial
 from pathlib import Path
@@ -135,54 +134,6 @@ def check_for_existing_file(*, file_info: FileInfo, overwrite: bool):
     output_file_ongoing = file_info.path_during_download
     if output_file_ongoing.exists():
         output_file_ongoing.unlink()
-
-
-def check_adjust_part_size(part_size: int, file_size: int) -> int:
-    """
-    Convert specified part size from MiB to bytes, check if it needs adjustment and
-    adjust accordingly
-    """
-    lower_bound = 5 * 1024**2
-    upper_bound = 5 * 1024**3
-    part_size = part_size * 1024**2
-
-    # clamp user input part sizes
-    if part_size < lower_bound:
-        part_size = lower_bound
-    elif part_size > upper_bound:
-        part_size = upper_bound
-
-    # fixed list for now, maybe change to something more meaningful
-    sizes_mib = [2**x for x in range(3, 13)]
-    sizes = [size * 1024**2 for size in sizes_mib]
-
-    # encryption will cause growth of ~ 0.0427%, so assume we might
-    # need five more parts for this check
-    if file_size / part_size > 9_995:
-        for candidate_size in sizes:
-            if candidate_size > part_size and file_size / candidate_size <= 9_995:
-                part_size = candidate_size
-                break
-        else:
-            raise ValueError(
-                "Could not find a valid part size that would allow to upload all file parts"
-            )
-
-    if part_size != part_size * 1024**2:
-        log.info(
-            "Part size was adjusted from %iMiB to %iMiB.\nThe configured part size"
-            + " would either have yielded more than the supported 10.000 parts or was"
-            + " not within the expected bounds (5MiB <= part_size <= 5GiB).",
-            part_size,
-            part_size / 1024**2,
-        )
-
-    return part_size
-
-
-def calc_number_of_parts(encrypted_file_size: int, part_size: int) -> int:
-    """Calculate the number of file parts from the file and part sizes"""
-    return math.ceil(encrypted_file_size / part_size)
 
 
 def parse_file_upload_path(s: str) -> Path:

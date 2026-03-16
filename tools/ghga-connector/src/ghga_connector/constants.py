@@ -16,6 +16,10 @@
 
 """Constants used throughout the core."""
 
+from math import ceil
+
+import crypt4gh.lib
+
 DEFAULT_PART_SIZE = 64 * (1024**2)  # 64 MiB
 TIMEOUT = 60.0
 TIMEOUT_LONG = 5 * TIMEOUT + 10
@@ -30,3 +34,13 @@ DOWNLOAD_URL_CACHE_SIZE = 250
 UPLOAD_WOT_LIFESPAN = 30  # The WPS default of 30 seconds
 UPLOAD_WOT_CACHE_TIME = UPLOAD_WOT_LIFESPAN - CACHE_MIN_FRESH
 UPLOAD_WOT_CACHE_SIZE = 250
+ENVELOPE_SIZE = 124  # for one recipient (i.e. GHGA)
+MIN_PART_SIZE = 5 * 1024**2  # 5 MiB (S3 minimum for multipart parts)
+MAX_PART_SIZE = 5 * 1024**3  # 5 GiB (S3 maximum for multipart parts)
+MIN_ALIGNED_PART_SIZE = (  # smallest cipher-segment-aligned part size
+    ceil(MIN_PART_SIZE / crypt4gh.lib.CIPHER_SEGMENT_SIZE)
+    * crypt4gh.lib.CIPHER_SEGMENT_SIZE
+)
+MAX_ALIGNED_PART_SIZE = (  # largest cipher-segment-aligned part size
+    MAX_PART_SIZE // crypt4gh.lib.CIPHER_SEGMENT_SIZE
+) * crypt4gh.lib.CIPHER_SEGMENT_SIZE

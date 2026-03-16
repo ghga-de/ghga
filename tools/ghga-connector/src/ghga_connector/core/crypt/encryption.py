@@ -44,9 +44,9 @@ class Crypt4GHEncryptor:
         self._server_public_key = base64.b64decode(get_ghga_pubkey())
         self._file_secret = os.urandom(32)
         self.checksums = Checksums()  # Updated as encryption takes place
-        self._encrypted_file_size = 0  # Updated as encryption takes place
+        self._ciphertext_size = 0  # Updated as encryption takes place
         num_segments = math.ceil(file_size / crypt4gh.lib.SEGMENT_SIZE)
-        self.expected_encrypted_size = file_size + num_segments * 28
+        self.expected_ciphertext_size = file_size + num_segments * 28
 
     def _encrypt(self, part: bytes):
         """Encrypt file part using secret"""
@@ -75,9 +75,9 @@ class Crypt4GHEncryptor:
         header_bytes = crypt4gh.header.serialize(header_packets)
         return header_bytes
 
-    def get_encrypted_size(self) -> int:
-        """Get file size after encryption, excluding envelope"""
-        return self._encrypted_file_size
+    def get_ciphertext_size(self) -> int:
+        """Get the size of the encrypted file content, EXCLUDING the envelope."""
+        return self._ciphertext_size
 
     def _get_current_part_and_update_checksum(
         self, *, upload_buffer: bytes, content_offset: int
@@ -88,13 +88,13 @@ class Crypt4GHEncryptor:
 
         # Make sure we only calculate the checksum on the file content itself,
         #  not the envelope. Same for calculating encrypted file size.
-        encrypted_file_content_chunk = (
+        ciphertext_chunk = (
             current_part[content_offset:]
-            if self.checksums.encrypted_is_empty()
+            if not self.checksums.encrypted_parts_md5
             else current_part
         )
-        self.checksums.update_encrypted(encrypted_file_content_chunk)
-        self._encrypted_file_size += len(encrypted_file_content_chunk)
+        self.checksums.update_encrypted(ciphertext_chunk)
+        self._ciphertext_size += len(ciphertext_chunk)
         return current_part
 
     def process_file(self, *, file: BufferedReader) -> FileProcessor:
@@ -111,7 +111,7 @@ class Crypt4GHEncryptor:
             read_file_parts(file=file, part_size=self._part_size), start=1
         ):
             # Update the unencrypted content's checksum
-            self.checksums.update_unencrypted(file_part)
+            self.checksums.update_decrypted_sha256(file_part)
 
             # Add the file part to the unencrypted buffer
             unprocessed_bytes += file_part
@@ -158,8 +158,8 @@ class Crypt4GHEncryptor:
             yield part_number, upload_buffer
 
         # Finally, verify the encrypted size and raise an error if it doesn't match.
-        if self.expected_encrypted_size != self._encrypted_file_size:
-            raise exceptions.EncryptedSizeMismatch(
-                actual_encrypted_size=self._encrypted_file_size,
-                expected_encrypted_size=self.expected_encrypted_size,
+        if self._ciphertext_size != self.expected_ciphertext_size:
+            raise exceptions.CiphertextSizeMismatch(
+                actual_ciphertext_size=self._ciphertext_size,
+                expected_ciphertext_size=self.expected_ciphertext_size,
             )
