@@ -39,7 +39,9 @@ class CentralClientConfig(BaseSettings):
     """Configuration required for the CentralClient class"""
 
     central_api_crypt4gh_public_key: str = Field(
-        ..., description="The Crypt4GH public key used by the Central API"
+        ...,
+        description="The Crypt4GH public key used by the Central API. This is used to"
+        + " encrypt new file encryption secrets.",
     )
     central_api_url: HttpUrl = Field(
         ..., description="The base URL used to connect to to the GHGA Central API"

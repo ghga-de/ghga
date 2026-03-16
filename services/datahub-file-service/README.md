@@ -72,7 +72,7 @@ The service requires the following configuration parameters:
   - **Any of**
     - <a id="properties/crypt4gh_private_key_passphrase/anyOf/0"></a>*string*
     - <a id="properties/crypt4gh_private_key_passphrase/anyOf/1"></a>*null*
-- <a id="properties/central_api_crypt4gh_public_key"></a>**`central_api_crypt4gh_public_key`** *(string, required)*: The Crypt4GH public key used by the Central API.
+- <a id="properties/central_api_crypt4gh_public_key"></a>**`central_api_crypt4gh_public_key`** *(string, required)*: The Crypt4GH public key used by the Central API. This is used to encrypt new file encryption secrets.
 - <a id="properties/central_api_url"></a>**`central_api_url`** *(string, format: uri, required)*: The base URL used to connect to to the GHGA Central API. Length must be between 1 and 2083 (inclusive).
 - <a id="properties/data_hub_signing_key"></a>**`data_hub_signing_key`** *(string, format: password, required and write-only)*: The Data Hub's private JWK for signing JWT auth tokens.
 

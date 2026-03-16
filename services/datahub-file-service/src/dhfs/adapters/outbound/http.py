@@ -27,6 +27,8 @@ from ghga_service_commons.transports import (
 from pydantic import Field
 from tenacity import RetryError
 
+from dhfs import __version__
+
 __all__ = [
     "ConnectionFailedError",
     "HttpClientConfig",
@@ -35,6 +37,8 @@ __all__ = [
     "get_configured_httpx_client",
     "raise_if_connection_failed",
 ]
+
+USER_AGENT = f"DataHubFileService/{__version__}"
 
 
 class HttpClientConfig(CompositeCacheConfig):
@@ -53,9 +57,13 @@ async def get_configured_httpx_client(
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
         config=config
     )
+    headers = httpx.Headers({"User-Agent": USER_AGENT})
     proxies = ratelimiting_retry_proxies(config=config)
     async with httpx.AsyncClient(
-        timeout=config.http_request_timeout_seconds, transport=transport, mounts=proxies
+        timeout=config.http_request_timeout_seconds,
+        headers=headers,
+        transport=transport,
+        mounts=proxies,
     ) as client:
         yield client
 

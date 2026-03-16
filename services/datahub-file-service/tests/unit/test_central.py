@@ -33,6 +33,7 @@ from hexkit.utils import now_utc_ms_prec
 from pydantic import BaseModel, SecretBytes
 from pytest_httpx import HTTPXMock
 
+from dhfs import __version__
 from dhfs.adapters.outbound.central import CentralClient
 from dhfs.adapters.outbound.http import (
     ConnectionFailedError,
@@ -184,6 +185,8 @@ async def test_report_submission(config: Config, central_client, httpx_mock: HTT
 
     # Define an httpx_mock callback to let us inspect the request body
     def callback(request: httpx.Request):
+        user_agent = request.headers.get("User-Agent")
+        assert user_agent == f"DataHubFileService/{__version__}"
         body = json.load(request)  # type: ignore
         interrogated_at = datetime.fromisoformat(body["interrogated_at"])
         assert interrogated_at - now_utc_ms_prec() < timedelta(seconds=3)
