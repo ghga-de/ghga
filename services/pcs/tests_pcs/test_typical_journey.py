@@ -17,12 +17,14 @@
 """Tests typical user journeys"""
 
 import json
+from uuid import UUID
 
 import pytest
 from fastapi import status
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from httpx import Headers
+from pydantic import UUID4
 
 from pcs.config import Config
 from tests_pcs.fixtures.joint import JointFixture
@@ -30,10 +32,10 @@ from tests_pcs.fixtures.joint import JointFixture
 pytestmark = pytest.mark.asyncio()
 
 
-TEST_FILE_ID = "test_id"
+TEST_FILE_ID = UUID("70a7e795-fe0c-4a03-9af4-a758f5b5464b")
 
 
-def expected_event_from_file_id(*, file_id: str, config: Config) -> ExpectedEvent:
+def expected_event_from_file_id(*, file_id: UUID4, config: Config) -> ExpectedEvent:
     """Given a file ID and event type, return a FileDeletionRequest formatted
     as an ExpectedEvent.
     """
@@ -41,7 +43,7 @@ def expected_event_from_file_id(*, file_id: str, config: Config) -> ExpectedEven
     files_deletion_event = event_schemas.FileDeletionRequested(file_id=TEST_FILE_ID)
     payload = json.loads(files_deletion_event.model_dump_json())
     type_ = config.file_deletion_request_type
-    expected_event = ExpectedEvent(payload=payload, type_=type_, key=file_id)
+    expected_event = ExpectedEvent(payload=payload, type_=type_, key=str(file_id))
     return expected_event
 
 

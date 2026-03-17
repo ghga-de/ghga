@@ -16,6 +16,7 @@
 """Main business-logic of this service"""
 
 from ghga_event_schemas.pydantic_ import FileDeletionRequested
+from pydantic import UUID4
 
 from pcs.ports.inbound.file_deletion import FileDeletionPort
 from pcs.ports.outbound.event_pub import EventPubTranslatorPort
@@ -28,7 +29,7 @@ class FileDeletion(FileDeletionPort):
         """Initialize with outbound adapters."""
         self._event_publisher = event_publisher
 
-    async def delete_file(self, *, file_id: str) -> None:
+    async def delete_file(self, *, file_id: UUID4) -> None:
         """Sends out an event to delete all occurrences of a certain file.
 
         Args:

@@ -17,6 +17,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, status
+from pydantic import UUID4
 
 from pcs.adapters.inbound.fastapi_ import dummies
 from pcs.adapters.inbound.fastapi_.http_authorization import (
@@ -50,7 +51,7 @@ async def health():
 )
 @TRACER.start_as_current_span("routes.delete_file")
 async def delete_file(
-    file_id: str,
+    file_id: UUID4,
     file_deletion: dummies.FileDeletionDummy,
     _token: Annotated[TokenAuthContext, require_token],
 ):

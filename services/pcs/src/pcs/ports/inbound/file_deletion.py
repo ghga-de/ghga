@@ -17,12 +17,14 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 
 class FileDeletionPort(ABC):
     """A service that commissions file deletions."""
 
     @abstractmethod
-    async def delete_file(self, *, file_id: str) -> None:
+    async def delete_file(self, *, file_id: UUID4) -> None:
         """Sends out an event to delete all occurrences of a certain file.
 
         Args:

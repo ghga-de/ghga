@@ -31,7 +31,7 @@ def get_openapi_schema(app: FastAPI) -> dict[str, Any]:
         title="Purge Controller Service",
         version=__version__,
         description="A service exposing an external API to commission file deletions"
-        + "from the wholefile backend.",
+        + " from the whole file backend.",
         tags=[{"name": "PurgeControllerService"}],
         routes=app.routes,
     )

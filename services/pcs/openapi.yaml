@@ -40,10 +40,10 @@ components:
       scheme: bearer
       type: http
 info:
-  description: A service exposing an external API to commission file deletionsfrom
-    the wholefile backend.
+  description: A service exposing an external API to commission file deletions from
+    the whole file backend.
   title: Purge Controller Service
-  version: 5.1.0
+  version: 6.0.0
 openapi: 3.1.0
 paths:
   /files/{file_id}:
@@ -55,6 +55,7 @@ paths:
         name: file_id
         required: true
         schema:
+          format: uuid4
           title: File Id
           type: string
       responses:

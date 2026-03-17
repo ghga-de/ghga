@@ -41,10 +41,10 @@ class EventPubTranslator(EventPubTranslatorPort):
         self, *, file_deletion_request: FileDeletionRequested
     ):
         """Translate a file deletion request into an event."""
-        payload = file_deletion_request.model_dump()
+        payload = file_deletion_request.model_dump(mode="json")
         await self._provider.publish(
             payload=payload,
             topic=self._config.file_deletion_request_topic,
             type_=self._config.file_deletion_request_type,
-            key=file_deletion_request.file_id,
+            key=str(file_deletion_request.file_id),
         )
