@@ -111,7 +111,7 @@ class UploadClient:
         decrypted_size: int,
         encrypted_size: int,
         part_size: int,
-    ) -> UUID4:
+    ) -> tuple[UUID4, str]:
         """Contact the Upload API to initiate a new upload for a file alias"""
         box_id = await self._work_package_client.get_package_box_id()
 
@@ -146,8 +146,20 @@ class UploadClient:
             )
 
         # Return the newly generated File ID
-        file_id = UUID(response.json())
-        return file_id
+        response_payload = response.json()
+        if response_payload["alias"] != file_alias:
+            log.error(
+                "Response is for file alias %s, but expected %s.",
+                response_payload["alias"],
+                file_alias,
+            )
+            raise exceptions.CreateFileUploadError(
+                file_alias=file_alias,
+                reason="When initiating the file upload, the received response indicated that it was for a different file alias.",
+            )
+        file_id = UUID(response_payload["file_id"])
+        storage_alias = response_payload["storage_alias"]
+        return file_id, storage_alias
 
     async def get_part_upload_url(
         self, *, file_id: UUID4, part_no: int, bust_cache: bool = False

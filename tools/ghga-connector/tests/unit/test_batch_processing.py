@@ -24,11 +24,13 @@ from pydantic import SecretBytes
 
 from ghga_connector import exceptions
 from ghga_connector.core.uploading.batch_processing import upload_files_from_list
-from tests.fixtures.utils import TEST_FILE_ID, make_file_info_for_upload
+from tests.fixtures.utils import (
+    TEST_FILE_ID,
+    TEST_STORAGE_ALIAS1,
+    make_file_info_for_upload,
+)
 
 pytestmark = pytest.mark.asyncio
-
-FILE_ID = TEST_FILE_ID
 
 
 def make_mock_uploader(
@@ -37,7 +39,7 @@ def make_mock_uploader(
 ) -> AsyncMock:
     """Create a mock Uploader with configurable upload_file side effect."""
     uploader = AsyncMock()
-    uploader.initiate_file_upload.return_value = FILE_ID
+    uploader.initiate_file_upload.return_value = TEST_FILE_ID, TEST_STORAGE_ALIAS1
     if upload_raises is not None:
         uploader.upload_file.side_effect = upload_raises
     return uploader

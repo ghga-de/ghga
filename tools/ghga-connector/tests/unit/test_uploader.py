@@ -26,7 +26,11 @@ from ghga_connector import exceptions
 from ghga_connector.core.crypt.checksums import Checksums
 from ghga_connector.core.crypt.encryption import FileProcessor
 from ghga_connector.core.uploading.uploader import Uploader
-from tests.fixtures.utils import TEST_FILE_ID, make_file_info_for_upload
+from tests.fixtures.utils import (
+    TEST_FILE_ID,
+    TEST_STORAGE_ALIAS2,
+    make_file_info_for_upload,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -59,13 +63,11 @@ def make_uploader(
     """Create an Uploader instance wired up with mock dependencies for unit testing."""
     if upload_client is None:
         upload_client = AsyncMock()
-    encryptor = make_mock_encryptor()
     file_info = make_file_info_for_upload(
         path=path, alias=FILE_ALIAS, decrypted_size=1000
     )
     return Uploader(
         upload_client=upload_client,
-        encryptor=encryptor,
         file_info=file_info,
         max_concurrent_uploads=max_concurrent_uploads,
     )
@@ -75,13 +77,13 @@ async def test_initiate_file_upload_returns_file_id():
     """Make sure initiate_file_upload returns the file ID provided by the upload client."""
     with NamedTemporaryFile() as f:
         upload_client = AsyncMock()
-        upload_client.create_file_upload.return_value = FILE_ID
+        upload_client.create_file_upload.return_value = FILE_ID, TEST_STORAGE_ALIAS2
         uploader = make_uploader(Path(f.name), upload_client=upload_client)
         file_info = uploader._file_info
 
         result = await uploader.initiate_file_upload()
 
-        assert result == FILE_ID
+        assert result == (FILE_ID, TEST_STORAGE_ALIAS2)
         upload_client.create_file_upload.assert_called_once_with(
             file_alias=FILE_ALIAS,
             decrypted_size=file_info.decrypted_size,
@@ -163,20 +165,17 @@ async def test_upload_file_calls_complete_after_all_parts():
         f.flush()
 
         upload_client = AsyncMock()
-        encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
         mock_file_info = make_file_info_for_upload(path=Path(f.name), alias=FILE_ALIAS)
 
         uploader = Uploader(
             upload_client=upload_client,
-            encryptor=encryptor,
             file_info=mock_file_info,
             max_concurrent_uploads=1,
         )
         uploader._file_id = FILE_ID
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())  # type: ignore
-
-        await uploader.upload_file()
-
+        encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
+        await uploader.upload_file(encryptor=encryptor)
         upload_client.complete_file_upload.assert_called_once()
 
 
@@ -190,12 +189,10 @@ async def test_upload_file_complete_error_raises_complete_file_upload_error():
 
         upload_client = AsyncMock()
         upload_client.complete_file_upload.side_effect = RuntimeError("server error")
-        encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
         mock_file_info = make_file_info_for_upload(path=Path(f.name), alias=FILE_ALIAS)
 
         uploader = Uploader(
             upload_client=upload_client,
-            encryptor=encryptor,
             file_info=mock_file_info,
             max_concurrent_uploads=1,
         )
@@ -203,7 +200,8 @@ async def test_upload_file_complete_error_raises_complete_file_upload_error():
         uploader.new_progress_bar = MagicMock(return_value=MagicMock())  # type: ignore
 
         with pytest.raises(exceptions.CompleteFileUploadError):
-            await uploader.upload_file()
+            encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
+            await uploader.upload_file(encryptor=encryptor)
 
 
 async def test_semaphore_initialized_with_max_concurrent_uploads():

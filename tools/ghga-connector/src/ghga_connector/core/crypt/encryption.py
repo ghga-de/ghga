@@ -28,7 +28,7 @@ from nacl.bindings import crypto_aead_chacha20poly1305_ietf_encrypt
 from pydantic import SecretBytes
 
 from ghga_connector import exceptions
-from ghga_connector.config import get_ghga_pubkey
+from ghga_connector.config import get_crypt4gh_public_key
 from ghga_connector.core.crypt.checksums import Checksums
 from ghga_connector.core.file_operations import get_segments, read_file_parts
 
@@ -38,15 +38,25 @@ FileProcessor = Generator[tuple[int, bytes], Any, None]
 class Crypt4GHEncryptor:
     """Handles on the fly encryption and checksum calculation"""
 
-    def __init__(self, part_size: int, my_private_key: SecretBytes, file_size: int):
+    def __init__(
+        self,
+        part_size: int,
+        my_private_key: SecretBytes,
+        file_size: int,
+        storage_alias: str,
+    ):
         self._part_size = part_size
         self._my_private_key = my_private_key
-        self._server_public_key = base64.b64decode(get_ghga_pubkey())
         self._file_secret = os.urandom(32)
         self.checksums = Checksums()  # Updated as encryption takes place
         self._ciphertext_size = 0  # Updated as encryption takes place
         num_segments = math.ceil(file_size / crypt4gh.lib.SEGMENT_SIZE)
         self.expected_ciphertext_size = file_size + num_segments * 28
+
+        # Decode the Data Hub public key
+        self._data_hub_public_key = base64.b64decode(
+            get_crypt4gh_public_key(storage_alias)
+        )
 
     def _encrypt(self, part: bytes):
         """Encrypt file part using secret"""
@@ -69,7 +79,7 @@ class Crypt4GHEncryptor:
         Gather file encryption/decryption secret and assemble a crypt4gh envelope using the
         server's private and the client's public key
         """
-        keys = [(0, self._my_private_key.get_secret_value(), self._server_public_key)]
+        keys = [(0, self._my_private_key.get_secret_value(), self._data_hub_public_key)]
         header_content = crypt4gh.header.make_packet_data_enc(0, self._file_secret)
         header_packets = crypt4gh.header.encrypt(header_content, keys)
         header_bytes = crypt4gh.header.serialize(header_packets)

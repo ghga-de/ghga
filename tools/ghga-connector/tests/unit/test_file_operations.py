@@ -28,6 +28,7 @@ from ghga_service_commons.utils.temp_files import big_temp_file
 from ghga_connector.core import is_file_encrypted, read_file_parts
 from ghga_connector.core.crypt import Crypt4GHDecryptor, Crypt4GHEncryptor
 from ghga_connector.core.utils import get_private_key
+from tests.fixtures.utils import TEST_STORAGE_ALIAS1
 
 
 @pytest.mark.parametrize("from_part", (None, 3))
@@ -78,7 +79,8 @@ async def test_encryption_decryption(
 
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
     monkeypatch.setattr(
-        "ghga_connector.core.crypt.encryption.get_ghga_pubkey", lambda: pubkey
+        "ghga_connector.core.crypt.encryption.get_crypt4gh_public_key",
+        lambda storage_alias: pubkey,
     )
 
     with (
@@ -95,6 +97,7 @@ async def test_encryption_decryption(
             part_size=8 * 1024**3,
             my_private_key=private_key,
             file_size=file_size,
+            storage_alias=TEST_STORAGE_ALIAS1,
         )
         for chunk in encryptor.process_file(file=in_file):  # type: ignore
             encrypted_file.write(chunk[1])

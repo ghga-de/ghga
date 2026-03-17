@@ -36,7 +36,6 @@ class Uploader:
         self,
         *,
         upload_client: UploadClient,
-        encryptor: Crypt4GHEncryptor,
         file_info: FileInfoForUpload,
         max_concurrent_uploads: int,
     ):
@@ -44,7 +43,6 @@ class Uploader:
         self._upload_client = upload_client
         self._file_alias = file_info.alias
         self._file_path = file_info.path
-        self._encryptor = encryptor
         self._file_info = file_info
         self._semaphore = asyncio.Semaphore(max_concurrent_uploads)
 
@@ -54,21 +52,21 @@ class Uploader:
             file_name=self._file_alias, file_size=self._file_info.decrypted_size
         )
 
-    async def initiate_file_upload(self) -> UUID4:
+    async def initiate_file_upload(self) -> tuple[UUID4, str]:
         """Initiate a file upload in the Upload API, exchanging the file alias for a
-        UUID4 file ID.
+        UUID4 file ID and storage alias.
 
         Raises a `CreateFileUploadError` if the operation fails.
         """
         # Establish the file expectation and open the multipart upload
         try:
-            self._file_id = await self._upload_client.create_file_upload(
+            self._file_id, storage_alias = await self._upload_client.create_file_upload(
                 file_alias=self._file_alias,
                 decrypted_size=self._file_info.decrypted_size,
                 encrypted_size=self._file_info.encrypted_size,
                 part_size=self._file_info.part_size,
             )
-            return self._file_id
+            return self._file_id, storage_alias
         except Exception as err:
             raise exceptions.CreateFileUploadError(
                 file_alias=self._file_alias, reason=str(err)
@@ -118,7 +116,7 @@ class Uploader:
                     file_alias=self._file_alias, reason=str(exc)
                 ) from exc
 
-    async def upload_file(self):
+    async def upload_file(self, *, encryptor: Crypt4GHEncryptor):
         """Upload a file to S3, encrypting it on the fly.
 
         Raises:
@@ -132,7 +130,7 @@ class Uploader:
         # Encrypt and upload file parts in parallel
         self._progress_bar = self.new_progress_bar()
         with self._file_path.open("rb") as file, self._progress_bar:
-            file_processor = self._encryptor.process_file(file=file)
+            file_processor = encryptor.process_file(file=file)
             task_handler = TaskHandler()
             for _ in range(self._file_info.part_count):
                 task_handler.schedule(
@@ -142,8 +140,8 @@ class Uploader:
             await task_handler.gather()
 
         # Get the unencrypted checksum and tell the Upload API to conclude the S3 upload
-        unencrypted_checksum = self._encryptor.checksums.decrypted_sha256.hexdigest()
-        encrypted_checksum = self._encryptor.checksums.get_encrypted_checksum_for_s3()
+        unencrypted_checksum = encryptor.checksums.decrypted_sha256.hexdigest()
+        encrypted_checksum = encryptor.checksums.get_encrypted_checksum_for_s3()
 
         try:
             await self._upload_client.complete_file_upload(
@@ -151,8 +149,8 @@ class Uploader:
                 file_alias=self._file_alias,
                 decrypted_sha256=unencrypted_checksum,
                 encrypted_md5=encrypted_checksum,
-                encrypted_parts_md5=self._encryptor.checksums.encrypted_parts_md5,
-                encrypted_parts_sha256=self._encryptor.checksums.encrypted_parts_sha256,
+                encrypted_parts_md5=encryptor.checksums.encrypted_parts_md5,
+                encrypted_parts_sha256=encryptor.checksums.encrypted_parts_sha256,
             )
             log.info("(4/4) Finished upload for %s.", self._file_id)
         except Exception as err:

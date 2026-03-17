@@ -70,30 +70,32 @@ async def upload_files_from_list(
     """
     CLIMessageDisplay.display(f"Starting batch upload of {len(file_info_list)} files")
     for file_info in file_info_list:
-        encryptor = Crypt4GHEncryptor(
-            part_size=file_info.part_size,  # this will be the adjusted part size
-            my_private_key=my_private_key,
-            file_size=file_info.decrypted_size,
-        )
         uploader = Uploader(
             upload_client=upload_client,
-            encryptor=encryptor,
             file_info=file_info,
             max_concurrent_uploads=max_concurrent_uploads,
         )
         log.info("Initializing upload for %s", file_info.alias)
         log.debug("Full file path is %s", str(file_info.path.resolve()))
-        file_id = await uploader.initiate_file_upload()
+
+        file_id, storage_alias = await uploader.initiate_file_upload()
         log.info(
             "File upload successfully initialized for %s."
-            + " The generated file ID is %s.",
+            + " The generated file ID is %s and the assigned storage alias is %s.",
             file_info.alias,
             file_id,
+            storage_alias,
         )
 
         log.info("Encrypting and uploading %s", file_info.alias)
+        encryptor = Crypt4GHEncryptor(
+            part_size=file_info.part_size,  # this will be the adjusted part size
+            my_private_key=my_private_key,
+            file_size=file_info.decrypted_size,
+            storage_alias=storage_alias,
+        )
         try:
-            await uploader.upload_file()
+            await uploader.upload_file(encryptor=encryptor)
         except KeyboardInterrupt:
             # User cancellation is handled here
             CLIMessageDisplay.failure(

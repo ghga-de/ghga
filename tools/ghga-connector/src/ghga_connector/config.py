@@ -32,8 +32,8 @@ from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_WAIT_TIME
 __all__ = [
     "Config",
     "get_config",
+    "get_crypt4gh_public_key",
     "get_download_api_url",
-    "get_ghga_pubkey",
     "get_upload_api_url",
     "get_work_package_api_url",
     "set_runtime_config",
@@ -44,7 +44,9 @@ download_api_url_var: ContextVar[str] = ContextVar("download_api_url_var", defau
 work_package_api_url_var: ContextVar[str] = ContextVar(
     "work_package_api_url_var", default=""
 )
-ghga_pubkey_var: ContextVar[str] = ContextVar("ghga_pubkey", default="")
+crypt4gh_public_keys: ContextVar[dict[str, str] | None] = ContextVar(
+    "ghga_pubkeys", default=None
+)
 
 
 def _get_context_var(context_var: ContextVar) -> Any:
@@ -69,9 +71,16 @@ def get_work_package_api_url() -> str:
     return _get_context_var(work_package_api_url_var)
 
 
-def get_ghga_pubkey() -> str:
-    """Get the GHGA crypt4gh public key."""
-    return _get_context_var(ghga_pubkey_var)
+def get_crypt4gh_public_key(storage_alias: str) -> str:
+    """Get the Crypt4GH public key for a given storage alias.
+
+    Storage alias corresponds to "Data Hub".
+    """
+    all_keys = _get_context_var(crypt4gh_public_keys)
+    hub_key = all_keys.get(storage_alias)
+    if not hub_key:
+        raise KeyError(f"No Crypt4GH public key is configured for {storage_alias}.")
+    return hub_key
 
 
 @config_from_yaml(prefix="ghga_connector")
@@ -112,7 +121,7 @@ async def set_runtime_config(client: httpx.AsyncClient):
     """Set runtime config as context vars to be accessed within a context manager.
 
     This sets the following values:
-    - ghga_pubkey
+    - crypt4gh_public_keys
     - work_package_api_url
     - download_api_url
     - upload_api_url
@@ -126,7 +135,7 @@ async def set_runtime_config(client: httpx.AsyncClient):
     """
     values = await _get_wkvs_values(client)
     for value_name in [
-        "crypt4gh_public_key",
+        "crypt4gh_public_keys",
         "wps_api_url",
         "dcs_api_url",
         "ucs_api_url",
@@ -135,7 +144,7 @@ async def set_runtime_config(client: httpx.AsyncClient):
             raise exceptions.WellKnownValueNotFound(value_name=value_name)
 
     async with (
-        set_context_var(ghga_pubkey_var, values["crypt4gh_public_key"]),
+        set_context_var(crypt4gh_public_keys, values["crypt4gh_public_keys"]),
         set_context_var(work_package_api_url_var, values["wps_api_url"].rstrip("/")),
         set_context_var(download_api_url_var, values["dcs_api_url"].rstrip("/")),
         set_context_var(upload_api_url_var, values["ucs_api_url"].rstrip("/")),
