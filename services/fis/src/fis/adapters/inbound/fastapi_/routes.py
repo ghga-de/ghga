@@ -17,7 +17,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, Request, status
 from pydantic import UUID4
 
 from fis.adapters.inbound.fastapi_ import dummies
@@ -30,6 +30,35 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def log_user_agent_header(
+    request: Request, endpoint_description: str, storage_alias: str = ""
+) -> None:
+    """Log a structured message from the User-Agent header.
+
+    Expects the format 'ClientName/1.0.0'. Adapts the message for a missing or
+    malformed header, or a missing storage alias.
+    """
+    raw_user_agent_header = request.headers.get("user-agent")
+    extra = {"user_agent": raw_user_agent_header}
+
+    parts = (raw_user_agent_header or "").split("/")
+
+    client_part = raw_user_agent_header
+    if (len(parts) == 2) and all(parts):
+        extra["client_name"] = parts[0]
+        extra["client_version"] = parts[1]
+        client_part = f"from {parts[0]}, version {parts[1]}"
+
+    alias_part = f", originating from {storage_alias}" if storage_alias else ""
+    log.info(
+        "Received request %s for the %s endpoint%s.",
+        client_part,
+        endpoint_description,
+        alias_part,
+        extra=extra,
+    )
+
+
 @router.get(
     "/health",
     summary="health",
@@ -37,8 +66,9 @@ router = APIRouter()
     status_code=200,
 )
 @TRACER.start_as_current_span("routes.health")
-async def health():
+async def health(request: Request):
     """Used to test if this service is alive"""
+    log_user_agent_header(request, "health")
     return {"status": "OK"}
 
 
@@ -52,10 +82,12 @@ async def health():
 @TRACER.start_as_current_span("routes.list_uploads")
 async def list_uploads(
     storage_alias: str,
+    request: Request,
     interrogator: dummies.InterrogatorPort,
     _token: Annotated[JWT, require_data_hub_jwt],
 ) -> list[models.BaseFileInformation]:
     """Return a list of not-yet-interrogated files for a Data Hub (storage_alias)"""
+    log_user_agent_header(request, "list_uploads", storage_alias)
     try:
         return await interrogator.get_files_not_yet_interrogated(
             storage_alias=storage_alias
@@ -76,6 +108,7 @@ async def list_uploads(
 @TRACER.start_as_current_span("routes.get_removable_files")
 async def get_removable_files(
     storage_alias: str,
+    request: Request,
     interrogator: dummies.InterrogatorPort,
     _token: Annotated[JWT, require_data_hub_jwt],
     object_ids: list[UUID4] = Body(),
@@ -83,6 +116,7 @@ async def get_removable_files(
     """Returns a subset of the provided object ID list containing the IDs of all S3
     objects which may be now removed from the interrogation bucket.
     """
+    log_user_agent_header(request, "get_removable_files", storage_alias)
     try:
         return [
             o for o in object_ids if await interrogator.check_if_removable(object_id=o)
@@ -107,11 +141,13 @@ async def get_removable_files(
 @TRACER.start_as_current_span("routes.post_interrogation_report")
 async def post_interrogation_report(
     storage_alias: str,
+    request: Request,
     interrogator: dummies.InterrogatorPort,
     _token: Annotated[JWT, require_data_hub_jwt],
     report: models.InterrogationReportWithSecret = Body(),
 ) -> None:
     """Post an InterrogationReport"""
+    log_user_agent_header(request, "post_interrogation_report", storage_alias)
     try:
         await interrogator.handle_interrogation_report(report=report)
     except InterrogationHandlerPort.FileNotFoundError as err:

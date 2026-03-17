@@ -15,6 +15,7 @@
 
 """Unit tests for the API"""
 
+import logging
 from uuid import uuid4
 
 import pytest
@@ -63,15 +64,40 @@ def jwt_factory(data_hub_jwks):
     return JWTTestFactory(data_hub_jwks)
 
 
-async def test_health(rest_client: AsyncTestClient, rig: JointRig):
+ROUTES_LOGGER = "fis.adapters.inbound.fastapi_.routes"
+TEST_USER_AGENT = "DataHubFileService/1.0.0"
+
+
+async def test_health(
+    rest_client: AsyncTestClient, rig: JointRig, caplog: pytest.LogCaptureFixture
+):
     """Test the GET /health endpoint"""
     url = "/health"
     response = await rest_client.get(url)
     assert response.status_code == 200
 
+    # No User-Agent header → logged as unknown client, no storage alias
+    with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
+        await rest_client.get(url, headers={"User-Agent": "Boto3/1.2.3 Python/3.12"})
+    assert "Boto3/1.2.3 Python/3.12" in caplog.text
+    assert "health endpoint" in caplog.text
+    assert "originating from" not in caplog.text
+    caplog.clear()
+
+    # With User-Agent header → client name and version logged, still no storage alias
+    with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
+        await rest_client.get(url, headers={"User-Agent": TEST_USER_AGENT})
+    assert "DataHubFileService" in caplog.text
+    assert "1.0.0" in caplog.text
+    assert "health endpoint" in caplog.text
+    assert "originating from" not in caplog.text
+
 
 async def test_list_uploads(
-    rest_client: AsyncTestClient, rig: JointRig, jwt_factory: JWTTestFactory
+    rest_client: AsyncTestClient,
+    rig: JointRig,
+    jwt_factory: JWTTestFactory,
+    caplog: pytest.LogCaptureFixture,
 ):
     """Test the GET /storages/{storage_alias}/uploads endpoint"""
     url = f"/storages/{HUB1}/uploads"
@@ -107,9 +133,22 @@ async def test_list_uploads(
     for a, b in zip(files_received_sorted, files_expected_sorted, strict=True):
         assert a.model_dump() == b.model_dump()
 
+    # Verify user agent logging includes client name and storage alias
+    with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
+        await rest_client.get(
+            url,
+            headers={**jwt_factory.auth_header(HUB1), "User-Agent": TEST_USER_AGENT},
+        )
+    assert "DataHubFileService" in caplog.text
+    assert "1.0.0" in caplog.text
+    assert HUB1 in caplog.text
+
 
 async def test_get_removable_files(
-    rest_client: AsyncTestClient, rig: JointRig, jwt_factory: JWTTestFactory
+    rest_client: AsyncTestClient,
+    rig: JointRig,
+    jwt_factory: JWTTestFactory,
+    caplog: pytest.LogCaptureFixture,
 ):
     """Test the POST /storages/{storage_alias}/uploads/can_remove endpoint"""
     url = f"/storages/{HUB1}/uploads/can_remove"
@@ -165,11 +204,23 @@ async def test_get_removable_files(
     response = await rest_client.post(url, json=["blahblah"], headers=correct_headers)
     assert response.status_code == 422
 
+    # Verify user agent logging includes client name and storage alias
+    with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
+        await rest_client.post(
+            url,
+            json=[],
+            headers={**correct_headers, "User-Agent": TEST_USER_AGENT},
+        )
+    assert "DataHubFileService" in caplog.text
+    assert "1.0.0" in caplog.text
+    assert HUB1 in caplog.text
+
 
 async def test_post_interrogation_report(
     rest_client: AsyncTestClient,
     rig: JointRig,
     jwt_factory: JWTTestFactory,
+    caplog: pytest.LogCaptureFixture,
 ):
     """Test the POST /storages/{storage_alias}/interrogation-reports endpoint"""
     url = f"/storages/{HUB1}/interrogation-reports"
@@ -270,3 +321,14 @@ async def test_post_interrogation_report(
         url, json=invalid_failure_report, headers=correct_headers
     )
     assert response.status_code == 422
+
+    # Verify user agent logging includes client name and storage alias
+    with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
+        await rest_client.post(
+            url,
+            json=success_report,
+            headers={**correct_headers, "User-Agent": TEST_USER_AGENT},
+        )
+    assert "DataHubFileService" in caplog.text
+    assert "1.0.0" in caplog.text
+    assert HUB1 in caplog.text
