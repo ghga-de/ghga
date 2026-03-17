@@ -20,6 +20,7 @@ InterrogationReports.
 import logging
 from contextlib import suppress
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
@@ -37,7 +38,7 @@ from fis.ports.outbound.dao import (
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.secrets import SecretsClientPort
 
-STATES = models.FileUploadState
+STATES = event_schemas.FileUploadState
 log = logging.getLogger(__name__)
 
 

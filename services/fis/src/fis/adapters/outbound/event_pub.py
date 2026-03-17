@@ -14,39 +14,23 @@
 # limitations under the License.
 """Adapter for publishing events to other services."""
 
+from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    FileInterrogationFailureEventsConfig,
+    FileInterrogationSuccessEventsConfig,
+)
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import UUID4, Field
-from pydantic_settings import BaseSettings
+from pydantic import UUID4
 
-from fis.core import models
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 
 
-class EventPubConfig(BaseSettings):
+class EventPubConfig(
+    FileInterrogationFailureEventsConfig,
+    FileInterrogationSuccessEventsConfig,
+):
     """Topic & type information for event publishing"""
-
-    file_interrogations_topic: str = Field(
-        default=...,
-        description=(
-            "The name of the topic use to publish file interrogation outcome events."
-        ),
-        examples=["file-interrogations"],
-    )
-    interrogation_success_type: str = Field(
-        default=...,
-        description=(
-            "The type used for events informing about successful file validations."
-        ),
-        examples=["interrogation_success"],
-    )
-    interrogation_failure_type: str = Field(
-        default=...,
-        description=(
-            "The type used for events informing about failed file validations."
-        ),
-        examples=["interrogation_failed"],
-    )
 
 
 class EventPubTranslator(EventPubTranslatorPort):
@@ -76,7 +60,7 @@ class EventPubTranslator(EventPubTranslatorPort):
         encrypted_size: int,
     ):
         """Publish a file interrogation success event"""
-        payload = models.InterrogationSuccess(
+        payload = event_schemas.InterrogationSuccess(
             file_id=file_id,
             secret_id=secret_id,
             storage_alias=storage_alias,
@@ -103,7 +87,7 @@ class EventPubTranslator(EventPubTranslatorPort):
         reason: str,
     ):
         """Publish a file interrogation failure event"""
-        payload = models.InterrogationFailure(
+        payload = event_schemas.InterrogationFailure(
             file_id=file_id,
             storage_alias=storage_alias,
             interrogated_at=interrogated_at,
