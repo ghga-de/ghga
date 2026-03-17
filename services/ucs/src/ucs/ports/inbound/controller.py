@@ -17,8 +17,14 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_event_schemas.pydantic_ import FileUpload, FileUploadReport
 from pydantic import UUID4
+
+from ucs.core.models import (
+    FileUpload,
+    InterrogationFailure,
+    InterrogationSuccess,
+    UploadBoxState,
+)
 
 
 class UploadControllerPort(ABC):
@@ -28,13 +34,19 @@ class UploadControllerPort(ABC):
         """Base error class for all upload errors"""
 
     class IncompleteUploadsError(UploadError):
-        """Raised when trying to lock a FileUploadBox for which at least one incomplete
-        FileUpload exists.
+        """Raised when trying to lock or archive a FileUploadBox for which
+        at least one incomplete FileUpload exists.
         """
 
         def __init__(self, *, box_id: UUID4, file_ids: list[UUID4]):
-            msg = f"Cannot lock box {box_id} because these files are incomplete: {file_ids}"
+            msg = (
+                f"Cannot lock or archive box {box_id} because these"
+                + f" files are incomplete: {file_ids}"
+            )
             super().__init__(msg)
+
+    class FileArchivalError(UploadError):
+        """Raised when there's a problem that prevents archiving a given FileUpload."""
 
     class S3UploadDetailsNotFoundError(UploadError):
         """Raised when the expected S3 upload details aren't found in the local DB.
@@ -46,62 +58,71 @@ class UploadControllerPort(ABC):
             msg = f"Failed to find S3 multipart upload details for file ID {file_id}."
             super().__init__(msg)
 
-    class S3UploadNotFoundError(UploadError):
-        """Raised when the local DB has a record of an S3 multipart upload but S3 itself doesn't."""
+    class UnknownStorageAliasError(UploadError):
+        """Raised when the requested storage alias is not configured."""
 
-        def __init__(self, *, bucket_id: str, s3_upload_id: str):
-            msg = (
-                "S3 object storage does not contain a multipart upload with ID"
-                + f" {s3_upload_id} in bucket ID {bucket_id}."
-            )
+        def __init__(self, *, storage_alias: str):
+            msg = f"No storage node exists for alias {storage_alias}."
             super().__init__(msg)
 
-    class UploadAbortError(UploadError):
-        """Raised when aborting an S3 multipart upload results in an error."""
-
-        def __init__(self, *, file_id: UUID4, s3_upload_id: str, bucket_id: str):
-            msg = (
-                f"Failed to abort S3 multipart upload with ID {s3_upload_id} for"
-                + f" file ID {file_id} in bucket ID {bucket_id}."
-            )
-            super().__init__(msg)
-
-    class UploadCompletionError(UploadError):
-        """Raised when completing an S3 multipart upload results in an error"""
-
-        def __init__(self, *, file_id: UUID4, s3_upload_id: str, bucket_id: str):
-            msg = (
-                f"Failed to complete S3 multipart upload with ID {s3_upload_id} for"
-                + f" file ID {file_id} in bucket ID {bucket_id}."
-            )
-            super().__init__(msg)
-
-    class OrphanedMultipartUploadError(UploadError):
-        """Raised when a pre-existing multipart upload is unexpectedly found"""
+    class UploadAlreadyInProgressError(UploadError):
+        """Raised when a file upload is initiated but one is already in progress."""
 
         def __init__(self, *, file_id: UUID4, bucket_id: str):
             msg = (
-                f"An S3 multipart upload already exists for file ID {file_id} and"
+                f"An upload is already in progress for file ID {file_id} in"
                 + f" bucket ID {bucket_id}."
             )
             super().__init__(msg)
 
-    class UnknownStorageAliasError(UploadError):
-        """Thrown when the requested storage location is not configured.
-        The given parameter given should be a configured alias, but is not.
-        """
+    class UploadSessionNotFoundError(UploadError):
+        """Raised when the tracked upload session can no longer be found."""
 
-        def __init__(self, *, storage_alias: str):
-            message = f"No storage node exists for alias {storage_alias}."
-            super().__init__(message)
+        def __init__(self, *, bucket_id: str, s3_upload_id: str):
+            msg = (
+                f"Upload session with ID {s3_upload_id} could not be found in"
+                + f" bucket ID {bucket_id}."
+            )
+            super().__init__(msg)
 
-    class LockedBoxError(UploadError):
-        """Raised when a user tries to perform an action that requires the Box to be
-        unlocked, but the Box is locked.
-        """
+    class UploadCompletionError(UploadError):
+        """Raised when completing a file upload results in an error."""
+
+        def __init__(self, *, file_id: UUID4, s3_upload_id: str, bucket_id: str):
+            msg = (
+                f"Failed to complete upload session {s3_upload_id} for"
+                + f" file ID {file_id} in bucket ID {bucket_id}."
+            )
+            super().__init__(msg)
+
+    class UploadAbortError(UploadError):
+        """Raised when aborting a file upload results in an error."""
+
+        def __init__(self, *, file_id: UUID4, s3_upload_id: str, bucket_id: str):
+            msg = (
+                f"Failed to abort upload session {s3_upload_id} for"
+                + f" file ID {file_id} in bucket ID {bucket_id}."
+            )
+            super().__init__(msg)
+
+    class BoxVersionError(UploadError):
+        """Raised when the supplied box version doesn't match the current version in the DB."""
 
         def __init__(self, *, box_id: UUID4):
-            msg = f"Can't perform this action because FileUploadBox with ID {box_id} is locked"
+            msg = f"The supplied version for FileUploadBox {box_id} is outdated."
+            super().__init__(msg)
+
+    class BoxStateError(UploadError):
+        """Thrown when the user requests an action FileUploadBox prevented by the box's state."""
+
+        box_state: UploadBoxState
+
+        def __init__(self, *, box_id: UUID4, box_state: UploadBoxState):
+            self.box_state = box_state
+            msg = (
+                "Can't perform this action because FileUploadBox with"
+                + f" ID {box_id} is {box_state}"
+            )
             super().__init__(msg)
 
     class FileUploadAlreadyExists(UploadError):
@@ -142,16 +163,24 @@ class UploadControllerPort(ABC):
 
     @abstractmethod
     async def initiate_file_upload(
-        self, *, box_id: UUID4, alias: str, size: int
-    ) -> UUID4:
-        """Initialize a new multipart upload and return the file ID.
+        self,
+        *,
+        box_id: UUID4,
+        alias: str,
+        decrypted_size: int,
+        encrypted_size: int,
+        part_size: int,
+    ) -> tuple[UUID4, str]:
+        """Initialize a new multipart upload.
+
+        Returns the file ID and storage alias as a 2-tuple.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
-        - `LockedBoxError` if the box exists but is locked.
+        - `BoxStateError` if the box exists but is locked.
         - `FileUploadAlreadyExists` if there's already a FileUpload for this alias.
         - `UnknownStorageAliasError` if the storage alias is not known.
-        - `OrphanedMultipartUploadError` if an S3 upload is already in progress.
+        - `UploadAlreadyInProgressError` if an upload is already in progress.
         """
         ...
 
@@ -164,18 +193,20 @@ class UploadControllerPort(ABC):
         Raises:
         - `S3UploadDetailsNotFoundError` if no upload details are found.
         - `UnknownStorageAliasError` if the storage alias is not known.
-        - `S3UploadNotFoundError` if the S3 multipart upload can't be found.
+        - `UploadSessionNotFoundError` if the upload session can't be found.
         """
         ...
 
     @abstractmethod
-    async def complete_file_upload(
+    async def complete_file_upload(  # noqa: PLR0913
         self,
         *,
         box_id: UUID4,
         file_id: UUID4,
         unencrypted_checksum: str,
         encrypted_checksum: str,
+        encrypted_parts_md5: list[str],
+        encrypted_parts_sha256: list[str],
     ) -> None:
         """Instruct S3 to complete a multipart upload and compares the remote checksum
         with the value provided for `encrypted_checksum`. The `unencrypted_checksum`
@@ -185,7 +216,8 @@ class UploadControllerPort(ABC):
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `S3UploadDetailsNotFoundError` if the S3UploadDetails aren't found.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
-        - `LockedBoxError` if the box exists but is locked.
+        - `BoxStateError` if the box exists but is locked.
+        - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
         - `ChecksumMismatchError` if the checksums don't match.
@@ -198,7 +230,8 @@ class UploadControllerPort(ABC):
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
-        - `LockedBoxError` if the box exists but is locked.
+        - `BoxStateError` if the box exists but is locked.
+        - `BoxVersionError` if the box version changed before stats could be updated.
         - `S3UploadDetailsNotFoundError` if the S3UploadDetails aren't found.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
@@ -216,20 +249,37 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def lock_file_upload_box(self, *, box_id: UUID4) -> None:
+    async def lock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Lock an existing FileUploadBox.
 
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
+        - `BoxVersionError` if the supplied version doesn't match the current version.
+        - `IncompleteUploadsError` if the box has incomplete FileUploads.
         """
         ...
 
     @abstractmethod
-    async def unlock_file_upload_box(self, *, box_id: UUID4) -> None:
+    async def unlock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Unlock an existing FileUploadBox.
 
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
+        - `BoxVersionError` if the supplied version doesn't match the current version.
+        - `BoxStateError` if the box is archived and cannot be unlocked.
+        """
+        ...
+
+    @abstractmethod
+    async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
+        """Archive an existing FileUploadBox.
+
+        Raises:
+        - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
+        - `BoxVersionError` if the supplied version doesn't match the current version.
+        - `BoxStateError` if the box is open.
+        - `IncompleteUploadsError` if the FileUploadBox has incomplete FileUploads.
+        - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
         ...
 
@@ -243,11 +293,11 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def process_file_upload_report(
-        self, *, file_upload_report: FileUploadReport
+    async def process_interrogation_success(
+        self, *, report: InterrogationSuccess
     ) -> None:
-        """Use a file upload report to clean up a file from the inbox bucket and
-        set the FileUpload state to 'archived'.
+        """Update a FileUpload with the information from a corresponding successful
+        interrogation report and remove it from the inbox bucket.
 
         Raises:
         - `S3UploadDetailsNotFoundError` if the S3UploadDetails aren't found.
@@ -255,3 +305,18 @@ class UploadControllerPort(ABC):
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         """
+        ...
+
+    @abstractmethod
+    async def process_interrogation_failure(
+        self, *, report: InterrogationFailure
+    ) -> None:
+        """Update a FileUpload state to 'failed' and remove it from the inbox bucket.
+
+        Raises:
+        - `FileUploadNotFound` if the FileUpload isn't found.
+        - `S3UploadDetailsNotFoundError` if the S3UploadDetails aren't found.
+        - `UnknownStorageAliasError` if the storage alias is not known.
+        - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        """
+        ...

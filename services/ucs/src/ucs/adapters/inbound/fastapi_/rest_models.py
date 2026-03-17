@@ -17,7 +17,9 @@
 
 from typing import Literal, TypeVar
 
-from pydantic import UUID4, BaseModel, ConfigDict, Field
+from pydantic import UUID4, BaseModel, ConfigDict, Field, model_validator
+
+from ucs.core.models import UploadBoxState
 
 
 class BoxCreationRequest(BaseModel):
@@ -32,8 +34,10 @@ class BoxCreationRequest(BaseModel):
 class BoxUpdateRequest(BaseModel):
     """Request body for updating a FileUploadBox."""
 
-    lock: bool = Field(
-        ..., description="Whether the box should be locked (true) or unlocked (false)"
+    state: UploadBoxState = Field(default=..., description="Updated state")
+    version: int = Field(
+        ...,
+        description="The expected current version of the box (for optimistic locking)",
     )
     model_config = ConfigDict(title="Box Update Request")
 
@@ -45,23 +49,69 @@ class FileUploadCreationRequest(BaseModel):
         ...,
         description="The alias for the file within the box (must be unique within the box)",
     )
-    size: int = Field(..., description="The size of the file in bytes", ge=1)
+    decrypted_size: int = Field(
+        ..., description="The size of the unencrypted file in bytes", ge=1
+    )
+    encrypted_size: int = Field(
+        ..., description="The size of the encrypted file in bytes", ge=1
+    )
+    part_size: int = Field(
+        ...,
+        description="The number of bytes in each file part (last part may be smaller)",
+        ge=1,
+    )
+
+    @model_validator(mode="after")
+    def encrypted_size_exceeds_decrypted_size(self) -> "FileUploadCreationRequest":
+        """Ensure encrypted_size is larger than decrypted_size."""
+        if self.encrypted_size <= self.decrypted_size:
+            raise ValueError(
+                f"encrypted_size ({self.encrypted_size}) must be larger than"
+                f" decrypted_size ({self.decrypted_size})"
+            )
+        return self
+
     model_config = ConfigDict(title="File Upload Creation Request")
+
+
+class FileUploadCreationResponse(BaseModel):
+    """Response body for newly created FileUploads"""
+
+    file_id: UUID4 = Field(
+        ..., description="The UUID4 identifier assigned to the FileUpload"
+    )
+    alias: str = Field(
+        ...,
+        description="The alias for the file within the box (must be unique within the box)",
+    )
+    storage_alias: str = Field(
+        ..., description="The storage alias to use for this upload"
+    )
 
 
 class FileUploadCompletionRequest(BaseModel):
     """Request body for completing a FileUpload."""
 
-    unencrypted_checksum: str = Field(
+    decrypted_sha256: str = Field(
         ..., description="The checksum of the unencrypted file"
     )
-    encrypted_checksum: str = Field(
-        ..., description="The checksum of the encrypted file"
+    encrypted_md5: str = Field(
+        ...,
+        description="The checksum of the encrypted file content, calculated from the list of MD5s for each part.",
+    )
+    encrypted_parts_md5: list[str] = Field(
+        ..., description="The MD5 checksum for each encrypted file part, in sequence"
+    )
+    encrypted_parts_sha256: list[str] = Field(
+        ...,
+        description="The SHA-256 checksum for each encrypted file part, in sequence",
     )
     model_config = ConfigDict(title="File Upload Completion Request")
 
 
-WorkType = Literal["create", "lock", "unlock", "view", "upload", "close", "delete"]
+WorkType = Literal[
+    "create", "lock", "unlock", "archive", "view", "upload", "close", "delete"
+]
 
 T = TypeVar("T", bound=WorkType)
 
@@ -76,7 +126,7 @@ class BaseWorkOrderToken[T: WorkType](BaseModel):
 CreateFileBoxWorkOrder = BaseWorkOrderToken[Literal["create"]]
 
 
-class ChangeFileBoxWorkOrder(BaseWorkOrderToken[Literal["lock", "unlock"]]):
+class ChangeFileBoxWorkOrder(BaseWorkOrderToken[Literal["lock", "unlock", "archive"]]):
     """WOT schema authorizing a user to lock or unlock an existing FileUploadBox"""
 
     box_id: UUID4

@@ -20,7 +20,7 @@ from typing import Annotated
 
 import typer
 
-from ucs.main import consume_events, initialize, publish_events, run_rest_app
+from ucs.main import consume_events, publish_events, run_rest_app
 
 cli = typer.Typer()
 
@@ -46,9 +46,3 @@ def sync_run_publish_events(
 def sync_consume_events(run_forever: bool = True):
     """Run an event consumer listening to the specified topic."""
     asyncio.run(consume_events(run_forever=run_forever))
-
-
-@cli.command(name="initialize")
-def sync_initialize():
-    """Run the init container functionality"""
-    asyncio.run(initialize())

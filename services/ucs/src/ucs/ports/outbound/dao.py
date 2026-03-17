@@ -18,11 +18,11 @@
 # for convenience: forward errors that may be thrown by DAO instances:
 from abc import ABC, abstractmethod
 
-from ghga_event_schemas.pydantic_ import FileUpload, FileUploadBox
 from hexkit.protocols.dao import Dao, ResourceAlreadyExistsError, ResourceNotFoundError
 from hexkit.protocols.daopub import DaoPublisher
 
 from ucs.core import models
+from ucs.core.models import FileUploadBox
 
 __all__ = [
     "FileUploadBoxDao",
@@ -35,7 +35,7 @@ __all__ = [
 
 S3UploadDetailsDao = Dao[models.S3UploadDetails]
 FileUploadBoxDao = DaoPublisher[FileUploadBox]
-FileUploadDao = DaoPublisher[FileUpload]
+FileUploadDao = DaoPublisher[models.FileUpload]
 
 
 class UploadDaoPublisherFactoryPort(ABC):
@@ -49,5 +49,5 @@ class UploadDaoPublisherFactoryPort(ABC):
         """Construct an outbox DAO for FileUploadBox objects"""
 
     @abstractmethod
-    async def get_file_upload_dao(self) -> DaoPublisher[FileUpload]:
+    async def get_file_upload_dao(self) -> DaoPublisher[models.FileUpload]:
         """Construct an outbox DAO for FileUpload objects"""

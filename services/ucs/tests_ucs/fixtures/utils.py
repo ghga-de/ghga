@@ -28,6 +28,10 @@ from ucs.adapters.inbound.fastapi_ import rest_models as models
 BASE_DIR = Path(__file__).parent.resolve()
 
 TOKEN_LIFESPAN = 30  # seconds
+DECRYPTED_SIZE = 10737418240
+ENCRYPTED_SIZE = 10742005884
+PART_SIZE = 5245120
+
 
 SignedToken: TypeAlias = str
 
@@ -50,7 +54,7 @@ def create_file_box_token_header(*, jwk: JWK) -> dict[str, str]:
 def change_file_box_token_header(
     *,
     box_id: UUID = uuid4(),
-    work_type: Literal["lock", "unlock"] = "lock",
+    work_type: Literal["lock", "unlock", "archive"] = "lock",
     jwk: JWK,
 ) -> dict[str, str]:
     """Generate ChangeFileBoxWorkOrder token for testing.

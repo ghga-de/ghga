@@ -149,21 +149,28 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
-    "file_upload_reports_topic": {
-      "description": "Name of the topic used for events indicating that a Data Hub has completed re-encryption and inspection of a file.",
+    "file_interrogations_topic": {
+      "description": "The name of the topic use to publish file interrogation outcome events.",
       "examples": [
-        "file-upload-reports"
+        "file-interrogations"
       ],
-      "title": "File Upload Reports Topic",
+      "title": "File Interrogations Topic",
       "type": "string"
     },
-    "file_upload_reports_type": {
-      "description": "The type used for events indicating that a Data Hub has completed re-encryption and inspection of a file.",
+    "interrogation_success_type": {
+      "description": "The type used for events informing about successful file validations.",
       "examples": [
-        "file_upload_report_generated",
-        "file_upload_report"
+        "interrogation_success"
       ],
-      "title": "File Upload Reports Type",
+      "title": "Interrogation Success Type",
+      "type": "string"
+    },
+    "interrogation_failure_type": {
+      "description": "The type used for events informing about failed file validations.",
+      "examples": [
+        "interrogation_failed"
+      ],
+      "title": "Interrogation Failure Type",
       "type": "string"
     },
     "enable_opentelemetry": {
@@ -633,8 +640,9 @@
     }
   },
   "required": [
-    "file_upload_reports_topic",
-    "file_upload_reports_type",
+    "file_interrogations_topic",
+    "interrogation_success_type",
+    "interrogation_failure_type",
     "service_instance_id",
     "object_storages",
     "kafka_servers",

@@ -19,7 +19,6 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, status
-from ghga_event_schemas.pydantic_ import FileUpload
 from pydantic import UUID4
 
 from ucs.adapters.inbound.fastapi_ import (
@@ -29,6 +28,7 @@ from ucs.adapters.inbound.fastapi_ import (
     rest_models,
 )
 from ucs.constants import TRACER
+from ucs.core.models import FileUpload
 from ucs.ports.inbound.controller import UploadControllerPort
 
 router = APIRouter(tags=["UploadControllerService"])
@@ -50,12 +50,19 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpBoxNotFoundError.get_body_model(),
     },
-    "lockedBox": {
+    "boxStateError": {
         "description": (
             "Exceptions by ID:"
-            + "\n- lockedBox: The FileUploadBox is locked and cannot be modified."
+            + "\n- boxStateError: The FileUploadBox's state precludes the requested action."
         ),
-        "model": http_exceptions.HttpLockedBoxError.get_body_model(),
+        "model": http_exceptions.HttpBoxStateError.get_body_model(),
+    },
+    "boxVersionOutdated": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- boxVersionOutdated: The requested FileUploadBox version is outdated."
+        ),
+        "model": http_exceptions.HttpBoxVersionError.get_body_model(),
     },
     "fileUploadAlreadyExists": {
         "description": (
@@ -119,6 +126,13 @@ ERROR_RESPONSES = {
     },
 }
 
+# For the update_box endpoint, map the work type required to change to a given box state
+BOX_STATE_TO_WORK_TYPE: dict[str, str] = {
+    "open": "unlock",
+    "locked": "lock",
+    "archived": "archive",
+}
+
 
 @router.get(
     "/health",
@@ -167,12 +181,13 @@ async def create_box(
 
 @router.patch(
     "/boxes/{box_id}",
-    summary="Update a FileUploadBox (lock/unlock)",
+    summary="Update a FileUploadBox (lock/unlock/archive)",
     operation_id="updateBox",
     status_code=status.HTTP_204_NO_CONTENT,
     response_description="FileUploadBox successfully updated",
     responses={
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxVersionOutdated"],
     },
 )
 @TRACER.start_as_current_span("routes.update_box")
@@ -185,25 +200,39 @@ async def update_box(
     ],
     upload_controller: dummies.UploadControllerDummy,
 ) -> None:
-    """Update a FileUploadBox to lock or unlock it.
+    """Update a FileUploadBox to lock it, unlock it, or archive it.
 
-    Request body must indicate whether the box is meant to be locked or unlocked.
+    Request body must contain a `state` field indicating the target state of the box,
+    as well as a `version` field indicating the expected current version of the box.
     Requires ChangeFileBoxWorkOrder token from the UOS. Users are only allowed to lock
-    the box; a Data Steward role is required to unlock it.
+    the box; a Data Steward role is required to do everything else.
     """
-    required_work_type = "lock" if box_update.lock else "unlock"
-    if work_order.box_id != box_id:
+    required_work_type = BOX_STATE_TO_WORK_TYPE.get(box_update.state)
+    if (
+        work_order.box_id != box_id
+        or not required_work_type
+        or work_order.work_type != required_work_type
+    ):
         raise http_exceptions.HttpNotAuthorizedError()
-    elif work_order.work_type != required_work_type:
-        raise http_exceptions.HttpNotAuthorizedError(status_code=401)
 
     try:
-        if box_update.lock:
-            await upload_controller.lock_file_upload_box(box_id=box_id)
-        else:
-            await upload_controller.unlock_file_upload_box(box_id=box_id)
+        match box_update.state:
+            case "locked":
+                await upload_controller.lock_file_upload_box(
+                    box_id=box_id, version=box_update.version
+                )
+            case "open":
+                await upload_controller.unlock_file_upload_box(
+                    box_id=box_id, version=box_update.version
+                )
+            case "archived":
+                await upload_controller.archive_file_upload_box(
+                    box_id=box_id, version=box_update.version
+                )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
+    except UploadControllerPort.BoxVersionError as error:
+        raise http_exceptions.HttpBoxVersionError(box_id=box_id) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
@@ -253,12 +282,12 @@ async def get_box_uploads(
     summary="Add a new FileUpload to an existing FileUploadBox",
     operation_id="createFileUpload",
     status_code=status.HTTP_201_CREATED,
-    response_model=UUID4,
+    response_model=rest_models.FileUploadCreationResponse,
     response_description="The file_id of the newly created FileUpload",
     responses={
         status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["noSuchStorage"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
-        status.HTTP_409_CONFLICT: ERROR_RESPONSES["lockedBox"]
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"]
         | ERROR_RESPONSES["fileUploadAlreadyExists"]
         | ERROR_RESPONSES["orphanedMultipartUpload"],
     },
@@ -272,11 +301,14 @@ async def create_file_upload(
         http_authorization.require_create_file_work_order,
     ],
     upload_controller: dummies.UploadControllerDummy,
-) -> UUID4:
+) -> rest_models.FileUploadCreationResponse:
     """Add a new FileUpload to an existing FileUploadBox.
 
     Creates a new file upload within the specified box with the provided alias, checksum, and size.
-    Initiates a multipart upload and returns the file ID for the newly created upload.
+    Initiates a multipart upload and returns the file ID, file alias, and storage alias
+    for the newly created upload. The file alias may be used by clients to ensure the
+    response pertains to the correct file.
+
     Requires a CreateFileWorkOrder token from the WPS.
     """
     file_alias = file_upload_creation.alias
@@ -284,15 +316,19 @@ async def create_file_upload(
         raise http_exceptions.HttpNotAuthorizedError()
 
     try:
-        file_id = await upload_controller.initiate_file_upload(
+        file_id, storage_alias = await upload_controller.initiate_file_upload(
             box_id=box_id,
             alias=file_alias,
-            size=file_upload_creation.size,
+            decrypted_size=file_upload_creation.decrypted_size,
+            encrypted_size=file_upload_creation.encrypted_size,
+            part_size=file_upload_creation.part_size,
         )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
-    except UploadControllerPort.LockedBoxError as error:
-        raise http_exceptions.HttpLockedBoxError(box_id=box_id) from error
+    except UploadControllerPort.BoxStateError as error:
+        raise http_exceptions.HttpBoxStateError(
+            box_id=box_id, box_state=error.box_state
+        ) from error
     except UploadControllerPort.FileUploadAlreadyExists as error:
         raise http_exceptions.HttpFileUploadAlreadyExistsError(
             alias=file_alias
@@ -301,7 +337,7 @@ async def create_file_upload(
         # This should not happen in normal operation since the box was already created
         # with a valid storage alias, but handle it just in case
         raise http_exceptions.HttpUnknownStorageAliasError() from error
-    except UploadControllerPort.OrphanedMultipartUploadError as error:
+    except UploadControllerPort.UploadAlreadyInProgressError as error:
         raise http_exceptions.HttpOrphanedMultipartUploadError(
             file_alias=file_alias
         ) from error
@@ -309,7 +345,10 @@ async def create_file_upload(
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
 
-    return file_id
+    response_payload = rest_models.FileUploadCreationResponse(
+        file_id=file_id, alias=file_alias, storage_alias=storage_alias
+    )
+    return response_payload
 
 
 @router.get(
@@ -357,7 +396,7 @@ async def get_part_upload_url(
         ) from error
     except UploadControllerPort.UnknownStorageAliasError as error:
         raise http_exceptions.HttpUnknownStorageAliasError() from error
-    except UploadControllerPort.S3UploadNotFoundError as error:
+    except UploadControllerPort.UploadSessionNotFoundError as error:
         raise http_exceptions.HttpS3UploadNotFoundError() from error
     except Exception as error:
         log.error(error, exc_info=True)
@@ -377,7 +416,7 @@ async def get_part_upload_url(
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
         | ERROR_RESPONSES["s3UploadDetailsNotFound"]
         | ERROR_RESPONSES["fileUploadNotFound"],
-        status.HTTP_409_CONFLICT: ERROR_RESPONSES["lockedBox"],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES[
             "s3UploadCompletionFailure"
         ],
@@ -407,13 +446,17 @@ async def complete_file_upload(
         await upload_controller.complete_file_upload(
             box_id=box_id,
             file_id=file_id,
-            unencrypted_checksum=file_upload_completion.unencrypted_checksum,
-            encrypted_checksum=file_upload_completion.encrypted_checksum,
+            unencrypted_checksum=file_upload_completion.decrypted_sha256,
+            encrypted_checksum=file_upload_completion.encrypted_md5,
+            encrypted_parts_md5=file_upload_completion.encrypted_parts_md5,
+            encrypted_parts_sha256=file_upload_completion.encrypted_parts_sha256,
         )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
-    except UploadControllerPort.LockedBoxError as error:
-        raise http_exceptions.HttpLockedBoxError(box_id=box_id) from error
+    except UploadControllerPort.BoxStateError as error:
+        raise http_exceptions.HttpBoxStateError(
+            box_id=box_id, box_state=error.box_state
+        ) from error
     except UploadControllerPort.FileUploadNotFound as error:
         raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error
     except UploadControllerPort.S3UploadDetailsNotFoundError as error:
@@ -441,7 +484,7 @@ async def complete_file_upload(
         status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["noSuchStorage"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
         | ERROR_RESPONSES["s3UploadDetailsNotFound"],
-        status.HTTP_409_CONFLICT: ERROR_RESPONSES["lockedBox"],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["uploadAbortError"],
     },
 )
@@ -467,8 +510,10 @@ async def remove_file_upload(
         await upload_controller.remove_file_upload(box_id=box_id, file_id=file_id)
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
-    except UploadControllerPort.LockedBoxError as error:
-        raise http_exceptions.HttpLockedBoxError(box_id=box_id) from error
+    except UploadControllerPort.BoxStateError as error:
+        raise http_exceptions.HttpBoxStateError(
+            box_id=box_id, box_state=error.box_state
+        ) from error
     except UploadControllerPort.S3UploadDetailsNotFoundError as error:
         raise http_exceptions.HttpS3UploadDetailsNotFoundError(
             file_id=file_id

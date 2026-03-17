@@ -32,7 +32,7 @@ from hexkit.providers.s3.testutils import (  # noqa: F401
 
 from tests_ucs.fixtures import ConfigFixture
 from tests_ucs.fixtures.config import get_config
-from tests_ucs.fixtures.joint import joint_fixture  # noqa: F401
+from tests_ucs.fixtures.joint import joint_fixture, patch_s3_calls, rig  # noqa: F401
 
 
 @pytest.fixture(name="config")

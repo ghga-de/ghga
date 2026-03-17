@@ -24,13 +24,13 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from ghga_event_schemas.pydantic_ import FileUploadReport
 from hexkit.correlation import set_correlation_id
+from hexkit.utils import now_utc_ms_prec
 
 from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.joint import JointFixture
 from ucs.constants import FILE_UPLOADS_COLLECTION, S3_UPLOAD_DETAILS_COLLECTION
-from ucs.main import initialize
+from ucs.core.models import InterrogationSuccess
 from ucs.ports.inbound.controller import UploadControllerPort
 
 pytestmark = pytest.mark.asyncio()
@@ -79,7 +79,8 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         assert events[0].type_ == "upserted"
         assert events[0].payload == {
             "id": str(box_id),
-            "locked": False,
+            "version": 0,
+            "state": "open",
             "size": 0,
             "file_count": 0,
             "storage_alias": "test",
@@ -87,7 +88,6 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
 
         # Make the temp test file
         temp_file.write(("abcdefghij" * (1024 * 1024)).encode())
-        file_size = 10 * 1024 * 1024  # 10 MiB
         temp_file.flush()
 
         expected_encrypted_checksum = calc_expected_encrypted_checksum(
@@ -101,26 +101,39 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             create_file_token_header = utils.create_file_token_header(
                 jwk=wps_jwk, box_id=box_id, alias="test_file"
             )
-            file_creation_body = {"alias": "test_file", "size": file_size}
+            file_creation_body = {
+                "alias": "test_file",
+                "decrypted_size": utils.DECRYPTED_SIZE,
+                "encrypted_size": utils.ENCRYPTED_SIZE,
+                "part_size": utils.PART_SIZE,
+            }
             response = await rest_client.post(
                 f"/boxes/{box_id}/uploads",
                 json=file_creation_body,
                 headers=create_file_token_header,
             )
             assert response.status_code == 201
-            file_id = UUID(response.json())
+            file_creation_response_body = response.json()
+            assert "file_id" in file_creation_response_body
+            assert "alias" in file_creation_response_body
+            assert "storage_alias" in file_creation_response_body
+            file_id = UUID(file_creation_response_body["file_id"])
+            assert "storage_alias" != ""
+            assert file_creation_response_body["alias"] == file_creation_body["alias"]
+
         events = file_recorder.recorded_events
         assert events
         assert len(events) == 1
         assert events[0].type_ == "upserted"
-        assert events[0].payload == {
-            **file_creation_body,
-            "state": "init",
-            "checksum": "",
-            "completed": False,
-            "id": str(file_id),
-            "box_id": str(box_id),
-        }, "Payload was wrong for new file upload event"
+        assert events[0].payload["state"] == "init"
+        assert events[0].payload["id"] == str(file_id)
+        assert events[0].payload["box_id"] == str(box_id)
+
+        # Look up the object_id for S3 operations (independent from file_id)
+        db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+        s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
+        s3_details = s3_upload_details_collection.find_one({"_id": file_id})
+        assert s3_details is not None
 
         # Get part upload URL for the file (should only require 1 part since file is under 16 MiB)
         upload_token_header = utils.upload_file_token_header(
@@ -139,6 +152,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         assert response.status_code == 200
 
         # File is now uploaded, so complete the upload
+        # After this, _update_box_stats increments box version from 0 → 1
         async with kafka.record_events(
             in_topic=config.file_upload_topic
         ) as file_recorder:
@@ -146,8 +160,10 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
                 jwk=wps_jwk, box_id=box_id, file_id=file_id
             )
             body = {
-                "unencrypted_checksum": "abc123",
-                "encrypted_checksum": expected_encrypted_checksum,
+                "decrypted_sha256": "abc123",
+                "encrypted_md5": expected_encrypted_checksum,
+                "encrypted_parts_md5": ["abc123"],
+                "encrypted_parts_sha256": ["def456"],
             }
             response = await rest_client.patch(
                 f"/boxes/{box_id}/uploads/{file_id}",
@@ -158,21 +174,22 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         assert len(events) == 1
         assert events[0].payload["state"] in ["inbox", "archived"]
 
-        # Let's lock the box now and verify that it is reflected in the event
+        # Let's lock the box now and verify that it is reflected in the event.
+        # Box version is 1 after completing the file upload (stats changed 0→1 file).
         async with kafka.record_events(
             in_topic=config.file_upload_box_topic
         ) as box_recorder:
             lock_box_token_header = utils.change_file_box_token_header(
                 box_id=box_id, jwk=uos_jwk
             )
-            box_update_body = {"lock": True}
+            box_update_body = {"state": "locked", "version": 1}
             response = await rest_client.patch(
                 f"/boxes/{box_id}", json=box_update_body, headers=lock_box_token_header
             )
             assert response.status_code == 204
         events = box_recorder.recorded_events
         assert len(events) == 1
-        assert events[0].payload["locked"]
+        assert events[0].payload["state"] == "locked"
 
         # Now try to delete the file and verify that no event gets emitted
         async with kafka.record_events(
@@ -187,9 +204,9 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             assert response.status_code == 409
         assert not file_recorder.recorded_events
 
-        # Great, we verified that the locked box prevents changes. Now unlock the box
-        #  but don't check for events -- satisfied at this point that outbox is working
-        box_update_body = {"lock": False}
+        # Great, we verified that the locked box prevents changes. Now unlock the box.
+        # Box version is 2 after locking.
+        box_update_body = {"state": "open", "version": 2}
         unlock_box_token_header = utils.change_file_box_token_header(
             box_id=box_id, work_type="unlock", jwk=uos_jwk
         )
@@ -220,8 +237,12 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     controller = joint_fixture.upload_controller
     async with set_correlation_id(uuid4()):
         box_id = await controller.create_file_upload_box(storage_alias="test")
-        file_id = await controller.initiate_file_upload(
-            box_id=box_id, alias="test-file", size=1024
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=utils.DECRYPTED_SIZE,
+            encrypted_size=utils.ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
         )
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
@@ -237,9 +258,10 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     assert len(uploads) == 1
     assert not uploads[0]["completed"]
     upload_id = uploads[0]["s3_upload_id"]
+    object_id = str(uploads[0]["object_id"])
 
     await joint_fixture.s3.storage.complete_multipart_upload(
-        bucket_id="test-inbox", object_id=str(file_id), upload_id=upload_id
+        bucket_id="test-inbox", object_id=object_id, upload_id=upload_id
     )
 
     # Now call the completion endpoint using the rest client
@@ -248,8 +270,10 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     )
     expected_encrypted_checksum = calc_expected_encrypted_checksum(CONTENT)
     body = {
-        "unencrypted_checksum": "abc123",
-        "encrypted_checksum": expected_encrypted_checksum,
+        "decrypted_sha256": "abc123",
+        "encrypted_md5": expected_encrypted_checksum,
+        "encrypted_parts_md5": ["a1", "b2"],
+        "encrypted_parts_sha256": ["a1", "b2"],
     }
     response = await joint_fixture.rest_client.patch(
         f"/boxes/{box_id}/uploads/{file_id}", json=body, headers=close_token_header
@@ -283,8 +307,12 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     controller = joint_fixture.upload_controller
     async with set_correlation_id(uuid4()):
         box_id = await controller.create_file_upload_box(storage_alias="test")
-        file_id = await controller.initiate_file_upload(
-            box_id=box_id, alias="test-file", size=1024
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=utils.DECRYPTED_SIZE,
+            encrypted_size=utils.ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
         )
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
@@ -300,8 +328,9 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     assert len(uploads) == 1
     assert not uploads[0]["completed"]
     upload_id = uploads[0]["s3_upload_id"]
+    object_id = str(uploads[0]["object_id"])
     await joint_fixture.s3.storage.abort_multipart_upload(
-        bucket_id="test-inbox", object_id=str(file_id), upload_id=upload_id
+        bucket_id="test-inbox", object_id=object_id, upload_id=upload_id
     )
 
     # Make the completion request with the rest client
@@ -309,8 +338,10 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
         box_id=box_id, file_id=file_id, jwk=wps_jwk
     )
     body: dict[str, Any] = {
-        "unencrypted_checksum": "abc123",
-        "encrypted_checksum": "abc123",
+        "decrypted_sha256": "abc123",
+        "encrypted_md5": "abc123",
+        "encrypted_parts_md5": ["a1", "b2"],
+        "encrypted_parts_sha256": ["a1", "b2"],
     }
     response = await rest_client.patch(
         f"/boxes/{box_id}/uploads/{file_id}", json=body, headers=close_token_header
@@ -334,12 +365,23 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     create_token_header = utils.create_file_token_header(
         box_id=box_id, alias="test-file", jwk=wps_jwk
     )
-    body = {"alias": "test-file", "size": 1024}
+    body = {
+        "alias": "test-file",
+        "decrypted_size": utils.DECRYPTED_SIZE,
+        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "part_size": utils.PART_SIZE,
+    }
     response = await rest_client.post(
         f"/boxes/{box_id}/uploads", headers=create_token_header, json=body
     )
     assert response.status_code == 201
-    file_id2 = UUID(response.json())
+    file_creation_response_body = response.json()
+    assert "file_id" in file_creation_response_body
+    assert "alias" in file_creation_response_body
+    assert "storage_alias" in file_creation_response_body
+    file_id2 = UUID(file_creation_response_body["file_id"])
+    assert "storage_alias" != ""
+    assert file_creation_response_body["alias"] == body["alias"]
 
     upload_token_header = utils.upload_file_token_header(
         box_id=box_id, file_id=file_id2, jwk=wps_jwk
@@ -360,8 +402,10 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
         box_id=box_id, file_id=file_id2, jwk=wps_jwk
     )
     body = {
-        "unencrypted_checksum": "abc123",
-        "encrypted_checksum": expected_encrypted_checksum,
+        "decrypted_sha256": "abc123",
+        "encrypted_md5": expected_encrypted_checksum,
+        "encrypted_parts_md5": ["abc123"],
+        "encrypted_parts_sha256": ["def456"],
     }
     response = await rest_client.patch(
         f"/boxes/{box_id}/uploads/{file_id2}", json=body, headers=close_token_header2
@@ -412,7 +456,12 @@ async def test_orphaned_s3_upload_in_file_create(joint_fixture: JointFixture, ca
     create_token_header = utils.create_file_token_header(
         box_id=box_id, alias="test-file", jwk=joint_fixture.wps_jwk
     )
-    body = {"alias": "test-file", "checksum": "abc123", "size": 1024}
+    body = {
+        "alias": "test-file",
+        "decrypted_size": utils.DECRYPTED_SIZE,
+        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "part_size": utils.PART_SIZE,
+    }
     with (
         caplog.at_level("CRITICAL"),
         patch("ucs.core.controller.uuid4", return_value=file_id),
@@ -457,23 +506,29 @@ async def test_file_upload_index(joint_fixture: JointFixture, monkeypatch):
     monkeypatch.setattr("ucs.main.Config", lambda: joint_fixture.config)
 
     async with set_correlation_id(uuid4()):
-        await initialize()
-
         box_id = await joint_fixture.upload_controller.create_file_upload_box(
             storage_alias="test"
         )
         _ = await joint_fixture.upload_controller.initiate_file_upload(
-            box_id=box_id, alias="file1", size=1024
+            box_id=box_id,
+            alias="file1",
+            decrypted_size=utils.DECRYPTED_SIZE,
+            encrypted_size=utils.ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
         )
         with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
             _ = await joint_fixture.upload_controller.initiate_file_upload(
-                box_id=box_id, alias="file1", size=1024
+                box_id=box_id,
+                alias="file1",
+                decrypted_size=utils.DECRYPTED_SIZE,
+                encrypted_size=utils.ENCRYPTED_SIZE,
+                part_size=utils.PART_SIZE,
             )
 
 
 async def test_file_upload_report_happy(joint_fixture: JointFixture):
-    """Test the normal path of receiving a FileUploadReport event and deleting the file
-    from the S3 bucket.
+    """Test the normal path of receiving an InterrogationSuccess event and deleting
+    the file from the S3 bucket.
     """
     controller = joint_fixture.upload_controller
     s3_storage = joint_fixture.s3.storage
@@ -483,8 +538,12 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
     # Create a box and initiate a file upload
     async with set_correlation_id(uuid4()):
         box_id = await controller.create_file_upload_box(storage_alias="test")
-        file_id = await controller.initiate_file_upload(
-            box_id=box_id, alias="test-file", size=1024
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=utils.DECRYPTED_SIZE,
+            encrypted_size=utils.ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
         )
 
     # Get upload URL and upload the file content
@@ -500,18 +559,24 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
             file_id=file_id,
             unencrypted_checksum="abc123",
             encrypted_checksum=expected_encrypted_checksum,
+            encrypted_parts_md5=["abc123"],
+            encrypted_parts_sha256=["def456"],
         )
 
+    # Look up the actual object_id from the DB (independent from file_id)
+    db = joint_fixture.mongodb.client[config.db_name]
+    s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
+    s3_details = s3_upload_details_collection.find_one({"_id": file_id})
+    assert s3_details is not None
+    object_id = str(s3_details["object_id"])
+
     # Verify the file exists in S3
-    object_id = str(file_id)
     file_exists_before = await s3_storage.does_object_exist(
         bucket_id=bucket_id, object_id=object_id
     )
     assert file_exists_before
 
     # Verify the database records exist
-    db = joint_fixture.mongodb.client[config.db_name]
-    s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
     file_upload_collection = db[FILE_UPLOADS_COLLECTION]
 
     s3_uploads_before = s3_upload_details_collection.find({"_id": file_id}).to_list()
@@ -524,15 +589,23 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
     assert len(file_uploads_before) == 1
     assert file_uploads_before[0]["state"] == "inbox"
 
-    # Create and publish a FileUploadReport event
-    file_upload_report = FileUploadReport(
-        file_id=file_id, secret_id="test-secret-123", passed_inspection=True
+    # Create and publish an InterrogationSuccess event
+    interrogation_success = InterrogationSuccess(
+        file_id=file_id,
+        secret_id="test-secret-123",
+        storage_alias="test",
+        bucket_id=bucket_id,
+        object_id=uuid4(),
+        interrogated_at=now_utc_ms_prec(),
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+        encrypted_size=utils.ENCRYPTED_SIZE,
     )
 
     await joint_fixture.kafka.publish_event(
-        payload=file_upload_report.model_dump(),
-        type_=config.file_upload_reports_type,
-        topic=config.file_upload_reports_topic,
+        payload=interrogation_success.model_dump(mode="json"),
+        type_=config.interrogation_success_type,
+        topic=config.file_interrogations_topic,
     )
 
     # Consume the event
@@ -547,13 +620,13 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
     # Verify the FileUpload state was updated
     file_uploads_after = file_upload_collection.find().to_list()
     assert len(file_uploads_after) == 1
-    assert file_uploads_after[0]["state"] == "archived"
+    assert file_uploads_after[0]["state"] == "interrogated"
 
     # Now test for idempotency by repeating the publish and consume
     await joint_fixture.kafka.publish_event(
-        payload=file_upload_report.model_dump(),
-        type_=config.file_upload_reports_type,
-        topic=config.file_upload_reports_topic,
+        payload=interrogation_success.model_dump(mode="json"),
+        type_=config.interrogation_success_type,
+        topic=config.file_interrogations_topic,
     )
 
     # Consume the event -- should not receive an error

@@ -15,13 +15,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/upload-controller-service):
 ```bash
-docker pull ghga/upload-controller-service:10.1.0
+docker pull ghga/upload-controller-service:11.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/upload-controller-service:10.1.0 .
+docker build -t ghga/upload-controller-service:11.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -29,7 +29,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/upload-controller-service:10.1.0 --help
+docker run -p 8080:8080 ghga/upload-controller-service:11.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -46,28 +46,33 @@ ucs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- <a id="properties/file_upload_reports_topic"></a>**`file_upload_reports_topic`** *(string, required)*: Name of the topic used for events indicating that a Data Hub has completed re-encryption and inspection of a file.
+- <a id="properties/file_interrogations_topic"></a>**`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
 
 
   Examples:
 
   ```json
-  "file-upload-reports"
+  "file-interrogations"
   ```
 
 
-- <a id="properties/file_upload_reports_type"></a>**`file_upload_reports_type`** *(string, required)*: The type used for events indicating that a Data Hub has completed re-encryption and inspection of a file.
+- <a id="properties/interrogation_success_type"></a>**`interrogation_success_type`** *(string, required)*: The type used for events informing about successful file validations.
 
 
   Examples:
 
   ```json
-  "file_upload_report_generated"
+  "interrogation_success"
   ```
 
 
+- <a id="properties/interrogation_failure_type"></a>**`interrogation_failure_type`** *(string, required)*: The type used for events informing about failed file validations.
+
+
+  Examples:
+
   ```json
-  "file_upload_report"
+  "interrogation_failed"
   ```
 
 

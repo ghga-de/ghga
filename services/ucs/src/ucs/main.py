@@ -15,18 +15,20 @@
 
 """Top-level service functions"""
 
+import logging
+
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 
 from ucs.config import Config
-from ucs.constants import FILE_UPLOADS_COLLECTION
 from ucs.inject import (
     prepare_event_subscriber,
     prepare_outbox_publisher,
     prepare_rest_app,
 )
+
+log = logging.getLogger(__name__)
 
 
 async def run_rest_app() -> None:
@@ -64,16 +66,3 @@ async def consume_events(run_forever: bool = True):
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
-
-
-# TODO: In the actual UCS ticket, move index creation to the .get_dao() call
-async def initialize() -> None:
-    """Operations to be run in an init container before service startup."""
-    config = Config()
-
-    configure_logging(config=config)
-    configure_opentelemetry(service_name=config.service_name, config=config)
-    async with ConfiguredMongoClient(config=config) as client:
-        db = client.get_database(config.db_name)
-        file_uploads_collection = db.get_collection(FILE_UPLOADS_COLLECTION)
-        await file_uploads_collection.create_index(["box_id", "alias"], unique=True)

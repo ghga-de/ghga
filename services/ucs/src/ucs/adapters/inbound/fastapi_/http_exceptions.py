@@ -18,6 +18,8 @@
 from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import UUID4, BaseModel
 
+from ucs.core.models import UploadBoxState
+
 
 class HttpUnknownStorageAliasError(HttpCustomExceptionBase):
     """Thrown when an upload to a storage node that does not exist was requested."""
@@ -52,10 +54,35 @@ class HttpBoxNotFoundError(HttpCustomExceptionBase):
         )
 
 
-class HttpLockedBoxError(HttpCustomExceptionBase):
-    """Thrown when trying to perform an action on a locked FileUploadBox."""
+class HttpBoxStateError(HttpCustomExceptionBase):
+    """Thrown when the user requests an action FileUploadBox prevented by the box's state."""
 
-    exception_id = "lockedBox"
+    exception_id = "boxStateError"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        box_id: UUID4
+        box_state: UploadBoxState
+
+    def __init__(
+        self, *, box_id: UUID4, box_state: UploadBoxState, status_code: int = 409
+    ):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=(
+                f"Can't perform this action because the box with ID {box_id} is"
+                + f" {box_state}."
+            ),
+            data={"box_id": str(box_id), "box_state": box_state},
+        )
+
+
+class HttpBoxVersionError(HttpCustomExceptionBase):
+    """Thrown when a request referenced an outdated resource state."""
+
+    exception_id = "boxVersionOutdated"
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -67,7 +94,7 @@ class HttpLockedBoxError(HttpCustomExceptionBase):
         super().__init__(
             status_code=status_code,
             description=(
-                f"Can't perform this action because the box with ID {box_id} is locked."
+                f"Requested version of FileUploadBox with ID {box_id} is outdated."
             ),
             data={"box_id": str(box_id)},
         )

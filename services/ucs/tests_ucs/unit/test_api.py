@@ -87,27 +87,31 @@ async def test_update_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
     and a 204 if the token is correct (and request succeeds).
     """
     uos_jwk = config.uos_jwk
-    body = {"lock": True}
+    body = {"state": "locked", "version": 0}
     rest_client = app_fixture.rest_client
 
+    # Missing auth header should result in a 401
     url = f"/boxes/{TEST_BOX_ID}"
     response = await rest_client.patch(url, json=body)
     assert response.status_code == 401
 
+    # Invalid auth header should result in a 401
     response = await rest_client.patch(url, json=body, headers=INVALID_HEADER)
     assert response.status_code == 401
 
+    # Supply a token with the correct work type but the wrong box ID -- should get a 403
     wrong_id_token_header = utils.change_file_box_token_header(jwk=uos_jwk)
     response = await rest_client.patch(url, json=body, headers=wrong_id_token_header)
     assert response.status_code == 403
 
-    # generate a different kind of token with otherwise correct params
+    # Supply the wrong work type for the given state -- should return 403
     wrong_work_token_header = utils.change_file_box_token_header(
         box_id=TEST_BOX_ID, work_type="unlock", jwk=uos_jwk
     )
     response = await rest_client.patch(url, json=body, headers=wrong_work_token_header)
-    assert response.status_code == 401
+    assert response.status_code == 403
 
+    # Now the happy case
     good_token_header = utils.change_file_box_token_header(
         box_id=TEST_BOX_ID, jwk=uos_jwk
     )
@@ -156,10 +160,15 @@ async def test_create_file_upload_endpoint_auth(
     but doesn't match the requested resource, and a 201 if the request succeeds.
     """
     wps_jwk = config.wps_jwk
-    body = {"alias": "test_file", "size": 1024}
+    body = {
+        "alias": "test_file",
+        "decrypted_size": utils.DECRYPTED_SIZE,
+        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "part_size": utils.PART_SIZE,
+    }
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
-    core_mock.initiate_file_upload.return_value = TEST_FILE_ID
+    core_mock.initiate_file_upload.return_value = (TEST_FILE_ID, "HD01")
 
     url = f"/boxes/{TEST_BOX_ID}/uploads"
     response = await rest_client.post(url, json=body)
@@ -195,6 +204,11 @@ async def test_create_file_upload_endpoint_auth(
     )
     response = await rest_client.post(url, json=body, headers=good_token_header)
     assert response.status_code == 201
+    assert response.json() == {
+        "file_id": str(TEST_FILE_ID),
+        "alias": body["alias"],
+        "storage_alias": "HD01",
+    }
 
 
 async def test_get_file_part_upload_url_endpoint_auth(
@@ -250,9 +264,11 @@ async def test_complete_file_upload_endpoint_auth(
     incorrect data, and a 204 if the request succeeds.
     """
     wps_jwk = config.wps_jwk
-    body: dict[str, str] = {
-        "unencrypted_checksum": "unencrypted_checksum",
-        "encrypted_checksum": "encrypted_checksum",
+    body: dict = {
+        "decrypted_sha256": "unencrypted_checksum",
+        "encrypted_md5": "encrypted_checksum",
+        "encrypted_parts_md5": ["abc123"],
+        "encrypted_parts_sha256": ["def456"],
     }
     rest_client = app_fixture.rest_client
     url = f"/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}"
@@ -369,9 +385,13 @@ async def test_create_box_endpoint_error_handling(
             UploadControllerPort.BoxNotFoundError(box_id=TEST_BOX_ID),
             http_exceptions.HttpBoxNotFoundError(box_id=TEST_BOX_ID),
         ),
+        (
+            UploadControllerPort.BoxVersionError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpBoxVersionError(box_id=TEST_BOX_ID),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
-    ids=["BoxNotFound", "InternalError"],
+    ids=["BoxNotFound", "BoxVersionOutdated", "InternalError"],
 )
 async def test_update_box_endpoint_error_handling(
     config: ConfigFixture,
@@ -381,7 +401,7 @@ async def test_update_box_endpoint_error_handling(
 ):
     """Test that the endpoint correctly translates errors from the core."""
     uos_jwk = config.uos_jwk
-    body = {"lock": True}
+    body = {"state": "locked", "version": 0}
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
     core_mock.lock_file_upload_box.side_effect = core_error
@@ -432,8 +452,8 @@ async def test_view_box_endpoint_error_handling(
             http_exceptions.HttpBoxNotFoundError(box_id=TEST_BOX_ID),
         ),
         (
-            UploadControllerPort.LockedBoxError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpLockedBoxError(box_id=TEST_BOX_ID),
+            UploadControllerPort.BoxStateError(box_id=TEST_BOX_ID, box_state="locked"),
+            http_exceptions.HttpBoxStateError(box_id=TEST_BOX_ID, box_state="locked"),
         ),
         (
             UploadControllerPort.FileUploadAlreadyExists(alias="test_file"),
@@ -444,7 +464,7 @@ async def test_view_box_endpoint_error_handling(
             http_exceptions.HttpUnknownStorageAliasError(),
         ),
         (
-            UploadControllerPort.OrphanedMultipartUploadError(
+            UploadControllerPort.UploadAlreadyInProgressError(
                 file_id=TEST_FILE_ID, bucket_id="test-bucket"
             ),
             http_exceptions.HttpOrphanedMultipartUploadError(file_alias="test_file"),
@@ -456,7 +476,7 @@ async def test_view_box_endpoint_error_handling(
         "LockedBox",
         "FileUploadAlreadyExists",
         "UnknownStorageAlias",
-        "OrphanedMultipartUploadError",
+        "UploadAlreadyInProgressError",
         "InternalError",
     ],
 )
@@ -468,7 +488,12 @@ async def test_create_file_upload_endpoint_error_handling(
 ):
     """Test that the endpoint correctly translates errors from the core."""
     wps_jwk = config.wps_jwk
-    body = {"alias": "test_file", "size": 1024}
+    body = {
+        "alias": "test_file",
+        "decrypted_size": utils.DECRYPTED_SIZE,
+        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "part_size": utils.PART_SIZE,
+    }
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
     core_mock.initiate_file_upload.side_effect = core_error
@@ -484,6 +509,35 @@ async def test_create_file_upload_endpoint_error_handling(
 
 
 @pytest.mark.parametrize(
+    "encrypted_size", [utils.DECRYPTED_SIZE, utils.DECRYPTED_SIZE - 1]
+)
+async def test_create_file_upload_endpoint_model_validator(
+    config: ConfigFixture, app_fixture: AppFixture, encrypted_size: int
+):
+    """Test that the model validator for the model required on the endpoint works.
+
+    It should make sure that the `encrypted_size` is larger than `decrypted_size`.
+    """
+    wps_jwk = config.wps_jwk
+    body = {
+        "alias": "test_file",
+        "decrypted_size": utils.DECRYPTED_SIZE,
+        "encrypted_size": encrypted_size,
+        "part_size": utils.PART_SIZE,
+    }
+    rest_client = app_fixture.rest_client
+    token_header = utils.create_file_token_header(
+        box_id=TEST_BOX_ID, alias="test_file", jwk=wps_jwk
+    )
+    response = await rest_client.post(
+        f"/boxes/{TEST_BOX_ID}/uploads",
+        json=body,
+        headers=token_header,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
     "core_error, http_error",
     [
         (
@@ -495,7 +549,7 @@ async def test_create_file_upload_endpoint_error_handling(
             http_exceptions.HttpUnknownStorageAliasError(),
         ),
         (
-            UploadControllerPort.S3UploadNotFoundError(
+            UploadControllerPort.UploadSessionNotFoundError(
                 bucket_id="test-bucket", s3_upload_id="test-upload-id"
             ),
             http_exceptions.HttpS3UploadNotFoundError(),
@@ -505,7 +559,7 @@ async def test_create_file_upload_endpoint_error_handling(
     ids=[
         "S3UploadDetailsNotFound",
         "UnknownStorageAlias",
-        "S3UploadNotFound",
+        "UploadSessionNotFound",
         "InternalError",
     ],
 )
@@ -538,8 +592,8 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
             http_exceptions.HttpBoxNotFoundError(box_id=TEST_BOX_ID),
         ),
         (
-            UploadControllerPort.LockedBoxError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpLockedBoxError(box_id=TEST_BOX_ID),
+            UploadControllerPort.BoxStateError(box_id=TEST_BOX_ID, box_state="locked"),
+            http_exceptions.HttpBoxStateError(box_id=TEST_BOX_ID, box_state="locked"),
         ),
         (
             UploadControllerPort.FileUploadNotFound(file_id=TEST_FILE_ID),
@@ -578,9 +632,11 @@ async def test_complete_file_upload_endpoint_error_handling(
 ):
     """Test that the endpoint correctly translates errors from the core."""
     wps_jwk = config.wps_jwk
-    body: dict[str, str] = {
-        "unencrypted_checksum": "unencrypted_checksum",
-        "encrypted_checksum": "encrypted_checksum",
+    body: dict = {
+        "decrypted_sha256": "unencrypted_checksum",
+        "encrypted_md5": "encrypted_checksum",
+        "encrypted_parts_md5": ["abc123"],
+        "encrypted_parts_sha256": ["def456"],
     }
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
@@ -604,8 +660,8 @@ async def test_complete_file_upload_endpoint_error_handling(
             http_exceptions.HttpBoxNotFoundError(box_id=TEST_BOX_ID),
         ),
         (
-            UploadControllerPort.LockedBoxError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpLockedBoxError(box_id=TEST_BOX_ID),
+            UploadControllerPort.BoxStateError(box_id=TEST_BOX_ID, box_state="locked"),
+            http_exceptions.HttpBoxStateError(box_id=TEST_BOX_ID, box_state="locked"),
         ),
         (
             UploadControllerPort.S3UploadDetailsNotFoundError(file_id=TEST_FILE_ID),

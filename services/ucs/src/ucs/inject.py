@@ -34,6 +34,7 @@ from ucs.adapters.outbound.dao import (
     UploadDaoPublisherFactory,
     get_s3_upload_details_dao,
 )
+from ucs.adapters.outbound.s3 import S3Client
 from ucs.config import Config
 from ucs.core.controller import UploadController
 from ucs.ports.inbound.controller import UploadControllerPort
@@ -59,6 +60,7 @@ async def prepare_core(
 ) -> AsyncGenerator[UploadControllerPort]:
     """Constructs and initializes all core components and their outbound dependencies."""
     object_storages = S3ObjectStorages(config=config)
+    s3_client = S3Client(config=config, object_storages=object_storages)
 
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
@@ -76,7 +78,7 @@ async def prepare_core(
             file_upload_box_dao=file_upload_box_dao,
             file_upload_dao=file_upload_dao,
             s3_upload_details_dao=s3_upload_details_dao,
-            object_storages=object_storages,
+            s3_client=s3_client,
         )
         yield controller
 

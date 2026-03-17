@@ -16,17 +16,41 @@
 
 from uuid import UUID
 
-from ghga_event_schemas.configs import FileUploadReportEventsConfig
-from ghga_event_schemas.pydantic_ import FileUploadReport
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
+from ucs.core.models import InterrogationFailure, InterrogationSuccess
 from ucs.ports.inbound.controller import UploadControllerPort
 
 
-class EventSubConfig(FileUploadReportEventsConfig):
+class EventSubConfig(BaseSettings):
     """Event sub translator configuration"""
+
+    # TODO: Replace this with standardized config from ghga-event-schemas
+    file_interrogations_topic: str = Field(
+        default=...,
+        description=(
+            "The name of the topic use to publish file interrogation outcome events."
+        ),
+        examples=["file-interrogations"],
+    )
+    interrogation_success_type: str = Field(
+        default=...,
+        description=(
+            "The type used for events informing about successful file validations."
+        ),
+        examples=["interrogation_success"],
+    )
+    interrogation_failure_type: str = Field(
+        default=...,
+        description=(
+            "The type used for events informing about failed file validations."
+        ),
+        examples=["interrogation_failed"],
+    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -39,18 +63,32 @@ class EventSubTranslator(EventSubscriberProtocol):
         self, *, config: EventSubConfig, upload_controller: UploadControllerPort
     ):
         """Configure the translator"""
-        self.topics_of_interest = [config.file_upload_reports_topic]
-        self.types_of_interest = [config.file_upload_reports_type]
+        self._config = config
+        self.topics_of_interest = [config.file_interrogations_topic]
+        self.types_of_interest = [
+            config.interrogation_success_type,
+            config.interrogation_failure_type,
+        ]
         self._upload_controller = upload_controller
 
-    async def _consume_new_report(self, *, payload: JsonObject):
-        """Consume a new FileUploadReport"""
-        validated_payload = get_validated_payload(payload, FileUploadReport)
-        await self._upload_controller.process_file_upload_report(
-            file_upload_report=validated_payload
+    async def _consume_interrogation_success(self, *, payload: JsonObject):
+        """Consume an InterrogationSuccess event"""
+        validated_payload = get_validated_payload(payload, InterrogationSuccess)
+        await self._upload_controller.process_interrogation_success(
+            report=validated_payload
+        )
+
+    async def _consume_interrogation_failure(self, *, payload: JsonObject):
+        """Consume an InterrogationFailure event"""
+        validated_payload = get_validated_payload(payload, InterrogationFailure)
+        await self._upload_controller.process_interrogation_failure(
+            report=validated_payload
         )
 
     async def _consume_validated(
         self, *, payload: JsonObject, type_: str, topic: str, key: str, event_id: UUID
     ) -> None:
-        await self._consume_new_report(payload=payload)
+        if type_ == self._config.interrogation_success_type:
+            await self._consume_interrogation_success(payload=payload)
+        elif type_ == self._config.interrogation_failure_type:
+            await self._consume_interrogation_failure(payload=payload)
