@@ -23,6 +23,7 @@ from ghga_event_schemas.configs import (
     FileStagingRequestedEventsConfig,
     FileUploadEventsConfig,
 )
+from ghga_event_schemas.pydantic_ import FileDeletionRequested, NonStagedFileRequested
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
@@ -30,7 +31,7 @@ from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import UUID4
 
 from ifrs.constants import TRACER
-from ifrs.core.models import FileDeletionRequested, FileUpload, NonStagedFileRequested
+from ifrs.core.models import FileUpload
 from ifrs.ports.inbound.file_registry import FileRegistryPort
 
 log = logging.getLogger(__name__)

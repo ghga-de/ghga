@@ -18,10 +18,10 @@
 from uuid import uuid4
 
 import pytest
+from ghga_event_schemas.pydantic_ import FileDeletionRequested
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
-from ifrs.core.models import FileDeletionRequested
 from ifrs.inject import prepare_event_subscriber
 from tests_ifrs.fixtures.config import get_config
 

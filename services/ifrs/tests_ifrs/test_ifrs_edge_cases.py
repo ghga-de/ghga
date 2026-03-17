@@ -21,6 +21,7 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
+from ghga_event_schemas.pydantic_ import FileDeletionRequested, NonStagedFileRequested
 from hexkit.custom_types import JsonObject
 from hexkit.providers.s3.testutils import (
     FileObject,
@@ -29,7 +30,7 @@ from hexkit.providers.s3.testutils import (
 )
 from hexkit.utils import now_utc_ms_prec
 
-from ifrs.core.models import FileDeletionRequested, FileMetadata, NonStagedFileRequested
+from ifrs.core.models import FileMetadata
 from ifrs.ports.inbound.file_registry import FileRegistryPort
 from tests_ifrs.fixtures.example_data import (
     EXAMPLE_ARCHIVABLE_FILE,

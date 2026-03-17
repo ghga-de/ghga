@@ -15,6 +15,7 @@
 
 """Adapter for publishing events to other services."""
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     FileDeletedEventsConfig,
     FileInternallyRegisteredEventsConfig,
@@ -51,7 +52,7 @@ class EventPubTranslator(EventPublisherPort):
     @TRACER.start_as_current_span("EventPubTranslator.file_internally_registered")
     async def file_internally_registered(self, *, file: models.FileMetadata) -> None:
         """Communicates the event that a new file has been internally registered."""
-        payload = models.FileInternallyRegistered(
+        payload = event_schemas.FileInternallyRegistered(
             file_id=file.id,
             archive_date=file.archive_date,
             storage_alias=file.storage_alias,
@@ -75,7 +76,7 @@ class EventPubTranslator(EventPublisherPort):
     @TRACER.start_as_current_span("EventPubTranslator.file_deleted")
     async def file_deleted(self, *, file_id: UUID4) -> None:
         """Communicates the event that a file has been successfully deleted."""
-        payload = models.FileDeletionSuccess(file_id=file_id)
+        payload = event_schemas.FileDeletionSuccess(file_id=file_id)
 
         await self._provider.publish(
             payload=payload.model_dump(mode="json"),
@@ -95,7 +96,7 @@ class EventPubTranslator(EventPublisherPort):
         decrypted_sha256: str,
     ) -> None:
         """Communicates the event that a file has been staged for download."""
-        payload = models.FileStagedForDownload(
+        payload = event_schemas.FileStagedForDownload(
             file_id=file_id,
             storage_alias=storage_alias,
             target_bucket_id=target_bucket_id,

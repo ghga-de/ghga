@@ -237,7 +237,7 @@
     "interrogation_success_type": {
       "description": "The type used for events informing about successful file validations.",
       "examples": [
-        "file_interrogation_success"
+        "interrogation_success"
       ],
       "title": "Interrogation Success Type",
       "type": "string"

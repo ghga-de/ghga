@@ -208,7 +208,7 @@ The service requires the following configuration parameters:
   Examples:
 
   ```json
-  "file_interrogation_success"
+  "interrogation_success"
   ```
 
 
