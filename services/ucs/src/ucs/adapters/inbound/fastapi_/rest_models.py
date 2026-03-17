@@ -17,9 +17,8 @@
 
 from typing import Literal, TypeVar
 
+from ghga_event_schemas.pydantic_ import UploadBoxState
 from pydantic import UUID4, BaseModel, ConfigDict, Field, model_validator
-
-from ucs.core.models import UploadBoxState
 
 
 class BoxCreationRequest(BaseModel):

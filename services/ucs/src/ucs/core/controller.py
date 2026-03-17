@@ -20,18 +20,13 @@ from contextlib import suppress
 from typing import Any
 from uuid import uuid4
 
+from ghga_event_schemas.pydantic_ import InterrogationFailure, InterrogationSuccess
 from hexkit.protocols.dao import NoHitsFoundError, UniqueConstraintViolationError
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from ucs.config import Config
-from ucs.core.models import (
-    FileUpload,
-    FileUploadBox,
-    InterrogationFailure,
-    InterrogationSuccess,
-    S3UploadDetails,
-)
+from ucs.core.models import FileUpload, FileUploadBox, S3UploadDetails
 from ucs.ports.inbound.controller import UploadControllerPort
 from ucs.ports.outbound.dao import (
     FileUploadBoxDao,

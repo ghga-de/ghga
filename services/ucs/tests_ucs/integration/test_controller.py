@@ -24,13 +24,13 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+from ghga_event_schemas.pydantic_ import InterrogationSuccess
 from hexkit.correlation import set_correlation_id
 from hexkit.utils import now_utc_ms_prec
 
 from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.joint import JointFixture
 from ucs.constants import FILE_UPLOADS_COLLECTION, S3_UPLOAD_DETAILS_COLLECTION
-from ucs.core.models import InterrogationSuccess
 from ucs.ports.inbound.controller import UploadControllerPort
 
 pytestmark = pytest.mark.asyncio()

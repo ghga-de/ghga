@@ -151,7 +151,7 @@ components:
       - decrypted_size
       - encrypted_size
       - part_size
-      title: FileUpload
+      title: file_upload
       type: object
     FileUploadCompletionRequest:
       description: Request body for completing a FileUpload.

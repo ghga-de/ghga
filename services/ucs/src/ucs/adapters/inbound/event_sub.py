@@ -16,41 +16,23 @@
 
 from uuid import UUID
 
+from ghga_event_schemas.configs import (
+    FileInterrogationFailureEventsConfig,
+    FileInterrogationSuccessEventsConfig,
+)
+from ghga_event_schemas.pydantic_ import InterrogationFailure, InterrogationSuccess
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
-from ucs.core.models import InterrogationFailure, InterrogationSuccess
 from ucs.ports.inbound.controller import UploadControllerPort
 
 
-class EventSubConfig(BaseSettings):
+class EventSubConfig(
+    FileInterrogationFailureEventsConfig,
+    FileInterrogationSuccessEventsConfig,
+):
     """Event sub translator configuration"""
-
-    # TODO: Replace this with standardized config from ghga-event-schemas
-    file_interrogations_topic: str = Field(
-        default=...,
-        description=(
-            "The name of the topic use to publish file interrogation outcome events."
-        ),
-        examples=["file-interrogations"],
-    )
-    interrogation_success_type: str = Field(
-        default=...,
-        description=(
-            "The type used for events informing about successful file validations."
-        ),
-        examples=["interrogation_success"],
-    )
-    interrogation_failure_type: str = Field(
-        default=...,
-        description=(
-            "The type used for events informing about failed file validations."
-        ),
-        examples=["interrogation_failed"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):

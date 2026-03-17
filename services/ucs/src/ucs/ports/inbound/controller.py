@@ -17,14 +17,14 @@
 
 from abc import ABC, abstractmethod
 
-from pydantic import UUID4
-
-from ucs.core.models import (
-    FileUpload,
+from ghga_event_schemas.pydantic_ import (
     InterrogationFailure,
     InterrogationSuccess,
     UploadBoxState,
 )
+from pydantic import UUID4
+
+from ucs.core.models import FileUpload
 
 
 class UploadControllerPort(ABC):

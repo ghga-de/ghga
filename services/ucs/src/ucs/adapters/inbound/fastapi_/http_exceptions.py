@@ -15,10 +15,9 @@
 
 """A collextion of http exceptions."""
 
+from ghga_event_schemas.pydantic_ import UploadBoxState
 from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import UUID4, BaseModel
-
-from ucs.core.models import UploadBoxState
 
 
 class HttpUnknownStorageAliasError(HttpCustomExceptionBase):
