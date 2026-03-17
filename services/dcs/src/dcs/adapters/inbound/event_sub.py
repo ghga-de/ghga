@@ -72,7 +72,7 @@ class EventSubTranslator(EventSubscriberProtocol):
     async def _consume_files_to_register(self, *, payload: JsonObject) -> None:
         """Consume file registration events."""
         validated_payload = get_validated_payload(
-            payload=payload, schema=models.FileInternallyRegistered
+            payload=payload, schema=event_schemas.FileInternallyRegistered
         )
 
         file = models.DrsObjectBase(

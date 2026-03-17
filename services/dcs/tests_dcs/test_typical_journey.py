@@ -23,6 +23,7 @@ from uuid import uuid4
 import httpx
 import pytest
 from fastapi import status
+from ghga_event_schemas.pydantic_ import FileDownloadServed, NonStagedFileRequested
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3.testutils import FileObject, temp_file_object
 from hexkit.utils import now_utc_ms_prec
@@ -30,11 +31,7 @@ from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from dcs.core import models
 from dcs.core.errors import StorageAliasNotConfiguredError
-from dcs.core.models import FileDownloadServed, NonStagedFileRequested
-from tests_dcs.fixtures.joint import (
-    CleanupFixture,
-    PopulatedFixture,
-)
+from tests_dcs.fixtures.joint import CleanupFixture, PopulatedFixture
 from tests_dcs.fixtures.mock_api.app import router
 from tests_dcs.fixtures.utils import generate_work_order_token
 

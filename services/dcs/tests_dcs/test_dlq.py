@@ -22,7 +22,6 @@ import pytest
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import KafkaFixture
 
-from dcs.core.models import FileInternallyRegistered
 from dcs.inject import prepare_event_subscriber
 from tests_dcs.fixtures.config import get_config
 from tests_dcs.fixtures.joint import JointFixture
@@ -62,9 +61,9 @@ async def test_consume_from_retry(joint_fixture: JointFixture):
     # Override the kafka test fixture's default for kafka_enable_dlq
     config = joint_fixture.config
     assert config.kafka_enable_dlq
-    outbox_payload = event_schemas.FileDeletionRequested(file_id="123")
+    outbox_payload = event_schemas.FileDeletionRequested(file_id=uuid4())
     upload_date = datetime.fromisoformat("2025-02-25T16:15:28.148287+00:00")
-    event_payload = FileInternallyRegistered(
+    event_payload = event_schemas.FileInternallyRegistered(
         file_id=uuid4(),
         bucket_id="test",
         archive_date=upload_date,

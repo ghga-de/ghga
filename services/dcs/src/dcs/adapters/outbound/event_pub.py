@@ -15,6 +15,7 @@
 
 """Adapter for publishing events to other services."""
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     DownloadServedEventsConfig,
     FileDeletedEventsConfig,
@@ -55,7 +56,7 @@ class EventPubTranslator(EventPublisherPort):
         self, *, drs_object: models.DrsObject, bucket_id: str
     ):
         """Publish an event to request staging of the corresponding file"""
-        payload = models.NonStagedFileRequested(
+        payload = event_schemas.NonStagedFileRequested(
             file_id=drs_object.file_id,
             storage_alias=drs_object.storage_alias,
             target_object_id=drs_object.object_id,
@@ -80,7 +81,7 @@ class EventPubTranslator(EventPublisherPort):
         """Communicate the event of a download being served. This can be relevant for
         auditing purposes.
         """
-        payload = models.FileDownloadServed(
+        payload = event_schemas.FileDownloadServed(
             file_id=drs_object.file_id,
             storage_alias=drs_object.storage_alias,
             target_bucket_id=target_bucket_id,
@@ -99,7 +100,7 @@ class EventPubTranslator(EventPublisherPort):
     @TRACER.start_as_current_span("EventPubTranslator.file_registered")
     async def file_registered(self, *, drs_object: models.DrsObjectWithUri) -> None:
         """Communicates the event that a file has been registered."""
-        payload = models.FileRegisteredForDownload(
+        payload = event_schemas.FileRegisteredForDownload(
             file_id=drs_object.file_id,
             decrypted_sha256=drs_object.decrypted_sha256,
             archive_date=drs_object.creation_date,
@@ -115,7 +116,7 @@ class EventPubTranslator(EventPublisherPort):
     @TRACER.start_as_current_span("EventPubTranslator.file_deleted")
     async def file_deleted(self, *, file_id: UUID4) -> None:
         """Communicates the event that a file has been successfully deleted."""
-        payload = models.FileDeletionSuccess(file_id=file_id)
+        payload = event_schemas.FileDeletionSuccess(file_id=file_id)
 
         await self._provider.publish(
             payload=payload.model_dump(),

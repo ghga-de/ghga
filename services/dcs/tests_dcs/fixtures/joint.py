@@ -33,6 +33,10 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest_asyncio
+from ghga_event_schemas.pydantic_ import (
+    FileInternallyRegistered,
+    FileRegisteredForDownload,
+)
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils import utc_dates
 from ghga_service_commons.utils.multinode_storage import (
@@ -177,7 +181,7 @@ async def populated_fixture(
 ) -> AsyncGenerator[PopulatedFixture]:
     """Prepopulate state for an existing DRS object"""
     # publish an event to register a new file for download:
-    file_to_register_event = models.FileInternallyRegistered(
+    file_to_register_event = FileInternallyRegistered(
         file_id=EXAMPLE_FILE.file_id,
         storage_alias=joint_fixture.endpoint_aliases.valid_node,
         bucket_id=joint_fixture.bucket_id,
@@ -210,7 +214,7 @@ async def populated_fixture(
         == joint_fixture.config.file_registered_for_download_type
     )
 
-    file_registered_event = models.FileRegisteredForDownload(
+    file_registered_event = FileRegisteredForDownload(
         **recorder.recorded_events[0].payload
     )
     assert file_registered_event.file_id == EXAMPLE_FILE.file_id
