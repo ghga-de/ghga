@@ -47,6 +47,8 @@ def create_chart_from_template(
     chart_yaml_["name"] = chart["name"]
     chart_yaml_["description"] = chart["description"]
     chart_yaml_["appVersion"] = DoubleQuotedScalarString(str(chart["appVersion"]))
+    if "version" in chart:
+        chart_yaml_["version"] = DoubleQuotedScalarString(str(chart["version"]))
 
     with (chart_dir / "Chart.yaml").open("w", encoding="utf-8") as chart_yaml_file:
         YAML_PARSER.dump(chart_yaml_, chart_yaml_file)
