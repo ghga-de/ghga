@@ -75,3 +75,8 @@ charts:
     name: work-package
     description: Work package service
     appVersion: "7.2.1"
+  auth-km-jobs:
+    name: auth-km-jobs
+    description: This job is to refresh the internal and external auth keys.
+    appVersion: "0.2.1"
+    version: "2.3.1"
