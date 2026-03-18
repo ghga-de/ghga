@@ -1,0 +1,87 @@
+image:
+  repository: "ghga/dataset-information-service"
+
+configPrefix: dins
+
+# Service parameters
+
+# Service base path
+apiBasePath: /dins/
+# Name of the database
+mongodb:
+  dbName: dataset-information
+
+# This parameter is used as Kafka's group id
+serviceName: dins-consumer
+
+# Those values are directly injected into the service's configuration
+config:
+  host: 0.0.0.0
+  mongo_dsn: null
+  kafka_enable_dlq: true
+
+cmd: dins run-rest
+# cmd: dins consume-events
+
+_topics:
+
+  fileRegisteredEvent:
+    # as consumer
+    topic:
+      name: file_internally_registered_topic
+      value: internal-registrations
+    types:
+      - name: file_internally_registered_type
+        value: internal_file_registered
+    kafkaUser:
+      operations:
+        - Read
+  filesToDelete:
+    # as consumer
+    topic:
+      name: file_deletion_request_topic
+      value: purges
+    types:
+    - name: file_deletion_request_type
+      value: file_deletion_requested
+    kafkaUser:
+      operations:
+        - Read
+  datasetUpsertionEvent:
+    # as consumer
+    topic:
+      name: dataset_change_topic
+      value: metadata-datasets
+    types:
+      - name: dataset_upsertion_type
+        value: dataset_created
+    kafkaUser:
+      operations:
+        - Read
+  datasetDeletionEvent:
+    # as consumer
+    topic:
+      name: dataset_change_topic
+      value: metadata-datasets
+    types:
+      - name: dataset_deletion_type
+        value: dataset_deleted
+    kafkaUser:
+      operations:
+        - Write
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read

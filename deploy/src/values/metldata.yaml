@@ -1,0 +1,69 @@
+image:
+  repository: "ghga/metldata"
+
+configPrefix: metldata
+
+# Service parameters
+
+# Service base path
+apiBasePath: /metldata/
+# Name of the database
+mongodb:
+  dbName: metadata-artifacts
+
+# This parameter is used as Kafka's group id
+serviceName: metldata
+
+
+mapping:
+  timeoutLoadArtifacts: 10000
+
+config:
+  artifact_infos: []
+  mongo_dsn: null
+  db_name: metadata_artifacts
+  host: 0.0.0.0
+  loader_token_hashes: null  # <Please fill - The tokens must be the loader token generated using the data steward kit.>
+  primary_artifact_name: embedded_public
+  primary_dataset_name: EmbeddedDataset
+  service_instance_id: 'rest.1'
+  publishable_artifacts:
+  - "added_accessions"
+
+cmd: metldata
+
+_topics:
+  artifactsEvent:
+    # as producer
+    topic:
+      name: artifact_topic
+      value: artifacts
+    kafkaUser:
+      operations:
+        - Write
+  datasetChangeEvent:
+    # as producer
+    topic:
+      name: dataset_change_topic
+      value: metadata-datasets
+    types:
+    - name: dataset_deletion_type
+      value: dataset_deleted
+    - name: dataset_upsertion_type
+      value: dataset_created
+    kafkaUser:
+      operations:
+        - Write
+  resourceChangeEvent:
+    # as producer
+    topic:
+      name: resource_change_topic
+      value: searchable-resources
+    types:
+    - name: resource_deletion_type
+      value: searchable_resource_deleted
+    - name: resource_upsertion_type
+      value: searchable_resource_upserted
+    kafkaUser:
+      operations:
+        - Write

@@ -1,0 +1,68 @@
+image:
+  repository: "ghga/mass"
+
+configPrefix: mass
+
+# Service parameters
+
+# Service base path
+apiBasePath: /mass/
+# Name of the database
+mongodb:
+  dbName: mass
+
+# This parameter is used as Kafka's group id
+serviceName: mass-consumer
+
+config:
+  mongo_dsn: null
+  db_name: metadata-store
+  host: "0.0.0.0"
+  searchable_classes:
+    EmbeddedDataset:
+      description: Dataset grouping files under controlled access.
+      facetable_fields:
+      - key: alias
+        name: Dataset alias
+      - key: title
+        name: Dataset title
+      selected_fields:
+      - key: ega_accession
+        name: EGA accession
+      - key: title
+        name: Dataset title
+  kafka_enable_dlq: true
+
+cmd: mass run-rest
+# cmd: mass consume-events
+
+_topics:
+  resourceChangeEvent:
+    # as consumer
+    topic:
+      name: resource_change_topic
+      value: searchable-resources
+    types:
+    - name: resource_deletion_type
+      value: searchable_resource_deleted
+    - name: resource_upsertion_type
+      value: searchable_resource_upserted
+    kafkaUser:
+      operations:
+        - Read
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read

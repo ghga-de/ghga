@@ -1,0 +1,69 @@
+image:
+  repository: "ghga/access-request-service"
+
+configPrefix: ars
+
+# Service parameters
+
+# Service base path
+apiBasePath: /ars/
+# Name of the database
+mongodb:
+  dbName: access-request
+# This parameter is used as Kafka's group id
+
+serviceName: ars-consumer
+
+# Those values are directly injected into the service's configuration
+config:
+  auth_key: '{}'
+  mongo_dsn: null
+  download_access_url: http://claims-repository:8080/download-access
+  host: "0.0.0.0"
+  kafka_enable_dlq: true
+  db_version_collection: "arsDbVersions"
+  migration_wait_sec: 10
+
+
+cmd: ars run-rest
+# cmd: ars consume-events
+
+_topics:
+  fileRegisteredEvent:
+    # as producer
+    topic:
+      name: access_request_topic
+      value: access-requests
+    kafkaUser:
+      operations:
+        - Write
+
+  datasetChangeEvent:
+    # as consumer
+    topic:
+      name: dataset_change_topic
+      value: metadata-datasets
+    types:
+    - name: dataset_upsertion_type
+      value: dataset_created
+    - name: dataset_deletion_type
+      value: dataset_deleted
+    kafkaUser:
+      operations:
+        - Read
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read

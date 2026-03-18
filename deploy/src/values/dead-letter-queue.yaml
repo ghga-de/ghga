@@ -1,0 +1,49 @@
+image:
+  repository: "ghga/dlq-service"
+
+configPrefix: dlqs
+
+# Service parameters
+
+# Service base path
+apiBasePath: /dlqs/
+# Name of the database
+mongodb:
+  dbName: dlqs
+
+# This parameter is used as Kafka's group id
+serviceName: dlqs-consumer
+
+config:
+  token_hashes: []
+  mongo_dsn: null
+  db_name: dlqs
+  host: "0.0.0.0"
+  service_instance_id: 'dlqs_1'
+  service_name: dlqs
+  kafka_enable_dlq: false
+  db_version_collection: "dlqsDbVersions"
+  migration_wait_sec: 10
+
+cmd: dlqs run-rest
+# cmd: dlqs consume-events
+
+_topics:
+  # as consumer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Read
+  deadLetterQueueRetries:
+    topic:
+      name: null
+      value: retry-
+    kafkaUser:
+      operations:
+        - Write
+        - Describe
+      resource:
+        patternType: prefix

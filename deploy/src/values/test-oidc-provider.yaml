@@ -1,0 +1,17 @@
+image:
+  repository: "ghga/test-oidc-provider"
+
+configPrefix: top
+
+# Service parameters
+
+# Service base path
+apiBasePath: /test/op/
+
+# This parameter is used as Kafka's group id
+serviceName: top
+
+config:
+  host: 0.0.0.0
+
+cmd: top

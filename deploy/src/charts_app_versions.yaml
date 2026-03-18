@@ -1,0 +1,77 @@
+charts:
+  access-request:
+    name: access-request
+    description: Access request service
+    appVersion: "6.2.0"
+  auth-service:
+    name: auth-service
+    description: The auth_adapter subpackage contains the authentication service used by the API gateway via the ExtAuth protocol.
+    appVersion: "8.3.2"
+  data-portal-ui:
+    name: data-portal-ui
+    description: The Metadata Search Service is a service for providing a unified search interface over a metadata store.
+    appVersion: "2.4.1"
+  dataset-information:
+    name: dataset-information
+    description: Dataset Information Service
+    appVersion: "4.2.0"
+  dead-letter-queue:
+    name: dead-letter-queue
+    description: DLQ service
+    appVersion: "3.1.0"
+  download-controller:
+    name: download-controller
+    description: This service implements the GA4GH DRS, while providing the option to serve files from localstack S3.
+    appVersion: "8.1.0"
+  encryption-key-store:
+    name: encryption-key-store
+    description: providing crypt4gh file secret extraction, storage and envelope generation
+    appVersion: "4.1.0"
+  file-ingest:
+    name: file-ingest
+    description: A lightweight service to propagate file upload metadata to the GHGA file backend services
+    appVersion: "9.1.0"
+  internal-file-registry:
+    name: internal-file-registry
+    description: This service acts as a registry for the internal location and representation of files.
+    appVersion: "6.1.0"
+  mass:
+    name: mass
+    description: Metadata Artifact Search Service
+    appVersion: "6.1.0"
+  metldata:
+    name: metldata
+    description: metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing.
+    appVersion: "4.0.7"
+  notification:
+    name: notification
+    description: Notification service
+    appVersion: "6.1.0"
+  notification-orchestration:
+    name: notification-orchestration
+    description: Notification orchestration service
+    appVersion: "8.1.0"
+  purge-controller:
+    name: purge-controller
+    description: Purge Controller Service
+    appVersion: "5.1.0"
+  reverse-transpiler:
+    name: reverse-transpiler
+    description: Reverse Transpiler Service
+    appVersion: "2.2.0"
+  state-management:
+    name: state-management
+    description: State Management Service
+    appVersion: "4.2.2"
+  test-oidc-provider:
+    name: test-oidc-provider
+    description: A dummy OpenID Connect provider (OP) that can be user for testing purposes.
+    appVersion: "1.2.1"
+  well-known-value:
+    name: well-known-value
+    description: Well-known Value Service
+    appVersion: "2.1.0"
+  work-package:
+    name: work-package
+    description: Work package service
+    appVersion: "7.2.1"

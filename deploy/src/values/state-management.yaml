@@ -1,0 +1,35 @@
+image:
+  repository: "ghga/state-management-service"
+
+configPrefix: sms
+
+# Service base path
+apiBasePath: /sms/
+
+# This parameter is used as Kafka's group id
+serviceName: sms-rest
+
+config:
+  host: 0.0.0.0
+  mongo_dsn: null
+  db_permissions:
+  - "*.*:*"
+  allow_empty_prefix: true
+  db_prefix: ""
+  token_hashes: []
+  log_level: DEBUG
+  object_storages: {}
+  vault_url: http://vault:8200
+  # Is set in the request
+  vault_path: ""
+
+cmd: sms
+
+# SMS is just used for testing, it requires access to all topics to clear them
+kafkaTopicsParameters: false
+
+_topics:
+  wildcard:
+    topic:
+      name: wildcard
+      value: '*'

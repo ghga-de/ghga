@@ -1,0 +1,72 @@
+image:
+  repository: "ghga/work-package-service"
+
+configPrefix: wps
+
+# Service parameters
+
+# Service base path
+apiBasePath: /wps/
+# Name of the database
+mongodb:
+  dbName: work-package
+
+# This parameter is used as Kafka's group id
+serviceName: wps-consumer
+
+config:
+  auth_key: '{}'
+  mongo_dsn: null
+  db_name: wps
+  access_url: http://claims-repository:8080
+  host: "0.0.0.0"
+  service_instance_id: 'wps_1'
+  service_name: wps
+  work_package_signing_key: '{}'
+  kafka_enable_dlq: true
+  enable_opentelemetry: false
+  db_version_collection: "wpsDbVersions"
+  migration_wait_sec: 10
+
+
+cmd: wps run-rest
+# cmd: wps consume-events
+
+_topics:
+  uploadBoxTopic:
+    # as consumer
+    topic:
+      name: upload_box_topic
+      value: upload-boxes
+    kafkaUser:
+      operations:
+        - Read
+  datasetChangeEvent:
+    # as consumer
+    topic:
+      name: dataset_change_topic
+      value: metadata-datasets
+    types:
+    - name: dataset_upsertion_type
+      value: dataset_created
+    - name: dataset_deletion_type
+      value: dataset_deleted
+    kafkaUser:
+      operations:
+        - Read
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read

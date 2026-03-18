@@ -1,0 +1,115 @@
+image:
+  repository: "ghga/download-controller-service"
+
+configPrefix: dcs
+
+# Service parameters
+
+# Service base path
+apiBasePath: /ga4gh/drs/v1/
+# Name of the database
+mongodb:
+  dbName: download-controller
+
+# This parameter is used as Kafka's group id
+serviceName: dcs-consumer
+
+config:
+  auth_key: '{}'
+  mongo_dsn: null
+  drs_server_uri: drs://localhost:8080/
+  ekss_base_url: http://encryption-key-store:8080
+  host: "0.0.0.0"
+  presigned_url_expires_after: 10
+  object_storages: {}
+  kafka_enable_dlq: true
+  enable_opentelemetry: false
+  db_version_collection: "dcsDbVersions"
+  migration_wait_sec: 10
+
+cmd: dcs run-rest
+# cmd: dcs consume-events
+
+_topics:
+  fileRegisteredEvent:
+    # as producer
+    topic:
+      name: file_registered_for_download_topic
+      value: downloads
+    types:
+      - name: file_registered_for_download_type
+        value: drs_object_registered
+    kafkaUser:
+      operations:
+        - Write
+  fileDeletedEvent:
+    # as producer
+    topic:
+      name: file_deleted_topic
+      value: downloads
+    types:
+      - name: file_deleted_type
+        value: drs_object_deleted
+    kafkaUser:
+      operations:
+        - Write
+  filesToRegister:
+    # as consumer
+    topic:
+      name: file_internally_registered_topic
+      value: internal-registrations
+    types:
+      - name: file_internally_registered_type
+        value: internal_file_registered
+    kafkaUser:
+      operations:
+        - Read
+  filesToDelete:
+    # as consumer
+    topic:
+      name: file_deletion_request_topic
+      value: purges
+    type:
+      name: file_deletion_request_type
+      value: file_deletion_requested
+    kafkaUser:
+      operations:
+        - Read
+  downloadServed:
+    # as producer
+    topic:
+      name: download_served_topic
+      value: downloads
+    types:
+      - name: download_served_type
+        value: drs_object_served
+    kafkaUser:
+      operations:
+        - Write
+  unstagedDownload:
+    # as producer
+    topic:
+      name: files_to_stage_topic
+      value: staging-requests  # must differ from 'downloads' topic vals
+    type:
+      name: files_to_stage_type
+      value: file_staging_requested
+    kafkaUser:
+      operations:
+        - Write
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read

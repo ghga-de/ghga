@@ -1,0 +1,40 @@
+image:
+  repository: "ghga/purge-controller-service"
+
+configPrefix: pcs
+
+# Service parameters
+
+# Service base path
+apiBasePath: /pcs/
+# Name of the database
+mongodb:
+  dbName: purge-controller
+
+# This parameter is used as Kafka's group id
+serviceName: pcs-rest
+
+config:
+  host: 0.0.0.0
+  mongo_dsn: null
+  db_name: pcs
+  service_instance_id: rest.1
+  token_hashes: []
+  enable_opentelemetry: false
+  db_version_collection: "pcsDbVersions"
+  migration_wait_sec: 10
+
+cmd: pcs run-rest
+
+_topics:
+  filesToDelete:
+    # as producer
+    topic:
+      name: file_deletion_request_topic
+      value: purges
+    type:
+      name: file_deletion_request_type
+      value: file_deletion_requested
+    kafkaUser:
+      operations:
+        - Write

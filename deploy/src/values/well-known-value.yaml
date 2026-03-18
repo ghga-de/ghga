@@ -1,0 +1,20 @@
+image:
+  repository: "ghga/well-known-value-service"
+
+configPrefix: wkvs
+
+# Service parameters
+
+# Service base path
+apiBasePath: /.well-known/
+
+# This parameter is used as Kafka's group id
+serviceName: wkvs
+
+config:
+  dcs_api_url: http://download-controller/download
+  host: "0.0.0.0"
+  ucs_api_url: http://upload-controller/upload
+  wps_api_url: http://work-package/
+
+cmd: wkvs

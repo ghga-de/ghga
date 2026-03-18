@@ -1,0 +1,94 @@
+image:
+  repository: "ghga/notification-orchestration-service"
+
+configPrefix: nos
+
+# Service parameters
+
+# Name of the database
+mongodb:
+  dbName: notification-orchestration
+
+# This parameter is used as Kafka's group id
+serviceName: nos-consumer
+
+config:
+  central_data_stewardship_email: helpdesk@ghga.de
+  helpdesk_email: helpdesk@ghga.de
+  kafka_enable_dlq: true
+  db_version_collection: "nosDbVersions"
+  migration_wait_sec: 10
+
+
+cmd: nos
+
+_topics:
+  accessRequestEvents:
+    # as consumer
+    topic:
+      name: access_request_topic
+      value: access-requests
+    kafkaUser:
+      operations:
+        - Read
+  ivaStateChangeEvent:
+    # as consumer
+    topic:
+      name: iva_state_changed_topic
+      value: ivas
+    types:
+    - name: iva_state_changed_type
+      value: iva_state_changed
+    - name: iva_send_code_type
+      value: iva_send_code
+    kafkaUser:
+      operations:
+        - Read
+  notificationEvent:
+    # as producer
+    topic:
+      name: notification_topic
+      value: notifications
+    types:
+    - name: email_notification_type
+      value: email_notification
+    - name: sms_notification_type
+      value: sms_notification
+    kafkaUser:
+      operations:
+        - Write
+  secondFactorRecreatedEvent:
+    # as consumer
+    topic:
+      name: auth_topic
+      value: auth
+    types:
+    - name: second_factor_recreated_type
+      value: second_factor_recreated
+    kafkaUser:
+      operations:
+        - Read
+  userEvents:
+    # as consumer
+    topic:
+      name: user_topic
+      value: users
+    kafkaUser:
+      operations:
+        - Read
+  # as producer
+  deadLetterQueue:
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  # as consumer
+  deadLetterQueueRetry:
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read

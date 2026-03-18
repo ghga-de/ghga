@@ -1,0 +1,41 @@
+image:
+  repository: "ghga/file-ingest-service"
+
+configPrefix: fis
+
+# Service parameters
+
+# Service base path
+apiBasePath: /fis/
+# Name of the database
+mongodb:
+  dbName: file-ingest
+
+# This parameter is used as Kafka's group id
+serviceName: fis-rest
+
+config:
+  host: 0.0.0.0
+  private_key_path: <Please fill>
+  vault_url: http://vault:8200
+  vault_path: ekss
+  mongo_dsn: null
+  token_hashes: []
+  db_version_collection: "fisDbVersions"
+  migration_wait_sec: 10
+  enable_opentelemetry: false
+
+cmd: fis run-rest
+
+_topics:
+  fileUploadValidationSuccess:
+    # as producer
+    topic:
+      name: file_interrogations_topic
+      value: interrogations
+    type:
+      name: interrogation_success_type
+      value: file_interrogation_success
+    kafkaUser:
+      operations:
+        - Write
