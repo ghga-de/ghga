@@ -1,4 +1,5 @@
 {{- define "ghga-common.configmap" -}}
+{{- if .Values.configMap.enabled -}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -21,4 +22,5 @@ data:
     {{- end }}
 
     {{- $config | toYaml | nindent 4 }}
+{{- end -}}
 {{- end -}}
