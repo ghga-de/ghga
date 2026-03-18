@@ -46,6 +46,51 @@ ucs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- <a id="properties/file_deletion_request_topic"></a>**`file_deletion_request_topic`** *(string, required)*: The name of the topic to receive events informing about files to delete.
+
+
+  Examples:
+
+  ```json
+  "file-deletion-requests"
+  ```
+
+
+- <a id="properties/file_deletion_request_type"></a>**`file_deletion_request_type`** *(string, required)*: The type used for events indicating that a request to delete a file has been received.
+
+
+  Examples:
+
+  ```json
+  "file_deletion_requested"
+  ```
+
+
+- <a id="properties/file_internally_registered_topic"></a>**`file_internally_registered_topic`** *(string, required)*: Name of the topic used for events indicating that a file has been registered for download.
+
+
+  Examples:
+
+  ```json
+  "file-registrations"
+  ```
+
+
+  ```json
+  "file-registrations-internal"
+  ```
+
+
+- <a id="properties/file_internally_registered_type"></a>**`file_internally_registered_type`** *(string, required)*: The type used for event indicating that that a file has been registered for download.
+
+
+  Examples:
+
+  ```json
+  "file_internally_registered"
+  ```
+
+
 - <a id="properties/file_interrogations_topic"></a>**`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
 
 

@@ -21,13 +21,23 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from ghga_event_schemas.pydantic_ import InterrogationSuccess
+from ghga_event_schemas.pydantic_ import (
+    FileInternallyRegistered,
+    FileUploadState,
+    InterrogationSuccess,
+)
 from hexkit.protocols.dao import UniqueConstraintViolationError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
 
 from tests_ucs.fixtures.joint import JointRig
-from tests_ucs.fixtures.utils import DECRYPTED_SIZE, ENCRYPTED_SIZE, PART_SIZE
+from tests_ucs.fixtures.utils import (
+    DECRYPTED_SIZE,
+    ENCRYPTED_SIZE,
+    PART_SIZE,
+    make_file_upload,
+)
+from ucs.core.models import FileUpload
 from ucs.ports.inbound.controller import UploadControllerPort
 
 pytestmark = pytest.mark.asyncio()
@@ -1171,3 +1181,94 @@ async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
     # Original FileUpload must be untouched
     assert len(file_upload_dao.resources) == 1
     assert (await file_upload_dao.get_by_id(file_id_1)).state == "inbox"
+
+
+def _make_matching_event(file_upload: FileUpload) -> FileInternallyRegistered:
+    """Create a FileInternallyRegistered event that matches the given FileUpload."""
+    return FileInternallyRegistered(
+        file_id=file_upload.id,
+        archive_date=now_utc_ms_prec(),
+        storage_alias=file_upload.storage_alias,
+        bucket_id="permanent",
+        secret_id=file_upload.secret_id,
+        decrypted_size=file_upload.decrypted_size,
+        encrypted_size=file_upload.encrypted_size,
+        decrypted_sha256=file_upload.decrypted_sha256,
+        encrypted_parts_md5=file_upload.encrypted_parts_md5,
+        encrypted_parts_sha256=file_upload.encrypted_parts_sha256,
+        part_size=file_upload.part_size,
+    )
+
+
+async def test_handle_internal_file_registration(rig: JointRig):
+    """Test that process_internal_file_registration sets state to 'archived' and
+    updates state_updated on a FileUpload that is in 'awaiting_archival' state.
+
+    Then the method is re-run to test idempotence.
+    """
+    # Create the FileUpload and matching FileInternallyRegistered event, but don't
+    #  insert the FileUpload just yet. First, check for error handling on absent FileUploads
+    file_upload = make_file_upload(state="awaiting_archival")
+    event = _make_matching_event(file_upload)
+    with pytest.raises(UploadControllerPort.FileUploadNotFound):
+        await rig.controller.process_internal_file_registration(
+            registration_metadata=event
+        )
+
+    # Now insert the FileUpload and run the event handling function
+    await rig.file_upload_dao.insert(file_upload)
+
+    await sleep(0.1)  # sleep so that timestamp comparisons are valid
+    await rig.controller.process_internal_file_registration(registration_metadata=event)
+    updated_file_upload = await rig.file_upload_dao.get_by_id(file_upload.id)
+    assert updated_file_upload.state == "archived"
+    assert updated_file_upload.state_updated > file_upload.state_updated
+
+    # Now reprocess the event - should get no errors and timestamp should be unchanged
+    await sleep(0.1)  # sleep so that timestamp comparisons are valid
+    await rig.controller.process_internal_file_registration(registration_metadata=event)
+    final_file_upload = await rig.file_upload_dao.get_by_id(file_upload.id)
+    assert final_file_upload.state == "archived"
+    assert final_file_upload.state_updated == updated_file_upload.state_updated
+
+
+@pytest.mark.parametrize(
+    "file_upload_state,bad_event_field,bad_event_value",
+    [
+        # Wrong states - FileUpload is not in 'awaiting_archival' or 'archived'
+        ("init", None, None),
+        ("inbox", None, None),
+        ("interrogated", None, None),
+        ("failed", None, None),
+        ("cancelled", None, None),
+        # Field mismatches - state is correct but event data doesn't match
+        ("awaiting_archival", "decrypted_sha256", "wrong-sha256"),
+        ("awaiting_archival", "encrypted_parts_md5", ["wrong-md5"]),
+        ("awaiting_archival", "encrypted_parts_sha256", ["wrong-sha256"]),
+        ("awaiting_archival", "storage_alias", "wrong-alias"),
+        ("awaiting_archival", "secret_id", "wrong-secret"),
+        ("awaiting_archival", "decrypted_size", DECRYPTED_SIZE + 1),
+        ("awaiting_archival", "encrypted_size", ENCRYPTED_SIZE + 1),
+    ],
+)
+async def test_handle_internal_file_registration_state_error(
+    rig: JointRig,
+    file_upload_state: FileUploadState,
+    bad_event_field: str | None,
+    bad_event_value,
+):
+    """Test that FileUploadStateError is raised when the FileUpload is in an unexpected
+    state, or when any of the checked fields differ between the FileUpload and the event.
+    """
+    file_upload = make_file_upload(state="awaiting_archival")
+    file_upload.state = file_upload_state
+    await rig.file_upload_dao.insert(file_upload)
+
+    event = _make_matching_event(file_upload)
+    if bad_event_field is not None:
+        event = event.model_copy(update={bad_event_field: bad_event_value})
+
+    with pytest.raises(UploadControllerPort.FileUploadStateError):
+        await rig.controller.process_internal_file_registration(
+            registration_metadata=event
+        )

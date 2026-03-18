@@ -27,37 +27,12 @@ from pydantic import UUID4
 
 from tests_ucs.fixtures import ConfigFixture
 from tests_ucs.fixtures.in_mem_obj_storage import InMemS3ObjectStorages
-from tests_ucs.fixtures.utils import DECRYPTED_SIZE, ENCRYPTED_SIZE, PART_SIZE
+from tests_ucs.fixtures.utils import TEST_BUCKET, TEST_STORAGE_ALIAS, make_file_upload
 from ucs.adapters.outbound.s3 import S3Client
-from ucs.core.models import FileUpload, S3UploadDetails
+from ucs.core.models import S3UploadDetails
 from ucs.ports.outbound.storage import S3ClientPort
 
-TEST_STORAGE_ALIAS = "test"  # Should match the test config
-TEST_BUCKET = "test-inbox"
-
 pytestmark = pytest.mark.asyncio
-
-
-def make_file_upload(
-    *,
-    storage_alias: str = TEST_STORAGE_ALIAS,
-    bucket_id: str = TEST_BUCKET,
-    object_id: UUID4 | None = None,
-) -> FileUpload:
-    """Make a FileUpload instance with sensible defaults."""
-    return FileUpload(
-        id=uuid4(),
-        alias="test.bam",
-        box_id=uuid4(),
-        state="init",
-        state_updated=now_utc_ms_prec(),
-        storage_alias=storage_alias,
-        bucket_id=bucket_id,
-        object_id=object_id or uuid4(),
-        decrypted_size=DECRYPTED_SIZE,
-        encrypted_size=ENCRYPTED_SIZE,
-        part_size=PART_SIZE,
-    )
 
 
 def make_s3_upload_details(

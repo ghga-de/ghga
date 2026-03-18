@@ -18,6 +18,7 @@
 from abc import ABC, abstractmethod
 
 from ghga_event_schemas.pydantic_ import (
+    FileInternallyRegistered,
     InterrogationFailure,
     InterrogationSuccess,
     UploadBoxState,
@@ -149,6 +150,16 @@ class UploadControllerPort(ABC):
 
         def __init__(self, *, file_id: UUID4):
             msg = f"FileUpload with ID {file_id} not found."
+            super().__init__(msg)
+
+    class FileUploadStateError(UploadError):
+        """Raised when a FileUpload's details don't match the expected values."""
+
+        def __init__(self, *, file_id: UUID4, details: str):
+            msg = (
+                f"FileUpload with ID {file_id} doesn't match the expected state."
+                + f" Details: {details}"
+            )
             super().__init__(msg)
 
     class ChecksumMismatchError(RuntimeError):
@@ -318,5 +329,28 @@ class UploadControllerPort(ABC):
         - `S3UploadDetailsNotFoundError` if the S3UploadDetails aren't found.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        """
+        ...
+
+    @abstractmethod
+    async def process_internal_file_registration(
+        self, *, registration_metadata: FileInternallyRegistered
+    ) -> None:
+        """Update a FileUpload state to 'archived' and verify other data.
+
+        Raises:
+        - `FileUploadNotFound` if the FileUpload isn't found.
+        - `FileUploadStateError` if the FileUpload's details aren't what's expected.
+        """
+        ...
+
+    @abstractmethod
+    async def process_file_deletion_requested(self, *, file_id: UUID4) -> None:
+        """Process a deletion request for the given FileUpload ID.
+
+        This will remove the object from the inbox, if it exists.
+        Database objects are untouched.
+
+        If no FileUpload with the given ID exists, merely logs a warning and returns.
         """
         ...

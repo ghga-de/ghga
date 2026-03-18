@@ -24,7 +24,7 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from ghga_event_schemas.pydantic_ import InterrogationSuccess
+from ghga_event_schemas.pydantic_ import FileDeletionRequested, InterrogationSuccess
 from hexkit.correlation import set_correlation_id
 from hexkit.utils import now_utc_ms_prec
 
@@ -631,3 +631,76 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
 
     # Consume the event -- should not receive an error
     await joint_fixture.event_subscriber.run(forever=False)
+
+
+async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog):
+    """Test that consuming a FileDeletionRequested event aborts the S3 multipart upload,
+    removes S3UploadDetails from the DB, and marks the FileUpload as 'cancelled'.
+
+    Also verifies behavior for publishing a deletion event for an unknown file ID
+    (should be consumed without error).
+    """
+    controller = joint_fixture.upload_controller
+    config = joint_fixture.config
+    db = joint_fixture.mongodb.client[config.db_name]
+    file_upload_collection = db[FILE_UPLOADS_COLLECTION]
+    s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
+
+    # Create a FileUpload with an active MPU
+    async with set_correlation_id(uuid4()):
+        box_id = await controller.create_file_upload_box(storage_alias="test")
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=utils.DECRYPTED_SIZE,
+            encrypted_size=utils.ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+
+    # Publish the file deletion request event
+    event = FileDeletionRequested(file_id=file_id)
+    await joint_fixture.kafka.publish_event(
+        payload=event.model_dump(mode="json"),
+        type_=config.file_deletion_request_type,
+        topic=config.file_deletion_request_topic,
+    )
+
+    # Consume it
+    await joint_fixture.event_subscriber.run(forever=False)
+
+    # Check that the item is set to 'cancelled'
+    file_uploads_after = file_upload_collection.find({"_id": file_id}).to_list()
+    assert len(file_uploads_after) == 1
+    assert file_uploads_after[0]["state"] == "cancelled"
+    assert len(s3_upload_details_collection.find({"_id": file_id}).to_list()) == 0
+
+    # Consume the same event again
+    await joint_fixture.kafka.publish_event(
+        payload=event.model_dump(mode="json"),
+        type_=config.file_deletion_request_type,
+        topic=config.file_deletion_request_topic,
+    )
+    with caplog.at_level("INFO"):
+        caplog.clear()
+        await joint_fixture.event_subscriber.run(forever=False)
+    assert any(
+        f"FileUpload {file_id} is already marked 'cancelled', further action presumed unnecessary."
+        in record.message
+        for record in caplog.records
+    )
+
+    # Publish/Consume a deletion request for a file that doesn't exist (no error)
+    unknown_event = FileDeletionRequested(file_id=uuid4())
+    await joint_fixture.kafka.publish_event(
+        payload=unknown_event.model_dump(mode="json"),
+        type_=config.file_deletion_request_type,
+        topic=config.file_deletion_request_topic,
+    )
+    with caplog.at_level("WARNING"):
+        caplog.clear()
+        await joint_fixture.event_subscriber.run(forever=False)
+    assert any(
+        f"Cannot process deletion request for file ID {unknown_event.file_id}. No such FileUpload found."
+        in record.message
+        for record in caplog.records
+    )

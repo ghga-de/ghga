@@ -9,6 +9,10 @@ db_name: dev
 db_version_collection: ucsDbVersions
 docs_url: /docs
 enable_opentelemetry: false
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
+file_internally_registered_topic: internal-file-registry
+file_internally_registered_type: file_registered
 file_interrogations_topic: file-interrogations
 file_upload_box_topic: file-upload-boxes
 file_upload_topic: file-uploads

@@ -19,11 +19,14 @@ from pathlib import Path
 from typing import Literal, TypeAlias
 from uuid import UUID, uuid4
 
+from ghga_event_schemas.pydantic_ import FileUploadState
 from ghga_service_commons.utils import jwt_helpers
+from hexkit.utils import now_utc_ms_prec
 from jwcrypto.jwk import JWK
 from pydantic import UUID4
 
 from ucs.adapters.inbound.fastapi_ import rest_models as models
+from ucs.core.models import FileUpload
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -31,7 +34,8 @@ TOKEN_LIFESPAN = 30  # seconds
 DECRYPTED_SIZE = 10737418240
 ENCRYPTED_SIZE = 10742005884
 PART_SIZE = 5245120
-
+TEST_STORAGE_ALIAS = "test"  # Should match the test config
+TEST_BUCKET = "test-inbox"
 
 SignedToken: TypeAlias = str
 
@@ -137,3 +141,36 @@ def delete_file_token_header(
         work_type="delete", box_id=box_id, file_id=file_id
     )
     return _make_auth_header(work_order, jwk)
+
+
+def make_file_upload(
+    *,
+    storage_alias: str = TEST_STORAGE_ALIAS,
+    bucket_id: str = TEST_BUCKET,
+    object_id: UUID4 | None = None,
+    state: FileUploadState = "init",
+) -> FileUpload:
+    """Make a FileUpload instance with sensible defaults."""
+    file_upload = FileUpload(
+        id=uuid4(),
+        alias="test.bam",
+        box_id=uuid4(),
+        state=state,
+        state_updated=now_utc_ms_prec(),
+        storage_alias=storage_alias,
+        bucket_id=bucket_id,
+        object_id=object_id or uuid4(),
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    if state != "init":
+        file_upload.decrypted_sha256 = "my-decrypted-sha"
+        file_upload.encrypted_parts_md5 = ["a1", "b2", "c3"]
+        file_upload.encrypted_parts_sha256 = ["a1", "b2", "c3"]
+
+    if state not in ["init", "inbox"]:
+        file_upload.secret_id = "the-secret-is"
+
+    return file_upload

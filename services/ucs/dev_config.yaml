@@ -24,3 +24,7 @@ uos_auth_config:
 file_interrogations_topic: file-interrogations
 interrogation_success_type: interrogation_success
 interrogation_failure_type: interrogation_failed
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
+file_internally_registered_topic: internal-file-registry
+file_internally_registered_type: file_registered
