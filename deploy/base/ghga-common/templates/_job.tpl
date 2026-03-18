@@ -60,33 +60,7 @@ spec:
           {{- if $envVars }}
           env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
           {{- end }}
-          volumeMounts:
-          {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 12 }}
-          {{- if .Values.kafkaUser.enabled }}
-            - mountPath: "/kafka-secrets/"
-              name: kafka-secret
-              readOnly: true
-            - mountPath:  "/cluster-ca-cert/"
-              name: cluster-ca-cert
-              readOnly: true
-          {{- end }}
-          {{- if .Values.extraVolumeMounts }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
-          {{- end }}
-      volumes:
-        {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 8 }}
-        {{- if .Values.extraVolumes }}
-        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
-        {{- end }}
-        {{- if .Values.kafkaUser.enabled }}
-        - name: kafka-secret
-          secret:
-            secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
-            optional: false
-        - name: cluster-ca-cert
-          secret:
-            secretName: {{ .Values.kafkaUser.caCertSecretName }}
-            optional: false
-          {{- end }}
+          volumeMounts: {{- include "ghga-common.volumemounts" $ | nindent 12 }}
+      volumes: {{- include "ghga-common.volumes" $ | nindent 10 }}
 {{- end -}}
 {{- end -}}

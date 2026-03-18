@@ -24,24 +24,41 @@
     {{ .Values.serviceInstanceIdPrefix | empty | ternary .Values.serviceInstanceId (cat .Values.serviceInstanceIdPrefix "-" .Values.serviceInstanceId ) | nospace }}
 {{- end -}}
 {{- end -}}
-{{- define "ghga-common.configVolume" -}}
+
+{{- define "ghga-common.volumes" -}}
+{{- $volumes := list -}}
 {{- if .Values.configMap.enabled -}}
-name: config
-configMap:
-    name: {{ include "common.names.fullname" $ }}
-    items:
-    - key: config
-      path: {{ .Values.configMap.subPath }}
+{{- $configmap := dict "name" "config" "configMap" (dict "name" (include "common.names.fullname" $) "items" (list (dict "key" "config" "path" .Values.configMap.subPath))) -}}
+{{- $volumes = append $volumes $configmap }}
 {{- end -}}
+{{- if .Values.kafkaUser.enabled }}
+{{- $kafkauser := dict "name" "kafka-secret" "secret" (dict "secretName" (print .Release.Namespace "-"  (include "common.names.fullname" $)) "optional" false) }}
+{{- $cluster_ca_cert := dict "name" "cluster-ca-cert" "secret" (dict "secretName" .Values.kafkaUser.caCertSecretName "optional" false) }}
+{{- $volumes = append $volumes $kafkauser }}
+{{- $volumes = append $volumes $cluster_ca_cert }}
+{{- end }}
+{{- if .Values.extraVolumes }}
+{{- $volumes = concat $volumes .Values.extraVolumes }}
+{{- end }}
+{{- $volumes | toYaml -}}
 {{- end -}}
-{{- define "ghga-common.configVolumeMount" -}}
+
+{{- define "ghga-common.volumemounts" -}}
+{{- $volumemounts := list -}}
 {{- if .Values.configMap.enabled -}}
-name: config
-mountPath: {{ .Values.configMap.mountPath }}
-subPath: {{ .Values.configMap.subPath }}
-readOnly: true
+{{- $configmap := dict "name" "config" "mountPath" .Values.configMap.mountPath "subPath" .Values.configMap.subPath "readOnly" true -}}
+{{- $volumemounts = append $volumemounts $configmap -}}
 {{- end -}}
+{{- if .Values.kafkaUser.enabled }}
+{{- $volumemounts = append $volumemounts (dict "mountPath" "/kafka-secrets/" "name" "kafka-secret" "readOnly" true) }}
+{{- $volumemounts = append $volumemounts (dict "mountPath" "/cluster-ca-cert/" "name" "cluster-ca-cert" "readOnly" true) }}
+{{- end }}
+{{- if .Values.extraVolumeMounts }}
+{{- $volumemounts = concat $volumemounts .Values.extraVolumeMounts }}
+{{- end }}
+{{- $volumemounts | toYaml }}
 {{- end -}}
+
 {{- define "ghga-common.env-vars" -}}
 {{- $envVars := .Values.configMap.envVar.enabled | ternary (append .Values.envVars (dict "name" (print .Values.configPrefix "_CONFIG_YAML" | upper) "value" .Values.configMap.mountPath)) .Values.envVars }}
 {{- dict "envVars" $envVars | toYaml -}}

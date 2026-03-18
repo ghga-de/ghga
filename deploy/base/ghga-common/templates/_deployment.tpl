@@ -104,37 +104,11 @@ spec:
           {{- if .Values.lifecycleHooks }}
           lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
           {{- end }}
-          volumeMounts:
-            {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 12 }}
-            {{- if .Values.extraVolumeMounts }}
-            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
-            {{- end }}
-            {{- if .Values.kafkaUser.enabled }}
-            - mountPath: "/kafka-secrets/"
-              name: kafka-secret
-              readOnly: true
-            - mountPath:  "/cluster-ca-cert/"
-              name: cluster-ca-cert
-              readOnly: true
-            {{- end }}
+          volumeMounts: {{- include "ghga-common.volumemounts" $ | nindent 12 }}
         {{- if .Values.sidecars }}
         {{- include "common.tplvalues.render" (dict "value" $.Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
-      volumes:
-        {{- include "common.tplvalues.render" ( dict "value" (include "ghga-common.configVolume" $ | fromYaml | list) "context" $) | nindent 8 }}
-        {{- if .Values.extraVolumes }}
-        {{- include "common.tplvalues.render" ( dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
-        {{- end }}
-        {{- if .Values.kafkaUser.enabled }}
-        - name: kafka-secret
-          secret:
-            secretName: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
-            optional: false
-        - name: cluster-ca-cert
-          secret:
-            secretName: {{ .Values.kafkaUser.caCertSecretName }}
-            optional: false
-        {{- end }}
+      volumes: {{- include "ghga-common.volumes" $ | nindent 8 }}
       {{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) | indent 6 }}
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}

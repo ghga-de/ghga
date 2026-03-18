@@ -34,11 +34,7 @@
   {{- if $container.resources }}
   resources: {{- toYaml $container.resources | nindent 4 }}
   {{- end }}
-  volumeMounts:
-    {{- include "common.tplvalues.render" (dict "value" (include "ghga-common.configVolumeMount" $ | fromYaml | list) "context" $) | nindent 4 }}
-    {{- if $.Values.extraVolumeMounts }}
-    {{- include "common.tplvalues.render" (dict "value" $.Values.extraVolumeMounts "context" $) | nindent 4 }}
-    {{- end }}
+  volumeMounts: {{- include "ghga-common.volumemounts" $ | nindent 4 }}
     {{- if $container.volumeMounts }}
     {{- include "common.tplvalues.render" (dict "value" $container.volumeMounts "context" $) | nindent 4 }}
     {{- end }}
