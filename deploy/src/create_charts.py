@@ -61,23 +61,13 @@ def load_charts() -> dict:
         return YAML_PARSER.load(charts_file)
 
 
-def main() -> int:
-    charts = load_charts()
+charts = load_charts()
 
-    created: list[Path] = []
-    for chart_name, chart in charts["charts"].items():
-        values = find_values_file(VALUES_DIR, chart_name)
-        created_path = create_chart_from_template(
-            chart=chart,
-            values_file=values,
-        )
-        created.append(created_path)
-
-    for path in created:
-        print(f"- {path}")
-
-    return 0
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-
+created: list[Path] = []
+for chart_name, chart in charts["charts"].items():
+    values = find_values_file(VALUES_DIR, chart_name)
+    created_path = create_chart_from_template(
+        chart=chart,
+        values_file=values,
+    )
+    print(f"Created chart for {chart_name} at {created_path}")
