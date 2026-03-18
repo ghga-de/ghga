@@ -259,6 +259,9 @@ exports:
 
     healthEndpoint: "/health"
     
+    destinationRule:
+      enabled: false
+    
     networkPolicy:
       enabled: false
       ingress:
