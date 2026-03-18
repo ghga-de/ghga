@@ -12,8 +12,8 @@ helm install my-release ghga/<chart>
 
 ### Update Chart
 
-- Update `appVersion` in Chart.yaml to desired version
-- Update values.yaml or add service parameters (only required or parameters which differ from default on purpose)
+- Update `appVersion` in `src/charts_app_versions.yaml` to desired version
+- Update `src/values` to add service parameters (only required or parameters which differ from default on purpose)
 - Create PR
 
 ## Developer notes
