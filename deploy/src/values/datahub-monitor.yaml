@@ -1,0 +1,42 @@
+image:
+  repository: ghga/datahub-monitor
+  pullPolicy: IfNotPresent
+
+cronSchedule: "0 * * * *"
+
+cronjob:
+  enabled: true
+
+deployment:
+  enabled: false
+
+service:
+  enabled: false
+
+configPrefix: ""
+
+configMap:
+  mountPath: /app/.config.yaml
+  envVar:
+    enabled: false
+
+vaultAgent:
+  annotations:
+    vault.hashicorp.com/agent-pre-populate-only: "true"
+
+extraVolumes:
+  - name: data
+    emptyDir:
+      sizeLimit: 1Gi
+
+extraVolumeMounts:
+  - name: data
+    mountPath: /data
+
+config:
+  service:
+    output_file: "/data/upload_results.txt"   # JSON output file
+    part_size_mb: 100                    # ~100MB per part
+    file_size_mb: 1000                   # Test file size in MB (auto-created in /data)
+
+  nodes: {}

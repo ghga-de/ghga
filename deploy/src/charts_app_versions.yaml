@@ -80,3 +80,13 @@ charts:
     description: This job is to refresh the internal and external auth keys.
     appVersion: "0.2.1"
     version: "2.4.0"
+  remotebackup:
+    name: remotebackup
+    description: remotebackup
+    appVersion: "3.1.9"
+    version: "3.2.2"
+  datahub-monitor:
+    name: datahub-monitor
+    description: datahub-monitor
+    appVersion: "0.1.3"
+    version: "0.1.7"
