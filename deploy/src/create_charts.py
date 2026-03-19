@@ -10,7 +10,7 @@ from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
 repo_root = Path(__file__).resolve().parents[1]
 VALUES_DIR: Path = repo_root / "src" / "values"
-OUTPUT_DIR: Path = repo_root / "archive"
+OUTPUT_DIR: Path = repo_root / "charts"
 CHARTS_YAML: Path = repo_root / "src" / "charts_app_versions.yaml"
 CHART_TEMPLATE: Path = repo_root / "src" / "template"
 
