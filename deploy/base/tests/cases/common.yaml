@@ -1,0 +1,8 @@
+image:
+  repository: busybox
+  tag: latest
+
+job:
+  enabled: true
+
+cmd: sleep 100000000

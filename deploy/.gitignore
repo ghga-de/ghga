@@ -6,3 +6,8 @@ charts/**/charts/*.tgz
 .DS_Store
 desktop.ini
 thumbs.db
+
+**/.pytest_cache/
+**/__pycache__/
+**/.mypy_cache/
+**/.coverage

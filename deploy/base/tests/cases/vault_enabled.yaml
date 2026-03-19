@@ -1,0 +1,8 @@
+vaultAgent:
+  enabled: true
+  secrets:
+    mongodb:
+      enabled: true
+      parameterName: TEST_DB
+    service:
+      enabled: true

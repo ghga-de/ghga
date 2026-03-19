@@ -1,0 +1,8 @@
+config:
+  foo: bar
+
+configMap:
+  mountPath: /home/appuser/config.yaml
+  subPath: config.yaml
+  envVar:
+    enabled: false

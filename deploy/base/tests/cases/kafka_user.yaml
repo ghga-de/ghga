@@ -1,0 +1,13 @@
+kafkaUser:
+  enabled: true
+
+_topics:
+  foo:
+    topic:
+      name: bar
+      value: baz
+    kafkaUser:
+      operations:
+        - Write
+        - Describe
+        - Create
