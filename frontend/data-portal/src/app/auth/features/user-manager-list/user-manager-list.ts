@@ -63,9 +63,6 @@ export class UserManagerListComponent implements AfterViewInit {
 
   source = new MatTableDataSource<DisplayUser>([]);
 
-  defaultTablePageSize = 10;
-  tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
-
   #updateSourceEffect = effect(() => (this.source.data = this.users()));
 
   #userSortingAccessor = (user: DisplayUser, key: string) => {

@@ -78,8 +78,6 @@
 
 @if (accessGrants().length > 10) {
   <mat-paginator
-    [pageSize]="defaultTablePageSize"
-    [pageSizeOptions]="tablePageSizeOptions"
     showFirstLastButtons
     class="sticky left-0"
     aria-label="Select page of access grants"

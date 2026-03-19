@@ -114,9 +114,6 @@ export class DatasetDetailsTableComponent implements AfterViewInit {
   #storageLabels = this.#wkvs.storageLabels;
   protected storageLabels = this.#storageLabels.value;
 
-  protected defaultTablePageSize = 10;
-  protected tablePageSizeOptions = [10, 25, 50, 100];
-
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChildren(MatSort) matSorts!: QueryList<MatSort>;
   @ViewChild(MatPaginator) paginator!: MatPaginator;

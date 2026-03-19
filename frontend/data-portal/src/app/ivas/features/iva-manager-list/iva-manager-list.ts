@@ -70,9 +70,6 @@ export class IvaManagerListComponent implements AfterViewInit {
 
   source = new MatTableDataSource<UserWithIva>([]);
 
-  defaultTablePageSize = 10;
-  tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
-
   #duplicateUsers = new Set<string>(); // user IDs where name and email are ambiguous
 
   #updateSourceEffect = effect(() => (this.source.data = this.ivas()));

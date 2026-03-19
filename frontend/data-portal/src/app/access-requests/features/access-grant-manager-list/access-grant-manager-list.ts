@@ -61,9 +61,6 @@ export class AccessGrantManagerListComponent implements AfterViewInit {
   accessGrants = this.#ars.allAccessGrantsFiltered;
   source = new MatTableDataSource<AccessGrant>([]);
 
-  defaultTablePageSize = 10;
-  tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
-
   periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
   periodTimeZone = DEFAULT_TIME_ZONE;
 

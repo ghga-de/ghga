@@ -7,11 +7,16 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  MAT_PAGINATOR_DEFAULT_OPTIONS,
+  MatPaginator,
+  MatPaginatorDefaultOptions,
+} from '@angular/material/paginator';
+import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
 import { UserManagerListComponent } from './user-manager-list';
-
 /**
  * Mock ConfigService for testing
  */
@@ -39,6 +44,11 @@ class MockRouter {
   navigate = vitest.fn();
 }
 
+const paginatorDefaults: MatPaginatorDefaultOptions = {
+  pageSize: 10,
+  pageSizeOptions: [10, 25, 50, 100, 250, 500],
+};
+
 describe('UserManagerListComponent', () => {
   let component: UserManagerListComponent;
   let fixture: ComponentFixture<UserManagerListComponent>;
@@ -55,6 +65,7 @@ describe('UserManagerListComponent', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: ConfigService, useClass: MockConfigService },
         { provide: Router, useValue: mockRouter },
+        { provide: MAT_PAGINATOR_DEFAULT_OPTIONS, useValue: paginatorDefaults },
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
@@ -93,8 +104,25 @@ describe('UserManagerListComponent', () => {
   });
 
   it('should have correct default pagination settings', () => {
-    expect(component.defaultTablePageSize).toBe(10);
-    expect(component.tablePageSizeOptions).toEqual([10, 25, 50, 100, 250, 500]);
+    const usersWithVariousTitles = [] as any;
+    for (let i = 0; i < 15; i++) {
+      usersWithVariousTitles.push({
+        name: 'John Doe',
+        title: 'Dr.' as const,
+        roles: ['data_steward'],
+        displayName: 'Dr. John Doe',
+        roleNames: ['Data Steward'],
+        sortName: 'Doe, John, Dr.',
+      });
+    }
+    mockUserService.users.value.mockReturnValue(usersWithVariousTitles);
+    fixture.detectChanges();
+    const paginatorDebugEl = fixture.debugElement.query(By.directive(MatPaginator));
+    const paginator = paginatorDebugEl.componentInstance as MatPaginator;
+    const defaults = TestBed.inject(MAT_PAGINATOR_DEFAULT_OPTIONS);
+
+    expect(paginator.pageSize).toBe(defaults.pageSize);
+    expect(paginator.pageSizeOptions).toEqual(defaults.pageSizeOptions);
   });
 
   it('should format display name with title when available', () => {

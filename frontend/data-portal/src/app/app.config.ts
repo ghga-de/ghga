@@ -28,6 +28,16 @@ import {
   DEFAULT_DATE_OUTPUT_FORMAT,
 } from '@app/shared/utils/date-formats';
 
+import {
+  MAT_PAGINATOR_DEFAULT_OPTIONS,
+  MatPaginatorDefaultOptions,
+} from '@angular/material/paginator';
+
+const paginatorDefaults: MatPaginatorDefaultOptions = {
+  pageSize: 10,
+  pageSizeOptions: [10, 25, 50, 100, 250, 500],
+};
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
@@ -44,6 +54,10 @@ export const appConfig: ApplicationConfig = {
     {
       provide: DATE_PIPE_DEFAULT_OPTIONS,
       useValue: { dateFormat: DEFAULT_DATE_OUTPUT_FORMAT },
+    },
+    {
+      provide: MAT_PAGINATOR_DEFAULT_OPTIONS,
+      useValue: paginatorDefaults,
     },
     provideDateFnsAdapter(DEFAULT_DATE_FORMATS),
   ],

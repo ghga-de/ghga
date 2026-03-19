@@ -6,7 +6,6 @@
 
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { uploadBoxes } from '@app/../mocks/data';
 import { NotificationService } from '@app/shared/services/notification';
 import { UploadBoxService } from '@app/upload/services/upload-box';

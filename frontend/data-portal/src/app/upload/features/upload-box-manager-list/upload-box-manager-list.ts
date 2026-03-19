@@ -70,9 +70,6 @@ export class UploadBoxManagerListComponent implements AfterViewInit {
 
   dataSource = new MatTableDataSource<ResearchDataUploadBox>([]);
 
-  defaultTablePageSize = 10;
-  tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
-
   #updateDataSourceEffect = effect(() => (this.dataSource.data = this.uploadBoxes()));
 
   #uploadBoxErrorEffect = effect(() => {

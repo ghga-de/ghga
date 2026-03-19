@@ -116,15 +116,11 @@
     </table>
   </div>
 
-  @if (users().length > 10) {
-    <mat-paginator
-      [pageSize]="defaultTablePageSize"
-      [pageSizeOptions]="tablePageSizeOptions"
-      showFirstLastButtons
-      class="sticky left-0"
-      aria-label="Select page of users"
-      #paginator
-    >
-    </mat-paginator>
-  }
+  <mat-paginator
+    showFirstLastButtons
+    class="sticky left-0"
+    aria-label="Select page of users"
+    #paginator
+  >
+  </mat-paginator>
 }

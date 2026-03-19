@@ -69,9 +69,6 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
 
   source = new MatTableDataSource<AccessRequest>([]);
 
-  defaultTablePageSize = 10;
-  tablePageSizeOptions = [10, 25, 50, 100, 250, 500];
-
   periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
   periodTimeZone = DEFAULT_TIME_ZONE;
 
