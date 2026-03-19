@@ -10,6 +10,9 @@ cronjob:
 deployment:
   enabled: false
 
+service:
+  enabled: false
+
 configPrefix: ""
 
 cmd: "remotebackup backup"
