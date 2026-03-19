@@ -1,0 +1,203 @@
+<div
+  class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6"
+  [style.view-transition-name]="
+    showTransition ? 'detail' : showBackTransition ? 'detail-back' : null
+  "
+>
+  <div class="justify-between md:flex">
+    <header class="grow">
+      <button
+        mat-icon-button
+        (click)="goBack()"
+        aria-label="Go back to previous page"
+        class="text-primary float-left mt-1 mr-4"
+      >
+        <mat-icon fontIcon="chevron_left"></mat-icon>
+      </button>
+      <h1>Upload Box Details</h1>
+    </header>
+  </div>
+
+  @if (isLoading()) {
+    <p class="text-base">Loading upload box details...</p>
+  } @else if (error() === 'not found') {
+    <p class="text-error">Upload box not found.</p>
+  } @else if (error() === 'other') {
+    <p class="text-error"
+      >There was an error retrieving the upload box. Please try again later.</p
+    >
+  } @else if (uploadBox(); as box) {
+    <div class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <!-- Box Info -->
+        <mat-card class="self-start">
+          <mat-card-header>
+            <mat-card-title><h2>Upload Box Info</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>
+              <strong class="inline-block w-40">Title:</strong>
+              <span>{{ box.title }}</span>
+            </p>
+            <p class="flex">
+              <strong class="inline-block min-w-40">Description:</strong>
+              <span>{{ box.description }}</span>
+            </p>
+            <p>
+              <strong class="inline-block w-40">State:</strong>
+              <strong class="{{ stateClass[box.state] }} capitalize">{{
+                box.state | CapitalisePipe
+              }}</strong>
+            </p>
+            <p>
+              <strong class="inline-block w-40">Last change:</strong>
+              <span
+                >{{ box.last_changed | date: friendlyDateFormat : timeZone }}
+                @if (changedBy()) {
+                  by
+                  <a
+                    [routerLink]="'/user-manager/' + box.changed_by"
+                    class="text-primary"
+                    >{{ changedBy()!.displayName }}</a
+                  >
+                } @else if (changedBy() === null) {
+                  by {{ box.changed_by }}
+                }
+              </span>
+            </p>
+            <p>
+              <strong class="inline-block w-40">Files / Size:</strong>
+              <span>{{ box.file_count }} files, {{ box.size | parseBytes }}</span>
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Upload Grants -->
+        <mat-card class="self-start">
+          <mat-card-header>
+            <mat-card-title><h2>Upload Grants</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="overflow-auto">
+              <table mat-table [dataSource]="grants()" class="w-full">
+                <ng-container matColumnDef="grantee">
+                  <th mat-header-cell *matHeaderCellDef>Grantee</th>
+                  <td mat-cell *matCellDef="let grant"
+                    >{{ grant.user_name }} ({{ grant.user_email }})</td
+                  >
+                </ng-container>
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Status</th>
+                  <td mat-cell *matCellDef="let grant">
+                    <span
+                      [class]="isGrantActive(grant) ? 'text-success' : 'text-error'"
+                      >{{ isGrantActive(grant) ? 'active' : 'inactive' }}</span
+                    >
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="validity">
+                  <th mat-header-cell *matHeaderCellDef>Validity Period</th>
+                  <td mat-cell *matCellDef="let grant"
+                    >{{ grant.valid_from }} to {{ grant.valid_until }}</td
+                  >
+                </ng-container>
+                <ng-container matColumnDef="details">
+                  <th mat-header-cell *matHeaderCellDef class="w-24">Details</th>
+                  <td mat-cell *matCellDef="let grant">
+                    <button
+                      mat-icon-button
+                      [routerLink]="['/upload-box-manager', id(), 'grant', grant.id]"
+                      aria-label="View grant details"
+                      class="text-primary"
+                    >
+                      <mat-icon fontIcon="chevron_right"></mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="grantColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: grantColumns"></tr>
+
+                <tr class="mat-row" *matNoDataRow>
+                  <td class="mat-cell p-4 text-base" colspan="4"
+                    >No upload grants found.</td
+                  >
+                </tr>
+              </table>
+            </div>
+            <button mat-raised-button color="primary" class="mt-4" (click)="addGrant()">
+              <mat-icon fontIcon="add"></mat-icon>
+              Add new upload grant
+            </button>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Storage & Files -->
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title><h2>Storage &amp; Files</h2></mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>
+            <strong class="inline-block w-40">Location:</strong>
+            <span>{{ storageLocationLabel() }}</span>
+          </p>
+          <p><strong>Files:</strong></p>
+          @if (box.file_count > 0) {
+            <div class="overflow-auto">
+              <table mat-table [dataSource]="fileUploadsDataSource" class="w-full">
+                <ng-container matColumnDef="alias">
+                  <th mat-header-cell *matHeaderCellDef>Alias</th>
+                  <td mat-cell *matCellDef="let file">{{ file.alias }}</td>
+                </ng-container>
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef>Status</th>
+                  <td mat-cell *matCellDef="let file">
+                    <span [class]="getFileStatusClass(file.state)">{{
+                      file.state
+                    }}</span>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="size">
+                  <th mat-header-cell *matHeaderCellDef>Size</th>
+                  <td mat-cell *matCellDef="let file">{{
+                    file.decrypted_size | parseBytes
+                  }}</td>
+                </ng-container>
+                <ng-container matColumnDef="uploaded">
+                  <th mat-header-cell *matHeaderCellDef>Uploaded</th>
+                  <td mat-cell *matCellDef="let file">{{
+                    file.state_updated | date: friendlyDateFormat : timeZone
+                  }}</td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="fileColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: fileColumns"></tr>
+
+                <tr class="mat-row" *matNoDataRow>
+                  <td class="mat-cell p-4 text-base" colspan="4">Loading files...</td>
+                </tr>
+              </table>
+            </div>
+            @if (box.file_count > 10) {
+              <mat-paginator
+                showFirstLastButtons
+                class="sticky left-0"
+                aria-label="Select page of files"
+              ></mat-paginator>
+            }
+            @if (showMapFilesButton()) {
+              <button mat-raised-button color="primary" class="mt-4" disabled>
+                <mat-icon fontIcon="check"></mat-icon>
+                Map files to metadata and archive
+              </button>
+            }
+          } @else {
+            <p class="text-warning mt-2">This upload box is still empty.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+  }
+</div>

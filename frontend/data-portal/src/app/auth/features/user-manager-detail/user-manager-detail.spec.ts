@@ -89,7 +89,7 @@ class MockUserService {
   deleteUser = () => undefined;
   updateUser = () => undefined;
 
-  createUserResource = () => ({
+  createUserFetcher = () => ({
     load: () => undefined,
     resource: {
       value: () => undefined,
@@ -176,7 +176,7 @@ describe('UserManagerDetailComponent', () => {
         error: vitest.fn(() => null),
       },
       loadUser: () => undefined,
-      createUserResource: () => undefined,
+      createUserFetcher: () => undefined,
       filter: () => {
         idStrings: [];
       },

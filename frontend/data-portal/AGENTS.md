@@ -101,6 +101,8 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
 - Use strict type checking
 - Prefer type inference when the type is obvious
 - Avoid the `any` type; use `unknown` when type is uncertain
+- Use `undefined` for optional values and parameters and missing results or config settings, and `null` for explicit empty values, form and backend data and for resetting state.
+- In case of doubt, prefer `undefined` over `null`, avoid allowing both unless really required.
 
 ## Documentation
 

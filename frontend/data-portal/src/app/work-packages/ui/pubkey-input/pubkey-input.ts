@@ -4,14 +4,8 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  effect,
-  input,
-  model,
-} from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import {
   FormValueControl,
   schema,
@@ -97,7 +91,7 @@ function validatePubKey(key: string): number {
  */
 @Component({
   selector: 'app-pubkey-input',
-  imports: [MatFormFieldModule, MatInputModule, FormsModule, ReactiveFormsModule],
+  imports: [MatFormFieldModule, MatInputModule, FormsModule],
   templateUrl: './pubkey-input.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -138,21 +132,10 @@ export class PubkeyFieldComponent implements FormValueControl<string> {
   /** Invalid state from parent form */
   invalid = input(false);
 
-  /** Internal FormControl for Material form field integration */
-  #formControl = new FormControl('');
-
   /** Shows errors when field has value and is invalid */
   errorStateMatcher: ErrorStateMatcher = {
     isErrorState: () => !!this.value() && this.invalid(),
   };
-
-  /**
-   * Expose formControl for template
-   * @returns Internal FormControl instance
-   */
-  get formControl() {
-    return this.#formControl;
-  }
 
   /**
    * Trimmed key value ready for submission
@@ -161,16 +144,4 @@ export class PubkeyFieldComponent implements FormValueControl<string> {
   get trimmedKey(): string {
     return trimKey(this.value());
   }
-
-  #validateEffect = effect(() => {
-    if (this.invalid()) {
-      this.#formControl.setErrors({ invalid: true });
-    } else {
-      this.#formControl.setErrors(null);
-    }
-  });
-
-  #valueEffect = effect(() => {
-    this.#formControl.setValue(this.value(), { emitEvent: false });
-  });
 }

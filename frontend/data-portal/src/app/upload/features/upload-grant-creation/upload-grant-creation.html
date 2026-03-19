@@ -1,0 +1,246 @@
+<div
+  class="mx-auto flex max-w-[900px] flex-col gap-4 p-6"
+  [style.view-transition-name]="showTransition ? 'detail' : null"
+>
+  <div class="justify-between md:flex">
+    <header class="grow">
+      <button
+        mat-icon-button
+        (click)="navigateBack()"
+        aria-label="Go back to upload box details"
+        class="text-primary float-left mt-1 mr-4"
+      >
+        <mat-icon fontIcon="chevron_left"></mat-icon>
+      </button>
+      <h1>New Upload Grant</h1>
+    </header>
+  </div>
+  @if (box(); as b) {
+    <p>
+      <strong>Upload Box:</strong>&nbsp;<a
+        [routerLink]="['/upload-box-manager', boxId()]"
+        >{{ b.title }}</a
+      >
+    </p>
+  }
+
+  <!-- Grantee search card -->
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title><h2>Select a Grantee</h2></mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="flex flex-col gap-3">
+      @if (selectedUser(); as user) {
+        <div class="flex items-center gap-2">
+          <mat-icon fontIcon="person" class="text-primary shrink-0"></mat-icon>
+          <div
+            class="grid min-w-0 flex-1 grid-cols-[1fr_auto] items-center gap-x-4 gap-y-0.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+          >
+            <span class="truncate font-semibold">{{ user.displayName }}</span>
+            <div class="text-secondary flex min-w-0 items-center gap-1 text-sm">
+              <mat-icon fontIcon="email" class="shrink-0 text-base"></mat-icon>
+              <span class="truncate">{{ user.email }}</span>
+            </div>
+            <div class="text-secondary flex min-w-0 items-center gap-1 text-xs">
+              <mat-icon fontIcon="badge" class="shrink-0 text-base"></mat-icon>
+              <span class="truncate font-mono">{{ user.ext_id | userExtId }}</span>
+            </div>
+          </div>
+          <button
+            mat-icon-button
+            (click)="clearUser()"
+            aria-label="Clear selected user"
+            class="shrink-0"
+          >
+            <mat-icon fontIcon="close"></mat-icon>
+          </button>
+        </div>
+      } @else {
+        <mat-form-field class="w-full">
+          <mat-label>Search by name, email or external ID</mat-label>
+          <input
+            matInput
+            type="text"
+            [value]="searchQuery()"
+            (input)="searchQuery.set($any($event.target).value)"
+            autocomplete="off"
+          />
+          <mat-icon matSuffix fontIcon="search"></mat-icon>
+        </mat-form-field>
+
+        @if (usersLoading()) {
+          <div class="flex items-center gap-2 text-sm">
+            <mat-progress-spinner
+              mode="indeterminate"
+              diameter="20"
+            ></mat-progress-spinner>
+            <span>Loading users…</span>
+          </div>
+        } @else if (searchQuery().trim() && filteredUsers().length === 0) {
+          <p class="text-warning text-sm"
+            >No users found matching "{{ searchQuery() }}".</p
+          >
+        } @else if (filteredUsers().length > 0) {
+          <table class="w-full border-collapse text-sm">
+            @for (user of filteredUsers(); track user.id) {
+              <tr
+                class="cursor-pointer rounded hover:bg-black/5"
+                (click)="selectUser(user)"
+                (keydown.enter)="selectUser(user)"
+                (keydown.space)="selectUser(user)"
+                tabindex="0"
+                role="button"
+                [attr.aria-label]="'Select ' + user.displayName"
+              >
+                <td class="py-1 pr-4">
+                  <div class="flex items-center gap-2">
+                    <mat-icon
+                      fontIcon="person_outline"
+                      class="shrink-0 text-base"
+                    ></mat-icon>
+                    <span class="font-semibold">{{ user.displayName }}</span>
+                  </div>
+                </td>
+                <td class="py-1 pr-4">
+                  <div class="text-secondary flex items-center gap-1">
+                    <mat-icon fontIcon="email" class="shrink-0 text-base"></mat-icon>
+                    <span>{{ user.email }}</span>
+                  </div>
+                </td>
+                <td class="py-1">
+                  <div class="text-secondary flex items-center gap-1">
+                    <mat-icon fontIcon="badge" class="shrink-0 text-base"></mat-icon>
+                    <span class="font-mono text-xs">{{ user.ext_id | userExtId }}</span>
+                  </div>
+                </td>
+              </tr>
+            }
+          </table>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- IVA selection card (only shown when a user is selected) -->
+  @if (selectedUser()) {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title><h2>Select an IVA</h2></mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (ivasLoading()) {
+          <div class="flex items-center gap-2 text-sm">
+            <mat-progress-spinner
+              mode="indeterminate"
+              diameter="20"
+            ></mat-progress-spinner>
+            <span>Loading IVAs…</span>
+          </div>
+        } @else if (ivasError()) {
+          <p class="text-error">Failed to load IVAs for this user.</p>
+        } @else {
+          @if (userIvas().length === 0) {
+            <p class="text-error text-xl">No IVA found.</p>
+            <p class="text-warning text-base"
+              >Users need to create an IVA before you can create an upload grant for
+              them.</p
+            >
+          } @else {
+            <mat-radio-group
+              class="flex flex-col gap-2"
+              [value]="selectedIvaId()"
+              (change)="selectedIvaId.set($event.value)"
+            >
+              @for (iva of userIvas(); track iva.id) {
+                <mat-radio-button [value]="iva.id">
+                  <mat-icon
+                    fontIcon="{{ (iva.type | IvaTypePipe).icon }}"
+                    class="mr-1 align-middle text-base"
+                  ></mat-icon>
+                  <span class="font-semibold">{{ (iva.type | IvaTypePipe).name }}</span>
+                  <span class="text-secondary ml-2">{{ iva.value }}</span>
+                  <span class="ml-2 text-sm {{ (iva.state | IvaStatePipe).class }}">
+                    ({{ (iva.state | IvaStatePipe).name }})
+                  </span>
+                </mat-radio-button>
+              }
+              @if (userIvas().length === 0) {
+                <!-- handled above -->
+              }
+            </mat-radio-group>
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Validity period card (only after IVA is selected) -->
+  @if (ivaSelectionDone()) {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title><h2>Validity Period</h2></mat-card-title>
+      </mat-card-header>
+      <mat-card-content class="!flex flex-col gap-4 sm:flex-row sm:gap-8">
+        <mat-form-field class="w-full sm:w-60">
+          <mat-label>Valid from</mat-label>
+          <input
+            matInput
+            [formControl]="fromFormControl"
+            [matDatepicker]="from_picker"
+            [min]="minFromDate"
+            (dateInput)="fromDateChanged($event)"
+          />
+          @if (fromFormControl.invalid && fromFormControl.touched) {
+            <mat-error>Please choose a valid start date.</mat-error>
+          }
+          <mat-hint>{{ dateInputFormatHint }}</mat-hint>
+          <mat-datepicker-toggle
+            matIconSuffix
+            [for]="from_picker"
+          ></mat-datepicker-toggle>
+          <mat-datepicker #from_picker></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field class="w-full sm:w-60">
+          <mat-label>Valid until</mat-label>
+          <input
+            matInput
+            [formControl]="untilFormControl"
+            [matDatepicker]="until_picker"
+            [min]="minUntilDate"
+          />
+          @if (untilFormControl.invalid && untilFormControl.touched) {
+            <mat-error>Please choose a valid end date.</mat-error>
+          }
+          <mat-hint>{{ dateInputFormatHint }}</mat-hint>
+          <mat-datepicker-toggle
+            matIconSuffix
+            [for]="until_picker"
+          ></mat-datepicker-toggle>
+          <mat-datepicker #until_picker></mat-datepicker>
+        </mat-form-field>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Submit -->
+  @if (ivaSelectionDone()) {
+    <div class="flex justify-end gap-3">
+      <button mat-button (click)="navigateBack()">Cancel</button>
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="!canSubmit()"
+        (click)="submit()"
+      >
+        @if (isSubmitting()) {
+          <mat-progress-spinner
+            mode="indeterminate"
+            diameter="18"
+            class="mr-2 inline-block"
+          ></mat-progress-spinner>
+        }
+        Create Upload Grant
+      </button>
+    </div>
+  }
+</div>

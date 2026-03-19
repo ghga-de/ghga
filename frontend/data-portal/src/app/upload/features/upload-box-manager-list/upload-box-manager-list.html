@@ -5,13 +5,16 @@
 } @else if (uploadBoxesAreLoading()) {
   <p class="text-base">Loading upload boxes...</p>
 } @else {
-  @let columns = ['title', 'state', 'files', 'size', 'location'];
+  @let columns =
+    ['title', 'state', 'files', 'size', 'location', 'last_change', 'details'];
   <div class="overflow-auto">
     <table
       mat-table
       [dataSource]="dataSource"
       class="mat-elevation-z8 larger-mat-table-text"
       matSort
+      matSortActive="state"
+      matSortDirection="asc"
       #sort="matSort"
     >
       <ng-container matColumnDef="title">
@@ -55,11 +58,39 @@
         </td>
       </ng-container>
 
+      <ng-container matColumnDef="last_change">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="min-w-32">
+          Last change
+        </th>
+        <td mat-cell *matCellDef="let box">{{
+          box.last_changed | date: 'mediumDate'
+        }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="details">
+        <th mat-header-cell *matHeaderCellDef class="w-24">Details</th>
+        <td mat-cell *matCellDef="let box">
+          <button
+            mat-icon-button
+            (click)="viewDetails($event, box); $event.stopPropagation()"
+            aria-label="View upload box details"
+            class="text-primary"
+          >
+            <mat-icon fontIcon="chevron_right"></mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
       <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      <tr
+        mat-row
+        *matRowDef="let row; columns: columns"
+        class="duration-200 hover:cursor-pointer"
+        (click)="viewDetails($event, row)"
+      ></tr>
 
       <tr class="mat-row" *matNoDataRow>
-        <td class="mat-cell p-4 text-base" colspan="5">
+        <td class="mat-cell p-4 text-base" colspan="6">
           No upload boxes found. Try removing some filter conditions.
         </td>
       </tr>

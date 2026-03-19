@@ -571,4 +571,21 @@ mat-option.mat-mdc-option.no-option-margin .mdc-list-item__primary-text {
   ::view-transition-old(detail) {
     z-index: 1;
   }
+
+  /* When navigating back to a parent detail page, slide in from left */
+  ::view-transition-new(detail-back) {
+    animation-name: slide-in-left;
+    z-index: 1;
+  }
+
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
 }

@@ -118,13 +118,13 @@ export class UserManagerDetailComponent implements OnInit {
     return this.#accessRequestService.allAccessGrants().filter((g) => g.user_id === id);
   });
 
-  // create resource for loading the user who changed the status
-  #statusChangedByUser = this.#userService.createUserResource();
+  // fetcher for loading the user who changed the status
+  #statusChangedByUserFetcher = this.#userService.createUserFetcher();
 
   // signal for the user who changed the status (null means error)
   statusChangedBy = signal<DisplayUser | null | undefined>(undefined);
 
-  // create resource for loading the user who changed the status
+  // effect for loading the user who changed the status
   #loadStatusChangedBy = effect(() => {
     const user = this.user();
     const changedById = user?.status_change?.by;
@@ -142,7 +142,7 @@ export class UserManagerDetailComponent implements OnInit {
       return;
     }
     // Load the user via separate resource
-    const changedByResource = this.#statusChangedByUser.resource;
+    const changedByResource = this.#statusChangedByUserFetcher.resource;
     if (changedByResource.isLoading()) return; // wait until user is loaded
     if (changedByResource.error()) {
       this.statusChangedBy.set(null);
@@ -153,7 +153,7 @@ export class UserManagerDetailComponent implements OnInit {
       this.statusChangedBy.set(changedBy);
       return;
     }
-    this.#statusChangedByUser.load(changedById);
+    this.#statusChangedByUserFetcher.load(changedById);
   });
 
   #loadOnIdChange = effect(() => {

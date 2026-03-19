@@ -1,0 +1,179 @@
+<div
+  class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6"
+  [style.view-transition-name]="showTransition ? 'detail' : null"
+>
+  <div class="justify-between md:flex">
+    <header class="grow">
+      <button
+        mat-icon-button
+        (click)="goBack()"
+        aria-label="Go back to upload box details"
+        class="text-primary float-left mt-1 mr-4"
+      >
+        <mat-icon fontIcon="chevron_left"></mat-icon>
+      </button>
+      <h1>Upload Grant Detail</h1>
+    </header>
+  </div>
+
+  @if (grant(); as grant) {
+    <div class="flex w-full flex-wrap items-center justify-between">
+      <div class="me-4">
+        <p>
+          <strong>Status:</strong>&nbsp;<span
+            [class]="
+              isActive() ? 'text-success w-24 capitalize' : 'text-error w-24 capitalize'
+            "
+            >{{ isActive() ? 'active' : 'inactive' }}</span
+          >
+        </p>
+        <p>
+          <strong>Upload Box:</strong>&nbsp;<span class="w-24"
+            ><a routerLink="/upload-box-manager/{{ boxId() }}">{{
+              box()?.title ?? boxId()
+            }}</a></span
+          >
+        </p>
+      </div>
+      <div class="w-64">
+        <button
+          mat-raised-button
+          class="button-error"
+          matTooltip="Revoke Upload Grant"
+          (click)="revokeGrant()"
+        >
+          Revoke Upload Grant
+          <mat-icon fontIcon="block"></mat-icon>
+        </button>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div
+        class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
+      >
+        <!-- GRANTEE CARD -->
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Grantee</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-2xl md:min-w-xl">
+            <p>
+              <strong class="inline-block w-44">Name:</strong>
+              <a [routerLink]="'/user-manager/' + grant.user_id"
+                >{{ grant.user_title ? grant.user_title + ' ' : ''
+                }}{{ grant.user_name }}</a
+              >
+            </p>
+            <p>
+              <strong class="inline-block w-44">Email:</strong>
+              <a appExtLink [href]="'mailto:' + grant.user_email" tabindex="-1">{{
+                grant.user_email
+              }}</a>
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- UPLOAD BOX CARD -->
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Upload Box</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-2xl md:min-w-xl">
+            @if (box(); as box) {
+              <p>
+                <strong class="inline-block w-44">Title:</strong>
+                <span>{{ box.title }}</span>
+              </p>
+              <p class="flex">
+                <strong class="inline-block min-w-44">Description:</strong>
+                <span>{{ box.description }}</span>
+              </p>
+              <p>
+                <strong class="inline-block w-44">State:</strong>
+                <strong class="{{ stateClass[box.state] }} capitalize">{{
+                  box.state
+                }}</strong>
+              </p>
+            } @else {
+              <p class="text-warning flex items-center"
+                ><mat-icon fontIcon="warning" class="me-1 shrink-0"></mat-icon> Upload
+                box information is not available.</p
+              >
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <!-- IVA & STATUS CARD -->
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>IVA &amp; Status</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content
+            class="min-w-2xl *:mb-2 *:flex md:min-w-xl [&_div>strong]:inline-block [&_div>strong]:min-w-44"
+          >
+            @if (iva(); as iva) {
+              <div>
+                <strong>Type:</strong>
+                <span class="flex"
+                  ><mat-icon [fontIcon]="(iva.type | IvaTypePipe).icon"></mat-icon
+                  >{{ (iva.type | IvaTypePipe).name }}</span
+                >
+              </div>
+              <div>
+                <strong>Value:</strong>
+                <span>{{ iva.value }}</span>
+              </div>
+              <div>
+                <strong>State:</strong>
+                <span [class]="(iva.state | IvaStatePipe).class">{{
+                  (iva.state | IvaStatePipe).name
+                }}</span>
+              </div>
+            } @else {
+              <span class="text-error flex items-center pb-2"
+                ><mat-icon fontIcon="error" class="me-4 shrink-0"></mat-icon> The
+                corresponding IVA does not exist or is not owned by the user. Therefore,
+                this grant is considered invalid.</span
+              >
+            }
+            <div class="mt-4">
+              <a routerLink="/iva-manager" matButton="outlined">IVA Manager</a>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <div
+        class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
+      >
+        <!-- AUDIT LOG CARD -->
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Audit Log</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="divide-outline divide-y">
+            @for (item of sortedLog(); track item) {
+              @if (item.date) {
+                <p class="mb-2 pb-2">
+                  <strong class="inline-block w-44 xl:w-32">{{
+                    item.date | date
+                  }}</strong>
+                  <span>{{ item.status }}</span>
+                </p>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  } @else {
+    <div class="container mx-auto p-6">
+      <p class="text-center text-red-600">
+        @if (isLoading()) {
+          Loading upload grant details...
+        } @else {
+          The selected upload grant could not be found.
+        }
+      </p>
+    </div>
+  }
+</div>

@@ -80,7 +80,7 @@ describe('UploadBoxManagerFilterComponent', () => {
   it('should reset the filter upon initialization', async () => {
     expect(uploadBoxService.setUploadBoxesFilter).toHaveBeenCalledWith({
       title: undefined,
-      state: undefined,
+      state: 'not_archived',
       location: undefined,
     });
   });
@@ -111,13 +111,13 @@ describe('UploadBoxManagerFilterComponent', () => {
 
     expect(uploadBoxService.setUploadBoxesFilter).toHaveBeenCalledWith({
       title: 'Upload Box',
-      state: undefined,
+      state: 'not_archived',
       location: undefined,
     });
   });
 
   it('should set the filter after selecting a state', async () => {
-    const combobox = screen.getByRole('combobox', { name: 'All states' });
+    const combobox = screen.getByRole('combobox', { name: 'State' });
 
     await userEvent.click(combobox);
     await fixture.whenStable();
@@ -145,7 +145,7 @@ describe('UploadBoxManagerFilterComponent', () => {
 
     expect(uploadBoxService.setUploadBoxesFilter).toHaveBeenCalledWith({
       title: undefined,
-      state: undefined,
+      state: 'not_archived',
       location: 'HD02',
     });
   });

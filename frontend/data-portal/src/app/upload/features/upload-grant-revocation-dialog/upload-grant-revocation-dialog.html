@@ -1,0 +1,29 @@
+<div class="w-full">
+  <h2 mat-dialog-title>Upload Grant Revocation</h2>
+  <mat-dialog-content>
+    <p>
+      Are you sure you want to revoke the upload grant of
+      <strong
+        >{{ grant.user_title ? grant.user_title + ' ' : ''
+        }}{{ grant.user_name }}</strong
+      >
+      with email <strong>{{ grant.user_email }}</strong> for the
+      {{ data.boxState }} upload box <strong>{{ data.boxTitle }}</strong
+      >?
+    </p>
+    @if (revocationError()) {
+      <p class="text-error">Grant revocation failed. Please try again.</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions class="gap-y-2">
+    <button mat-button (click)="onCancel()" class="larger-button-text">Cancel</button>
+    <button
+      mat-flat-button
+      class="button-error larger-button-text"
+      (click)="onConfirm()"
+      [disabled]="disabled()"
+    >
+      Confirm revocation
+    </button>
+  </mat-dialog-actions>
+</div>

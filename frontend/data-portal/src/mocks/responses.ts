@@ -21,7 +21,11 @@ import {
   searchResults,
   storageLabels,
   studyData,
+  uploadBox1FileUploads,
+  uploadBox2FileUploads,
+  uploadBox3FileUploads,
   uploadBoxes,
+  uploadGrants,
   users,
   workPackageResponse,
 } from './data';
@@ -58,12 +62,17 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/auth/users/doe@test.dev/ivas': allIvasOfDoe,
   'GET /api/auth/users/roe@test.dev/ivas': allIvasOfRoe,
   'GET /api/auth/users/mar@test.dev/ivas': allIvasOfMar,
+  'GET /api/auth/users/jekyll@test.dev/ivas': [],
+  'GET /api/auth/users/hyde@test.dev/ivas': [],
+  'GET /api/auth/users/fred.flintstone@test.dev/ivas': [],
+  'GET /api/auth/users/wilma.flintstone@test.dev/ivas': [],
+  'GET /api/auth/users/barney.rubble@test.dev/ivas': [],
 
   // Delete access grant
   'DELETE /api/auth/users/*': 204,
 
   // New IVA
-  'POST /api/auth/users/*/ivas': { id: 'ABC123' },
+  'POST /api/auth/users/*/ivas': { id: crypto.randomUUID() },
 
   // Delete IVA
   'DELETE /api/auth/users/*/ivas/*': 204,
@@ -210,6 +219,32 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // All upload boxes
   'GET /api/uos/boxes': uploadBoxes,
+
+  // Single upload box
+  'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68001': uploadBoxes.boxes[0],
+  'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68002': uploadBoxes.boxes[1],
+  'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
+  'GET /api/uos/box/*': 404,
+
+  // Upload grants for a specific box
+  'GET /api/uos/access-grants?*': uploadGrants,
+
+  // File uploads for a specific box
+  'GET /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001/uploads':
+    uploadBox1FileUploads,
+  'GET /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/uploads':
+    uploadBox2FileUploads,
+  'GET /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003/uploads':
+    uploadBox3FileUploads,
+  'GET /api/uos/boxes/*/uploads': [],
+
+  // Create a new upload grant
+  'POST /api/uos/access-grants': {
+    id: crypto.randomUUID(),
+  },
+
+  // Revoke an upload grant
+  'DELETE /api/uos/access-grants/*': 204,
 
   /**
    * WKVS API

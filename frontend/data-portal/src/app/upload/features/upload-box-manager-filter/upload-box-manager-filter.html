@@ -50,8 +50,8 @@
                 </mat-label>
                 <mat-select [(ngModel)]="state">
                   <mat-option [value]="undefined">All states</mat-option>
-                  @for (opt of stateOptions; track opt) {
-                    <mat-option [value]="opt">{{ opt | CapitalisePipe }}</mat-option>
+                  @for (opt of stateOptions; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>

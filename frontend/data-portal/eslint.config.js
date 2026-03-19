@@ -127,6 +127,15 @@ export default [
                 ['pipe', { context: 'ivas' }],
               ],
             },
+            // upload context may import from ivas context
+            {
+              from: [['features', { context: 'upload' }]],
+              allow: [
+                ['service', { context: 'ivas' }],
+                ['model', { context: 'ivas' }],
+                ['pipe', { context: 'ivas' }],
+              ],
+            },
             {
               from: [['model', { context: 'access-requests' }]],
               allow: [['model', { context: 'ivas' }]],

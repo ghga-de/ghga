@@ -313,11 +313,11 @@ export class UserService {
   }
 
   /**
-   * Factory for creating independent user resources.
-   * Use this in components when you need additional users (e.g., "status changed by").
-   * @returns object with methods to load/clear the user and the user resource itself
+   * Factory for creating independent user fetchers.
+   * Use this in components when you need to load additional users on demand (e.g., "status changed by").
+   * @returns object with a `load` method to trigger a fetch and a `resource` holding the result
    */
-  createUserResource() {
+  createUserFetcher() {
     const id = signal<string | undefined>(undefined);
     const resource = httpResource<DisplayUser>(
       () => (id() ? `${this.#usersUrl}/${id()}` : undefined),
@@ -328,7 +328,6 @@ export class UserService {
     );
     return {
       load: (userId: string) => id.set(userId),
-      clear: () => id.set(undefined),
       resource,
     };
   }

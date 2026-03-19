@@ -21,10 +21,10 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
-import { UserExtIdPipe } from '@app/auth/pipes/user-ext-id-pipe';
 import { UserStatusClassPipe } from '@app/auth/pipes/user-status-class-pipe';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
+import { UserExtIdPipe } from '@app/shared/pipes/user-ext-id-pipe';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
 
 const DEFAULT_EXT_ID_SUFFIX = '@lifescience-ri.eu';

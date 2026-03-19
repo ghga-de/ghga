@@ -19,8 +19,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
-import { UploadBoxState } from '@app/upload/models/box';
+import { UploadBoxState, UploadBoxStateFilter } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 
 /**
@@ -38,7 +37,6 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
     MatSelectModule,
     MatFormFieldModule,
     MatIconModule,
-    Capitalise,
   ],
   templateUrl: './upload-box-manager-filter.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -55,7 +53,9 @@ export class UploadBoxManagerFilterComponent {
    * The model for upload-box filter properties.
    */
   title = model<string | undefined>(this.#filter().title);
-  state = model<UploadBoxState | undefined>(this.#filter().state);
+  state = model<UploadBoxStateFilter | undefined>(
+    this.#filter().state ?? 'not_archived',
+  );
   location = model<string | undefined>(this.#filter().location);
 
   /**
@@ -70,9 +70,15 @@ export class UploadBoxManagerFilterComponent {
   });
 
   /**
-   * All upload-box state values.
+   * All upload-box state filter options, including virtual negation filters.
    */
-  stateOptions = Object.values(UploadBoxState);
+  stateOptions: { value: UploadBoxStateFilter; label: string }[] = [
+    { value: 'not_archived', label: 'Not archived' },
+    ...Object.values(UploadBoxState).map((s) => ({
+      value: s,
+      label: s.charAt(0).toUpperCase() + s.slice(1),
+    })),
+  ];
 
   /**
    * All available upload-box locations including display labels.
