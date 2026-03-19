@@ -1,0 +1,33 @@
+image:
+  repository: ghga/devops-remotebackup
+  pullPolicy: IfNotPresent
+
+cronSchedule: "0 3 * * *"
+
+cronjob:
+  enabled: true
+
+configPrefix: ""
+
+cmd: "remotebackup backup"
+
+configMap:
+  mountPath: /home/appuser/.config.yaml
+  envVar:
+    enabled: false
+
+vaultAgent:
+  annotations:
+    vault.hashicorp.com/agent-pre-populate-only: "true"
+  secrets:
+    mongodb:
+      parameterName: DATABASE__MONGODB__SOURCE_CONNECTION_STR
+
+extraVolumes:
+  - name: backup-dir
+    emptyDir:
+      sizeLimit: 5Gi
+
+extraVolumeMounts:
+  - name: backup-dir
+    mountPath: /tmp/backups
