@@ -7,6 +7,9 @@ cronSchedule: "0 * * * *"
 cronjob:
   enabled: true
 
+deployment:
+  enabled: false
+
 configPrefix: ""
 
 configMap:
