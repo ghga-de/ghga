@@ -13,17 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests."""
+"""Top-level FastAPI router setup"""
 
-from dataclasses import dataclass
-from unittest.mock import AsyncMock
+from fastapi import APIRouter
 
-from ghga_service_commons.api.testing import AsyncTestClient
+from rs.adapters.inbound.fastapi_.routers.files import files_router
+
+router = APIRouter(tags=["GHGARegistryService"])
+
+router.include_router(files_router)
 
 
-@dataclass
-class AppFixture:
-    """A fixture class with a rest client and core override mock"""
-
-    rest_client: AsyncTestClient
-    core_mock: AsyncMock
+@router.get(
+    "/health",
+    operation_id="health",
+    summary="health",
+    tags=["health"],
+    status_code=200,
+)
+async def health():
+    """Used to test if this service is alive"""
+    return {"status": "OK"}

@@ -1,36 +1,9 @@
-# Microservice Repository Template
+[![tests](https://github.com/ghga-de/ghga-registry-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-registry-service/actions/workflows/tests.yaml)
+[![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-registry-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-registry-service?branch=main)
 
-This is a template for GitHub repositories containing one Python-based microservice (optimal for a multirepository setup).
+# Ghga Registry Service
 
-It features:
-
-- *Continuous Templation* - A continuous update delivery mechanism for templated repositories
-- A fully-configured [devcontainer](https://containers.dev/)-based development environment for VS Code
-- Tight linting and formatting using [Ruff](https://docs.astral.sh/ruff/)
-- Static type checking using [mypy](https://www.mypy-lang.org/)
-- Security scanning using [bandit](https://bandit.readthedocs.io/en/latest/)
-- A structure for automated tests using [pytest](https://docs.pytest.org/en/7.4.x/)
-- Dependency locking using [pip-tools](https://github.com/jazzband/pip-tools)
-- Git hooks checking linting and formatting before committing using [pre-commit](https://pre-commit.com/)
-- Automatic container-building and publishing to [Docker Hub](https://hub.docker.com/)
-- GitHub Actions for automating or checking all of the above
-
-It is worth emphasizing the first point, this template is not just a one-time kickstart for your project
-but repositories created using this template will continue receiving updates as the template evolves.
-For further details, please refer to the explanation in [.template/README.md](/.template/README.md).
-
-Please also refer to [.readme_generation/README.md](/.readme_generation/README.md) for details on how
-to adapt this readme.
-
-The introductory section ends here; the microservice README template begins below:
-
----
-[![tests](https://github.com/ghga-de/microservice-repository-template/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/microservice-repository-template/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/microservice-repository-template/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/microservice-repository-template?branch=main)
-
-# My Microservice
-
-My-Microservice - a short description
+GHGA Registry Service - a service for ingesting and archiving metadata from data submitters.
 
 ## Description
 
@@ -43,15 +16,15 @@ Here you should provide a short summary of the purpose of this microservice.
 
 We recommend using the provided Docker container.
 
-A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/my-microservice):
+A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/ghga-registry-service):
 ```bash
-docker pull ghga/my-microservice:0.1.0
+docker pull ghga/ghga-registry-service:0.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/my-microservice:0.1.0 .
+docker build -t ghga/ghga-registry-service:0.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -59,7 +32,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/my-microservice:0.1.0 --help
+docker run -p 8080:8080 ghga/ghga-registry-service:0.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -68,7 +41,7 @@ If you prefer not to use containers, you may install the service from source:
 pip install .
 
 # To run the service:
-my_microservice --help
+rs --help
 ```
 
 ## Configuration
@@ -76,8 +49,7 @@ my_microservice --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
-- <a id="properties/service_name"></a>**`service_name`** *(string)*: Short name of this service. Default: `"my_microservice"`.
+- <a id="properties/service_name"></a>**`service_name`** *(string)*: Short name of this service. Default: `"rs"`.
 - <a id="properties/service_instance_id"></a>**`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
   Examples:
@@ -85,6 +57,168 @@ The service requires the following configuration parameters:
   "germany-bw-instance-001"
   ```
 
+- <a id="properties/kafka_servers"></a>**`kafka_servers`** *(array, required)*: A list of connection strings to connect to Kafka bootstrap servers.
+  - <a id="properties/kafka_servers/items"></a>**Items** *(string)*
+
+  Examples:
+  ```json
+  [
+      "localhost:9092"
+  ]
+  ```
+
+- <a id="properties/kafka_security_protocol"></a>**`kafka_security_protocol`** *(string)*: Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. Must be one of: "PLAINTEXT" or "SSL". Default: `"PLAINTEXT"`.
+- <a id="properties/kafka_ssl_cafile"></a>**`kafka_ssl_cafile`** *(string)*: Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. Default: `""`.
+- <a id="properties/kafka_ssl_certfile"></a>**`kafka_ssl_certfile`** *(string)*: Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. Default: `""`.
+- <a id="properties/kafka_ssl_keyfile"></a>**`kafka_ssl_keyfile`** *(string)*: Optional filename containing the client private key. Default: `""`.
+- <a id="properties/kafka_ssl_password"></a>**`kafka_ssl_password`** *(string, format: password, write-only)*: Optional password to be used for the client private key. Default: `""`.
+- <a id="properties/generate_correlation_id"></a>**`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+
+  Examples:
+  ```json
+  true
+  ```
+
+  ```json
+  false
+  ```
+
+- <a id="properties/kafka_max_message_size"></a>**`kafka_max_message_size`** *(integer)*: The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size. Exclusive minimum: `0`. Default: `1048576`.
+
+  Examples:
+  ```json
+  1048576
+  ```
+
+  ```json
+  16777216
+  ```
+
+- <a id="properties/kafka_compression_type"></a>**`kafka_compression_type`**: The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio. Default: `null`.
+  - **Any of**
+    - <a id="properties/kafka_compression_type/anyOf/0"></a>*string*: Must be one of: "gzip", "snappy", "lz4", or "zstd".
+    - <a id="properties/kafka_compression_type/anyOf/1"></a>*null*
+
+  Examples:
+  ```json
+  null
+  ```
+
+  ```json
+  "gzip"
+  ```
+
+  ```json
+  "snappy"
+  ```
+
+  ```json
+  "lz4"
+  ```
+
+  ```json
+  "zstd"
+  ```
+
+- <a id="properties/kafka_max_retries"></a>**`kafka_max_retries`** *(integer)*: The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. Minimum: `0`. Default: `0`.
+
+  Examples:
+  ```json
+  0
+  ```
+
+  ```json
+  1
+  ```
+
+  ```json
+  2
+  ```
+
+  ```json
+  3
+  ```
+
+  ```json
+  5
+  ```
+
+- <a id="properties/kafka_enable_dlq"></a>**`kafka_enable_dlq`** *(boolean)*: A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries. Default: `false`.
+
+  Examples:
+  ```json
+  true
+  ```
+
+  ```json
+  false
+  ```
+
+- <a id="properties/kafka_dlq_topic"></a>**`kafka_dlq_topic`** *(string)*: The name of the topic used to resolve error-causing events. Default: `"dlq"`.
+
+  Examples:
+  ```json
+  "dlq"
+  ```
+
+- <a id="properties/kafka_retry_backoff"></a>**`kafka_retry_backoff`** *(integer)*: The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. Minimum: `0`. Default: `0`.
+
+  Examples:
+  ```json
+  0
+  ```
+
+  ```json
+  1
+  ```
+
+  ```json
+  2
+  ```
+
+  ```json
+  3
+  ```
+
+  ```json
+  5
+  ```
+
+- <a id="properties/mongo_dsn"></a>**`mongo_dsn`** *(string, format: multi-host-uri, required)*: MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/. Length must be at least 1.
+
+  Examples:
+  ```json
+  "mongodb://localhost:27017"
+  ```
+
+- <a id="properties/db_name"></a>**`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
+
+  Examples:
+  ```json
+  "my-database"
+  ```
+
+- <a id="properties/mongo_timeout"></a>**`mongo_timeout`**: Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). Default: `null`.
+  - **Any of**
+    - <a id="properties/mongo_timeout/anyOf/0"></a>*integer*: Exclusive minimum: `0`.
+    - <a id="properties/mongo_timeout/anyOf/1"></a>*null*
+
+  Examples:
+  ```json
+  300
+  ```
+
+  ```json
+  600
+  ```
+
+  ```json
+  null
+  ```
+
+- <a id="properties/enable_opentelemetry"></a>**`enable_opentelemetry`** *(boolean)*: If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation. Default: `false`.
+- <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. Minimum: `0`. Maximum: `1`. Default: `1.0`.
+- <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
 - <a id="properties/log_format"></a>**`log_format`**: If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details. Default: `null`.
   - **Any of**
     - <a id="properties/log_format/anyOf/0"></a>*string*
@@ -184,26 +318,32 @@ The service requires the following configuration parameters:
   []
   ```
 
-- <a id="properties/generate_correlation_id"></a>**`generate_correlation_id`** *(boolean)*: A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. Default: `true`.
+- <a id="properties/uos_auth_config"></a>**`uos_auth_config`** *(required)*: Refer to *[#/$defs/AuthConfig](#%24defs/AuthConfig)*.
+- <a id="properties/alt_accessions_collection"></a>**`alt_accessions_collection`** *(string)*: MongoDB collection name for alternative accessions. Default: `"altAccessions"`.
+- <a id="properties/alt_accessions_topic"></a>**`alt_accessions_topic`** *(string)*: Kafka topic for alternative accession events. Default: `"alt-accessions"`.
+## Definitions
 
-  Examples:
-  ```json
-  true
-  ```
+- <a id="%24defs/AuthConfig"></a>**`AuthConfig`** *(object)*: Config parameters and their defaults for the example auth context. Cannot contain additional properties.
+  - <a id="%24defs/AuthConfig/properties/auth_key"></a>**`auth_key`** *(string, required)*: The GHGA internal public key for validating the token signature.
 
-  ```json
-  false
-  ```
+    Examples:
+    ```json
+    "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+    ```
 
-- <a id="properties/language"></a>**`language`** *(string)*: The language. Must be one of: "Greek", "Croatian", "French", or "German". Default: `"Croatian"`.
+  - <a id="%24defs/AuthConfig/properties/auth_algs"></a>**`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens. Default: `["ES256"]`.
+    - <a id="%24defs/AuthConfig/properties/auth_algs/items"></a>**Items** *(string)*
+  - <a id="%24defs/AuthConfig/properties/auth_check_claims"></a>**`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Can contain additional properties. Default: `{"id": null, "name": null, "email": null, "iat": null, "exp": null}`.
+  - <a id="%24defs/AuthConfig/properties/auth_map_claims"></a>**`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
+    - <a id="%24defs/AuthConfig/properties/auth_map_claims/additionalProperties"></a>**Additional properties** *(string)*
 
 ### Usage:
 
 A template YAML file for configuring the service can be found at
 [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.my_microservice.yaml`, and place it in one of the following locations:
-- in the current working directory where you execute the service (on Linux: `./.my_microservice.yaml`)
-- in your home directory (on Linux: `~/.my_microservice.yaml`)
+Please adapt it, rename it to `.rs.yaml`, and place it in one of the following locations:
+- in the current working directory where you execute the service (on Linux: `./.rs.yaml`)
+- in your home directory (on Linux: `~/.rs.yaml`)
 
 The config YAML file will be automatically parsed by the service.
 
@@ -212,8 +352,8 @@ The config YAML file will be automatically parsed by the service.
 All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml)
 can also be set using environment variables or file secrets.
 
-For naming the environment variables, just prefix the parameter name with `my_microservice_`,
-e.g. for the `host` set an environment variable named `my_microservice_host`
+For naming the environment variables, just prefix the parameter name with `rs_`,
+e.g. for the `host` set an environment variable named `rs_host`
 (you may use both upper or lower cases, however, it is standard to define all env
 variables in upper cases).
 

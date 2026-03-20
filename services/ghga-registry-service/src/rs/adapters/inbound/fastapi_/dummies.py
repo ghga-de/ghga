@@ -13,17 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests."""
+"""A collection of dependency dummies that are used in view definitions but need to be
+replaced at runtime by actual dependencies.
+"""
 
-from dataclasses import dataclass
-from unittest.mock import AsyncMock
+from typing import Annotated
 
-from ghga_service_commons.api.testing import AsyncTestClient
+from fastapi import Depends
+from ghga_service_commons.api.di import DependencyDummy
 
+from rs.ports.inbound.files import FileControllerPort
 
-@dataclass
-class AppFixture:
-    """A fixture class with a rest client and core override mock"""
+file_controller_port = DependencyDummy("file_controller_port")
+auth_provider_dummy = DependencyDummy("auth_provider_dummy")
 
-    rest_client: AsyncTestClient
-    core_mock: AsyncMock
+FileControllerDummy = Annotated[FileControllerPort, Depends(file_controller_port)]

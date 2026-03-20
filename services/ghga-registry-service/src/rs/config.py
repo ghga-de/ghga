@@ -16,26 +16,36 @@
 """Config Parameter Modeling and Parsing."""
 
 from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.auth.ghga import AuthConfig
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 from pydantic import Field
 
-from .models import SupportedLanguages
-
-SERVICE_NAME: str = "my_microservice"  # Please adapt
+from rs.constants import SERVICE_NAME
 
 
-# Please adapt config prefix and remove unnecessary config bases:
 @config_from_yaml(prefix=SERVICE_NAME)
-class Config(ApiConfigBase, LoggingConfig):
+class Config(
+    ApiConfigBase,
+    LoggingConfig,
+    OpenTelemetryConfig,
+    MongoKafkaConfig,
+):
     """Config parameters and their defaults."""
 
     service_name: str = Field(
         default=SERVICE_NAME, description="Short name of this service"
     )
-
-    language: SupportedLanguages = Field(
-        default="Croatian", description="The language."
+    uos_auth_config: AuthConfig
+    alt_accessions_collection: str = Field(
+        default="altAccessions",
+        description="MongoDB collection name for alternative accessions",
+    )
+    alt_accessions_topic: str = Field(
+        default="alt-accessions",
+        description="Kafka topic for alternative accession events",
     )
 
 

@@ -13,17 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests."""
+"""Entrypoint of the package"""
 
-from dataclasses import dataclass
-from unittest.mock import AsyncMock
+import asyncio
+from typing import Annotated
 
-from ghga_service_commons.api.testing import AsyncTestClient
+import typer
+
+from rs.main import publish_events, run_rest_app
+
+cli = typer.Typer()
 
 
-@dataclass
-class AppFixture:
-    """A fixture class with a rest client and core override mock"""
+@cli.command(name="run-rest")
+def sync_run_api():
+    """Run the HTTP REST API."""
+    asyncio.run(run_rest_app())
 
-    rest_client: AsyncTestClient
-    core_mock: AsyncMock
+
+@cli.command(name="publish-events")
+def sync_run_publish_events(
+    all: Annotated[
+        bool, typer.Option(help="Set to (re)publish all events regardless of status")
+    ] = False,
+):
+    """Publish pending events."""
+    asyncio.run(publish_events(all=all))

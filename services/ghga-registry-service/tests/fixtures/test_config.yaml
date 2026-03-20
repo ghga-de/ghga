@@ -1,0 +1,8 @@
+service_instance_id: "1"
+kafka_servers: ["kafka:9092"]
+mongo_dsn: mongodb://localhost:27017
+db_name: rs
+mongo_timeout: 300
+uos_auth_config:
+  auth_key: "{}"
+  auth_check_claims: {}

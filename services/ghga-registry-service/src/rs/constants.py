@@ -13,12 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test dummy."""
+"""Service-wide constants"""
 
-from my_microservice.core.greeting import generate_greeting
+from opentelemetry import trace
 
-
-def test_dummy():
-    """A very simple example test."""
-    greeting = generate_greeting("monde", "French", True)
-    assert greeting.message == "Salut monde!"
+SERVICE_NAME: str = "rs"
+TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
+AUTH_CHECK_CLAIMS = ["iat", "exp"]

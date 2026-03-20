@@ -13,17 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests."""
-
-from dataclasses import dataclass
-from unittest.mock import AsyncMock
-
-from ghga_service_commons.api.testing import AsyncTestClient
-
-
-@dataclass
-class AppFixture:
-    """A fixture class with a rest client and core override mock"""
-
-    rest_client: AsyncTestClient
-    core_mock: AsyncMock
+"""Inbound adapters"""

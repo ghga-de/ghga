@@ -13,17 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests."""
+"""Entrypoint of the package."""
 
-from dataclasses import dataclass
-from unittest.mock import AsyncMock
+from rs.cli import cli
 
-from ghga_service_commons.api.testing import AsyncTestClient
-
-
-@dataclass
-class AppFixture:
-    """A fixture class with a rest client and core override mock"""
-
-    rest_client: AsyncTestClient
-    core_mock: AsyncMock
+if __name__ == "__main__":
+    cli()

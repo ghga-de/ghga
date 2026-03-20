@@ -13,17 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests."""
+"""Defines an inbound port for filename and file ID operations."""
 
-from dataclasses import dataclass
-from unittest.mock import AsyncMock
+from abc import ABC, abstractmethod
 
-from ghga_service_commons.api.testing import AsyncTestClient
+from pydantic import UUID4
+
+from rs.core.models import FileAccession
 
 
-@dataclass
-class AppFixture:
-    """A fixture class with a rest client and core override mock"""
+class FileControllerPort(ABC):
+    """Inbound port for filename and file ID operations."""
 
-    rest_client: AsyncTestClient
-    core_mock: AsyncMock
+    @abstractmethod
+    async def post_file_ids(
+        self, *, study_pid: str, file_id_map: dict[FileAccession, UUID4]
+    ) -> None:
+        """Store file accession to internal file ID mappings."""

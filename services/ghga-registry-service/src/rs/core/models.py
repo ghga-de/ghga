@@ -13,17 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures that are used in both integration and unit tests."""
+"""Defines dataclasses for holding business-logic data."""
 
-from dataclasses import dataclass
-from unittest.mock import AsyncMock
+from enum import StrEnum
+from typing import Annotated
 
-from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from pydantic import BaseModel, StringConstraints
+
+FileAccession = Annotated[str, StringConstraints(pattern=r"^GHGAF.+")]
 
 
-@dataclass
-class AppFixture:
-    """A fixture class with a rest client and core override mock"""
+class AltAccessionType(StrEnum):
+    """Kinds of alternative accessions."""
 
-    rest_client: AsyncTestClient
-    core_mock: AsyncMock
+    EGA = "EGA"
+    FILE_ID = "FILE_ID"
+    GHGA_LEGACY = "GHGA_LEGACY"
+
+
+class AltAccession(BaseModel):
+    """Stores alternative accessions referencing a primary accession."""
+
+    id: str
+    pid: str
+    type: AltAccessionType
+    created: UTCDatetime
