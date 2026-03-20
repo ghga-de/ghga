@@ -1,0 +1,19 @@
+acls:
+  - operations:
+      - Write
+      - Describe
+      - Create
+    resource:
+      name: baz
+      patternType: literal
+      type: topic
+  - operations:
+      - Read
+    resource:
+      name: ""
+      patternType: literal
+      type: group
+secretAnnotations:
+  reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+  reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: test
+  reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
