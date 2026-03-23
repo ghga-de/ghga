@@ -36,7 +36,8 @@ async def test_migration_v2(mongodb: MongoDbFixture):
 
     # Generate User and Access Request Details objects
     access_requests: list[AccessRequestDetails] = sorted(
-        [make_access_request(user_id=uuid4()) for _ in range(3)], key=lambda x: x.id
+        [make_access_request(user_id=uuid4(), request_id=uuid4()) for _ in range(3)],
+        key=lambda x: x.id,
     )
     users: list[User] = sorted(
         [

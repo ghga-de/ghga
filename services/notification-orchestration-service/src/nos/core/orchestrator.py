@@ -130,6 +130,8 @@ class Orchestrator(OrchestratorPort):
             user.email,
         )
 
+        request_url = f"{self._config.portal_url}access-requests/{access_request.id}"
+
         # Send a notification to the data steward
         await self._notification_emitter.email_notify(
             email=self._config.central_data_stewardship_email,
@@ -142,6 +144,7 @@ class Orchestrator(OrchestratorPort):
                 dac_alias=access_request.dac_alias,
                 dac_email=access_request.dac_email,
                 request_text=access_request.request_text,
+                request_url=request_url,
             ),
         )
         log.info(

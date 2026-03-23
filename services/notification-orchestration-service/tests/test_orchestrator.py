@@ -27,7 +27,7 @@ from pydantic import UUID4
 from nos.core import notifications
 from tests.conftest import TEST_USER
 from tests.fixtures.joint import JointFixture
-from tests.fixtures.utils import DATASET_ID, make_access_request
+from tests.fixtures.utils import ACCESS_REQUEST_ID, DATASET_ID, make_access_request
 
 pytestmark = pytest.mark.asyncio()
 
@@ -57,6 +57,7 @@ def iva_state_payload(user_id: UUID4, state: event_schemas.IvaState) -> dict[str
                 "dac_alias": "Some DAC",
                 "dac_email": "dac@some.org",
                 "request_text": "Please grant me access to this data.",
+                "request_url": f"https://data.ghga.de/access-requests/{ACCESS_REQUEST_ID}",
             },
             "pending",
         ),

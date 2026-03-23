@@ -30,6 +30,7 @@ migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
 notification_topic: notification_events
+portal_url: https://data.ghga.de/
 second_factor_recreated_type: second_factor_recreated
 service_instance_id: '1'
 service_name: nos

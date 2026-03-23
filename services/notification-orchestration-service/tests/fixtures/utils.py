@@ -27,15 +27,17 @@ BASE_DIR = Path(__file__).parent.resolve()
 
 DATASET_ID = "dataset1"
 
+ACCESS_REQUEST_ID = uuid4()
+
 
 def make_access_request(
-    user_id: UUID4, status: str = "pending"
+    user_id: UUID4, status: str = "pending", request_id: UUID4 | None = None
 ) -> AccessRequestDetails:
     """Succinctly create the payload for an access request event."""
     start = now_utc_ms_prec()
     end = start + timedelta(days=180)
     return AccessRequestDetails(
-        id=uuid4(),
+        id=request_id or ACCESS_REQUEST_ID,
         user_id=user_id,
         dataset_id=DATASET_ID,
         dataset_title="A Great Dataset",

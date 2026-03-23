@@ -81,6 +81,9 @@ Full message from requester:
 {request_text}
 
 The specified contact email address is: {email}
+
+Link to the Access Request in the Data Portal:
+{request_url}
 """,
 )
 

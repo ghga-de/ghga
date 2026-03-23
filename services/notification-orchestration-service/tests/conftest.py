@@ -25,10 +25,12 @@ from hexkit.providers.akafka.testutils import (  # noqa: F401
     kafka_fixture,
 )
 from hexkit.providers.mongodb.testutils import (  # noqa: F401
+    MongoDbFixture,
     mongodb_container_fixture,
     mongodb_fixture,
 )
 
+from nos.adapters.outbound.dao import get_user_dao
 from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
 
 TEST_USER_ID = UUID("dcc8c67d-78a1-4395-8e84-6e9a57de4a12")
@@ -41,16 +43,14 @@ TEST_USER = event_schemas.User(
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def insert_test_data(joint_fixture: JointFixture):  # noqa: F811
+async def insert_test_data(mongodb: MongoDbFixture):
     """Fixture that inserts TEST_USER into the database and deletes it after the tests
     are done.
-
-    The ID-containing user is assigned as an attribute to the joint_fixture as well so
-    the ID is easily accessible to tests.
     """
-    await joint_fixture.user_dao.insert(TEST_USER)
+    user_dao = await get_user_dao(dao_factory=mongodb.dao_factory)
+    await user_dao.insert(TEST_USER)
     yield
     try:
-        await joint_fixture.user_dao.delete(TEST_USER.user_id)
+        await user_dao.delete(TEST_USER.user_id)
     except ResourceNotFoundError:
         pass

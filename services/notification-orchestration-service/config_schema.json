@@ -357,6 +357,15 @@
       "description": "The email address of the GHGA Helpdesk.",
       "title": "Helpdesk Email",
       "type": "string"
+    },
+    "portal_url": {
+      "default": "https://data.ghga.de/",
+      "description": "The URL of the GHGA data portal.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Portal Url",
+      "type": "string"
     }
   },
   "required": [

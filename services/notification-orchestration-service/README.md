@@ -20,13 +20,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/notification-orchestration-service):
 ```bash
-docker pull ghga/notification-orchestration-service:8.1.1
+docker pull ghga/notification-orchestration-service:8.2.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/notification-orchestration-service:8.1.1 .
+docker build -t ghga/notification-orchestration-service:8.2.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -34,7 +34,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/notification-orchestration-service:8.1.1 --help
+docker run -p 8080:8080 ghga/notification-orchestration-service:8.2.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -344,6 +344,7 @@ The service requires the following configuration parameters:
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 - <a id="properties/central_data_stewardship_email"></a>**`central_data_stewardship_email`** *(string, required)*: The email address of the central data steward.
 - <a id="properties/helpdesk_email"></a>**`helpdesk_email`** *(string, required)*: The email address of the GHGA Helpdesk.
+- <a id="properties/portal_url"></a>**`portal_url`** *(string, format: uri)*: The URL of the GHGA data portal. Length must be between 1 and 2083 (inclusive). Default: `"https://data.ghga.de/"`.
 
 ### Usage:
 

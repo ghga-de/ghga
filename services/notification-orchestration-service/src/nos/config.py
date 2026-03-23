@@ -19,7 +19,7 @@ from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
-from pydantic import Field
+from pydantic import Field, HttpUrl
 
 from nos.adapters.inbound.event_sub import (
     EventSubTranslatorConfig,
@@ -56,4 +56,9 @@ class Config(
 
     helpdesk_email: str = Field(
         default=..., description="The email address of the GHGA Helpdesk."
+    )
+
+    portal_url: HttpUrl = Field(
+        default="https://data.ghga.de/",  # type: ignore
+        description="The URL of the GHGA data portal.",
     )
