@@ -86,12 +86,12 @@ def test_good_creation_data():
     )
     test_box_id = uuid4()
     data = WorkPackageCreationData(
-        box_id=test_box_id,
+        research_data_upload_box_id=test_box_id,
         type=WorkPackageType.UPLOAD,
         file_ids=None,
         user_public_crypt4gh_key=wrapped_key,
     )
-    assert data.box_id == test_box_id
+    assert data.research_data_upload_box_id == test_box_id
     assert data.type == WorkPackageType.UPLOAD
     assert data.file_ids is None
     assert data.user_public_crypt4gh_key == user_public_crypt4gh_key
@@ -196,7 +196,8 @@ def test_work_package():
             None,
             uuid4(),
             WorkPackageType.DOWNLOAD,
-            "dataset_id is required for download work packages; box_id shouldn't be provided for download work packages",
+            "dataset_id is required for download work packages;"
+            + " research_data_upload_box_id shouldn't be provided for download work packages",
             id="DownloadWithBothProblems",
         ),
     ],
@@ -208,7 +209,7 @@ def test_work_package_creation_data_validation(
     with pytest.raises(ValidationError, match=expected_error):
         WorkPackageCreationData(
             dataset_id=dataset_id,
-            box_id=box_id,
+            research_data_upload_box_id=box_id,
             type=work_type,
             user_public_crypt4gh_key=user_public_crypt4gh_key,
         )

@@ -104,6 +104,9 @@ class WorkPackageRepositoryPort(ABC):
     ) -> str:
         """Create a work order token for a given work package and file.
 
+        The box ID populated in upload WOTs is the FileUploadBox ID, not the main
+        ResearchDataUploadBox ID.
+
         In the following cases, a WorkPackageAccessError is raised:
         - if a work package with the given work_package_id does not exist
         - if the work type is not valid, i.e. one of create, upload, close, or delete
@@ -145,25 +148,25 @@ class WorkPackageRepositoryPort(ABC):
     async def register_upload_box(
         self, upload_box: ResearchDataUploadBoxBasics
     ) -> None:
-        """Register an upload box."""
+        """Register a research data upload box."""
 
     @abstractmethod
     async def delete_upload_box(self, box_id: UUID4) -> None:
-        """Delete an upload box with the given ID.
+        """Delete a research data upload box with the given ID.
 
         If no such box exists, an UploadBoxNotFoundError will be raised.
         """
 
     @abstractmethod
     async def get_upload_box(self, box_id: UUID4) -> ResearchDataUploadBoxBasics:
-        """Get a registered upload box using the given ID.
+        """Get a registered research data upload box using the given ID.
 
         If no such box exists, an UploadBoxNotFoundError will be raised.
         """
 
     @abstractmethod
     async def get_upload_boxes(self, user_id: UUID4) -> list[BoxWithExpiration]:
-        """Get the list of all upload boxes accessible to the specified user.
+        """Get the list of all research data upload boxes accessible to the specified user.
 
         The returned boxes also have an expiration date until when access is granted.
 

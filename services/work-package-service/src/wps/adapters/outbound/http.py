@@ -182,13 +182,14 @@ class AccessCheckAdapter(AccessCheckPort):
 
     @TRACER.start_as_current_span("AccessCheckAdapter.check_upload_access")
     async def check_upload_access(
-        self, user_id: UUID, box_id: UUID
+        self, user_id: UUID, research_data_upload_box_id: UUID
     ) -> UTCDatetime | None:
-        """Check until when the given user has upload access for the given box.
+        """Check until when the given user has upload access for the given
+        ResearchDataUploadBox.
 
         Raises AccessCheckError on failure.
         """
-        url = f"{self._upload_url}/users/{user_id}/boxes/{box_id}"
+        url = f"{self._upload_url}/users/{user_id}/boxes/{research_data_upload_box_id}"
         response = await self._client.get(url)
         status_code = response.status_code
         if status_code == httpx.codes.NOT_FOUND:
@@ -201,7 +202,7 @@ class AccessCheckAdapter(AccessCheckPort):
                 short_repr(response.text),
                 extra={
                     "user_id": user_id,
-                    "box_id": box_id,
+                    "research_data_upload_box_id": research_data_upload_box_id,
                     "error": status_code,
                     "reason": reason_phrase,
                 },
@@ -214,7 +215,10 @@ class AccessCheckAdapter(AccessCheckPort):
             log.error(
                 f"{msg}: %s",
                 short_repr(response.text),
-                extra={"user_id": user_id, "box_id": box_id},
+                extra={
+                    "user_id": user_id,
+                    "research_data_upload_box_id": research_data_upload_box_id,
+                },
             )
             raise self.AccessCheckError(msg) from error
         if not valid_until:
@@ -226,7 +230,10 @@ class AccessCheckAdapter(AccessCheckPort):
             log.error(
                 f"{msg}: %s",
                 short_repr(valid_until),
-                extra={"user_id": user_id, "box_id": box_id},
+                extra={
+                    "user_id": user_id,
+                    "research_data_upload_box_id": research_data_upload_box_id,
+                },
             )
             raise self.AccessCheckError(msg) from error
 
@@ -277,12 +284,12 @@ class AccessCheckAdapter(AccessCheckPort):
             )
             raise self.AccessCheckError(msg) from error
         accessible_boxes: dict[UUID4, UTCDatetime] = {}
-        for box_id, valid_until in box_ids.items():
+        for rdub_id, valid_until in box_ids.items():
             try:
-                converted_box_id = UUID(box_id)
+                converted_box_id = UUID(rdub_id)
             except (ValueError, TypeError) as err:
                 msg = "Invalid UUID when fetching upload access list"
-                log.error(f"{msg}: %s", short_repr(box_id), extra={"user_id": user_id})
+                log.error(f"{msg}: %s", short_repr(rdub_id), extra={"user_id": user_id})
                 raise self.AccessCheckError(msg) from err
             try:
                 converted_datetime = datetime.fromisoformat(valid_until)
@@ -291,7 +298,7 @@ class AccessCheckAdapter(AccessCheckPort):
                 log.error(
                     f"{msg}: %s",
                     short_repr(valid_until),
-                    extra={"user_id": user_id, "box_id": box_id},
+                    extra={"user_id": user_id, "research_data_upload_box_id": rdub_id},
                 )
                 raise self.AccessCheckError(msg) from err
             accessible_boxes[converted_box_id] = converted_datetime

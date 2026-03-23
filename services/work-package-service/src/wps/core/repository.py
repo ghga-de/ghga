@@ -19,6 +19,7 @@
 import logging
 from contextlib import suppress
 from datetime import timedelta
+from typing import cast
 from uuid import UUID
 
 from ghga_service_commons.auth.ghga import AuthContext
@@ -150,23 +151,22 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             log.error(access_error)
             raise access_error from error
 
-        dataset_id = creation_data.dataset_id
-        box_id = creation_data.box_id
-
         match creation_data.type:
             case WorkPackageType.DOWNLOAD:
                 return await self._create_download_work_package(
                     creation_data,
                     auth_context,
                     user_id,
-                    dataset_id,  # type: ignore
+                    # validator guarantees that the dataset ID is not None
+                    creation_data.dataset_id,  # type: ignore[arg-type]
                 )
             case WorkPackageType.UPLOAD:
                 return await self._create_upload_work_package(
                     creation_data,
                     auth_context,
                     user_id,
-                    box_id,  # type: ignore
+                    # validator guarantees that the box ID is not None
+                    creation_data.research_data_upload_box_id,  # type: ignore[arg-type]
                 )
 
     async def _create_download_work_package(
@@ -233,17 +233,19 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         creation_data: WorkPackageCreationData,
         auth_context: AuthContext,
         user_id: UUID4,
-        box_id: UUID4,
+        research_data_upload_box_id: UUID4,
     ) -> WorkPackageCreationResponse:
         """Create an upload work package."""
         extra = {  # only used for logging
             "user_id": user_id,
-            "box_id": box_id,
+            "research_data_upload_box_id": research_data_upload_box_id,
             "work_package_type": WorkPackageType.UPLOAD,
         }
 
         try:
-            expires = await self._access.check_upload_access(user_id, box_id)
+            expires = await self._access.check_upload_access(
+                user_id, research_data_upload_box_id
+            )
         except self._access.AccessCheckError as error:
             access_error = self.WorkPackageAccessError(
                 "Failed to check upload box access permission"
@@ -257,9 +259,25 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             log.error(access_error, extra=extra)
             raise access_error
 
+        # Fetch the RDUB object from the DB to get the file_upload_box_id
+        try:
+            rdub = await self._upload_box_dao.get_by_id(research_data_upload_box_id)
+        except ResourceNotFoundError as error:
+            access_error = self.WorkPackageAccessError(
+                "Cannot find research data upload box details"
+            )
+            log.error(access_error, extra=extra)
+            raise access_error from error
+
         # For upload work packages, files aren't used, so the arg is an empty dict
         return await self._create_work_package_record(
-            creation_data, auth_context, user_id, expires, {}, box_id=box_id
+            creation_data,
+            auth_context,
+            user_id,
+            expires,
+            {},
+            research_data_upload_box_id=research_data_upload_box_id,
+            file_upload_box_id=rdub.file_upload_box_id,
         )
 
     async def _create_work_package_record(  # noqa: PLR0913
@@ -271,7 +289,8 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         files: dict[str, str],
         *,
         dataset_id: str | None = None,
-        box_id: UUID4 | None = None,
+        research_data_upload_box_id: UUID4 | None = None,
+        file_upload_box_id: UUID4 | None = None,
     ) -> WorkPackageCreationResponse:
         """Create the work package database record."""
         full_user_name = auth_context.name
@@ -286,7 +305,8 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
 
         work_package = WorkPackage(
             dataset_id=dataset_id,
-            box_id=box_id,
+            research_data_upload_box_id=research_data_upload_box_id,
+            file_upload_box_id=file_upload_box_id,
             type=creation_data.type,
             files=files,
             user_id=user_id,
@@ -361,7 +381,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
                 try:
                     has_access = await self._access.check_upload_access(
                         work_package.user_id,
-                        work_package.box_id,  # type: ignore
+                        work_package.research_data_upload_box_id,  # type: ignore
                     )
                 except self._access.AccessCheckError as error:
                     access_error = self.WorkPackageAccessError(
@@ -461,7 +481,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         """Create an upload work order token for a given work package, work type,
         box id, file id and alias.
 
-        The box ID populated in upload WOTs is the file_upload_box ID, not the main
+        The box ID populated in upload WOTs is the FileUploadBox ID, not the main
         ResearchDataUploadBox ID.
 
         In the following cases, a WorkPackageAccessError is raised:
@@ -486,17 +506,16 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             check_valid=check_valid,
             work_package_access_token=work_package_access_token,
         )
-
         extra["work_package_type"] = work_package.type
 
-        # Retrieve the ResearchDataUploadBox in order to get its FileUploadBox ID
-        try:
-            research_data_upload_box = await self._upload_box_dao.get_by_id(box_id)
-        except ResourceNotFoundError as err:
-            access_error = self.WorkPackageAccessError("Upload box does not exist")
+        # Verify that the specified box ID and the RDUB ID on the WP are the same
+        if box_id != work_package.research_data_upload_box_id:
+            access_error = self.WorkPackageAccessError("Specified box ID is incorrect.")
             log.error(access_error, extra=extra)
-            raise access_error from err
-        file_upload_box_id = research_data_upload_box.file_upload_box_id
+            raise access_error
+
+        # Create a WOT with the *File Upload* box ID (NOT the RDUB ID)
+        file_upload_box_id = cast(UUID, work_package.file_upload_box_id)
 
         user_public_crypt4gh_key = work_package.user_public_crypt4gh_key
         match work_type:
@@ -594,12 +613,12 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
     async def register_upload_box(
         self, upload_box: ResearchDataUploadBoxBasics
     ) -> None:
-        """Register an upload box."""
+        """Register a research data upload box."""
         await self._upload_box_dao.upsert(upload_box)
         log.info("Upserted UploadBox with ID %s", upload_box.id)
 
     async def delete_upload_box(self, box_id: UUID4) -> None:
-        """Delete an upload box with the given ID.
+        """Delete a research data upload box with the given ID.
 
         If no such box exists, an UploadBoxNotFoundError will be raised.
         """
@@ -612,7 +631,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             )
 
     async def get_upload_box(self, box_id: UUID4) -> ResearchDataUploadBoxBasics:
-        """Get a registered upload box using the given ID.
+        """Get a registered research data upload box using the given ID.
 
         If no such box exists, an UploadBoxNotFoundError will be raised.
         """
@@ -624,7 +643,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             raise box_not_found_error from error
 
     async def get_upload_boxes(self, user_id: UUID4) -> list[BoxWithExpiration]:
-        """Get the list of all upload boxes accessible to the specified user.
+        """Get the list of all research data upload boxes accessible to the specified user.
 
         The returned boxes also have an expiration date until when access is granted.
 

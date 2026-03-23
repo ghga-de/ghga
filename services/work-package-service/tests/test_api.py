@@ -155,10 +155,11 @@ async def test_make_download_work_order_token(
     response_data = response.json()
     assert isinstance(response_data, dict)
     assert sorted(response_data) == [
-        "box_id",
         "created",
         "expires",
+        "file_upload_box_id",
         "files",
+        "research_data_upload_box_id",
         "type",
     ]
 
@@ -166,7 +167,8 @@ async def test_make_download_work_order_token(
     assert response_data == {
         "type": "download",
         "files": {"GHGAF01": ".json", "GHGAF03": ".bam"},
-        "box_id": None,
+        "research_data_upload_box_id": None,
+        "file_upload_box_id": None,
     }
 
     # try to get a work order token without authorization
@@ -267,7 +269,7 @@ async def test_make_upload_work_order_token(
 
     # Create an upload work package
     upload_creation_data = {
-        "box_id": RDU_BOX_ID,
+        "research_data_upload_box_id": RDU_BOX_ID,
         "type": "upload",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
     }
@@ -290,10 +292,11 @@ async def test_make_upload_work_order_token(
     response_data = response.json()
     assert isinstance(response_data, dict)
     assert sorted(response_data) == [
-        "box_id",
         "created",
         "expires",
+        "file_upload_box_id",
         "files",
+        "research_data_upload_box_id",
         "type",
     ]
 
@@ -301,7 +304,8 @@ async def test_make_upload_work_order_token(
     assert response_data == {
         "type": "upload",
         "files": {},
-        "box_id": RDU_BOX_ID,
+        "research_data_upload_box_id": RDU_BOX_ID,
+        "file_upload_box_id": FILE_BOX_ID,
     }
 
     # Test VIEW work order token
@@ -463,7 +467,7 @@ async def test_get_upload_wot_expired_access(
 
     # Create an upload work package
     upload_creation_data = {
-        "box_id": RDU_BOX_ID,
+        "research_data_upload_box_id": RDU_BOX_ID,
         "type": "upload",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
     }

@@ -138,7 +138,7 @@ class ViewFileBoxWorkOrder(BaseWorkOrderToken):
     """WOT schema authorizing a user to view a FileUploadBox"""
 
     work_type: ViewType = "view"
-    box_id: UUID4
+    box_id: UUID4 = Field(..., description="The FileUploadBox ID")
 
 
 class CreateFileWorkOrder(BaseWorkOrderToken):
@@ -146,7 +146,7 @@ class CreateFileWorkOrder(BaseWorkOrderToken):
 
     work_type: CreateType = "create"
     alias: str
-    box_id: UUID4
+    box_id: UUID4 = Field(..., description="The FileUploadBox ID")
 
 
 class _FileUploadToken(BaseModel):
@@ -156,7 +156,7 @@ class _FileUploadToken(BaseModel):
     """
 
     file_id: UUID4
-    box_id: UUID4
+    box_id: UUID4 = Field(..., description="The FileUploadBox ID")
 
 
 class UploadFileWorkOrder(BaseWorkOrderToken, _FileUploadToken):
@@ -209,16 +209,22 @@ class BoxWithExpiration(ResearchDataUploadBoxBasics):
 
 
 def validate_work_package_data(data):
-    """Ensure exactly one of dataset_id or box_id is provided based on work type."""
+    """Ensure exactly one of dataset_id or research_data_upload_box_id is provided
+    based on work type.
+    """
     errors: list[str] = []
     if data.type == WorkPackageType.DOWNLOAD:
         if not data.dataset_id:
             errors.append("dataset_id is required for download work packages")
-        if data.box_id:
-            errors.append("box_id shouldn't be provided for download work packages")
+        if data.research_data_upload_box_id:
+            errors.append(
+                "research_data_upload_box_id shouldn't be provided for download work packages"
+            )
     elif data.type == WorkPackageType.UPLOAD:
-        if not data.box_id:
-            errors.append("box_id is required for upload work packages")
+        if not data.research_data_upload_box_id:
+            errors.append(
+                "research_data_upload_box_id is required for upload work packages"
+            )
         if data.dataset_id:
             errors.append("dataset_id shouldn't be provided for upload work packages")
     if errors:
@@ -231,8 +237,9 @@ class WorkPackageCreationData(BaseDto):
     dataset_id: str | None = Field(
         default=None, description="ID of the dataset (for download work packages)"
     )
-    box_id: UUID4 | None = Field(
-        default=None, description="ID of the upload box (for upload work packages)"
+    research_data_upload_box_id: UUID4 | None = Field(
+        default=None,
+        description="ID of the research data upload box (for upload work packages)",
     )
     type: WorkPackageType = Field(default=..., description="The work package type")
     file_ids: list[str] | None = Field(
@@ -253,7 +260,9 @@ class WorkPackageCreationData(BaseDto):
 
     @model_validator(mode="after")
     def validate_ids(self):
-        """Ensure exactly one of dataset_id or box_id is provided based on work type."""
+        """Ensure exactly one of dataset_id or research_data_upload_box_id is provided
+        based on work type.
+        """
         validate_work_package_data(self)
         return self
 
@@ -282,8 +291,12 @@ class WorkPackageDetails(BaseModel):
         + " for upload work packages)",
         examples=[{"GHGAF01": ".json", "GHGAF02": ".csv"}],
     )
-    box_id: UUID4 | None = Field(
-        default=None, description="ID of the upload box (for upload work packages)"
+    research_data_upload_box_id: UUID4 | None = Field(
+        default=None,
+        description="ID of the research data upload box (for upload work packages)",
+    )
+    file_upload_box_id: UUID4 | None = Field(
+        default=None, description="ID of the file upload box (for upload work packages)"
     )
     created: UTCDatetime = Field(
         default=..., description="Creation date of the work package"
@@ -299,9 +312,6 @@ class WorkPackage(WorkPackageDetails):
     id: UUID4 = UUID4Field(description="ID of the work package")
     dataset_id: str | None = Field(
         default=None, description="ID of the dataset (for download work packages)"
-    )
-    box_id: UUID4 | None = Field(
-        default=None, description="ID of the upload box (for upload work packages)"
     )
     user_id: UUID4 = Field(default=..., description="The unique ID for the user")
     full_user_name: str = Field(
@@ -320,7 +330,9 @@ class WorkPackage(WorkPackageDetails):
 
     @model_validator(mode="after")
     def validate_ids(self):
-        """Ensure exactly one of dataset_id or box_id is provided based on work type."""
+        """Ensure exactly one of dataset_id or research_data_upload_box_id is provided
+        based on work type.
+        """
         validate_work_package_data(self)
         return self
 

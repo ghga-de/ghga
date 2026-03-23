@@ -52,13 +52,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/work-package-service):
 ```bash
-docker pull ghga/work-package-service:8.0.0
+docker pull ghga/work-package-service:9.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/work-package-service:8.0.0 .
+docker build -t ghga/work-package-service:9.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -66,7 +66,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/work-package-service:8.0.0 --help
+docker run -p 8080:8080 ghga/work-package-service:9.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -318,19 +318,11 @@ The service requires the following configuration parameters:
   5
   ```
 
-- <a id="properties/upload_box_topic"></a>**`upload_box_topic`** *(string, required)*: Name of the event topic containing research data upload box events.
+- <a id="properties/research_data_upload_box_topic"></a>**`research_data_upload_box_topic`** *(string, required)*: Name of the event topic containing research data upload box events.
 
   Examples:
   ```json
   "research-data-upload-boxes"
-  ```
-
-  ```json
-  "rdu-boxes"
-  ```
-
-  ```json
-  "rdubs"
   ```
 
 - <a id="properties/accession_map_topic"></a>**`accession_map_topic`** *(string, required)*: The name of the topic used for file accession map events.

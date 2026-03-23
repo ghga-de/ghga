@@ -278,7 +278,7 @@ async def test_rudb_outbox_consumer(config: Config, kafka: KafkaFixture):
         # Publish an outbox 'upserted' event for upload box
         await kafka.publish_event(
             payload=test_event.model_dump(mode="json"),
-            topic=config.upload_box_topic,
+            topic=config.research_data_upload_box_topic,
             type_="upserted",
             key=str(research_data_upload_box_id),
         )
@@ -292,7 +292,7 @@ async def test_rudb_outbox_consumer(config: Config, kafka: KafkaFixture):
         # Publish an outbox 'deleted' event
         await kafka.publish_event(
             payload={},
-            topic=config.upload_box_topic,
+            topic=config.research_data_upload_box_topic,
             type_="deleted",
             key=str(research_data_upload_box_id),
         )

@@ -122,7 +122,8 @@ async def get_work_package(
     return WorkPackageDetails(
         type=package.type,
         files=package.files,
-        box_id=package.box_id,
+        research_data_upload_box_id=package.research_data_upload_box_id,
+        file_upload_box_id=package.file_upload_box_id,
         created=package.created,
         expires=package.expires,
     )
@@ -202,8 +203,8 @@ async def create_upload_work_order_token(
 
         wot = await repository.get_upload_wot(
             work_package_id=work_package_id,
-            box_id=box_id,
             work_type=wot_request.work_type,
+            box_id=box_id,
             alias=wot_request.alias,
             file_id=wot_request.file_id,
             check_valid=True,

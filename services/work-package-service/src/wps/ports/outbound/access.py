@@ -52,9 +52,10 @@ class AccessCheckPort(ABC):
 
     @abstractmethod
     async def check_upload_access(
-        self, user_id: UUID4, box_id: UUID4
+        self, user_id: UUID4, research_data_upload_box_id: UUID4
     ) -> UTCDatetime | None:
-        """Check until when the given user has upload access for the given box.
+        """Check until when the given user has upload access for the given
+        ResearchDataUploadBox.
 
         Raises AccessCheckError on failure.
         """

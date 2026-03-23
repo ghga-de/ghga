@@ -357,7 +357,9 @@ async def test_retrieve_work_package_without_box_id(
     # Verify basic details to see if the work package was retrieved correctly
     assert retrieved_package.id == old_work_package_id
     assert retrieved_package.dataset_id == "some-old-dataset-id"
-    assert retrieved_package.box_id is None  # Should be None for old documents
+    assert (
+        retrieved_package.research_data_upload_box_id is None
+    )  # Should be None for old documents
 
 
 async def test_box_crud(

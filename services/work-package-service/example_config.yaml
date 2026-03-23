@@ -51,10 +51,10 @@ mongo_timeout: null
 openapi_url: /openapi.json
 otel_trace_sampling_rate: 1.0
 port: 8080
+research_data_upload_box_topic: upload-boxes
 service_instance_id: wps_1
 service_name: wps
 timeout_keep_alive: 90
-upload_box_topic: upload-boxes
 upload_boxes_collection: uploadBoxes
 work_package_signing_key: '**********'
 work_package_valid_days: 30

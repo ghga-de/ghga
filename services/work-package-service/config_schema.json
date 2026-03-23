@@ -320,14 +320,12 @@
       "title": "Kafka Retry Backoff",
       "type": "integer"
     },
-    "upload_box_topic": {
+    "research_data_upload_box_topic": {
       "description": "Name of the event topic containing research data upload box events",
       "examples": [
-        "research-data-upload-boxes",
-        "rdu-boxes",
-        "rdubs"
+        "research-data-upload-boxes"
       ],
-      "title": "Upload Box Topic",
+      "title": "Research Data Upload Box Topic",
       "type": "string"
     },
     "accession_map_topic": {
@@ -576,7 +574,7 @@
     "db_version_collection",
     "migration_wait_sec",
     "kafka_servers",
-    "upload_box_topic",
+    "research_data_upload_box_topic",
     "accession_map_topic",
     "dataset_change_topic",
     "dataset_deletion_type",

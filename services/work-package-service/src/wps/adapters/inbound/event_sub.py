@@ -21,13 +21,15 @@ from contextlib import suppress
 from uuid import UUID
 
 from ghga_event_schemas import pydantic_ as event_schemas
-from ghga_event_schemas.configs import DatasetEventsConfig
+from ghga_event_schemas.configs import (
+    DatasetEventsConfig,
+    FileAccessionMappingEventsConfig,
+    ResearchDataUploadBoxEventsConfig,
+)
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
-from pydantic_settings import BaseSettings
 
 from wps.constants import TRACER
 from wps.core.models import (
@@ -53,23 +55,13 @@ class EventSubTranslatorConfig(DatasetEventsConfig):
     """Config for dataset creation related events."""
 
 
-class OutboxSubConfig(BaseSettings):
+class OutboxSubConfig(
+    FileAccessionMappingEventsConfig, ResearchDataUploadBoxEventsConfig
+):
     """Config for listening to events carrying state updates for UploadBox objects
 
     The event types are hardcoded by `hexkit`.
     """
-
-    # TODO: Replace this with standardized config from ghga-event-schemas when available
-    upload_box_topic: str = Field(
-        ...,
-        description="Name of the event topic containing research data upload box events",
-        examples=["research-data-upload-boxes", "rdu-boxes", "rdubs"],
-    )
-    accession_map_topic: str = Field(
-        default=...,
-        description="The name of the topic used for file accession map events",
-        examples=["accession-maps", "file-accession-maps"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -174,7 +166,7 @@ class RDUBOutboxTranslator(DaoSubscriberProtocol):
         config: OutboxSubConfig,
         work_package_repository: WorkPackageRepositoryPort,
     ):
-        self.event_topic = config.upload_box_topic
+        self.event_topic = config.research_data_upload_box_topic
         self._repository = work_package_repository
 
     async def changed(
