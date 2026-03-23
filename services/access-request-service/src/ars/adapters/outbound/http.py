@@ -87,7 +87,11 @@ class AccessGrantsAdapter(AccessGrantsPort):
                 "Invalid validity period"
             ) from error
         try:
-            response = await self._client.post(url, content=validity.model_dump_json())
+            response = await self._client.post(
+                url,
+                content=validity.model_dump_json(),
+                headers={"Content-Type": "application/json"},
+            )
         except httpx.RequestError as error:
             raise self.AccessGrantsError(f"HTTP request error: {error}") from error
         if response.status_code != httpx.codes.CREATED:
