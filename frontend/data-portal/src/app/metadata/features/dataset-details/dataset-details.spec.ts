@@ -32,10 +32,12 @@ class MockMetadataService {
   loadDatasetDetails = () => undefined;
 }
 
+import { signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
+import { IvaService } from '@app/ivas/services/iva';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
@@ -48,6 +50,14 @@ class MockAuthService {
   email = () => 'doe@home.org';
   roles = () => ['data_steward'];
   roleNames = () => ['Data Steward'];
+}
+
+/**
+ * Mock the IVA service as needed by the dynamic access request button
+ */
+class MockIvaService {
+  userIvas = { error: signal(undefined), value: signal([]) };
+  loadUserIvas = () => undefined;
 }
 
 /**
@@ -86,6 +96,7 @@ describe('DatasetDetailsComponent', () => {
         { provide: WellKnownValueService, useClass: MockWellKnownValueService },
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: IvaService, useClass: MockIvaService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         provideAnimations(),
       ],

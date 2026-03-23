@@ -6,11 +6,13 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
+import { IvaService } from '@app/ivas/services/iva';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { SearchResultComponent } from './search-result';
 
@@ -26,6 +28,14 @@ class MockAuthService {
   email = () => 'doe@home.org';
   roles = () => ['data_steward'];
   roleNames = () => ['Data Steward'];
+}
+
+/**
+ * Mock the IVA service as needed by the dynamic access request button
+ */
+class MockIvaService {
+  userIvas = { error: signal(undefined), value: signal([]) };
+  loadUserIvas = () => undefined;
 }
 
 /**
@@ -51,6 +61,7 @@ describe(SearchResultComponent, () => {
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        { provide: IvaService, useClass: MockIvaService },
       ],
     })
       .overrideComponent(SearchResultComponent, {
