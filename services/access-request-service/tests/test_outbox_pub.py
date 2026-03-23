@@ -90,10 +90,11 @@ async def test_upsert(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert event.type_ == "upserted"
         assert event.key == event.payload["id"] == str(access_request.id)
         assert event.payload["status"] == "pending"
+        assert event.payload["ticket_id"] == None
 
         # Perform an update to the request
         access_request_update = access_request.model_copy(
-            update={"status": AccessRequestStatus.ALLOWED}
+            update={"status": AccessRequestStatus.ALLOWED, "ticket_id": "test-ticket"}
         )
         async with kafka.record_events(
             in_topic=config.access_request_topic
@@ -104,6 +105,7 @@ async def test_upsert(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert event.type_ == "upserted"
         assert event.key == event.payload["id"] == str(access_request.id)
         assert event.payload["status"] == "allowed"
+        assert event.payload["ticket_id"] == "test-ticket"
 
 
 async def test_delete(config, kafka: KafkaFixture, mongodb: MongoDbFixture):

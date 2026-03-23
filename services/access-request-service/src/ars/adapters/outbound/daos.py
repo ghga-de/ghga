@@ -46,6 +46,7 @@ def _access_request_to_event(access_request: models.AccessRequest) -> JsonObject
         dac_email=access_request.dac_email,
         access_starts=access_request.access_starts,
         access_ends=access_request.access_ends,
+        ticket_id=access_request.ticket_id,
     )
     return event.model_dump()
 
