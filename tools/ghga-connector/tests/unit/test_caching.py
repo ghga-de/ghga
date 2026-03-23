@@ -112,9 +112,9 @@ async def test_get_work_order_token_caching(
             json=base64.b64encode(b"1234567890" * 5).decode(),
         )
         add_httpx_response()
-        box_id = uuid4()
+        rdub_id = uuid4()
         await work_pkg_client.get_upload_wot(
-            work_type="upload", file_id=file_id, box_id=box_id
+            work_type="upload", file_id=file_id, research_data_upload_box_id=rdub_id
         )
 
         # Verify that the call was made
@@ -124,16 +124,16 @@ async def test_get_work_order_token_caching(
 
         # Make same call and verify that the response came from the cache instead
         await work_pkg_client.get_upload_wot(
-            work_type="upload", file_id=file_id, box_id=box_id
+            work_type="upload", file_id=file_id, research_data_upload_box_id=rdub_id
         )
         assert not client.calls, "Upload WOT should have been provided by the cache"
 
         # Manually invalidate the cache, then make the call again
         work_pkg_client.get_upload_wot.cache_invalidate(
-            work_type="upload", file_id=file_id, box_id=box_id
+            work_type="upload", file_id=file_id, research_data_upload_box_id=rdub_id
         )
         add_httpx_response()
         await work_pkg_client.get_upload_wot(
-            work_type="upload", file_id=file_id, box_id=box_id
+            work_type="upload", file_id=file_id, research_data_upload_box_id=rdub_id
         )
         assert client.calls, "Upload WOT should NOT have been provided by the cache"

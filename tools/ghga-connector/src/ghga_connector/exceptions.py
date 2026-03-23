@@ -324,12 +324,12 @@ class OrphanedUploadError(RuntimeError):
     resolved by the GHGA dev team if it occurs.
     """
 
-    def __init__(self, *, file_alias: str, box_id: UUID4):
+    def __init__(self, *, file_alias: str, file_upload_box_id: UUID4):
         msg = (
             "A multipart upload is already in progress for this file, but"
             + " cannot be aborted due to a system error. Please contact the GHGA Help"
             + " Desk and request manual abortion of any S3 uploads for file alias"
-            + f" {file_alias} in box {box_id}."
+            + f" {file_alias} in FileUploadBox {file_upload_box_id}."
         )
         super().__init__(msg)
 

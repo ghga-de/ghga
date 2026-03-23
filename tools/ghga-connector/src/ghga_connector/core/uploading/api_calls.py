@@ -71,7 +71,7 @@ class UploadClient:
         *,
         status_code: int,
         response: httpx.Response,
-        box_id: UUID4 | None = None,
+        file_upload_box_id: UUID4 | None = None,
         file_alias: str | None = None,
         file_id: UUID4 | None = None,
     ):
@@ -96,7 +96,7 @@ class UploadClient:
                 _handle_409(
                     exception_id=response.json()["exception_id"],
                     work_package_id=work_package_id,
-                    box_id=box_id,
+                    file_upload_box_id=file_upload_box_id,
                     file_alias=file_alias,
                 )
 
@@ -113,15 +113,18 @@ class UploadClient:
         part_size: int,
     ) -> tuple[UUID4, str]:
         """Contact the Upload API to initiate a new upload for a file alias"""
-        box_id = await self._work_package_client.get_package_box_id()
+        rdub_id, fub_id = await self._work_package_client.get_package_box_ids()
 
         # Shouldn't need to worry about cache busting here
         create_file_wot = await self._work_package_client.get_upload_wot(
-            work_type="create", box_id=box_id, file_id=None, alias=file_alias
+            work_type="create",
+            research_data_upload_box_id=rdub_id,
+            file_id=None,
+            alias=file_alias,
         )
 
         # contact Upload API to create file upload
-        url = f"{self._upload_api_url}/boxes/{box_id}/uploads"
+        url = f"{self._upload_api_url}/boxes/{fub_id}/uploads"
         headers = _form_authorization_headers(create_file_wot)
         body = {
             "alias": file_alias,
@@ -141,7 +144,7 @@ class UploadClient:
             self._handle_bad_status_codes(
                 status_code=response.status_code,
                 response=response,
-                box_id=box_id,
+                file_upload_box_id=fub_id,
                 file_alias=file_alias,
             )
 
@@ -155,7 +158,10 @@ class UploadClient:
             )
             raise exceptions.CreateFileUploadError(
                 file_alias=file_alias,
-                reason="When initiating the file upload, the received response indicated that it was for a different file alias.",
+                reason=(
+                    "When initiating the file upload, the received response indicated"
+                    + " that it was for a different file alias."
+                ),
             )
         file_id = UUID(response_payload["file_id"])
         storage_alias = response_payload["storage_alias"]
@@ -173,7 +179,10 @@ class UploadClient:
         Returns a pre-signed URL that can be used to upload the bytes for the specified
         part number of the specified file upload.
         """
-        box_id = await self._work_package_client.get_package_box_id()  # cached
+        (
+            rdub_id,
+            fub_id,
+        ) = await self._work_package_client.get_package_box_ids()  # cached
 
         # Invalidate the upload WOT cache if indicated to do so
         if bust_cache:
@@ -183,14 +192,20 @@ class UploadClient:
                 part_no,
             )
             self._work_package_client.get_upload_wot.cache_invalidate(
-                work_type="upload", box_id=box_id, file_id=file_id, alias=None
+                work_type="upload",
+                research_data_upload_box_id=rdub_id,
+                file_id=file_id,
+                alias=None,
             )
         upload_file_wot = await self._work_package_client.get_upload_wot(
-            work_type="upload", box_id=box_id, file_id=file_id, alias=None
+            work_type="upload",
+            research_data_upload_box_id=rdub_id,
+            file_id=file_id,
+            alias=None,
         )
 
         # contact Upload API to create file upload URL
-        url = f"{self._upload_api_url}/boxes/{box_id}/uploads/{file_id}/parts/{part_no}"
+        url = f"{self._upload_api_url}/boxes/{fub_id}/uploads/{file_id}/parts/{part_no}"
         headers = _form_authorization_headers(upload_file_wot)
 
         try:
@@ -210,7 +225,7 @@ class UploadClient:
             self._handle_bad_status_codes(
                 status_code=response.status_code,
                 response=response,
-                box_id=box_id,
+                file_upload_box_id=fub_id,
                 file_id=file_id,
             )
 
@@ -255,14 +270,20 @@ class UploadClient:
         encrypted_parts_sha256: list[str],
     ) -> None:
         """Complete a file upload"""
-        box_id = await self._work_package_client.get_package_box_id()  # cached
+        (
+            rdub_id,
+            fub_id,
+        ) = await self._work_package_client.get_package_box_ids()  # cached
 
         # Shouldn't need to worry about cache busting here
         close_file_wot = await self._work_package_client.get_upload_wot(
-            work_type="close", box_id=box_id, file_id=file_id, alias=None
+            work_type="close",
+            research_data_upload_box_id=rdub_id,
+            file_id=file_id,
+            alias=None,
         )
 
-        url = f"{self._upload_api_url}/boxes/{box_id}/uploads/{file_id}"
+        url = f"{self._upload_api_url}/boxes/{fub_id}/uploads/{file_id}"
         headers = _form_authorization_headers(close_file_wot)
         body = {
             "decrypted_sha256": decrypted_sha256,
@@ -282,21 +303,27 @@ class UploadClient:
             self._handle_bad_status_codes(
                 status_code=response.status_code,
                 response=response,
-                box_id=box_id,
+                file_upload_box_id=fub_id,
                 file_alias=file_alias,
                 file_id=file_id,
             )
 
     async def delete_file(self, *, file_id: UUID4, file_alias: str) -> None:
         """Delete a file upload"""
-        box_id = await self._work_package_client.get_package_box_id()  # cached
+        (
+            rdub_id,
+            fub_id,
+        ) = await self._work_package_client.get_package_box_ids()  # cached
 
         # Shouldn't need to worry about cache busting here
         delete_file_wot = await self._work_package_client.get_upload_wot(
-            work_type="delete", box_id=box_id, file_id=file_id, alias=None
+            work_type="delete",
+            research_data_upload_box_id=rdub_id,
+            file_id=file_id,
+            alias=None,
         )
 
-        url = f"{self._upload_api_url}/boxes/{box_id}/uploads/{file_id}"
+        url = f"{self._upload_api_url}/boxes/{fub_id}/uploads/{file_id}"
         headers = _form_authorization_headers(delete_file_wot)
 
         try:
@@ -310,7 +337,7 @@ class UploadClient:
             self._handle_bad_status_codes(
                 status_code=response.status_code,
                 response=response,
-                box_id=box_id,
+                file_upload_box_id=fub_id,
                 file_alias=file_alias,
                 file_id=file_id,
             )
@@ -360,7 +387,7 @@ def _handle_409(
     *,
     exception_id: str,
     work_package_id: UUID4,
-    box_id: UUID4 | None,
+    file_upload_box_id: UUID4 | None,
     file_alias: str | None,
 ):
     """Raise the proper error based on returned info about the 409.
@@ -375,5 +402,5 @@ def _handle_409(
         case "orphanedMultipartUpload":
             raise exceptions.OrphanedUploadError(
                 file_alias=file_alias,  # type: ignore
-                box_id=box_id,  # type: ignore
+                file_upload_box_id=file_upload_box_id,  # type: ignore
             )

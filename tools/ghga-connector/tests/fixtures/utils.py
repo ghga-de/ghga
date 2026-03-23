@@ -32,7 +32,8 @@ PUBLIC_KEY_FILE = KEY_DIR / "key.pub"
 PRIVATE_KEY_FILE = KEY_DIR / "key.sec"
 TEST_STORAGE_ALIAS1 = "HD01"
 TEST_STORAGE_ALIAS2 = "B"
-TEST_FILE_UPLOAD_BOX_ID = UUID("6ec579af-3918-45d2-8333-d2cdcfb53d1d")
+TEST_RDUB_ID = UUID("fd4981eb-5272-4170-8a78-6ab17d92363d")
+TEST_FUB_ID = UUID("6ec579af-3918-45d2-8333-d2cdcfb53d1d")
 TEST_FILE_ID = UUID("550e8400-e29b-41d4-a716-446655440002")
 TEST_WORK_PACKAGE_ID = "2cc323e2-f2ba-4f52-aae3-57107ab8ff2f"
 TEST_PUBLIC_KEYS: dict[str, str] = {
@@ -59,11 +60,11 @@ def make_file_info_for_upload(
 @pytest.fixture()
 def patch_work_package_functions(monkeypatch):
     """Patches work package functions for up and download as well as input"""
-    box_id_mock = AsyncMock()
-    box_id_mock.return_value = TEST_FILE_UPLOAD_BOX_ID
+    box_ids_mock = AsyncMock()
+    box_ids_mock.return_value = (TEST_RDUB_ID, TEST_FUB_ID)
     monkeypatch.setattr(
-        "ghga_connector.core.work_package.WorkPackageClient.get_package_box_id",
-        box_id_mock,
+        "ghga_connector.core.work_package.WorkPackageClient.get_package_box_ids",
+        box_ids_mock,
     )
     monkeypatch.setattr(
         "ghga_connector.core.work_package.get_work_package_token",

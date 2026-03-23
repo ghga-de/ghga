@@ -134,15 +134,19 @@ class WorkPackageClient:
         work_package = await self._get_work_package()
         return work_package["files"]
 
-    async def get_package_box_id(self) -> UUID4:
-        """Call Work Package API and retrieve FileUploadBox ID.
+    async def get_package_box_ids(self) -> tuple[UUID4, UUID4]:
+        """Call Work Package API and retrieve the ResearchDataUploadBox and FileUploadBox IDs.
+
+        Returns a 2-tuple containing the RDUB ID and FUB ID, in that order.
 
         Raises:
             NoWorkPackageAccessError: If a 403 is received.
             InvalidWorkPackageResponseError: If any other non-200 error code is received.
         """
         work_package = await self._get_work_package()
-        return UUID(work_package["box_id"])
+        rdub_id = UUID(work_package["research_data_upload_box_id"])
+        fub_id = UUID(work_package["file_upload_box_id"])
+        return rdub_id, fub_id
 
     async def get_download_wot(self, *, file_id: str) -> str:
         """Get a work order token from the Work Package API enabling download of a single file"""
@@ -154,12 +158,12 @@ class WorkPackageClient:
         self,
         *,
         work_type: WorkType,
-        box_id: UUID4,
+        research_data_upload_box_id: UUID4,
         file_id: UUID4 | None = None,
         alias: str | None = None,
     ) -> str:
-        """Get a work order token from the Work Package API enabling file upload operations for
-        a single file.
+        """Get a work order token from the Work Package API enabling file upload
+        operations for a single file.
 
         Results from this method are cached and can be invalidated with:
         `get_upload_wot.cache_invalidate(**kwargs)`
@@ -169,7 +173,10 @@ class WorkPackageClient:
         several times within the life of one upload WOT, depending on transfer speed
         and part size.
         """
-        url = f"{self.work_package_api_url}/work-packages/{self.package_id}/boxes/{box_id}/work-order-tokens"
+        url = (
+            f"{self.work_package_api_url}/work-packages/{self.package_id}/boxes/"
+            + f"{research_data_upload_box_id}/work-order-tokens"
+        )
         body = {
             "work_type": work_type,
             "alias": alias,
