@@ -49,11 +49,12 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
 - Typecheck (TS project refs): `pnpm typecheck` (or `pnpm typecheck:watch`)
 - Typecheck incl. Angular templates: `pnpm typecheck:ng`
 - Unit tests (Angular builder): `pnpm test` / `pnpm test:watch` / `pnpm test:ui`
-  - Default command for unit tests is always `pnpm test`.
-  - Test framework: Vitest (with Angular TestBed integration via the Angular test builder)
-  - But do not run plain `vitest` directly; Angular component tests rely on the Angular test builder.
-  - Test syntax: Use `vitest.fn()` for mocks, not `jasmine.createSpy()`.
-  - Run individual tests with `ng test --include FILENAME` / `ng test --filter TESTNAME`.
+  - Default: use `pnpm test`.
+  - Do not run plain `vitest`; use Angular test commands only.
+  - Use `vitest.fn()` for mocks (not `jasmine.createSpy()`).
+  - For targeted runs, use `pnpm ng test --watch=false --include <file>` or `pnpm ng test --watch=false --filter <name>`.
+  - Do not use argument forwarding (`ng test -- <runner-args>`) and do not duplicate watch flags across boundaries.
+  - Invalid example (causes parsing failures): `ng test --watch=false -- --watch=false --include src/app/...`.
 - E2E tests (Playwright): `pnpm e2e` / `pnpm e2e:ui` / `pnpm e2e:headed` / `pnpm e2e:debug` / `pnpm e2e:report`
   - Default command for e2e tests is always `pnpm e2e`.
   - Test framework: Playwright
