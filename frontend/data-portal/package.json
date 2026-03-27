@@ -1,6 +1,6 @@
 {
   "name": "data-portal",
-  "version": "2.4.2",
+  "version": "2.5.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -68,7 +68,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.5.0",
     "@vitest/browser-playwright": "^4.1.2",
-    "@vitest/ui": "4.0.18",
+    "@vitest/ui": "^4.1.2",
     "angular-eslint": "^21.3.1",
     "autoprefixer": "^10.4.27",
     "eslint": "^9.39.4",
