@@ -217,19 +217,24 @@ export const responses: { [endpoint: string]: ResponseValue } = {
    * UOS API
    */
 
-  // All upload boxes
+  // Create a new upload box
+  'POST /api/uos/boxes': {
+    id: crypto.randomUUID(),
+  },
+
+  // Fetch all upload boxes
   'GET /api/uos/boxes': uploadBoxes,
 
-  // Single upload box
+  // Fetch a single upload box
   'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68001': uploadBoxes.boxes[0],
   'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68002': uploadBoxes.boxes[1],
   'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
   'GET /api/uos/box/*': 404,
 
-  // Upload grants for a specific box
+  // Fetch upload grants for a specific box
   'GET /api/uos/access-grants?*': uploadGrants,
 
-  // File uploads for a specific box
+  // Fetch file uploads for a specific box
   'GET /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001/uploads':
     uploadBox1FileUploads,
   'GET /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/uploads':

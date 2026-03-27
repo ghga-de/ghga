@@ -6,9 +6,12 @@
 
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { NotificationService } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
+import { of } from 'rxjs';
 import { UploadBoxManagerComponent } from './upload-box-manager';
 
 const TEST_UPLOAD_BOX: ResearchDataUploadBox = {
@@ -62,15 +65,30 @@ class MockUploadBoxService {
   }
 }
 
+const mockDialog = {
+  open: vitest.fn(),
+};
+
+const mockNotificationService = {
+  showSuccess: vitest.fn(),
+};
+
 describe('UploadBoxManagerComponent', () => {
   let component: UploadBoxManagerComponent;
   let fixture: ComponentFixture<UploadBoxManagerComponent>;
   let uploadBoxService: MockUploadBoxService;
 
   beforeEach(async () => {
+    mockDialog.open.mockReset();
+    mockNotificationService.showSuccess.mockReset();
+
     await TestBed.configureTestingModule({
       imports: [UploadBoxManagerComponent],
-      providers: [{ provide: UploadBoxService, useClass: MockUploadBoxService }],
+      providers: [
+        { provide: UploadBoxService, useClass: MockUploadBoxService },
+        { provide: MatDialog, useValue: mockDialog },
+        { provide: NotificationService, useValue: mockNotificationService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(UploadBoxManagerComponent);
@@ -106,5 +124,28 @@ describe('UploadBoxManagerComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('button.button-primary')).toBeTruthy();
+  });
+
+  it('should display the create Upload Box button', () => {
+    expect(screen.getByRole('button', { name: /create upload box/i })).toBeVisible();
+  });
+
+  it('should open the create Upload Box dialog when clicking the button', () => {
+    mockDialog.open.mockReturnValue({ afterClosed: () => of(undefined) });
+
+    screen.getByRole('button', { name: /create upload box/i }).click();
+
+    expect(mockDialog.open).toHaveBeenCalled();
+  });
+
+  it('should notify on successful dialog result', () => {
+    mockDialog.open.mockReturnValue({ afterClosed: () => of('new-box-id') });
+
+    component.openCreateUploadBoxDialog();
+
+    expect(uploadBoxService.loadAllUploadBoxes).toHaveBeenCalledTimes(1);
+    expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
+      'Upload Box created successfully.',
+    );
   });
 });

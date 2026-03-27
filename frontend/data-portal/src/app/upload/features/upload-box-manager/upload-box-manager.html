@@ -3,4 +3,13 @@
 <div class="flex flex-col gap-4">
   <app-upload-box-manager-filter></app-upload-box-manager-filter>
   <app-upload-box-manager-list></app-upload-box-manager-list>
+  <button
+    (click)="openCreateUploadBoxDialog()"
+    mat-raised-button
+    class="button-quaternary mt-4 self-start"
+    aria-label="Create Upload Box"
+  >
+    <mat-icon fontIcon="add"></mat-icon>
+    Create Upload Box
+  </button>
 </div>

@@ -6,6 +6,7 @@
 
 import { HttpClient, HttpParams, httpResource } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import { map, Observable } from 'rxjs';
 import {
@@ -14,6 +15,7 @@ import {
   ResearchDataUploadBoxBase,
   ResearchDataUploadBoxUpdate,
   UploadBoxFilter,
+  UploadBoxState,
 } from '../models/box';
 import { FileUploadWithAccession } from '../models/file-upload';
 import {
@@ -28,6 +30,7 @@ import {
  */
 @Injectable({ providedIn: 'root' })
 export class UploadBoxService {
+  #auth = inject(AuthService);
   #config = inject(ConfigService);
   #http = inject(HttpClient);
   #uosUrl = this.#config.uosUrl;
@@ -232,9 +235,46 @@ export class UploadBoxService {
    * @returns An observable that emits the ID of the created box
    */
   createUploadBox(data: ResearchDataUploadBoxBase): Observable<string> {
-    return this.#http
-      .post<{ id: string }>(this.#boxesUrl, data)
-      .pipe(map((response) => response.id));
+    return this.#http.post<{ id: string }>(this.#boxesUrl, data).pipe(
+      map((response) => response.id),
+      map((id) => {
+        this.#addUploadBoxLocally(data, id);
+        return id;
+      }),
+    );
+  }
+
+  /**
+   * Add a newly created upload box locally to keep the list in sync without waiting for a reload.
+   * @param data - creation payload
+   * @param id - server-generated upload box ID
+   */
+  #addUploadBoxLocally(data: ResearchDataUploadBoxBase, id: string): void {
+    if (
+      this.boxRetrievalResults.error() ||
+      typeof this.boxRetrievalResults.value.set !== 'function'
+    ) {
+      return;
+    }
+
+    const newBox: ResearchDataUploadBox = {
+      id,
+      version: 1,
+      state: UploadBoxState.open,
+      title: data.title,
+      description: data.description,
+      storage_alias: data.storage_alias,
+      last_changed: new Date().toISOString(),
+      changed_by: this.#auth.user()?.id ?? '',
+      file_count: 0,
+      size: 0,
+    };
+
+    const current = this.boxRetrievalResults.value();
+    this.boxRetrievalResults.value.set({
+      count: current.count + 1,
+      boxes: [...current.boxes, newBox],
+    });
   }
 
   /**

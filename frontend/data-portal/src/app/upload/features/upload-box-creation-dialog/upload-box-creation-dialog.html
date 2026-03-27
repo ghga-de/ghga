@@ -1,0 +1,41 @@
+<h2 mat-dialog-title>Creeate a new Upload Box</h2>
+
+<mat-dialog-content>
+  <form class="grid gap-3 pt-2" [formGroup]="form">
+    <mat-form-field>
+      <mat-label>Title</mat-label>
+      <input matInput type="text" formControlName="title" />
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Description</mat-label>
+      <textarea matInput rows="4" formControlName="description"></textarea>
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Storage location</mat-label>
+      <mat-select formControlName="storage_alias">
+        @for (opt of locationOptions(); track opt.value) {
+          <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (creationError()) {
+      <p class="text-error">There was an error creating the Upload Box.</p>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="gap-2">
+  <button mat-button type="button" (click)="onCancel()">Cancel</button>
+  <button
+    mat-raised-button
+    class="button-primary"
+    type="button"
+    [disabled]="isSubmitDisabled()"
+    (click)="onSubmit()"
+  >
+    OK
+  </button>
+</mat-dialog-actions>

@@ -10,6 +10,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import {
   BoxRetrievalResults,
@@ -71,6 +72,13 @@ class MockConfigService {
   wkvsUrl = 'http://mock.dev/.well-known';
 }
 
+/**
+ * Mock auth service exposing a current authenticated user.
+ */
+class MockAuthService {
+  user = () => ({ id: 'doe@test.dev' });
+}
+
 describe('UploadBoxService', () => {
   let service: UploadBoxService;
   let httpMock: HttpTestingController;
@@ -81,6 +89,7 @@ describe('UploadBoxService', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: AuthService, useClass: MockAuthService },
         { provide: ConfigService, useClass: MockConfigService },
       ],
     });
@@ -282,6 +291,16 @@ describe('UploadBoxService', () => {
     req.flush({ id: createdId }, { status: 201, statusText: 'Created' });
 
     expect(emittedId).toBe(createdId);
+    expect(service.uploadBoxes().some((box) => box.id === createdId)).toBe(true);
+
+    const created = service.uploadBoxes().find((box) => box.id === createdId);
+    expect(created?.title).toBe(newBoxData.title);
+    expect(created?.description).toBe(newBoxData.description);
+    expect(created?.storage_alias).toBe(newBoxData.storage_alias);
+    expect(created?.state).toBe(UploadBoxState.open);
+    expect(created?.changed_by).toBe('doe@test.dev');
+    expect(created?.file_count).toBe(0);
+    expect(created?.size).toBe(0);
   });
 
   it('should propagate an error when creating an upload box fails', async () => {
