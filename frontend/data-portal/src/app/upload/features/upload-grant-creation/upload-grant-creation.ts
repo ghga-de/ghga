@@ -36,11 +36,7 @@ import { UserExtIdPipe } from '@app/shared/pipes/user-ext-id-pipe';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
-import {
-  UploadGrant,
-  UploadGrantBase,
-  VALID_GRANT_DAYS,
-} from '@app/upload/models/grant';
+import { UploadGrantBase, VALID_GRANT_DAYS } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 
 /** Max users to show in the search results list */
@@ -286,26 +282,23 @@ export class UploadGrantCreationComponent implements OnInit {
       valid_from: toIsoDate(from),
       valid_until: toIsoDate(until),
     };
-    this.#uploadBoxService.createUploadGrant(payload).subscribe({
-      next: ({ id }) => {
-        const grant: UploadGrant = {
-          ...payload,
-          id,
-          created: new Date().toISOString(),
-          user_name: user.displayName,
-          user_email: user.email,
-          user_title: user.title ?? null,
-        };
-        this.#uploadBoxService.addGrantLocally(grant);
-        this.#notification.showSuccess('Upload grant created successfully.');
-        this.#location.back(['/upload-box-manager', this.boxId()]);
-      },
-      error: () => {
-        this.#notification.showError(
-          'Failed to create upload grant. Please try again.',
-        );
-        this.isSubmitting.set(false);
-      },
-    });
+    this.#uploadBoxService
+      .createUploadGrant(payload, {
+        name: user.displayName,
+        email: user.email,
+        title: user.title ?? null,
+      })
+      .subscribe({
+        next: () => {
+          this.#notification.showSuccess('Upload grant created successfully.');
+          this.#location.back(['/upload-box-manager', this.boxId()]);
+        },
+        error: () => {
+          this.#notification.showError(
+            'Failed to create upload grant. Please try again.',
+          );
+          this.isSubmitting.set(false);
+        },
+      });
   }
 }

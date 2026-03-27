@@ -79,7 +79,6 @@ class MockUploadBoxService {
 
   loadUploadBox = vitest.fn();
   createUploadGrant = vitest.fn();
-  addGrantLocally = vitest.fn();
 
   /**
    * Set the upload box value in the mock resource.
@@ -315,12 +314,14 @@ describe('UploadGrantCreationComponent', () => {
         expect(payload.iva_id).toBe(testIvas[0].id);
       });
 
-      it('should call addGrantLocally with the new grant', () => {
-        expect(uploadBoxService.addGrantLocally).toHaveBeenCalledWith(
+      it('should pass the user metadata to createUploadGrant', () => {
+        const [, user] = uploadBoxService.createUploadGrant.mock.calls[0];
+
+        expect(user).toEqual(
           expect.objectContaining({
-            id: 'new-grant-001',
-            user_name: testUser.displayName,
-            user_email: testUser.email,
+            name: testUser.displayName,
+            email: testUser.email,
+            title: testUser.title,
           }),
         );
       });

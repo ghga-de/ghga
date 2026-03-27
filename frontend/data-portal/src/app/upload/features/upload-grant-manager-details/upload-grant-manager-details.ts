@@ -74,6 +74,9 @@ export class UploadGrantManagerDetailsComponent implements OnInit {
   /** Whether to apply the view transition animation. */
   showTransition = false;
 
+  /** Whether the grant was just revoked and the view is about to navigate away. */
+  isGrantRevoked = signal(false);
+
   #cachedBox = signal<ResearchDataUploadBox | undefined>(undefined);
 
   /** The upload grant being displayed. */
@@ -197,8 +200,15 @@ export class UploadGrantManagerDetailsComponent implements OnInit {
   revokeGrant(): void {
     const grant = this.grant();
     if (!grant) return;
-    this.#dialog.open(UploadGrantRevocationDialogComponent, {
+    const ref = this.#dialog.open(UploadGrantRevocationDialogComponent, {
       data: { grant, boxTitle: this.box()?.title, boxState: this.box()?.state },
+    });
+
+    ref.afterClosed().subscribe((confirmed) => {
+      if (confirmed) {
+        this.isGrantRevoked.set(true);
+        this.#location.back(['/upload-box-manager', this.boxId()]);
+      }
     });
   }
 }

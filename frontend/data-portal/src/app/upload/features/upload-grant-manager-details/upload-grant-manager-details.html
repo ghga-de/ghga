@@ -167,9 +167,11 @@
     </div>
   } @else {
     <div class="container mx-auto p-6">
-      <p class="text-center text-red-600">
+      <p class="text-center" [class.text-red-600]="!isGrantRevoked()">
         @if (isLoading()) {
           Loading upload grant details...
+        } @else if (isGrantRevoked()) {
+          The upload grant has been revoked.
         } @else {
           The selected upload grant could not be found.
         }

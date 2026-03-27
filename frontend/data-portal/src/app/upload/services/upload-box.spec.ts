@@ -514,6 +514,7 @@ describe('UploadBoxService', () => {
   });
 
   describe('createUploadGrant', () => {
+    const CREATED_AT = '2026-01-01T00:00:00.000Z';
     const GRANT_PAYLOAD = {
       user_id: 'user-abc',
       iva_id: null,
@@ -521,6 +522,20 @@ describe('UploadBoxService', () => {
       valid_from: '2026-01-01',
       valid_until: '2026-12-31',
     };
+    const USER = {
+      name: 'Alice Example',
+      email: 'alice@test.dev',
+      title: null,
+    };
+
+    beforeEach(() => {
+      vitest.useFakeTimers();
+      vitest.setSystemTime(new Date(CREATED_AT));
+    });
+
+    afterEach(() => {
+      vitest.useRealTimers();
+    });
 
     it('should POST to access-grants and return the new grant id', () => {
       const newId = 'grant-new-001';
@@ -533,6 +548,46 @@ describe('UploadBoxService', () => {
       req.flush({ id: newId }, { status: 201, statusText: 'Created' });
 
       expect(result).toEqual({ id: newId });
+    });
+
+    it('should append the grant to the in-memory list after loading when user data is provided', async () => {
+      const newId = 'grant-new-001';
+      service.loadBoxGrants(GRANT_PAYLOAD.box_id);
+      testBed.tick();
+
+      const grantsReq = httpMock.expectOne(
+        `http://mock.dev/uos/access-grants?box_id=${encodeURIComponent(GRANT_PAYLOAD.box_id)}`,
+      );
+      grantsReq.flush([]);
+      await Promise.resolve();
+
+      expect(service.boxGrants.value()).toEqual([]);
+
+      service.createUploadGrant(GRANT_PAYLOAD, USER).subscribe();
+
+      const createReq = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      expect(createReq.request.method).toBe('POST');
+      createReq.flush({ id: newId }, { status: 201, statusText: 'Created' });
+
+      expect(service.boxGrants.value()).toEqual([
+        {
+          ...GRANT_PAYLOAD,
+          id: newId,
+          created: CREATED_AT,
+          user_name: USER.name,
+          user_email: USER.email,
+          user_title: USER.title,
+        },
+      ]);
+    });
+
+    it('should not throw when user data is provided before box grants are loaded', () => {
+      expect(() => {
+        service.createUploadGrant(GRANT_PAYLOAD, USER).subscribe();
+      }).not.toThrow();
+
+      const req = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      req.flush({ id: 'grant-new-001' }, { status: 201, statusText: 'Created' });
     });
 
     it('should propagate an error when creating a grant fails', () => {
@@ -551,6 +606,34 @@ describe('UploadBoxService', () => {
 
   describe('revokeUploadGrant', () => {
     const GRANT_ID = 'grant-to-revoke-001';
+    const OTHER_GRANT_ID = 'grant-to-keep-001';
+    const BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
+    const EXISTING_GRANTS: UploadGrant[] = [
+      {
+        id: GRANT_ID,
+        user_id: 'user-abc',
+        iva_id: null,
+        box_id: BOX_ID,
+        created: '2026-01-01T00:00:00Z',
+        valid_from: '2026-01-01',
+        valid_until: '2026-12-31',
+        user_name: 'Alice Example',
+        user_email: 'alice@test.dev',
+        user_title: null,
+      },
+      {
+        id: OTHER_GRANT_ID,
+        user_id: 'user-def',
+        iva_id: null,
+        box_id: BOX_ID,
+        created: '2026-01-02T00:00:00Z',
+        valid_from: '2026-01-02',
+        valid_until: '2026-12-31',
+        user_name: 'Bob Example',
+        user_email: 'bob@test.dev',
+        user_title: 'Dr.',
+      },
+    ];
 
     it('should DELETE the access-grant by id', () => {
       let completed = false;
@@ -565,6 +648,36 @@ describe('UploadBoxService', () => {
       expect(completed).toBe(true);
     });
 
+    it('should remove the grant from the in-memory list after loading', async () => {
+      service.loadBoxGrants(BOX_ID);
+      testBed.tick();
+
+      const grantsReq = httpMock.expectOne(
+        `http://mock.dev/uos/access-grants?box_id=${encodeURIComponent(BOX_ID)}`,
+      );
+      grantsReq.flush(EXISTING_GRANTS);
+      await Promise.resolve();
+
+      expect(service.boxGrants.value()).toEqual(EXISTING_GRANTS);
+
+      service.revokeUploadGrant(GRANT_ID).subscribe();
+
+      const req = httpMock.expectOne(`http://mock.dev/uos/access-grants/${GRANT_ID}`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+
+      expect(service.boxGrants.value()).toEqual([EXISTING_GRANTS[1]]);
+    });
+
+    it('should not throw when grants have not been loaded yet', () => {
+      expect(() => {
+        service.revokeUploadGrant(GRANT_ID).subscribe();
+      }).not.toThrow();
+
+      const req = httpMock.expectOne(`http://mock.dev/uos/access-grants/${GRANT_ID}`);
+      req.flush(null, { status: 204, statusText: 'No Content' });
+    });
+
     it('should propagate an error when revoking a grant fails', () => {
       let caughtError: HttpErrorResponse | undefined;
       service
@@ -576,43 +689,6 @@ describe('UploadBoxService', () => {
 
       expect(caughtError).toBeInstanceOf(HttpErrorResponse);
       expect(caughtError?.status).toBe(404);
-    });
-  });
-
-  describe('addGrantLocally', () => {
-    const BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
-    const GRANT: UploadGrant = {
-      id: 'grant-local-001',
-      user_id: 'user-abc',
-      iva_id: null,
-      box_id: BOX_ID,
-      created: '2026-01-01T00:00:00Z',
-      valid_from: '2026-01-01',
-      valid_until: '2026-12-31',
-      user_name: 'Alice Example',
-      user_email: 'alice@test.dev',
-      user_title: null,
-    };
-
-    it('should append the grant to the in-memory list after loading', async () => {
-      service.loadBoxGrants(BOX_ID);
-      testBed.tick();
-
-      const req = httpMock.expectOne(
-        `http://mock.dev/uos/access-grants?box_id=${encodeURIComponent(BOX_ID)}`,
-      );
-      req.flush([]);
-      await Promise.resolve();
-
-      expect(service.boxGrants.value()).toHaveLength(0);
-      service.addGrantLocally(GRANT);
-      expect(service.boxGrants.value()).toEqual([GRANT]);
-    });
-
-    it('should not throw when boxGrants has not been loaded yet', () => {
-      // No loadBoxGrants call, so boxGrants.error() would be undefined
-      // and value() returns the defaultValue []
-      expect(() => service.addGrantLocally(GRANT)).not.toThrow();
     });
   });
 
