@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from './fixtures';
+import { expectTitle } from './utils/expect-title';
 
 test('does not show IVA manager when not logged in', async ({ page }) => {
   const logIn = page.getByRole('button', { name: 'Log In' });
@@ -14,7 +15,7 @@ test('does not show IVA manager when not logged in', async ({ page }) => {
   await expect(adminMenu).toHaveCount(0);
 
   await page.goto('/iva-manager');
-  await expect(page).toHaveTitle('Home | GHGA Data Portal');
+  await expectTitle(page, 'Home');
 
   const main = page.locator('main');
   await expect(main).not.toContainText('Address Management');
@@ -22,7 +23,7 @@ test('does not show IVA manager when not logged in', async ({ page }) => {
 
 test('can use IVA manager when logged in', async ({ loggedInPage }) => {
   const page = loggedInPage;
-  await expect(page).toHaveTitle('Home | GHGA Data Portal');
+  await expectTitle(page, 'Home');
 
   const adminMenu = page.getByRole('navigation').getByLabel('Administration');
   await adminMenu.click();
@@ -31,7 +32,7 @@ test('can use IVA manager when logged in', async ({ loggedInPage }) => {
   await expect(managerItem).toBeVisible();
   await managerItem.click();
 
-  await expect(page).toHaveTitle('IVA Manager | GHGA Data Portal');
+  await expectTitle(page, 'IVA Manager');
   await expect(page).toHaveURL('/iva-manager');
 
   const main = page.locator('main');

@@ -5,13 +5,14 @@
  */
 
 import { expect, test } from './fixtures';
+import { expectTitle } from './utils/expect-title';
 
 test('does not show account page when not logged in', async ({ page }) => {
   const logIn = page.getByRole('button', { name: 'Log In' });
   await expect(logIn).toHaveCount(0);
 
   await page.goto('/account');
-  await expect(page).toHaveTitle('Home | GHGA Data Portal');
+  await expectTitle(page, 'Home');
 
   const main = page.locator('main');
   await expect(main).not.toContainText('Account');
@@ -19,7 +20,7 @@ test('does not show account page when not logged in', async ({ page }) => {
 
 test('show account page when logged in', async ({ loggedInPage }) => {
   const page = loggedInPage;
-  await expect(page).toHaveTitle('Home | GHGA Data Portal');
+  await expectTitle(page, 'Home');
 
   const accountMenu = page.getByRole('button', { name: 'Account' });
   await expect(accountMenu).toBeVisible();
@@ -28,7 +29,7 @@ test('show account page when logged in', async ({ loggedInPage }) => {
   await expect(accountItem).toBeVisible();
   await accountItem.click();
 
-  await expect(page).toHaveTitle('User Account | GHGA Data Portal');
+  await expectTitle(page, 'User Account');
   await expect(page).toHaveURL('/account');
 
   const main = page.locator('main');

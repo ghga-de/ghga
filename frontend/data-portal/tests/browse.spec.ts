@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { expectTitle } from './utils/expect-title';
 
 test('can browse data', async ({ page }) => {
   await page.goto('/');
@@ -57,7 +58,7 @@ test('can navigate to dataset details', async ({ page }) => {
 
   await expect(page).toHaveURL('/dataset/GHGAD12345678901236');
 
-  await expect(page).toHaveTitle('Dataset GHGAD12345678901236 | GHGA Data Portal');
+  await expectTitle(page, 'Dataset GHGAD12345678901236');
 
   await expect(main).toContainText('Dataset ID | GHGAD12345678901236');
   await expect(main).toContainText('Test dataset with some details for testing.');

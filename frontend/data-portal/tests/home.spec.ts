@@ -5,11 +5,12 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { expectTitle } from './utils/expect-title';
 
 test('has proper title', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page).toHaveTitle('Home | GHGA Data Portal');
+  await expectTitle(page, 'Home');
 });
 
 test('has proper heading', async ({ page }) => {
