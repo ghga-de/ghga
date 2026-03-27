@@ -156,46 +156,47 @@ export const routes: Routes = [
       },
     ],
   },
-  {
-    path: 'upload-box-manager',
-    providers: [UserService],
-    canActivate: [() => inject(AuthService).guardDataSteward()],
-    children: [
-      {
-        path: '',
-        loadComponent: () =>
-          import('./upload/features/upload-box-manager/upload-box-manager').then(
-            (m) => m.UploadBoxManagerComponent,
-          ),
-        title: 'Upload Box Manager',
-      },
-      {
-        path: ':id',
-        loadComponent: () =>
-          import('./upload/features/upload-box-manager-detail/upload-box-manager-detail').then(
-            (m) => m.UploadBoxManagerDetailComponent,
-          ),
-        title: 'Upload Box Details',
-        data: { transition: 'detail' },
-      },
-      {
-        path: ':boxId/grant/new',
-        loadComponent: () =>
-          import('./upload/features/upload-grant-creation/upload-grant-creation').then(
-            (m) => m.UploadGrantCreationComponent,
-          ),
-        title: 'New Upload Grant',
-      },
-      {
-        path: ':boxId/grant/:grantId',
-        loadComponent: () =>
-          import('./upload/features/upload-grant-manager-details/upload-grant-manager-details').then(
-            (m) => m.UploadGrantManagerDetailsComponent,
-          ),
-        title: 'Upload Grant Details',
-      },
-    ],
-  },
+  // TODO: re-enable Upload Box Manager after it is finished
+  // {
+  //   path: 'upload-box-manager',
+  //   providers: [UserService],
+  //   canActivate: [() => inject(AuthService).guardDataSteward()],
+  //   children: [
+  //     {
+  //       path: '',
+  //       loadComponent: () =>
+  //         import('./upload/features/upload-box-manager/upload-box-manager').then(
+  //           (m) => m.UploadBoxManagerComponent,
+  //         ),
+  //       title: 'Upload Box Manager',
+  //     },
+  //     {
+  //       path: ':id',
+  //       loadComponent: () =>
+  //         import('./upload/features/upload-box-manager-detail/upload-box-manager-detail').then(
+  //           (m) => m.UploadBoxManagerDetailComponent,
+  //         ),
+  //       title: 'Upload Box Details',
+  //       data: { transition: 'detail' },
+  //     },
+  //     {
+  //       path: ':boxId/grant/new',
+  //       loadComponent: () =>
+  //         import('./upload/features/upload-grant-creation/upload-grant-creation').then(
+  //           (m) => m.UploadGrantCreationComponent,
+  //         ),
+  //       title: 'New Upload Grant',
+  //     },
+  //     {
+  //       path: ':boxId/grant/:grantId',
+  //       loadComponent: () =>
+  //         import('./upload/features/upload-grant-manager-details/upload-grant-manager-details').then(
+  //           (m) => m.UploadGrantManagerDetailsComponent,
+  //         ),
+  //       title: 'Upload Grant Details',
+  //     },
+  //   ],
+  // },
   // routes used in the authentication flows
   {
     path: 'oauth/callback',

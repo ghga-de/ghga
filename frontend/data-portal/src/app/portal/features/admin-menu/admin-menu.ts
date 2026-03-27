@@ -32,15 +32,15 @@ export class AdminMenuComponent {
   isAccessRequestsManagerRoute = computed<boolean>(() =>
     this.#route().startsWith('access-request-manager'),
   );
-  isUploadBoxManagerRoute = computed<boolean>(() =>
-    this.#route().startsWith('upload-box-manager'),
-  );
+  // TODO: re-enable Upload Box Manager after it is finished
+  // isUploadBoxManagerRoute = computed<boolean>(() =>
+  //   this.#route().startsWith('upload-box-manager'),
+  // );
   isAdminRoute = computed<boolean>(
     () =>
       this.isUserManagerRoute() ||
       this.isIvaManagerRoute() ||
       this.isAccessRequestsManagerRoute() ||
-      this.isAccessGrantManagerRoute() ||
-      this.isUploadBoxManagerRoute(),
+      this.isAccessGrantManagerRoute(),
   );
 }
