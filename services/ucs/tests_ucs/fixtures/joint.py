@@ -46,7 +46,7 @@ from ucs.adapters.outbound.s3 import S3Client
 from ucs.config import Config
 from ucs.core import models
 from ucs.core.controller import UploadController
-from ucs.core.models import FileUpload, FileUploadBox, S3UploadDetails
+from ucs.core.models import FileUpload, FileUploadBox
 from ucs.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from ucs.ports.inbound.controller import UploadControllerPort
 from ucs.ports.outbound.storage import S3ClientPort
@@ -127,7 +127,6 @@ class JointRig:
     config: Config
     file_upload_box_dao: BaseInMemDao[models.FileUploadBox]
     file_upload_dao: BaseInMemDao[models.FileUpload]
-    s3_upload_details_dao: BaseInMemDao[models.S3UploadDetails]
     object_storages: ObjectStorages
     controller: UploadController
     s3_client: S3ClientPort
@@ -135,9 +134,6 @@ class JointRig:
 
 InMemFileUploadBoxDao = new_mock_dao_class(dto_model=FileUploadBox, id_field="id")
 InMemFileUploadDao = new_mock_dao_class(dto_model=FileUpload, id_field="id")
-InMemS3UploadDetailsDao = new_mock_dao_class(
-    dto_model=S3UploadDetails, id_field="file_id"
-)
 
 
 @pytest.fixture()
@@ -155,7 +151,6 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
     _config = config.config
     file_upload_box_dao = InMemFileUploadBoxDao()
     file_upload_dao = InMemFileUploadDao()
-    s3_upload_details_dao = InMemS3UploadDetailsDao()
     object_storages = InMemS3ObjectStorages(config=_config)
     s3_client = S3Client(config=_config, object_storages=object_storages)
 
@@ -163,7 +158,6 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
         config=(_config),
         file_upload_box_dao=(file_upload_box_dao),
         file_upload_dao=(file_upload_dao),
-        s3_upload_details_dao=(s3_upload_details_dao),
         s3_client=s3_client,
     )
 
@@ -171,7 +165,6 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
         config=_config,
         file_upload_box_dao=file_upload_box_dao,
         file_upload_dao=file_upload_dao,
-        s3_upload_details_dao=s3_upload_details_dao,
         object_storages=object_storages,
         controller=controller,
         s3_client=s3_client,

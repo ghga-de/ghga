@@ -80,13 +80,6 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpOrphanedMultipartUploadError.get_body_model(),
     },
-    "s3UploadDetailsNotFound": {
-        "description": (
-            "Exceptions by ID:"
-            + "\n- s3UploadDetailsNotFound: S3 upload details for the file could not be found."
-        ),
-        "model": http_exceptions.HttpS3UploadDetailsNotFoundError.get_body_model(),
-    },
     "s3UploadNotFound": {
         "description": (
             "Exceptions by ID:"
@@ -360,7 +353,7 @@ async def create_file_upload(
     response_description="The pre-signed URL for uploading the file part",
     responses={
         status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["noSuchStorage"],
-        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["s3UploadDetailsNotFound"]
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["fileUploadNotFound"]
         | ERROR_RESPONSES["s3UploadNotFound"],
     },
 )
@@ -390,10 +383,8 @@ async def get_part_upload_url(
         presigned_url = await upload_controller.get_part_upload_url(
             file_id=file_id, part_no=part_no
         )
-    except UploadControllerPort.S3UploadDetailsNotFoundError as error:
-        raise http_exceptions.HttpS3UploadDetailsNotFoundError(
-            file_id=file_id
-        ) from error
+    except UploadControllerPort.FileUploadNotFound as error:
+        raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error
     except UploadControllerPort.UnknownStorageAliasError as error:
         raise http_exceptions.HttpUnknownStorageAliasError() from error
     except UploadControllerPort.UploadSessionNotFoundError as error:
@@ -414,7 +405,6 @@ async def get_part_upload_url(
     responses={
         status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["checksumMismatch"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
-        | ERROR_RESPONSES["s3UploadDetailsNotFound"]
         | ERROR_RESPONSES["fileUploadNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES[
@@ -459,10 +449,6 @@ async def complete_file_upload(
         ) from error
     except UploadControllerPort.FileUploadNotFound as error:
         raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error
-    except UploadControllerPort.S3UploadDetailsNotFoundError as error:
-        raise http_exceptions.HttpS3UploadDetailsNotFoundError(
-            file_id=file_id
-        ) from error
     except UploadControllerPort.UploadCompletionError as error:
         raise http_exceptions.HttpUploadCompletionError(
             box_id=box_id, file_id=file_id
@@ -482,8 +468,7 @@ async def complete_file_upload(
     response_description="FileUpload removed successfully",
     responses={
         status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["noSuchStorage"],
-        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
-        | ERROR_RESPONSES["s3UploadDetailsNotFound"],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["uploadAbortError"],
     },
@@ -513,10 +498,6 @@ async def remove_file_upload(
     except UploadControllerPort.BoxStateError as error:
         raise http_exceptions.HttpBoxStateError(
             box_id=box_id, box_state=error.box_state
-        ) from error
-    except UploadControllerPort.S3UploadDetailsNotFoundError as error:
-        raise http_exceptions.HttpS3UploadDetailsNotFoundError(
-            file_id=file_id
         ) from error
     except UploadControllerPort.UnknownStorageAliasError as error:
         raise http_exceptions.HttpUnknownStorageAliasError() from error

@@ -148,11 +148,13 @@ def make_file_upload(
     storage_alias: str = TEST_STORAGE_ALIAS,
     bucket_id: str = TEST_BUCKET,
     object_id: UUID4 | None = None,
+    file_id: UUID4 | None = None,
     state: FileUploadState = "init",
+    s3_upload_id: str = "uninitialized",
 ) -> FileUpload:
     """Make a FileUpload instance with sensible defaults."""
     file_upload = FileUpload(
-        id=uuid4(),
+        id=file_id or uuid4(),
         alias="test.bam",
         box_id=uuid4(),
         state=state,
@@ -163,6 +165,8 @@ def make_file_upload(
         decrypted_size=DECRYPTED_SIZE,
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
+        s3_upload_id=s3_upload_id,
+        initiated=now_utc_ms_prec(),
     )
 
     if state != "init":

@@ -541,10 +541,6 @@ async def test_create_file_upload_endpoint_model_validator(
     "core_error, http_error",
     [
         (
-            UploadControllerPort.S3UploadDetailsNotFoundError(file_id=TEST_FILE_ID),
-            http_exceptions.HttpS3UploadDetailsNotFoundError(file_id=TEST_FILE_ID),
-        ),
-        (
             UploadControllerPort.UnknownStorageAliasError(storage_alias="HD01"),
             http_exceptions.HttpUnknownStorageAliasError(),
         ),
@@ -557,7 +553,6 @@ async def test_create_file_upload_endpoint_model_validator(
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
     ids=[
-        "S3UploadDetailsNotFound",
         "UnknownStorageAlias",
         "UploadSessionNotFound",
         "InternalError",
@@ -600,10 +595,6 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
             http_exceptions.HttpFileUploadNotFoundError(file_id=TEST_FILE_ID),
         ),
         (
-            UploadControllerPort.S3UploadDetailsNotFoundError(file_id=TEST_FILE_ID),
-            http_exceptions.HttpS3UploadDetailsNotFoundError(file_id=TEST_FILE_ID),
-        ),
-        (
             UploadControllerPort.UploadCompletionError(
                 file_id=TEST_FILE_ID,
                 s3_upload_id="test-upload",
@@ -619,7 +610,6 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
         "BoxNotFound",
         "LockedBox",
         "FileUploadNotFound",
-        "S3UploadDetailsNotFound",
         "UploadCompletionError",
         "InternalError",
     ],
@@ -664,10 +654,6 @@ async def test_complete_file_upload_endpoint_error_handling(
             http_exceptions.HttpBoxStateError(box_id=TEST_BOX_ID, box_state="locked"),
         ),
         (
-            UploadControllerPort.S3UploadDetailsNotFoundError(file_id=TEST_FILE_ID),
-            http_exceptions.HttpS3UploadDetailsNotFoundError(file_id=TEST_FILE_ID),
-        ),
-        (
             UploadControllerPort.UnknownStorageAliasError(storage_alias="HD01"),
             http_exceptions.HttpUnknownStorageAliasError(),
         ),
@@ -684,7 +670,6 @@ async def test_complete_file_upload_endpoint_error_handling(
     ids=[
         "BoxNotFound",
         "LockedBox",
-        "S3UploadDetailsNotFound",
         "UnknownStorageAlias",
         "UploadAbortError",
         "InternalError",

@@ -22,7 +22,7 @@ from hexkit.protocols.objstorage import ObjectStorageProtocol
 from pydantic import UUID4
 
 from ucs.config import Config
-from ucs.core.models import FileUpload, S3UploadDetails
+from ucs.core.models import FileUpload, FileUploadBasics
 from ucs.ports.outbound.storage import S3ClientPort
 
 log = logging.getLogger(__name__)
@@ -63,7 +63,9 @@ class S3Client(S3ClientPort):
         bucket_id, _ = self._get_bucket_and_storage(storage_alias)
         return bucket_id
 
-    async def init_multipart_upload(self, *, file_upload: FileUpload) -> str:
+    async def init_multipart_upload(
+        self, *, file_upload_basics: FileUploadBasics
+    ) -> str:
         """Initiate a new multipart upload for a FileUpload.
 
         Returns a str containing the multipart upload ID.
@@ -72,9 +74,11 @@ class S3Client(S3ClientPort):
             `UnknownStorageAliasError` if the storage alias is not known.
             `OrphanedMultipartUploadError` if an S3 upload is already in progress.
         """
-        bucket_id = file_upload.bucket_id
-        object_id = file_upload.object_id
-        _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
+        bucket_id = file_upload_basics.bucket_id
+        object_id = file_upload_basics.object_id
+        _, object_storage = self._get_bucket_and_storage(
+            file_upload_basics.storage_alias
+        )
 
         try:
             s3_upload_id = await object_storage.init_multipart_upload(
@@ -83,18 +87,18 @@ class S3Client(S3ClientPort):
             log.info(
                 "S3 multipart upload %s created for file ID %s (file alias %s)",
                 s3_upload_id,
-                file_upload.id,
-                file_upload.alias,
+                file_upload_basics.id,
+                file_upload_basics.alias,
             )
             return s3_upload_id
         except object_storage.MultiPartUploadAlreadyExistsError as err:
             #  See the long note on UploadController.initiate_file_upload()
             raise self.OrphanedMultipartUploadError(
-                file_id=file_upload.id, bucket_id=bucket_id
+                file_id=file_upload_basics.id, bucket_id=bucket_id
             ) from err
 
     async def get_part_upload_url(
-        self, *, s3_upload_details: S3UploadDetails, part_no: int
+        self, *, file_upload: FileUpload, part_no: int
     ) -> str:
         """Get a pre-signed URL to upload a specific part of a multipart upload.
 
@@ -102,36 +106,32 @@ class S3Client(S3ClientPort):
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadNotFoundError` if the multipart upload can't be found in S3.
         """
-        _, object_storage = self._get_bucket_and_storage(
-            s3_upload_details.storage_alias
-        )
+        _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
         try:
             return await object_storage.get_part_upload_url(
-                upload_id=s3_upload_details.s3_upload_id,
-                bucket_id=s3_upload_details.bucket_id,
-                object_id=str(s3_upload_details.object_id),
+                upload_id=file_upload.s3_upload_id,
+                bucket_id=file_upload.bucket_id,
+                object_id=str(file_upload.object_id),
                 part_number=part_no,
             )
         except object_storage.MultiPartUploadNotFoundError as err:
             error = self.S3UploadNotFoundError(
-                s3_upload_id=s3_upload_details.s3_upload_id,
-                bucket_id=s3_upload_details.bucket_id,
+                s3_upload_id=file_upload.s3_upload_id,
+                bucket_id=file_upload.bucket_id,
             )
             log.error(
                 error,
                 exc_info=True,
                 extra={
-                    "s3_upload_id": s3_upload_details.s3_upload_id,
-                    "bucket_id": s3_upload_details.bucket_id,
-                    "file_id": s3_upload_details.file_id,
-                    "storage_alias": s3_upload_details.storage_alias,
+                    "s3_upload_id": file_upload.s3_upload_id,
+                    "bucket_id": file_upload.bucket_id,
+                    "file_id": file_upload.id,
+                    "storage_alias": file_upload.storage_alias,
                 },
             )
             raise error from err
 
-    async def complete_multipart_upload(
-        self, *, s3_upload_details: S3UploadDetails
-    ) -> None:
+    async def complete_multipart_upload(self, *, file_upload: FileUpload) -> None:
         """Instruct S3 to assemble all uploaded parts into the final object.
 
         Recovers idempotently if the upload was already completed (object exists).
@@ -140,13 +140,11 @@ class S3Client(S3ClientPort):
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadCompletionError` if the upload cannot be completed or found.
         """
-        bucket_id = s3_upload_details.bucket_id
-        object_id = str(s3_upload_details.object_id)
-        s3_upload_id = s3_upload_details.s3_upload_id
-        file_id = s3_upload_details.file_id
-        _, object_storage = self._get_bucket_and_storage(
-            s3_upload_details.storage_alias
-        )
+        bucket_id = file_upload.bucket_id
+        object_id = str(file_upload.object_id)
+        s3_upload_id = file_upload.s3_upload_id
+        file_id = file_upload.id
+        _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
 
         try:
             await object_storage.complete_multipart_upload(
@@ -171,7 +169,7 @@ class S3Client(S3ClientPort):
                     + " since the expected object with ID %s exists. Proceeding to"
                     + " update DB.",
                     s3_upload_id,
-                    s3_upload_details.object_id,
+                    file_upload.object_id,
                 )
             else:
                 error = self.S3UploadCompletionError(
@@ -184,28 +182,26 @@ class S3Client(S3ClientPort):
                         "s3_upload_id": s3_upload_id,
                         "bucket_id": bucket_id,
                         "file_id": file_id,
-                        "storage_alias": s3_upload_details.storage_alias,
+                        "storage_alias": file_upload.storage_alias,
                     },
                 )
                 raise error from err
 
     async def get_object_etag(
-        self, *, s3_upload_details: S3UploadDetails, object_id: UUID4
+        self, *, file_upload: FileUpload, object_id: UUID4
     ) -> str:
         """Return the ETag of an object in the inbox bucket (quotes stripped).
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
         """
-        _, object_storage = self._get_bucket_and_storage(
-            s3_upload_details.storage_alias
-        )
+        _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
         etag = await object_storage.get_object_etag(
-            bucket_id=s3_upload_details.bucket_id, object_id=str(object_id)
+            bucket_id=file_upload.bucket_id, object_id=str(object_id)
         )
         return etag.strip('"')
 
-    async def delete_inbox_file(self, *, s3_upload_details: S3UploadDetails) -> None:
+    async def delete_inbox_file(self, *, file_upload: FileUpload) -> None:
         """Delete a fully uploaded file from the inbox, or abort any stale multipart.
 
         If the object exists it is deleted. If only an in-progress multipart upload
@@ -215,13 +211,11 @@ class S3Client(S3ClientPort):
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadAbortError` if an abort is required but fails.
         """
-        object_id = str(s3_upload_details.object_id)
-        s3_upload_id = s3_upload_details.s3_upload_id
-        bucket_id = s3_upload_details.bucket_id
-        file_id = s3_upload_details.file_id
-        _, object_storage = self._get_bucket_and_storage(
-            s3_upload_details.storage_alias
-        )
+        object_id = str(file_upload.object_id)
+        s3_upload_id = file_upload.s3_upload_id
+        bucket_id = file_upload.bucket_id
+        file_id = file_upload.id
+        _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
 
         if await object_storage.does_object_exist(
             bucket_id=bucket_id, object_id=object_id
@@ -262,26 +256,22 @@ class S3Client(S3ClientPort):
                         "file_id": file_id,
                         "object_id": object_id,
                         "bucket_id": bucket_id,
-                        "storage_alias": s3_upload_details.storage_alias,
+                        "storage_alias": file_upload.storage_alias,
                     },
                 )
                 raise error from err
 
-    async def abort_multipart_upload(
-        self, *, s3_upload_details: S3UploadDetails
-    ) -> None:
+    async def abort_multipart_upload(self, *, file_upload: FileUpload) -> None:
         """Abort an in-progress multipart upload. Tolerates a missing upload.
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadAbortError` if the abort fails.
         """
-        file_id = s3_upload_details.file_id
-        s3_upload_id = s3_upload_details.s3_upload_id
-        bucket_id = s3_upload_details.bucket_id
-        _, object_storage = self._get_bucket_and_storage(
-            s3_upload_details.storage_alias
-        )
+        file_id = file_upload.id
+        s3_upload_id = file_upload.s3_upload_id
+        bucket_id = file_upload.bucket_id
+        _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
 
         try:
             log.debug(
@@ -290,7 +280,7 @@ class S3Client(S3ClientPort):
             await object_storage.abort_multipart_upload(
                 upload_id=s3_upload_id,
                 bucket_id=bucket_id,
-                object_id=str(s3_upload_details.object_id),
+                object_id=str(file_upload.object_id),
             )
             log.info("Successfully aborted S3 upload %s", s3_upload_id)
         except object_storage.MultiPartUploadAbortError as err:
@@ -303,7 +293,7 @@ class S3Client(S3ClientPort):
                 extra={
                     "file_id": file_id,
                     "bucket_id": bucket_id,
-                    "storage_alias": s3_upload_details.storage_alias,
+                    "storage_alias": file_upload.storage_alias,
                     "s3_upload_id": s3_upload_id,
                 },
             )

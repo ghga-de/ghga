@@ -21,7 +21,6 @@ from contextlib import asynccontextmanager, nullcontext
 from fastapi import FastAPI
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
-from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka.provider import MongoKafkaDaoPublisherFactory
 
 from ucs.adapters.inbound.event_sub import EventSubTranslator
@@ -30,10 +29,7 @@ from ucs.adapters.inbound.fastapi_.configure import get_configured_app
 from ucs.adapters.inbound.fastapi_.http_authorization import (
     JWTAuthContextProviderBundle,
 )
-from ucs.adapters.outbound.dao import (
-    UploadDaoPublisherFactory,
-    get_s3_upload_details_dao,
-)
+from ucs.adapters.outbound.dao import UploadDaoPublisherFactory
 from ucs.adapters.outbound.s3 import S3Client
 from ucs.config import Config
 from ucs.core.controller import UploadController
@@ -62,22 +58,19 @@ async def prepare_core(
     object_storages = S3ObjectStorages(config=config)
     s3_client = S3Client(config=config, object_storages=object_storages)
 
-    async with (
-        MongoDbDaoFactory.construct(config=config) as dao_factory,
-        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_pub_factory,
-    ):
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=config
+    ) as dao_pub_factory:
         upload_dao_factory = UploadDaoPublisherFactory(
             config=config, dao_publisher_factory=dao_pub_factory
         )
         file_upload_box_dao = await upload_dao_factory.get_file_upload_box_dao()
         file_upload_dao = await upload_dao_factory.get_file_upload_dao()
-        s3_upload_details_dao = await get_s3_upload_details_dao(dao_factory=dao_factory)
 
         controller = UploadController(
             config=config,
             file_upload_box_dao=file_upload_box_dao,
             file_upload_dao=file_upload_dao,
-            s3_upload_details_dao=s3_upload_details_dao,
             s3_client=s3_client,
         )
         yield controller

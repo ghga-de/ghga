@@ -144,25 +144,6 @@ class HttpOrphanedMultipartUploadError(HttpCustomExceptionBase):
         )
 
 
-class HttpS3UploadDetailsNotFoundError(HttpCustomExceptionBase):
-    """Thrown when S3 upload details for a file cannot be found."""
-
-    exception_id = "s3UploadDetailsNotFound"
-
-    class DataModel(BaseModel):
-        """Model for exception data"""
-
-        file_id: UUID4
-
-    def __init__(self, *, file_id: UUID4, status_code: int = 404):
-        """Construct message and init the exception."""
-        super().__init__(
-            status_code=status_code,
-            description=(f"S3 upload details for file ID {file_id} were not found."),
-            data={"file_id": str(file_id)},
-        )
-
-
 class HttpS3UploadNotFoundError(HttpCustomExceptionBase):
     """Thrown when an S3 multipart upload cannot be found."""
 

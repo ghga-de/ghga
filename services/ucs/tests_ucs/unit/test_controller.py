@@ -73,18 +73,14 @@ async def test_create_new_file_upload(rig: JointRig):
         part_size=PART_SIZE,
     )
 
-    # Verify the FileUpload was created
+    # Verify the FileUpload was created with S3 fields populated
     assert file_upload_dao.latest.id == file_id
     assert file_upload_dao.latest.alias == "test_file"
     assert file_upload_dao.latest.decrypted_sha256 is None
     assert file_upload_dao.latest.decrypted_size == DECRYPTED_SIZE
-
-    # Verify S3UploadDetails were created
-    upload_details = rig.s3_upload_details_dao.latest
-    assert upload_details.file_id == file_id
-    assert upload_details.storage_alias == "test"
-    assert now_utc_ms_prec() - upload_details.initiated < timedelta(seconds=5)
-    assert not upload_details.completed
+    assert file_upload_dao.latest.storage_alias == "test"
+    assert now_utc_ms_prec() - file_upload_dao.latest.initiated < timedelta(seconds=5)
+    assert not file_upload_dao.latest.completed
 
 
 async def test_get_part_url(rig: JointRig):
@@ -124,7 +120,7 @@ async def test_complete_file_upload(rig: JointRig):
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    file1_object_id = rig.s3_upload_details_dao.latest.object_id
+    file1_object_id = rig.file_upload_dao.latest.object_id
 
     # Now complete the file upload
     await controller.complete_file_upload(
@@ -140,13 +136,13 @@ async def test_complete_file_upload(rig: JointRig):
         bucket_id=bucket_id, object_id=str(file1_object_id)
     )
 
-    # Verify that the S3UploadDetails still exist (they should remain for tracking)
+    # Verify that the completed field was set on the FileUpload
     completed = now_utc_ms_prec()
-    s3_upload_details_dao = rig.s3_upload_details_dao
-    assert s3_upload_details_dao.latest.file_id == file_id
-    assert s3_upload_details_dao.latest.completed is not None
-    assert completed - s3_upload_details_dao.latest.completed < timedelta(seconds=5)
-    assert rig.file_upload_dao.latest.inbox_upload_completed
+    file_upload_dao = rig.file_upload_dao
+    assert file_upload_dao.latest.id == file_id
+    assert file_upload_dao.latest.completed is not None
+    assert completed - file_upload_dao.latest.completed < timedelta(seconds=5)
+    assert file_upload_dao.latest.inbox_upload_completed
     file_upload_box_dao = rig.file_upload_box_dao
     assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
     assert file_upload_box_dao.latest.file_count == 1
@@ -162,7 +158,7 @@ async def test_complete_file_upload(rig: JointRig):
         encrypted_size=other_encrypted_size,
         part_size=PART_SIZE,
     )
-    file2_object_id = rig.s3_upload_details_dao.latest.object_id
+    file2_object_id = rig.file_upload_dao.latest.object_id
     await controller.complete_file_upload(
         box_id=box_id,
         file_id=file_id2,
@@ -171,10 +167,10 @@ async def test_complete_file_upload(rig: JointRig):
         encrypted_parts_md5=["abc123"],
         encrypted_parts_sha256=["def456"],
     )
-    latest_s3_details = s3_upload_details_dao.latest
-    assert latest_s3_details.file_id == file_id2
-    assert latest_s3_details.completed
-    assert latest_s3_details.completed > completed
+    latest_file_upload = file_upload_dao.latest
+    assert latest_file_upload.id == file_id2
+    assert latest_file_upload.completed
+    assert latest_file_upload.completed > completed
     assert file_upload_box_dao.latest.file_count == 2
     assert file_upload_box_dao.latest.size == DECRYPTED_SIZE + other_decrypted_size
 
@@ -185,7 +181,6 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
     controller = rig.controller
     file_upload_box_dao = rig.file_upload_box_dao
     file_upload_dao = rig.file_upload_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
     bucket_id, object_storage = rig.object_storages.for_alias("test")
 
     # First create a FileUploadBox
@@ -199,7 +194,7 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    object_id = str(rig.s3_upload_details_dao.latest.object_id)
+    object_id = str(rig.file_upload_dao.latest.object_id)
 
     if complete_before_delete:
         await controller.complete_file_upload(
@@ -222,10 +217,9 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
         bucket_id=bucket_id, object_id=object_id
     )
 
-    # FileUpload is set to "cancelled" (not removed from DB); S3UploadDetails are deleted
+    # FileUpload is set to "cancelled" (not removed from DB)
     assert len(file_upload_dao.resources) == 1
     assert file_upload_dao.latest.state == "cancelled"
-    assert not s3_upload_details_dao.resources
     assert file_upload_box_dao.latest.file_count == 0
     assert file_upload_box_dao.latest.size == 0
 
@@ -310,7 +304,7 @@ async def test_get_box_uploads(rig: JointRig):
             encrypted_size=ENCRYPTED_SIZE,
             part_size=PART_SIZE,
         )
-        object_id = rig.s3_upload_details_dao.latest.object_id
+        object_id = rig.file_upload_dao.latest.object_id
         await controller.complete_file_upload(
             box_id=box_id,
             file_id=file_id,
@@ -332,7 +326,7 @@ async def test_get_box_uploads(rig: JointRig):
             encrypted_size=ENCRYPTED_SIZE,
             part_size=PART_SIZE,
         )
-        other_object_id = rig.s3_upload_details_dao.latest.object_id
+        other_object_id = rig.file_upload_dao.latest.object_id
         await controller.complete_file_upload(
             box_id=other_box_id,
             file_id=other_file_id,
@@ -405,7 +399,6 @@ async def test_create_file_upload_when_box_missing(rig: JointRig):
 
     # Verify no FileUpload was created
     assert not rig.file_upload_dao.resources
-    assert not rig.s3_upload_details_dao.resources
 
 
 async def test_create_file_upload_when_box_locked(rig: JointRig):
@@ -435,7 +428,6 @@ async def test_create_file_upload_when_box_locked(rig: JointRig):
 
     # Verify no FileUpload was created
     assert not rig.file_upload_dao.resources
-    assert not rig.s3_upload_details_dao.resources
 
 
 async def test_delete_file_upload_when_box_missing(rig: JointRig):
@@ -460,7 +452,6 @@ async def test_delete_file_upload_when_box_missing(rig: JointRig):
     # Verify no changes were made to DAOs
     assert not rig.file_upload_box_dao.resources
     assert not rig.file_upload_dao.resources
-    assert not rig.s3_upload_details_dao.resources
 
 
 async def test_delete_file_upload_when_box_locked(rig: JointRig):
@@ -470,7 +461,6 @@ async def test_delete_file_upload_when_box_locked(rig: JointRig):
     controller = rig.controller
     file_upload_box_dao = rig.file_upload_box_dao
     file_upload_dao = rig.file_upload_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
 
     # First create a FileUploadBox and FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
@@ -495,9 +485,8 @@ async def test_delete_file_upload_when_box_locked(rig: JointRig):
     # Verify the exception contains the correct box_id
     assert str(box_id) in str(exc_info.value)
 
-    # Verify the FileUpload and S3UploadDetails still exist (weren't deleted)
+    # Verify the FileUpload still exists (wasn't deleted)
     assert len(file_upload_dao.resources) == 1
-    assert len(s3_upload_details_dao.resources) == 1
 
 
 async def test_delete_file_upload_when_upload_missing(rig: JointRig):
@@ -513,54 +502,11 @@ async def test_delete_file_upload_when_upload_missing(rig: JointRig):
     await controller.remove_file_upload(box_id=box_id, file_id=uuid4())
 
 
-async def test_delete_file_upload_with_missing_s3_details(rig: JointRig):
-    """Test error handling in the case where the user tries to delete a FileUpload
-    where the s3 upload details are missing. This would be an unusual case,
-    but we're still testing it.
-    """
-    controller = rig.controller
-    file_upload_dao = rig.file_upload_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
-
-    # Create a FileUploadBox and a FileUpload
-    box_id = await controller.create_file_upload_box(storage_alias="test")
-    file_id, _ = await controller.initiate_file_upload(
-        box_id=box_id,
-        alias="test_file",
-        decrypted_size=DECRYPTED_SIZE,
-        encrypted_size=ENCRYPTED_SIZE,
-        part_size=PART_SIZE,
-    )
-
-    # Verify both FileUpload and S3UploadDetails were created
-    assert len(file_upload_dao.resources) == 1
-    assert len(s3_upload_details_dao.resources) == 1
-
-    # Manually delete the S3UploadDetails but leave the FileUpload
-    # This simulates a data inconsistency where S3 details are missing
-    await s3_upload_details_dao.delete(file_id)
-
-    # Verify the FileUpload exists but S3UploadDetails are gone
-    assert len(file_upload_dao.resources) == 1
-    assert len(s3_upload_details_dao.resources) == 0
-
-    # Try to delete the file upload - should raise S3UploadDetailsNotFoundError
-    with pytest.raises(UploadControllerPort.S3UploadDetailsNotFoundError) as exc_info:
-        await controller.remove_file_upload(box_id=box_id, file_id=file_id)
-
-    # Verify the exception contains the correct file_id
-    assert str(file_id) in str(exc_info.value)
-
-    # Verify the FileUpload still exists (deletion was aborted due to missing S3 details)
-    assert len(file_upload_dao.resources) == 1
-
-
 async def test_delete_file_upload_with_s3_error(rig: JointRig):
     """Test for error handling when the user tries to delete a FileUpload
     but gets an S3 error in the process of aborting an ongoing upload.
     """
     controller = rig.controller
-    s3_upload_details_dao = rig.s3_upload_details_dao
 
     # Create a FileUploadBox and a FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
@@ -585,12 +531,11 @@ async def test_delete_file_upload_with_s3_error(rig: JointRig):
         await controller.remove_file_upload(box_id=box_id, file_id=file_id)
 
     # Verify the exception contains the S3 upload ID
-    s3_upload_id = s3_upload_details_dao.latest.s3_upload_id
+    s3_upload_id = rig.file_upload_dao.latest.s3_upload_id
     assert s3_upload_id in str(exc_info.value)
 
-    # Verify the FileUpload and S3UploadDetails still exist (deletion failed)
+    # Verify the FileUpload still exists (deletion failed)
     assert len(rig.file_upload_dao.resources) == 1
-    assert len(s3_upload_details_dao.resources) == 1
 
 
 async def test_unlock_missing_box(rig: JointRig):
@@ -668,7 +613,6 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
     controller = rig.controller
     file_upload_box_dao = rig.file_upload_box_dao
     file_upload_dao = rig.file_upload_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
 
     # Create a FileUploadBox and a FileUpload
     box_id = await controller.create_file_upload_box(storage_alias="test")
@@ -687,7 +631,6 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
     # Verify the box is gone but file upload and S3 details remain
     assert not file_upload_box_dao.resources
     assert len(file_upload_dao.resources) == 1
-    assert len(s3_upload_details_dao.resources) == 1
 
     # Try to complete the file upload for the now missing box
     with pytest.raises(UploadControllerPort.BoxNotFoundError) as exc_info:
@@ -703,7 +646,6 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
     # Verify the exception contains the correct box_id
     assert str(box_id) in str(exc_info.value)
     assert not file_upload_dao.latest.inbox_upload_completed
-    assert not s3_upload_details_dao.latest.completed
 
 
 async def test_complete_missing_file_upload(rig: JointRig):
@@ -727,51 +669,9 @@ async def test_complete_missing_file_upload(rig: JointRig):
             encrypted_parts_sha256=["def456"],
         )
     assert not rig.file_upload_dao.resources
-    assert not rig.s3_upload_details_dao.resources
 
     # Verify the exception contains the correct file_id
     assert str(non_existent_file_id) in str(exc_info.value)
-
-
-async def test_complete_file_upload_with_missing_s3_details(rig: JointRig):
-    """Test error handling in the case where the user tries to complete a FileUpload
-    where the s3 upload details are missing. This would be an unusual case,
-    but we're still testing it.
-    """
-    controller = rig.controller
-
-    # Create a FileUploadBox and a FileUpload
-    box_id = await controller.create_file_upload_box(storage_alias="test")
-    file_id, _ = await controller.initiate_file_upload(
-        box_id=box_id,
-        alias="test_file",
-        decrypted_size=DECRYPTED_SIZE,
-        encrypted_size=ENCRYPTED_SIZE,
-        part_size=PART_SIZE,
-    )
-
-    # Manually delete the S3UploadDetails but leave the FileUpload
-    # This simulates a data inconsistency where S3 details are missing
-    await rig.s3_upload_details_dao.delete(file_id)
-
-    # Try to complete the file upload - should raise S3UploadDetailsNotFoundError
-    with pytest.raises(UploadControllerPort.S3UploadDetailsNotFoundError) as exc_info:
-        await controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id,
-            unencrypted_checksum="sha256:unencrypted_checksum_here",
-            encrypted_checksum="sha256:encrypted_checksum_here",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
-
-    # Verify the exception contains the correct file_id
-    assert str(file_id) in str(exc_info.value)
-
-    # Verify the FileUpload is still marked as incomplete
-    assert not rig.file_upload_dao.latest.inbox_upload_completed
-    assert rig.file_upload_box_dao.latest.size == 0
-    assert rig.file_upload_box_dao.latest.file_count == 0
 
 
 async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
@@ -779,7 +679,6 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
     with a storage alias that isn't configured.
     """
     file_upload_dao = rig.file_upload_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
     controller = rig.controller
 
     # Create a FileUploadBox and a FileUpload with a valid storage alias
@@ -792,15 +691,14 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
         part_size=PART_SIZE,
     )
 
-    # Verify both FileUpload and S3UploadDetails were created
+    # Verify the FileUpload was created
     assert len(file_upload_dao.resources) == 1
-    assert len(s3_upload_details_dao.resources) == 1
 
-    # Manually modify the S3UploadDetails to have an unknown storage alias
+    # Manually modify the FileUpload to have an unknown storage alias
     # This simulates a scenario where configuration changed or data was corrupted
-    s3_details = s3_upload_details_dao.latest
-    s3_details.storage_alias = "does_not_exist"
-    await s3_upload_details_dao.update(s3_details)
+    file_upload = file_upload_dao.latest
+    file_upload.storage_alias = "does_not_exist"
+    await file_upload_dao.update(file_upload)
 
     # Try to complete the file upload - should raise UnknownStorageAliasError
     with pytest.raises(UploadControllerPort.UnknownStorageAliasError) as exc_info:
@@ -825,7 +723,7 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
     but gets an S3 error in the process.
     """
     file_upload_box_dao = rig.file_upload_box_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
+    file_upload_dao = rig.file_upload_dao
     controller = rig.controller
 
     # Create a FileUploadBox and a FileUpload
@@ -858,10 +756,10 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
         )
 
     # Verify the exception contains the S3 upload ID
-    s3_upload_id = s3_upload_details_dao.latest.s3_upload_id
+    s3_upload_id = file_upload_dao.latest.s3_upload_id
     assert s3_upload_id in str(exc_info.value)
     assert not rig.file_upload_dao.latest.inbox_upload_completed
-    assert not s3_upload_details_dao.latest.completed
+    assert not file_upload_dao.latest.completed
     assert file_upload_box_dao.latest.size == 0
     assert file_upload_box_dao.latest.file_count == 0
 
@@ -871,7 +769,6 @@ async def test_complete_file_upload_checksum_mismatch(rig: JointRig):
     raises a ChecksumMismatchError.
     """
     file_upload_box_dao = rig.file_upload_box_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
     controller = rig.controller
 
     # Create a FileUploadBox and a FileUpload
@@ -905,45 +802,17 @@ async def test_complete_file_upload_checksum_mismatch(rig: JointRig):
     assert file_upload.state == "failed"
     assert file_upload.state_updated > state_updated
     assert not file_upload.inbox_upload_completed
-    assert not s3_upload_details_dao.latest.completed
+    assert not file_upload.completed
     assert file_upload_box_dao.latest.size == 0
     assert file_upload_box_dao.latest.file_count == 0
 
 
-async def test_get_part_upload_url_with_missing_file_id(rig: JointRig):
-    """Test for error handling when getting a part URL but there's no S3UploadDetails
-    document with a matching file_id.
-    """
-    # Create a FileUploadBox and a FileUpload
-    controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
-    file_id, _ = await controller.initiate_file_upload(
-        box_id=box_id,
-        alias="test_file",
-        decrypted_size=DECRYPTED_SIZE,
-        encrypted_size=ENCRYPTED_SIZE,
-        part_size=PART_SIZE,
-    )
-
-    # Manually delete the S3UploadDetails but leave the FileUpload
-    await rig.s3_upload_details_dao.delete(file_id)
-
-    # Try to get a part upload URL - should raise S3UploadDetailsNotFoundError
-    with pytest.raises(UploadControllerPort.S3UploadDetailsNotFoundError) as exc_info:
-        await controller.get_part_upload_url(file_id=file_id, part_no=1)
-
-    # Verify the exception contains the correct file_id
-    assert str(file_id) in str(exc_info.value)
-
-
 async def test_get_part_upload_url_with_unknown_storage_alias(rig: JointRig):
     """Test for error handling when getting a part URL but the storage alias found in
-    the relevant S3UploadDetails document is unknown (maybe configuration changed or
-    data was migrated improperly).
+    the FileUpload is unknown (maybe configuration changed or data was migrated wrong).
     """
     # Create a FileUploadBox and a FileUpload with a valid storage alias
     controller = rig.controller
-    s3_upload_details_dao = rig.s3_upload_details_dao
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
@@ -953,11 +822,11 @@ async def test_get_part_upload_url_with_unknown_storage_alias(rig: JointRig):
         part_size=PART_SIZE,
     )
 
-    # Manually modify the S3UploadDetails to have an unknown storage alias
+    # Manually modify the FileUpload to have an unknown storage alias
     # This simulates a scenario where configuration changed or data was corrupted
-    s3_details = s3_upload_details_dao.latest
-    s3_details.storage_alias = "unknown_storage_alias"
-    await s3_upload_details_dao.update(s3_details)
+    file_upload = rig.file_upload_dao.latest
+    file_upload.storage_alias = "unknown_storage_alias"
+    await rig.file_upload_dao.update(file_upload)
 
     # Try to get a part upload URL - should raise UnknownStorageAliasError
     with pytest.raises(UploadControllerPort.UnknownStorageAliasError) as exc_info:
@@ -995,7 +864,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found(rig: JointRig):
         await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
     # Verify the exception contains the S3 upload ID
-    s3_upload_id = rig.s3_upload_details_dao.latest.s3_upload_id
+    s3_upload_id = rig.file_upload_dao.latest.s3_upload_id
     assert s3_upload_id in str(exc_info.value)
 
 
@@ -1026,11 +895,10 @@ async def test_process_interrogation_success_no_file_upload(rig: JointRig):
 
 async def test_initiate_upload_after_failed(rig: JointRig):
     """Re-initiating an upload with the same alias is allowed when the existing
-    FileUpload is in 'failed' state (S3UploadDetails remain in DB for that state).
+    FileUpload is in 'failed' state.
     """
     controller = rig.controller
     file_upload_dao = rig.file_upload_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
 
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id_1, _ = await controller.initiate_file_upload(
@@ -1041,13 +909,10 @@ async def test_initiate_upload_after_failed(rig: JointRig):
         part_size=PART_SIZE,
     )
 
-    # Simulate the "failed" state directly (process_interrogation_failure would also
-    # clean up the S3 object, but we want to verify S3UploadDetails remain in DB)
+    # Simulate the "failed" state directly
     file_upload = await file_upload_dao.get_by_id(file_id_1)
     file_upload.state = "failed"
     await file_upload_dao.update(file_upload)
-
-    assert len(s3_upload_details_dao.resources) == 1
 
     # Patch insert to simulate the MongoDB compound-index constraint violation
     original_insert = file_upload_dao.insert
@@ -1077,18 +942,14 @@ async def test_initiate_upload_after_failed(rig: JointRig):
     new_upload = await file_upload_dao.get_by_id(file_id_2)
     assert new_upload.state == "init"
     assert new_upload.alias == "test_file"
-    # Old S3UploadDetails deleted; new one created for file_id_2
-    assert len(s3_upload_details_dao.resources) == 1
-    assert s3_upload_details_dao.latest.file_id == file_id_2
 
 
 async def test_initiate_upload_after_cancelled(rig: JointRig):
     """Re-initiating an upload with the same alias is allowed when the existing
-    FileUpload is in 'cancelled' state (S3UploadDetails already deleted for that state).
+    FileUpload is in 'cancelled' state.
     """
     controller = rig.controller
     file_upload_dao = rig.file_upload_dao
-    s3_upload_details_dao = rig.s3_upload_details_dao
 
     box_id = await controller.create_file_upload_box(storage_alias="test")
     file_id_1, _ = await controller.initiate_file_upload(
@@ -1102,7 +963,6 @@ async def test_initiate_upload_after_cancelled(rig: JointRig):
 
     cancelled = await file_upload_dao.get_by_id(file_id_1)
     assert cancelled.state == "cancelled"
-    assert len(s3_upload_details_dao.resources) == 0
 
     original_insert = file_upload_dao.insert
     call_count = 0
@@ -1130,8 +990,7 @@ async def test_initiate_upload_after_cancelled(rig: JointRig):
     assert len(file_upload_dao.resources) == 1
     new_upload = await file_upload_dao.get_by_id(file_id_2)
     assert new_upload.state == "init"
-    assert len(s3_upload_details_dao.resources) == 1
-    assert s3_upload_details_dao.latest.file_id == file_id_2
+    assert new_upload.s3_upload_id != cancelled.s3_upload_id
 
 
 async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
@@ -1149,7 +1008,7 @@ async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    object_id_1 = rig.s3_upload_details_dao.latest.object_id
+    object_id_1 = rig.file_upload_dao.latest.object_id
     await controller.complete_file_upload(
         box_id=box_id,
         file_id=file_id_1,

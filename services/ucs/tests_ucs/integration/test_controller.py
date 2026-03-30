@@ -30,7 +30,8 @@ from hexkit.utils import now_utc_ms_prec
 
 from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.joint import JointFixture
-from ucs.constants import FILE_UPLOADS_COLLECTION, S3_UPLOAD_DETAILS_COLLECTION
+from ucs.adapters.outbound.dao import FIELDS_NOT_PUBLISHED
+from ucs.constants import FILE_UPLOADS_COLLECTION
 from ucs.ports.inbound.controller import UploadControllerPort
 
 pytestmark = pytest.mark.asyncio()
@@ -129,12 +130,6 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         assert events[0].payload["id"] == str(file_id)
         assert events[0].payload["box_id"] == str(box_id)
 
-        # Look up the object_id for S3 operations (independent from file_id)
-        db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
-        s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
-        s3_details = s3_upload_details_collection.find_one({"_id": file_id})
-        assert s3_details is not None
-
         # Get part upload URL for the file (should only require 1 part since file is under 16 MiB)
         upload_token_header = utils.upload_file_token_header(
             jwk=wps_jwk, box_id=box_id, file_id=file_id
@@ -173,6 +168,8 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         events = file_recorder.recorded_events
         assert len(events) == 1
         assert events[0].payload["state"] in ["inbox", "archived"]
+        # Make sure the UCS-only fields are excluded from the outbox event
+        assert not any(field in events[0].payload for field in FIELDS_NOT_PUBLISHED)
 
         # Let's lock the box now and verify that it is reflected in the event.
         # Box version is 1 after completing the file upload (stats changed 0→1 file).
@@ -228,7 +225,7 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     """Test error handling when the S3 upload is successfully completed but a hard
     crash (simulated) causes the DB to never get updated.
 
-    The FileUpload, S3UploadDetails, and FileUploadBox are not updated, even though
+    The FileUpload and FileUploadBox are not updated, even though
     the S3 operations were finished properly. In this case, the requester would not
     receive a meaningful error message and would have to retry the request. Upon issuing
     the request a second time, the UCS would see that the S3 upload has already been
@@ -253,8 +250,8 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     # To simulate the hiccup, we'll manually complete the upload. This will create the
     #  out-of-sync state described above.
     db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
-    s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
-    uploads = s3_upload_details_collection.find().to_list()
+    file_upload_collection = db[FILE_UPLOADS_COLLECTION]
+    uploads = file_upload_collection.find({"__metadata__.deleted": False}).to_list()
     assert len(uploads) == 1
     assert not uploads[0]["completed"]
     upload_id = uploads[0]["s3_upload_id"]
@@ -283,16 +280,12 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     assert response.status_code == 204
 
     # DB should now show that everything is complete
-    uploads = s3_upload_details_collection.find().to_list()
-    assert len(uploads) == 1
-    assert uploads[0]["completed"]
-    file_upload_collection = db[FILE_UPLOADS_COLLECTION]
     file_uploads = file_upload_collection.find(
         {"__metadata__.deleted": False}
     ).to_list()
     assert len(file_uploads) == 1
+    assert file_uploads[0]["completed"]
     assert file_uploads[0]["state"] in ["inbox", "archived"]
-    assert uploads[0]["_id"] == file_uploads[0]["_id"]
 
 
 async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
@@ -323,8 +316,8 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     # To simulate the hiccup, we'll manually abort the upload. This will create the
     #  out-of-sync state described above.
     db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
-    s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
-    uploads = s3_upload_details_collection.find().to_list()
+    file_upload_collection = db[FILE_UPLOADS_COLLECTION]
+    uploads = file_upload_collection.find({"__metadata__.deleted": False}).to_list()
     assert len(uploads) == 1
     assert not uploads[0]["completed"]
     upload_id = uploads[0]["s3_upload_id"]
@@ -414,22 +407,18 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
 
     # Check the DB to verify that docs were deleted for the old file upload and that
     #  the new file upload (for the same alias) exists instead, set to completed
-    uploads = s3_upload_details_collection.find().to_list()
-    assert len(uploads) == 1
-    assert uploads[0]["_id"] == file_id2
-    assert uploads[0]["completed"]
-    file_upload_collection = db[FILE_UPLOADS_COLLECTION]
     file_uploads = file_upload_collection.find(
         {"__metadata__.deleted": False}
     ).to_list()
     assert len(file_uploads) == 1
+    assert file_uploads[0]["_id"] == file_id2
+    assert file_uploads[0]["completed"]
     assert file_uploads[0]["state"] in ["inbox", "archived"]
-    assert uploads[0]["_id"] == file_uploads[0]["_id"]
 
 
 async def test_orphaned_s3_upload_in_file_create(joint_fixture: JointFixture, caplog):
     """A test for the scenario where a crash occurs in the `init_file_upload` method
-    between creating the S3 upload and inserting the S3UploadDetails.
+    between creating the S3 upload and inserting the FileUpload.
 
     The expected behavior is that the FileUpload is deleted, a critical error log
     is emitted, and the REST API returns a 409 CONFLICT error.
@@ -490,11 +479,6 @@ async def test_orphaned_s3_upload_in_file_create(joint_fixture: JointFixture, ca
     )
     assert records[0].msg == expected_log_msg
 
-    # Verify that no S3UploadDetails were created
-    s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
-    s3_uploads = s3_upload_details_collection.find({"_id": file_id}).to_list()
-    assert len(s3_uploads) == 0, "No S3UploadDetails should exist for the failed upload"
-
     # Clean up the orphaned S3 upload for this test
     await s3_storage.abort_multipart_upload(
         bucket_id=bucket_id, object_id=str(file_id), upload_id=s3_upload_id
@@ -526,7 +510,7 @@ async def test_file_upload_index(joint_fixture: JointFixture, monkeypatch):
             )
 
 
-async def test_file_upload_report_happy(joint_fixture: JointFixture):
+async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     """Test the normal path of receiving an InterrogationSuccess event and deleting
     the file from the S3 bucket.
     """
@@ -565,10 +549,12 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
 
     # Look up the actual object_id from the DB (independent from file_id)
     db = joint_fixture.mongodb.client[config.db_name]
-    s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
-    s3_details = s3_upload_details_collection.find_one({"_id": file_id})
-    assert s3_details is not None
-    object_id = str(s3_details["object_id"])
+    file_upload_collection = db[FILE_UPLOADS_COLLECTION]
+    file_upload_db = file_upload_collection.find_one(
+        {"_id": file_id, "__metadata__.deleted": False}
+    )
+    assert file_upload_db is not None
+    object_id = str(file_upload_db["object_id"])
 
     # Verify the file exists in S3
     file_exists_before = await s3_storage.does_object_exist(
@@ -577,16 +563,11 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
     assert file_exists_before
 
     # Verify the database records exist
-    file_upload_collection = db[FILE_UPLOADS_COLLECTION]
-
-    s3_uploads_before = s3_upload_details_collection.find({"_id": file_id}).to_list()
-    assert len(s3_uploads_before) == 1
-    assert s3_uploads_before[0]["completed"]
-
     file_uploads_before = file_upload_collection.find(
         {"_id": file_id, "__metadata__.deleted": False}
     ).to_list()
     assert len(file_uploads_before) == 1
+    assert file_uploads_before[0]["completed"]
     assert file_uploads_before[0]["state"] == "inbox"
 
     # Create and publish an InterrogationSuccess event
@@ -595,7 +576,7 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
         secret_id="test-secret-123",
         storage_alias="test",
         bucket_id=bucket_id,
-        object_id=uuid4(),
+        object_id=UUID(object_id),
         interrogated_at=now_utc_ms_prec(),
         encrypted_parts_md5=["abc123"],
         encrypted_parts_sha256=["def456"],
@@ -634,8 +615,8 @@ async def test_file_upload_report_happy(joint_fixture: JointFixture):
 
 
 async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog):
-    """Test that consuming a FileDeletionRequested event aborts the S3 multipart upload,
-    removes S3UploadDetails from the DB, and marks the FileUpload as 'cancelled'.
+    """Test that consuming a FileDeletionRequested event aborts the S3 multipart upload
+    and marks the FileUpload as 'cancelled'.
 
     Also verifies behavior for publishing a deletion event for an unknown file ID
     (should be consumed without error).
@@ -644,7 +625,6 @@ async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog
     config = joint_fixture.config
     db = joint_fixture.mongodb.client[config.db_name]
     file_upload_collection = db[FILE_UPLOADS_COLLECTION]
-    s3_upload_details_collection = db[S3_UPLOAD_DETAILS_COLLECTION]
 
     # Create a FileUpload with an active MPU
     async with set_correlation_id(uuid4()):
@@ -672,7 +652,6 @@ async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog
     file_uploads_after = file_upload_collection.find({"_id": file_id}).to_list()
     assert len(file_uploads_after) == 1
     assert file_uploads_after[0]["state"] == "cancelled"
-    assert len(s3_upload_details_collection.find({"_id": file_id}).to_list()) == 0
 
     # Consume the same event again
     await joint_fixture.kafka.publish_event(

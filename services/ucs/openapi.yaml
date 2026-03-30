@@ -53,6 +53,13 @@ components:
           description: The name of the bucket where the file is currently stored
           title: Bucket Id
           type: string
+        completed:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: When the S3 multipart upload was completed
+          title: Completed
         decrypted_sha256:
           anyOf:
           - type: string
@@ -102,6 +109,11 @@ components:
             the inbox.
           title: Inbox Upload Completed
           type: boolean
+        initiated:
+          description: When the S3 multipart upload was initiated
+          format: date-time
+          title: Initiated
+          type: string
         object_id:
           description: The ID of the file specific to its S3 bucket
           format: uuid4
@@ -112,6 +124,10 @@ components:
             smaller)
           title: Part Size
           type: integer
+        s3_upload_id:
+          description: The ID of the S3 multipart upload
+          title: S3 Upload Id
+          type: string
         secret_id:
           anyOf:
           - type: string
@@ -151,6 +167,8 @@ components:
       - decrypted_size
       - encrypted_size
       - part_size
+      - s3_upload_id
+      - initiated
       title: file_upload
       type: object
     FileUploadCompletionRequest:
@@ -433,36 +451,6 @@ components:
       - file_alias
       title: HttpOrphanedMultipartUploadErrorData
       type: object
-    HttpS3UploadDetailsNotFoundError:
-      additionalProperties: false
-      properties:
-        data:
-          $ref: '#/components/schemas/HttpS3UploadDetailsNotFoundErrorData'
-        description:
-          description: A human readable message to the client explaining the cause
-            of the exception.
-          title: Description
-          type: string
-        exception_id:
-          const: s3UploadDetailsNotFound
-          title: Exception Id
-          type: string
-      required:
-      - data
-      - description
-      - exception_id
-      title: HttpS3UploadDetailsNotFoundError
-      type: object
-    HttpS3UploadDetailsNotFoundErrorData:
-      properties:
-        file_id:
-          format: uuid4
-          title: File Id
-          type: string
-      required:
-      - file_id
-      title: HttpS3UploadDetailsNotFoundErrorData
-      type: object
     HttpS3UploadNotFoundError:
       additionalProperties: false
       properties:
@@ -607,7 +595,7 @@ info:
   description: A service managing uploads of file objects to an S3-compatible Object
     Storage.
   title: Upload Controller Service
-  version: 11.0.0
+  version: 11.1.0
 openapi: 3.1.0
 paths:
   /boxes:
@@ -878,11 +866,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpS3UploadDetailsNotFoundError'
+                $ref: '#/components/schemas/HttpBoxNotFoundError'
           description: 'Exceptions by ID:
 
-            - s3UploadDetailsNotFound: S3 upload details for the file could not be
-            found.'
+            - boxNotFound: The FileUploadBox with the given ID does not exist.'
         '409':
           content:
             application/json:

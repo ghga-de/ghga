@@ -22,7 +22,7 @@ from hexkit.protocols.objstorage import (  # noqa: F401
 )
 from pydantic import UUID4
 
-from ucs.core.models import FileUpload, S3UploadDetails
+from ucs.core.models import FileUpload, FileUploadBasics
 
 
 class S3ClientPort(ABC):
@@ -85,7 +85,9 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
-    async def init_multipart_upload(self, *, file_upload: FileUpload) -> str:
+    async def init_multipart_upload(
+        self, *, file_upload_basics: FileUploadBasics
+    ) -> str:
         """Initiate a new multipart upload for a FileUpload.
 
         Returns a str containing the multipart upload ID.
@@ -97,7 +99,7 @@ class S3ClientPort(ABC):
 
     @abstractmethod
     async def get_part_upload_url(
-        self, *, s3_upload_details: S3UploadDetails, part_no: int
+        self, *, file_upload: FileUpload, part_no: int
     ) -> str:
         """Get a pre-signed URL to upload a specific part of a multipart upload.
 
@@ -107,9 +109,7 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
-    async def complete_multipart_upload(
-        self, *, s3_upload_details: S3UploadDetails
-    ) -> None:
+    async def complete_multipart_upload(self, *, file_upload: FileUpload) -> None:
         """Instruct S3 to assemble all uploaded parts into the final object.
 
         Recovers idempotently if the upload was already completed (object exists).
@@ -121,7 +121,7 @@ class S3ClientPort(ABC):
 
     @abstractmethod
     async def get_object_etag(
-        self, *, s3_upload_details: S3UploadDetails, object_id: UUID4
+        self, *, file_upload: FileUpload, object_id: UUID4
     ) -> str:
         """Return the ETag of an object in the inbox bucket (quotes stripped).
 
@@ -130,7 +130,7 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
-    async def delete_inbox_file(self, *, s3_upload_details: S3UploadDetails) -> None:
+    async def delete_inbox_file(self, *, file_upload: FileUpload) -> None:
         """Delete a fully uploaded file from the inbox, or abort any stale multipart.
 
         If the object exists it is deleted. If only an in-progress multipart upload
@@ -142,9 +142,7 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
-    async def abort_multipart_upload(
-        self, *, s3_upload_details: S3UploadDetails
-    ) -> None:
+    async def abort_multipart_upload(self, *, file_upload: FileUpload) -> None:
         """Abort an in-progress multipart upload. Tolerates a missing upload.
 
         Raises:
