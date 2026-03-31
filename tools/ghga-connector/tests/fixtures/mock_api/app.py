@@ -32,7 +32,7 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from ghga_service_commons.api.api import ApiConfigBase, configure_app
 from ghga_service_commons.api.di import DependencyDummy
@@ -298,18 +298,29 @@ async def get_upload_url(box_id: UUID, file_id: UUID, part_no: int, request: Req
     return JSONResponse(status_code=200, content=url)
 
 
-async def terminate_upload_placeholder(object_id: str):
+async def terminate_upload_placeholder(object_id: str, calculated_md5: str):
     """Placeholder for a function that terminates an S3 multipart upload."""
     raise NotImplementedError()
 
 
+class _FileCompletePayload(BaseModel):
+    encrypted_md5: str
+    decrypted_sha256: str
+    encrypted_parts_md5: list[str]
+    encrypted_parts_sha256: list[str]
+
+
 @mock_external_app.patch(UPLOAD + "/boxes/{box_id}/uploads/{file_id}")
-async def complete_file_upload(box_id: UUID, file_id: UUID, request: Request):
+async def complete_file_upload(
+    box_id: UUID, file_id: UUID, payload: Annotated[_FileCompletePayload, Body()]
+):
     """Mock for the Upload API's PATCH /boxes/{box_id}/uploads/{file_id} endpoint.
 
     This endpoint terminates the upload and verifies the checksum of the encrypted file.
     """
-    await terminate_upload_placeholder(str(file_id))
+    await terminate_upload_placeholder(
+        str(file_id), calculated_md5=payload.encrypted_md5
+    )
     return Response(status_code=204)
 
 

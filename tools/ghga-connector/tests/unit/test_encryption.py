@@ -73,7 +73,7 @@ def run_process_file(
 
 
 def test_process_file_total_bytes_match_encrypted_size(private_key):
-    """Make sure the sum of all yielded part sizes equals the full encrypted_size (envelope + ciphertext)."""
+    """Make sure the sum of all yielded part sizes equals the full encrypted_size."""
     file_data = os.urandom(2 * MIN_ALIGNED_PART_SIZE + 100)
     core_info = CoreFileInfo(
         alias="x", path=Path("/dev/null"), decrypted_size=len(file_data)

@@ -116,11 +116,17 @@ def set_init_upload_placeholder(
             )
         )
 
-    async def complete_upload(object_id: str):
+    async def complete_upload(object_id: str, calculated_md5: str):
         """Complete an S3 upload"""
         assert upload_id_ref, "No upload ID found"
         await s3_fixture.storage.complete_multipart_upload(
             upload_id=upload_id_ref.pop(), bucket_id=bucket_id, object_id=object_id
+        )
+        etag = await s3_fixture.storage.get_object_etag(
+            object_id=object_id, bucket_id=bucket_id
+        )
+        assert etag.strip('"') == calculated_md5, (
+            f"Connector calculated {calculated_md5}, but S3 says it should be {etag}"
         )
 
     # Monkeypatch the placeholder functions with the above

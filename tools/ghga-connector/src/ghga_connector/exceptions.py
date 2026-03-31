@@ -128,17 +128,13 @@ class DownloadError(RuntimeError):
 
 
 class CiphertextSizeMismatch(RuntimeError):
-    """Thrown when the encrypted file content length differs from the computed one.
-
-    In this case, the concerned value should not include the envelope.
-    """
+    """Thrown when the encrypted file content length differs from the computed one."""
 
     def __init__(self, *, actual_ciphertext_size: int, expected_ciphertext_size: int):
         message = (
             "Mismatch between actual and calculated encrypted file size:\n"
             + f"Is: {actual_ciphertext_size}\n"
-            + f"Should be: {expected_ciphertext_size}\nThis refers only to the"
-            + " encrypted file content without the Crypt4GH envelope."
+            + f"Should be: {expected_ciphertext_size}"
         )
         super().__init__(message)
 

@@ -29,6 +29,7 @@ from pydantic import SecretBytes
 
 from ghga_connector import exceptions
 from ghga_connector.config import get_crypt4gh_public_key
+from ghga_connector.constants import ENVELOPE_SIZE
 from ghga_connector.core.crypt.checksums import Checksums
 from ghga_connector.core.file_operations import get_segments, read_file_parts
 
@@ -51,7 +52,9 @@ class Crypt4GHEncryptor:
         self.checksums = Checksums()  # Updated as encryption takes place
         self._ciphertext_size = 0  # Updated as encryption takes place
         num_segments = math.ceil(file_size / crypt4gh.lib.SEGMENT_SIZE)
-        self.expected_ciphertext_size = file_size + num_segments * 28
+
+        # Expected ciphertext size is used to verify the final object size
+        self.expected_ciphertext_size = file_size + num_segments * 28 + ENVELOPE_SIZE
 
         # Decode the Data Hub public key
         self._data_hub_public_key = base64.b64decode(
@@ -86,34 +89,21 @@ class Crypt4GHEncryptor:
         return header_bytes
 
     def get_ciphertext_size(self) -> int:
-        """Get the size of the encrypted file content, EXCLUDING the envelope."""
+        """Get the size of the entire encrypted object (content + envelope)."""
         return self._ciphertext_size
 
-    def _get_current_part_and_update_checksum(
-        self, *, upload_buffer: bytes, content_offset: int
-    ) -> bytes:
+    def _get_current_part_and_update_checksum(self, *, upload_buffer: bytes) -> bytes:
         """Get the next encrypted chunk and update the encrypted checksum and size"""
         # Cap the yielded chunk size at the part size
         current_part = upload_buffer[: self._part_size]
-
-        # Make sure we only calculate the checksum on the file content itself,
-        #  not the envelope. Same for calculating encrypted file size.
-        ciphertext_chunk = (
-            current_part[content_offset:]
-            if not self.checksums.encrypted_parts_md5
-            else current_part
-        )
-        self.checksums.update_encrypted(ciphertext_chunk)
-        self._ciphertext_size += len(ciphertext_chunk)
+        self.checksums.update_encrypted(current_part)
+        self._ciphertext_size += len(current_part)
         return current_part
 
     def process_file(self, *, file: BufferedReader) -> FileProcessor:
         """Encrypt file parts for upload, yielding a tuple of the part number and content."""
         # Create an upload buffer initialized with the file envelope.
         upload_buffer = self._create_envelope()
-
-        # get envelope size to adjust checksum buffers and encrypted content size
-        envelope_size = len(upload_buffer)
 
         # Create a separate buffer for content that has yet to be encrypted
         unprocessed_bytes = b""
@@ -136,7 +126,6 @@ class Crypt4GHEncryptor:
             if len(upload_buffer) >= self._part_size:
                 current_part = self._get_current_part_and_update_checksum(
                     upload_buffer=upload_buffer,
-                    content_offset=envelope_size,
                 )
                 yield part_number, current_part
 
@@ -152,7 +141,6 @@ class Crypt4GHEncryptor:
         while len(upload_buffer) >= self._part_size:
             current_part = self._get_current_part_and_update_checksum(
                 upload_buffer=upload_buffer,
-                content_offset=envelope_size,
             )
             part_number += 1  # manually increment part number now
             yield part_number, current_part
@@ -162,7 +150,6 @@ class Crypt4GHEncryptor:
         if upload_buffer:
             current_part = self._get_current_part_and_update_checksum(
                 upload_buffer=upload_buffer,
-                content_offset=envelope_size,
             )
             part_number += 1
             yield part_number, upload_buffer

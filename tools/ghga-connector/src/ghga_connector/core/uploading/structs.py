@@ -48,7 +48,7 @@ class CoreFileInfo:
     @computed_field  # type: ignore
     @cached_property
     def encrypted_size(self) -> int:
-        """The expected size of the encrypted file content, INCLUDING envelope."""
+        """The expected size of the encrypted file content + Crypt4GH envelope."""
         # The number of encrypted chunks produced during encryption depends on the file
         #  size. ChaCha20Poly1305 encrypts SEGMENT_SIZE bytes at a time
         chunks, unencrypted_remainder = divmod(
