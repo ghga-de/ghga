@@ -2,19 +2,19 @@ charts:
   access-request:
     name: access-request
     description: Access request service
-    appVersion: "6.2.0"
+    appVersion: "7.1.0"
   auth-service:
     name: auth-service
     description: The auth_adapter subpackage contains the authentication service used by the API gateway via the ExtAuth protocol.
-    appVersion: "8.3.2"
+    appVersion: "9.0.0"
   data-portal-ui:
     name: data-portal-ui
     description: The Metadata Search Service is a service for providing a unified search interface over a metadata store.
-    appVersion: "2.4.1"
+    appVersion: "2.4.2"
   dataset-information:
     name: dataset-information
     description: Dataset Information Service
-    appVersion: "4.2.0"
+    appVersion: "4.2.1"
   dead-letter-queue:
     name: dead-letter-queue
     description: DLQ service
@@ -50,7 +50,7 @@ charts:
   notification-orchestration:
     name: notification-orchestration
     description: Notification orchestration service
-    appVersion: "8.1.0"
+    appVersion: "8.1.1"
   purge-controller:
     name: purge-controller
     description: Purge Controller Service
