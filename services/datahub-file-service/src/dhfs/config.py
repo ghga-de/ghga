@@ -15,6 +15,7 @@
 
 """Config Parameter Modeling and Parsing."""
 
+import logging
 from pathlib import Path
 
 from hexkit.config import config_from_yaml
@@ -27,6 +28,8 @@ from dhfs.adapters.outbound.central import CentralClientConfig
 from dhfs.adapters.outbound.http import HttpClientConfig
 
 SERVICE_NAME: str = "dhfs"
+
+log = logging.getLogger(__name__)
 
 
 class Crypt4GHConfig(BaseSettings):
@@ -77,8 +80,11 @@ class Config(
     def enforce_client_reraise_from_retry_error_false(cls, value: bool) -> bool:
         """Enforce the False setting for client_reraise_from_retry_error"""
         if value:
-            raise ValueError("client_reraise_from_retry_error must be set to False")
-        return value
+            log.info(
+                "Forcing config value `client_reraise_from_retry_error` to False, as"
+                + " that is the only supported value for this application."
+            )
+        return False
 
 
 CONFIG = Config()  # type: ignore

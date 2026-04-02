@@ -18,7 +18,6 @@
 from math import ceil
 
 import crypt4gh.lib
-import pytest
 
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import get_encrypted_object, make_file_upload
@@ -169,9 +168,9 @@ def test_adjusted_part_size_big_file():
 
 def test_config_validator():
     """Test the validator for client_reraise_from_retry_error"""
-    # Error when True:
-    with pytest.raises(ValueError):
-        _ = get_config(client_reraise_from_retry_error=True)
+    # When True, gets overridden
+    config = get_config(client_reraise_from_retry_error=True)
+    assert config.client_reraise_from_retry_error is False
 
     # No error when False:
     _ = get_config(client_reraise_from_retry_error=False)
