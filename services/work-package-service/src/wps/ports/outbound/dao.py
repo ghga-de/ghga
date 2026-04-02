@@ -32,4 +32,4 @@ __all__ = [
 DatasetDaoPort = Dao[models.Dataset]
 UploadBoxDaoPort = Dao[models.ResearchDataUploadBoxBasics]
 WorkPackageDaoPort = Dao[models.WorkPackage]
-AccessionMapDaoPort = Dao[models.FileAccessionMapping]
+AccessionMapDaoPort = Dao[models.AltAccession]

@@ -22,10 +22,10 @@ from ghga_service_commons.auth.ghga import AuthContext
 from pydantic import UUID4
 
 from wps.core.models import (
+    AltAccession,
     BoxWithExpiration,
     Dataset,
     DatasetWithExpiration,
-    FileAccessionMapping,
     ResearchDataUploadBoxBasics,
     UploadPathType,
     WorkPackage,
@@ -174,8 +174,8 @@ class WorkPackageRepositoryPort(ABC):
         """
 
     @abstractmethod
-    async def store_accession_map(self, *, accession_map: FileAccessionMapping) -> None:
-        """Store an accession map in the database"""
+    async def store_accession_map(self, *, accession_map: AltAccession) -> None:
+        """Store an accession map in the database using a FILE_ID-type AltAccession"""
 
     @abstractmethod
     async def delete_accession_map(self, *, accession: str) -> None:

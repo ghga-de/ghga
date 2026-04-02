@@ -16,7 +16,7 @@
 
 """Sample datasets for testing."""
 
-from uuid import UUID
+from datetime import UTC, datetime
 
 from ghga_event_schemas.pydantic_ import (
     MetadataDatasetFile,
@@ -25,7 +25,15 @@ from ghga_event_schemas.pydantic_ import (
     MetadataDatasetStage,
 )
 
-from wps.core.models import Dataset, DatasetFile, FileAccessionMapping, WorkPackageType
+from wps.adapters.inbound.event_sub import FILE_ID_TYPE
+from wps.core.models import (
+    AltAccession,
+    Dataset,
+    DatasetFile,
+    WorkPackageType,
+)
+
+_CREATED = datetime(2024, 1, 1, tzinfo=UTC)
 
 __all__ = [
     "DATASET",
@@ -76,13 +84,28 @@ DATASET_UPSERTION_EVENT = MetadataDatasetOverview(
 )
 
 FILE_ACCESSION_MAP_DOCS: list[dict] = [
-    {"_id": "GHGAF01", "file_id": UUID("ed42650f-a683-4300-ad41-6d13e33b45eb")},
-    {"_id": "GHGAF02", "file_id": UUID("abeffa71-37d0-4a4b-8b6d-c66e8a15af41")},
-    {"_id": "GHGAF03", "file_id": UUID("d1038bd8-7a04-40ba-8a3d-9eb4146b02e9")},
+    {
+        "_id": "GHGAF01",
+        "id": "ed42650f-a683-4300-ad41-6d13e33b45eb",
+        "type": "FILE_ID",
+        "created": _CREATED,
+    },
+    {
+        "_id": "GHGAF02",
+        "id": "abeffa71-37d0-4a4b-8b6d-c66e8a15af41",
+        "type": "FILE_ID",
+        "created": _CREATED,
+    },
+    {
+        "_id": "GHGAF03",
+        "id": "d1038bd8-7a04-40ba-8a3d-9eb4146b02e9",
+        "type": "FILE_ID",
+        "created": _CREATED,
+    },
 ]
 
 FILE_ACCESSION_MAPS = [
-    FileAccessionMapping(accession=doc["_id"], file_id=doc["file_id"])
+    AltAccession(pid=doc["_id"], id=doc["id"], type=FILE_ID_TYPE, created=_CREATED)
     for doc in FILE_ACCESSION_MAP_DOCS
 ]
 

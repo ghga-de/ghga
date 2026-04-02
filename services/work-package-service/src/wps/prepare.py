@@ -29,7 +29,7 @@ from hexkit.providers.akafka import (
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from wps.adapters.inbound.event_sub import (
-    AccessionMapOutboxTranslator,
+    AltAccessionOutboxTranslator,
     EventSubTranslator,
     RDUBOutboxTranslator,
 )
@@ -148,14 +148,14 @@ async def prepare_consumer(
         rdub_outbox_translator = RDUBOutboxTranslator(
             config=config, work_package_repository=work_package_repository
         )
-        accession_map_outbox_translator = AccessionMapOutboxTranslator(
+        alt_accession_outbox_translator = AltAccessionOutboxTranslator(
             config=config, work_package_repository=work_package_repository
         )
         translator = ComboTranslator(
             translators=[
                 event_sub_translator,
                 rdub_outbox_translator,
-                accession_map_outbox_translator,
+                alt_accession_outbox_translator,
             ]
         )
 
