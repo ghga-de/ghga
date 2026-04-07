@@ -178,10 +178,11 @@ def there_are_access_requests(
     field: str, alias: str, value: str, fixtures: JointFixture, requests
 ):
     datasets = fixtures.state.get_state("all available datasets")
-    field = field.lower().replace(" ", "_")
+    _field = field.lower().replace(" ", "_")
     assert alias in datasets
     dataset_id = datasets[alias]["accession"]
     requests = [request for request in requests if request["dataset_id"] == dataset_id]
     assert len(requests) == 1
     request = requests[0]
-    assert request[field] == value
+    assert request[_field] == value
+    fixtures.state.set_state(f"access request {alias} {_field}", value)

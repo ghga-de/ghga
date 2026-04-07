@@ -63,6 +63,7 @@ from steps.conftest_1x import *  # noqa: F403
 from steps.conftest_5x import *  # noqa: F403
 from steps.utils import (
     EXPECTED_NOTIFICATIONS,
+    Notification,
     parse,
     parse_notifications,
     reset_user_token_counter,
@@ -310,14 +311,17 @@ def check_item_count_in_response(count: int, response: Response):
     check_item_count_in_list(count=count, results=results)
 
 
-@then(parse('"{notification_type}" email was sent to "{full_name}"'))
+@then(
+    parse('"{notification_type}" email was sent to "{full_name}"'),
+    target_fixture="notification",
+)
 def check_email_sent_to(
     notification_type: str,
     full_name: str,
     fixtures: JointFixture,
     timeout: float = 15,
     interval: float = 0.1,
-):
+) -> Notification:
     """Validate e-mail notification.
 
     Wait for an e-mail to be received by the mail server. If it does not appear
@@ -347,6 +351,7 @@ def check_email_sent_to(
         content = response.json()
         if content["count"] > 0:
             notifications = parse_notifications(content)
+            notifications = sorted(notifications, key=lambda n: n.created_time)
             latest_notification = notifications[0]
             assert email in latest_notification.receiver
             assert latest_notification.is_recent()
@@ -354,10 +359,27 @@ def check_email_sent_to(
             url = f"{fixtures.config.mail_url}/api/v1/messages/{latest_notification.id}"
             response = fixtures.http.delete(url, timeout=timeout)
             assert response.status_code == 200
-            return
+            return latest_notification
         sleep(interval)
         slept += interval
     assert False, f"An email notification was not received by {email}."
+
+
+@then(
+    parse(
+        'the "{field}" of the request for dataset "{alias}" is present in the email subject'
+    )
+)
+def check_field_in_email_subject(
+    alias: str, field: str, fixtures: JointFixture, notification: Notification
+):
+    """Check that the value of the given field for the access request is present in the email subject."""
+    assert notification, "No notification found for checking the email subject."
+    _field = field.lower().replace(" ", "_")
+    field_value = fixtures.state.get_state(f"access request {alias} {_field}")
+    assert field_value in notification.subject, (
+        f'The value "{field_value}" of field "{field}" is not present in the email subject "{notification.subject}".'
+    )
 
 
 @given("no file encryption secrets exist in the vault")
@@ -375,6 +397,7 @@ def ars_database_is_empty(fixtures: JointFixture):
         collection_names=[fixtures.config.ars_access_requests_collection],
     )
     fixtures.state.unset_state("is allowed to download")
+    fixtures.state.unset_state("access request")
 
 
 @given("the claims repository is empty")

@@ -7,6 +7,7 @@ Feature: 320 Access Request
     And the session store is empty
     And the claims repository is empty
     And no access requests have been made yet
+    And no notification has been sent yet
 
   Scenario: Requesting access to the dataset A
 
@@ -43,12 +44,12 @@ Feature: 320 Access Request
 
     When "Data Steward" fetches the list of access requests for "DS_B"
     Then there is one request for test dataset "DS_B" from "Dr. John Doe"
-    When "Data Steward" updates "ticket id" of the request to "#000"
+    When "Data Steward" updates "ticket id" of the request to "1357246"
     Then the response status code is "204"
 
     When "Data Steward" fetches the list of access requests for "DS_B"
     Then there is one request for test dataset "DS_B" from "Dr. John Doe"
-    And the "ticket id" of the request for dataset "DS_B" is "#000"
+    And the "ticket id" of the request for dataset "DS_B" is "1357246"
 
   Scenario: Granting access to the pending requests
     When "Data Steward" allows the pending requests from "Dr. John Doe"
@@ -69,5 +70,6 @@ Feature: 320 Access Request
     And the "status" of the request for dataset "DS_B" is "allowed"
 
     And "Access Request Allowed" email was sent to "Central Data Steward"
+    And the "ticket id" of the request for dataset "DS_B" is present in the email subject
     And "Access Request Accepted" email was sent to "Dr. John Doe"
     And set the state to "John Doe is allowed to download the test datasets"
