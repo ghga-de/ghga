@@ -75,7 +75,13 @@ class Interrogator(InterrogatorPort):
         - CantCompleteError if an error prevents interrogation from completing (e.g., network issues, S3 unavailable).
         """
         new_files = await self._central_client.fetch_new_uploads()
+        log.info("Received a list of %i files to interrogate.", len(new_files))
         for file in new_files:
+            log.info(
+                "Starting interrogation process for FileUpload ID %s with inbox object ID %s.",
+                file.id,
+                file.object_id,
+            )
             try:
                 # Verify that the file exists in the inbox before proceeding
                 if not await self._s3_client.get_is_file_in_inbox(file=file):
@@ -85,7 +91,13 @@ class Interrogator(InterrogatorPort):
                 await self.interrogate_file(file)
             except self.InterrogationError as err:
                 reason = getattr(err, "reason", None) or "Unexpected error"
+                log.error(
+                    "Interrogation failed for file %s. Reason: %s.",
+                    file.id,
+                    reason,
+                )
                 await self.report_failure(file_id=file.id, reason=reason)
+        log.info("Interrogation loop complete.")
 
     async def _fetch_original_secret(self, *, file_upload: FileUpload) -> SecretBytes:
         """Fetch the original file encryption secret.
@@ -269,7 +281,7 @@ class Interrogator(InterrogatorPort):
                 )
             except Exception as err:
                 log.error(
-                    "Failed confirmatory decryption of chunk number %i of file %s",
+                    "Failed confirmatory decryption of chunk number %i of file %s.",
                     part_no,
                     file_id,
                     exc_info=True,
@@ -295,6 +307,12 @@ class Interrogator(InterrogatorPort):
                         part_md5=checksums.encrypted_md5[-1],
                         part=part_to_upload,
                     )
+                    log.debug(
+                        "Uploaded S3 part %i for file %s.",
+                        uploaded_part_number,
+                        file_id,
+                        extra=log_extra,
+                    )
                     uploaded_part_number += 1
                 except S3ClientPort.InconclusiveError as err:
                     raise self.CantCompleteError() from err
@@ -316,14 +334,26 @@ class Interrogator(InterrogatorPort):
                     part_md5=checksums.encrypted_md5[-1],
                     part=remaining_bytes,
                 )
+                log.debug(
+                    "Uploaded S3 part %i for file %s.",
+                    uploaded_part_number,
+                    file_id,
+                    extra=log_extra,
+                )
             except S3ClientPort.ConclusiveError as error:
                 raise self.InterrogationError() from error
             except S3ClientPort.InconclusiveError as error:
                 raise self.CantCompleteError() from error
 
+        log.info(
+            "All %i S3 part(s) uploaded for file %s.",
+            len(checksums.encrypted_md5),
+            file_id,
+            extra=log_extra,
+        )
         return checksums
 
-    async def interrogate_file(self, file_upload: FileUpload) -> None:
+    async def interrogate_file(self, file_upload: FileUpload) -> None:  # noqa: PLR0915
         """Inspect and re-encrypt a newly uploaded file.
 
         Raises:
@@ -335,6 +365,7 @@ class Interrogator(InterrogatorPort):
         - InterrogationError for other errors that signal interrogation failure.
         """
         # Extract the file encryption secret and content offset
+        log.info("Fetching original symmetric encryption secret from file envelope.")
         try:
             old_secret = await self._fetch_original_secret(file_upload=file_upload)
         except Exception as err:
@@ -364,10 +395,15 @@ class Interrogator(InterrogatorPort):
 
         # Generate new file encryption secret
         new_secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
+        log.info("Generated new encryption secret for file %s.", file_upload.id)
 
         try:
             # Re-encrypt and upload file parts, obtaining the checksums for the decrypted
             #  and re-encrypted content
+            log.info(
+                "Starting decryption/re-encryption process for file upload %s.",
+                file_upload.id,
+            )
             checksums = await self._process_file_parts(
                 file_upload=file_upload,
                 new_object_id=new_object_id,
@@ -383,6 +419,11 @@ class Interrogator(InterrogatorPort):
             raise
 
         # Compare final decrypted content checksum with the user-reported value
+        log.info(
+            "Re-encryption complete for file upload %s (upload remains active). Verifying that the"
+            + " SHA256 checksum of decrypted content matches the user-reported value.",
+            file_upload.id,
+        )
         if checksums.unencrypted_sha256.hexdigest() != file_upload.decrypted_sha256:
             await self._s3_client.abort_upload(
                 upload_id=upload_id, object_id=new_object_id
@@ -393,11 +434,17 @@ class Interrogator(InterrogatorPort):
             raise sha256_error
 
         # Complete upload
+        log.info("Checksums match - completing multipart upload ID %s.", upload_id)
         try:
             actual_etag = await self._s3_client.complete_upload(
                 upload_id=upload_id,
                 object_id=new_object_id,
                 part_count=len(checksums.encrypted_md5),
+            )
+            log.info(
+                "Multipart upload %s for object ID %s completed.",
+                upload_id,
+                new_object_id,
             )
         except S3ClientPort.InconclusiveError as err:
             await self._s3_client.abort_upload(
@@ -413,6 +460,7 @@ class Interrogator(InterrogatorPort):
             raise self.InterrogationError() from err
 
         # Check integrity of final object in S3
+        log.info("Verifying S3 ETag of completed upload for file %s.", file_upload.id)
         expected_etag = checksums.encrypted_checksum_for_s3()
         if expected_etag != actual_etag:
             md5_error = self.EncryptedChecksumMismatchError(file_id=file_upload.id)
@@ -432,6 +480,10 @@ class Interrogator(InterrogatorPort):
             raise md5_error
 
         # Issue report to Central API containing new encryption secret and checksums
+        log.info(
+            "S3 ETag check passed for file %s - submitting success report.",
+            file_upload.id,
+        )
         await self.report_success(
             file_id=file_upload.id,
             bucket_id=self._interrogation_bucket_id,

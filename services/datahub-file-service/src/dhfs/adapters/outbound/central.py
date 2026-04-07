@@ -138,7 +138,7 @@ class CentralClient(CentralClientPort):
         - CentralAPIError if the request to the central API fails.
         """
         url = f"{self._base_url}/storages/{self._storage_alias}/uploads"
-
+        log.info("Fetching new uploads from %s.", url)
         try:
             response = await self._httpx_client.get(
                 url=url, headers=self._auth_headers()
@@ -164,6 +164,11 @@ class CentralClient(CentralClientPort):
         - CentralAPIError if the request to the central API fails.
         """
         url = f"{self._base_url}/storages/{self._storage_alias}/uploads/can_remove"
+        log.info(
+            "Querying GHGA Central API about removability of %i files (URL is %s).",
+            len(object_ids),
+            url,
+        )
         try:
             response = await self._httpx_client.post(
                 url=url, json=object_ids, headers=self._auth_headers()
@@ -177,7 +182,9 @@ class CentralClient(CentralClientPort):
             log.error(error)
             raise error
 
-        return self._response_to_object_id_list(response)
+        removable = self._response_to_object_id_list(response)
+        log.info("Central API indicated %i file(s) can be removed.", len(removable))
+        return removable
 
     async def submit_interrogation_report(
         self, *, report: models.InterrogationReport
@@ -189,6 +196,12 @@ class CentralClient(CentralClientPort):
         """
         body = report.model_dump(mode="json")
         url = f"{self._base_url}/storages/{self._storage_alias}/interrogation-reports"
+        log.info(
+            "Submitting %s interrogation report for file %s to %s.",
+            "success" if report.passed else "failure",
+            report.file_id,
+            url,
+        )
 
         # Encrypt secret (core class doesn't know central api public key)
         if report.secret:
@@ -208,3 +221,7 @@ class CentralClient(CentralClientPort):
             error = self.CentralAPIError(url=url, status_code=status_code)
             log.error(error)
             raise error
+
+        log.info(
+            "Successfully submitted interrogation report for file %s.", report.file_id
+        )

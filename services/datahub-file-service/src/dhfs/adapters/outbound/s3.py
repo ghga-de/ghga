@@ -55,9 +55,27 @@ class S3Client(S3ClientPort):
 
     async def get_is_file_in_inbox(self, *, file: FileUpload) -> bool:
         """Return a bool indicating whether the file exists in the inbox"""
-        return await self._storage.does_object_exist(
+        log.info(
+            "Verifying that object %s exists in bucket named %s.",
+            file.object_id,
+            file.bucket_id,
+        )
+        exists = await self._storage.does_object_exist(
             bucket_id=file.bucket_id, object_id=str(file.object_id)
         )
+        if exists:
+            log.info(
+                "Confirmed object %s exists in bucket %s.",
+                file.object_id,
+                file.bucket_id,
+            )
+        else:
+            log.warning(
+                "Object %s was not found in bucket %s.",
+                file.object_id,
+                file.bucket_id,
+            )
+        return exists
 
     async def list_files_in_interrogation_bucket(self) -> list[str]:
         """Returns a list of object IDs from the interrogation bucket.
@@ -213,11 +231,16 @@ class S3Client(S3ClientPort):
             )
 
         try:
+            log.info(
+                "Creating new S3 multipart upload for object ID %s in bucket ID %s.",
+                object_id,
+                self._interrogation_bucket_id,
+            )
             upload_id = await self._storage.init_multipart_upload(
                 bucket_id=self._interrogation_bucket_id, object_id=object_id
             )
             log.info(
-                "Created multipart upload ID %s for file ID %s", upload_id, object_id
+                "Created multipart upload ID %s for file ID %s.", upload_id, object_id
             )
             return upload_id
         except ObjectStorageProtocol.MultiPartUploadAlreadyExistsError as err:
@@ -442,6 +465,7 @@ class S3Client(S3ClientPort):
                 bucket_id=self._interrogation_bucket_id,
                 object_id=object_id,
             )
+            log.info("Aborted multipart upload %s for object %s.", upload_id, object_id)
         except ObjectStorageProtocol.BucketNotFoundError as err:
             # This is logged as critical because the bucket should definitely exist
             bucket_error = self.BucketNotFoundError(

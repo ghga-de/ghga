@@ -57,7 +57,7 @@ class S3Cleaner(S3CleanerPort):
             object_ids = await self._s3_client.list_files_in_interrogation_bucket()
         except Exception as exc:
             log.error(
-                "Failed to list files in interrogation bucket: %s",
+                "Failed to list files in interrogation bucket: %s.",
                 exc,
                 exc_info=True,
             )
@@ -76,7 +76,7 @@ class S3Cleaner(S3CleanerPort):
             )
         except Exception as exc:
             log.error(
-                "Failed to fetch removable files from Central API: %s",
+                "Failed to fetch removable files from Central API: %s.",
                 exc,
                 exc_info=True,
             )
