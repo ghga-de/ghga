@@ -14,7 +14,6 @@
 # limitations under the License.
 """DAO translators for database access."""
 
-from ghga_event_schemas.pydantic_ import FileAccessionMapping
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb import MongoDbIndex
 
@@ -41,12 +40,12 @@ async def get_file_information_dao(
 async def get_file_accession_map_dao(
     *, dao_factory: DaoFactoryProtocol
 ) -> FileAccessionMapDaoPort:
-    """Set up the FileAccessionMap DAO using the specified provider of the DaoFactoryProtocol."""
+    """Set up the AltAccession DAO using the specified provider of the DaoFactoryProtocol."""
     return await dao_factory.get_dao(
         name="fileAccessionMaps",
-        dto_model=FileAccessionMapping,
-        id_field="accession",
-        indexes=[MongoDbIndex(fields="file_id", properties={"unique": True})],
+        dto_model=models.AltAccession,
+        id_field="pid",
+        indexes=[MongoDbIndex(fields="id", properties={"unique": True})],
     )
 
 

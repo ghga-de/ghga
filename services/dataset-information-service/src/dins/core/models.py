@@ -14,15 +14,42 @@
 # limitations under the License.
 """Models for internal representation"""
 
-from pydantic import UUID4, BaseModel, Field, PositiveInt
+from enum import StrEnum
+
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from pydantic import (
+    UUID4,
+    BaseModel,
+    Field,
+    PositiveInt,
+)
 
 __all__ = [
+    "AltAccession",
+    "AltAccessionType",
     "DatasetFileAccessions",
     "DatasetFileInformation",
     "FileAccession",
     "FileInformation",
     "PendingFileInfo",
 ]
+
+
+class AltAccessionType(StrEnum):
+    """Kinds of alternative accessions."""
+
+    EGA = "EGA"
+    FILE_ID = "FILE_ID"
+    GHGA_LEGACY = "GHGA_LEGACY"
+
+
+class AltAccession(BaseModel):
+    """Stores alternative accessions referencing a primary accession."""
+
+    id: str
+    pid: str
+    type: AltAccessionType
+    created: UTCDatetime
 
 
 class FileAccession(BaseModel):
@@ -77,7 +104,7 @@ class DatasetFileInformation(BaseModel):
 
 
 class PendingFileInfo(BaseModel):
-    """Temporarily stored file registration data awaiting the corresponding accession map."""
+    """Temporarily stored file registration data awaiting the corresponding AltAccession record."""
 
     file_id: UUID4 = Field(
         default=..., description="Unique identifier for the file upload"

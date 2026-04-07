@@ -246,13 +246,12 @@
       ],
       "title": "Mongo Timeout"
     },
-    "accession_map_topic": {
-      "description": "The name of the topic used for file accession map events",
+    "alt_accession_topic": {
+      "description": "The name of the topic used for AltAccession events",
       "examples": [
-        "accession-maps",
-        "file-accession-maps"
+        "alt-accessions"
       ],
-      "title": "Accession Map Topic",
+      "title": "Alt Accession Topic",
       "type": "string"
     },
     "file_deletion_request_topic": {
@@ -471,7 +470,7 @@
     "kafka_servers",
     "mongo_dsn",
     "db_name",
-    "accession_map_topic",
+    "alt_accession_topic",
     "file_deletion_request_topic",
     "file_deletion_request_type",
     "file_internally_registered_topic",

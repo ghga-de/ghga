@@ -23,6 +23,7 @@ from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from dins.core import models
+from dins.core.models import AltAccession, AltAccessionType
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -86,10 +87,13 @@ def make_metadata_dataset_overview(
 def make_accession_map(
     accession: str = "GHGA001",
     file_id: UUID4 | None = None,
-) -> event_schemas.FileAccessionMapping:
-    """Generate a FileAccessionMap object for testing"""
-    return event_schemas.FileAccessionMapping(
-        accession=accession, file_id=file_id or uuid4()
+) -> AltAccession:
+    """Generate an AltAccession object for testing"""
+    return AltAccession(
+        pid=accession,
+        id=str(file_id or uuid4()),
+        type=AltAccessionType.FILE_ID,
+        created=now_utc_ms_prec(),
     )
 
 
