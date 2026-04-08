@@ -31,7 +31,7 @@ async def run_interrogator(forever: bool = True):
     """Run the file interrogation and re-encryption process."""
     config = Config()  # type: ignore
     configure_logging(config=config)
-    log.info("Interrogator starting. Current DHFS version is %s.", __version__)
+    log.info("DHFS version %s starting.", __version__)
     async with prepare_interrogator(config=config) as interrogator:
         if forever:
             while True:
