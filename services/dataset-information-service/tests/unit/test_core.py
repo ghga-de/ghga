@@ -250,7 +250,7 @@ async def test_store_accession_map_happy(rig: JointRig):
     accession_map = make_accession_map()
     await rig.information_service.store_accession_map(accession_map=accession_map)
 
-    stored_map = await rig.accession_map_dao.get_by_id(accession_map.pid)
+    stored_map = await rig.accession_map_dao.get_by_id(accession_map.accession)
     assert stored_map == accession_map
 
 
@@ -289,11 +289,11 @@ async def test_delete_accession_map(rig: JointRig):
     exists as well as when it doesn't exist.
     """
     accession_map = make_accession_map()
-    accession = accession_map.pid
+    accession = accession_map.accession
     await rig.accession_map_dao.insert(accession_map)
 
     await rig.information_service.delete_accession_map(accession=accession)
-    remaining = rig.accession_map_dao.find_all(mapping={"pid": accession})
+    remaining = rig.accession_map_dao.find_all(mapping={"accession": accession})
     assert len([x async for x in remaining]) == 0
 
     # Deleting a non-existent accession map should not raise an error

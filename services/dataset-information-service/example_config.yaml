@@ -1,4 +1,4 @@
-alt_accession_topic: alt-accessions
+accession_map_topic: file-accession-mappings
 api_root_path: ''
 auto_reload: false
 cors_allow_credentials: null

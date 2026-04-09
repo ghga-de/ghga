@@ -14,4 +14,4 @@ file_deletion_request_topic: file-deletion-requests
 file_deletion_request_type: file_deletion_requested
 file_internally_registered_topic: internal_file_registry
 file_internally_registered_type: file_registered
-alt_accession_topic: alt-accessions
+accession_map_topic: file-accession-mappings

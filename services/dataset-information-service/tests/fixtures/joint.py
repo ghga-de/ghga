@@ -22,6 +22,7 @@ from dataclasses import dataclass
 import httpx
 import pytest
 import pytest_asyncio
+from ghga_event_schemas.pydantic_ import FileAccessionMapping
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
@@ -32,7 +33,6 @@ from dins.adapters.outbound.dao import get_dataset_dao, get_file_information_dao
 from dins.config import Config
 from dins.core.information_service import InformationService
 from dins.core.models import (
-    AltAccession,
     DatasetFileAccessions,
     FileInformation,
     PendingFileInfo,
@@ -55,7 +55,7 @@ InMemFileInformationDao: type[FileInformationDaoPort] = new_mock_dao_class(  # t
     dto_model=FileInformation, id_field="accession"
 )
 InMemAccessionMapDao: type[FileAccessionMapDaoPort] = new_mock_dao_class(  # type: ignore
-    dto_model=AltAccession, id_field="pid"
+    dto_model=FileAccessionMapping, id_field="accession"
 )
 InMemPendingFileInfoDao: type[PendingFileInfoDaoPort] = new_mock_dao_class(  # type: ignore
     dto_model=PendingFileInfo, id_field="file_id"

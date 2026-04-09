@@ -28,7 +28,7 @@ from hexkit.providers.akafka import (
 from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from dins.adapters.inbound.event_sub import (
-    AltAccessionOutboxTranslator,
+    AccessionMapOutboxTranslator,
     EventSubTranslator,
 )
 from dins.adapters.inbound.fastapi_ import dummies
@@ -91,7 +91,7 @@ async def prepare_event_subscriber(
         event_sub_translator = EventSubTranslator(
             config=config, information_service=information_service
         )
-        accession_map_subscriber = AltAccessionOutboxTranslator(
+        accession_map_subscriber = AccessionMapOutboxTranslator(
             config=config,
             information_service=information_service,
         )

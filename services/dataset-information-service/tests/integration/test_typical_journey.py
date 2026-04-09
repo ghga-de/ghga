@@ -23,7 +23,6 @@ from hexkit.protocols.dao import ResourceNotFoundError
 
 from dins.adapters.outbound.dao import get_file_accession_map_dao
 from dins.core import models
-from dins.core.models import AltAccessionType
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
     ACCESSION1,
@@ -324,22 +323,22 @@ async def test_dataset_information_journey(
 
 
 async def test_accession_map_unique_file_id_index(joint_fixture: JointFixture):
-    """Verifies that the unique index on 'id' (file UUID) in the accession map collection works.
+    """Verifies that the unique index on 'file_id' in the accession map collection works.
 
-    Two different accessions must not be mapped to the same file UUID. The second
+    Two different accessions must not be mapped to the same file_id. The second
     event should fail due to the unique index and be sent to the DLQ.
     """
     # Publish and consume the first accession map event - should succeed
     await joint_fixture.kafka.publish_event(
         payload=ACCESSION_MAP_1.model_dump(),
         type_="upserted",
-        topic=joint_fixture.config.alt_accession_topic,
+        topic=joint_fixture.config.accession_map_topic,
         key=ACCESSION1,
     )
     await joint_fixture.event_subscriber.run(forever=False)
 
-    # Publish a second accession map with the same file UUID but a different accession.
-    # The unique index on 'id' should reject the insert and route the event to the DLQ.
+    # Publish a second accession map with the same file_id but a different accession.
+    # The unique index on file_id should reject the insert and route the event to the DLQ.
     duplicate_file_id_map = make_accession_map(accession=ACCESSION2, file_id=FILE_ID_1)
     async with joint_fixture.kafka.record_events(
         in_topic=joint_fixture.config.kafka_dlq_topic
@@ -347,38 +346,12 @@ async def test_accession_map_unique_file_id_index(joint_fixture: JointFixture):
         await joint_fixture.kafka.publish_event(
             payload=duplicate_file_id_map.model_dump(),
             type_="upserted",
-            topic=joint_fixture.config.alt_accession_topic,
+            topic=joint_fixture.config.accession_map_topic,
             key=ACCESSION2,
         )
         await joint_fixture.event_subscriber.run(forever=False)
 
     assert len(recorder.recorded_events) == 1
-
-
-async def test_non_file_id_alt_accession_is_ignored(joint_fixture: JointFixture):
-    """Verify that upserted AltAccession events with a type other than FILE_ID are ignored.
-
-    EGA and GHGA_LEGACY accession types carry no file-to-accession mapping relevant
-    to this service and must not be stored.
-    """
-    accession_map_dao = await get_file_accession_map_dao(
-        dao_factory=joint_fixture.mongodb.dao_factory
-    )
-
-    for non_file_id_type in (AltAccessionType.EGA, AltAccessionType.GHGA_LEGACY):
-        ignored_map = make_accession_map(accession=ACCESSION1, file_id=FILE_ID_1)
-        ignored_map = ignored_map.model_copy(update={"type": non_file_id_type})
-
-        await joint_fixture.kafka.publish_event(
-            payload=ignored_map.model_dump(),
-            type_="upserted",
-            topic=joint_fixture.config.alt_accession_topic,
-            key=ACCESSION1,
-        )
-        await joint_fixture.event_subscriber.run(forever=False)
-
-        with pytest.raises(ResourceNotFoundError):
-            await accession_map_dao.get_by_id(ACCESSION1)
 
 
 async def test_accession_map_deletion_event(joint_fixture: JointFixture):
@@ -391,7 +364,7 @@ async def test_accession_map_deletion_event(joint_fixture: JointFixture):
     await joint_fixture.kafka.publish_event(
         payload=ACCESSION_MAP_1.model_dump(),
         type_="upserted",
-        topic=joint_fixture.config.alt_accession_topic,
+        topic=joint_fixture.config.accession_map_topic,
         key=ACCESSION1,
     )
     await joint_fixture.event_subscriber.run(forever=False)
@@ -403,7 +376,7 @@ async def test_accession_map_deletion_event(joint_fixture: JointFixture):
     await joint_fixture.kafka.publish_event(
         payload={},
         type_="deleted",
-        topic=joint_fixture.config.alt_accession_topic,
+        topic=joint_fixture.config.accession_map_topic,
         key=ACCESSION1,
     )
     await joint_fixture.event_subscriber.run(forever=False)

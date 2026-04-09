@@ -19,12 +19,7 @@ from abc import ABC, abstractmethod
 import ghga_event_schemas.pydantic_ as event_schemas
 from pydantic import UUID4
 
-from dins.core.models import (
-    AltAccession,
-    DatasetFileInformation,
-    FileInformation,
-    PendingFileInfo,
-)
+from dins.core.models import DatasetFileInformation, FileInformation, PendingFileInfo
 
 
 class InformationServicePort(ABC):
@@ -80,8 +75,8 @@ class InformationServicePort(ABC):
     async def delete_file_information(self, file_id: UUID4) -> None:
         """Delete FileInformation for the given file ID.
 
-        If no AltAccession record is found for the file ID, logs and returns early.
-        If the AltAccession record exists but no FileInformation is stored, logs and returns.
+        If no accession map is found for the file ID, logs and returns early.
+        If the accession map exists but no FileInformation is stored, logs and returns.
         """
 
     @abstractmethod
@@ -90,7 +85,7 @@ class InformationServicePort(ABC):
     ) -> None:
         """Decide how to handle a new file registration.
 
-        If a corresponding AltAccession record already exists, merge and store FileInformation.
+        If a corresponding FileAccessionMap already exists, merge and store FileInformation.
         If not, temporarily store the essential fields as a PendingFileInfo instance.
         """
 
@@ -102,9 +97,10 @@ class InformationServicePort(ABC):
         """
 
     @abstractmethod
-    async def store_accession_map(self, *, accession_map: AltAccession) -> None:
-        """Upsert an accession map using a FILE_ID-type AltAccession, then
-        merge any waiting PendingFileInfo into FileInformation.
+    async def store_accession_map(
+        self, *, accession_map: event_schemas.FileAccessionMapping
+    ) -> None:
+        """Upsert an accession map, then merge any waiting PendingFileInfo into FileInformation.
 
         Raises MismatchingFileInformationAlreadyRegistered if the accession is already mapped
         to a different file_id and a FileInformation record already exists for this accession.
