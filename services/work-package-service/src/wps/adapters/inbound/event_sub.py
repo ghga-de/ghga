@@ -23,17 +23,16 @@ from uuid import UUID
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     DatasetEventsConfig,
+    FileAccessionMappingEventsConfig,
     ResearchDataUploadBoxEventsConfig,
 )
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import Field
 
 from wps.constants import TRACER
 from wps.core.models import (
-    AltAccession,
     Dataset,
     DatasetFile,
     ResearchDataUploadBoxBasics,
@@ -42,8 +41,6 @@ from wps.core.models import (
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
 __all__ = [
-    "FILE_ID_TYPE",
-    "AltAccessionOutboxTranslator",
     "EventSubTranslator",
     "EventSubTranslatorConfig",
     "OutboxSubConfig",
@@ -52,24 +49,18 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
-FILE_ID_TYPE = "FILE_ID"
-
 
 class EventSubTranslatorConfig(DatasetEventsConfig):
     """Config for dataset creation related events."""
 
 
-class OutboxSubConfig(ResearchDataUploadBoxEventsConfig):
+class OutboxSubConfig(
+    FileAccessionMappingEventsConfig, ResearchDataUploadBoxEventsConfig
+):
     """Config for listening to events carrying state updates for UploadBox objects
 
     The event types are hardcoded by `hexkit`.
     """
-
-    alt_accession_topic: str = Field(
-        default=...,
-        description="The name of the topic used for AltAccession events",
-        examples=["alt-accessions"],
-    )
 
 
 class EventSubTranslator(EventSubscriberProtocol):
@@ -199,11 +190,13 @@ class RDUBOutboxTranslator(DaoSubscriberProtocol):
             await self._repository.delete_upload_box(UUID(resource_id))
 
 
-class AltAccessionOutboxTranslator(DaoSubscriberProtocol[AltAccession]):
-    """An outbox subscriber event translator for AltAccession outbox events."""
+class AccessionMapOutboxTranslator(
+    DaoSubscriberProtocol[event_schemas.FileAccessionMapping]
+):
+    """An outbox subscriber event translator for AccessionMap outbox events."""
 
     event_topic: str
-    dto_model = AltAccession
+    dto_model = event_schemas.FileAccessionMapping
 
     def __init__(
         self,
@@ -212,26 +205,21 @@ class AltAccessionOutboxTranslator(DaoSubscriberProtocol[AltAccession]):
         work_package_repository: WorkPackageRepositoryPort,
     ):
         """Initialize the outbox subscriber"""
-        self.event_topic = config.alt_accession_topic
+        self.event_topic = config.accession_map_topic
         self._repository = work_package_repository
 
-    @TRACER.start_as_current_span("AltAccessionOutboxTranslator.changed")
-    async def changed(self, resource_id: str, update: AltAccession) -> None:
-        """Process an AltAccession event."""
-        if update.type == FILE_ID_TYPE:
-            log.info(
-                "Received upsertion outbox event for AltAccession for accession %s.",
-                resource_id,
-            )
-            await self._repository.store_accession_map(accession_map=update)
-        else:
-            log.info(
-                "Ignoring upsertion event for %s-type AltAccession for %s.",
-                update.type,
-                resource_id,
-            )
+    @TRACER.start_as_current_span("AccessionMapOutboxTranslator.changed")
+    async def changed(
+        self, resource_id: str, update: event_schemas.FileAccessionMapping
+    ) -> None:
+        """Process an AccessionMap event."""
+        log.info(
+            "Received upsertion outbox event for AccessionMap for accession %s.",
+            update.accession,
+        )
+        await self._repository.store_accession_map(accession_map=update)
 
-    @TRACER.start_as_current_span("AltAccessionOutboxTranslator.deleted")
+    @TRACER.start_as_current_span("AccessionMapOutboxTranslator.deleted")
     async def deleted(self, resource_id: str) -> None:
         """Delete the mapping for a given accession"""
         log.info(

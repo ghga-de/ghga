@@ -182,7 +182,7 @@ async def test_work_package_and_token_creation(
     assert wot_claims.pop("exp") - wot_claims.pop("iat") == valid_days
     assert wot_claims == {
         "work_type": package.type.value,
-        "file_id": FILE_ACCESSION_MAPS[2].id,
+        "file_id": str(FILE_ACCESSION_MAPS[2].file_id),
         "accession": "GHGAF03",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
     }
@@ -232,7 +232,7 @@ async def test_work_package_and_token_creation(
     assert wot_claims.pop("exp") - wot_claims.pop("iat") == valid_days
     assert wot_claims == {
         "work_type": package.type.value,
-        "file_id": FILE_ACCESSION_MAPS[0].id,
+        "file_id": str(FILE_ACCESSION_MAPS[0].file_id),
         "accession": "GHGAF01",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
     }
@@ -477,7 +477,7 @@ async def test_accession_maps(
     config: Config, repository: WorkPackageRepository, mongodb: MongoDbFixture
 ):
     """Test storing and deleting accession maps"""
-    collection = mongodb.client[config.db_name][config.alt_accessions_collection]
+    collection = mongodb.client[config.db_name][config.accession_maps_collection]
 
     # First verify nothing is in the collection
     assert not collection.find().to_list()

@@ -29,7 +29,7 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
 
 from wps.config import Config
-from wps.core.models import AltAccession, ResearchDataUploadBoxBasics
+from wps.core.models import ResearchDataUploadBoxBasics
 from wps.prepare import Consumer, prepare_consumer
 
 from .fixtures import (  # noqa: F401
@@ -307,22 +307,22 @@ async def test_rudb_outbox_consumer(config: Config, kafka: KafkaFixture):
 
 
 async def test_accession_outbox_consumer(config: Config, kafka: KafkaFixture):
-    """Test consuming an 'upserted' & 'deleted' AltAccession event in the outbox consumer."""
+    """Test consuming an 'upserted' & 'deleted' accession map event in the outbox consumer."""
     # Create a mock repository to track calls
     mock_repository = AsyncMock()
-    alt_accession_payload = FILE_ACCESSION_MAPS[0].model_dump(mode="json")
+    accession_map_event_payload = FILE_ACCESSION_MAPS[0].model_dump(mode="json")
     # Create a consumer with the mock repository
     async with prepare_consumer(
         config=config, work_package_repo_override=mock_repository
     ) as consumer:
         subscriber = consumer.event_subscriber
 
-        # Publish an outbox 'upserted' event for an AltAccession
+        # Publish an outbox 'upserted' event for an accession map
         await kafka.publish_event(
-            payload=alt_accession_payload,
-            topic=config.alt_accession_topic,
+            payload=accession_map_event_payload,
+            topic=config.accession_map_topic,
             type_="upserted",
-            key=FILE_ACCESSION_MAPS[0].pid,
+            key="",
         )
 
         # Process the event
@@ -336,7 +336,7 @@ async def test_accession_outbox_consumer(config: Config, kafka: KafkaFixture):
         # Publish an outbox 'deleted' event
         await kafka.publish_event(
             payload={},
-            topic=config.alt_accession_topic,
+            topic=config.accession_map_topic,
             type_="deleted",
             key="GHGAF01",
         )
@@ -348,31 +348,3 @@ async def test_accession_outbox_consumer(config: Config, kafka: KafkaFixture):
         mock_repository.delete_accession_map.assert_called_once_with(
             accession="GHGAF01"
         )
-
-
-async def test_non_file_id_alt_accession_event_is_ignored(
-    config: Config, kafka: KafkaFixture
-):
-    """Test that 'upserted' AltAccession events with a type other than FILE_ID are ignored."""
-    mock_repository = AsyncMock()
-    non_file_id_accession = AltAccession(
-        pid="GHGAF01",
-        id="ed42650f-a683-4300-ad41-6d13e33b45eb",
-        type="EGA",
-        created=FILE_ACCESSION_MAPS[0].created,
-    )
-    async with prepare_consumer(
-        config=config, work_package_repo_override=mock_repository
-    ) as consumer:
-        subscriber = consumer.event_subscriber
-
-        await kafka.publish_event(
-            payload=non_file_id_accession.model_dump(mode="json"),
-            topic=config.alt_accession_topic,
-            type_="upserted",
-            key="GHGAF01",
-        )
-
-        await asyncio.wait_for(subscriber.run(forever=False), timeout=TIMEOUT)
-
-        mock_repository.store_accession_map.assert_not_called()

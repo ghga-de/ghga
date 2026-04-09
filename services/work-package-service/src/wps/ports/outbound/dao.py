@@ -16,6 +16,7 @@
 
 """DAO interface for accessing the database."""
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import Dao, ResourceNotFoundError
 
 from wps.core import models
@@ -32,4 +33,4 @@ __all__ = [
 DatasetDaoPort = Dao[models.Dataset]
 UploadBoxDaoPort = Dao[models.ResearchDataUploadBoxBasics]
 WorkPackageDaoPort = Dao[models.WorkPackage]
-AccessionMapDaoPort = Dao[models.AltAccession]
+AccessionMapDaoPort = Dao[event_schemas.FileAccessionMapping]

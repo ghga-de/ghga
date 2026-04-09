@@ -36,7 +36,6 @@ from pydantic import (
 from wps.core.crypt import validate_public_key
 
 __all__ = [
-    "AltAccession",
     "BaseWorkOrderToken",
     "BoxWithExpiration",
     "CloseFileWorkOrder",
@@ -361,26 +360,3 @@ class UploadWorkOrderTokenRequest(BaseModel):
         elif self.work_type != "create" and not self.file_id:
             raise ValueError("File ID is required for UPLOAD, CLOSE, DELETE work types")
         return self
-
-
-class AltAccession(BaseModel):
-    """Stores alternative accessions referencing a primary accession."""
-
-    id: str = Field(..., description="The UUID4 file identifier used by file services")
-    pid: str = Field(
-        ..., description="The public-facing permanent accession number for the file"
-    )
-    type: str = Field(
-        ...,
-        description=(
-            "An enumerated string describing the type of accession. WPS is only"
-            + " interested in AltAccessions where the type is 'FILE_ID'."
-        ),
-    )
-    created: UTCDatetime = Field(
-        ...,
-        description=(
-            "The timestamp for when the AltAccession was originally created"
-            + " in the GHGA Registry Service"
-        ),
-    )

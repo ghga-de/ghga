@@ -15,6 +15,7 @@
 
 """DAO translators for accessing the database."""
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import DaoFactoryProtocol
 
 from wps.core import models
@@ -74,7 +75,7 @@ async def get_accession_map_dao(
 ) -> AccessionMapDaoPort:
     """Setup the DAO using the specified provider of the DaoFactoryProtocol."""
     return await dao_factory.get_dao(
-        name=config.alt_accessions_collection,
-        dto_model=models.AltAccession,
-        id_field="pid",
+        name=config.accession_maps_collection,
+        dto_model=event_schemas.FileAccessionMapping,
+        id_field="accession",
     )

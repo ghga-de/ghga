@@ -52,11 +52,11 @@ def mongodb_populated_fixture(
     dataset_collection.insert_one(dataset)
 
     # Insert file accession maps into database
-    alt_accessions_collection = database.get_collection(
-        config.alt_accessions_collection
+    accession_maps_collection = database.get_collection(
+        config.accession_maps_collection
     )
     for accession_map in FILE_ACCESSION_MAP_DOCS:
-        alt_accessions_collection.insert_one(accession_map)
+        accession_maps_collection.insert_one(accession_map)
 
     # Insert an upload box into the database
     upload_box = {

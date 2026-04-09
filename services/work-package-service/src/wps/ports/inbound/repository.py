@@ -18,11 +18,11 @@
 
 from abc import ABC, abstractmethod
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.auth.ghga import AuthContext
 from pydantic import UUID4
 
 from wps.core.models import (
-    AltAccession,
     BoxWithExpiration,
     Dataset,
     DatasetWithExpiration,
@@ -174,8 +174,10 @@ class WorkPackageRepositoryPort(ABC):
         """
 
     @abstractmethod
-    async def store_accession_map(self, *, accession_map: AltAccession) -> None:
-        """Store an accession map in the database using a FILE_ID-type AltAccession"""
+    async def store_accession_map(
+        self, *, accession_map: event_schemas.FileAccessionMapping
+    ) -> None:
+        """Store an accession map in the database."""
 
     @abstractmethod
     async def delete_accession_map(self, *, accession: str) -> None:

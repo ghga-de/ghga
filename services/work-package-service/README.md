@@ -112,7 +112,7 @@ The service requires the following configuration parameters:
 - <a id="properties/datasets_collection"></a>**`datasets_collection`** *(string)*: The name of the database collection for datasets. Default: `"datasets"`.
 - <a id="properties/upload_boxes_collection"></a>**`upload_boxes_collection`** *(string)*: The name of the database collection for upload boxes. Default: `"uploadBoxes"`.
 - <a id="properties/work_packages_collection"></a>**`work_packages_collection`** *(string)*: The name of the database collection for work packages. Default: `"workPackages"`.
-- <a id="properties/alt_accessions_collection"></a>**`alt_accessions_collection`** *(string)*: The name of the database collection for file accession maps. Default: `"accessionMaps"`.
+- <a id="properties/accession_maps_collection"></a>**`accession_maps_collection`** *(string)*: The name of the database collection for file accession maps. Default: `"accessionMaps"`.
 - <a id="properties/work_package_valid_days"></a>**`work_package_valid_days`** *(integer)*: How many days a work package (and its access token) stays valid. Default: `30`.
 - <a id="properties/work_package_signing_key"></a>**`work_package_signing_key`** *(string, format: password, required and write-only)*: The private key for signing work order tokens.
 
@@ -325,11 +325,15 @@ The service requires the following configuration parameters:
   "research-data-upload-boxes"
   ```
 
-- <a id="properties/alt_accession_topic"></a>**`alt_accession_topic`** *(string, required)*: The name of the topic used for AltAccession events.
+- <a id="properties/accession_map_topic"></a>**`accession_map_topic`** *(string, required)*: The name of the topic used for file accession map events.
 
   Examples:
   ```json
-  "alt-accessions"
+  "accession-maps"
+  ```
+
+  ```json
+  "file-accession-maps"
   ```
 
 - <a id="properties/dataset_change_topic"></a>**`dataset_change_topic`** *(string, required)*: Name of the topic announcing, among other things, the list of files included in a new dataset.

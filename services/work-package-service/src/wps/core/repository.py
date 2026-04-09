@@ -22,6 +22,7 @@ from datetime import timedelta
 from typing import cast
 from uuid import UUID
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.crypt import encrypt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -31,7 +32,6 @@ from pydantic import UUID4, Field, SecretStr
 from pydantic_settings import BaseSettings
 
 from wps.core.models import (
-    AltAccession,
     BoxWithExpiration,
     CloseFileWorkOrder,
     CreateFileWorkOrder,
@@ -81,7 +81,7 @@ class WorkPackageConfig(BaseSettings):
         "workPackages",
         description="The name of the database collection for work packages",
     )
-    alt_accessions_collection: str = Field(
+    accession_maps_collection: str = Field(
         "accessionMaps",
         description="The name of the database collection for file accession maps",
     )
@@ -457,7 +457,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             log.error(mapping_error, extra=extra)
             raise mapping_error from err
         else:
-            file_id = UUID(accession_map.id)
+            file_id = accession_map.file_id
 
         wot = DownloadWorkOrder(
             file_id=file_id,
@@ -679,13 +679,15 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             upload_boxes_with_expiration.append(box_with_expiration)
         return upload_boxes_with_expiration
 
-    async def store_accession_map(self, *, accession_map: AltAccession) -> None:
-        """Store an accession map in the database using a FILE_ID-type AltAccession"""
+    async def store_accession_map(
+        self, *, accession_map: event_schemas.FileAccessionMapping
+    ) -> None:
+        """Store an accession map in the database."""
         await self._accession_map_dao.upsert(accession_map)
         log.info(
             "Upserted accession map for accession %s, file ID %s.",
-            accession_map.pid,
-            accession_map.id,
+            accession_map.accession,
+            accession_map.file_id,
         )
 
     async def delete_accession_map(self, *, accession: str) -> None:

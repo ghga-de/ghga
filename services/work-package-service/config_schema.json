@@ -84,10 +84,10 @@
       "title": "Work Packages Collection",
       "type": "string"
     },
-    "alt_accessions_collection": {
+    "accession_maps_collection": {
       "default": "accessionMaps",
       "description": "The name of the database collection for file accession maps",
-      "title": "Alt Accessions Collection",
+      "title": "Accession Maps Collection",
       "type": "string"
     },
     "work_package_valid_days": {
@@ -328,12 +328,13 @@
       "title": "Research Data Upload Box Topic",
       "type": "string"
     },
-    "alt_accession_topic": {
-      "description": "The name of the topic used for AltAccession events",
+    "accession_map_topic": {
+      "description": "The name of the topic used for file accession map events",
       "examples": [
-        "alt-accessions"
+        "accession-maps",
+        "file-accession-maps"
       ],
-      "title": "Alt Accession Topic",
+      "title": "Accession Map Topic",
       "type": "string"
     },
     "dataset_change_topic": {
@@ -574,7 +575,7 @@
     "migration_wait_sec",
     "kafka_servers",
     "research_data_upload_box_topic",
-    "alt_accession_topic",
+    "accession_map_topic",
     "dataset_change_topic",
     "dataset_deletion_type",
     "dataset_upsertion_type",

@@ -229,7 +229,7 @@ async def test_make_download_work_order_token(
     assert wot_dict.pop("exp") - wot_dict.pop("iat") == 30
     assert wot_dict == {
         "work_type": "download",
-        "file_id": FILE_ACCESSION_MAPS[2].id,
+        "file_id": str(FILE_ACCESSION_MAPS[2].file_id),
         "accession": "GHGAF03",
         "user_public_crypt4gh_key": user_public_crypt4gh_key,
     }
