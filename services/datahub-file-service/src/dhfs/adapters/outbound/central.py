@@ -97,6 +97,15 @@ class CentralClient(CentralClientPort):
         """Create an authorization header with a bearer token containing a fresh JWT"""
         return {"Authorization": f"Bearer {self._make_jwt()}"}
 
+    def _log_if_upgrade_required(self, status_code: int) -> None:
+        """Log a hard-coded message if the Central API indicates DHFS is outdated."""
+        if status_code == 426:
+            log.error(
+                "The GHGA Central API has rejected this request (HTTP 426): this DHFS"
+                " installation is outdated. Please upgrade DHFS by following GHGA's"
+                " upgrade documentation."
+            )
+
     def _response_to_object_id_list(self, response: httpx.Response) -> list[str]:
         """Returns a list of strings from an httpx Response.
 
@@ -148,6 +157,7 @@ class CentralClient(CentralClientPort):
             response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 200:
+            self._log_if_upgrade_required(status_code)
             error = self.CentralAPIError(url=url, status_code=status_code)
             log.error(error)
             raise error
@@ -178,6 +188,7 @@ class CentralClient(CentralClientPort):
             response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 200:
+            self._log_if_upgrade_required(status_code)
             error = self.CentralAPIError(url=url, status_code=status_code)
             log.error(error)
             raise error
@@ -218,6 +229,7 @@ class CentralClient(CentralClientPort):
             response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 201:
+            self._log_if_upgrade_required(status_code)
             error = self.CentralAPIError(url=url, status_code=status_code)
             log.error(error)
             raise error

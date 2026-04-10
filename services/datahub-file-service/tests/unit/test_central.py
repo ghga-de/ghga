@@ -17,6 +17,7 @@
 
 import base64
 import json
+import logging
 import os
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
@@ -173,6 +174,33 @@ async def test_500_response_handling(
     with pytest.raises(CentralClient.CentralAPIError):
         report = make_interrogation_success_report(config.storage_alias)
         await central_client.submit_interrogation_report(report=report)
+
+
+@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+async def test_426_response_handling(
+    config: Config, central_client, httpx_mock: HTTPXMock, caplog
+):
+    """Test that 426 responses trigger a CentralAPIError and log the upgrade message."""
+    upgrade_message = "The GHGA Central API has rejected this request (HTTP 426)"
+    httpx_mock.add_response(status_code=426)
+
+    with pytest.raises(CentralClient.CentralAPIError):
+        with caplog.at_level(logging.ERROR):
+            await central_client.fetch_new_uploads()
+    assert upgrade_message in caplog.text
+    caplog.clear()
+
+    with pytest.raises(CentralClient.CentralAPIError):
+        with caplog.at_level(logging.ERROR):
+            await central_client.get_removable_files(object_ids=[])
+    assert upgrade_message in caplog.text
+    caplog.clear()
+
+    with pytest.raises(CentralClient.CentralAPIError):
+        with caplog.at_level(logging.ERROR):
+            report = make_interrogation_success_report(config.storage_alias)
+            await central_client.submit_interrogation_report(report=report)
+    assert upgrade_message in caplog.text
 
 
 async def test_report_submission(config: Config, central_client, httpx_mock: HTTPXMock):
