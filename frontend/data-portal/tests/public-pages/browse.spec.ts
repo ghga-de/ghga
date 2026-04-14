@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { expectTitle } from './utils/expect-title';
+import { expectTitle } from '../utils/expect-title';
 
 test('can browse data', async ({ page }) => {
   await page.goto('/');

@@ -4,38 +4,25 @@
  * @license Apache-2.0
  */
 
-import { test as baseTest, expect } from './fixtures';
-import { expectTitle } from './utils/expect-title';
+import { expectPageRequiresLogin } from '../utils/expect-login-required-error';
+import { expectTitle } from '../utils/expect-title';
+import { expect, test } from './admin-fixtures';
 
-// Local fixture for login and navigate to Upload Box Manager page
-const test = baseTest.extend({
-  page: async ({ loggedInPage }, use) => {
-    const page = loggedInPage;
-    const adminMenu = page.getByRole('navigation').getByLabel('Administration');
-    await adminMenu.click();
-    const managerItem = page.getByRole('menuitem', { name: 'Upload Box Manager' });
-    await managerItem.click();
-    await use(page);
-  },
+test.use({
+  adminMenuItemName: 'Upload Box Manager',
+  adminMenuItemUrl: '/upload-box-manager',
 });
 
-// Unauthenticated test with baseTest
-baseTest('does not show Upload Box manager when not logged in', async ({ page }) => {
-  const logIn = page.getByRole('button', { name: 'Log In' });
-  await expect(logIn).toHaveCount(0);
-
-  const adminMenu = page.getByRole('navigation').getByLabel('Administration');
-  await expect(adminMenu).toHaveCount(0);
-
-  await page.goto('/upload-box-manager');
+test('does not show Upload Box manager when not logged in', async ({
+  loggedOutAdminPage: page,
+}) => {
+  await expectPageRequiresLogin(page, 'Upload Box Manager');
   const bar = page.locator('app-custom-snack-bar');
   await expect(bar).toContainText('Please login to continue');
 });
 
-// Authenticated tests using local feature
-test('can use Upload Box manager when logged in', async ({ page }) => {
+test('can use Upload Box manager when logged in', async ({ adminPage: page }) => {
   await expectTitle(page, 'Upload Box Manager');
-  await expect(page).toHaveURL('/upload-box-manager');
 
   const main = page.locator('main');
   const heading = main.getByRole('heading', { level: 1 });
@@ -60,7 +47,7 @@ test('can use Upload Box manager when logged in', async ({ page }) => {
   await expect(main.getByLabel('Location').first()).toBeVisible();
 });
 
-test('can navigate to Upload Box details', async ({ page }) => {
+test('can navigate to Upload Box details', async ({ adminPage: page }) => {
   const detailsPageMain = page.locator('main');
   const detailsButton = detailsPageMain
     .getByRole('button', { name: 'View upload box details' })
@@ -97,7 +84,7 @@ test('can navigate to Upload Box details', async ({ page }) => {
   await expect(page).toHaveURL('/upload-box-manager');
 });
 
-test('can navigate to Add Grant page', async ({ page }) => {
+test('can navigate to Add Grant page', async ({ adminPage: page }) => {
   const detailsButton = page
     .locator('main')
     .getByRole('button', { name: 'View upload box details' })
@@ -120,7 +107,9 @@ test('can navigate to Add Grant page', async ({ page }) => {
   await expect(page).toHaveURL(/\/upload-box-manager\/.+/);
 });
 
-test('displays error message when upload box not found', async ({ page }) => {
+test('displays error message when upload box not found', async ({
+  adminPage: page,
+}) => {
   await page.goto('/upload-box-manager/invalid-id');
 
   const main = page.locator('main');

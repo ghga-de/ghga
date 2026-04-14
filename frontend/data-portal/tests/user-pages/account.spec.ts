@@ -4,12 +4,13 @@
  * @license Apache-2.0
  */
 
-import { expect, test } from './fixtures';
-import { expectTitle } from './utils/expect-title';
+import { expect, test } from '../shared-features/fixtures';
+import { expectTitle } from '../utils/expect-title';
 
 test('does not show account page when not logged in', async ({ page }) => {
-  const logIn = page.getByRole('button', { name: 'Log In' });
-  await expect(logIn).toHaveCount(0);
+  await page.goto('/');
+  const logIn = page.getByRole('button', { name: 'Log in' });
+  await expect(logIn).toBeVisible();
 
   await page.goto('/account');
   await expectTitle(page, 'Home');

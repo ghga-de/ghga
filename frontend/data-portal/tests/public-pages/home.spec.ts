@@ -5,7 +5,7 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { expectTitle } from './utils/expect-title';
+import { expectTitle } from '../utils/expect-title';
 
 test('has proper title', async ({ page }) => {
   await page.goto('/');
