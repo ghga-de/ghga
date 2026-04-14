@@ -63,6 +63,17 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
 - Docs: `pnpm docs`
 - README table of contents: `pnpm toc` (updates the region between `<!-- toc -->` and `<!-- tocstop -->`)
 
+## Dev container CLI tools
+
+The following tools are pre-installed in the dev container and available on `PATH`:
+
+- `rg` (ripgrep): fast recursive text search; prefer over `grep` for workspace searches
+- `fd`: fast file finder; prefer over `find` for file discovery
+- `jq`: JSON querying and transformation (useful for inspecting `package.json`, `pnpm-lock.yaml`, etc.)
+- `bat`: syntax-highlighted file viewer; drop-in alternative to `cat`
+- `shellcheck`: shell script linter
+- `shfmt`: shell script formatter
+
 ## MCP tools
 
 - MCP servers `angular-cli` and `context7` are available in this workspace.

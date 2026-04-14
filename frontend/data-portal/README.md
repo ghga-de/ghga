@@ -139,6 +139,16 @@ pnpm install
 
 to install the dependencies.
 
+### Dependency overrides
+
+`package.json` currently contains the following `pnpm.overrides` entries. Review these from time to time and remove overrides that are no longer necessary.
+
+- `@angular-devkit/core@21.1.0>picomatch: 4.0.4`
+  - Reason: `@compodoc/compodoc@1.2.1` depends on `@angular-devkit/schematics@21.1.0`, which pulls `@angular-devkit/core@21.1.0` and `picomatch@4.0.3`.
+  - Removal criteria: remove this override once Compodoc updates its Angular devkit dependency to a version that no longer resolves to the vulnerable `picomatch` version.
+
+After adding, changing, or removing overrides, run `pnpm install` to refresh `pnpm-lock.yaml`.
+
 ---
 
 **NOTE**
