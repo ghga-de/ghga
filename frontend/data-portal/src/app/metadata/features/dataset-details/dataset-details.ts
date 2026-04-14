@@ -26,7 +26,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
-// eslint-disable-next-line boundaries/element-types
+// eslint-disable-next-line boundaries/dependencies
 import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button';
 import { Experiment, File, Sample } from '@app/metadata/models/dataset-details';
 import { ValidateDOI } from '@app/metadata/pipes/validate-doi-pipe';

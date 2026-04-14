@@ -22,9 +22,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-// eslint-disable-next-line boundaries/element-types
+// eslint-disable-next-line boundaries/dependencies
 import { AccessGrantWithIva } from '@app/access-requests/models/access-requests';
-// eslint-disable-next-line boundaries/element-types
+// eslint-disable-next-line boundaries/dependencies
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { NotificationService } from '@app/shared/services/notification';
 import { ParagraphsComponent } from '@app/shared/ui/paragraphs/paragraphs';

@@ -6,7 +6,7 @@
 
 import { inject, Injectable } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-// eslint-disable-next-line boundaries/element-types
+// eslint-disable-next-line boundaries/dependencies
 import { ConfirmDialogComponent } from '../ui/confirm-dialog/confirm-dialog';
 
 /**

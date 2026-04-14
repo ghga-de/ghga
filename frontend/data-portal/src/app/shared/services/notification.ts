@@ -6,7 +6,7 @@
 
 import { inject, Injectable } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-// eslint-disable-next-line boundaries/element-types
+// eslint-disable-next-line boundaries/dependencies
 import { CustomSnackBarComponent } from '../ui/custom-snack-bar/custom-snack-bar';
 
 /**

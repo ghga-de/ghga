@@ -5,7 +5,7 @@
  */
 
 import { signal } from '@angular/core';
-// eslint-disable-next-line boundaries/element-types
+// eslint-disable-next-line boundaries/dependencies
 import { accessGrants, accessRequests } from '@app/../mocks/data';
 import {
   AccessGrantFilter,

@@ -19,7 +19,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
-// eslint-disable-next-line boundaries/element-types
+// eslint-disable-next-line boundaries/dependencies
 import { DownloadWorkPackageDialogComponent } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
 import { AccessRequestDialogComponent } from '../access-request-dialog/access-request-dialog';
 

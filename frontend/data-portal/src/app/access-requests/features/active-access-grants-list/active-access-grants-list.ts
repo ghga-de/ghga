@@ -16,7 +16,7 @@ import { Iva } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil';
-// eslint-disable-next-line boundaries/element-types
+// eslint-disable-next-line boundaries/dependencies
 import { DownloadWorkPackageDialogComponent } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
 
 /**
