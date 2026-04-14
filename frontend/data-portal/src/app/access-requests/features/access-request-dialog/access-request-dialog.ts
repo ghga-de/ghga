@@ -5,13 +5,7 @@
  */
 
 import { Component, computed, inject, input, signal } from '@angular/core';
-import {
-  AbstractControl,
-  FormControl,
-  ReactiveFormsModule,
-  ValidationErrors,
-  Validators,
-} from '@angular/forms';
+import { email, form, FormField, required, validate } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MatDatepickerInputEvent,
@@ -39,7 +33,7 @@ import { DATE_INPUT_FORMAT_HINT, timeZoneToUTC } from '@app/shared/utils/date-fo
     MatLabel,
     MatFormField,
     MatInputModule,
-    ReactiveFormsModule,
+    FormField,
     MatDialogModule,
     MatButtonModule,
   ],
@@ -50,31 +44,63 @@ export class AccessRequestDialogComponent {
   readonly data = inject<AccessRequestDetailData>(MAT_DIALOG_DATA);
   #config = inject(ConfigService);
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
-  readonly emailFormControl = new FormControl(this.data.email, [
-    Validators.required,
-    Validators.email,
-  ]);
-  readonly descriptionFormControl = new FormControl(this.data.description, [
-    Validators.required,
-  ]);
-  todayMidnight = new Date();
-  minFromDate = new Date();
-  minUntilDate = new Date();
-  maxFromDate = new Date();
-  maxUntilDate = new Date();
-  datasetID = input.required<string>();
-  descriptionErrorMessage = signal('');
-  emailErrorMessage = signal('');
-  untilDateErrorMessage = signal('');
-  fromDateErrorMessage = signal('');
-  submitDisabled = computed(() => {
-    return this.emailErrorMessage().length ||
-      this.fromDateErrorMessage().length ||
-      this.untilDateErrorMessage().length ||
-      this.descriptionErrorMessage().length
-      ? true
-      : false;
+  protected model = signal({
+    description: this.data.description ?? '',
+    fromDate: null as Date | null,
+    untilDate: null as Date | null,
+    email: this.data.email ?? '',
   });
+  readonly todayMidnight = new Date();
+  datasetID = input.required<string>();
+  protected minFromDate = signal(new Date());
+  protected maxFromDate = signal(new Date());
+  protected minUntilDate = signal(new Date());
+  protected maxUntilDate = signal(new Date());
+  protected requestForm = form(this.model, (p) => {
+    required(p.description);
+    required(p.email);
+    email(p.email);
+    validate(p.fromDate, ({ value }) => {
+      const date = value();
+      if (!date)
+        return { kind: 'required', message: 'Please choose a valid start date.' };
+      if (date < this.minFromDate())
+        return { kind: 'minDate', message: 'Please choose a later start date.' };
+      if (date > this.maxFromDate())
+        return { kind: 'maxDate', message: 'Please choose an earlier start date.' };
+      return null;
+    });
+    validate(p.untilDate, ({ value }) => {
+      const date = value();
+      if (!date)
+        return { kind: 'required', message: 'Please choose a valid end date.' };
+      if (date < this.minUntilDate())
+        return { kind: 'minDate', message: 'Please choose a later end date.' };
+      if (date > this.maxUntilDate())
+        return { kind: 'maxDate', message: 'Please choose an earlier end date.' };
+      return null;
+    });
+  });
+  protected descriptionError = computed(() => {
+    const f = this.requestForm.description();
+    return f.touched() && f.invalid()
+      ? 'Please provide a reason for this request.'
+      : '';
+  });
+  protected emailError = computed(() => {
+    const f = this.requestForm.email();
+    if (!f.touched() || !f.invalid()) return '';
+    return f.errors().find((e) => e.kind === 'required')
+      ? 'You must enter an email address'
+      : 'Not a valid email';
+  });
+  protected untilDateError = computed(
+    () => this.requestForm.untilDate().errors()[0]?.message ?? '',
+  );
+  protected fromDateError = computed(
+    () => this.requestForm.fromDate().errors()[0]?.message ?? '',
+  );
+  protected submitDisabled = computed(() => !this.requestForm().valid());
 
   constructor() {
     this.todayMidnight.setHours(0, 0, 0, 0);
@@ -82,113 +108,26 @@ export class AccessRequestDialogComponent {
 
     let d = new Date(this.todayMidnight);
     d.setHours(23, 59, 59, 999);
-    this.minUntilDate.setDate(d.getDate() + this.#config.accessGrantMinDays);
-
     d.setDate(d.getDate() + this.#config.defaultAccessDurationDays - 1);
     const defaultUntilDate = d;
 
     this.updateUntilRangeForFromValue(defaultFromDate);
     this.updateFromRangeForUntilValue(defaultUntilDate);
 
-    this.fromFormControl.setValue(defaultFromDate);
-    this.untilFormControl.setValue(defaultUntilDate);
-    this.fromFormControl.updateValueAndValidity();
-    this.untilFormControl.updateValueAndValidity();
-  }
-
-  /**
-   * Validate a date against a given interval
-   * @param inDate - The date to validate
-   * @param min - The minimum date
-   * @param max - The maximum date
-   * @returns a validation error with either minDate or maxDate set or null
-   */
-  #validateDateAgainstMinAndMax(
-    inDate: Date,
-    min: Date,
-    max: Date,
-  ): ValidationErrors | null {
-    if (!inDate) return { invalid: true };
-    if (inDate < min) {
-      return { minDate: true };
-    } else if (inDate > max) {
-      return { maxDate: true };
-    }
-    return null;
-  }
-
-  /**
-   * Validate a Form Control against the constraints of the date
-   * @param control The Form Control to validate
-   * @param isFromDate Whether the date is a 'from' date
-   * @returns a validation error or null
-   */
-  #dateValidator = (
-    control: AbstractControl<Date | null, Date | null>,
-    isFromDate: boolean,
-  ): ValidationErrors | null => {
-    const [min, max, field, name] = isFromDate
-      ? [this.minFromDate, this.maxFromDate, this.fromDateErrorMessage, 'start']
-      : [this.minUntilDate, this.maxUntilDate, this.untilDateErrorMessage, 'end'];
-    const ret = control.value
-      ? this.#validateDateAgainstMinAndMax(control.value, min, max)
-      : { invalid: true };
-    field.set(this.getErrorMessageForValidationState(name, ret));
-    return ret;
-  };
-
-  readonly fromFormControl = new FormControl<Date | null>(null, [
-    Validators.required,
-    (control) => this.#dateValidator(control, true),
-  ]);
-
-  readonly untilFormControl = new FormControl<Date | null>(null, [
-    Validators.required,
-    (control) => this.#dateValidator(control, false),
-  ]);
-
-  /**
-   * Get an error message for a given validation state
-   * @param name - The name of the date (e.g. start or end)
-   * @param error - The validation error with minDate, maxDate or invalid set
-   * @returns an error message as a string
-   */
-  getErrorMessageForValidationState(
-    name: string,
-    error: ValidationErrors | null,
-  ): string {
-    if (!error) {
-      return '';
-    } else if (error['invalid']) {
-      return 'Please choose a valid ' + name + ' date.';
-    } else if (error['minDate']) {
-      return 'Please choose a later ' + name + ' date.';
-    } else if (error['maxDate']) {
-      return 'Please choose an earlier ' + name + ' date.';
-    } else {
-      return '';
-    }
-  }
-
-  /**
-   * Update the error message for the description form control
-   */
-  updateDescriptionErrorMessage() {
-    if (this.descriptionFormControl.hasError('required')) {
-      this.descriptionErrorMessage.set('Please provide a reason for this request.');
-    } else {
-      this.descriptionErrorMessage.set('');
-    }
+    this.model.update((m) => ({
+      ...m,
+      fromDate: defaultFromDate,
+      untilDate: defaultUntilDate,
+    }));
   }
 
   /**
    * Update the error message based on the from date form control
    * @param $event - The event that triggered the change
    */
-  fromDateChanged($event: MatDatepickerInputEvent<Date, string>) {
+  fromDateChanged($event: MatDatepickerInputEvent<Date, string>): void {
     if ($event.value) {
       this.updateUntilRangeForFromValue($event.value);
-      this.untilFormControl.updateValueAndValidity();
     }
   }
 
@@ -196,10 +135,9 @@ export class AccessRequestDialogComponent {
    * Update the error message based on the until date form control
    * @param $event - The event that triggered the change
    */
-  untilDateChanged($event: MatDatepickerInputEvent<Date, string>) {
+  untilDateChanged($event: MatDatepickerInputEvent<Date, string>): void {
     if ($event.value) {
       this.updateFromRangeForUntilValue($event.value);
-      this.fromFormControl.updateValueAndValidity();
     }
   }
 
@@ -231,8 +169,8 @@ export class AccessRequestDialogComponent {
       ),
     );
 
-    this.minFromDate = newFromMinDate;
-    this.maxFromDate = newFromMaxDate;
+    this.minFromDate.set(newFromMinDate);
+    this.maxFromDate.set(newFromMaxDate);
   }
 
   /**
@@ -247,21 +185,8 @@ export class AccessRequestDialogComponent {
     newUntilMaxDate.setHours(23, 59, 59, 999);
     newUntilMaxDate.setDate(date.getDate() + this.#config.accessGrantMaxDays - 1);
 
-    this.minUntilDate = newUntilMinDate;
-    this.maxUntilDate = newUntilMaxDate;
-  }
-
-  /**
-   * Update the error message for the email form control
-   */
-  updateEmailErrorMessage(): void {
-    if (this.emailFormControl.hasError('required')) {
-      this.emailErrorMessage.set('You must enter an email address');
-    } else if (this.emailFormControl.hasError('email')) {
-      this.emailErrorMessage.set('Not a valid email');
-    } else {
-      this.emailErrorMessage.set('');
-    }
+    this.minUntilDate.set(newUntilMinDate);
+    this.maxUntilDate.set(newUntilMaxDate);
   }
 
   /**
@@ -275,19 +200,26 @@ export class AccessRequestDialogComponent {
    * Submit the access request and close the dialog
    */
   submit(): void {
-    const description = this.descriptionFormControl.value;
-    const email = this.emailFormControl.value;
-    const from = this.fromFormControl.value;
-    const until = this.untilFormControl.value;
-    if (!from || !until) return;
-    const fromDate = timeZoneToUTC(from.getFullYear(), from.getMonth(), from.getDate());
-    const untilDate = timeZoneToUTC(
-      until.getFullYear(),
-      until.getMonth(),
-      until.getDate(),
+    if (!this.requestForm().valid()) return;
+    const { description, email: emailValue, fromDate, untilDate } = this.model();
+    if (!fromDate || !untilDate) return;
+    const from = timeZoneToUTC(
+      fromDate.getFullYear(),
+      fromDate.getMonth(),
+      fromDate.getDate(),
+    );
+    const until = timeZoneToUTC(
+      untilDate.getFullYear(),
+      untilDate.getMonth(),
+      untilDate.getDate(),
       true,
     );
-    const data = { ...this.data, description, fromDate, untilDate, email };
-    this.dialogRef.close(data);
+    this.dialogRef.close({
+      ...this.data,
+      description,
+      fromDate: from,
+      untilDate: until,
+      email: emailValue,
+    });
   }
 }

@@ -13,18 +13,16 @@
           @if (rows() > 1) {
             <textarea
               matInput
-              [(ngModel)]="field"
-              (ngModelChange)="changed()"
+              [formField]="fieldForm.field"
               [rows]="rows()"
+              (input)="changed()"
             ></textarea>
           } @else {
             <input
               matInput
               type="text"
-              [(ngModel)]="field"
-              (ngModelChange)="changed(formControl.control)"
-              #formControl="ngModel"
-              [pattern]="pattern()"
+              [formField]="fieldForm.field"
+              (input)="changed()"
             />
           }
         </mat-form-field>
@@ -49,9 +47,9 @@
       <div class="flex items-center">
         <p class="mb-0 grow">
           @if (ticketUrl()) {
-            <a appExtLink [href]="ticketUrl()" tabindex="-1">{{ field() }}</a>
+            <a appExtLink [href]="ticketUrl()" tabindex="-1">{{ formModel().field }}</a>
           } @else {
-            {{ field() }}
+            {{ formModel().field }}
           }
         </p>
         @if (!locked()) {

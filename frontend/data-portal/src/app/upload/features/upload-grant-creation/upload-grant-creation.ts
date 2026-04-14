@@ -14,8 +14,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { form, FormField, validate } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import {
@@ -58,6 +57,7 @@ function toIsoDate(date: Date): string {
 @Component({
   selector: 'app-upload-grant-creation',
   imports: [
+    FormField,
     MatButtonModule,
     MatCardModule,
     MatDatepickerModule,
@@ -66,7 +66,6 @@ function toIsoDate(date: Date): string {
     MatIcon,
     MatProgressSpinner,
     MatRadioModule,
-    ReactiveFormsModule,
     RouterLink,
     IvaStatePipe,
     IvaTypePipe,
@@ -128,34 +127,41 @@ export class UploadGrantCreationComponent implements OnInit {
   readonly minFromDate = this.today;
 
   /** Minimum selectable date for valid_until; updated when validFrom changes. */
-  minUntilDate: Date = (() => {
-    const d = new Date(this.today);
-    d.setDate(d.getDate() + 1);
-    return d;
-  })();
+  protected minUntilDate = signal<Date>(
+    (() => {
+      const d = new Date(this.today);
+      d.setDate(d.getDate() + 1);
+      return d;
+    })(),
+  );
 
   /** The format hint shown below date inputs. */
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
 
-  /** Form control for the valid_from date. */
-  readonly fromFormControl = new FormControl<Date | null>(this.today, [
-    Validators.required,
-  ]);
-
-  /** Form control for the valid_until date. */
-  readonly untilFormControl = new FormControl<Date | null>(this.defaultUntilDate, [
-    Validators.required,
-  ]);
-
-  /** Reactive validity of the from date form control. */
-  readonly #fromStatus = toSignal(this.fromFormControl.statusChanges, {
-    initialValue: this.fromFormControl.status,
+  protected formModel = signal<{ fromDate: Date | null; untilDate: Date | null }>({
+    fromDate: this.today,
+    untilDate: this.defaultUntilDate,
   });
 
-  /** Reactive validity of the until date form control. */
-  readonly #untilStatus = toSignal(this.untilFormControl.statusChanges, {
-    initialValue: this.untilFormControl.status,
+  protected datesForm = form(this.formModel, (p) => {
+    validate(p.fromDate, ({ value }) => {
+      if (!value()) return { kind: 'required', message: 'Please choose a valid start date.' };
+      return null;
+    });
+    validate(p.untilDate, ({ value }) => {
+      if (!value()) return { kind: 'required', message: 'Please choose a valid end date.' };
+      if (value()! < this.minUntilDate())
+        return { kind: 'minDate', message: 'Please choose a valid end date.' };
+      return null;
+    });
   });
+
+  protected fromDateError = computed(
+    () => this.datesForm.fromDate().errors()[0]?.message ?? null,
+  );
+  protected untilDateError = computed(
+    () => this.datesForm.untilDate().errors()[0]?.message ?? null,
+  );
 
   /**
    * Users matching the current search query, capped at MAX_USER_RESULTS.
@@ -196,8 +202,7 @@ export class UploadGrantCreationComponent implements OnInit {
       !!this.selectedUser() &&
       this.ivaSelectionDone() &&
       !this.isSubmitting() &&
-      this.#fromStatus() === 'VALID' &&
-      this.#untilStatus() === 'VALID',
+      this.datesForm().valid(),
   );
 
   /** When the selected user changes, reload their IVAs and reset the IVA selection. */
@@ -259,8 +264,18 @@ export class UploadGrantCreationComponent implements OnInit {
     if (event.value) {
       const nextDay = new Date(event.value);
       nextDay.setDate(nextDay.getDate() + 1);
-      this.minUntilDate = nextDay;
-      this.untilFormControl.updateValueAndValidity();
+      this.minUntilDate.set(nextDay);
+      this.formModel.update((m) => ({ ...m, fromDate: event.value }));
+    }
+  }
+
+  /**
+   * Handle until-date changes to keep the form model in sync.
+   * @param event - The datepicker input event
+   */
+  untilDateChanged(event: MatDatepickerInputEvent<Date>): void {
+    if (event.value) {
+      this.formModel.update((m) => ({ ...m, untilDate: event.value }));
     }
   }
 
@@ -272,8 +287,8 @@ export class UploadGrantCreationComponent implements OnInit {
     const user = this.selectedUser();
     if (!user) return;
     this.isSubmitting.set(true);
-    const from = this.fromFormControl.value;
-    const until = this.untilFormControl.value;
+    const from = this.formModel().fromDate;
+    const until = this.formModel().untilDate;
     if (!from || !until) return;
     const payload: UploadGrantBase = {
       user_id: user.id,

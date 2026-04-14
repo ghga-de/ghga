@@ -4,16 +4,15 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { FormField, form, required } from '@angular/forms/signals';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { RouterLink } from '@angular/router';
 
 import { AcademicTitle, UserBasicData } from '@app/auth/models/user';
-
-import { MatButtonModule } from '@angular/material/button';
-import { RouterLink } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth';
 import { NotificationService } from '@app/shared/services/notification';
 
@@ -23,8 +22,7 @@ import { NotificationService } from '@app/shared/services/notification';
 @Component({
   selector: 'app-register',
   imports: [
-    FormsModule,
-    ReactiveFormsModule,
+    FormField,
     MatButtonModule,
     MatCheckboxModule,
     MatFormFieldModule,
@@ -41,22 +39,22 @@ export class RegisterComponent {
 
   allTitles: AcademicTitle[] = [null, 'Dr.', 'Prof.'];
 
-  titleControl = new FormControl<AcademicTitle>(null);
+  protected model = signal({ title: null as AcademicTitle, accepted: false });
 
-  accepted = false;
+  protected registerForm = form(this.model, (p) => {
+    required(p.accepted);
+  });
+
+  protected submitDisabled = computed(() => !this.registerForm().valid());
 
   allowNavigation = false; // used by canDeactivate guard
 
-  /**
-   * Initialize the registration component
-   */
   constructor() {
-    // if a re-registering user already has a title,
-    // then set it as value in the control
+    // if a re-registering user already has a title, pre-populate it
     effect(() => {
       const title = this.user()?.title;
       if (title) {
-        this.titleControl.setValue(title);
+        this.model.update((m) => ({ ...m, title }));
       }
     });
   }
@@ -72,10 +70,10 @@ export class RegisterComponent {
    * Submit registration form
    */
   async register(): Promise<void> {
-    if (!this.accepted) return;
+    if (!this.model().accepted) return;
     const user = this.user();
     if (!user) return;
-    const title = this.titleControl.value || null;
+    const title = this.model().title || null;
     const { id, ext_id, name, email } = user;
     const data: UserBasicData = { name, email, title };
     this.allowNavigation = true;

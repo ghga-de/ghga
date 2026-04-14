@@ -45,7 +45,7 @@
         <span id="academic-title">Academic title:</span>
         <mat-form-field>
           <mat-select
-            [formControl]="titleControl"
+            [formField]="registerForm.title"
             aria-labelledby="academic-title"
             autocomplete="honorific-prefix"
           >
@@ -57,7 +57,7 @@
       </p>
     </div>
     <p class="mb-4">
-      <mat-checkbox [(ngModel)]="accepted">
+      <mat-checkbox [formField]="registerForm.accepted">
         I accept the
         <a
           href="https://zenodo.org/records/11146387"
@@ -95,8 +95,8 @@
           mat-raised-button
           class="w-full sm:w-auto"
           (click)="register()"
-          [disabled]="!accepted"
-          [aria-disabled]="!accepted"
+          [disabled]="submitDisabled()"
+          [aria-disabled]="submitDisabled()"
           data-umami-event="Registration Submit Clicked"
         >
           {{ u?.id ? 'Confirm' : 'Register' }}

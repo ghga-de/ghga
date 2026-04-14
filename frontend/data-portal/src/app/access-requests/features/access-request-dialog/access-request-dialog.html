@@ -9,13 +9,10 @@
       <textarea
         matInput
         placeholder="I need access for research on..."
-        [formControl]="descriptionFormControl"
-        (blur)="updateDescriptionErrorMessage()"
-        #details
-        required
+        [formField]="requestForm.description"
       ></textarea>
-      @if (descriptionErrorMessage()) {
-        <mat-error> {{ descriptionErrorMessage() }} </mat-error>
+      @if (descriptionError()) {
+        <mat-error> {{ descriptionError() }} </mat-error>
       }
     </mat-form-field>
     <mat-form-field class="mt-4 w-full">
@@ -23,15 +20,14 @@
       <input
         matInput
         type="text"
-        [formControl]="fromFormControl"
+        [formField]="requestForm.fromDate"
         [matDatepicker]="from_picker"
-        [min]="minFromDate"
-        [max]="maxFromDate"
+        [min]="minFromDate()"
+        [max]="maxFromDate()"
         (dateInput)="fromDateChanged($event)"
-        required
       />
-      @if (fromDateErrorMessage()) {
-        <mat-error> {{ fromDateErrorMessage() }} </mat-error>
+      @if (fromDateError()) {
+        <mat-error> {{ fromDateError() }} </mat-error>
       }
       <mat-hint>{{ dateInputFormatHint }}</mat-hint>
       <mat-datepicker-toggle matIconSuffix [for]="from_picker"></mat-datepicker-toggle>
@@ -43,15 +39,14 @@
       <input
         matInput
         type="text"
-        [formControl]="untilFormControl"
+        [formField]="requestForm.untilDate"
         [matDatepicker]="until_picker"
-        [min]="minUntilDate"
-        [max]="maxUntilDate"
+        [min]="minUntilDate()"
+        [max]="maxUntilDate()"
         (dateInput)="untilDateChanged($event)"
-        required
       />
-      @if (untilDateErrorMessage()) {
-        <mat-error> {{ untilDateErrorMessage() }} </mat-error>
+      @if (untilDateError()) {
+        <mat-error> {{ untilDateError() }} </mat-error>
       }
       <mat-hint>{{ dateInputFormatHint }}</mat-hint>
       <mat-datepicker-toggle matIconSuffix [for]="until_picker"></mat-datepicker-toggle>
@@ -64,14 +59,11 @@
         type="email"
         matInput
         placeholder="your.email@goes.here"
-        #emailField
-        [formControl]="emailFormControl"
-        (blur)="updateEmailErrorMessage()"
+        [formField]="requestForm.email"
         autocomplete="email"
-        required
       />
-      @if (emailFormControl.invalid) {
-        <mat-error>{{ emailErrorMessage() }}</mat-error>
+      @if (emailError()) {
+        <mat-error>{{ emailError() }}</mat-error>
       }
     </mat-form-field>
     <div class="py-3">

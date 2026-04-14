@@ -5,13 +5,7 @@
  */
 
 import { Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  FormControl,
-  FormsModule,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { form, FormField, maxLength, pattern, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -32,8 +26,7 @@ import { NotificationService } from '@app/shared/services/notification';
 @Component({
   selector: 'app-verification-dialog',
   imports: [
-    FormsModule,
-    ReactiveFormsModule,
+    FormField,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -51,21 +44,25 @@ export class VerificationDialogComponent {
   protected data = inject<{ id: string; address: string }>(MAT_DIALOG_DATA);
   protected address = computed(() => this.data.address);
 
-  protected disabled = computed(
-    () => this.#validInput() !== 'VALID' || this.#isProcessing(),
-  );
+  protected codeModel = signal<{ code: string }>({ code: '' });
 
-  #previousSubmission: string | undefined = undefined;
+  protected codeForm = form(this.codeModel, (schemaPath) => {
+    required(schemaPath.code);
+    maxLength(schemaPath.code, 6);
+    pattern(schemaPath.code, /^[A-Z0-9]{6}$/);
+  });
+
+  #previousSubmission = signal('');
 
   #isProcessing = signal(false);
 
-  protected codeControl = new FormControl<string>('', [
-    Validators.required,
-    Validators.pattern(/^[A-Z0-9]{6}$/),
-  ]);
-  #validInput = toSignal(this.codeControl.statusChanges, {
-    initialValue: this.codeControl.status,
-  });
+  protected disabled = computed<boolean>(
+    () =>
+      !this.codeForm.code().value() ||
+      this.codeForm.code().invalid() ||
+      this.#isProcessing() ||
+      this.codeForm.code().value() === this.#previousSubmission(),
+  );
 
   protected verificationError = signal(false);
 
@@ -80,9 +77,12 @@ export class VerificationDialogComponent {
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '')
       .slice(0, 6);
-    this.codeControl.setValue(target.value);
-    if (!this.codeControl.valid) return;
-    if (this.codeControl.value === this.#previousSubmission) return;
+    this.codeForm.code().value.set(target.value);
+    if (
+      this.codeForm.code().invalid() ||
+      this.codeForm.code().value() === this.#previousSubmission()
+    )
+      return;
     this.onSubmit();
   }
 
@@ -135,10 +135,10 @@ export class VerificationDialogComponent {
    */
   async onSubmit(): Promise<void> {
     if (this.#isProcessing()) return;
-    const code = this.codeControl.value;
-    if (!code || !this.codeControl.valid) return;
+    const code = this.codeForm.code().value();
+    if (!code || this.codeForm.code().invalid()) return;
     this.#isProcessing.set(true);
-    this.#previousSubmission = code;
+    this.#previousSubmission.set(code);
     const verified = await this.submitVerificationCode(this.data.id, code);
     if (verified) {
       this.#dialogRef.close(true);

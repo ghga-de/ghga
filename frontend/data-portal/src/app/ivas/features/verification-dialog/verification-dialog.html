@@ -13,7 +13,7 @@
         cdkFocusInitial
         class="totp-style-input text-center sm:text-left"
         matInput
-        [formControl]="codeControl"
+        [formField]="codeForm.code"
         (input)="onInput($event)"
       />
     </mat-form-field>

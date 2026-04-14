@@ -9,12 +9,11 @@ import {
   computed,
   inject,
   input,
-  model,
   OnInit,
   output,
   signal,
 } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { form, FormField, validate } from '@angular/forms/signals';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -40,8 +39,7 @@ const ERROR_TICKET_ID = 'ID must be a number with up to 9 digits';
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
-    FormsModule,
-    ReactiveFormsModule,
+    FormField,
   ],
   templateUrl: './access-request-field-edit.html',
 })
@@ -57,80 +55,75 @@ export class AccessRequestFieldEditComponent implements OnInit {
   rows = computed<number>(() => (this.name().includes('note') ? 5 : 1));
   locked = computed<boolean>(() => this.request().status !== 'pending');
 
-  field = model<string>();
-
   saved = output<Map<keyof AccessRequest, string>>();
   edited = output<[keyof AccessRequest, boolean]>();
 
   isOpen = signal<boolean>(false);
   isModified = signal<boolean>(false);
 
-  pattern = computed<string>(() =>
-    this.name() === 'ticket_id' ? PATTERN_TICKET_ID : '.*',
-  );
-  validationError = signal<string>('');
+  protected formModel = signal({ field: '' });
+
+  protected fieldForm = form(this.formModel, (p) => {
+    validate(p.field, ({ value }) => {
+      if (this.name() !== 'ticket_id') return null;
+      return new RegExp(PATTERN_TICKET_ID).test(value())
+        ? null
+        : { kind: 'pattern', message: ERROR_TICKET_ID };
+    });
+  });
+
+  validationError = computed(() => this.fieldForm.field().errors()[0]?.message ?? '');
 
   ticketUrl = computed<string | null>(() =>
-    this.name() === 'ticket_id' && this.field()
-      ? this.#baseTicketUrl + this.field()
+    this.name() === 'ticket_id' && this.formModel().field
+      ? this.#baseTicketUrl + this.formModel().field
       : null,
   );
 
   #defaultValue = computed<string>(() => this.request()[this.name()] || '');
 
+  changed = () => {
+    if (this.name() === 'ticket_id') {
+      // if the field is prefixed with (parts of) the base ticket URL, remove that prefix
+      const baseUrl = this.#baseTicketUrl;
+      const value = this.formModel().field;
+      const i = value.lastIndexOf('/');
+      if (baseUrl && i >= 0 && baseUrl.endsWith(value.substring(0, i + 1))) {
+        this.fieldForm.field().value.set(value.substring(i + 1));
+        return;
+      }
+    }
+    const isModified = this.formModel().field !== this.#defaultValue();
+    if (isModified !== this.isModified()) {
+      this.isModified.set(isModified);
+      this.edited.emit([this.name(), isModified]);
+    }
+  };
+
   /**
    * Populate the editable field with the values from the access request on component init.
    */
   ngOnInit(): void {
-    this.field.update(() => this.#defaultValue());
+    this.formModel.set({ field: this.#defaultValue() });
   }
 
   edit = () => {
     this.isOpen.set(true);
   };
 
-  /**
-   * Remove any URL prefix from the field value if this is a ticket ID
-   * and set the proper error message if the field is invalid.
-   * @param control - the form control for the field
-   */
-  #handleControl = (control: FormControl) => {
-    if (this.name() === 'ticket_id') {
-      // if the field is prefixed with (parts of) the base ticket URL, remove that prefix
-      const baseUrl = this.#baseTicketUrl;
-      let value = this.field() || '';
-      const i = value.lastIndexOf('/');
-      if (baseUrl && i >= 0 && baseUrl.endsWith(value.substring(0, i + 1))) {
-        value = value.substring(i + 1);
-        control.setValue(value);
-      }
-      this.validationError.set(control.invalid ? ERROR_TICKET_ID : '');
-    }
-  };
-
-  changed = (control?: FormControl) => {
-    if (control) this.#handleControl(control);
-    const wasModified = this.isModified();
-    const isModified = this.field() !== this.#defaultValue();
-    if (isModified !== wasModified) {
-      this.isModified.set(isModified);
-      this.edited.emit([this.name(), isModified]);
-    }
-  };
-
   cancel = () => {
     if (this.isModified()) {
-      this.field.update(() => this.#defaultValue());
+      this.isModified.set(false);
+      this.formModel.set({ field: this.#defaultValue() });
       this.edited.emit([this.name(), false]);
     }
     this.isOpen.set(false);
   };
 
   save = () => {
-    const field = this.field();
-    if (field === undefined) return;
-    this.field.update(() => field);
+    const field = this.formModel().field;
     if (this.isModified()) {
+      this.isModified.set(false);
       const name = this.name();
       this.saved.emit(new Map([[name, field]]));
       this.edited.emit([name, false]);

@@ -1,20 +1,20 @@
 <h2 mat-dialog-title>Creeate a new Upload Box</h2>
 
 <mat-dialog-content>
-  <form class="grid gap-3 pt-2" [formGroup]="form">
+  <form class="grid gap-3 pt-2">
     <mat-form-field>
       <mat-label>Title</mat-label>
-      <input matInput type="text" formControlName="title" />
+      <input matInput type="text" [formField]="boxForm.title" />
     </mat-form-field>
 
     <mat-form-field>
       <mat-label>Description</mat-label>
-      <textarea matInput rows="4" formControlName="description"></textarea>
+      <textarea matInput rows="4" [formField]="boxForm.description"></textarea>
     </mat-form-field>
 
     <mat-form-field>
       <mat-label>Storage location</mat-label>
-      <mat-select formControlName="storage_alias">
+      <mat-select [formField]="boxForm.storage_alias">
         @for (opt of locationOptions(); track opt.value) {
           <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
         }

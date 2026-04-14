@@ -11,13 +11,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  FormControl,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { form, FormField, pattern, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MatDialogActions,
@@ -33,21 +27,12 @@ import { ResearchDataUploadBoxBase } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 
 /**
- * Form model for creating an upload box.
- */
-interface CreateUploadBoxForm {
-  title: FormControl<string>;
-  description: FormControl<string>;
-  storage_alias: FormControl<string>;
-}
-
-/**
  * Dialog for creating a new upload box.
  */
 @Component({
   selector: 'app-upload-box-creation-dialog',
   imports: [
-    ReactiveFormsModule,
+    FormField,
     MatDialogTitle,
     MatDialogContent,
     MatDialogActions,
@@ -69,27 +54,17 @@ export class UploadBoxCreationDialogComponent {
   isSubmitting = signal(false);
   creationError = signal(false);
 
-  form = new FormGroup<CreateUploadBoxForm>({
-    title: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.pattern(/\S/)],
-    }),
-    description: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.pattern(/\S/)],
-    }),
-    storage_alias: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
+  protected boxModel = signal({ title: '', description: '', storage_alias: '' });
+
+  protected boxForm = form(this.boxModel, (p) => {
+    required(p.title);
+    pattern(p.title, /\S/);
+    required(p.description);
+    pattern(p.description, /\S/);
+    required(p.storage_alias);
   });
 
-  #formStatus = toSignal(this.form.statusChanges, { initialValue: this.form.status });
-
-  /** Whether the submit button should be disabled. */
-  isSubmitDisabled = computed(
-    () => this.#formStatus() !== 'VALID' || this.isSubmitting(),
-  );
+  isSubmitDisabled = computed(() => !this.boxForm().valid() || this.isSubmitting());
 
   /**
    * Close the dialog without creating a box.
@@ -102,15 +77,15 @@ export class UploadBoxCreationDialogComponent {
    * Submit the create-upload-box request.
    */
   onSubmit(): void {
-    if (this.form.invalid || this.isSubmitting()) return;
+    if (!this.boxForm().valid() || this.isSubmitting()) return;
 
     this.isSubmitting.set(true);
     this.creationError.set(false);
 
     const payload: ResearchDataUploadBoxBase = {
-      title: this.form.controls.title.value.trim(),
-      description: this.form.controls.description.value.trim(),
-      storage_alias: this.form.controls.storage_alias.value,
+      title: this.boxModel().title.trim(),
+      description: this.boxModel().description.trim(),
+      storage_alias: this.boxModel().storage_alias,
     };
 
     this.#uploadBoxService.createUploadBox(payload).subscribe({

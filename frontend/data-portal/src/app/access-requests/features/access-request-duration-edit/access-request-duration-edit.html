@@ -13,15 +13,15 @@
             <input
               matInput
               type="text"
-              [formControl]="fromFormControl"
+              [formField]="durationForm.fromDate"
               [matDatepicker]="datepickerFrom"
-              [min]="minFromDate"
-              [max]="maxFromDate"
+              [min]="minFromDate()"
+              [max]="maxFromDate()"
               (dateChange)="onDateSelected($event, true)"
               class="pr-8"
             />
-            @if (fromFieldErrorMessage()) {
-              <mat-error>{{ fromFieldErrorMessage() }}</mat-error>
+            @if (fromDateError()) {
+              <mat-error>{{ fromDateError() }}</mat-error>
             }
             <mat-datepicker #datepickerFrom></mat-datepicker>
           </mat-form-field>
@@ -34,15 +34,15 @@
             <input
               matInput
               type="text"
-              [formControl]="untilFormControl"
+              [formField]="durationForm.untilDate"
               [matDatepicker]="datepickerUntil"
-              [min]="minUntilDate"
-              [max]="maxUntilDate"
+              [min]="minUntilDate()"
+              [max]="maxUntilDate()"
               (dateChange)="onDateSelected($event, false)"
               class="pr-8"
             />
-            @if (untilFieldErrorMessage()) {
-              <mat-error>{{ untilFieldErrorMessage() }}</mat-error>
+            @if (untilDateError()) {
+              <mat-error>{{ untilDateError() }}</mat-error>
             }
             <mat-datepicker #datepickerUntil></mat-datepicker>
           </mat-form-field>
@@ -68,8 +68,8 @@
     <strong class="min-w-50 pe-1 text-start align-middle">Access duration:</strong>
     <span class="flex min-w-60 grow items-center pb-1">
       <span class="grow">
-        {{ fromField() | date: periodFormat : periodTimeZone }} until
-        {{ untilField() | date: periodFormat : periodTimeZone }}
+        {{ formModel().fromDate | date: periodFormat : periodTimeZone }} until
+        {{ formModel().untilDate | date: periodFormat : periodTimeZone }}
       </span>
       @if (!locked()) {
         <mat-chip

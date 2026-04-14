@@ -1,11 +1,13 @@
 <h1 mat-dialog-title>Add an IVA</h1>
 <div mat-dialog-content cdkTrapFocus>
-  <form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <form (ngSubmit)="onSubmit()">
     <p class="mb-3">Please select one of the following IVA types:</p>
     <div class="text-center">
       <mat-button-toggle-group
         aria-label="IVA type"
-        formControlName="type"
+        name="type"
+        [value]="model().type"
+        (change)="onTypeChange($event.value)"
         class="[&_mat-button-toggle]:w-31 sm:[&_mat-button-toggle]:w-40"
       >
         @for (type of types; track type) {
@@ -15,17 +17,18 @@
         }
       </mat-button-toggle-group>
     </div>
-    @if (type) {
+    @if (model().type) {
       <p class="mt-5">{{ valuePrompt }}</p>
       <mat-form-field class="w-full">
-        @if (type === 'Phone' || type === 'Fax') {
+        @if (model().type === 'Phone' || model().type === 'Fax') {
           <ngx-mat-input-tel
             class="w-full"
             [preferredCountries]="['de']"
             [enablePlaceholder]="true"
             [enableSearch]="true"
             name="value"
-            formControlName="value"
+            [ngModel]="model().value"
+            (ngModelChange)="onValueChange($event)"
             autocomplete="tel"
             maxLength="15"
             #valueField
@@ -35,11 +38,9 @@
             matInput
             type="text"
             autocomplete="street-address"
-            formControlName="value"
+            [formField]="ivaForm.value"
             cdkFocusInitial
-            maxlength="500"
             #valueField
-            required
           />
         }
       </mat-form-field>
@@ -48,14 +49,19 @@
     }
 
     <div mat-dialog-actions>
-      <button mat-button (click)="onCancel()" data-umami-event="New IVA Cancel Clicked">
+      <button
+        mat-button
+        (click)="onCancel()"
+        data-umami-event="New IVA Cancel Clicked"
+        type="button"
+      >
         Cancel
       </button>
       <button
         id="submit-code"
         mat-raised-button
-        [disabled]="isInvalid()"
-        (click)="onSubmit()"
+        type="submit"
+        [disabled]="submitDisabled()"
         data-umami-event="New IVA Submit Clicked"
       >
         Submit

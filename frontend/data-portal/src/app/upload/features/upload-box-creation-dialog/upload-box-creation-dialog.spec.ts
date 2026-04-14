@@ -10,6 +10,7 @@ import { MatDialogRef } from '@angular/material/dialog';
 import { NotificationService } from '@app/shared/services/notification';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { UploadBoxCreationDialogComponent } from './upload-box-creation-dialog';
 
@@ -53,7 +54,6 @@ describe('UploadBoxCreationDialogComponent', () => {
     fixture = TestBed.createComponent(UploadBoxCreationDialogComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-    await fixture.whenStable();
   });
 
   it('should create', () => {
@@ -70,15 +70,21 @@ describe('UploadBoxCreationDialogComponent', () => {
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
   });
 
-  it('should enable OK with multiline description when all fields are set', () => {
-    component.form.setValue({
-      title: 'New Box',
-      description: 'First line\nSecond line',
-      storage_alias: 'TUE01',
+  it('should enable OK with multiline description when all fields are set', async () => {
+    const titleInput = screen.getByRole('textbox', { name: 'Title' });
+    const descriptionInput = screen.getByRole('textbox', {
+      name: 'Description',
     });
+    const locationSelect = screen.getByRole('combobox', {
+      name: 'Storage location',
+    });
+
+    await userEvent.type(titleInput, 'New Box');
+    await userEvent.type(descriptionInput, 'First line{enter}Second line');
+    await userEvent.click(locationSelect);
+    await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
     fixture.detectChanges();
 
-    expect(component.form.valid).toBe(true);
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeEnabled();
   });
 
@@ -87,15 +93,22 @@ describe('UploadBoxCreationDialogComponent', () => {
     expect(mockDialogRef.close).toHaveBeenCalledWith(undefined);
   });
 
-  it('should call createUploadBox and close with created id on success', () => {
+  it('should call createUploadBox and close with created id on success', async () => {
     uploadBoxService.createUploadBox.mockReturnValue(of('new-box-id'));
 
-    component.form.setValue({
-      title: '  New Box  ',
-      description: '  Description  ',
-      storage_alias: 'TUE01',
+    const titleInput = screen.getByRole('textbox', { name: 'Title' });
+    const descriptionInput = screen.getByRole('textbox', {
+      name: 'Description',
     });
-    component.onSubmit();
+    const locationSelect = screen.getByRole('combobox', {
+      name: 'Storage location',
+    });
+
+    await userEvent.type(titleInput, '  New Box  ');
+    await userEvent.type(descriptionInput, '  Description  ');
+    await userEvent.click(locationSelect);
+    await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
+    await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
     expect(uploadBoxService.createUploadBox).toHaveBeenCalledWith({
       title: 'New Box',
@@ -106,17 +119,24 @@ describe('UploadBoxCreationDialogComponent', () => {
     expect(mockNotificationService.showError).not.toHaveBeenCalled();
   });
 
-  it('should show an error and keep dialog open when create fails', () => {
+  it('should show an error and keep dialog open when create fails', async () => {
     uploadBoxService.createUploadBox.mockReturnValue(
       throwError(() => new Error('create failed')),
     );
 
-    component.form.setValue({
-      title: 'New Box',
-      description: 'Description',
-      storage_alias: 'HD02',
+    const titleInput = screen.getByRole('textbox', { name: 'Title' });
+    const descriptionInput = screen.getByRole('textbox', {
+      name: 'Description',
     });
-    component.onSubmit();
+    const locationSelect = screen.getByRole('combobox', {
+      name: 'Storage location',
+    });
+
+    await userEvent.type(titleInput, 'New Box');
+    await userEvent.type(descriptionInput, 'Description');
+    await userEvent.click(locationSelect);
+    await userEvent.click(await screen.findByRole('option', { name: 'Heidelberg 2' }));
+    await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
     fixture.detectChanges();
 
     expect(mockDialogRef.close).not.toHaveBeenCalled();
