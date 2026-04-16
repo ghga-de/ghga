@@ -7,6 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { provideHttpClient } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
@@ -14,6 +15,7 @@ import { MockAccessRequestService } from '@app/access-requests/services/access-r
 import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfigService } from '@app/shared/services/config';
+import { UploadBoxService } from '@app/upload/services/upload-box';
 import { provideHttpCache } from '@ngneat/cashew';
 import { AccountComponent } from './account';
 
@@ -36,6 +38,19 @@ class MockIvaService {
   userIvas = { value: () => [], isLoading: () => false, error: () => undefined };
 }
 
+/**
+ * Mock the upload box service as needed by the account component
+ */
+class MockUploadBoxService {
+  userGrants = {
+    value: signal([]),
+    error: signal(undefined),
+    isLoading: signal(false),
+    reload: () => undefined,
+  };
+  loadUserGrants = () => undefined;
+}
+
 const MockConfigService = {
   auth_url: '/test/auth',
 };
@@ -51,6 +66,7 @@ describe('AccountComponent', () => {
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: IvaService, useClass: MockIvaService },
+        { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: ConfigService, useValue: MockConfigService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         provideHttpClient(),

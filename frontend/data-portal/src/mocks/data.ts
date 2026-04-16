@@ -16,7 +16,7 @@ import { Study } from '@app/metadata/models/study';
 import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { BoxRetrievalResults, UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
-import { UploadGrant } from '@app/upload/models/grant';
+import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
 
@@ -1093,7 +1093,7 @@ export const uploadBoxes: BoxRetrievalResults = {
 /**
  * UOS upload grants
  */
-export const uploadGrants: UploadGrant[] = [
+export const uploadGrants: GrantWithBoxInfo[] = [
   {
     id: 'grant-uos-001',
     user_id: 'doe@test.dev',
@@ -1105,6 +1105,10 @@ export const uploadGrants: UploadGrant[] = [
     user_name: 'John Doe',
     user_email: 'doe@home.org',
     user_title: 'Dr.',
+    box_title: 'Research Data Upload Box of John',
+    box_description: 'Upload box for RNA sequencing files of study GHGAS12345678901234',
+    box_state: UploadBoxState.open,
+    box_version: 1,
   },
   {
     id: 'grant-uos-002',
@@ -1117,6 +1121,10 @@ export const uploadGrants: UploadGrant[] = [
     user_name: 'Jane Roe',
     user_email: 'roe@home.org',
     user_title: 'Prof.',
+    box_title: 'Research Data Upload Box of John',
+    box_description: 'Upload box for RNA sequencing files of study GHGAS12345678901234',
+    box_state: UploadBoxState.open,
+    box_version: 1,
   },
 ];
 

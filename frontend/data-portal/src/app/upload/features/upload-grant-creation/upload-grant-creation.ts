@@ -145,11 +145,13 @@ export class UploadGrantCreationComponent implements OnInit {
 
   protected datesForm = form(this.formModel, (p) => {
     validate(p.fromDate, ({ value }) => {
-      if (!value()) return { kind: 'required', message: 'Please choose a valid start date.' };
+      if (!value())
+        return { kind: 'required', message: 'Please choose a valid start date.' };
       return null;
     });
     validate(p.untilDate, ({ value }) => {
-      if (!value()) return { kind: 'required', message: 'Please choose a valid end date.' };
+      if (!value())
+        return { kind: 'required', message: 'Please choose a valid end date.' };
       if (value()! < this.minUntilDate())
         return { kind: 'minDate', message: 'Please choose a valid end date.' };
       return null;

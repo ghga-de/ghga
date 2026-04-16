@@ -8,7 +8,7 @@ import { HttpClient, HttpParams, httpResource } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
-import { map, Observable } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import {
   BoxRetrievalResults,
   ResearchDataUploadBox,
@@ -33,6 +33,7 @@ export class UploadBoxService {
   #auth = inject(AuthService);
   #config = inject(ConfigService);
   #http = inject(HttpClient);
+  #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #uosUrl = this.#config.uosUrl;
   #boxesUrl = `${this.#uosUrl}/boxes`;
   #accessGrantsUrl = `${this.#uosUrl}/access-grants`;
@@ -84,6 +85,18 @@ export class UploadBoxService {
       const boxId = this.#loadGrantsForBox();
       if (!boxId) return undefined;
       return `${this.#accessGrantsUrl}?box_id=${encodeURIComponent(boxId)}`;
+    },
+    { defaultValue: [] },
+  );
+
+  /**
+   * Resource for loading the current user's valid upload grants with box info.
+   */
+  userGrants = httpResource<GrantWithBoxInfo[]>(
+    () => {
+      const userId = this.#userId();
+      if (!userId) return undefined;
+      return `${this.#accessGrantsUrl}?userid=${encodeURIComponent(userId)}&valid=true`;
     },
     { defaultValue: [] },
   );
@@ -278,13 +291,67 @@ export class UploadBoxService {
   }
 
   /**
+   * Update the box state locally to avoid waiting for reload.
+   * @param id - the ID of the updated upload box
+   * @param changes - the changes to the upload box which may be partial
+   */
+  #updateUploadBoxLocally(id: string, changes: Partial<ResearchDataUploadBox>): void {
+    const expectedVersion = changes.version;
+    if (expectedVersion === undefined) {
+      return;
+    }
+    const version = expectedVersion + 1;
+    if (!this.uploadBox.error()) {
+      const oldBox = this.uploadBox.value();
+      if (oldBox && oldBox.id === id && oldBox.version === expectedVersion) {
+        const newBox = { ...oldBox, ...changes, version };
+        this.uploadBox.value.set(newBox);
+      }
+    }
+    if (!this.boxRetrievalResults.error()) {
+      const oldBox = this.boxRetrievalResults.value().boxes.find((b) => b.id === id);
+      if (oldBox && oldBox.version === expectedVersion) {
+        const newBox = { ...oldBox, ...changes, version };
+        const current = this.boxRetrievalResults.value();
+        const update = (boxes: ResearchDataUploadBox[]) =>
+          boxes.map((b) => (b.id === id ? newBox : b));
+        this.boxRetrievalResults.value.set({
+          count: current.count,
+          boxes: update(current.boxes),
+        });
+      }
+    }
+    if (!this.userGrants.error()) {
+      const oldGrant = this.userGrants.value().find((g) => g.box_id === id);
+      if (oldGrant && oldGrant.box_version === expectedVersion) {
+        const newGrant = { ...oldGrant };
+        if ('state' in changes && changes.state !== undefined) {
+          newGrant.box_state = changes.state;
+        }
+        if ('title' in changes && changes.title !== undefined) {
+          newGrant.box_title = changes.title;
+        }
+        if ('description' in changes && changes.description !== undefined) {
+          newGrant.box_description = changes.description;
+        }
+        newGrant.box_version = version;
+        this.userGrants.value.set(
+          this.userGrants.value().map((g) => (g.box_id === id ? newGrant : g)),
+        );
+      }
+    }
+  }
+
+  /**
    * Update an existing upload box.
    * @param id - the ID of the upload box to update
    * @param changes - the fields to update
    * @returns An observable that completes when the update is successful
    */
   updateUploadBox(id: string, changes: ResearchDataUploadBoxUpdate): Observable<void> {
-    return this.#http.patch<void>(`${this.#boxesUrl}/${id}`, changes);
+    return this.#http
+      .patch<void>(`${this.#boxesUrl}/${id}`, changes)
+      .pipe(tap(() => this.#updateUploadBoxLocally(id, changes)));
   }
 
   /**

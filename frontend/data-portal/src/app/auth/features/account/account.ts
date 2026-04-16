@@ -13,6 +13,8 @@ import { PendingAccessRequestsListComponent } from '@app/access-requests/feature
 import { AuthService } from '@app/auth/services/auth';
 import { UserIvaListComponent } from '@app/ivas/features/user-iva-list/user-iva-list';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
+// eslint-disable-next-line boundaries/dependencies
+import { UserUploadGrantsListComponent } from '@app/upload/features/user-upload-grants-list/user-upload-grants-list';
 
 /**
  * This Component shows data about the current user and allows managing their IVAs.
@@ -27,6 +29,7 @@ import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-lin
     ActiveAccessGrantsListComponent,
     UserIvaListComponent,
     ExternalLinkDirective,
+    UserUploadGrantsListComponent,
   ],
   templateUrl: './account.html',
 })

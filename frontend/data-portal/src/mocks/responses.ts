@@ -251,6 +251,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Revoke an upload grant
   'DELETE /api/uos/access-grants/*': 204,
 
+  // Update (submit) an upload box
+  'PATCH /api/uos/boxes/*': 204,
+
   /**
    * WKVS API
    */

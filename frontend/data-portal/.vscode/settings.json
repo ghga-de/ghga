@@ -45,5 +45,6 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "vitest.nodeExecutable": "",
   "vitest.cliArguments": "",
-  "vitest.applyDiagnostic": false
+  "vitest.applyDiagnostic": false,
+  "workbench.browser.enableChatTools": true
 }

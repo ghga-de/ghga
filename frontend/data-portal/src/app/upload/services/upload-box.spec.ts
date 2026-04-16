@@ -98,6 +98,17 @@ describe('UploadBoxService', () => {
   });
 
   afterEach(() => {
+    // userGrants now loads reactively from auth state; drain any unmatched requests
+    // so tests that don't care about this resource can keep focused assertions.
+    httpMock
+      .match((req) =>
+        req.urlWithParams ===
+        'http://mock.dev/uos/access-grants?userid=doe%40test.dev&valid=true'
+          ? true
+          : false,
+      )
+      .forEach((req) => req.flush([]));
+
     httpMock.verify();
   });
 
@@ -413,6 +424,8 @@ describe('UploadBoxService', () => {
         user_title: 'Dr.',
         box_title: 'Upload Box Alpha',
         box_description: 'First upload box for stewardship tests',
+        box_state: UploadBoxState.open,
+        box_version: 1,
       },
       {
         id: 'grant-002',
@@ -427,9 +440,10 @@ describe('UploadBoxService', () => {
         user_title: null,
         box_title: 'Upload Box Beta',
         box_description: 'Second upload box for stewardship tests',
+        box_state: UploadBoxState.locked,
+        box_version: 2,
       },
     ];
-
     it('should fetch access grants without filters', () => {
       let result: GrantWithBoxInfo[] | undefined;
       service.getAccessGrants().subscribe((grants) => (result = grants));

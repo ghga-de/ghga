@@ -4,6 +4,8 @@
  * @license Apache-2.0
  */
 
+import { UploadBoxState } from './box';
+
 /** Default number of days a new upload grant is valid */
 export const VALID_GRANT_DAYS = 180;
 
@@ -41,10 +43,14 @@ export interface UploadGrant extends UploadGrantBase {
   user_title: string | null;
 }
 
-/** An UploadGrant with the ResearchDataUploadBox title and description */
+/** An UploadGrant with the ResearchDataUploadBox title, description, state, and version */
 export interface GrantWithBoxInfo extends UploadGrant {
   /** Short meaningful name for the box */
   box_title: string;
   /** Describes the upload box in more detail */
   box_description: string;
+  /** Current state of the upload box */
+  box_state: UploadBoxState;
+  /** Current version of the upload box */
+  box_version: number;
 }

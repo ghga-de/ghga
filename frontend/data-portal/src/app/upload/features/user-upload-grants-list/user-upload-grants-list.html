@@ -1,0 +1,66 @@
+@if (hasError()) {
+  <p class="text-base"
+    >There was an error retrieving your research data upload boxes.</p
+  >
+} @else {
+  @if (isLoading()) {
+    <app-stencil></app-stencil>
+  } @else {
+    @let grants = openGrants();
+    @if (grants.length === 0) {
+      <p class="text-base"
+        >You do not currently have any open research data upload boxes.</p
+      >
+    } @else {
+      <p class="text-base"
+        >The following open research data upload boxes are assigned to you:</p
+      >
+      <div
+        class="border-outline-dark mb-4 grid grid-cols-1 border-t [&_button>mat-icon]:-translate-y-0.75"
+      >
+        @for (grant of grants; track grant.id) {
+          <div class="border-outline-dark border-b py-2">
+            <div class="grid grid-cols-12 items-center gap-2 text-black">
+              <div
+                class="col-span-12 flex min-h-12 items-center md:col-span-4 lg:col-span-5"
+              >
+                {{ grant.box_title }}
+              </div>
+              <div
+                class="col-span-12 flex items-center justify-center md:col-span-8 lg:col-span-7"
+              >
+                <div class="flex w-full flex-wrap items-center justify-center gap-2">
+                  <div class="w-full sm:max-w-64">
+                    <button
+                      mat-stroked-button
+                      (click)="createToken()"
+                      aria-label="Create an upload token for this upload box"
+                      data-umami-event="User Upload Grants List Create Token Clicked"
+                      class="w-full whitespace-nowrap"
+                    >
+                      <mat-icon fontIcon="upload"></mat-icon>
+                      Create token
+                    </button>
+                  </div>
+                  <div class="w-full sm:max-w-64">
+                    <button
+                      mat-stroked-button
+                      (click)="submitBox(grant)"
+                      [disabled]="submittingBoxId() === grant.box_id"
+                      aria-label="Submit this upload box as complete"
+                      data-umami-event="User Upload Grants List Submit Clicked"
+                      class="w-full whitespace-nowrap"
+                    >
+                      <mat-icon fontIcon="check"></mat-icon>
+                      Submit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+}
