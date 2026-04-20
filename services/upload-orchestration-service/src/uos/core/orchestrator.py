@@ -237,11 +237,11 @@ class UploadOrchestrator(UploadOrchestratorPort):
         match (old_box.state, updated_box.state):
             case ("open", "locked"):  # lock the box
                 await self._file_upload_box_client.lock_file_upload_box(
-                    box_id=fub_id, version=updated_box.file_upload_box_version
+                    box_id=fub_id, version=old_box.file_upload_box_version
                 )
             case ("locked", "open"):  # unlock the box
                 await self._file_upload_box_client.unlock_file_upload_box(
-                    box_id=fub_id, version=updated_box.file_upload_box_version
+                    box_id=fub_id, version=old_box.file_upload_box_version
                 )
             case ("locked", "archived"):  # archive the box
                 # Check prerequisites using old version number for logging purposes
