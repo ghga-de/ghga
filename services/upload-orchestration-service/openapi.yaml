@@ -468,7 +468,7 @@ info:
   description: A service providing a web-accessible management and auth layer over
     upload-path file services.
   title: Upload Orchestration Service
-  version: 2.0.0
+  version: 2.0.1
 openapi: 3.1.0
 paths:
   /access-grants:

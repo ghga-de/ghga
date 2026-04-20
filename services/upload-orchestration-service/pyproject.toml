@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.10",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "uos"
-version = "2.0.0"
+version = "2.0.1"
 description = "Upload Orchestration Service - A service providing a web-accessible management and auth layer over upload-path file services."
 dependencies = [
     "typer >= 0.15",
