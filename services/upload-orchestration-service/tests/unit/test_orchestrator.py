@@ -155,15 +155,22 @@ async def test_update_research_data_upload_box_happy(
     # Get the box to get its current version
     box_id = populated_boxes[0]
     box = await rig.box_dao.get_by_id(box_id)
+    assert box.file_upload_box_version == 0
 
     # Create an update request
     update_request = models.UpdateUploadBoxRequest(
-        version=box.version, title="Updated Title", description="Updated Description"
+        version=box.version,
+        title="Updated Title",
+        description="Updated Description",
+        state="locked",
     )
 
     # Call the update method
     await rig.controller.update_research_data_upload_box(
         box_id=box_id, request=update_request, auth_context=DATA_STEWARD_AUTH_CONTEXT
+    )
+    rig.file_upload_box_client.lock_file_upload_box.assert_called_with(  # type: ignore
+        box_id=box.file_upload_box_id, version=box.file_upload_box_version
     )
 
     # Verify the box was updated
