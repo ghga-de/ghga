@@ -251,6 +251,17 @@ mat-icon.large-icon {
   cursor: pointer;
 }
 
+mat-card-header mat-card-title h2 {
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+mat-dialog-container mat-card-header mat-card-title h2 {
+  font: inherit;
+  font-size: 1.25rem;
+}
+
 .mat-mdc-card.mat-mdc-card-outlined.error {
   background-color: var(--mat-sys-error-container);
   color: var(--mat-sys-on-error-container);

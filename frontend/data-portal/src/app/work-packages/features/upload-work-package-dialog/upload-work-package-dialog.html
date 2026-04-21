@@ -3,10 +3,10 @@
   <div class="mb-4">
     <mat-card appearance="outlined" class="text-primary mb-4">
       <mat-card-header>
-        <mat-card-title>Research Data Upload Box</mat-card-title>
+        <mat-card-title><h2>Research Data Upload Box</h2></mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <p class="mt-2"><strong>Selected upload box:</strong> {{ grant.box_title }}</p>
+        <p><strong>Selected upload box:</strong> {{ grant.box_title }}</p>
         <app-paragraphs
           [text]="grant.box_description"
           label="Description"
@@ -75,21 +75,19 @@
       >
       <mat-card appearance="outlined" class="text-primary mb-4">
         <mat-card-header>
-          <mat-card-title>Upload token</mat-card-title>
+          <mat-card-title><h2>Upload token</h2></mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <button
             mat-fab
-            class="float-right mt-6 ml-4"
+            class="float-right mt-2 ml-4"
             (click)="copyToken()"
             title="Copy token to clipboard"
             data-umami-event="Upload Token Creation Copy Token Clicked"
           >
             <mat-icon fontIcon="content_copy"></mat-icon>
           </button>
-          <p class="mt-4"
-            >Please use the following token to upload into the selected box:</p
-          >
+          <p>Please use the following token to upload into the selected box:</p>
           <pre
             class="mb-3 whitespace-pre-wrap"
           ><span class="text-sm break-all text-green-900">{{ token() }}</span></pre>
