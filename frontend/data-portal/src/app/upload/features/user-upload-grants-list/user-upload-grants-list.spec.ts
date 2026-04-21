@@ -6,11 +6,13 @@
 
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NotificationService } from '@app/shared/services/notification';
 import { UploadBoxState } from '@app/upload/models/box';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { UploadWorkPackageDialogComponent } from '@app/work-packages/features/upload-work-package-dialog/upload-work-package-dialog';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { UserUploadGrantsListComponent } from './user-upload-grants-list';
@@ -84,6 +86,7 @@ const mockNotificationService = {
   showSuccess: vitest.fn(),
   showError: vitest.fn(),
 };
+const mockDialog = { open: vitest.fn() };
 
 // --- Tests ---
 
@@ -97,6 +100,7 @@ describe('UserUploadGrantsListComponent', () => {
     mockNotificationService.showInfo.mockReset();
     mockNotificationService.showSuccess.mockReset();
     mockNotificationService.showError.mockReset();
+    mockDialog.open.mockReset();
 
     await TestBed.configureTestingModule({
       imports: [UserUploadGrantsListComponent],
@@ -104,6 +108,7 @@ describe('UserUploadGrantsListComponent', () => {
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: ConfirmationService, useValue: mockConfirmationService },
         { provide: NotificationService, useValue: mockNotificationService },
+        { provide: MatDialog, useValue: mockDialog },
       ],
     }).compileComponents();
 
@@ -114,7 +119,6 @@ describe('UserUploadGrantsListComponent', () => {
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
-
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -134,7 +138,7 @@ describe('UserUploadGrantsListComponent', () => {
   it('should show an empty message when no open grants exist', async () => {
     uploadBoxService.setGrants([]);
     fixture.detectChanges();
-    expect(screen.getByText(/no.*open research data upload boxes/i)).toBeVisible();
+    expect(screen.getByText(/no.*open Research Data Upload Boxes/i)).toBeVisible();
   });
 
   it('should render the box title for an open grant', async () => {
@@ -169,13 +173,18 @@ describe('UserUploadGrantsListComponent', () => {
     expect(screen.getAllByText('Test Upload Box')).toHaveLength(1);
   });
 
-  it('should show an info notification when Create token is clicked', async () => {
+  it('should open upload token dialog when Create token is clicked', async () => {
     uploadBoxService.setGrants([openGrant]);
     fixture.detectChanges();
     const btn = screen.getByRole('button', { name: /create an upload token/i });
     btn.click();
-    expect(mockNotificationService.showInfo).toHaveBeenCalledWith(
-      'Upload token creation is not yet implemented.',
+    expect(mockDialog.open).toHaveBeenCalledWith(
+      UploadWorkPackageDialogComponent,
+      expect.objectContaining({
+        data: openGrant,
+        width: '64rem',
+        maxWidth: '96vw',
+      }),
     );
   });
 

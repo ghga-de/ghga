@@ -184,7 +184,7 @@ describe('UploadBoxManagerDetailComponent', () => {
     it('should display upload grants when available', async () => {
       uploadBoxService.setBoxGrants(uploadGrants);
       await fixture.whenStable();
-      expect(screen.getByText('John Doe (doe@home.org)')).toBeVisible();
+      expect(screen.getAllByText('John Doe (doe@home.org)')).toHaveLength(3);
     });
 
     it('should show "No upload grants found" when grants list is empty', () => {

@@ -14,9 +14,13 @@ import {
 import { computed, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, lastValueFrom } from 'rxjs';
 import { DatasetWithExpiration } from '../models/dataset';
-import { WorkPackage, WorkPackageResponse } from '../models/work-package';
+import {
+  DownloadWorkPackageRequest,
+  UploadWorkPackageRequest,
+  WorkPackageResponse,
+} from '../models/work-package';
 import { WorkPackageService } from './work-package';
 
 const TEST_DATASET: DatasetWithExpiration = {
@@ -28,10 +32,16 @@ const TEST_DATASET: DatasetWithExpiration = {
   expires: '2099-12-31T23:59:59Z',
 };
 
-const TEST_WORK_PACKAGE: WorkPackage = {
+const TEST_DOWNLOAD_WORK_PACKAGE: DownloadWorkPackageRequest = {
   dataset_id: 'test-dataset-id',
   file_ids: ['file-id-1', 'file-id-2'],
   type: 'download',
+  user_public_crypt4gh_key: 'test-crypt4gh-key',
+};
+
+const TEST_UPLOAD_WORK_PACKAGE: UploadWorkPackageRequest = {
+  type: 'upload',
+  research_data_upload_box_id: 'test-upload-box-id',
   user_public_crypt4gh_key: 'test-crypt4gh-key',
 };
 
@@ -112,13 +122,58 @@ describe('WorkPackageService', () => {
 
   it('should create a work package for download', async () => {
     const workPackagePromise = firstValueFrom(
-      service.createWorkPackage(TEST_WORK_PACKAGE),
+      service.createWorkPackage(TEST_DOWNLOAD_WORK_PACKAGE),
     );
     const req = httpMock.expectOne('http://mock.dev/wps/work-packages');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toBe(TEST_WORK_PACKAGE);
+    expect(req.request.body).toBe(TEST_DOWNLOAD_WORK_PACKAGE);
     req.flush(TEST_WORK_PACKAGE_RESPONSE);
     const workPackage = await workPackagePromise;
     expect(workPackage).toEqual(TEST_WORK_PACKAGE_RESPONSE);
+  });
+
+  it('should create a work package for upload', async () => {
+    const workPackagePromise = firstValueFrom(
+      service.createWorkPackage(TEST_UPLOAD_WORK_PACKAGE),
+    );
+    const req = httpMock.expectOne('http://mock.dev/wps/work-packages');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toBe(TEST_UPLOAD_WORK_PACKAGE);
+    req.flush(TEST_WORK_PACKAGE_RESPONSE);
+    const workPackage = await workPackagePromise;
+    expect(workPackage).toEqual(TEST_WORK_PACKAGE_RESPONSE);
+  });
+
+  it('should reject a work package with an empty public key', async () => {
+    await expect(
+      lastValueFrom(
+        service.createWorkPackage({
+          ...TEST_DOWNLOAD_WORK_PACKAGE,
+          user_public_crypt4gh_key: ' ',
+        }),
+      ),
+    ).rejects.toThrow('Invalid work package');
+  });
+
+  it('should reject a download work package without dataset_id', async () => {
+    await expect(
+      lastValueFrom(
+        service.createWorkPackage({
+          ...TEST_DOWNLOAD_WORK_PACKAGE,
+          dataset_id: '',
+        }),
+      ),
+    ).rejects.toThrow('Invalid work package');
+  });
+
+  it('should reject an upload work package without box ID', async () => {
+    await expect(
+      lastValueFrom(
+        service.createWorkPackage({
+          ...TEST_UPLOAD_WORK_PACKAGE,
+          research_data_upload_box_id: '',
+        }),
+      ),
+    ).rejects.toThrow('Invalid work package');
   });
 });

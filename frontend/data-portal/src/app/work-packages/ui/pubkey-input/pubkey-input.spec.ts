@@ -37,6 +37,25 @@ describe('PubkeyFieldComponent', () => {
     expect(component.trimmedKey).toBe('MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=');
   });
 
+  it('should default hint text to encrypt context', () => {
+    expect(component.hintText()).toContain('so that we can encrypt your data.');
+  });
+
+  it('should allow decrypt context in hint text', () => {
+    fixture.componentRef.setInput('hintAction', 'decrypt');
+    fixture.detectChanges();
+
+    expect(component.hintText()).toContain('so that we can decrypt your data.');
+  });
+
+  it('should prefer custom hint over generated hint text', () => {
+    fixture.componentRef.setInput('hint', 'Custom key hint');
+    fixture.componentRef.setInput('hintAction', 'decrypt');
+    fixture.detectChanges();
+
+    expect(component.hintText()).toBe('Custom key hint');
+  });
+
   it('should trim headers and footers', () => {
     const keyWithHeaders = `-----BEGIN CRYPT4GH PUBLIC KEY-----
 MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI

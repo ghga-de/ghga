@@ -1,6 +1,6 @@
 @if (hasError()) {
   <p class="text-base"
-    >There was an error retrieving your research data upload boxes.</p
+    >There was an error retrieving your Research Data Upload Boxes.</p
   >
 } @else {
   @if (isLoading()) {
@@ -9,11 +9,11 @@
     @let grants = openGrants();
     @if (grants.length === 0) {
       <p class="text-base"
-        >You do not currently have any open research data upload boxes.</p
+        >You do not currently have any open Research Data Upload Boxes.</p
       >
     } @else {
       <p class="text-base"
-        >The following open research data upload boxes are assigned to you:</p
+        >The following open Research Data Upload Boxes are assigned to you:</p
       >
       <div
         class="border-outline-dark mb-4 grid grid-cols-1 border-t [&_button>mat-icon]:-translate-y-0.75"
@@ -33,7 +33,7 @@
                   <div class="w-full sm:max-w-64">
                     <button
                       mat-stroked-button
-                      (click)="createToken()"
+                      (click)="createToken(grant)"
                       aria-label="Create an upload token for this upload box"
                       data-umami-event="User Upload Grants List Create Token Clicked"
                       class="w-full whitespace-nowrap"

@@ -10,7 +10,7 @@ import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import { Observable, throwError } from 'rxjs';
 import { DatasetWithExpiration } from '../models/dataset';
-import { WorkPackage, WorkPackageResponse } from '../models/work-package';
+import { WorkPackageRequest, WorkPackageResponse } from '../models/work-package';
 
 /**
  * Work package service
@@ -43,17 +43,25 @@ export class WorkPackageService {
   ).asReadonly();
 
   /**
-   * Create a work package for download
-   * @param workPackage - the work package to be created
-   * @returns a response with the work package id and the download token
+   * Check whether a work package request has a valid payload.
+   * @param workPackage - work package request to validate
+   * @returns true if the request is valid
    */
-  createWorkPackage(workPackage: WorkPackage): Observable<WorkPackageResponse> {
-    if (
-      !workPackage ||
-      workPackage.type !== 'download' ||
-      !workPackage.user_public_crypt4gh_key
-    ) {
-      // do not throw immediately to unify error handling
+  #isValidWorkPackageRequest(
+    workPackage: WorkPackageRequest | undefined,
+  ): workPackage is WorkPackageRequest {
+    if (!workPackage?.user_public_crypt4gh_key.trim()) return false;
+    if (workPackage.type === 'download') return !!workPackage.dataset_id;
+    return !!workPackage.research_data_upload_box_id;
+  }
+
+  /**
+   * Create a work package.
+   * @param workPackage - the work package request to be created
+   * @returns a response with the work package ID and token
+   */
+  createWorkPackage(workPackage: WorkPackageRequest): Observable<WorkPackageResponse> {
+    if (!this.#isValidWorkPackageRequest(workPackage)) {
       return throwError(() => new Error('Invalid work package'));
     }
     return this.#http.post<WorkPackageResponse>(this.#workPackagesUrl, workPackage);

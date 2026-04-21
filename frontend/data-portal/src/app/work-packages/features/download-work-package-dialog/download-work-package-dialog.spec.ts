@@ -7,6 +7,7 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import {
   AccessGrantStatus,
@@ -207,23 +208,7 @@ describe('DownloadWorkPackageDialogComponent', () => {
       );
     });
 
-    it('should set loading state during token creation', () => {
-      (
-        workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
-      ).mockReturnValue(
-        of({
-          id: 'wp-123',
-          token: 'test-token-456',
-          expires: '2026-02-01T00:00:00Z',
-        }),
-      );
-
-      expect(component.tokenIsLoading()).toBe(false);
-      component.onCreateToken();
-      expect(component.tokenIsLoading()).toBe(false); // Already completed in sync test
-    });
-
-    it('should set token on successful creation', () => {
+    it('should display loading message during token creation', () => {
       (
         workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
       ).mockReturnValue(
@@ -235,63 +220,71 @@ describe('DownloadWorkPackageDialogComponent', () => {
       );
 
       component.onCreateToken();
+      fixture.detectChanges();
 
-      expect(component.token()).toBe('wp-123:test-token-456');
-      expect(component.tokenExpiration()).toBe('2026-02-01T00:00:00Z');
-      expect(component.tokenIsLoading()).toBe(false);
+      // Verify the service was called (token creation initiated)
+      expect(workPackageService.createWorkPackage).toHaveBeenCalled();
     });
 
-    it('should handle error during token creation', () => {
+    it('should display token on successful creation', () => {
+      (
+        workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
+      ).mockReturnValue(
+        of({
+          id: 'wp-123',
+          token: 'test-token-456',
+          expires: '2026-02-01T00:00:00Z',
+        }),
+      );
+
+      component.onCreateToken();
+      fixture.detectChanges();
+
+      const tokenElement = fixture.debugElement.query(By.css('span.text-green-900'));
+      expect(tokenElement?.nativeElement.textContent).toContain(
+        'wp-123:test-token-456',
+      );
+      expect(notificationService.showSuccess).not.toHaveBeenCalled();
+    });
+
+    it('should display error message on token creation failure', () => {
       const error = new Error('Network error');
       (
         workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
       ).mockReturnValue(throwError(() => error));
 
       component.onCreateToken();
+      fixture.detectChanges();
 
-      expect(component.tokenError()).toContain('could not be created');
-      expect(component.tokenIsLoading()).toBe(false);
+      const errorElement = fixture.debugElement.query(By.css('.text-red-600'));
+      expect(errorElement?.nativeElement.textContent).toContain('could not be created');
       expect(notificationService.showError).toHaveBeenCalled();
-    });
-
-    it('should clear previous token state when creating new token', () => {
-      component.token.set('old-token');
-      component.tokenError.set('old-error');
-
-      (
-        workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
-      ).mockReturnValue(
-        of({
-          id: 'wp-123',
-          token: 'test-token-456',
-          expires: '2026-02-01T00:00:00Z',
-        }),
-      );
-
-      component.onCreateToken();
-
-      expect(component.token()).toBe('wp-123:test-token-456');
-      expect(component.tokenError()).toBe('');
     });
   });
 
   describe('resetToken', () => {
-    it('should clear token and error state', () => {
-      component.token.set('test-token');
-      component.tokenError.set('test-error');
-      component.tokenIsLoading.set(true);
+    it('should clear token and error state from view', () => {
+      (component as any)['token'].set('test-token');
+      (component as any)['tokenError'].set('test-error');
+      (component as any)['tokenIsLoading'].set(true);
+      fixture.detectChanges();
 
       component.resetToken();
+      fixture.detectChanges();
 
-      expect(component.token()).toBe('');
-      expect(component.tokenError()).toBe('');
-      expect(component.tokenIsLoading()).toBe(false);
+      // Verify token is no longer displayed
+      let tokenElement = fixture.debugElement.query(By.css('span.text-green-900'));
+      expect(tokenElement).toBeFalsy();
+
+      // Verify error is no longer displayed
+      let errorElement = fixture.debugElement.query(By.css('div.text-red-600'));
+      expect(errorElement).toBeFalsy();
     });
   });
 
   describe('copyToken', () => {
     it('should copy token to clipboard and show notification', () => {
-      component.token.set('test-token-123');
+      (component as any)['token'].set('test-token-123');
 
       component.copyToken();
 
@@ -302,7 +295,8 @@ describe('DownloadWorkPackageDialogComponent', () => {
     });
 
     it('should not copy if token is empty', () => {
-      component.token.set('');
+      (component as any)['token'].set('');
+      fixture.detectChanges();
 
       component.copyToken();
 

@@ -18,14 +18,14 @@ export const UploadBoxStateClass: Record<UploadBoxState, string> = {
   archived: 'text-gray-600',
 };
 
-/** Base data required to create a research data upload box */
+/** Base data required to create a Research Data Upload Box */
 export interface ResearchDataUploadBoxBase {
   title: string;
   description: string;
   storage_alias: string;
 }
 
-/** All data describing a research data upload box */
+/** All data describing a Research Data Upload Box */
 export interface ResearchDataUploadBox extends ResearchDataUploadBoxBase {
   id: string;
   version: number;
@@ -36,7 +36,7 @@ export interface ResearchDataUploadBox extends ResearchDataUploadBoxBase {
   size: number; // in bytes
 }
 
-/** Data to update a research data upload box */
+/** Data to update a Research Data Upload Box */
 export interface ResearchDataUploadBoxUpdate {
   version: number;
   state?: UploadBoxState;
@@ -44,7 +44,7 @@ export interface ResearchDataUploadBoxUpdate {
   description?: string;
 }
 
-/** Response when retrieving research data upload boxes */
+/** Response when retrieving Research Data Upload Boxes */
 export interface BoxRetrievalResults {
   count: number;
   boxes: ResearchDataUploadBox[];

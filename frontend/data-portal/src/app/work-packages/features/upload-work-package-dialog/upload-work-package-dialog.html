@@ -1,0 +1,139 @@
+<h1 mat-dialog-title>Create an Upload Token</h1>
+<div mat-dialog-content>
+  <div class="mb-4">
+    <mat-card appearance="outlined" class="text-primary mb-4">
+      <mat-card-header>
+        <mat-card-title>Research Data Upload Box</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="mt-2"><strong>Selected upload box:</strong> {{ grant.box_title }}</p>
+        <app-paragraphs
+          [text]="grant.box_description"
+          label="Description"
+          pClasses="text-sm mb-0.5"
+        />
+      </mat-card-content>
+    </mat-card>
+
+    <p class="w-full">
+      You have been granted upload access to this box from
+      {{ grant.valid_from | date: friendlyDateFormat }} to
+      {{ grant.valid_until | date: friendlyDateFormat }}.
+    </p>
+
+    @if (!iva()) {
+      <p class="flex items-center">
+        <span class="text-error"
+          ><mat-icon fontIcon="error" class="me-2 mt-1 shrink-0"></mat-icon></span
+        ><span class="text-error">Missing IVA</span>
+      </p>
+      <p>
+        We could not find an independent verification address (IVA) associated with this
+        grant. Please contact the helpdesk for assistance with this issue.
+      </p>
+    } @else if (iva()?.state !== 'Verified') {
+      <p class="flex items-center">
+        <span class="text-warning"
+          ><mat-icon fontIcon="warning" class="me-2 mt-1 shrink-0"></mat-icon
+        ></span>
+        <span
+          ><span class="text-warning">Unverified IVA:</span>
+          {{ (iva()!.type | IvaTypePipe).name }}: {{ iva()!.value }}</span
+        >
+      </p>
+      <p
+        >In order to upload data using this upload grant, the above independent
+        verification address (IVA) must still be verified. You can create an IVA and
+        request verification here on your user account page.</p
+      >
+    } @else if (tokenIsLoading()) {
+      <div class="mt-6 mb-3 flex items-center gap-3">
+        <mat-spinner [diameter]="24"></mat-spinner>
+        <p class="text-base">Creating your upload token...</p>
+      </div>
+    } @else if (tokenError()) {
+      <p class="mt-6 mb-3 font-bold text-red-600">{{ tokenError() }}</p>
+      <p>
+        Please
+        <button type="button" class="cursor-pointer underline" (click)="resetToken()"
+          >try again</button
+        >
+        later or
+        <a
+          class="cursor-pointer underline"
+          href="https://www.ghga.de/about-us/contact"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-umami-event="Upload Token Creation Contact Us Clicked"
+          >contact us</a
+        >
+        for support.
+      </p>
+    } @else if (token()) {
+      <p class="mt-6 mb-3 font-bold text-green-600"
+        >Your upload token has been created.</p
+      >
+      <mat-card appearance="outlined" class="text-primary mb-4">
+        <mat-card-header>
+          <mat-card-title>Upload token</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <button
+            mat-fab
+            class="float-right mt-6 ml-4"
+            (click)="copyToken()"
+            title="Copy token to clipboard"
+            data-umami-event="Upload Token Creation Copy Token Clicked"
+          >
+            <mat-icon fontIcon="content_copy"></mat-icon>
+          </button>
+          <p class="mt-4"
+            >Please use the following token to upload into the selected box:</p
+          >
+          <pre
+            class="mb-3 whitespace-pre-wrap"
+          ><span class="text-sm break-all text-green-900">{{ token() }}</span></pre>
+          <p class="mt-4"
+            ><strong
+              >Make sure to copy the token now as you will not be able to see this
+              again!</strong
+            ></p
+          >
+          <p class="mt-4">
+            Your token expires on {{ tokenExpiration() | date: friendlyDateFormat }}.
+          </p>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+      <p class="mb-6">
+        To upload research data files, you need to use the GHGA connector with an upload
+        token that you can create in the following step.
+      </p>
+
+      <div class="mt-4 mb-2">
+        <app-pubkey-input [formField]="uploadForm.pubkey" hintAction="decrypt" />
+      </div>
+    }
+  </div>
+</div>
+<div mat-dialog-actions>
+  <button
+    mat-button
+    (click)="onClose()"
+    data-umami-event="Upload Work Package Dialog Close Clicked"
+  >
+    Close
+  </button>
+  @if (iva()?.state === 'Verified' && !token() && !tokenError() && !tokenIsLoading()) {
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="onCreateToken()"
+      [disabled]="!uploadForm().valid()"
+      data-umami-event="Upload Work Package Dialog Generate Token Clicked"
+    >
+      <mat-icon fontIcon="upload"></mat-icon>
+      Generate upload token
+    </button>
+  }
+</div>

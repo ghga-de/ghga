@@ -165,7 +165,7 @@ To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix 
 
 ### Ease of use
 
-For comfort, we are adding these shorthands: `pnpm run lint`, `pnpm run lf` (for `lint --fix`), and `pnpm run docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
+For comfort, we are adding these shorthands: `pnpm lint`, `pnpm lf` (for `lint --fix`), and `pnpm docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
 
 ## Automated tests
 

@@ -36,7 +36,7 @@
         {{ grant.valid_until | date: friendlyDateFormat }} &ndash;
         {{ grant.daysRemaining }} days left.
       </p>
-      @if (iva === undefined) {
+      @if (!iva) {
         <p class="flex items-center">
           <span class="text-error"
             ><mat-icon fontIcon="error" class="me-2 mt-1 shrink-0"></mat-icon></span
@@ -161,8 +161,7 @@
   </button>
   @if (
     dataset() &&
-    grant.iva &&
-    grant.iva.state === 'Verified' &&
+    grant.iva?.state === 'Verified' &&
     !token() &&
     !tokenError() &&
     !tokenIsLoading()

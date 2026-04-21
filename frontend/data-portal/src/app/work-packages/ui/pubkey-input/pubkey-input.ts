@@ -4,7 +4,13 @@
  * @license Apache-2.0
  */
 
-import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  model,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   FormValueControl,
@@ -118,16 +124,24 @@ export class PubkeyFieldComponent implements FormValueControl<string> {
   /** Input field label */
   label = input('Your public Crypt4GH key');
 
-  /** Hint text displayed below input */
-  hint = input(
-    'Please enter your public Crypt4GH key (in Base64 encoded format) above, so that we can encrypt your data.',
+  /** Optional custom hint text displayed below input */
+  hint = input<string | undefined>(undefined);
+
+  /** Action context used in the default hint text */
+  hintAction = input<'encrypt' | 'decrypt'>('encrypt');
+
+  /** Final hint text displayed below input */
+  readonly hintText = computed(
+    () =>
+      this.hint() ??
+      `Please enter your public Crypt4GH key (in Base64 encoded format) above, so that we can ${this.hintAction()} your data.`,
   );
 
   /** Current value (required by FormValueControl) */
   value = model.required<string>();
 
   /** Validation errors from parent form */
-  errors = input<readonly ValidationError.WithOptionalField[]>([]);
+  errors = input<readonly ValidationError.WithOptionalFieldTree[]>([]);
 
   /** Invalid state from parent form */
   invalid = input(false);

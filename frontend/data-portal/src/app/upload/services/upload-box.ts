@@ -373,14 +373,14 @@ export class UploadBoxService {
   }
 
   /**
-   * Fetch access grants from the UOS backend.
+   * Fetch upload grants from the UOS backend.
    * @param params - optional filter parameters
    * @param params.userId - filter by user ID (maps to the `userid` query param)
    * @param params.boxId - filter by box ID (maps to the `box_id` query param)
    * @param params.valid - true = valid only, false = invalid only, null/omitted = both
    * @returns An observable that emits an array of GrantWithBoxInfo objects
    */
-  getAccessGrants(params?: {
+  getUploadGrants(params?: {
     userId?: string;
     boxId?: string;
     valid?: boolean | null;

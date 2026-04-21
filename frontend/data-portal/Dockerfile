@@ -16,7 +16,7 @@ WORKDIR /service
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install
 COPY . .
-RUN pnpm run build
+RUN pnpm build
 # create base package.json with just name and version
 RUN jq '{name, version, type}' package.json > ./package.json.run
 # extract js-yaml and its dependencies for runtime
