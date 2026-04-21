@@ -8,9 +8,12 @@ components:
           title: Bucket Id
           type: string
         decrypted_sha256:
-          description: SHA-256 checksum of the entire unencrypted file content
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: SHA-256 checksum of the entire unencrypted file content. This
+            will be None when the FileUpload is still in the init state.
           title: Decrypted Sha256
-          type: string
         decrypted_size:
           description: The size of the unencrypted file
           title: Decrypted Size
@@ -43,7 +46,6 @@ components:
       - storage_alias
       - bucket_id
       - object_id
-      - decrypted_sha256
       - decrypted_size
       - encrypted_size
       - part_size
@@ -177,7 +179,7 @@ info:
   description: A service to liaise between Central File Services and Data Hubs for
     file inspection.
   title: File Ingest Service
-  version: 10.0.0
+  version: 10.0.1
 openapi: 3.1.0
 paths:
   /health:

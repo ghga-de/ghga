@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fis"
-version = "10.0.0"
+version = "10.0.1"
 description = "File Ingest Service - A service to liaise between Central File Services and Data Hubs for file inspection."
 readme = "README.md"
 authors = [

@@ -33,9 +33,12 @@ class BaseFileInformation(BaseModel):
     object_id: UUID4 = Field(
         default=..., description="The ID of the file specific to its S3 bucket."
     )
-    decrypted_sha256: str = Field(
-        default=...,
-        description="SHA-256 checksum of the entire unencrypted file content",
+    decrypted_sha256: str | None = Field(
+        default=None,
+        description=(
+            "SHA-256 checksum of the entire unencrypted file content. This will be"
+            + " None when the FileUpload is still in the init state."
+        ),
     )
     decrypted_size: int = Field(
         default=..., description="The size of the unencrypted file"
@@ -65,6 +68,19 @@ class FileUnderInterrogation(BaseFileInformation):
         default=False,
         description="Indicates whether the file can be deleted from the interrogation bucket",
     )
+
+    @model_validator(mode="after")
+    def validate_conditional_fields(self) -> "FileUnderInterrogation":
+        """Validate that conditional fields are set based on passed status."""
+        if not self.decrypted_sha256 and self.state not in [
+            "init",
+            "failed",
+            "cancelled",
+        ]:
+            raise ValueError(
+                f"The field decrypted_sha256 cannot be empty when state is {self.state}."
+            )
+        return self
 
 
 class InterrogationReport(BaseModel):

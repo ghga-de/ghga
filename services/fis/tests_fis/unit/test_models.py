@@ -15,13 +15,15 @@
 
 """Unit tests for models"""
 
+from contextlib import nullcontext
 from uuid import uuid4
 
 import pytest
+from ghga_event_schemas.pydantic_ import FileUploadState
 from hexkit.utils import now_utc_ms_prec
 from pydantic import SecretBytes, ValidationError
 
-from fis.core.models import InterrogationReportWithSecret
+from fis.core.models import FileUnderInterrogation, InterrogationReportWithSecret
 
 
 def test_interrogation_report_validator():
@@ -121,3 +123,44 @@ def test_interrogation_report_validator():
             passed=False,
             reason=None,
         )
+
+
+@pytest.mark.parametrize("decrypted_sha256", [None, "", "bigchecksum"])
+@pytest.mark.parametrize(
+    "state",
+    [
+        "init",
+        "inbox",
+        "failed",
+        "cancelled",
+        "interrogated",
+        "awaiting_archival",
+        "archived",
+    ],
+)
+def test_file_under_interrogation(decrypted_sha256: str | None, state: FileUploadState):
+    """Test for the model validator on FileUnderInterrogation"""
+    payload = {
+        "id": "dc1f885b-fddf-4b84-9f1c-0219d568eefa",
+        "box_id": "1e6683b1-65e4-45d6-8423-69f86c1ddd04",
+        "alias": "INDV_SF_1",
+        "state": state,
+        "state_updated": "2026-04-21T09:04:37.349000+00:00",
+        "storage_alias": "primary",
+        "bucket_id": "hub1-inbox",
+        "object_id": "1d366477-6a1c-4208-a2d7-6c5923aa39d9",
+        "secret_id": None,
+        "decrypted_size": 3,
+        "encrypted_size": 155,
+        "decrypted_sha256": decrypted_sha256,
+        "encrypted_parts_md5": None,
+        "encrypted_parts_sha256": None,
+        "part_size": 5368708140,
+        "failure_reason": None,
+    }
+
+    # Should get an error when state is not one of these and the checksum is also blank
+    should_error = not (state in ["init", "failed", "cancelled"] or decrypted_sha256)
+
+    with pytest.raises(ValidationError) if should_error else nullcontext():
+        _ = FileUnderInterrogation(**payload)
