@@ -13,24 +13,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Top-level FastAPI router setup"""
+"""FastAPI endpoints for RS interaction"""
+
+import logging
 
 from fastapi import APIRouter
 
-from rs.adapters.inbound.fastapi_.routers.files import files_router
+from rs.adapters.inbound.fastapi_.routers.upload_boxes import box_router
+from rs.adapters.inbound.fastapi_.routers.upload_grants import upload_grant_router
+from rs.constants import TRACER
 
-router = APIRouter(tags=["GHGARegistryService"])
+log = logging.getLogger(__name__)
 
-router.include_router(files_router)
+router = APIRouter()
+
+
+router.include_router(
+    box_router, prefix="/upload-boxes", tags=["ResearchDataUploadBoxes"]
+)
+router.include_router(
+    upload_grant_router, prefix="/upload-grants", tags=["UploadGrants"]
+)
 
 
 @router.get(
     "/health",
-    operation_id="health",
     summary="health",
-    tags=["health"],
     status_code=200,
 )
+@TRACER.start_as_current_span("routes.health")
 async def health():
     """Used to test if this service is alive"""
     return {"status": "OK"}
+
+
+# TODO: Add `/filenames/{study_id}` endpoint to get ACCESSION -> name & alias mapping for files

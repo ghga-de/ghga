@@ -15,35 +15,56 @@
 
 """Outbound DAO adapter — wires DTO models to MongoDB/Kafka via the outbox pattern."""
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-
-from hexkit.custom_types import JsonObject
+from ghga_event_schemas.configs import (
+    FileAccessionMappingEventsConfig,
+    ResearchDataUploadBoxEventsConfig,
+)
+from ghga_event_schemas.pydantic_ import FileAccessionMapping
+from hexkit.providers.mongodb import MongoDbIndex
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
-from rs.config import Config
-from rs.core.models import AltAccession
-from rs.ports.outbound.dao import AltAccessionDao
+from rs.constants import BOX_COLLECTION
+from rs.core.models import ResearchDataUploadBox
+from rs.ports.outbound.dao import BoxDao, FileAccessionMappingDao
+
+__all__ = ["OutboxPubConfig", "get_box_dao", "get_file_accession_mapping_dao"]
 
 
-def alt_accession_to_event(alt_accession: AltAccession) -> JsonObject:
-    """Map an AltAccession DTO to its Kafka event payload."""
-    return {"accession": alt_accession.pid, "file_id": alt_accession.id}
+class OutboxPubConfig(
+    ResearchDataUploadBoxEventsConfig, FileAccessionMappingEventsConfig
+):
+    """Config needed to publish outbox events"""
 
 
-@asynccontextmanager
-async def get_alt_accession_dao(
+async def get_file_accession_mapping_dao(
     *,
-    config: Config,
+    config,
     dao_publisher_factory: MongoKafkaDaoPublisherFactory,
-) -> AsyncGenerator[AltAccessionDao]:
-    """Construct an AltAccession DAO from the shared factory."""
-    alt_accession_dao = await dao_publisher_factory.get_dao(
-        name=config.alt_accessions_collection,
-        dto_model=AltAccession,
-        id_field="pid",
-        dto_to_event=alt_accession_to_event,
-        event_topic=config.alt_accessions_topic,
+) -> FileAccessionMappingDao:
+    """Construct a FileAccessionMapping DAO from the shared factory."""
+    return await dao_publisher_factory.get_dao(
+        name=config.file_accession_mappings_collection,
+        dto_model=FileAccessionMapping,
+        id_field="accession",
+        dto_to_event=lambda event: event.model_dump(mode="json"),
+        event_topic=config.accession_map_topic,
         autopublish=True,
     )
-    yield alt_accession_dao
+
+
+async def get_box_dao(
+    *, config: OutboxPubConfig, dao_publisher_factory: MongoKafkaDaoPublisherFactory
+) -> BoxDao:
+    """Construct a ResearchDataUploadBox outbox DAO from the provided dao_publisher_factory"""
+    if not dao_publisher_factory:
+        raise RuntimeError("No DAO Factory and no override provided for BoxDao")
+
+    return await dao_publisher_factory.get_dao(
+        name=BOX_COLLECTION,
+        dto_model=ResearchDataUploadBox,
+        id_field="id",
+        autopublish=True,
+        dto_to_event=lambda dto: dto.model_dump(mode="json"),
+        event_topic=config.research_data_upload_box_topic,
+        indexes=[MongoDbIndex(fields="file_upload_box_id")],
+    )

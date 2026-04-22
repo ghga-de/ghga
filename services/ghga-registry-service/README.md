@@ -1,7 +1,7 @@
 [![tests](https://github.com/ghga-de/ghga-registry-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-registry-service/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-registry-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-registry-service?branch=main)
 
-# Ghga Registry Service
+# GHGA Registry Service
 
 GHGA Registry Service - a service for ingesting and archiving metadata from data submitters.
 
@@ -49,6 +49,70 @@ rs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- <a id="properties/accession_map_topic"></a>**`accession_map_topic`** *(string, required)*: The name of the topic used for file accession map events.
+
+  Examples:
+  ```json
+  "accession-maps"
+  ```
+
+  ```json
+  "file-accession-maps"
+  ```
+
+- <a id="properties/research_data_upload_box_topic"></a>**`research_data_upload_box_topic`** *(string, required)*: Name of the event topic containing research data upload box events.
+
+  Examples:
+  ```json
+  "research-data-upload-boxes"
+  ```
+
+- <a id="properties/file_upload_box_topic"></a>**`file_upload_box_topic`** *(string, required)*: Topic containing published FileUploadBox outbox events.
+
+  Examples:
+  ```json
+  "file-upload-boxes"
+  ```
+
+  ```json
+  "file-upload-box-topic"
+  ```
+
+- <a id="properties/audit_record_topic"></a>**`audit_record_topic`** *(string, required)*: Name of the topic used for events conveying audit record information.
+
+  Examples:
+  ```json
+  "audit-records"
+  ```
+
+- <a id="properties/audit_record_type"></a>**`audit_record_type`** *(string, required)*: The type used for events conveying audit record information.
+
+  Examples:
+  ```json
+  "audit_record_logged"
+  ```
+
+- <a id="properties/work_order_signing_key"></a>**`work_order_signing_key`** *(string, format: password, required and write-only)*: The private key for signing work order tokens and other JWTs.
+
+  Examples:
+  ```json
+  "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+  ```
+
+- <a id="properties/ucs_url"></a>**`ucs_url`** *(string, format: uri, required)*: URL pointing to the API of the service that owns FileUploadBoxes (currently the UCS). Length must be between 1 and 2083 (inclusive).
+
+  Examples:
+  ```json
+  "http://127.0.0.1/upload"
+  ```
+
+- <a id="properties/access_url"></a>**`access_url`** *(string, format: uri, required)*: URL pointing to the internal access API. Length must be between 1 and 2083 (inclusive).
+
+  Examples:
+  ```json
+  "http://127.0.0.1/access"
+  ```
+
 - <a id="properties/service_name"></a>**`service_name`** *(string)*: Short name of this service. Default: `"rs"`.
 - <a id="properties/service_instance_id"></a>**`service_instance_id`** *(string, required)*: A string that uniquely identifies this instance across all instances of this service. This is included in log messages.
 
@@ -234,6 +298,18 @@ The service requires the following configuration parameters:
   ```
 
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
+- <a id="properties/auth_key"></a>**`auth_key`** *(string, required)*: The GHGA internal public key for validating the token signature.
+
+  Examples:
+  ```json
+  "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+  ```
+
+- <a id="properties/auth_algs"></a>**`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens. Default: `["ES256"]`.
+  - <a id="properties/auth_algs/items"></a>**Items** *(string)*
+- <a id="properties/auth_check_claims"></a>**`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Can contain additional properties. Default: `{"id": null, "name": null, "email": null, "iat": null, "exp": null}`.
+- <a id="properties/auth_map_claims"></a>**`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
+  - <a id="properties/auth_map_claims/additionalProperties"></a>**Additional properties** *(string)*
 - <a id="properties/host"></a>**`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 - <a id="properties/port"></a>**`port`** *(integer)*: Port to expose the server on the specified host. Default: `8080`.
 - <a id="properties/auto_reload"></a>**`auto_reload`** *(boolean)*: A development feature. Set to `True` to automatically reload the server upon code changes. Default: `false`.
@@ -318,24 +394,7 @@ The service requires the following configuration parameters:
   []
   ```
 
-- <a id="properties/uos_auth_config"></a>**`uos_auth_config`** *(required)*: Refer to *[#/$defs/AuthConfig](#%24defs/AuthConfig)*.
-- <a id="properties/alt_accessions_collection"></a>**`alt_accessions_collection`** *(string)*: MongoDB collection name for alternative accessions. Default: `"altAccessions"`.
-- <a id="properties/alt_accessions_topic"></a>**`alt_accessions_topic`** *(string)*: Kafka topic for alternative accession events. Default: `"alt-accessions"`.
-## Definitions
-
-- <a id="%24defs/AuthConfig"></a>**`AuthConfig`** *(object)*: Config parameters and their defaults for the example auth context. Cannot contain additional properties.
-  - <a id="%24defs/AuthConfig/properties/auth_key"></a>**`auth_key`** *(string, required)*: The GHGA internal public key for validating the token signature.
-
-    Examples:
-    ```json
-    "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
-    ```
-
-  - <a id="%24defs/AuthConfig/properties/auth_algs"></a>**`auth_algs`** *(array)*: A list of all algorithms used for signing GHGA internal tokens. Default: `["ES256"]`.
-    - <a id="%24defs/AuthConfig/properties/auth_algs/items"></a>**Items** *(string)*
-  - <a id="%24defs/AuthConfig/properties/auth_check_claims"></a>**`auth_check_claims`** *(object)*: A dict of all GHGA internal claims that shall be verified. Can contain additional properties. Default: `{"id": null, "name": null, "email": null, "iat": null, "exp": null}`.
-  - <a id="%24defs/AuthConfig/properties/auth_map_claims"></a>**`auth_map_claims`** *(object)*: A mapping of claims to attributes in the GHGA auth context. Can contain additional properties. Default: `{}`.
-    - <a id="%24defs/AuthConfig/properties/auth_map_claims/additionalProperties"></a>**Additional properties** *(string)*
+- <a id="properties/file_accession_mappings_collection"></a>**`file_accession_mappings_collection`** *(string)*: MongoDB collection name for file accession mappings. Default: `"fileAccessionMappings"`.
 
 ### Usage:
 

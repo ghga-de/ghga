@@ -1,61 +1,81 @@
 {
-  "$defs": {
-    "AuthConfig": {
-      "additionalProperties": false,
-      "description": "Config parameters and their defaults for the example auth context.",
-      "properties": {
-        "auth_key": {
-          "description": "The GHGA internal public key for validating the token signature.",
-          "examples": [
-            "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
-          ],
-          "title": "Internal public key",
-          "type": "string"
-        },
-        "auth_algs": {
-          "default": [
-            "ES256"
-          ],
-          "description": "A list of all algorithms used for signing GHGA internal tokens.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Auth Algs",
-          "type": "array"
-        },
-        "auth_check_claims": {
-          "additionalProperties": true,
-          "default": {
-            "id": null,
-            "name": null,
-            "email": null,
-            "iat": null,
-            "exp": null
-          },
-          "description": "A dict of all GHGA internal claims that shall be verified.",
-          "title": "Auth Check Claims",
-          "type": "object"
-        },
-        "auth_map_claims": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "default": {},
-          "description": "A mapping of claims to attributes in the GHGA auth context.",
-          "title": "Auth Map Claims",
-          "type": "object"
-        }
-      },
-      "required": [
-        "auth_key"
-      ],
-      "title": "AuthConfig",
-      "type": "object"
-    }
-  },
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "accession_map_topic": {
+      "description": "The name of the topic used for file accession map events",
+      "examples": [
+        "accession-maps",
+        "file-accession-maps"
+      ],
+      "title": "Accession Map Topic",
+      "type": "string"
+    },
+    "research_data_upload_box_topic": {
+      "description": "Name of the event topic containing research data upload box events",
+      "examples": [
+        "research-data-upload-boxes"
+      ],
+      "title": "Research Data Upload Box Topic",
+      "type": "string"
+    },
+    "file_upload_box_topic": {
+      "description": "Topic containing published FileUploadBox outbox events",
+      "examples": [
+        "file-upload-boxes",
+        "file-upload-box-topic"
+      ],
+      "title": "File Upload Box Topic",
+      "type": "string"
+    },
+    "audit_record_topic": {
+      "description": "Name of the topic used for events conveying audit record information.",
+      "examples": [
+        "audit-records"
+      ],
+      "title": "Audit Record Topic",
+      "type": "string"
+    },
+    "audit_record_type": {
+      "description": "The type used for events conveying audit record information.",
+      "examples": [
+        "audit_record_logged"
+      ],
+      "title": "Audit Record Type",
+      "type": "string"
+    },
+    "work_order_signing_key": {
+      "description": "The private key for signing work order tokens and other JWTs",
+      "examples": [
+        "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+      ],
+      "format": "password",
+      "title": "Work Order Signing Key",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ucs_url": {
+      "description": "URL pointing to the API of the service that owns FileUploadBoxes (currently the UCS).",
+      "examples": [
+        "http://127.0.0.1/upload"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Ucs Url",
+      "type": "string"
+    },
+    "access_url": {
+      "description": "URL pointing to the internal access API.",
+      "examples": [
+        "http://127.0.0.1/access"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Access Url",
+      "type": "string"
+    },
     "service_name": {
       "default": "rs",
       "description": "Short name of this service",
@@ -301,6 +321,47 @@
       "title": "Log Traceback",
       "type": "boolean"
     },
+    "auth_key": {
+      "description": "The GHGA internal public key for validating the token signature.",
+      "examples": [
+        "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
+      ],
+      "title": "Internal public key",
+      "type": "string"
+    },
+    "auth_algs": {
+      "default": [
+        "ES256"
+      ],
+      "description": "A list of all algorithms used for signing GHGA internal tokens.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Auth Algs",
+      "type": "array"
+    },
+    "auth_check_claims": {
+      "additionalProperties": true,
+      "default": {
+        "id": null,
+        "name": null,
+        "email": null,
+        "iat": null,
+        "exp": null
+      },
+      "description": "A dict of all GHGA internal claims that shall be verified.",
+      "title": "Auth Check Claims",
+      "type": "object"
+    },
+    "auth_map_claims": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "A mapping of claims to attributes in the GHGA auth context.",
+      "title": "Auth Map Claims",
+      "type": "object"
+    },
     "host": {
       "default": "127.0.0.1",
       "description": "IP of the host.",
@@ -454,28 +515,27 @@
       ],
       "title": "Cors Exposed Headers"
     },
-    "uos_auth_config": {
-      "$ref": "#/$defs/AuthConfig"
-    },
-    "alt_accessions_collection": {
-      "default": "altAccessions",
-      "description": "MongoDB collection name for alternative accessions",
-      "title": "Alt Accessions Collection",
-      "type": "string"
-    },
-    "alt_accessions_topic": {
-      "default": "alt-accessions",
-      "description": "Kafka topic for alternative accession events",
-      "title": "Alt Accessions Topic",
+    "file_accession_mappings_collection": {
+      "default": "fileAccessionMappings",
+      "description": "MongoDB collection name for file accession mappings",
+      "title": "File Accession Mappings Collection",
       "type": "string"
     }
   },
   "required": [
+    "accession_map_topic",
+    "research_data_upload_box_topic",
+    "file_upload_box_topic",
+    "audit_record_topic",
+    "audit_record_type",
+    "work_order_signing_key",
+    "ucs_url",
+    "access_url",
     "service_instance_id",
     "kafka_servers",
     "mongo_dsn",
     "db_name",
-    "uos_auth_config"
+    "auth_key"
   ],
   "title": "ModSettings",
   "type": "object"

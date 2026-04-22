@@ -3,6 +3,14 @@ kafka_servers: ["kafka:9092"]
 mongo_dsn: mongodb://localhost:27017
 db_name: rs
 mongo_timeout: 300
-uos_auth_config:
-  auth_key: "{}"
-  auth_check_claims: {}
+auth_key: "{}"
+auth_check_claims: {}
+work_order_signing_key: "{}"
+access_url: http://127.0.0.1/access
+ucs_url: http://127.0.0.1/upload
+audit_record_topic: "audit-records"
+audit_record_type: "audit_record_created"
+file_upload_box_topic: "file-upload-boxes"
+research_data_upload_box_topic: "research-data-upload-boxes"
+accession_map_topic: file-accession-mappings
+file_accession_mappings_collection: fileAccessionMappings

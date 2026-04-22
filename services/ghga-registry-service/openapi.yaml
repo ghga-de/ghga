@@ -1,26 +1,328 @@
 components:
   schemas:
-    FileIdMappingRequest:
-      description: Request body for posting file ID mappings.
+    AccessionMapRequest:
+      description: The request body schema for submitting accession maps
       properties:
+        box_version:
+          description: A counter indicating research data upload box version
+          title: Box Version
+          type: integer
         mapping:
-          description: Map of file accession PIDs to internal file IDs.
+          description: Map of accessions to file IDs
           patternProperties:
             ^GHGAF.+:
               format: uuid4
               type: string
           title: Mapping
           type: object
-        study_pid:
+        study_id:
           description: Identifier of the study to which the file accessions belong.
           maxLength: 256
           minLength: 1
-          title: Study Pid
+          title: Study Id
           type: string
       required:
-      - study_pid
+      - box_version
       - mapping
-      title: FileIdMappingRequest
+      - study_id
+      title: AccessionMapRequest
+      type: object
+    BoxRetrievalResults:
+      description: A model encapsulating retrieved research data upload boxes and
+        the count thereof.
+      properties:
+        boxes:
+          description: The retrieved research data upload boxes
+          items:
+            $ref: '#/components/schemas/ResearchDataUploadBox'
+          title: Boxes
+          type: array
+        count:
+          description: The total number of unpaginated results
+          title: Count
+          type: integer
+      required:
+      - count
+      - boxes
+      title: BoxRetrievalResults
+      type: object
+    CreateUploadBoxRequest:
+      description: Request model for creating a new research data upload box.
+      properties:
+        description:
+          description: Describes the upload box in more detail
+          title: Description
+          type: string
+        storage_alias:
+          description: S3 storage alias to use for uploads
+          minLength: 1
+          title: Storage Alias
+          type: string
+        title:
+          description: Short meaningful name for the box
+          minLength: 1
+          title: Title
+          type: string
+      required:
+      - title
+      - description
+      - storage_alias
+      title: CreateUploadBoxRequest
+      type: object
+    FileUploadWithAccession:
+      description: A FileUpload with its accession
+      properties:
+        accession:
+          anyOf:
+          - pattern: ^GHGAF.+
+            type: string
+          - type: 'null'
+          description: The accession number assigned to this file.
+          title: Accession
+        alias:
+          description: The submitted alias from the metadata (unique within the box)
+          title: Alias
+          type: string
+        box_id:
+          description: The ID of the FileUploadBox this file is associated with
+          format: uuid4
+          title: Box Id
+          type: string
+        bucket_id:
+          description: The name of the bucket where the file is currently stored
+          title: Bucket Id
+          type: string
+        decrypted_sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: SHA-256 checksum of the entire unencrypted file content
+          title: Decrypted Sha256
+        decrypted_size:
+          description: The size of the unencrypted file
+          title: Decrypted Size
+          type: integer
+        encrypted_parts_md5:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: The MD5 checksum for each file part, in sequence
+          title: Encrypted Parts Md5
+        encrypted_parts_sha256:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: The SHA256 checksum for each file part, in sequence
+          title: Encrypted Parts Sha256
+        encrypted_size:
+          description: The size of the encrypted file content. When the file is in
+            the inbox, this includes the Crypt4GH envelope. After re-encryption, the
+            file no longer contains an envelope, so the value is slightly smaller.
+          title: Encrypted Size
+          type: integer
+        failure_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The reason for upload or interrogation failure, if applicable.
+          title: Failure Reason
+        id:
+          description: Unique identifier for the file upload
+          format: uuid4
+          title: Id
+          type: string
+        object_id:
+          description: The ID of the file specific to its S3 bucket
+          format: uuid4
+          title: Object Id
+          type: string
+        part_size:
+          description: The number of bytes in each file part (last part is likely
+            smaller)
+          title: Part Size
+          type: integer
+        secret_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The internal ID of the Data Hub-generated decryption secret
+          title: Secret Id
+        state:
+          default: init
+          description: The state of the FileUpload
+          enum:
+          - init
+          - inbox
+          - failed
+          - cancelled
+          - interrogated
+          - awaiting_archival
+          - archived
+          title: State
+          type: string
+        state_updated:
+          description: Timestamp of when state was updated
+          format: date-time
+          title: State Updated
+          type: string
+        storage_alias:
+          description: The storage alias of the Data Hub housing the file
+          title: Storage Alias
+          type: string
+      required:
+      - id
+      - box_id
+      - alias
+      - state_updated
+      - storage_alias
+      - bucket_id
+      - object_id
+      - decrypted_size
+      - encrypted_size
+      - part_size
+      title: file_upload
+      type: object
+    GrantAccessRequest:
+      description: Request model for granting upload access to a user.
+      properties:
+        box_id:
+          description: ID of the upload box
+          format: uuid4
+          title: Box Id
+          type: string
+        iva_id:
+          description: ID of the IVA verification
+          format: uuid4
+          title: Iva Id
+          type: string
+        user_id:
+          description: ID of the user to grant access to
+          format: uuid4
+          title: User Id
+          type: string
+        valid_from:
+          description: Start date of validity
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - box_id
+      - user_id
+      - iva_id
+      - valid_from
+      - valid_until
+      title: GrantAccessRequest
+      type: object
+    GrantId:
+      description: The ID of an access grant.
+      properties:
+        id:
+          description: Internal grant ID (same as claim ID)
+          format: uuid4
+          title: Id
+          type: string
+      required:
+      - id
+      title: GrantId
+      type: object
+    GrantWithBoxInfo:
+      description: An UploadGrant with the ResearchDataUploadBox title and description.
+      properties:
+        box_description:
+          description: Describes the upload box in more detail
+          title: Box Description
+          type: string
+        box_id:
+          description: ID of the upload box this grant is for
+          format: uuid4
+          title: Box Id
+          type: string
+        box_state:
+          description: The state of the upload box
+          enum:
+          - open
+          - locked
+          - archived
+          title: Box State
+          type: string
+        box_title:
+          description: Short meaningful name for the box
+          title: Box Title
+          type: string
+        box_version:
+          description: The upload box version
+          title: Box Version
+          type: integer
+        created:
+          description: Date of creation of this grant
+          format: date-time
+          title: Created
+          type: string
+        id:
+          description: Internal grant ID (same as claim ID)
+          format: uuid4
+          title: Id
+          type: string
+        iva_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of an IVA associated with this grant
+          title: Iva Id
+        user_email:
+          description: The email address of the user
+          format: email
+          title: User Email
+          type: string
+        user_id:
+          description: Internal user ID
+          format: uuid4
+          title: User Id
+          type: string
+        user_name:
+          description: Full name of the user
+          title: User Name
+          type: string
+        user_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Academic title of the user
+          title: User Title
+        valid_from:
+          description: Start date of validity
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - id
+      - user_id
+      - box_id
+      - created
+      - valid_from
+      - valid_until
+      - user_name
+      - user_email
+      - box_title
+      - box_description
+      - box_state
+      - box_version
+      title: GrantWithBoxInfo
       type: object
     HTTPValidationError:
       properties:
@@ -31,8 +333,128 @@ components:
           type: array
       title: HTTPValidationError
       type: object
+    ResearchDataUploadBox:
+      description: A class representing a ResearchDataUploadBox.
+      properties:
+        changed_by:
+          description: ID of the user who performed the latest change
+          format: uuid4
+          title: Changed By
+          type: string
+        description:
+          description: Describes the upload box in more detail
+          title: Description
+          type: string
+        file_count:
+          default: 0
+          description: The number of files in the box
+          title: File Count
+          type: integer
+        file_upload_box_id:
+          description: The ID of the file upload box.
+          format: uuid4
+          title: File Upload Box Id
+          type: string
+        file_upload_box_state:
+          description: Current state of the file upload box
+          enum:
+          - open
+          - locked
+          - archived
+          title: File Upload Box State
+          type: string
+        file_upload_box_version:
+          description: A counter indicating resource version
+          title: File Upload Box Version
+          type: integer
+        id:
+          description: Unique identifier for the research data upload box
+          format: uuid4
+          title: Id
+          type: string
+        last_changed:
+          description: Timestamp of the latest change
+          format: date-time
+          title: Last Changed
+          type: string
+        size:
+          default: 0
+          description: The total size of all files in the box
+          title: Size
+          type: integer
+        state:
+          description: Current state of the research data upload box
+          enum:
+          - open
+          - locked
+          - archived
+          title: State
+          type: string
+        storage_alias:
+          description: S3 storage alias to use for uploads
+          title: Storage Alias
+          type: string
+        title:
+          description: Short meaningful name for the box
+          title: Title
+          type: string
+        version:
+          description: A counter indicating resource version
+          title: Version
+          type: integer
+      required:
+      - version
+      - state
+      - title
+      - description
+      - last_changed
+      - changed_by
+      - file_upload_box_id
+      - file_upload_box_version
+      - file_upload_box_state
+      - storage_alias
+      title: research_data_upload_box
+      type: object
+    UpdateUploadBoxRequest:
+      description: Request model for updating a research data upload box.
+      properties:
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Updated description
+          title: Description
+        state:
+          anyOf:
+          - enum:
+            - open
+            - locked
+            - archived
+            type: string
+          - type: 'null'
+          description: Updated state
+          title: State
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Updated title
+          title: Title
+        version:
+          description: A counter indicating resource version
+          title: Version
+          type: integer
+      required:
+      - version
+      title: UpdateUploadBoxRequest
+      type: object
     ValidationError:
       properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
         loc:
           items:
             anyOf:
@@ -57,33 +479,140 @@ components:
       scheme: bearer
       type: http
 info:
-  description: A service for ingesting and archiving metadata from data submitters.
+  description: A service providing a web-accessible management and auth layer over
+    upload-path file services.
   title: GHGA Registry Service
   version: 0.1.0
 openapi: 3.1.0
 paths:
-  /file-ids/{study_pid}:
-    post:
-      description: Store file accession to internal file ID mappings.
-      operationId: postFilenames
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+  /upload-boxes:
+    get:
+      description: Returns a list of research data upload boxes. Results are sorted
+        first by locked status (unlocked followed by locked), then by most recently
+        changed, then by box ID. Data Stewards have access to all boxes, while regular
+        users may only access boxes to which they have been granted upload access.
+      operationId: get_research_data_upload_boxes_upload_boxes_get
       parameters:
-      - in: path
-        name: study_pid
-        required: true
+      - description: Number of research data upload boxes to skip for pagination
+        in: query
+        name: skip
+        required: false
         schema:
-          maxLength: 256
-          minLength: 1
-          title: Study Pid
-          type: string
+          anyOf:
+          - minimum: 0
+            type: integer
+          - type: 'null'
+          description: Number of research data upload boxes to skip for pagination
+          title: Skip
+      - description: Maximum number of research data upload boxes to return
+        in: query
+        name: limit
+        required: false
+        schema:
+          anyOf:
+          - minimum: 0
+            type: integer
+          - type: 'null'
+          description: Maximum number of research data upload boxes to return
+          title: Limit
+      - description: Filter by state. None returns all boxes.
+        in: query
+        name: state
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - open
+            - locked
+            - archived
+            type: string
+          - type: 'null'
+          description: Filter by state. None returns all boxes.
+          title: State
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoxRetrievalResults'
+          description: Research data upload boxes successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '422':
+          description: Validation error in query parameters.
+      security:
+      - HTTPBearer: []
+      summary: List upload boxes
+      tags:
+      - ResearchDataUploadBoxes
+    post:
+      description: Create a new research data upload box to label and track related
+        file uploads for a given user.
+      operationId: create_research_data_upload_box_upload_boxes_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FileIdMappingRequest'
+              $ref: '#/components/schemas/CreateUploadBoxRequest'
         required: true
       responses:
-        '204':
-          description: Successful Response
+        '201':
+          content:
+            application/json:
+              schema:
+                format: uuid4
+                title: Response 201 Create Research Data Upload Box Upload Boxes Post
+                type: string
+          description: Upload box created successfully.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '422':
+          description: Validation error in request body.
+      security:
+      - HTTPBearer: []
+      summary: Create upload box
+      tags:
+      - ResearchDataUploadBoxes
+  /upload-boxes/{box_id}:
+    get:
+      description: Returns the details of an existing research data upload box.
+      operationId: get_research_data_upload_box_upload_boxes__box_id__get
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid
+          title: Box Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchDataUploadBox'
+          description: Upload box details successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Upload box not found or access denied.
         '422':
           content:
             application/json:
@@ -92,23 +621,262 @@ paths:
           description: Validation Error
       security:
       - HTTPBearer: []
-      summary: Post file ID mappings
+      summary: Get upload box details
       tags:
-      - GHGARegistryService
-      - files
-  /health:
+      - ResearchDataUploadBoxes
+    patch:
+      description: 'Update modifiable details for a research data upload box, including
+        the description, title, and state. When modifying the state, users are only
+        allowed to move the state from OPEN to LOCKED, and all other changes are restricted
+        to Data Stewards. A note on archival: Once archived, the box may no longer
+        be modified, and files in the box will be moved to permanent storage. If any
+        files in the box have yet to be re-encrypted, if the box is still open, or
+        if there are any files that lack an accession number, archival is denied.'
+      operationId: update_research_data_upload_box_upload_boxes__box_id__patch
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid
+          title: Box Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUploadBoxRequest'
+        required: true
+      responses:
+        '204':
+          description: Upload box updated successfully.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Upload box not found.
+        '409':
+          description: Update failed due to an outdated request or unmet prerequisites.
+        '422':
+          description: Validation error in request body.
+      security:
+      - HTTPBearer: []
+      summary: Update upload box
+      tags:
+      - ResearchDataUploadBoxes
+  /upload-boxes/{box_id}/file-ids:
+    post:
+      description: Submit a file ID to accession number mapping for an upload box.
+      operationId: submit_accession_map_upload_boxes__box_id__file_ids_post
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid
+          title: Box Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessionMapRequest'
+        required: true
+      responses:
+        '204':
+          description: Accession map successfully submitted.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Upload box not found.
+        '409':
+          description: The version of the requested box is out of date.
+        '422':
+          description: Validation error in request body.
+      security:
+      - HTTPBearer: []
+      summary: Map file IDs to accession numbers for files in the upload box
+      tags:
+      - ResearchDataUploadBoxes
+  /upload-boxes/{box_id}/uploads:
     get:
-      description: Used to test if this service is alive
-      operationId: health
+      description: List the details of all files uploads for a research data upload
+        box.
+      operationId: list_upload_box_files_upload_boxes__box_id__uploads_get
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid
+          title: Box Id
+          type: string
       responses:
         '200':
           content:
             application/json:
-              schema: {}
-          description: Successful Response
-      summary: health
+              schema:
+                items:
+                  $ref: '#/components/schemas/FileUploadWithAccession'
+                title: Response 200 List Upload Box Files Upload Boxes  Box Id  Uploads
+                  Get
+                type: array
+          description: File upload information successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Upload box not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: List files in upload box
       tags:
-      - GHGARegistryService
-      - health
+      - ResearchDataUploadBoxes
+  /upload-grants:
+    get:
+      description: Endpoint to get the list of all upload access grants. Can be filtered
+        by user ID, IVA ID, and box ID. Results are sorted by validity, box ID, user
+        ID, IVA ID, and grant ID.
+      operationId: get_upload_access_grants_upload_grants_get
+      parameters:
+      - description: The internal ID of the user
+        in: query
+        name: user_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The internal ID of the user
+          title: User Id
+      - description: The ID of the IVA
+        in: query
+        name: iva_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The ID of the IVA
+          title: Iva Id
+      - description: The ID of the upload box
+        in: query
+        name: box_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The ID of the upload box
+          title: Box Id
+      - description: Whether the grant is currently valid
+        in: query
+        name: valid
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Whether the grant is currently valid
+          title: Valid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/GrantWithBoxInfo'
+                title: Response 200 Get Upload Access Grants Upload Grants Get
+                type: array
+          description: Upload access grants have been fetched.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Get upload access grants
+      tags:
+      - UploadGrants
+    post:
+      description: Grant upload access to a user for a single research data upload
+        box. Users cannot upload any files until they have been granted access to
+        a box.
+      operationId: grant_upload_access_upload_grants_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantAccessRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantId'
+          description: Upload access granted successfully.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '422':
+          description: Validation error in request body.
+      security:
+      - HTTPBearer: []
+      summary: Grant upload access
+      tags:
+      - UploadGrants
+  /upload-grants/{grant_id}:
+    delete:
+      description: Revokes an existing upload access grant.
+      operationId: revoke_upload_access_grant_upload_grants__grant_id__delete
+      parameters:
+      - in: path
+        name: grant_id
+        required: true
+        schema:
+          format: uuid4
+          title: Grant Id
+          type: string
+      responses:
+        '204':
+          description: Upload access grant has been revoked.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: The upload access grant was not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Revoke an upload access grant
+      tags:
+      - UploadGrants
 tags:
-- name: GHGARegistryService
+- name: ResearchDataUploadBoxes

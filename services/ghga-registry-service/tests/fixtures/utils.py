@@ -18,32 +18,24 @@
 from pathlib import Path
 from uuid import UUID
 
-from ghga_service_commons.utils import jwt_helpers
-from jwcrypto.jwk import JWK
-from pydantic import UUID4
-
-from rs.adapters.inbound.fastapi_.rest_models import MapFileIdsWorkOrder
-
 BASE_DIR = Path(__file__).parent.resolve()
 
 TOKEN_LIFESPAN = 30  # seconds
-DATA_STEWARD_ID = UUID("6d1a41c3-de07-42f8-80ef-243aa69b6261")
+TEST_DS_ID = UUID("f698158d-8417-4368-bb45-349277bc45ee")
+TEST_BOX_ID = UUID("bf344cd4-0c1b-434a-93d1-36a11b6b02d9")
+INVALID_HEADER: dict[str, str] = {"Authorization": "Bearer ab12"}
+
+DS_AUTH_CLAIMS = {
+    "name": "John Doe",
+    "email": "john@home.org",
+    "title": "Dr.",
+    "id": str(TEST_DS_ID),
+    "roles": ["data_steward"],
+}
+USER_AUTH_CLAIMS = DS_AUTH_CLAIMS.copy()
+del USER_AUTH_CLAIMS["roles"]
 
 
-def _make_auth_header(work_order, jwk) -> dict[str, str]:
-    """Make an auth header from the supplied work order"""
-    claims = work_order.model_dump(mode="json")
-    signed_token = jwt_helpers.sign_and_serialize_token(
-        claims=claims, key=jwk, valid_seconds=TOKEN_LIFESPAN
-    )
-    return {"Authorization": f"Bearer {signed_token}"}
-
-
-def map_file_ids_token_header(
-    *, user_id: UUID4 = DATA_STEWARD_ID, uos_jwk: JWK, study_pid: str
-) -> dict[str, str]:
-    """Generate MapFileIdsWorkOrder token for testing."""
-    work_order = MapFileIdsWorkOrder(
-        work_type="map", user_id=user_id, study_pid=study_pid
-    )
-    return _make_auth_header(work_order, uos_jwk)
+def headers_for_token(token: str) -> dict[str, str]:
+    """Get the Authorization headers for the given token."""
+    return {"Authorization": f"Bearer {token}"}

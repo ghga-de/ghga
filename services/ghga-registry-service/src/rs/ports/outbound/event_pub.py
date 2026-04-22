@@ -12,5 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Event publisher port definition"""
 
-"""Routers for the different facets of the API surface"""
+from abc import ABC, abstractmethod
+
+from ghga_event_schemas.pydantic_ import AuditRecord
+
+__all__ = ["EventPublisherPort"]
+
+
+class EventPublisherPort(ABC):
+    """Port for publishing events."""
+
+    @abstractmethod
+    async def publish_audit_record(self, audit_record: AuditRecord) -> None:
+        """Publish an audit record event"""

@@ -15,8 +15,10 @@
 
 """Outbound DAO port definitions."""
 
+from ghga_event_schemas.pydantic_ import FileAccessionMapping
 from hexkit.protocols.daopub import DaoPublisher
 
-from rs.core.models import AltAccession
+from rs.core.models import ResearchDataUploadBox
 
-AltAccessionDao = DaoPublisher[AltAccession]
+FileAccessionMappingDao = DaoPublisher[FileAccessionMapping]
+BoxDao = DaoPublisher[ResearchDataUploadBox]

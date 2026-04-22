@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utils to configure the FastAPI app"""
+"""Utils to customize openAPI script"""
 
 from typing import Any
 
@@ -23,16 +23,20 @@ from ghga_service_commons.api import ApiConfigBase, configure_app
 
 from rs import __version__
 from rs.adapters.inbound.fastapi_.routes import router
+from rs.config import Config
+
+config = Config()  # type: ignore
 
 
-def get_openapi_schema(app: FastAPI) -> dict[str, Any]:
+def get_openapi_schema(api) -> dict[str, Any]:
     """Generates a custom openapi schema for the service"""
     return get_openapi(
         title="GHGA Registry Service",
         version=__version__,
-        description="A service for ingesting and archiving metadata from data submitters.",
-        tags=[{"name": "GHGARegistryService"}],
-        routes=app.routes,
+        description="A service providing a web-accessible management and auth layer"
+        + " over upload-path file services.",
+        tags=[{"name": "ResearchDataUploadBoxes"}],
+        routes=api.routes,
     )
 
 

@@ -13,4 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Routers for the different facets of the API surface"""
+"""Defines the main GHGA Registry Service inbound port."""
+
+from abc import ABC, abstractmethod
+
+from rs.ports.inbound.rdub_manager import RDUBManagerPort
+
+
+class GHGARegistryPort(ABC):
+    """Inbound port defining all operations of the GHGA Registry Service."""
+
+    @property
+    @abstractmethod
+    def rdub_manager(self) -> RDUBManagerPort:
+        """The RDUBManager component."""
+        ...

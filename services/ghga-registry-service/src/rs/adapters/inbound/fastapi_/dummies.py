@@ -13,18 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A collection of dependency dummies that are used in view definitions but need to be
-replaced at runtime by actual dependencies.
+"""A collection of dependency dummies.
+
+These dummies are used in path operation definitions, but at runtime they need
+to be replaced  with actual dependencies.
 """
 
 from typing import Annotated
 
 from fastapi import Depends
 from ghga_service_commons.api.di import DependencyDummy
+from ghga_service_commons.auth.context import AuthContextProtocol
+from ghga_service_commons.auth.ghga import AuthContext
 
-from rs.ports.inbound.files import FileControllerPort
+from rs.ports.inbound.ghga_registry import GHGARegistryPort
 
-file_controller_port = DependencyDummy("file_controller_port")
-auth_provider_dummy = DependencyDummy("auth_provider_dummy")
+__all__ = [
+    "AuthProviderDummy",
+    "GHGARegistryDummy",
+    "auth_provider",
+    "ghga_registry_port",
+]
 
-FileControllerDummy = Annotated[FileControllerPort, Depends(file_controller_port)]
+auth_provider = DependencyDummy("auth_provider")
+ghga_registry_port = DependencyDummy("ghga_registry_port")
+
+AuthProviderDummy = Annotated[AuthContextProtocol[AuthContext], Depends(auth_provider)]
+GHGARegistryDummy = Annotated[GHGARegistryPort, Depends(ghga_registry_port)]

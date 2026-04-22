@@ -19,4 +19,13 @@ from opentelemetry import trace
 
 SERVICE_NAME: str = "rs"
 TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
-AUTH_CHECK_CLAIMS = ["iat", "exp"]
+BOX_COLLECTION = "boxes"
+AUDIT_COLLECTION = "auditLogs"
+WORK_ORDER_TOKEN_VALID_SECONDS = 30
+ACCESSION_MAPS_COLLECTION = "accessionMaps"
+HTTPX_TIMEOUT = 60
+VALID_STATE_TRANSITIONS = [
+    ("open", "locked"),
+    ("locked", "open"),
+    ("locked", "archived"),
+]

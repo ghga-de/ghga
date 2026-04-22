@@ -23,29 +23,36 @@ from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
 from pydantic import Field
 
+from rs.adapters.inbound.event_sub import OutboxSubConfig
+from rs.adapters.outbound.dao import OutboxPubConfig
+from rs.adapters.outbound.event_pub import EventPubConfig
+from rs.adapters.outbound.http import AccessApiConfig, FileBoxClientConfig
 from rs.constants import SERVICE_NAME
+
+__all__ = ["Config"]
 
 
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     ApiConfigBase,
+    AuthConfig,
     LoggingConfig,
     OpenTelemetryConfig,
     MongoKafkaConfig,
+    AccessApiConfig,
+    FileBoxClientConfig,
+    EventPubConfig,
+    OutboxSubConfig,
+    OutboxPubConfig,
 ):
     """Config parameters and their defaults."""
 
     service_name: str = Field(
         default=SERVICE_NAME, description="Short name of this service"
     )
-    uos_auth_config: AuthConfig
-    alt_accessions_collection: str = Field(
-        default="altAccessions",
-        description="MongoDB collection name for alternative accessions",
-    )
-    alt_accessions_topic: str = Field(
-        default="alt-accessions",
-        description="Kafka topic for alternative accession events",
+    file_accession_mappings_collection: str = Field(
+        default="fileAccessionMappings",
+        description="MongoDB collection name for file accession mappings",
     )
 
 

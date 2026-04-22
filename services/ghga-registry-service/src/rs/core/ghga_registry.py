@@ -12,5 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""GHGARegistry implementation"""
 
-"""Routers for the different facets of the API surface"""
+from rs.ports.inbound.ghga_registry import GHGARegistryPort
+from rs.ports.inbound.rdub_manager import RDUBManagerPort
+
+
+class GHGARegistry(GHGARegistryPort):
+    """Top-level class linking all constituent registry operations"""
+
+    def __init__(
+        self,
+        *,
+        rdub_manager: RDUBManagerPort,
+    ) -> None:
+        self._rdub_manager = rdub_manager
+
+    @property
+    def rdub_manager(self) -> RDUBManagerPort:
+        """The RDUBManager component."""
+        return self._rdub_manager
