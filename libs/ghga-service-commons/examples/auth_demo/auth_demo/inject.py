@@ -81,7 +81,7 @@ async def prepare_rest_app(
             config=config, hangout_override=hangout_override
         ) as hangout:
             app.dependency_overrides[dummies.hangout_port] = lambda: hangout
-            app.dependency_overrides[dummies.auth_provider_dummy] = (
-                lambda: auth_provider
+            app.dependency_overrides[dummies.auth_provider_dummy] = lambda: (
+                auth_provider
             )
             yield app

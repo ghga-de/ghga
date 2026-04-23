@@ -72,7 +72,7 @@ class AsyncRateLimitingTransport(httpx.AsyncBaseTransport):
             await asyncio.sleep(sleep_for)
 
         # Delegate call and update timestamp
-        response = await self._transport.handle_async_request(request=request)
+        response = await self._transport.handle_async_request(request)
 
         # Update state
         self._num_requests += 1
