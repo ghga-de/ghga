@@ -57,7 +57,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     ekss_url = f"{joint_fixture.config.ekss_api_url}/secrets"
     secret_id = "some-secret-id"
     httpx_mock.add_response(
-        url=ekss_url, method="POST", status_code=201, json=secret_id
+        url=ekss_url, method="POST", status_code=201, json={"secret_id": secret_id}
     )
 
     # Submit a successful interrogation report and check for the published event

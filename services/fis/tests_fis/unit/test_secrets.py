@@ -48,7 +48,7 @@ async def test_happy_deposition(httpx_mock: HTTPXMock, client: SecretsClient):
         url=f"{BASE_URL}/secrets",
         method="POST",
         status_code=201,
-        json=SECRET_ID,
+        json={"secret_id": SECRET_ID},
     )
 
     result = await client.deposit_secret(secret=SECRET_BYTES)
@@ -77,6 +77,17 @@ async def test_deposition_errors(httpx_mock: HTTPXMock, client: SecretsClient):
         httpx.ConnectError("Connection refused"),
         url=f"{BASE_URL}/secrets",
         method="POST",
+    )
+
+    with pytest.raises(SecretsClient.SecretsApiError):
+        await client.deposit_secret(secret=SECRET_BYTES)
+
+    # Invalid JSON response body should raise SecretsApiError
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/secrets",
+        method="POST",
+        status_code=201,
+        content=b"not valid json",
     )
 
     with pytest.raises(SecretsClient.SecretsApiError):
