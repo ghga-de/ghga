@@ -4,16 +4,19 @@
  * @license Apache-2.0
  */
 
-import { httpResource } from '@angular/common/http';
+import { HttpClient, httpResource } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
+import { concatMap, from, map, Observable, reduce } from 'rxjs';
 import {
   DatasetDetails,
   DatasetDetailsRaw,
+  File as DatasetFile,
   emptyDatasetDetails,
   ExperimentMethod,
   Individual,
 } from '../models/dataset-details';
+import { EmFile } from '../models/dataset-information';
 import { DatasetSummary, emptyDatasetSummary } from '../models/dataset-summary';
 import { emptyStudy, Study } from '../models/study';
 
@@ -29,6 +32,7 @@ import { emptyStudy, Study } from '../models/study';
 @Injectable()
 export class MetadataService {
   #config = inject(ConfigService);
+  #http = inject(HttpClient);
   #metldataUrl = this.#config.metldataUrl;
 
   #datasetSummaryUrl = `${this.#metldataUrl}/artifacts/stats_public/classes/DatasetStats/resources`;
@@ -51,8 +55,8 @@ export class MetadataService {
   );
 
   /**
-   * Load the study details for the given ID
-   * @param id study ID
+   * Load the study details for the given study ID
+   * @param id Study ID
    */
   loadStudy(id: string): void {
     this.#studyID.set(id);
@@ -98,6 +102,47 @@ export class MetadataService {
   loadDatasetDetails(id: string): void {
     this.#detailsID.set(id);
   }
+
+  /**
+   * Fetch the unique files for a study.
+   *
+   * Unfortunately, this method is not efficient, but it is only used temporarily
+   * until we switch to a study-based backend.
+   * @param study Study containing the list of dataset accessions to inspect
+   * @returns An observable emitting a list of unique EM files
+   */
+  filesOfStudy(study: Study): Observable<EmFile[]> {
+    return from(study.datasets).pipe(
+      concatMap((datasetAccession) =>
+        this.#http.get<DatasetDetails>(
+          `${this.#datasetDetailsUrl}/${datasetAccession}`,
+        ),
+      ),
+      concatMap((details) => from(Object.entries(details))),
+      concatMap(([propertyName, propertyValue]) => {
+        if (!propertyName.endsWith('_files') || !Array.isArray(propertyValue)) {
+          return from([] as unknown[]);
+        }
+
+        return from(propertyValue);
+      }),
+      reduce((filesByAccession, file) => {
+        if (!this.#isDatasetFile(file) || filesByAccession.has(file.accession)) {
+          return filesByAccession;
+        }
+
+        filesByAccession.set(file.accession, {
+          accession: file.accession,
+          alias: file.alias,
+          name: file.name,
+          format: file.format,
+        });
+        return filesByAccession;
+      }, new Map<string, EmFile>()),
+      map((filesByAccession) => Array.from(filesByAccession.values())),
+    );
+  }
+
   /**
    * Resolve dataset details
    * @param raw The raw dataset details object
@@ -138,5 +183,24 @@ export class MetadataService {
         individual: getIndividual(s.individual),
       })),
     };
+  }
+
+  /**
+   * Check if an unknown value looks like a dataset file object.
+   * @param value Value from a dynamic dataset details property
+   * @returns True when value is a dataset file with required fields
+   */
+  #isDatasetFile(value: unknown): value is DatasetFile & { alias: string } {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+
+    const candidate = value as Partial<DatasetFile>;
+    return (
+      typeof candidate.accession === 'string' &&
+      typeof candidate.alias === 'string' &&
+      typeof candidate.name === 'string' &&
+      typeof candidate.format === 'string'
+    );
   }
 }

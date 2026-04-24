@@ -19,8 +19,8 @@ export interface DatasetSummary {
 interface StudiesSummary {
   count: number;
   stats: {
-    accession: string;
-    title: string;
+    accession: string[];
+    title: string[];
   };
 }
 
@@ -62,7 +62,7 @@ export const emptyDatasetSummary: DatasetSummary = {
   description: '',
   dac_email: '',
   types: [],
-  studies_summary: { count: 0, stats: { accession: '', title: '' } },
+  studies_summary: { count: 0, stats: { accession: [], title: [] } },
   files_summary: { count: 0, stats: { format: [] } },
   samples_summary: {
     count: 0,

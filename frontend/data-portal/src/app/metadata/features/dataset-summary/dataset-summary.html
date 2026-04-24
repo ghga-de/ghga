@@ -49,24 +49,26 @@
             <mat-icon inline fontIcon="book_2"></mat-icon>
           </div>
           <div class="*:mb-0.5">
-            @if(studiesSummary().count > 0) {
+            @if (studiesSummary().count > 0) {
               <p>
                 <strong>Part of study: </strong>
               </p>
               <p>
                 <a
-                  routerLink="/study/{{ studiesSummaryStats().accession }}"
+                  routerLink="/study/{{ studiesSummaryStats().accession[0] }}"
                   data-umami-event="Dataset Summary Study Title Clicked"
-                  >{{  studiesSummaryStats().title }}</a>
+                  >{{ studiesSummaryStats().title[0] }}</a
+                >
               </p>
               <p>
                 <strong>Accession ID: </strong>
               </p>
               <p>
                 <a
-                  routerLink="/study/{{ studiesSummaryStats().accession }}"
+                  routerLink="/study/{{ studiesSummaryStats().accession[0] }}"
                   data-umami-event="Dataset Summary Study Accession Clicked"
-                  >{{  studiesSummaryStats().accession }}</a>
+                  >{{ studiesSummaryStats().accession[0] }}</a
+                >
               </p>
             } @else {
               <p>

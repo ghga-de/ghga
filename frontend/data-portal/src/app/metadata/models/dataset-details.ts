@@ -59,6 +59,7 @@ interface Publication {
 
 export interface File {
   accession: string;
+  alias?: string;
   format: string;
   name: string;
   ega_accession: string;

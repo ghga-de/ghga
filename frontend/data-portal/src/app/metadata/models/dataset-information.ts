@@ -18,6 +18,13 @@ export interface FileInformation {
   storage_alias?: string;
 }
 
+export interface EmFile {
+  accession: string;
+  alias: string;
+  name: string;
+  format: string;
+}
+
 export const emptyDatasetInformation: DatasetInformation = {
   accession: '',
   file_information: [],

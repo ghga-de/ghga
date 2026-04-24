@@ -417,8 +417,8 @@ export const datasetSummary: DatasetSummary = {
   studies_summary: {
     count: 1,
     stats: {
-      accession: 'GHGAS12345678901234',
-      title: 'Test Study',
+      accession: ['GHGAS12345678901234'],
+      title: ['Test Study'],
     },
   },
   experiments_summary: {
