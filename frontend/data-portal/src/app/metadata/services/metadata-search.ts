@@ -5,7 +5,7 @@
  */
 
 import { HttpClient, httpResource } from '@angular/common/http';
-import { Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 import {
   Observable,
@@ -49,37 +49,24 @@ export class MetadataSearchService {
   #studyUrl = `${this.#metldataUrl}/artifacts/embedded_public/classes/Study/resources`;
   #http = inject(HttpClient);
   #className = signal<string | undefined>(undefined);
-  #limit = signal<number | undefined>(undefined);
-  #skip = signal<number | undefined>(undefined);
+  #limit = signal<number>(DEFAULT_PAGE_SIZE);
+  #skip = signal<number>(DEFAULT_SKIP_VALUE);
   #query = signal<string | undefined>(undefined);
   #facets = signal<FacetFilterSetting>({});
 
-  query = computed(() => {
-    if (!this.#query()) return '';
-    return this.#query();
-  });
+  query = computed(() => this.#query() ?? '');
 
-  #massQueryUrl: Signal<string | undefined> = computed(() => {
-    const baseUrl = this.#searchUrl;
+  #massQueryUrl = computed(() => {
     const className = this.#className();
-
-    if (!baseUrl || !className) return undefined;
-
-    const query = this.#query();
-    const limit = this.#limit();
-    const skip = this.#skip();
-    const facets = this.#facets();
-
-    const newMassQueryUrl = this.urlFromParameters(
-      baseUrl,
+    if (!className) return undefined;
+    return this.#urlFromParameters(
+      this.#searchUrl,
       className,
-      facets,
-      query,
-      skip,
-      limit,
+      this.#facets(),
+      this.#query(),
+      this.#skip(),
+      this.#limit(),
     );
-
-    return newMassQueryUrl;
   });
 
   /**
@@ -144,16 +131,16 @@ export class MetadataSearchService {
    * The current search results skip value
    * to be used by the paginator
    */
-  searchResultsSkip = computed(() => this.#skip() ?? 0);
+  searchResultsSkip = computed(() => this.#skip());
 
   /**
    * The current search results limit value
    * to be used by the paginator
    */
-  searchResultsLimit = computed(() => this.#limit() ?? DEFAULT_PAGE_SIZE);
+  searchResultsLimit = computed(() => this.#limit());
 
   /**
-   * Computes an url from the provided parameters
+   * Computes a url from the provided parameters
    * @param baseUrl the server address to use for the api
    * @param className request parameter of the same name
    * @param facets The list of facets specified in the filter list
@@ -162,7 +149,7 @@ export class MetadataSearchService {
    * @param limit how many items to return
    * @returns a string containing the url
    */
-  urlFromParameters(
+  #urlFromParameters(
     baseUrl: string,
     className: string,
     facets: FacetFilterSetting,
@@ -170,14 +157,10 @@ export class MetadataSearchService {
     skip?: number,
     limit?: number,
   ): string {
-    let massQueryUrl = baseUrl + '?';
-    if (!className || className.length == 0) {
-      return '';
-    }
-    massQueryUrl += `class_name=${className}`;
-    for (let facetKey in facets) {
-      for (let option in facets[facetKey]) {
-        massQueryUrl += `&filter_by=${facetKey}&value=${facets[facetKey][option]}`;
+    let massQueryUrl = `${baseUrl}?class_name=${className}`;
+    for (const [facetKey, values] of Object.entries(facets)) {
+      for (const value of values) {
+        massQueryUrl += `&filter_by=${facetKey}&value=${value}`;
       }
     }
     if (query) {

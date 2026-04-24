@@ -43,13 +43,11 @@ class MockConfigService {
 }
 
 describe('AccessRequestManagerDetailComponent', () => {
-  let component: AccessRequestManagerDetailComponent;
   let fixture: ComponentFixture<AccessRequestManagerDetailComponent>;
   let httpMock: HttpTestingController;
-  let testBed: TestBed;
 
   beforeEach(async () => {
-    testBed = TestBed.configureTestingModule({
+    TestBed.configureTestingModule({
       imports: [AccessRequestManagerDetailComponent],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
@@ -61,14 +59,13 @@ describe('AccessRequestManagerDetailComponent', () => {
       ],
     });
 
-    await testBed.compileComponents();
-    fixture = testBed.createComponent(AccessRequestManagerDetailComponent);
-    component = fixture.componentInstance;
-    httpMock = testBed.inject(HttpTestingController);
+    await TestBed.compileComponents();
+    fixture = TestBed.createComponent(AccessRequestManagerDetailComponent);
+    httpMock = TestBed.inject(HttpTestingController);
 
     fixture.componentRef.setInput('id', '9409db13-e23e-433e-9afa-544d8f25b720');
 
-    testBed.tick();
+    TestBed.tick();
     const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev');
     expect(req.request.method).toBe('GET');
     req.flush({ ext_id: 'ls-id-of-joe@ls-aai.dev' });

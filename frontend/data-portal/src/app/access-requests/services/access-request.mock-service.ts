@@ -75,4 +75,5 @@ export class MockAccessRequestService {
   setAllAccessGrantsFilter = (filter: AccessGrantFilter) => undefined;
   allAccessGrantsFiltered = () => accessGrants;
   revokeAccessGrant = async (id: string) => undefined;
+  loadAccessRequest = (id: string) => undefined;
 }

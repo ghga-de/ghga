@@ -7,7 +7,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ConfigService } from '@app/shared/services/config';
 import { MetadataSearchService } from './metadata-search';
 
@@ -20,9 +20,11 @@ class MockConfigService {
 
 describe('MetadataSearchService', () => {
   let service: MetadataSearchService;
+  let httpController: HttpTestingController;
+  let testBed: TestBed;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({
+    testBed = TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -30,6 +32,11 @@ describe('MetadataSearchService', () => {
       ],
     });
     service = TestBed.inject(MetadataSearchService);
+    httpController = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpController.verify();
   });
 
   it('should be created', () => {
@@ -37,37 +44,32 @@ describe('MetadataSearchService', () => {
   });
 
   it('should compute the search URL correctly for a range of parameters', () => {
-    expect(
-      service.urlFromParameters(
-        '/',
-        'EmbeddedDataset',
-        {},
-        'GHGAD33646518790164',
-        0,
-        10,
-      ),
-    ).toBe('/?class_name=EmbeddedDataset&query=GHGAD33646518790164&limit=10');
-    expect(
-      service.urlFromParameters(
-        '/',
-        'EmbeddedDataset',
-        {},
-        'GHGAD33646518790164',
-        10,
-        10,
-      ),
-    ).toBe('/?class_name=EmbeddedDataset&query=GHGAD33646518790164&limit=10&skip=10');
+    service.loadQueryParameters('EmbeddedDataset', 10, 0, 'GHGAD33646518790164');
+    testBed.tick();
+    const req1 = httpController.expectOne(
+      'http://mock.dev/mass/search?class_name=EmbeddedDataset&query=GHGAD33646518790164&limit=10',
+    );
+    req1.flush({});
+
+    service.loadQueryParameters('EmbeddedDataset', 10, 10, 'GHGAD33646518790164');
+    testBed.tick();
+    const req2 = httpController.expectOne(
+      'http://mock.dev/mass/search?class_name=EmbeddedDataset&query=GHGAD33646518790164&limit=10&skip=10',
+    );
+    req2.flush({});
   });
 
-  it('should compute an empty url if the class name is not set', () => {
-    expect(service.urlFromParameters('/', '', {}, 'GHGAD33646518790164', 0, 10)).toBe(
-      '',
-    );
+  it('should not make a request when class name is not set', () => {
+    testBed.tick();
+    httpController.expectNone('http://mock.dev/mass/search');
   });
 
   it('should url escape the query parameter', () => {
-    expect(service.urlFromParameters('/', 'EmbeddedDataset', {}, 'test?', 0, 10)).toBe(
-      '/?class_name=EmbeddedDataset&query=test%3F&limit=10',
+    service.loadQueryParameters('EmbeddedDataset', 10, 0, 'test?');
+    testBed.tick();
+    const req = httpController.expectOne(
+      'http://mock.dev/mass/search?class_name=EmbeddedDataset&query=test%3F&limit=10',
     );
+    req.flush({});
   });
 });

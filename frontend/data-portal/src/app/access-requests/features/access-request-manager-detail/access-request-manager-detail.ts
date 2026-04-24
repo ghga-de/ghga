@@ -141,8 +141,8 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   #userId = computed(() => this.request()?.user_id);
 
   /**
-   * Resource for loading the external ID of the user who made the access request
-   * Only loads when userId is set
+   * Resource for loading the external ID of the user who made the access request.
+   * Only loads when userId is set.
    */
   userExtId = httpResource<string | undefined>(
     () => {
