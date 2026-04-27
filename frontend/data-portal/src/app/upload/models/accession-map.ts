@@ -1,5 +1,5 @@
 /**
- * Models for submitting a file accession mapping to the UOS backend.
+ * Models for submitting a file accession mapping to the RS backend.
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */

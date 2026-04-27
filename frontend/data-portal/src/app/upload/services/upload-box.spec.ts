@@ -68,7 +68,7 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
  * Mock the config service as needed for the upload box service.
  */
 class MockConfigService {
-  uosUrl = 'http://mock.dev/uos';
+  rsUrl = 'http://mock.dev/rs';
   wkvsUrl = 'http://mock.dev/.well-known';
 }
 
@@ -103,7 +103,7 @@ describe('UploadBoxService', () => {
     httpMock
       .match((req) =>
         req.urlWithParams ===
-        'http://mock.dev/uos/access-grants?userid=doe%40test.dev&valid=true'
+        'http://mock.dev/rs/upload-grants?user_id=doe%40test.dev&valid=true'
           ? true
           : false,
       )
@@ -126,7 +126,7 @@ describe('UploadBoxService', () => {
 
     expect(service.boxRetrievalResults.isLoading()).toBe(true);
 
-    const req = httpMock.expectOne('http://mock.dev/uos/boxes');
+    const req = httpMock.expectOne('http://mock.dev/rs/upload-boxes');
     expect(req.request.method).toBe('GET');
     req.flush(TEST_BOX_RETRIEVAL_RESULTS);
 
@@ -150,7 +150,7 @@ describe('UploadBoxService', () => {
     service.loadAllUploadBoxes();
     testBed.tick();
 
-    const req = httpMock.expectOne('http://mock.dev/uos/boxes');
+    const req = httpMock.expectOne('http://mock.dev/rs/upload-boxes');
     expect(req.request.method).toBe('GET');
     req.flush(TEST_BOX_RETRIEVAL_RESULTS);
 
@@ -207,7 +207,7 @@ describe('UploadBoxService', () => {
     service.loadAllUploadBoxes();
     testBed.tick();
 
-    const req = httpMock.expectOne('http://mock.dev/uos/boxes');
+    const req = httpMock.expectOne('http://mock.dev/rs/upload-boxes');
     req.flush(TEST_BOX_RETRIEVAL_RESULTS);
 
     const labelsReq = httpMock.expectOne(
@@ -227,7 +227,7 @@ describe('UploadBoxService', () => {
     service.loadAllUploadBoxes();
     testBed.tick();
 
-    const req = httpMock.expectOne('http://mock.dev/uos/boxes');
+    const req = httpMock.expectOne('http://mock.dev/rs/upload-boxes');
     expect(req.request.method).toBe('GET');
     req.flush(
       { detail: 'upload box retrieval failed' },
@@ -259,7 +259,7 @@ describe('UploadBoxService', () => {
 
     expect(service.uploadBox.isLoading()).toBe(true);
 
-    const req = httpMock.expectOne(`http://mock.dev/uos/box/${singleBox.id}`);
+    const req = httpMock.expectOne(`http://mock.dev/rs/upload-boxes/${singleBox.id}`);
     expect(req.request.method).toBe('GET');
     req.flush(singleBox);
 
@@ -276,7 +276,7 @@ describe('UploadBoxService', () => {
     service.loadUploadBox(id);
     testBed.tick();
 
-    const req = httpMock.expectOne(`http://mock.dev/uos/box/${id}`);
+    const req = httpMock.expectOne(`http://mock.dev/rs/upload-boxes/${id}`);
     req.flush({ detail: 'not found' }, { status: 404, statusText: 'Not Found' });
 
     await Promise.resolve();
@@ -296,10 +296,10 @@ describe('UploadBoxService', () => {
     let emittedId: string | undefined;
     service.createUploadBox(newBoxData).subscribe((id) => (emittedId = id));
 
-    const req = httpMock.expectOne('http://mock.dev/uos/boxes');
+    const req = httpMock.expectOne('http://mock.dev/rs/upload-boxes');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(newBoxData);
-    req.flush({ id: createdId }, { status: 201, statusText: 'Created' });
+    req.flush(createdId, { status: 201, statusText: 'Created' });
 
     expect(emittedId).toBe(createdId);
     expect(service.uploadBoxes().some((box) => box.id === createdId)).toBe(true);
@@ -326,7 +326,7 @@ describe('UploadBoxService', () => {
       .createUploadBox(newBoxData)
       .subscribe({ error: (err) => (caughtError = err) });
 
-    const req = httpMock.expectOne('http://mock.dev/uos/boxes');
+    const req = httpMock.expectOne('http://mock.dev/rs/upload-boxes');
     expect(req.request.method).toBe('POST');
     req.flush(
       { detail: 'invalid storage alias' },
@@ -346,7 +346,7 @@ describe('UploadBoxService', () => {
       .updateUploadBox(id, changes)
       .subscribe({ complete: () => (completed = true) });
 
-    const req = httpMock.expectOne(`http://mock.dev/uos/boxes/${id}`);
+    const req = httpMock.expectOne(`http://mock.dev/rs/upload-boxes/${id}`);
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual(changes);
     req.flush(null, { status: 204, statusText: 'No Content' });
@@ -363,7 +363,7 @@ describe('UploadBoxService', () => {
       .updateUploadBox(id, changes)
       .subscribe({ error: (err) => (caughtError = err) });
 
-    const req = httpMock.expectOne(`http://mock.dev/uos/boxes/${id}`);
+    const req = httpMock.expectOne(`http://mock.dev/rs/upload-boxes/${id}`);
     expect(req.request.method).toBe('PATCH');
     req.flush({ detail: 'version conflict' }, { status: 409, statusText: 'Conflict' });
 
@@ -391,7 +391,7 @@ describe('UploadBoxService', () => {
       testBed.tick();
 
       const req = httpMock.expectOne(
-        `http://mock.dev/uos/access-grants?box_id=${encodeURIComponent(BOX_ID)}`,
+        `http://mock.dev/rs/upload-grants?box_id=${encodeURIComponent(BOX_ID)}`,
       );
       expect(req.request.method).toBe('GET');
       expect(req.request.url).toContain(`box_id=${encodeURIComponent(BOX_ID)}`);
@@ -404,7 +404,7 @@ describe('UploadBoxService', () => {
 
     it('should not request grants when no box id has been set', () => {
       testBed.tick();
-      httpMock.expectNone('http://mock.dev/uos/access-grants');
+      httpMock.expectNone('http://mock.dev/rs/upload-grants');
       expect(service.boxGrants.value()).toEqual([]);
     });
   });
@@ -448,7 +448,7 @@ describe('UploadBoxService', () => {
       let result: GrantWithBoxInfo[] | undefined;
       service.getUploadGrants().subscribe((grants) => (result = grants));
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants');
       expect(req.request.method).toBe('GET');
       expect(req.request.params.keys()).toHaveLength(0);
       req.flush(TEST_GRANTS);
@@ -456,13 +456,13 @@ describe('UploadBoxService', () => {
       expect(result).toEqual(TEST_GRANTS);
     });
 
-    it('should pass userid query param when userId is provided', () => {
+    it('should pass user_id query param when userId is provided', () => {
       service.getUploadGrants({ userId: 'user-abc' }).subscribe();
 
       const req = httpMock.expectOne(
-        'http://mock.dev/uos/access-grants?userid=user-abc',
+        'http://mock.dev/rs/upload-grants?user_id=user-abc',
       );
-      expect(req.request.params.get('userid')).toBe('user-abc');
+      expect(req.request.params.get('user_id')).toBe('user-abc');
       expect(req.request.params.has('box_id')).toBe(false);
       expect(req.request.params.has('valid')).toBe(false);
       req.flush([]);
@@ -473,10 +473,10 @@ describe('UploadBoxService', () => {
       service.getUploadGrants({ boxId }).subscribe();
 
       const req = httpMock.expectOne(
-        `http://mock.dev/uos/access-grants?box_id=${boxId}`,
+        `http://mock.dev/rs/upload-grants?box_id=${boxId}`,
       );
       expect(req.request.params.get('box_id')).toBe(boxId);
-      expect(req.request.params.has('userid')).toBe(false);
+      expect(req.request.params.has('user_id')).toBe(false);
       expect(req.request.params.has('valid')).toBe(false);
       req.flush([]);
     });
@@ -484,7 +484,7 @@ describe('UploadBoxService', () => {
     it('should pass valid=true when valid is true', () => {
       service.getUploadGrants({ valid: true }).subscribe();
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants?valid=true');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants?valid=true');
       expect(req.request.params.get('valid')).toBe('true');
       req.flush([]);
     });
@@ -492,7 +492,7 @@ describe('UploadBoxService', () => {
     it('should pass valid=false when valid is false', () => {
       service.getUploadGrants({ valid: false }).subscribe();
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants?valid=false');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants?valid=false');
       expect(req.request.params.get('valid')).toBe('false');
       req.flush([]);
     });
@@ -500,7 +500,7 @@ describe('UploadBoxService', () => {
     it('should omit valid query param when valid is null', () => {
       service.getUploadGrants({ valid: null }).subscribe();
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants');
       expect(req.request.params.has('valid')).toBe(false);
       req.flush([]);
     });
@@ -511,8 +511,8 @@ describe('UploadBoxService', () => {
 
       const req = httpMock.expectOne(
         (r) =>
-          r.url === 'http://mock.dev/uos/access-grants' &&
-          r.params.get('userid') === 'user-abc' &&
+          r.url === 'http://mock.dev/rs/upload-grants' &&
+          r.params.get('user_id') === 'user-abc' &&
           r.params.get('box_id') === boxId &&
           r.params.get('valid') === 'true',
       );
@@ -524,7 +524,7 @@ describe('UploadBoxService', () => {
       let caughtError: HttpErrorResponse | undefined;
       service.getUploadGrants().subscribe({ error: (err) => (caughtError = err) });
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants');
       req.flush(
         { detail: 'unauthorized' },
         { status: 401, statusText: 'Unauthorized' },
@@ -538,7 +538,7 @@ describe('UploadBoxService', () => {
       let caughtError: HttpErrorResponse | undefined;
       service.getUploadGrants().subscribe({ error: (err) => (caughtError = err) });
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants');
       req.flush({ detail: 'not found' }, { status: 404, statusText: 'Not Found' });
 
       expect(caughtError).toBeInstanceOf(HttpErrorResponse);
@@ -575,7 +575,7 @@ describe('UploadBoxService', () => {
       let result: { id: string } | undefined;
       service.createUploadGrant(GRANT_PAYLOAD).subscribe((r) => (result = r));
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(GRANT_PAYLOAD);
       req.flush({ id: newId }, { status: 201, statusText: 'Created' });
@@ -589,7 +589,7 @@ describe('UploadBoxService', () => {
       testBed.tick();
 
       const grantsReq = httpMock.expectOne(
-        `http://mock.dev/uos/access-grants?box_id=${encodeURIComponent(GRANT_PAYLOAD.box_id)}`,
+        `http://mock.dev/rs/upload-grants?box_id=${encodeURIComponent(GRANT_PAYLOAD.box_id)}`,
       );
       grantsReq.flush([]);
       await Promise.resolve();
@@ -598,7 +598,7 @@ describe('UploadBoxService', () => {
 
       service.createUploadGrant(GRANT_PAYLOAD, USER).subscribe();
 
-      const createReq = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      const createReq = httpMock.expectOne('http://mock.dev/rs/upload-grants');
       expect(createReq.request.method).toBe('POST');
       createReq.flush({ id: newId }, { status: 201, statusText: 'Created' });
 
@@ -619,7 +619,7 @@ describe('UploadBoxService', () => {
         service.createUploadGrant(GRANT_PAYLOAD, USER).subscribe();
       }).not.toThrow();
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants');
       req.flush({ id: 'grant-new-001' }, { status: 201, statusText: 'Created' });
     });
 
@@ -629,7 +629,7 @@ describe('UploadBoxService', () => {
         .createUploadGrant(GRANT_PAYLOAD)
         .subscribe({ error: (err) => (caughtError = err) });
 
-      const req = httpMock.expectOne('http://mock.dev/uos/access-grants');
+      const req = httpMock.expectOne('http://mock.dev/rs/upload-grants');
       req.flush({ detail: 'conflict' }, { status: 409, statusText: 'Conflict' });
 
       expect(caughtError).toBeInstanceOf(HttpErrorResponse);
@@ -674,7 +674,7 @@ describe('UploadBoxService', () => {
         .revokeUploadGrant(GRANT_ID)
         .subscribe({ complete: () => (completed = true) });
 
-      const req = httpMock.expectOne(`http://mock.dev/uos/access-grants/${GRANT_ID}`);
+      const req = httpMock.expectOne(`http://mock.dev/rs/upload-grants/${GRANT_ID}`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null, { status: 204, statusText: 'No Content' });
 
@@ -686,7 +686,7 @@ describe('UploadBoxService', () => {
       testBed.tick();
 
       const grantsReq = httpMock.expectOne(
-        `http://mock.dev/uos/access-grants?box_id=${encodeURIComponent(BOX_ID)}`,
+        `http://mock.dev/rs/upload-grants?box_id=${encodeURIComponent(BOX_ID)}`,
       );
       grantsReq.flush(EXISTING_GRANTS);
       await Promise.resolve();
@@ -695,7 +695,7 @@ describe('UploadBoxService', () => {
 
       service.revokeUploadGrant(GRANT_ID).subscribe();
 
-      const req = httpMock.expectOne(`http://mock.dev/uos/access-grants/${GRANT_ID}`);
+      const req = httpMock.expectOne(`http://mock.dev/rs/upload-grants/${GRANT_ID}`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null, { status: 204, statusText: 'No Content' });
 
@@ -707,7 +707,7 @@ describe('UploadBoxService', () => {
         service.revokeUploadGrant(GRANT_ID).subscribe();
       }).not.toThrow();
 
-      const req = httpMock.expectOne(`http://mock.dev/uos/access-grants/${GRANT_ID}`);
+      const req = httpMock.expectOne(`http://mock.dev/rs/upload-grants/${GRANT_ID}`);
       req.flush(null, { status: 204, statusText: 'No Content' });
     });
 
@@ -717,7 +717,7 @@ describe('UploadBoxService', () => {
         .revokeUploadGrant(GRANT_ID)
         .subscribe({ error: (err) => (caughtError = err) });
 
-      const req = httpMock.expectOne(`http://mock.dev/uos/access-grants/${GRANT_ID}`);
+      const req = httpMock.expectOne(`http://mock.dev/rs/upload-grants/${GRANT_ID}`);
       req.flush({ detail: 'not found' }, { status: 404, statusText: 'Not Found' });
 
       expect(caughtError).toBeInstanceOf(HttpErrorResponse);
@@ -733,7 +733,7 @@ describe('UploadBoxService', () => {
       testBed.tick();
 
       const req = httpMock.expectOne(
-        `http://mock.dev/uos/boxes/${encodeURIComponent(BOX_ID)}/uploads`,
+        `http://mock.dev/rs/upload-boxes/${encodeURIComponent(BOX_ID)}/uploads`,
       );
       expect(req.request.method).toBe('GET');
       req.flush([]);

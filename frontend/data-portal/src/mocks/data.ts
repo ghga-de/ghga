@@ -1052,7 +1052,7 @@ export const datasetInformation: DatasetInformation = {
 };
 
 /**
- * UOS API
+ * RS Boxes API
  */
 
 export const uploadBoxes: BoxRetrievalResults = {
@@ -1098,11 +1098,11 @@ export const uploadBoxes: BoxRetrievalResults = {
 };
 
 /**
- * UOS upload grants
+ * RS Grants API
  */
 export const uploadGrants: GrantWithBoxInfo[] = [
   {
-    id: 'grant-uos-001',
+    id: 'grant-rs-001',
     user_id: 'doe@test.dev',
     iva_id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
     box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
@@ -1118,7 +1118,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
     box_version: 1,
   },
   {
-    id: 'grant-uos-002',
+    id: 'grant-rs-002',
     user_id: 'doe@test.dev',
     iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
     box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
@@ -1134,7 +1134,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
     box_version: 4,
   },
   {
-    id: 'grant-uos-003',
+    id: 'grant-rs-003',
     user_id: 'doe@test.dev',
     iva_id: null,
     box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
@@ -1152,7 +1152,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
 ];
 
 /**
- * UOS file uploads for box 1 (open, 3 files)
+ * RS file uploads for box 1 (open, 3 files)
  */
 export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   {
@@ -1193,14 +1193,14 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
     bucket_id: 'inbox-tue01',
     decrypted_sha256: null,
     decrypted_size: 0,
-    encrypted_size: null,
+    encrypted_size: 0,
     part_size: 16777216,
     accession: null,
   },
 ];
 
 /**
- * UOS file uploads for box 2 (locked, 15 files)
+ * RS file uploads for box 2 (locked, 15 files)
  */
 export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   {
@@ -1381,7 +1381,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
     bucket_id: 'inbox-hd02',
     decrypted_sha256: null,
     decrypted_size: 0,
-    encrypted_size: null,
+    encrypted_size: 0,
     part_size: 16777216,
     accession: null,
   },
@@ -1416,7 +1416,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
 ];
 
 /**
- * UOS file uploads for box 3 (archived, 28 files)
+ * RS file uploads for box 3 (archived, 28 files)
  */
 export const uploadBox3FileUploads: FileUploadWithAccession[] = Array.from(
   { length: 28 },

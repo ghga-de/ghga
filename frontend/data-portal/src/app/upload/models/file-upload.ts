@@ -35,7 +35,7 @@ export interface FileUploadWithAccession {
   /** The size of the unencrypted file in bytes */
   decrypted_size: number;
   /** The encrypted size of the file before re-encryption */
-  encrypted_size: number | null;
+  encrypted_size: number;
   /** The number of bytes in each file part (last part is likely smaller) */
   part_size: number;
   /** The accession number assigned to this file */

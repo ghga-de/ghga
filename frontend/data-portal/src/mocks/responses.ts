@@ -33,7 +33,7 @@ import {
   workPackageResponse,
 } from './data';
 
-export type ResponseValue = undefined | number | object;
+export type ResponseValue = undefined | number | string | object;
 
 /**
  * MSW responses to be returned for various endpoints of our API.
@@ -226,48 +226,46 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/rts/studies/GHGAS12345678901234': 404,
 
   /**
-   * UOS API
+   * RS API
    */
 
   // Create a new upload box
-  'POST /api/uos/boxes': {
-    id: crypto.randomUUID(),
-  },
+  'POST /api/rs/upload-boxes': crypto.randomUUID(),
 
   // Fetch all upload boxes
-  'GET /api/uos/boxes': uploadBoxes,
+  'GET /api/rs/upload-boxes': uploadBoxes,
 
   // Fetch a single upload box
-  'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68001': uploadBoxes.boxes[0],
-  'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68002': uploadBoxes.boxes[1],
-  'GET /api/uos/box/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
-  'GET /api/uos/box/*': 404,
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001': uploadBoxes.boxes[0],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002': uploadBoxes.boxes[1],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
+  'GET /api/rs/upload-boxes/*': 404,
 
   // Fetch upload grants for a specific box
-  'GET /api/uos/access-grants?*': uploadGrants,
+  'GET /api/rs/upload-grants?*': uploadGrants,
 
   // Fetch file uploads for a specific box
-  'GET /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001/uploads':
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001/uploads':
     uploadBox1FileUploads,
-  'GET /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/uploads':
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/uploads':
     uploadBox2FileUploads,
-  'GET /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003/uploads':
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003/uploads':
     uploadBox3FileUploads,
-  'GET /api/uos/boxes/*/uploads': [],
+  'GET /api/rs/upload-boxes/*/uploads': [],
 
   // Create a new upload grant
-  'POST /api/uos/access-grants': {
+  'POST /api/rs/upload-grants': {
     id: crypto.randomUUID(),
   },
 
   // Revoke an upload grant
-  'DELETE /api/uos/access-grants/*': 204,
+  'DELETE /api/rs/upload-grants/*': 204,
 
   // Submit file mapping for box 2 (locked box used for mapping UI testing)
-  'POST /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/file-ids': 204,
+  'POST /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/file-ids': 204,
 
   // Update (submit) an upload box
-  'PATCH /api/uos/boxes/*': 204,
+  'PATCH /api/rs/upload-boxes/*': 204,
 
   /**
    * WKVS API

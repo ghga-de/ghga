@@ -34,6 +34,8 @@ export interface ResearchDataUploadBox extends ResearchDataUploadBoxBase {
   changed_by: string;
   file_count: number;
   size: number; // in bytes
+  // Note: the API also returns file_upload_box_id, file_upload_box_version, and
+  // file_upload_box_state, but these are not used in the frontend.
 }
 
 /** Data to update a Research Data Upload Box */
