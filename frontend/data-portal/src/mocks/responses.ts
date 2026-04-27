@@ -25,6 +25,9 @@ import {
   uploadBox2FileUploads,
   uploadBox3FileUploads,
   uploadBoxes,
+  uploadBoxTestDatasetDetails,
+  uploadBoxTestDatasetSummary,
+  uploadBoxTestStudyData,
   uploadGrants,
   users,
   workPackageResponse,
@@ -124,6 +127,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Get summary data from a single dataset
   'GET /api/metldata/artifacts/stats_public/classes/DatasetStats/resources/GHGAD12345678901238':
     getDatasetSummary('GHGAD12345678901238'),
+  // Upload box mapping test dataset summary (points to the new test study)
+  'GET /api/metldata/artifacts/stats_public/classes/DatasetStats/resources/GHGAD99999999999001':
+    uploadBoxTestDatasetSummary,
 
   // Get dataset details (embedded)
   'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD12345678901234':
@@ -136,7 +142,13 @@ export const responses: { [endpoint: string]: ResponseValue } = {
     getDatasetDetails('GHGAD12345678901237'),
   'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD12345678901238':
     getDatasetDetails('GHGAD12345678901238'),
+  // Upload box mapping test dataset details (files match box 2 aliases for testing)
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD99999999999001':
+    uploadBoxTestDatasetDetails,
 
+  // Get study details (embedded) — specific entries before the wildcard catch-all
+  'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/GHGAS99999999999001':
+    uploadBoxTestStudyData,
   // Get study details (embedded)
   'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/*': studyData,
 
@@ -250,6 +262,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Revoke an upload grant
   'DELETE /api/uos/access-grants/*': 204,
+
+  // Submit file mapping for box 2 (locked box used for mapping UI testing)
+  'POST /api/uos/boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/file-ids': 204,
 
   // Update (submit) an upload box
   'PATCH /api/uos/boxes/*': 204,

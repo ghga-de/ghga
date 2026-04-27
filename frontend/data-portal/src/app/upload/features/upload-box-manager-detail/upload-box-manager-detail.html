@@ -148,7 +148,7 @@
             <div class="overflow-auto">
               <table mat-table [dataSource]="fileUploadsDataSource" class="w-full">
                 <ng-container matColumnDef="alias">
-                  <th mat-header-cell *matHeaderCellDef>Alias</th>
+                  <th mat-header-cell *matHeaderCellDef>Filename</th>
                   <td mat-cell *matCellDef="let file">{{ file.alias }}</td>
                 </ng-container>
                 <ng-container matColumnDef="status">
@@ -171,9 +171,13 @@
                     file.state_updated | date: friendlyDateFormat : timeZone
                   }}</td>
                 </ng-container>
+                <ng-container matColumnDef="accession">
+                  <th mat-header-cell *matHeaderCellDef>Accession</th>
+                  <td mat-cell *matCellDef="let file">{{ file.accession ?? '—' }}</td>
+                </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="fileColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: fileColumns"></tr>
+                <tr mat-header-row *matHeaderRowDef="fileColumns()"></tr>
+                <tr mat-row *matRowDef="let row; columns: fileColumns()"></tr>
 
                 <tr class="mat-row" *matNoDataRow>
                   <td class="mat-cell p-4 text-base" colspan="4">Loading files...</td>
@@ -187,17 +191,16 @@
                 aria-label="Select page of files"
               ></mat-paginator>
             }
-            @if (showMapFilesButton()) {
-              <button mat-raised-button color="primary" class="mt-4" disabled>
-                <mat-icon fontIcon="check"></mat-icon>
-                Map files to metadata and archive
-              </button>
-            }
           } @else {
             <p class="text-warning mt-2">This upload box is still empty.</p>
           }
         </mat-card-content>
       </mat-card>
+
+      <!-- File Mapping -->
+      @if (box.state === 'locked') {
+        <app-upload-box-mapping [box]="box" (archived)="onBoxArchived()" />
+      }
     </div>
   }
 </div>

@@ -34,13 +34,18 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { ResearchDataUploadBox, UploadBoxStateClass } from '@app/upload/models/box';
+import {
+  ResearchDataUploadBox,
+  UploadBoxState,
+  UploadBoxStateClass,
+} from '@app/upload/models/box';
 import {
   FileUploadState,
   FileUploadWithAccession,
 } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
 
 /**
  * Detail view component for managing an individual upload box.
@@ -58,6 +63,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
     RouterLink,
     Capitalise,
     ParseBytes,
+    UploadBoxMappingComponent,
   ],
   providers: [CommonDatePipe],
   templateUrl: './upload-box-manager-detail.html',
@@ -157,7 +163,11 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   readonly grantColumns = ['grantee', 'status', 'validity', 'details'];
 
   /** Columns for the file uploads table. */
-  readonly fileColumns = ['alias', 'status', 'size', 'uploaded'];
+  fileColumns = computed<string[]>(() =>
+    this.uploadBox()?.state === UploadBoxState.archived
+      ? ['alias', 'accession', 'size', 'uploaded']
+      : ['alias', 'status', 'size', 'uploaded'],
+  );
 
   /** The upload grants for this box. */
   grants = computed<UploadGrant[]>(() => this.#uploadBoxService.boxGrants.value());
@@ -177,9 +187,6 @@ export class UploadBoxManagerDetailComponent implements OnInit {
       this.fileUploadsDataSource.paginator = paginator;
     }
   });
-
-  /** Whether to show the "Map files to metadata and archive" button. */
-  showMapFilesButton = computed<boolean>(() => this.uploadBox()?.state === 'locked');
 
   /**
    * Check if an upload grant is currently active.
@@ -211,6 +218,16 @@ export class UploadBoxManagerDetailComponent implements OnInit {
       default:
         return 'text-warning';
     }
+  }
+
+  /**
+   * Handle the archived event from the mapping component by clearing the cached
+   * box and reloading fresh data, so the UI transitions out of the locked state.
+   */
+  onBoxArchived(): void {
+    this.#cachedBox.set(undefined);
+    const id = this.id();
+    if (id) this.#uploadBoxService.loadUploadBox(id);
   }
 
   /**

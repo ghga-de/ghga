@@ -738,6 +738,13 @@ export const searchResults: SearchResults = {
           'Test dataset for details and this is also testing whether two lines of text actually appear correctly on the expansion panel headers or not at least at a resolution of one thousand nine hundred and twenty pixels wide',
       },
     },
+    {
+      id_: 'GHGAD99999999999001',
+      content: {
+        ega_accession: 'EGAD99999999001',
+        title: 'Upload Box Test Dataset',
+      },
+    },
   ],
 };
 
@@ -1529,4 +1536,203 @@ export const studyData: Study = {
   description:
     'Test study description. Pharetra convallis posuere morbi leo urna molestie. Ut faucibus pulvinar elementum integer. Nec nam aliquam sem et tortor. Pretium viverra suspendisse potenti nullam ac. Commodo sed egestas egestas fringilla. Tincidunt dui ut ornare lectus sit. Amet massa vitae tortor condimentum lacinia quis vel eros donec. Feugiat pretium nibh ipsum consequat. Pulvinar etiam non quam lacus suspendisse faucibus interdum. Aliquam sem et tortor consequat id.',
   publications: ['GHGA123456789', 'GHGA123456709'],
+};
+
+/**
+ * Mock study for testing the upload box file mapping feature (box 2).
+ * Files in `uploadBoxTestDatasetDetails.research_data_files` deliberately
+ * cover exact alias matches, case-insensitive alias matches, exact name
+ * matches, and un-matched files so all mapping branches can be exercised.
+ */
+export const uploadBoxTestStudyData: Study = {
+  accession: 'GHGAS99999999999001',
+  ega_accession: 'EGAS99999999901',
+  alias: 'UPLOAD_BOX_TEST_STUDY',
+  types: ['test_genomics'],
+  title: 'Upload Box File Mapping Test Study',
+  affiliations: ['Test affiliation'],
+  datasets: ['GHGAD99999999999001'],
+  description: 'Dedicated study for testing the file mapping UI with upload box 2.',
+  publications: [],
+};
+
+/**
+ * Minimal DatasetSummary for the upload-box-mapping test dataset.
+ * The `studies_summary.stats.accession` must point to `uploadBoxTestStudyData`.
+ */
+export const uploadBoxTestDatasetSummary: DatasetSummary = {
+  accession: 'GHGAD99999999999001',
+  description: 'Upload box test dataset',
+  types: ['test_genomics'],
+  title: 'Upload Box Test Dataset',
+  dac_email: 'test@some.dac.org',
+  samples_summary: {
+    count: 1,
+    stats: { sex: [], tissues: [], phenotypic_features: [] },
+  },
+  studies_summary: {
+    count: 1,
+    stats: {
+      accession: ['GHGAS99999999999001'],
+      title: ['Upload Box File Mapping Test Study'],
+    },
+  },
+  experiments_summary: { count: 1, stats: { experiment_methods: [] } },
+  files_summary: {
+    count: 16,
+    stats: {
+      format: [
+        { value: 'FASTQ', count: 5 },
+        { value: 'BAM', count: 2 },
+        { value: 'CRAM', count: 1 },
+        { value: 'VCF', count: 1 },
+        { value: 'BED', count: 2 },
+        { value: 'FASTA', count: 1 },
+        { value: 'METH', count: 1 },
+        { value: 'RAW', count: 1 },
+        { value: 'PDF', count: 1 },
+        { value: 'CSV', count: 1 },
+      ],
+    },
+  },
+};
+
+/**
+ * DatasetDetailsRaw for the upload-box-mapping test dataset.
+ * `research_data_files` aliases/names are chosen to test all mapping scenarios:
+ * - exact alias match (files 1–3, 5, 7–9, 11–15)
+ * - case-insensitive alias match (files 4, 6)
+ * - exact name match only (file 10)
+ */
+export const uploadBoxTestDatasetDetails: DatasetDetailsRaw = {
+  ...datasetDetails,
+  accession: 'GHGAD99999999999001',
+  ega_accession: 'EGAD99999999001',
+  title: 'Upload Box Test Dataset',
+  description: 'Dedicated dataset for testing the file mapping UI.',
+  process_data_files: [],
+  experiment_method_supporting_files: [],
+  analysis_method_supporting_files: [],
+  individual_supporting_files: [],
+  experiments: [],
+  samples: [],
+  research_data_files: [
+    // Exact alias matches:
+    {
+      accession: 'GHGAF99999999999001',
+      ega_accession: 'EGAF99999901',
+      alias: 'sample_001_R1.fastq',
+      name: 'Sample 001 Read 1',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF99999999999002',
+      ega_accession: 'EGAF99999902',
+      alias: 'sample_001_R2.fastq',
+      name: 'Sample 001 Read 2',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF99999999999003',
+      ega_accession: 'EGAF99999903',
+      alias: 'sample_002_R1.fastq.gz',
+      name: 'Sample 002 Read 1',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF99999999999005',
+      ega_accession: 'EGAF99999905',
+      alias: 'reference_genome.fasta',
+      name: 'Reference Genome',
+      format: 'FASTA',
+    },
+    {
+      accession: 'GHGAF99999999999007',
+      ega_accession: 'EGAF99999907',
+      alias: 'aligned_reads_002.cram',
+      name: 'Aligned Reads 002',
+      format: 'CRAM',
+    },
+    {
+      accession: 'GHGAF99999999999008',
+      ega_accession: 'EGAF99999908',
+      alias: 'variants_cohort.vcf',
+      name: 'Variants Cohort',
+      format: 'VCF',
+    },
+    {
+      accession: 'GHGAF99999999999009',
+      ega_accession: 'EGAF99999909',
+      alias: 'chip_peaks_001.bed',
+      name: 'ChIP Peaks 001',
+      format: 'BED',
+    },
+    // Case-insensitive alias matches (alias case differs, name = exact box alias):
+    {
+      accession: 'GHGAF99999999999004',
+      ega_accession: 'EGAF99999904',
+      alias: 'Sample_002_R2.fastq.gz',
+      name: 'sample_002_R2.fastq.gz',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF99999999999006',
+      ega_accession: 'EGAF99999906',
+      alias: 'ALIGNED_READS_001.BAM',
+      name: 'aligned_reads_001.bam',
+      format: 'BAM',
+    },
+    // Exact name match only (alias does not match any box file):
+    {
+      accession: 'GHGAF99999999999010',
+      ega_accession: 'EGAF99999910',
+      alias: 'methylation_data.meth',
+      name: 'methylation_sample_001.meth',
+      format: 'METH',
+    },
+    // Further exact alias matches:
+    {
+      accession: 'GHGAF99999999999011',
+      ega_accession: 'EGAF99999911',
+      alias: 'ms_proteomics_run1.raw',
+      name: 'MS Proteomics Run 1',
+      format: 'RAW',
+    },
+    {
+      accession: 'GHGAF99999999999012',
+      ega_accession: 'EGAF99999912',
+      alias: 'study_data_manifest.pdf',
+      name: 'Study Data Manifest',
+      format: 'PDF',
+    },
+    {
+      accession: 'GHGAF99999999999013',
+      ega_accession: 'EGAF99999913',
+      alias: 'sample_003_R1.fastq.gz',
+      name: 'Sample 003 Read 1',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF99999999999014',
+      ega_accession: 'EGAF99999914',
+      alias: 'aligned_reads_003.bam',
+      name: 'Aligned Reads 003',
+      format: 'BAM',
+    },
+    {
+      accession: 'GHGAF99999999999015',
+      ega_accession: 'EGAF99999915',
+      alias: 'chip_peaks_002.bed',
+      name: 'ChIP Peaks 002',
+      format: 'BED',
+    },
+    // No match in upload box (metadata-only):
+    {
+      accession: 'GHGAF99999999999016',
+      ega_accession: 'EGAF99999916',
+      alias: 'some_unessential_data.csv',
+      name: 'Some Unessential Data',
+      format: 'CSV',
+    },
+  ],
 };

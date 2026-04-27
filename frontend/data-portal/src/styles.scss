@@ -183,6 +183,10 @@
     border-color: var(--mat-sys-outline-variant);
   }
 
+  .mat-mdc-select-placeholder {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
   .smaller-mat-card-title,
   :is(.\*\:smaller-mat-card-title > *) {
     @include mat.card-overrides(
@@ -460,6 +464,10 @@ mat-expansion-panel {
       header-hover-state-layer-color: var(--mat-sys-surface-variant),
     )
   );
+}
+
+.larger-mat-radio-label {
+  --mat-radio-label-text-size: 1rem;
 }
 
 table[mat-table].bold-table-headers {

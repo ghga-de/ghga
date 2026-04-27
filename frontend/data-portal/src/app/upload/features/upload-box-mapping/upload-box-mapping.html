@@ -1,0 +1,309 @@
+<div class="flex flex-col gap-4">
+  <!-- Study card -->
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title><h2>Study</h2></mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (selectedStudy(); as study) {
+        <!-- Study details with change button -->
+        <p class="flex items-center">
+          <strong class="inline-block w-40">Accession:</strong>
+          <a [routerLink]="['/study', study.accession]" class="text-primary">{{
+            study.accession
+          }}</a>
+          <button
+            mat-icon-button
+            class="ml-2"
+            title="Select a different study"
+            aria-label="Select a different study"
+            (click)="onChangeStudy()"
+          >
+            <mat-icon fontIcon="change_circle" />
+          </button>
+        </p>
+        <p>
+          <strong class="inline-block w-40">Title:</strong>
+          <span>{{ study.title }}</span>
+        </p>
+        <p class="flex">
+          <strong class="inline-block min-w-40">Description:</strong>
+          <span>{{ study.description }}</span>
+        </p>
+        <p>
+          <strong class="inline-block w-40">Datasets:</strong>
+          <span>{{ study.datasets.length }}</span>
+        </p>
+      } @else {
+        <!-- Intro text + study selector -->
+        <p
+          >In order to establish a mapping from the uploaded files to the Experimental
+          Metadata, you need to select the corresponding study.</p
+        >
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-select
+            [value]="selectedStudyAccession()"
+            (valueChange)="selectedStudyAccession.set($event)"
+            placeholder="Please select the study corresponding to this upload box"
+          >
+            @for (study of studiesArray(); track study.accession) {
+              <mat-option [value]="study.accession">
+                {{ study.accession }}: {{ study.title }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- File Mapping card (only shown when a study is selected) -->
+  @if (selectedStudyAccession()) {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title><h2>File Mapping</h2></mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="flex flex-col gap-4">
+          <!-- Mapped field selector -->
+          <div class="flex items-center gap-4">
+            <span class="font-medium">Mapped field in Experimental Metadata:</span>
+            <mat-radio-group
+              [value]="pendingMappedField() ?? null"
+              (change)="pendingMappedField.set($event.value)"
+              class="flex gap-4 larger-mat-radio-label"
+            >
+              <mat-radio-button value="alias">File alias</mat-radio-button>
+              <mat-radio-button value="name">File name</mat-radio-button>
+            </mat-radio-group>
+          </div>
+
+          <!-- File counts summary, filter, table, and buttons (only when field is committed) -->
+          @if (committedMappedField()) {
+            <div class="flex text-base">
+              <span class="w-1/2 pl-4"
+                ><strong>Files in Experimental Metadata:</strong>
+                {{ metadataFiles().length }}</span
+              >
+              <span class="w-1/2 pl-4"
+                ><strong>Files in Upload Box:</strong> {{ boxFiles().length }}</span
+              >
+            </div>
+            <mat-form-field appearance="outline" class="mt-2 w-full">
+              <mat-label>Filter by part of filename or extension</mat-label>
+              <input
+                matInput
+                [ngModel]="filterText()"
+                (ngModelChange)="filterText.set($event)"
+                placeholder="Type part of filename or extension to filter…"
+              />
+              @if (filterText()) {
+                <button
+                  matSuffix
+                  mat-icon-button
+                  aria-label="Clear filter"
+                  (click)="filterText.set('')"
+                >
+                  <mat-icon fontIcon="close" />
+                </button>
+              }
+            </mat-form-field>
+
+            <!-- Mapping table -->
+            <div class="overflow-x-auto">
+              <table
+                mat-table
+                matSort
+                matSortActive="metadataName"
+                matSortDirection="asc"
+                [dataSource]="tableDataSource"
+                class="w-full"
+              >
+                <!-- Metadata file name column -->
+                <ng-container matColumnDef="metadataName">
+                  <th
+                    mat-header-cell
+                    *matHeaderCellDef
+                    mat-sort-header
+                    class="w-1/2 !py-3"
+                  >
+                    <div class="flex w-full flex-col">
+                      <span class="pr-2">Name in Experimental Metadata</span>
+                      <span class="mt-1 flex gap-4 pr-2 text-sm font-normal">
+                        @if (mappedMetaCount() > 0) {
+                          <span class="text-gray-700"
+                            >Mapped: {{ mappedMetaCount() }}</span
+                          >
+                        }
+                        @if (unmappedMetaCount() > 0) {
+                          <span class="text-warning"
+                            >Unmapped: {{ unmappedMetaCount() }}</span
+                          >
+                        }
+                      </span>
+                    </div>
+                  </th>
+                  <td mat-cell *matCellDef="let row" class="py-1">
+                    {{
+                      committedMappedField() === 'alias'
+                        ? row.metadataFile.alias
+                        : row.metadataFile.name
+                    }}
+                  </td>
+                </ng-container>
+
+                <!-- Upload box file name column -->
+                <ng-container matColumnDef="boxFileName">
+                  <th
+                    mat-header-cell
+                    *matHeaderCellDef
+                    mat-sort-header
+                    class="w-1/2 !py-3"
+                  >
+                    <div class="flex w-full flex-col">
+                      <span class="pr-2">Name in Upload Box</span>
+                      <span class="mt-1 flex gap-4 pr-2 text-sm font-normal">
+                        @if (exactMatchCount() > 0) {
+                          <span class="text-success"
+                            >Matches: {{ exactMatchCount() }}</span
+                          >
+                        }
+                        @if (manualMappingCount() > 0) {
+                          <span class="text-blue-700"
+                            >Manual: {{ manualMappingCount() }}</span
+                          >
+                        }
+                        @if (unmappedBoxCount() > 0) {
+                          <span class="text-error"
+                            >Unmapped: {{ unmappedBoxCount() }}</span
+                          >
+                        }
+                      </span>
+                    </div>
+                  </th>
+                  <td mat-cell *matCellDef="let row" class="py-1">
+                    @if (editingMetaAccession() === row.metadataFile.accession) {
+                      <!-- Inline autocomplete editor -->
+                      <mat-form-field
+                        appearance="outline"
+                        class="w-full"
+                        subscriptSizing="dynamic"
+                      >
+                        <input
+                          #inlineInput
+                          matInput
+                          [ngModel]="inlineInputValue()"
+                          (ngModelChange)="inlineInputValue.set($event)"
+                          [matAutocomplete]="autocomplete"
+                          [attr.aria-label]="
+                            'Map upload box file for ' +
+                            (committedMappedField() === 'name'
+                              ? row.metadataFile.name
+                              : row.metadataFile.alias)
+                          "
+                          placeholder="Type or select file name in upload box…"
+                          (keydown.enter)="commitInlineEdit(row)"
+                          (keydown.escape)="editingMetaAccession.set(null)"
+                        />
+                        <mat-autocomplete
+                          #autocomplete="matAutocomplete"
+                          [displayWith]="displayBoxFileAlias"
+                          (optionSelected)="
+                            inlineInputValue.set($event.option.value.alias);
+                            commitInlineEdit(row)
+                          "
+                        >
+                          @for (opt of autocompleteOptions(); track opt.id) {
+                            <mat-option [value]="opt">{{ opt.alias }}</mat-option>
+                          }
+                        </mat-autocomplete>
+                        <button
+                          matSuffix
+                          mat-icon-button
+                          aria-label="Confirm"
+                          (click)="commitInlineEdit(row)"
+                        >
+                          <mat-icon fontIcon="check" />
+                        </button>
+                      </mat-form-field>
+                    } @else {
+                      <!-- Display mode with click-to-edit -->
+                      <button
+                        class="flex items-center gap-1 text-left"
+                        (click)="startEditing(row)"
+                        [title]="
+                          'Click to ' + (row.boxFile ? 'change' : 'set') + ' mapping'
+                        "
+                        [attr.aria-label]="
+                          'Click to ' +
+                          (row.boxFile ? 'change' : 'set') +
+                          ' mapping for ' +
+                          row.metadataFile.alias
+                        "
+                      >
+                        @if (row.boxFile) {
+                          <span
+                            [class.text-success]="row.mappingType === 'exact'"
+                            [class.text-blue-700]="row.mappingType === 'manual'"
+                            >{{ row.boxFile.alias }}</span
+                          >
+                        } @else {
+                          <span class="text-warning italic">unmapped</span>
+                        }
+                        <mat-icon
+                          fontIcon="change_circle"
+                          class="ml-2 !text-base opacity-50"
+                        />
+                      </button>
+                    }
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="columns"></tr>
+                <tr mat-row *matRowDef="let row; columns: columns"></tr>
+              </table>
+
+              <mat-paginator
+                [pageSizeOptions]="[10, 25, 50]"
+                showFirstLastButtons
+                aria-label="Select page of file mappings"
+              ></mat-paginator>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="mt-4 flex w-full flex-wrap items-center justify-between gap-3">
+              <button
+                mat-raised-button
+                color="primary"
+                [disabled]="!canConfirmAndArchive()"
+                (click)="onConfirmAndArchive()"
+              >
+                <mat-icon fontIcon="archive" />
+                Confirm mapping and archive
+              </button>
+              <div class="flex gap-3">
+                <button mat-stroked-button [disabled]="!canReset()" (click)="onReset()">
+                  <mat-icon fontIcon="refresh" />
+                  Reset
+                </button>
+                <button mat-stroked-button (click)="onCancel()">
+                  <mat-icon fontIcon="cancel" />
+                  Cancel
+                </button>
+              </div>
+            </div>
+          } @else if (pendingMappedField()) {
+            <div class="flex flex-wrap items-center gap-3">
+              <button mat-stroked-button (click)="onCancel()">
+                <mat-icon fontIcon="cancel" />
+                Cancel
+              </button>
+            </div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

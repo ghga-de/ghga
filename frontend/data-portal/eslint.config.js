@@ -133,7 +133,13 @@ export default [
                 ],
               },
             },
-            // upload context may import from ivas context
+            {
+              from: { type: 'model', captured: { context: 'access-requests' } },
+              allow: {
+                to: [{ type: 'model', captured: { context: 'ivas' } }],
+              },
+            },
+            // upload context may import from verification addresses and metadata context
             {
               from: { type: 'features', captured: { context: 'upload' } },
               allow: {
@@ -141,12 +147,10 @@ export default [
                   { type: 'service', captured: { context: 'ivas' } },
                   { type: 'model', captured: { context: 'ivas' } },
                   { type: 'pipe', captured: { context: 'ivas' } },
+                  { type: 'service', captured: { context: 'metadata' } },
+                  { type: 'model', captured: { context: 'metadata' } },
                 ],
               },
-            },
-            {
-              from: { type: 'model', captured: { context: 'access-requests' } },
-              allow: { to: { type: 'model', captured: { context: 'ivas' } } },
             },
             // work-package context may import from some other contexts
             {
@@ -161,7 +165,7 @@ export default [
                 ],
               },
             },
-            // auth context may import from verification addresses context
+            // auth context may import from verification addresses and access request context
             {
               from: { type: 'features', captured: { context: 'auth' } },
               allow: {
@@ -170,14 +174,6 @@ export default [
                   { type: 'model', captured: { context: 'ivas' } },
                   { type: 'pipe', captured: { context: 'ivas' } },
                   { type: 'features', captured: { context: 'ivas' } },
-                ],
-              },
-            },
-            // auth context may import from access request context
-            {
-              from: { type: 'features', captured: { context: 'auth' } },
-              allow: {
-                to: [
                   { type: 'service', captured: { context: 'access-requests' } },
                   { type: 'model', captured: { context: 'access-requests' } },
                   { type: 'pipe', captured: { context: 'access-requests' } },
