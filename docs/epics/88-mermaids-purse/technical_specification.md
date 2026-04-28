@@ -258,6 +258,25 @@ Results are recorded and attached to the epic. They inform whether any transform
 
 - A `add_relation` or `delete_relation` transformation — not required for the current aggregate workflow. (or is it?)
 
+#### 9. Metldata: Fix `jsonsubschema` Enum Regex Bug
+
+Metldata depends on the `jsonsubschema` library (IBM) for JSON Schema subset validation. The library is not actively maintained and contains a known bug: in `_canonicalization.py`, enum values are converted to regex patterns using bare string concatenation (`"^" + str(x) + "$"`) without escaping regex metacharacters. Any enum value containing a special character such as `^`, `*`, `+`, or `.` is therefore misinterpreted as a regex operator, causing incorrect validation results.
+
+This bug manifested against the GHGA `instrument_model` controlled vocabulary: the enum value `454_GS_FLX+` contains a `+` character. Without escaping, the generated pattern becomes `^454_GS_FLX+$`, which matches strings like `454_GS_FLXXX` rather than the literal value `454_GS_FLX+`, causing incorrect schema subset validation. The upstream fix is captured in [IBM/jsonsubschema@8e6535](https://github.com/IBM/jsonsubschema/commit/8e6535461d00f37e4c06189826d320e4750d3a31): apply `re.escape()` to each enum value before embedding it in the pattern.
+
+The upstream maintainers are unresponsive, so the fix cannot be obtained via a normal upstream release. The solution is to **fork `jsonsubschema` under the GHGA organisation**, and publish a GHGA-maintained release to PyPI (or the internal package registry). Metldata's dependency then points to the GHGA fork instead of the IBM original.
+
+Concretely:
+
+1. Fork `IBM/jsonsubschema` to `ghga-de/jsonsubschema`.
+2. Apply the fix from [IBM/jsonsubschema@8e6535](https://github.com/IBM/jsonsubschema/commit/8e6535461d00f37e4c06189826d320e4750d3a31) on the fork.
+3. Tag and publish a release from the fork.
+4. Update metldata's dependency to reference the GHGA fork release.
+5. Identify the specific GHGA CV value that triggers the bug and add a regression test to metldata that fails without the fix and passes with it.
+
+
+**Another issue with the library.** The library only supports JSON Schema draft 4. The GHGA metadata schema declares `$schema: https://json-schema.org/draft/2019-09/schema`. Keywords introduced after draft 4 (e.g., `$defs`, `unevaluatedProperties`) are silently ignored or mishandled, making subset validation unreliable for schemas that use draft 2019-09 features. Will we tackle this issue somehow? or will we fix the version to draft 4 in our content schemas? 
+
 ## User Journeys
 
 ### Journey 1: Schema Designer Enables Global Unique IDs
