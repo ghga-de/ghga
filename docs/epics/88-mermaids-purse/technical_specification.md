@@ -69,15 +69,13 @@ When validating a datapack against a schema with `global_unique_ids: true`:
 
 ##### Serialization fix (frozen dicts / circular reference)
 
-Schemapack's serialization of `DataPack` objects (which use frozen dicts internally) currently triggers `ValueError: Circular reference detected (id repeated)` in naive client code. The fix shall be applied inside schemapack so that client code requires no workarounds. This fix is a prerequisite for the broader adoption of the library.
+Schemapack's serialization of `DataPack` objects (which use frozen dicts internally) currently triggers `ValueError: Circular reference detected (id repeated)` in naive client code. The fix shall be applied inside schemapack so that client code requires no workarounds.
 
 #### 2. Metldata: `duplicate_class` Compatibility with Global Unique IDs
 
-The `duplicate_class` transformation shall be retained. However, `duplicate_class` copies a class under a new name while preserving all its resource IDs, which would produce two classes sharing the same IDs — a direct violation of the `global_unique_ids` constraint.
+The `duplicate_class` transformation shall be retained without a per-step model-assumption check for `global_unique_ids`. Adding such a check at the `duplicate_class` step would be too strict: a workflow that duplicates a class and then deletes it in a later step produces no ID collision in the final output, yet a per-step check would reject it.
 
-Metldata shall therefore add a model-assumption check to `duplicate_class` that inspects the input schemapack before executing. If the schema has `global_unique_ids: true`, the transformation must raise a `ModelAssumptionError` with a clear message explaining that duplicating a class produces ID collisions in a globally-unique-ID schema.
-
-The check is applied during the model-transformation phase (before any data is touched), so the failure is reported early — at workflow validation time when `WorkflowRunner` is constructed or when `transform_model` is called — rather than only during datapack validation at the end.
+This is consistent with the existing metldata behaviour: when the no-intermediate-validation flag is set, model compatibility is not enforced after every step — only at the workflow boundaries. The `global_unique_ids` uniqueness constraint follows the same rule: it is enforced only at **workflow output validation** (the final step), not during intermediate steps. If the output schema of a workflow still has `global_unique_ids: true` and the output datapack contains duplicate IDs across classes, the post-workflow validation raises an error at that point.
 
 #### 3. Metldata: `add_class` Transformation
 
@@ -104,6 +102,8 @@ class AddClassConfig(BaseModel):
 
 Relations are declared at class-creation time when they are known upfront. Each key is the relation name (snake_case); the value specifies the target class and multiplicity/mandatory flags matching the schemapack relation definition format. All referenced target classes must already exist in the schema — `add_class` raises `ModelAssumptionError` if any target class is missing.
 
+**How to populate this newly added class and the relations are a question mark. 
+**
 ##### Model transformation
 
 - Add the new `ClassDefinition` (with content schema and any declared relations) to the schemapack.
@@ -237,11 +237,7 @@ An end-to-end integration test shall be added to metldata that exercises all the
 The test uses a representative aggregate workflow — modelled on the EMIM → UDM transformation — and verifies:
 
 - **`global_unique_ids: true` schema.** The input schemapack has the flag set; validation correctly rejects datapacks with duplicate IDs across classes.
-- **`add_class` with relations.** A new class is introduced into the derived schema with declared relations to existing classes; the transformed schema and datapack match expectations.
-- **`duplicate_class` raises `ModelAssumptionError`.** A workflow step using `duplicate_class` on the same `global_unique_ids` input schema is asserted to fail at model-transformation time.
-- **Publication as Study content.** The test schema embeds publication data as an inline array in `Study` content; no `Publication` class or relation is present; content-transformation steps access it directly.
-- **`WorkflowRunner` separability.** `transform_model` and `transform_data` are called independently and produce consistent results; intermediate schema state is not exposed to the test.
-- **GHGA accessions as resource IDs.** A `replace_resource_ids` step replaces submission-time aliases with accession-style IDs; the output datapack reflects globally unique accessions across all classes.
+
 
 #### 8. Metldata: Performance Benchmark of the Aggregate Workflow
 
@@ -250,19 +246,11 @@ A performance benchmark shall be run against the full EMIM → UDM aggregate wor
 Results are recorded and attached to the epic. They inform whether any transformation steps are unexpectedly slow and whether further optimisation is needed before shipping. If any single step accounts for a disproportionate share of the total time, it is flagged for investigation.
 
 
-### Optional
-
-- A `copy_class` transformation: creates a new class as a structural copy of an existing class, but assigns fresh resource IDs rather than duplicating them. Useful when the logical structure of a class is reused in a derived model.
-
-### Not included
-
-- A `add_relation` or `delete_relation` transformation — not required for the current aggregate workflow. (or is it?)
-
 #### 9. Metldata: Fix `jsonsubschema` Enum Regex Bug
 
 Metldata depends on the `jsonsubschema` library (IBM) for JSON Schema subset validation. The library is not actively maintained and contains a known bug: in `_canonicalization.py`, enum values are converted to regex patterns using bare string concatenation (`"^" + str(x) + "$"`) without escaping regex metacharacters. Any enum value containing a special character such as `^`, `*`, `+`, or `.` is therefore misinterpreted as a regex operator, causing incorrect validation results.
 
-This bug manifested against the GHGA `instrument_model` controlled vocabulary: the enum value `454_GS_FLX+` contains a `+` character. Without escaping, the generated pattern becomes `^454_GS_FLX+$`, which matches strings like `454_GS_FLXXX` rather than the literal value `454_GS_FLX+`, causing incorrect schema subset validation. The upstream fix is captured in [IBM/jsonsubschema@8e6535](https://github.com/IBM/jsonsubschema/commit/8e6535461d00f37e4c06189826d320e4750d3a31): apply `re.escape()` to each enum value before embedding it in the pattern.
+This bug manifested against the GHGA `instrument_model` controlled vocabulary: the enum value `454_GS_FLX+` contains a `+` character. Without escaping, the generated pattern becomes `^454_GS_FLX+$`, which matches strings like `454_GS_FLXXX` rather than the literal value `454_GS_FLX+`, causing incorrect schema subset validation. The upstream fix is captured in [IBM/jsonsubschema@8e6535](https://github.com/IBM/jsonsubschema/commit/8e6535461d00f37e4c06189826d320e4750d3a31).
 
 The upstream maintainers are unresponsive, so the fix cannot be obtained via a normal upstream release. The solution is to **fork `jsonsubschema` under the GHGA organisation**, and publish a GHGA-maintained release to PyPI (or the internal package registry). Metldata's dependency then points to the GHGA fork instead of the IBM original.
 
@@ -281,10 +269,10 @@ Concretely:
 
 ### Journey 1: Schema Designer Enables Global Unique IDs
 
-1. A schema designer authors a new schemapack in which all classes share the same accession namespace (e.g., GHGA accessions for Study, Sample, and Dataset).
-2. They add `global_unique_ids: true` to the schema YAML.
-3. When they run `schemapack validate` against a conforming datapack, validation succeeds only if all resource IDs are distinct across all classes.
-4. If a collision is present — e.g., the Study `GHGAS00001` and a Sample also named `GHGAS00001` — validation fails with a clear error naming the conflicting ID and the two classes that claim it.
+
+1. A schema designer adds `global_unique_ids: true` to the schema YAML.
+2. When they run `schemapack validate` against a conforming datapack, validation succeeds only if all resource IDs are distinct across all classes.
+3. If a collision is present — e.g., the Study `GHGAS00001` and a Sample also named `GHGAS00001` — validation fails with a clear error naming the conflicting ID and the two classes that claim it.
 
 ### Journey 2: Workflow Author Builds an Aggregate Workflow with `add_class`
 
@@ -309,8 +297,16 @@ Concretely:
 - `WorkflowRunner.transform_data` must internally re-derive the intermediate schemas at each step — it cannot assume that `transform_model` has been called first. This keeps the two methods fully independent.
 - The validation that currently occurs at both ends of `WorkflowHandler.run()` must be preserved in `WorkflowRunner`: input schema/data validated against the first step's assumptions; output schema/data validated against the last step's output model.
 - `WorkflowRunner` embeds the transformation registry so callers do not need to import or manage it, unless they need a custom registry (e.g., for testing).
-- The `ModelAssumptionError` added to `duplicate_class` must be raised during the model-transformation phase so that workflows using `duplicate_class` on a `global_unique_ids` schema fail immediately at validation time, not during datapack processing.
 - The serialization fix for frozen dicts should be shipped as a patch release of schemapack before or alongside the main changes in this epic.
+
+
+### Optional
+
+- A `copy_class` transformation: creates a new class as a structural copy of an existing class, but assigns fresh resource IDs rather than duplicating them. Useful when the logical structure of a class is reused in a derived model.
+
+### Not included
+
+- A `add_relation` or `delete_relation` transformation — not required for the current aggregate workflow. (or is it?)
 
 ## Human Resource/Time Estimation
 
