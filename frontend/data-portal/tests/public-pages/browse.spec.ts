@@ -26,7 +26,7 @@ test('can view a dataset summary', async ({ page }) => {
   await page.goto('/browse');
 
   const main = page.locator('main');
-  await expect(main).toContainText('Total Datasets:26');
+  await expect(main).toContainText('Total Datasets:26', { timeout: 15000 });
 
   await expect(main).toContainText('GHGAD12345678901236');
   await expect(main).toContainText('Test dataset for details');

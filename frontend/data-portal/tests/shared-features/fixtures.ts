@@ -26,9 +26,9 @@ export const test = baseTest.extend<SharedFixtures>({
     const lsLogin = page.getByRole('menuitem', { name: 'LS Login' });
     await expect(lsLogin).toBeVisible();
     await lsLogin.click();
-    await use(page);
     const account = page.getByRole('button', { name: 'Account' });
     await expect(account).toBeVisible();
+    await use(page);
   },
 });
 
