@@ -18,3 +18,4 @@ from opentelemetry import trace
 
 SERVICE_NAME = "ekss"
 TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
+ENCODED_ENCRYPTED_KEY_SIZE = 124  # length of base64-encoded crypt4gh-encrypted secret

@@ -15,19 +15,20 @@
 
 """General testing utilities"""
 
+import base64
+import os
 from pathlib import Path
 
-from fastapi.testclient import TestClient
-
-from ekss.adapters.inbound.fastapi_.deps import config_injector
-from ekss.adapters.inbound.fastapi_.main import setup_app
-from ekss.config import Config
+from ghga_service_commons.utils.crypt import encrypt
 
 BASE_DIR = Path(__file__).parent.resolve()
 
 
-def get_test_client(config: Config) -> TestClient:
-    """Return a configured TestClient instance"""
-    app = setup_app(config)
-    app.dependency_overrides[config_injector] = lambda: config
-    return TestClient(app=app)
+def make_secret_payload(ekss_pk: bytes) -> tuple[bytes, str]:
+    """Returns a tuple containing a raw 32-byte file secret and the base64-encoded
+    crypt4gh-encrypted version of the same secret.
+    """
+    file_secret = os.urandom(32)
+    encoded_secret = base64.urlsafe_b64encode(file_secret).decode("utf-8")
+    encrypted_secret = encrypt(encoded_secret, key=ekss_pk, encoding="utf-8")
+    return (file_secret, encrypted_secret)

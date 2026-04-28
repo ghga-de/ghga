@@ -18,14 +18,11 @@ import os
 
 import pytest
 
-from ekss.adapters.outbound.vault.exceptions import SecretRetrievalError
-from tests_ekss.fixtures.vault import (
-    VaultFixture,
-    vault_fixture,  # noqa: F401
-)
+from ekss.ports.outbound.vault import VaultClientPort
+from tests_ekss.fixtures.vault import VaultFixture
 
 
-def test_connection(vault_fixture: VaultFixture):  # noqa: F811
+def test_connection(vault_fixture: VaultFixture):
     """Test if container is up and reachable and commands are working"""
     # populate
     secret = os.urandom(32)
@@ -39,7 +36,7 @@ def test_connection(vault_fixture: VaultFixture):  # noqa: F811
 
     # test deletion
     vault_fixture.adapter.delete_secret(key=secret_id)
-    with pytest.raises(SecretRetrievalError):
+    with pytest.raises(VaultClientPort.VaultException):
         vault_fixture.adapter.get_secret(key=secret_id)
 
     # test deletion only affected correct path

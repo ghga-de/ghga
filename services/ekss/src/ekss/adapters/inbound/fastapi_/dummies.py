@@ -13,4 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Fixtures for tests"""
+"""A collection of dependency dummies.
+
+These dummies are used in path operation definitions, but at runtime they need
+to be replaced  with actual dependencies.
+"""
+
+from typing import Annotated
+
+from fastapi import Depends
+from ghga_service_commons.api.di import DependencyDummy
+
+from ekss.ports.inbound.secrets import SecretsHandlerPort
+
+__all__ = ["SecretsHandlerDummy", "secrets_handler_port"]
+
+secrets_handler_port = DependencyDummy("secrets_handler_port")
+
+SecretsHandlerDummy = Annotated[SecretsHandlerPort, Depends(secrets_handler_port)]

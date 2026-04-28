@@ -25,15 +25,6 @@
       "title": "Server Private Key Path",
       "type": "string"
     },
-    "server_public_key_path": {
-      "description": "Path to the Crypt4GH public key file",
-      "examples": [
-        "./key.pub"
-      ],
-      "format": "path",
-      "title": "Server Public Key Path",
-      "type": "string"
-    },
     "private_key_passphrase": {
       "anyOf": [
         {
@@ -378,7 +369,6 @@
   },
   "required": [
     "server_private_key_path",
-    "server_public_key_path",
     "service_instance_id",
     "vault_url",
     "vault_path"

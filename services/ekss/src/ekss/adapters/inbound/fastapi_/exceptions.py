@@ -18,40 +18,6 @@ from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import BaseModel
 
 
-class HttpMalformedOrMissingEnvelopeError(HttpCustomExceptionBase):
-    """Raised when envelope decryption fails due to a missing or malformed envelope."""
-
-    exception_id = "malformedOrMissingEnvelopeError"
-
-    class DataModel(BaseModel):
-        """Model for exception data"""
-
-    def __init__(self, *, status_code: int = 400):
-        """Construct message and init the exception."""
-        super().__init__(
-            status_code=status_code,
-            description=("Envelope malformed or missing"),
-            data={},
-        )
-
-
-class HttpEnvelopeDecryptionError(HttpCustomExceptionBase):
-    """Raised when no available secret crypt4GH key can successfully decrypt the file envelope."""
-
-    exception_id = "envelopeDecryptionError"
-
-    class DataModel(BaseModel):
-        """Model for exception data"""
-
-    def __init__(self, *, status_code: int = 403):
-        """Construct message and init the exception."""
-        super().__init__(
-            status_code=status_code,
-            description=("Could not decrypt envelope content with given keys"),
-            data={},
-        )
-
-
 class HttpSecretInsertionError(HttpCustomExceptionBase):
     """Raised when a secret could not be inserted into the vault"""
 
@@ -65,23 +31,6 @@ class HttpSecretInsertionError(HttpCustomExceptionBase):
         super().__init__(
             status_code=status_code,
             description=("Could not insert key into vault"),
-            data={},
-        )
-
-
-class HttpVaultConnectionError(HttpCustomExceptionBase):
-    """Raised when the EKSS could not connect to the vault"""
-
-    exception_id = "vaultConnectionError"
-
-    class DataModel(BaseModel):
-        """Model for exception data"""
-
-    def __init__(self, *, status_code: int = 504):
-        """Construct message and init the exception."""
-        super().__init__(
-            status_code=status_code,
-            description=("Could not connect to vault"),
             data={},
         )
 
@@ -112,6 +61,73 @@ class HttpDecodingError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=f"Could not decode the the given string as base64: {affected}",
+            description=f"Could not decode the given string as base64: {affected}",
+            data={},
+        )
+
+
+class HttpDecryptionError(HttpCustomExceptionBase):
+    """Raised when the submitted file secret could not be decrypted"""
+
+    exception_id = "decryptionError"
+
+    def __init__(self, *, status_code: int = 403):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="Could not decrypt the submitted file secret",
+            data={},
+        )
+
+
+class HttpSecretDeletionError(HttpCustomExceptionBase):
+    """Raised when a secret was found but could not be deleted"""
+
+    exception_id = "secretDeletionError"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+    def __init__(self, *, status_code: int = 500):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="The secret was found but could not be deleted.",
+            data={},
+        )
+
+
+class HttpEnvelopeCreationError(HttpCustomExceptionBase):
+    """Raised when a Crypt4GH envelope could not be created for the requested secret"""
+
+    exception_id = "envelopeCreationError"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+    def __init__(self, *, status_code: int = 500):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="Could not create envelope for the requested secret",
+            data={},
+        )
+
+
+class HttpInternalError(HttpCustomExceptionBase):
+    """Thrown for otherwise unhandled exceptions"""
+
+    exception_id = "internalError"
+
+    def __init__(
+        self,
+        *,
+        message: str = "An internal server error has occurred.",
+        status_code: int = 500,
+    ):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=message,
             data={},
         )

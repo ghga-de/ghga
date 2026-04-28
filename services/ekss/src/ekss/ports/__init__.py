@@ -12,12 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Module containing HashiCorp vault related functionality"""
 
-from ekss.adapters.outbound.vault.client import VaultAdapter
-from ekss.adapters.outbound.vault.exceptions import (
-    SecretInsertionError,
-    SecretRetrievalError,
-)
-
-__all__ = ["SecretInsertionError", "SecretRetrievalError", "VaultAdapter"]
+"""Inbound and outbound port definitions"""

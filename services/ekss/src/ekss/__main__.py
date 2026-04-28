@@ -17,24 +17,12 @@
 
 import asyncio
 
-from ghga_service_commons.api import run_server
-from hexkit.log import configure_logging
-from hexkit.opentelemetry import configure_opentelemetry
-
-from ekss.adapters.inbound.fastapi_.main import (
-    setup_app,
-)
-from ekss.config import CONFIG, Config
-
-app = setup_app(CONFIG)
+from ekss.main import run_rest_app
 
 
-def run(config: Config = CONFIG):
+def run():
     """Run the service"""
-    configure_logging(config=config)
-    configure_opentelemetry(service_name=config.service_name, config=config)
-
-    asyncio.run(run_server(app="ekss.__main__:app", config=config))
+    asyncio.run(run_rest_app())
 
 
 if __name__ == "__main__":

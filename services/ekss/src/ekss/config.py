@@ -103,11 +103,6 @@ class Crypt4GHConfig(BaseSettings):
         examples=["./key.sec"],
         description="Path to the Crypt4GH private key file",
     )
-    server_public_key_path: Path = Field(
-        default=...,
-        examples=["./key.pub"],
-        description="Path to the Crypt4GH public key file",
-    )
     private_key_passphrase: str | None = Field(
         default=None,
         description=(

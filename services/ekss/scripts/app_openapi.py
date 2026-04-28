@@ -21,16 +21,16 @@
 import json
 from typing import Any
 
-from ekss.adapters.inbound.fastapi_.custom_openapi import get_openapi_schema
-from ekss.adapters.inbound.fastapi_.main import setup_app
-from ekss.config import CONFIG
+from fastapi import FastAPI
 
-app = setup_app(CONFIG)
+from ekss.adapters.inbound.fastapi_.configure import get_openapi_schema
+from ekss.adapters.inbound.fastapi_.routes import router
 
-__all__ = ["app"]
+app = FastAPI()
+app.include_router(router)
 
 
-def custom_openapi() -> dict[str, Any]:
+def custom_openapi() -> dict[str, Any]:  # noqa: D103
     if app.openapi_schema:
         return app.openapi_schema
     openapi_schema = get_openapi_schema(app)

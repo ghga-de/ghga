@@ -17,7 +17,6 @@ otel_trace_sampling_rate: 1.0
 port: 8080
 private_key_passphrase: null
 server_private_key_path: key.sec
-server_public_key_path: key.pub
 service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
 service_instance_id: '1'
 service_name: ekss

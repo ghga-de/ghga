@@ -65,13 +65,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/encryption-key-store-service):
 ```bash
-docker pull ghga/encryption-key-store-service:4.1.0
+docker pull ghga/encryption-key-store-service:5.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/encryption-key-store-service:4.1.0 .
+docker build -t ghga/encryption-key-store-service:5.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -79,7 +79,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/encryption-key-store-service:4.1.0 --help
+docker run -p 8080:8080 ghga/encryption-key-store-service:5.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -107,16 +107,6 @@ The service requires the following configuration parameters:
 
   ```json
   "./key.sec"
-  ```
-
-
-- <a id="properties/server_public_key_path"></a>**`server_public_key_path`** *(string, format: path, required)*: Path to the Crypt4GH public key file.
-
-
-  Examples:
-
-  ```json
-  "./key.pub"
   ```
 
 

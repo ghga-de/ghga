@@ -16,41 +16,75 @@
 
 import os
 from collections.abc import Generator
-from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
-from tempfile import mkstemp
+from tempfile import TemporaryDirectory
 
+import pytest
+from crypt4gh.keys import get_private_key, get_public_key
 from crypt4gh.keys.c4gh import generate as generate_keypair
 
 from ekss.config import Crypt4GHConfig
+from tests_ekss.fixtures.config import DEFAULT_CONFIG
 
 
-@contextmanager
-def tmp_keypair(passphrase: str | None = None) -> Generator[Crypt4GHConfig]:
-    """Creates a keypair in tmp using crypt4gh and yields the resulting Crypt4GHConfig"""
+@dataclass
+class KeypairFixture:
+    """A fixture that contains a temporary Crypt4GH keypair and the key file paths"""
+
+    ekss_pk_path: Path
+    ekss_sk_path: Path
+    ekss_pk: bytes
+    ekss_sk: bytes
+    user_pk: bytes
+    user_sk: bytes
+    config: Crypt4GHConfig
+
+
+@pytest.fixture(name="keypair")
+def keypair_fixture() -> Generator[KeypairFixture]:
+    """Creates a keypair in tmp using crypt4gh and yields a KeypairFixture with the file
+    paths and the values
+    """
     # Crypt4GH always writes to file and umask inside of its code causes permission issues
-    sk_file, sk_path = mkstemp(prefix="private", suffix=".key")
-    pk_file, pk_path = mkstemp(prefix="public", suffix=".key")
+    with TemporaryDirectory() as tempdir:
+        pk_path = Path(tempdir) / "pub.key"
+        sk_path = Path(tempdir) / "sec.key"
 
-    # Crypt4GH does not reset the umask it sets, so we need to deal with it
-    # umask returns the current value before setting the specified mask
-    original_umask = os.umask(0o022)
-    if passphrase:
-        generate_keypair(seckey=sk_file, pubkey=pk_file, passphrase=passphrase.encode())
-    else:
-        generate_keypair(seckey=sk_file, pubkey=pk_file)
-    os.umask(original_umask)
+        user_pk_path = Path(tempdir) / "user_pub.key"
+        user_sk_path = Path(tempdir) / "user_sec.key"
 
-    public_key_path = Path(pk_path)
-    private_key_path = Path(sk_path)
+        # Crypt4GH does not reset the umask it sets, so we need to deal with it
+        # umask returns the current value before setting the specified mask
+        original_umask = os.umask(0o022)
+        passphrase = DEFAULT_CONFIG.private_key_passphrase
+        if passphrase:
+            generate_keypair(
+                seckey=sk_path, pubkey=pk_path, passphrase=passphrase.encode()
+            )
+            generate_keypair(
+                seckey=user_sk_path,
+                pubkey=user_pk_path,
+                passphrase=passphrase.encode(),
+            )
+        else:
+            generate_keypair(seckey=sk_path, pubkey=pk_path)
+            generate_keypair(seckey=user_sk_path, pubkey=user_pk_path)
+        os.umask(original_umask)
 
-    crypt4gh_config = Crypt4GHConfig(
-        server_private_key_path=private_key_path,
-        server_public_key_path=public_key_path,
-        private_key_passphrase=passphrase,
-    )
+        ekss_sk = get_private_key(sk_path, callback=lambda: passphrase)
+        ekss_pk = get_public_key(pk_path)
+        user_sk = get_private_key(user_sk_path, callback=lambda: passphrase)
+        user_pk = get_public_key(user_pk_path)
 
-    yield crypt4gh_config
-
-    public_key_path.unlink()
-    private_key_path.unlink()
+        yield KeypairFixture(
+            ekss_pk_path=pk_path,
+            ekss_sk_path=sk_path,
+            ekss_pk=ekss_pk,
+            ekss_sk=ekss_sk,
+            user_pk=user_pk,
+            user_sk=user_sk,
+            config=Crypt4GHConfig(
+                server_private_key_path=sk_path, private_key_passphrase=passphrase
+            ),
+        )

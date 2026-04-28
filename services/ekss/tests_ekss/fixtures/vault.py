@@ -24,7 +24,7 @@ import pytest
 # from testcontainers.vault import DockerContainer
 from testcontainers.core.generic import DockerContainer
 
-from ekss.adapters.outbound.vault.client import VaultAdapter
+from ekss.adapters.outbound.vault import VaultClient
 from ekss.config import VaultConfig
 
 VAULT_URL = "http://0.0.0.0:8200"
@@ -37,7 +37,7 @@ VAULT_PORT = 8200
 class VaultFixture:
     """Contains initialized vault client"""
 
-    adapter: VaultAdapter
+    adapter: VaultClient
     config: VaultConfig
 
 
@@ -62,7 +62,7 @@ def vault_fixture() -> Generator[VaultFixture]:
             vault_path="ekss",
             vault_secrets_mount_point="secret-mount-point",
         )
-        vault_adapter = VaultAdapter(config=config)
+        vault_adapter = VaultClient(config=config)
         # client needs some time after creation
         time.sleep(2)
         yield VaultFixture(adapter=vault_adapter, config=config)

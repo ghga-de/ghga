@@ -34,53 +34,103 @@ components:
       properties: {}
       title: HttpDecodingErrorData
       type: object
-    HttpEnvelopeDecryptionError:
+    HttpDecryptionError:
       additionalProperties: false
       properties:
         data:
-          $ref: '#/components/schemas/HttpEnvelopeDecryptionErrorData'
+          $ref: '#/components/schemas/HttpDecryptionErrorData'
         description:
           description: A human readable message to the client explaining the cause
             of the exception.
           title: Description
           type: string
         exception_id:
-          const: envelopeDecryptionError
+          const: decryptionError
           title: Exception Id
           type: string
       required:
       - data
       - description
       - exception_id
-      title: HttpEnvelopeDecryptionError
+      title: HttpDecryptionError
       type: object
-    HttpEnvelopeDecryptionErrorData:
+    HttpDecryptionErrorData:
+      additionalProperties: true
       properties: {}
-      title: HttpEnvelopeDecryptionErrorData
+      title: HttpDecryptionErrorData
       type: object
-    HttpMalformedOrMissingEnvelopeError:
+    HttpEnvelopeCreationError:
       additionalProperties: false
       properties:
         data:
-          $ref: '#/components/schemas/HttpMalformedOrMissingEnvelopeErrorData'
+          $ref: '#/components/schemas/HttpEnvelopeCreationErrorData'
         description:
           description: A human readable message to the client explaining the cause
             of the exception.
           title: Description
           type: string
         exception_id:
-          const: malformedOrMissingEnvelopeError
+          const: envelopeCreationError
           title: Exception Id
           type: string
       required:
       - data
       - description
       - exception_id
-      title: HttpMalformedOrMissingEnvelopeError
+      title: HttpEnvelopeCreationError
       type: object
-    HttpMalformedOrMissingEnvelopeErrorData:
+    HttpEnvelopeCreationErrorData:
       properties: {}
-      title: HttpMalformedOrMissingEnvelopeErrorData
+      title: HttpEnvelopeCreationErrorData
+      type: object
+    HttpInternalError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpInternalErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: internalError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpInternalError
+      type: object
+    HttpInternalErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpInternalErrorData
+      type: object
+    HttpSecretDeletionError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpSecretDeletionErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: secretDeletionError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpSecretDeletionError
+      type: object
+    HttpSecretDeletionErrorData:
+      properties: {}
+      title: HttpSecretDeletionErrorData
       type: object
     HttpSecretInsertionError:
       additionalProperties: false
@@ -130,72 +180,6 @@ components:
       properties: {}
       title: HttpSecretNotFoundErrorData
       type: object
-    HttpVaultConnectionError:
-      additionalProperties: false
-      properties:
-        data:
-          $ref: '#/components/schemas/HttpVaultConnectionErrorData'
-        description:
-          description: A human readable message to the client explaining the cause
-            of the exception.
-          title: Description
-          type: string
-        exception_id:
-          const: vaultConnectionError
-          title: Exception Id
-          type: string
-      required:
-      - data
-      - description
-      - exception_id
-      title: HttpVaultConnectionError
-      type: object
-    HttpVaultConnectionErrorData:
-      properties: {}
-      title: HttpVaultConnectionErrorData
-      type: object
-    InboundEnvelopeContent:
-      description: 'Contains file encryption/decryption secret extracted from file
-        envelope, the ID
-
-        generated for this secret and the file content offset, i.e. the location of
-        the
-
-        encrypted file content within the file.'
-      properties:
-        new_secret:
-          title: New Secret
-          type: string
-        offset:
-          title: Offset
-          type: integer
-        secret_id:
-          title: Secret Id
-          type: string
-        submitter_secret:
-          title: Submitter Secret
-          type: string
-      required:
-      - submitter_secret
-      - new_secret
-      - secret_id
-      - offset
-      title: InboundEnvelopeContent
-      type: object
-    InboundEnvelopeQuery:
-      description: Request object containing first file part and a public key.
-      properties:
-        file_part:
-          title: File Part
-          type: string
-        public_key:
-          title: Public Key
-          type: string
-      required:
-      - file_part
-      - public_key
-      title: InboundEnvelopeQuery
-      type: object
     OutboundEnvelopeContent:
       description: 'Contains the header envelope, which contains the file secret encrypted
         with the
@@ -208,6 +192,16 @@ components:
       required:
       - content
       title: OutboundEnvelopeContent
+      type: object
+    SecretID:
+      description: Contains the Vault-generated secret ID for a file encryption secret.
+      properties:
+        secret_id:
+          title: Secret Id
+          type: string
+      required:
+      - secret_id
+      title: SecretID
       type: object
     ValidationError:
       properties:
@@ -239,7 +233,7 @@ info:
   description: A service managing storage and retrieval of symmetric keys in a HashiCorp
     Vault.
   title: Encryption Key Store Service
-  version: 4.1.0
+  version: 5.0.0
 openapi: 3.1.0
 paths:
   /health:
@@ -257,64 +251,57 @@ paths:
       - EncryptionKeyStoreService
   /secrets:
     post:
-      description: 'Extract file encryption/decryption secret, create secret ID and
-        extract
-
-        file content offset'
+      description: Decrypt the provided Crypt4GH-encrypted file secret and store it
+        in the key manager
       operationId: postEncryptionData
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InboundEnvelopeQuery'
+              description: Base64-encoded string containing a Crypt4GH-encrypted file
+                encryption secret.
+              maxLength: 124
+              minLength: 124
+              title: Encrypted Secret
+              type: string
         required: true
       responses:
-        '200':
+        '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InboundEnvelopeContent'
-          description: Successfully created and stored secret for re-encryption.
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HttpMalformedOrMissingEnvelopeError'
-          description: Crypt4GH header envelope is either missing or malformed in
-            the provided payload.
+                $ref: '#/components/schemas/SecretID'
+          description: Successfully stored file encryption secret.
         '403':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpEnvelopeDecryptionError'
-          description: Could not decrypt Crypt4GH header envelope with the given key
-            pair.
+                $ref: '#/components/schemas/HttpDecryptionError'
+          description: Could not decrypt the submitted file secret
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpDecodingError'
           description: One of the provided inputs could not be decoded as base64 string.
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpInternalError'
+          description: An internal server error has occurred.
         '502':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HttpSecretInsertionError'
           description: Failed to successfully insert secret into vault.
-        '504':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HttpVaultConnectionError'
-          description: Failed to establish a connection to vault.
-      summary: Extract file encryption/decryption secret and file content offset from
-        enevelope
+      summary: Store Crypt4GH-encrypted file encryption secret
       tags:
       - EncryptionKeyStoreService
   /secrets/{secret_id}:
     delete:
-      description: Create header envelope for the file secret with given ID encrypted
-        with a given public key
+      description: Delete the secret with the given ID from the key manager
       operationId: deleteSecret
       parameters:
       - in: path
@@ -325,7 +312,7 @@ paths:
           type: string
       responses:
         '204':
-          description: Succesfully deleted secret.
+          description: Successfully deleted secret.
         '404':
           content:
             application/json:
@@ -338,6 +325,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpSecretDeletionError'
+          description: The secret was found but could not be deleted.
       summary: Delete the associated secret
       tags:
       - EncryptionKeyStoreService
@@ -378,6 +371,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/HttpDecodingError'
           description: One of the provided inputs could not be decoded as base64 string.
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpEnvelopeCreationError'
+          description: Could not create an envelope for the requested secret.
       summary: Get personalized envelope containing Crypt4GH file encryption/decryption
         key
       tags:

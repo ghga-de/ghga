@@ -18,26 +18,6 @@
 from pydantic import BaseModel
 
 
-class InboundEnvelopeQuery(BaseModel):
-    """Request object containing first file part and a public key."""
-
-    file_part: str
-    public_key: str
-
-
-class InboundEnvelopeContent(BaseModel):
-    """
-    Contains file encryption/decryption secret extracted from file envelope, the ID
-    generated for this secret and the file content offset, i.e. the location of the
-    encrypted file content within the file.
-    """
-
-    submitter_secret: str
-    new_secret: str
-    secret_id: str
-    offset: int
-
-
 class OutboundEnvelopeContent(BaseModel):
     """
     Contains the header envelope, which contains the file secret encrypted with the
@@ -45,3 +25,9 @@ class OutboundEnvelopeContent(BaseModel):
     """
 
     content: str
+
+
+class SecretID(BaseModel):
+    """Contains the Vault-generated secret ID for a file encryption secret."""
+
+    secret_id: str

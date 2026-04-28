@@ -13,25 +13,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Module containing the main FastAPI router and (optionally) top-level API enpoints.
-Additional endpoints might be structured in dedicated modules
-(each of them having a sub-router).
-"""
+"""Utils to customize openAPI script"""
+
+from typing import Any
 
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 from ghga_service_commons.api import ApiConfigBase, configure_app
 
-from ekss.adapters.inbound.fastapi_.custom_openapi import get_openapi_schema
+from ekss import __version__
 from ekss.adapters.inbound.fastapi_.routes import router
+from ekss.config import CONFIG
 
 
-def setup_app(config: ApiConfigBase):
-    """Configure and return app"""
+def get_openapi_schema(api) -> dict[str, Any]:
+    """Generates a custom openapi schema for the service"""
+    return get_openapi(
+        title="Encryption Key Store Service",
+        version=__version__,
+        description="A service managing storage and retrieval of symmetric keys in"
+        + " a HashiCorp Vault.",
+        servers=[{"url": CONFIG.api_root_path}],
+        tags=[{"name": "EncryptionKeyStoreService"}],
+        routes=api.routes,
+    )
+
+
+def get_configured_app(*, config: ApiConfigBase) -> FastAPI:
+    """Create and configure a REST API application."""
     app = FastAPI()
-    configure_app(app, config=config)
-
     app.include_router(router)
+    configure_app(app, config=config)
 
     def custom_openapi():
         if app.openapi_schema:

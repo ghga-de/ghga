@@ -12,20 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Exceptions wrapping HashiCorp Vault errors"""
 
-
-class VaultException(RuntimeError):
-    """Baseclass for for errors encountered when interacting with HashiCorp Vault"""
-
-
-class SecretInsertionError(VaultException):
-    """Wrapper for errors encountered on secret insertion"""
-
-
-class SecretRetrievalError(VaultException):
-    """Wrapper for errors encountered on secret retrieval"""
-
-
-class SecretDeletionError(VaultException):
-    """Wrapper for errors encountered on secret deletion"""
+"""Outbound port definitions"""
