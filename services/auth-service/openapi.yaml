@@ -41,7 +41,7 @@ components:
           anyOf:
           - items:
               items:
-                $ref: '#/components/schemas/Condition-Output'
+                $ref: '#/components/schemas/Condition'
               type: array
             type: array
           - type: 'null'
@@ -154,7 +154,7 @@ components:
           anyOf:
           - items:
               items:
-                $ref: '#/components/schemas/Condition-Input'
+                $ref: '#/components/schemas/Condition'
               type: array
             type: array
           - type: 'null'
@@ -282,23 +282,7 @@ components:
       - valid_until
       title: ClaimValidity
       type: object
-    Condition-Input:
-      additionalProperties: false
-      description: A single condition to check a type and a set of claims
-      properties:
-        matches:
-          items:
-            $ref: '#/components/schemas/ClaimMatch'
-          title: Matches
-          type: array
-        type:
-          $ref: '#/components/schemas/VisaType'
-      required:
-      - type
-      - matches
-      title: Condition
-      type: object
-    Condition-Output:
+    Condition:
       additionalProperties: false
       description: A single condition to check a type and a set of claims
       properties:
@@ -1025,7 +1009,7 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 9.0.0
+  version: 9.0.1
 openapi: 3.1.0
 paths:
   /download-access/grants:
