@@ -243,6 +243,13 @@ The test uses a representative aggregate workflow — modelled on the EMIM → U
 - **`WorkflowRunner` separability.** `transform_model` and `transform_data` are called independently and produce consistent results; intermediate schema state is not exposed to the test.
 - **GHGA accessions as resource IDs.** A `replace_resource_ids` step replaces submission-time aliases with accession-style IDs; the output datapack reflects globally unique accessions across all classes.
 
+#### 8. Metldata: Performance Benchmark of the Aggregate Workflow
+
+A performance benchmark shall be run against the full EMIM → UDM aggregate workflow using the Epignostix dataset as a representative real-world input. The goal is to establish a baseline transformation time before the workflow is deployed to production.
+
+Results are recorded and attached to the epic. They inform whether any transformation steps are unexpectedly slow and whether further optimisation is needed before shipping. If any single step accounts for a disproportionate share of the total time, it is flagged for investigation.
+
+
 ### Optional
 
 - A `copy_class` transformation: creates a new class as a structural copy of an existing class, but assigns fresh resource IDs rather than duplicating them. Useful when the logical structure of a class is reused in a derived model.
