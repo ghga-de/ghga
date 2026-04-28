@@ -73,7 +73,7 @@
             <mat-radio-group
               [value]="pendingMappedField() ?? null"
               (change)="pendingMappedField.set($event.value)"
-              class="flex gap-4 larger-mat-radio-label"
+              class="larger-mat-radio-label flex gap-4"
             >
               <mat-radio-button value="alias">File alias</mat-radio-button>
               <mat-radio-button value="name">File name</mat-radio-button>
@@ -203,6 +203,8 @@
                               ? row.metadataFile.name
                               : row.metadataFile.alias)
                           "
+                          autocomplete="off"
+                          type="search"
                           placeholder="Type or select file name in upload box…"
                           (keydown.enter)="commitInlineEdit(row)"
                           (keydown.escape)="editingMetaAccession.set(null)"

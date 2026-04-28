@@ -91,12 +91,19 @@ export class UploadBoxManagerDetailComponent implements OnInit {
 
   #cachedBox = signal<ResearchDataUploadBox | undefined>(undefined);
 
-  /** The upload box to display, preferring the cached value over a fresh fetch. */
-  uploadBox = computed<ResearchDataUploadBox | undefined>(
-    () =>
-      this.#cachedBox() ||
-      (this.#singleBox.error() ? undefined : this.#singleBox.value()),
-  );
+  /**
+   * The upload box to display.
+   * Prefer the live single-box resource for the current ID when available,
+   * and fall back to the list-derived cache for initial rendering.
+   */
+  uploadBox = computed<ResearchDataUploadBox | undefined>(() => {
+    const id = this.id();
+    const single = this.#singleBox.error() ? undefined : this.#singleBox.value();
+    if (single && single.id === id) {
+      return single;
+    }
+    return this.#cachedBox();
+  });
 
   /** Whether the upload box data is currently being loaded. */
   isLoading = computed<boolean>(
@@ -284,6 +291,10 @@ export class UploadBoxManagerDetailComponent implements OnInit {
           this.#uploadBoxService.loadUploadBox(id);
         }
       }
+
+      // Always load the single-box resource as source of truth so local state
+      // updates (e.g. archived transition) are reflected in this detail view.
+      this.#uploadBoxService.loadUploadBox(id);
     }
   }
 

@@ -120,3 +120,55 @@ test('displays error message when upload box not found', async ({
   await backButton.click();
   await expect(page).toHaveURL('/upload-box-manager');
 });
+
+test('validates required fields in the create upload box dialog', async ({
+  adminPage: page,
+}) => {
+  const createButton = page.getByRole('button', { name: 'Create Upload Box' });
+  await expect(createButton).toBeVisible();
+  await createButton.click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Creeate a new Upload Box');
+
+  const okButton = dialog.getByRole('button', { name: 'OK' });
+  await expect(okButton).toBeDisabled();
+
+  await dialog.getByLabel('Title').fill('   ');
+  await dialog.getByLabel('Description').fill('   ');
+  await expect(okButton).toBeDisabled();
+
+  await dialog.getByLabel('Title').fill('Playwright Upload Box Validation');
+  await dialog.getByLabel('Description').fill('Dialog validation test description');
+  await expect(okButton).toBeDisabled();
+
+  await dialog.getByRole('combobox', { name: 'Storage location' }).click();
+  await page.getByRole('option', { name: 'Tübingen 1' }).click();
+
+  await expect(okButton).toBeEnabled();
+
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test('can create an upload box from the manager page', async ({ adminPage: page }) => {
+  const title = 'Playwright Created Upload Box';
+  const createButton = page.getByRole('button', { name: 'Create Upload Box' });
+  await expect(createButton).toBeVisible();
+  await createButton.click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByLabel('Title').fill(title);
+  await dialog.getByLabel('Description').fill('Created via E2E coverage test');
+  await dialog.getByRole('combobox', { name: 'Storage location' }).click();
+  await page.getByRole('option', { name: 'Heidelberg 2' }).click();
+  await dialog.getByRole('button', { name: 'OK' }).click();
+
+  const notification = page.locator('app-custom-snack-bar');
+  await expect(notification).toContainText(/upload box created successfully/i);
+
+  const main = page.locator('main');
+  await expect(main.getByText(title)).toBeVisible();
+});

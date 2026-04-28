@@ -377,7 +377,9 @@ export class UploadBoxMappingComponent implements OnInit {
       editingMetaFile && field ? (editingMetaFile[field] ?? '').toLowerCase() : '';
 
     const candidates = this.boxFiles().filter(
-      (bf) => unused.has(bf.id) || bf.id === currentBoxId,
+      (bf) =>
+        (unused.has(bf.id) || bf.id === currentBoxId) &&
+        (!query || bf.alias.toLowerCase().includes(query)),
     );
 
     return candidates.sort((a, b) => {
@@ -438,6 +440,15 @@ export class UploadBoxMappingComponent implements OnInit {
         }
         return fileSortKey(row.boxFile?.alias);
       };
+      /*
+       * MatSort.initialized fires during ngOnInit, before viewChild resolves.
+       * By the time this effect runs, the initialized Subject has already emitted,
+       * so the combineLatest inside MatTableDataSource never receives an initial
+       * trigger and leaves the data unsorted. Emitting sortChange with the current
+       * state (set via matSortActive/matSortDirection in the template) kicks off
+       * the first sort pass through the custom sortingDataAccessor.
+       */
+      sort.sortChange.emit({ active: sort.active, direction: sort.direction });
     }
   });
 

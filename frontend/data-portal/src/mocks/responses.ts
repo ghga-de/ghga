@@ -226,23 +226,20 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/rts/studies/GHGAS12345678901234': 404,
 
   /**
-   * RS API
+   * RS Upload Boxes API
    */
 
   // Create a new upload box
   'POST /api/rs/upload-boxes': crypto.randomUUID(),
 
+  // Submit file mapping for box 2 (locked box used for mapping UI testing)
+  'POST /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/file-ids': 204,
+
+  // Update (submit) an upload box
+  'PATCH /api/rs/upload-boxes/*': 204,
+
   // Fetch all upload boxes
   'GET /api/rs/upload-boxes': uploadBoxes,
-
-  // Fetch a single upload box
-  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001': uploadBoxes.boxes[0],
-  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002': uploadBoxes.boxes[1],
-  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
-  'GET /api/rs/upload-boxes/*': 404,
-
-  // Fetch upload grants for a specific box
-  'GET /api/rs/upload-grants?*': uploadGrants,
 
   // Fetch file uploads for a specific box
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001/uploads':
@@ -253,19 +250,28 @@ export const responses: { [endpoint: string]: ResponseValue } = {
     uploadBox3FileUploads,
   'GET /api/rs/upload-boxes/*/uploads': [],
 
+  // Fetch a single upload box
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001': uploadBoxes.boxes[0],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002': uploadBoxes.boxes[1],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
+
+  // Unknown upload box (catch-all, must stay after nested routes above)
+  'GET /api/rs/upload-boxes/*': 404,
+
+  /**
+   * RS Upload Grants API
+   */
+
   // Create a new upload grant
   'POST /api/rs/upload-grants': {
     id: crypto.randomUUID(),
   },
 
+  // Fetch upload grants for a specific box
+  'GET /api/rs/upload-grants?*': uploadGrants,
+
   // Revoke an upload grant
   'DELETE /api/rs/upload-grants/*': 204,
-
-  // Submit file mapping for box 2 (locked box used for mapping UI testing)
-  'POST /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/file-ids': 204,
-
-  // Update (submit) an upload box
-  'PATCH /api/rs/upload-boxes/*': 204,
 
   /**
    * WKVS API

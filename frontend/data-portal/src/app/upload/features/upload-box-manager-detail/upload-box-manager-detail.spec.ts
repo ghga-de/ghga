@@ -6,16 +6,21 @@
 
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { uploadBoxes, uploadGrants } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { UserService } from '@app/auth/services/user';
+import { MetadataService } from '@app/metadata/services/metadata';
+import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
-import { ResearchDataUploadBox } from '@app/upload/models/box';
+import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import { UploadGrant } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
+import { of } from 'rxjs';
+import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
 import { UploadBoxManagerDetailComponent } from './upload-box-manager-detail';
 
 const TEST_BOX = uploadBoxes.boxes[0];
@@ -61,6 +66,8 @@ class MockUploadBoxService {
   loadBoxGrants = vitest.fn();
   loadFileUploadsForBox = vitest.fn();
   addUploadGrant = vitest.fn();
+  submitFileMapping = vitest.fn(() => of(undefined));
+  archiveUploadBox = vitest.fn(() => of(undefined));
 
   getStorageLocationLabel = (alias: string) =>
     this.storageLabels.value()[alias] ?? alias;
@@ -107,6 +114,22 @@ class MockUploadBoxService {
 }
 
 /**
+ * Minimal mock of MetadataSearchService for the embedded mapping component.
+ */
+class MockMetadataSearchService {
+  loadStudiesMap = vitest.fn(() => of(new Map()));
+}
+
+/**
+ * Minimal mock of MetadataService for the embedded mapping component.
+ */
+class MockMetadataService {
+  filesOfStudy = vitest.fn(() => of([]));
+}
+
+const mockDialog = { open: vitest.fn() };
+
+/**
  * Minimal mock of UserService for detail component tests.
  */
 class MockUserService {
@@ -138,13 +161,22 @@ describe('UploadBoxManagerDetailComponent', () => {
     await TestBed.configureTestingModule({
       imports: [UploadBoxManagerDetailComponent],
       providers: [
+        provideRouter([]),
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: UserService, useClass: MockUserService },
         { provide: NavigationTrackingService, useValue: mockNavigationService },
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
+        { provide: MetadataSearchService, useClass: MockMetadataSearchService },
+        { provide: MatDialog, useValue: mockDialog },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(UploadBoxMappingComponent, {
+        set: {
+          providers: [{ provide: MetadataService, useClass: MockMetadataService }],
+        },
+      })
+      .compileComponents();
 
     uploadBoxService = TestBed.inject(
       UploadBoxService,
@@ -173,8 +205,8 @@ describe('UploadBoxManagerDetailComponent', () => {
       expect(screen.getByText('Tübingen 1')).toBeVisible();
     });
 
-    it('should not call loadUploadBox when box is found in list', () => {
-      expect(uploadBoxService.loadUploadBox).not.toHaveBeenCalled();
+    it('should call loadUploadBox to keep detail state synchronized', () => {
+      expect(uploadBoxService.loadUploadBox).toHaveBeenCalledWith(TEST_BOX.id);
     });
 
     it('should call loadBoxGrants with the box id', () => {
@@ -242,6 +274,39 @@ describe('UploadBoxManagerDetailComponent', () => {
 
     it('should show a generic error message', () => {
       expect(screen.getByText(/error retrieving the upload box/i)).toBeVisible();
+    });
+  });
+
+  describe('when box state is locked', () => {
+    beforeEach(async () => {
+      const lockedBox: ResearchDataUploadBox = {
+        ...TEST_BOX,
+        state: UploadBoxState.locked,
+      };
+      uploadBoxService.setUploadBoxes([lockedBox]);
+      fixture.componentRef.setInput('id', lockedBox.id);
+      await fixture.whenStable();
+    });
+
+    it('should render the file mapping card', () => {
+      expect(screen.getByRole('heading', { name: /study/i })).toBeVisible();
+    });
+  });
+
+  describe('onBoxArchived()', () => {
+    beforeEach(async () => {
+      uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+      fixture.componentRef.setInput('id', TEST_BOX.id);
+      await fixture.whenStable();
+    });
+
+    it('should reload the upload box after archival', () => {
+      const callsBefore = (
+        uploadBoxService.loadUploadBox as ReturnType<typeof vitest.fn>
+      ).mock.calls.length;
+      component.onBoxArchived();
+      expect(uploadBoxService.loadUploadBox).toHaveBeenCalledTimes(callsBefore + 1);
+      expect(uploadBoxService.loadUploadBox).toHaveBeenLastCalledWith(TEST_BOX.id);
     });
   });
 });
