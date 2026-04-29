@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.10",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,14 +21,14 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ars"
-version = "7.1.0"
+version = "7.1.1"
 description = "Access Request Service"
 dependencies = [
     "ghga-event-schemas~=12.0.0",
     "ghga-service-commons[api,auth]>=7.0,<8",
     "hexkit[mongodb,akafka]>=8.1,<9",
     "httpx>=0.28",
-    "typer>=0.24",
+    "typer>=0.25",
 ]
 
 [project.license]
