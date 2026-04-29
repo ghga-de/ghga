@@ -1,7 +1,7 @@
 [![tests](https://github.com/ghga-de/dlq-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/dlq-service/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/dlq-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/dlq-service?branch=main)
 
-# Dlq Service
+# DLQ Service
 
 DLQ Service - a service to manage the dead letter queue for Kafka events
 
@@ -26,13 +26,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/dlq-service):
 ```bash
-docker pull ghga/dlq-service:3.1.0
+docker pull ghga/dlq-service:3.1.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/dlq-service:3.1.0 .
+docker build -t ghga/dlq-service:3.1.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -40,7 +40,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/dlq-service:3.1.0 --help
+docker run -p 8080:8080 ghga/dlq-service:3.1.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:

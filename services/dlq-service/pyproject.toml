@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.10",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dlqs"
-version = "3.1.0"
+version = "3.1.1"
 description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
 dependencies = [
     "typer >= 0.19",
