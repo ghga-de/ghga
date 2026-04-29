@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.10",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -28,7 +28,7 @@ dependencies = [
     "ghga-service-commons[api,auth,crypt]>=7.0",
     "hexkit[akafka,mongodb,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=8.1",
     "httpx>=0.28",
-    "typer>=0.21",
+    "typer>=0.25",
 ]
 
 [project.license]
