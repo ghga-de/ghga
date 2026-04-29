@@ -6,13 +6,11 @@
 
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
-  AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   effect,
   inject,
-  QueryList,
-  ViewChild,
-  ViewChildren,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRippleModule } from '@angular/material/core';
@@ -53,8 +51,9 @@ import {
   ],
   providers: [CommonDatePipe, providePaginatorIntl('Access grants per page')],
   templateUrl: './access-grant-manager-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AccessGrantManagerListComponent implements AfterViewInit {
+export class AccessGrantManagerListComponent {
   #ars = inject(AccessRequestService);
   #router = inject(Router);
 
@@ -88,36 +87,22 @@ export class AccessGrantManagerListComponent implements AfterViewInit {
     }
   };
 
-  @ViewChildren(MatSort) matSorts!: QueryList<MatSort>;
-  @ViewChildren(MatPaginator) matPaginators!: QueryList<MatPaginator>;
-  @ViewChild('paginator') paginator!: MatPaginator;
-  @ViewChild('sort') sort!: MatSort;
+  private readonly sort = viewChild(MatSort);
+  private readonly paginator = viewChild(MatPaginator);
 
-  /**
-   * Assign sorting
-   */
-  #addSorting() {
-    if (this.sort) this.source.sort = this.sort;
-  }
-
-  /**
-   * Assign pagination
-   */
-  #addPagination() {
-    if (this.paginator) this.source.paginator = this.paginator;
-  }
-
-  /**
-   * After the view has been initialised
-   * assign the sorting of the table to the data source
-   */
-  ngAfterViewInit() {
+  /** Assign sort and configure sorting once available */
+  #assignSortEffect = effect(() => {
+    const sort = this.sort();
+    if (!sort) return;
     this.source.sortingDataAccessor = this.#accessGrantsSortingAccessor;
-    this.#addSorting();
-    this.#addPagination();
-    this.matSorts.changes.subscribe(() => this.#addSorting());
-    this.matPaginators.changes.subscribe(() => this.#addPagination());
-  }
+    this.source.sort = sort;
+  });
+
+  /** Assign paginator once available */
+  #assignPaginatorEffect = effect(() => {
+    const paginator = this.paginator();
+    if (paginator) this.source.paginator = paginator;
+  });
 
   /**
    * Navigate to access grant details page

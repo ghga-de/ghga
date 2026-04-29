@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { UserService } from '@app/auth/services/user';
 import { UserManagerFilterComponent } from '../user-manager-filter/user-manager-filter';
 import { UserManagerListComponent } from '../user-manager-list/user-manager-list';
@@ -19,6 +19,7 @@ import { UserManagerListComponent } from '../user-manager-list/user-manager-list
   selector: 'app-user-manager',
   imports: [UserManagerListComponent, UserManagerFilterComponent],
   templateUrl: './user-manager.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserManagerComponent implements OnInit {
   userService = inject(UserService);

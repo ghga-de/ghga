@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { IvaService } from '@app/ivas/services/iva';
 import { IvaManagerFilterComponent } from '../iva-manager-filter/iva-manager-filter';
 import { IvaManagerListComponent } from '../iva-manager-list/iva-manager-list';
@@ -19,6 +19,7 @@ import { IvaManagerListComponent } from '../iva-manager-list/iva-manager-list';
   selector: 'app-iva-manager',
   imports: [IvaManagerListComponent, IvaManagerFilterComponent],
   templateUrl: './iva-manager.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IvaManagerComponent implements OnInit {
   #ivaService = inject(IvaService);

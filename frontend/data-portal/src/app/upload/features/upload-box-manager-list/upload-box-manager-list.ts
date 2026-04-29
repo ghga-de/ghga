@@ -6,13 +6,11 @@
 
 import { DatePipe } from '@angular/common';
 import {
-  AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   effect,
   inject,
-  QueryList,
-  ViewChild,
-  ViewChildren,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -57,8 +55,9 @@ const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
   ],
   providers: [providePaginatorIntl('Upload boxes per page')],
   templateUrl: './upload-box-manager-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class UploadBoxManagerListComponent implements AfterViewInit {
+export class UploadBoxManagerListComponent {
   #uploadBoxService = inject(UploadBoxService);
   #notify = inject(NotificationService);
   #router = inject(Router);
@@ -104,32 +103,16 @@ export class UploadBoxManagerListComponent implements AfterViewInit {
     }
   };
 
-  @ViewChildren(MatSort) matSorts!: QueryList<MatSort>;
-  @ViewChildren(MatPaginator) matPaginators!: QueryList<MatPaginator>;
-  @ViewChild('paginator') paginator!: MatPaginator;
-  @ViewChild('sort') sort!: MatSort;
+  private readonly sort = viewChild(MatSort);
+  private readonly paginator = viewChild(MatPaginator);
 
-  /**
-   * Assign sorting.
-   */
-  #addSorting() {
-    if (this.sort) this.dataSource.sort = this.sort;
-  }
-
-  /**
-   * Assign pagination.
-   */
-  #addPagination() {
-    if (this.paginator) this.dataSource.paginator = this.paginator;
-  }
-
-  /**
-   * Assign sorting and pagination once the view has initialized.
-   */
-  ngAfterViewInit() {
+  /** Assign sort and configure sorting once available */
+  #assignSortEffect = effect(() => {
+    const sort = this.sort();
+    if (!sort) return;
     this.dataSource.sortingDataAccessor = this.#uploadBoxSortingAccessor;
-    this.dataSource.sortData = (data, sort) => {
-      const { active, direction } = sort;
+    this.dataSource.sortData = (data, s) => {
+      const { active, direction } = s;
       return [...data].sort((a, b) => {
         if (!direction) {
           // Default / no-sort: state order (locked→open→archived), then last_changed descending
@@ -150,11 +133,14 @@ export class UploadBoxManagerListComponent implements AfterViewInit {
         return compare;
       });
     };
-    this.#addSorting();
-    this.#addPagination();
-    this.matSorts.changes.subscribe(() => this.#addSorting());
-    this.matPaginators.changes.subscribe(() => this.#addPagination());
-  }
+    this.dataSource.sort = sort;
+  });
+
+  /** Assign paginator once available */
+  #assignPaginatorEffect = effect(() => {
+    const paginator = this.paginator();
+    if (paginator) this.dataSource.paginator = paginator;
+  });
 
   /**
    * Get the status class for an upload box state.

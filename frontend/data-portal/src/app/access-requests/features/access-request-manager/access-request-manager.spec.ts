@@ -14,7 +14,7 @@ import { ActivatedRoute } from '@angular/router';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
-import { fakeActivatedRoute } from 'src/mocks/route';
+import { fakeActivatedRoute } from '../../../../mocks/route';
 
 /**
  * Mock the config service as needed by the access request manager component

@@ -7,7 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AppComponent } from './app';
 
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { SiteFooterComponent } from './portal/features/site-footer/site-footer';
 import { SiteHeaderComponent } from './portal/features/site-header/site-header';
 import { ConfigService } from './shared/services/config';
@@ -25,6 +25,7 @@ class MockConfigService {
 @Component({
   selector: 'app-site-header',
   template: '<header>Mock Header</header>',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class MockSiteHeaderComponent {}
 
@@ -34,6 +35,7 @@ class MockSiteHeaderComponent {}
 @Component({
   selector: 'app-site-footer',
   template: '<footer>Mock Footer</footer>',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class MockSiteFooterComponent {}
 

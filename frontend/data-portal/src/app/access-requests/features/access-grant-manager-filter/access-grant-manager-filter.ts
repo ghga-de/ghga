@@ -4,7 +4,13 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, model } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  inject,
+  model,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -37,6 +43,7 @@ import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
     Capitalise,
   ],
   templateUrl: './access-grant-manager-filter.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessGrantManagerFilterComponent {
   displayFilters = true;

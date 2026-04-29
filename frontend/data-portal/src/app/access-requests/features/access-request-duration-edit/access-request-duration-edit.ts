@@ -6,11 +6,12 @@
 
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   Component,
+  OnInit,
   computed,
   inject,
   input,
-  OnInit,
   output,
   signal,
 } from '@angular/core';
@@ -46,6 +47,7 @@ import {
   ],
   providers: [CommonDatePipe],
   templateUrl: './access-request-duration-edit.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessRequestDurationEditComponent implements OnInit {
   #config = inject(ConfigService);

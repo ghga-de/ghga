@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
 
@@ -16,5 +16,6 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
   imports: [MatExpansionModule, StencilComponent],
   templateUrl: './search-result.stencil.html',
   styleUrl: './search-result.stencil.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchResultStencilComponent {}

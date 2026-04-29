@@ -4,8 +4,7 @@
  * @license Apache-2.0
  */
 
-import { CommonModule } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { StepDetails } from '@app/tools/models/stepper';
@@ -21,6 +20,7 @@ import { StepDetails } from '@app/tools/models/stepper';
   selector: 'app-stepper',
   templateUrl: './stepper.html',
   imports: [MatButtonModule, MatIconModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StepperComponent {
   steps = input.required<StepDetails[]>();

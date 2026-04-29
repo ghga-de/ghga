@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -28,6 +28,7 @@ const NUM_STENCILS = 3;
     SearchResultStencilComponent,
   ],
   templateUrl: './search-result-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchResultListComponent {
   #metadataSearch = inject(MetadataSearchService);

@@ -5,7 +5,15 @@
  */
 
 import { httpResource } from '@angular/common/http';
-import { Component, computed, effect, inject, input, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  input,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -41,6 +49,7 @@ const MAX_DATASETS = 100;
   ],
   templateUrl: './study-details.html',
   providers: [MetadataService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudyDetailsComponent implements OnInit {
   #metadataService = inject(MetadataService);

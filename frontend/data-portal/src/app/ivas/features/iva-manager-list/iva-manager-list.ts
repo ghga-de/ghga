@@ -5,13 +5,11 @@
  */
 
 import {
-  AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   effect,
   inject,
-  QueryList,
-  ViewChild,
-  ViewChildren,
+  viewChild,
 } from '@angular/core';
 
 import { DatePipe } from '@angular/common';
@@ -53,8 +51,9 @@ import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creati
   providers: [IvaTypePipe, providePaginatorIntl('IVAs per page')],
   templateUrl: './iva-manager-list.html',
   styleUrl: './iva-manager-list.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class IvaManagerListComponent implements AfterViewInit {
+export class IvaManagerListComponent {
   #dialog = inject(MatDialog);
   #confirm = inject(ConfirmationService);
   #notify = inject(NotificationService);
@@ -88,24 +87,22 @@ export class IvaManagerListComponent implements AfterViewInit {
     }
   };
 
-  @ViewChildren(MatSort) matSorts!: QueryList<MatSort>;
-  @ViewChildren(MatPaginator) matPaginators!: QueryList<MatPaginator>;
-  @ViewChild('paginator') paginator!: MatPaginator;
-  @ViewChild('sort') sort!: MatSort;
+  private readonly sort = viewChild(MatSort);
+  private readonly paginator = viewChild(MatPaginator);
 
-  /**
-   * Assign sorting
-   */
-  #addSorting() {
-    if (this.sort) this.source.sort = this.sort;
-  }
+  /** Assign sort and configure sorting once available */
+  #assignSortEffect = effect(() => {
+    const sort = this.sort();
+    if (!sort) return;
+    this.source.sortingDataAccessor = this.#ivaSortingAccessor;
+    this.source.sort = sort;
+  });
 
-  /**
-   * Assign pagination
-   */
-  #addPagination() {
-    if (this.paginator) this.source.paginator = this.paginator;
-  }
+  /** Assign paginator once available */
+  #assignPaginatorEffect = effect(() => {
+    const paginator = this.paginator();
+    if (paginator) this.source.paginator = paginator;
+  });
 
   /**
    * Get the display name for the IVA type
@@ -114,18 +111,6 @@ export class IvaManagerListComponent implements AfterViewInit {
    */
   #ivaTypeName(iva: UserWithIva): string {
     return this.#ivaTypePipe.transform(iva.type).name;
-  }
-
-  /**
-   * After the view has been initialised
-   * assign the sorting of the table to the data source
-   */
-  ngAfterViewInit() {
-    this.source.sortingDataAccessor = this.#ivaSortingAccessor;
-    this.#addSorting();
-    this.#addPagination();
-    this.matSorts.changes.subscribe(() => this.#addSorting());
-    this.matPaginators.changes.subscribe(() => this.#addPagination());
   }
 
   /**

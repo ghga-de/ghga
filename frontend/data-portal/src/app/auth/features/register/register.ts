@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormField, form, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -30,6 +37,7 @@ import { NotificationService } from '@app/shared/services/notification';
     RouterLink,
   ],
   templateUrl: './register.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterComponent {
   #notify = inject(NotificationService);

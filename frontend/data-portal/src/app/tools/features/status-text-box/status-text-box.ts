@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { SchemapackOutputStatus } from '@app/tools/models/status-text';
 
 /**
@@ -14,6 +14,7 @@ import { SchemapackOutputStatus } from '@app/tools/models/status-text';
   selector: 'app-status-text-box',
   imports: [],
   templateUrl: './status-text-box.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StatusTextBoxComponent {
   status = input.required<SchemapackOutputStatus>();

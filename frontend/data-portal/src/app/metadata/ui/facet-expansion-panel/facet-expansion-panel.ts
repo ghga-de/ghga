@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
@@ -34,6 +41,7 @@ const MAX_OPTIONS_BEFORE_FILTERING = 6;
     FormField,
   ],
   templateUrl: './facet-expansion-panel.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FacetExpansionPanelComponent {
   readonly maxOptionsBeforeFiltering = MAX_OPTIONS_BEFORE_FILTERING;

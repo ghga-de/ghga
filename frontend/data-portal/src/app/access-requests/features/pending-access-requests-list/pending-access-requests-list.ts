@@ -5,7 +5,7 @@
  */
 
 import { DatePipe } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
@@ -18,6 +18,7 @@ import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil';
   selector: 'app-pending-access-requests-list',
   imports: [RouterLink, StencilComponent, DatePipe],
   templateUrl: './pending-access-requests-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PendingAccessRequestsListComponent {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;

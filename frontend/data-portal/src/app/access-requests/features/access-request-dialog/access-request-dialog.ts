@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { email, form, FormField, required, validate } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -38,6 +45,7 @@ import { DATE_INPUT_FORMAT_HINT, timeZoneToUTC } from '@app/shared/utils/date-fo
     MatButtonModule,
   ],
   templateUrl: './access-request-dialog.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessRequestDialogComponent {
   readonly dialogRef = inject(MatDialogRef<AccessRequestDialogComponent>);

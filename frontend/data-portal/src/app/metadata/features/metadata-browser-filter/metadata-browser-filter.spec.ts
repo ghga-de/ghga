@@ -12,7 +12,7 @@ import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { searchResults } from 'src/mocks/data';
+import { searchResults } from '../../../../mocks/data';
 import { MetadataBrowserFilterComponent } from './metadata-browser-filter';
 
 /**

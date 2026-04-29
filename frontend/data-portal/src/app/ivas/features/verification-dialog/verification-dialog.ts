@@ -4,7 +4,13 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { form, FormField, maxLength, pattern, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -36,6 +42,7 @@ import { NotificationService } from '@app/shared/services/notification';
     MatDialogActions,
   ],
   templateUrl: './verification-dialog.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VerificationDialogComponent {
   #dialogRef = inject(MatDialogRef<VerificationDialogComponent, string>);

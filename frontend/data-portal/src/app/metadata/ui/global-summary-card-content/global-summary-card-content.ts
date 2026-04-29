@@ -5,7 +5,7 @@
  */
 
 import { DecimalPipe } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { ValueCount } from '@app/metadata/models/global-summary';
 import { UnderscoreToSpace as UnderscoreToSpacePipe } from '@app/shared/pipes/underscore-to-space-pipe';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
@@ -17,6 +17,7 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
   selector: 'app-global-summary-card-content',
   templateUrl: './global-summary-card-content.html',
   imports: [UnderscoreToSpacePipe, DecimalPipe, StencilComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GlobalSummaryCardContentComponent {
   readonly isLoading = input.required<boolean>();

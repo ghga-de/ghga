@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -24,6 +24,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
   selector: 'app-upload-grant-revocation-dialog',
   imports: [MatButton, MatDialogActions, MatDialogModule, MatIconModule],
   templateUrl: './upload-grant-revocation-dialog.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadGrantRevocationDialogComponent {
   #dialogRef = inject(MatDialogRef<UploadGrantRevocationDialogComponent, boolean>);

@@ -3,17 +3,17 @@
     <button
       mat-stroked-button
       class="button-primary w-full font-bold"
-      (click)="displayFilters = !displayFilters"
+      (click)="displayFilters.set(!displayFilters())"
     >
       <mat-icon fontIcon="filter_alt"></mat-icon>
-      @if (displayFilters) {
+      @if (displayFilters()) {
         Close filters
       } @else {
         Filter upload boxes
       }
     </button>
   </div>
-  <aside [class.hidden]="!displayFilters" class="mt-4 lg:block">
+  <aside [class.hidden]="!displayFilters()" class="mt-4 lg:block">
     <mat-card appearance="outlined" class="max-w-[1800px] overflow-x-auto">
       <mat-card-content class="min-w-sm">
         <div class="flex gap-4">

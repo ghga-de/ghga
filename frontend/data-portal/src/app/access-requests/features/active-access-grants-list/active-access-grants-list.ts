@@ -4,7 +4,13 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,6 +32,7 @@ import { DownloadWorkPackageDialogComponent } from '@app/work-packages/features/
   selector: 'app-granted-access-grants-list',
   imports: [RouterLink, StencilComponent, MatIconModule, MatButtonModule, RouterModule],
   templateUrl: './active-access-grants-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ActiveAccessGrantsListComponent implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;

@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,6 +33,7 @@ import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-h
     MatRippleModule,
   ],
   styleUrl: './site-header.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SiteHeaderComponent {
   #router = inject(Router);

@@ -4,7 +4,13 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { form, FormField, maxLength, pattern, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -20,6 +26,7 @@ import { NotificationService } from '@app/shared/services/notification';
   imports: [FormField, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './confirm-totp.html',
   styleUrl: './confirm-totp.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConfirmTotpComponent {
   #notify = inject(NotificationService);

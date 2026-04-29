@@ -11,6 +11,7 @@ import {
   effect,
   inject,
   model,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -47,7 +48,7 @@ export class UploadBoxManagerFilterComponent {
   #filter = this.#uploadBoxService.uploadBoxesFilter;
   showFilter = computed(() => this.#uploadBoxService.uploadBoxes().length > 0);
 
-  displayFilters = false;
+  displayFilters = signal(false);
 
   /**
    * The model for upload-box filter properties.

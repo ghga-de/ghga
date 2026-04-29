@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AccessGrantManagerFilterComponent } from '../access-grant-manager-filter/access-grant-manager-filter';
 import { AccessGrantManagerListComponent } from '../access-grant-manager-list/access-grant-manager-list';
@@ -18,6 +18,7 @@ import { AccessGrantManagerListComponent } from '../access-grant-manager-list/ac
   selector: 'app-access-request-manager',
   imports: [AccessGrantManagerFilterComponent, AccessGrantManagerListComponent],
   templateUrl: './access-grant-manager.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessGrantManagerComponent implements OnInit {
   #ars = inject(AccessRequestService);

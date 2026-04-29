@@ -35,9 +35,10 @@ export class MetadataService {
   #http = inject(HttpClient);
   #metldataUrl = this.#config.metldataUrl;
 
-  #datasetSummaryUrl = `${this.#metldataUrl}/artifacts/stats_public/classes/DatasetStats/resources`;
-  #datasetDetailsUrl = `${this.#metldataUrl}/artifacts/embedded_public/classes/EmbeddedDataset/resources`;
-  #studyUrl = `${this.#metldataUrl}/artifacts/embedded_public/classes/Study/resources`;
+  #artifactsUrl = `${this.#metldataUrl}/artifacts`;
+  #datasetSummaryUrl = `${this.#artifactsUrl}/stats_public/classes/DatasetStats/resources`;
+  #datasetDetailsUrl = `${this.#artifactsUrl}/embedded_public/classes/EmbeddedDataset/resources`;
+  #studyUrl = `${this.#artifactsUrl}/embedded_public/classes/Study/resources`;
 
   #summaryID = signal<string | undefined>(undefined);
   #detailsID = signal<string | undefined>(undefined);

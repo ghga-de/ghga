@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ExternalLinkDirective } from './external-link';
 
@@ -18,6 +18,7 @@ import { ExternalLinkDirective } from './external-link';
     <a id="with-aria" appExtLink aria-label="Custom Label">Docs</a>
   `,
   imports: [ExternalLinkDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class TestComponent {}
 

@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AccessRequestManagerFilterComponent } from '../access-request-manager-filter/access-request-manager-filter';
 import { AccessRequestManagerListComponent } from '../access-request-manager-list/access-request-manager-list';
@@ -19,6 +19,7 @@ import { AccessRequestManagerListComponent } from '../access-request-manager-lis
   selector: 'app-access-request-manager',
   imports: [AccessRequestManagerFilterComponent, AccessRequestManagerListComponent],
   templateUrl: './access-request-manager.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessRequestManagerComponent implements OnInit {
   #ars = inject(AccessRequestService);

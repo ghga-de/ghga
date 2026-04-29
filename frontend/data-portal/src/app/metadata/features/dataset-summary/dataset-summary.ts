@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -37,6 +37,7 @@ import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summar
     ExternalLinkDirective,
   ],
   templateUrl: './dataset-summary.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DatasetSummaryComponent {
   hit = input.required<Hit>();

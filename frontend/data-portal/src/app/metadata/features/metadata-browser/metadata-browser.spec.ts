@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -41,6 +41,7 @@ class MockMetadataSearchService {
 @Component({
   selector: 'app-search-result-list',
   template: '<div>Mock Search Result List</div>',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class MockSearchResultListComponent {}
 
@@ -50,6 +51,7 @@ class MockSearchResultListComponent {}
 @Component({
   selector: 'app-metadata-browser-filter',
   template: '<div>Mock Metadata Browser Filter</div>',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class MockMetadataBrowserFilterComponent {}
 

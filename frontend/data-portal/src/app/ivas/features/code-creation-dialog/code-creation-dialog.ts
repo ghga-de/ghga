@@ -5,7 +5,7 @@
  */
 
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -44,6 +44,7 @@ type IvaWithCode = UserWithIva & { code: string };
     IvaTypePipe,
   ],
   templateUrl: './code-creation-dialog.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CodeCreationDialogComponent {
   #clipboard = inject(Clipboard);

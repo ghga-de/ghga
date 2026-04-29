@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -24,5 +24,6 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
     ExternalLinkDirective,
   ],
   templateUrl: './dataset-summary.stencil.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DatasetSummaryStencilComponent {}

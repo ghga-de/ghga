@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MAT_SNACK_BAR_DATA, MatSnackBarRef } from '@angular/material/snack-bar';
@@ -17,6 +17,7 @@ import { MAT_SNACK_BAR_DATA, MatSnackBarRef } from '@angular/material/snack-bar'
   imports: [MatButtonModule, MatIconModule],
   templateUrl: './custom-snack-bar.html',
   styleUrl: './custom-snack-bar.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomSnackBarComponent {
   data = inject(MAT_SNACK_BAR_DATA);

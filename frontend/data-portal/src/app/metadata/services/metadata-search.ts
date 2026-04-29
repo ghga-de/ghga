@@ -45,8 +45,9 @@ export class MetadataSearchService {
   #massUrl = this.#config.massUrl;
   #searchUrl = `${this.#massUrl}/search`;
   #metldataUrl = this.#config.metldataUrl;
-  #datasetSummaryUrl = `${this.#metldataUrl}/artifacts/stats_public/classes/DatasetStats/resources`;
-  #studyUrl = `${this.#metldataUrl}/artifacts/embedded_public/classes/Study/resources`;
+  #artifactsUrl = `${this.#metldataUrl}/artifacts`;
+  #datasetSummaryUrl = `${this.#artifactsUrl}/stats_public/classes/DatasetStats/resources`;
+  #studyUrl = `${this.#artifactsUrl}/embedded_public/classes/Study/resources`;
   #http = inject(HttpClient);
   #className = signal<string | undefined>(undefined);
   #limit = signal<number>(DEFAULT_PAGE_SIZE);

@@ -15,7 +15,7 @@ import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
-import { fakeActivatedRoute } from 'src/mocks/route';
+import { fakeActivatedRoute } from '../../../../mocks/route';
 import { SearchResultComponent } from '../search-result/search-result';
 import { SearchResultListComponent } from './search-result-list';
 

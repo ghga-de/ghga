@@ -5,10 +5,11 @@
  */
 
 import {
+  ChangeDetectionStrategy,
   Component,
   EnvironmentInjector,
-  inject,
   OnInit,
+  inject,
   runInInjectionContext,
 } from '@angular/core';
 import { MatIconRegistry } from '@angular/material/icon';
@@ -30,6 +31,7 @@ import { UmamiService } from './shared/services/umami';
     VersionRibbonComponent,
   ],
   templateUrl: './app.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
   #matIconReg = inject(MatIconRegistry);

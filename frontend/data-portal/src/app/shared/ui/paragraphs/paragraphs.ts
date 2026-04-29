@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { SplitLinesPipe } from '@app/shared/pipes/split-lines-pipe';
 
 /**
@@ -14,6 +14,7 @@ import { SplitLinesPipe } from '@app/shared/pipes/split-lines-pipe';
   selector: 'app-paragraphs',
   imports: [SplitLinesPipe],
   templateUrl: './paragraphs.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ParagraphsComponent {
   text = input.required<string>();

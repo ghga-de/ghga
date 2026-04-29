@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -32,6 +32,7 @@ import { UserUploadGrantsListComponent } from '@app/upload/features/user-upload-
     UserUploadGrantsListComponent,
   ],
   templateUrl: './account.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountComponent {
   #auth = inject(AuthService);

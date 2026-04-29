@@ -1,6 +1,6 @@
 <div
   class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6"
-  [style.view-transition-name]="showTransition ? 'detail' : null"
+  [style.view-transition-name]="showTransition() ? 'detail' : null"
 >
   <div class="justify-between md:flex">
     <header class="grow">
@@ -171,9 +171,7 @@
                       [routerLink]="`/access-request-manager/${request.id}`"
                       data-umami-event="Access Grant Details Access Request Clicked"
                       class="button-tertiary ms-4 mt-2 shrink-0 grow-0"
-                      [matTooltip]="
-                        `View details of this access request (${idx + 1} of ${ar().length})`
-                      "
+                      [matTooltip]="`View details of this access request (${idx + 1} of ${ar().length})`"
                       matTooltipPosition="right"
                       ><mat-icon fontIcon="description" class="mb-1"></mat-icon
                     ></a>

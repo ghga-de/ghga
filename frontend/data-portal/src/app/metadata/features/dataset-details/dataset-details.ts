@@ -7,13 +7,14 @@
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  ChangeDetectionStrategy,
   Component,
+  OnInit,
+  Signal,
   computed,
   effect,
   inject,
   input,
-  OnInit,
-  Signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -75,6 +76,7 @@ const COLUMNS = {
   ],
   providers: [MetadataService],
   templateUrl: './dataset-details.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DatasetDetailsComponent implements OnInit {
   id = input.required<string>();

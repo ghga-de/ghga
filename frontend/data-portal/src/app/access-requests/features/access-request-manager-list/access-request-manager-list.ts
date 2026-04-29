@@ -7,13 +7,14 @@
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
-  computed,
-  effect,
-  inject,
   QueryList,
   ViewChild,
   ViewChildren,
+  computed,
+  effect,
+  inject,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRippleModule } from '@angular/material/core';
@@ -54,6 +55,7 @@ import {
   ],
   providers: [CommonDatePipe, providePaginatorIntl('Access requests per page')],
   templateUrl: './access-request-manager-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessRequestManagerListComponent implements AfterViewInit {
   #config = inject(ConfigService);

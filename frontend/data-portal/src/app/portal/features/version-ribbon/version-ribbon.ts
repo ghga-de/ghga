@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 
 /**
@@ -14,6 +14,7 @@ import { ConfigService } from '@app/shared/services/config';
   selector: 'app-version-ribbon',
   imports: [],
   templateUrl: './version-ribbon.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VersionRibbonComponent implements OnInit {
   #config = inject(ConfigService);

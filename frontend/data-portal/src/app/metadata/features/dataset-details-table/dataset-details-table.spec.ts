@@ -8,7 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
-import { datasetDetails } from 'src/mocks/data';
+import { datasetDetails } from '../../../../mocks/data';
 import { DatasetDetailsTableComponent } from './dataset-details-table';
 
 /**

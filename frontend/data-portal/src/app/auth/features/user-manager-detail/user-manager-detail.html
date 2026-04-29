@@ -1,6 +1,6 @@
 <div
   class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6 [&_mat-card]:w-full [&_mat-card]:overflow-x-auto"
-  [style.view-transition-name]="showTransition ? 'detail' : null"
+  [style.view-transition-name]="showTransition() ? 'detail' : null"
 >
   <div class="justify-between md:flex">
     <header class="inline-block grow-0">

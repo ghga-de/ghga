@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, effect, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -31,6 +38,7 @@ import { DatasetSummaryStencilComponent } from '../dataset-summary/dataset-summa
   providers: [MetadataService],
   templateUrl: './search-result.html',
   styleUrl: './search-result.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchResultComponent {
   #notify = inject(NotificationService);

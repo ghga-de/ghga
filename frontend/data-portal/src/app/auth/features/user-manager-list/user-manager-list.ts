@@ -7,12 +7,13 @@
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
-  effect,
-  inject,
   QueryList,
   ViewChild,
   ViewChildren,
+  effect,
+  inject,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -50,6 +51,7 @@ const DEFAULT_EXT_ID_SUFFIX = '@lifescience-ri.eu';
   ],
   providers: [CommonDatePipe, providePaginatorIntl('Users per page')],
   templateUrl: './user-manager-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserManagerListComponent implements AfterViewInit {
   #router = inject(Router);

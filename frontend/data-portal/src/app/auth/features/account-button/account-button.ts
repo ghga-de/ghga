@@ -5,7 +5,7 @@
  */
 
 import { NgOptimizedImage } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -34,6 +34,7 @@ import { ConfigService } from '@app/shared/services/config';
   ],
   templateUrl: './account-button.html',
   styleUrl: './account-button.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountButtonComponent {
   #router = inject(Router);

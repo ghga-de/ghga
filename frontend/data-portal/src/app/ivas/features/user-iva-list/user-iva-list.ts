@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -31,6 +38,7 @@ import { VerificationDialogComponent } from '../verification-dialog/verification
   ],
   providers: [IvaTypePipe],
   templateUrl: './user-iva-list.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserIvaListComponent implements OnInit {
   #dialog = inject(MatDialog);

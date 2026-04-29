@@ -5,11 +5,12 @@
  */
 
 import {
+  ChangeDetectionStrategy,
   Component,
+  OnInit,
   computed,
   inject,
   input,
-  OnInit,
   output,
   signal,
 } from '@angular/core';
@@ -42,6 +43,7 @@ const ERROR_TICKET_ID = 'ID must be a number with up to 9 digits';
     FormField,
   ],
   templateUrl: './access-request-field-edit.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessRequestFieldEditComponent implements OnInit {
   #config = inject(ConfigService);

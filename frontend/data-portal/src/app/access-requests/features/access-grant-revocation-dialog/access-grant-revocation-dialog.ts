@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, model, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  model,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
 import {
@@ -36,6 +43,7 @@ import { NotificationService } from '@app/shared/services/notification';
   ],
   providers: [AccessRequestService, NotificationService],
   templateUrl: './access-grant-revocation-dialog.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessGrantRevocationDialogComponent {
   #dialogRef = inject(MatDialogRef<AccessGrantRevocationDialogComponent, boolean>);

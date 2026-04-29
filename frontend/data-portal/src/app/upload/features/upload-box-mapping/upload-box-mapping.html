@@ -6,7 +6,10 @@
     </mat-card-header>
 
     <mat-card-content>
-      @if (selectedStudy(); as study) {
+      @if (!studiesMap()) {
+        <!-- Studies still loading -->
+        <mat-progress-bar mode="indeterminate" class="my-[1em]" />
+      } @else if (selectedStudy(); as study) {
         <!-- Study details with change button -->
         <p class="flex items-center">
           <strong class="inline-block w-40">Accession:</strong>
@@ -82,6 +85,10 @@
 
           <!-- File counts summary, filter, table, and buttons (only when field is committed) -->
           @if (committedMappedField()) {
+            @if (metadataFilesLoading() || boxFilesLoading()) {
+              <!-- Files still loading -->
+              <mat-progress-bar mode="indeterminate" class="my-[0.5em]" />
+            }
             <div class="flex text-base">
               <span class="w-1/2 pl-4"
                 ><strong>Files in Experimental Metadata:</strong>

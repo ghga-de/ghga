@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -18,6 +18,7 @@ import { BaseRouteService } from '@app/shared/services/base-route';
   selector: 'app-tools-menu',
   imports: [MatIconModule, MatButtonModule, MatMenuModule, RouterLink],
   templateUrl: './tools-menu.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ToolsMenuComponent {
   #baseRoute = inject(BaseRouteService);

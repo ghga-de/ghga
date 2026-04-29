@@ -26,12 +26,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
-import { catchError, concatMap, of, switchMap, throwError } from 'rxjs';
+import { catchError, concatMap, of, startWith, switchMap, throwError } from 'rxjs';
 
 import { EmFile } from '@app/metadata/models/dataset-information';
 import { Study } from '@app/metadata/models/study';
@@ -138,6 +139,7 @@ function computeAutoMappings(
     MatIconModule,
     MatInputModule,
     MatPaginatorModule,
+    MatProgressBarModule,
     MatRadioModule,
     MatSelectModule,
     MatSortModule,
@@ -196,38 +198,49 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Guard to prevent opening a second field-change confirmation dialog */
   #fieldChangeDialogOpen = signal<boolean>(false);
 
-  // Async data
-
-  private readonly studiesMap$ = this.#metadataSearchService.loadStudiesMap();
-
-  /** All available studies, keyed by accession */
-  studiesMap = toSignal(this.studiesMap$, { initialValue: new Map<string, Study>() });
+  /** All available studies, keyed by accession. `null` while loading. */
+  studiesMap = toSignal(
+    this.#metadataSearchService.loadStudiesMap().pipe(startWith(null)),
+  );
 
   /** Studies as a sorted array for the dropdown */
   studiesArray = computed(() =>
-    Array.from(this.studiesMap().values()).sort((a, b) =>
+    Array.from((this.studiesMap() ?? new Map()).values()).sort((a, b) =>
       a.accession.localeCompare(b.accession),
     ),
   );
 
   /** The currently selected Study object */
   selectedStudy = computed<Study | undefined>(() =>
-    this.studiesMap().get(this.selectedStudyAccession() ?? ''),
+    (this.studiesMap() ?? new Map()).get(this.selectedStudyAccession() ?? ''),
+  );
+
+  /** Files from the selected study in metadata. `null` while loading. */
+  #metadataFilesOrNull = toSignal(
+    toObservable(this.selectedStudy).pipe(
+      switchMap((study) =>
+        study
+          ? this.#metadataService.filesOfStudy(study).pipe(startWith(null))
+          : of([] as EmFile[]),
+      ),
+    ),
+    { initialValue: null as EmFile[] | null },
   );
 
   /** Files from the selected study in metadata */
-  metadataFiles = toSignal(
-    toObservable(this.selectedStudy).pipe(
-      switchMap((study) =>
-        study ? this.#metadataService.filesOfStudy(study) : of([]),
-      ),
-    ),
-    { initialValue: [] as EmFile[] },
-  );
+  metadataFiles = computed(() => this.#metadataFilesOrNull() ?? []);
+
+  /** Whether metadata files are still loading */
+  metadataFilesLoading = computed(() => this.#metadataFilesOrNull() === null);
 
   /** Files in the upload box */
   boxFiles = computed<FileUploadWithAccession[]>(() =>
     this.#uploadBoxService.boxFileUploads.value(),
+  );
+
+  /** Whether upload box files are still loading */
+  boxFilesLoading = computed<boolean>(() =>
+    this.#uploadBoxService.boxFileUploads.isLoading(),
   );
 
   // Derived mappings

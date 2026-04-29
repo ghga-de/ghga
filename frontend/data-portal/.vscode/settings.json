@@ -12,6 +12,7 @@
     "micropip",
     "Pydantic",
     "Pyodide",
+    "qrcode",
     "schemapack",
     "teardown",
     "TOTP"

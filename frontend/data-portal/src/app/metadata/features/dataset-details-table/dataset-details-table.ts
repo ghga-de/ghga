@@ -6,15 +6,16 @@
 
 import {
   AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
+  QueryList,
+  ViewChild,
+  ViewChildren,
   computed,
   effect,
   inject,
   input,
-  QueryList,
   signal,
-  ViewChild,
-  ViewChildren,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -52,6 +53,7 @@ import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
   ],
   templateUrl: './dataset-details-table.html',
   styleUrl: './dataset-details-table.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DatasetDetailsTableComponent implements AfterViewInit {
   tableName = input.required<'experiments' | 'samples' | 'files'>();

@@ -4,7 +4,15 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { form, FormField } from '@angular/forms/signals';
 import {
@@ -52,6 +60,7 @@ import { highlightMatchingText } from '@app/shared/utils/highlight-matching-text
     FormField,
   ],
   templateUrl: './metadata-browser-filter.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MetadataBrowserFilterComponent implements OnInit {
   #className = 'EmbeddedDataset';

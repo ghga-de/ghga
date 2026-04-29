@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, signal, WritableSignal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  WritableSignal,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { LogEntry, PyodideOutput } from '@app/tools/models/pyodide';
@@ -30,6 +37,7 @@ import { StepperComponent } from '../stepper/stepper';
     StepperComponent,
     FormatSchemapackErrorPipe,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MetadataValidatorComponent {
   #validationService = inject(MetadataValidationService);

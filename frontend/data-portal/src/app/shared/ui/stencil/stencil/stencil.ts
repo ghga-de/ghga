@@ -6,7 +6,7 @@
  */
 
 // eslint-disable-next-line header/header
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 const DEFAULT_COUNT = 1;
 const DEFAULT_TEXT = 'Loading...';
@@ -24,6 +24,7 @@ const DEFAULT_PULSE = true;
   imports: [],
   templateUrl: './stencil.html',
   styleUrl: './stencil.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StencilComponent {
   count = input<number>(DEFAULT_COUNT);
