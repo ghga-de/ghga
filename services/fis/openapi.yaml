@@ -179,7 +179,7 @@ info:
   description: A service to liaise between Central File Services and Data Hubs for
     file inspection.
   title: File Ingest Service
-  version: 11.0.0
+  version: 11.0.1
 openapi: 3.1.0
 paths:
   /health:
