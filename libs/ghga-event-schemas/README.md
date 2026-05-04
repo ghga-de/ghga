@@ -1,7 +1,7 @@
 [![tests](https://github.com/ghga-de/ghga-event-schemas/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-event-schemas/actions/workflows/tests.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-event-schemas/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-event-schemas?branch=main)
 
-# Ghga Event Schemas
+# GHGA Event Schemas
 
 GHGA Event Schemas: A package that collects schemas used for events exchanged between GHGA service.
 
@@ -17,13 +17,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/ghga-event-schemas):
 ```bash
-docker pull ghga/ghga-event-schemas:12.0.0
+docker pull ghga/ghga-event-schemas:13.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-event-schemas:12.0.0 .
+docker build -t ghga/ghga-event-schemas:13.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -31,7 +31,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/ghga-event-schemas:12.0.0 --help
+docker run -p 8080:8080 ghga/ghga-event-schemas:13.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:

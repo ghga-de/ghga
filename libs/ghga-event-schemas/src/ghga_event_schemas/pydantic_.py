@@ -526,7 +526,13 @@ class ResearchDataUploadBox(BaseModel):
         ..., description="Current state of the file upload box"
     )
     file_count: int = Field(default=0, description="The number of files in the box")
-    size: int = Field(default=0, description="The total size of all files in the box")
+    size: int = Field(
+        default=0, description="The total size of all files in the box, in bytes."
+    )
+    max_size: int = Field(
+        ...,
+        description="The maximum number of bytes allowed to be uploaded to the box across all files.",
+    )
     storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
     model_config = ConfigDict(title="research_data_upload_box")
 
@@ -617,7 +623,13 @@ class FileUploadBox(BaseModel):
     version: int = Field(..., description="A counter indicating resource version")
     state: UploadBoxState = Field(..., description="Current state of the box")
     file_count: int = Field(..., description="The number of files in the box")
-    size: int = Field(..., description="The total size of all files in the box")
+    size: int = Field(
+        ..., description="The total size of all files in the box, in bytes"
+    )
+    max_size: int = Field(
+        ...,
+        description="The maximum number of bytes allowed to be uploaded to the box across all files.",
+    )
     storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
     model_config = ConfigDict(title="file_upload_box")
 
