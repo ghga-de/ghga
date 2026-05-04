@@ -19,7 +19,6 @@ import logging
 
 from ghga_event_schemas.configs import (
     FileDeletionRequestEventsConfig,
-    FileInterrogationSuccessEventsConfig,
     FileStagingRequestedEventsConfig,
     FileUploadEventsConfig,
 )
@@ -38,9 +37,7 @@ log = logging.getLogger(__name__)
 
 
 class EventSubTranslatorConfig(
-    FileStagingRequestedEventsConfig,
-    FileDeletionRequestEventsConfig,
-    FileInterrogationSuccessEventsConfig,
+    FileStagingRequestedEventsConfig, FileDeletionRequestEventsConfig
 ):
     """Config for the event subscriber"""
 
@@ -56,12 +53,10 @@ class EventSubTranslator(EventSubscriberProtocol):
         self.topics_of_interest = [
             config.files_to_stage_topic,
             config.file_deletion_request_topic,
-            config.file_interrogations_topic,
         ]
         self.types_of_interest = [
             config.files_to_stage_type,
             config.file_deletion_request_type,
-            config.interrogation_success_type,
         ]
 
     @TRACER.start_as_current_span("EventSubTranslator._consume_file_staging_request")

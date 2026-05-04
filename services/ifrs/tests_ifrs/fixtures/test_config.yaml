@@ -23,8 +23,6 @@ db_name: "dev"
 service_instance_id: "001"
 kafka_servers: ["kafka:9092"]
 kafka_enable_dlq: True
-file_interrogations_topic: file-interrogations
-interrogation_success_type: file_interrogation_success
 files_to_stage_topic: file-downloads
 files_to_stage_type: file_staging_requested
 file_deletion_request_topic: file-deletion-requests

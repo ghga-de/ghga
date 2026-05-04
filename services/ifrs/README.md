@@ -36,13 +36,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/internal-file-registry-service):
 ```bash
-docker pull ghga/internal-file-registry-service:7.0.0
+docker pull ghga/internal-file-registry-service:7.0.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/internal-file-registry-service:7.0.0 .
+docker build -t ghga/internal-file-registry-service:7.0.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -50,7 +50,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/internal-file-registry-service:7.0.0 --help
+docker run -p 8080:8080 ghga/internal-file-registry-service:7.0.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -189,26 +189,6 @@ The service requires the following configuration parameters:
 
   ```json
   "file_staged_for_download"
-  ```
-
-
-- <a id="properties/file_interrogations_topic"></a>**`file_interrogations_topic`** *(string, required)*: The name of the topic use to publish file interrogation outcome events.
-
-
-  Examples:
-
-  ```json
-  "file-interrogations"
-  ```
-
-
-- <a id="properties/interrogation_success_type"></a>**`interrogation_success_type`** *(string, required)*: The type used for events informing about successful file validations.
-
-
-  Examples:
-
-  ```json
-  "interrogation_success"
   ```
 
 

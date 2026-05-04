@@ -226,22 +226,6 @@
       "title": "File Staged Type",
       "type": "string"
     },
-    "file_interrogations_topic": {
-      "description": "The name of the topic use to publish file interrogation outcome events.",
-      "examples": [
-        "file-interrogations"
-      ],
-      "title": "File Interrogations Topic",
-      "type": "string"
-    },
-    "interrogation_success_type": {
-      "description": "The type used for events informing about successful file validations.",
-      "examples": [
-        "interrogation_success"
-      ],
-      "title": "Interrogation Success Type",
-      "type": "string"
-    },
     "file_deletion_request_topic": {
       "description": "The name of the topic to receive events informing about files to delete.",
       "examples": [
@@ -502,8 +486,6 @@
     "file_deleted_type",
     "file_staged_topic",
     "file_staged_type",
-    "file_interrogations_topic",
-    "interrogation_success_type",
     "file_deletion_request_topic",
     "file_deletion_request_type",
     "files_to_stage_topic",
