@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.10",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "mass"
-version = "6.1.0"
+version = "6.1.1"
 description = "Metadata Artifact Search Service - A service for searching metadata artifacts and filtering results."
 dependencies = [
-    "typer>=0.19",
+    "typer>=0.25",
     "ghga-service-commons[api]>=7",
-    "ghga-event-schemas~=10.1",
+    "ghga-event-schemas~=13.0",
     "hexkit[mongodb,akafka]>=8.1",
 ]
 
