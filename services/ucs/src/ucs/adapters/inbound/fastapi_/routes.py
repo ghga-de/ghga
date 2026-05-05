@@ -117,6 +117,21 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpChecksumMismatchError.get_body_model(),
     },
+    "boxMaxSizeExceeded": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- boxMaxSizeExceeded: Adding this file would exceed the box's size limit."
+        ),
+        "model": http_exceptions.HttpBoxMaxSizeExceededError.get_body_model(),
+    },
+    "boxMaxSizeTooLow": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- boxMaxSizeTooLow: The requested max_size is less than the"
+            + " box's current committed size."
+        ),
+        "model": http_exceptions.HttpMaxSizeTooLowError.get_body_model(),
+    },
 }
 
 # For the update_box endpoint, map the work type required to change to a given box state
@@ -163,8 +178,10 @@ async def create_box(
     Returns the box_id of the newly created FileUploadBox.
     """
     try:
-        alias = box_creation.storage_alias
-        return await upload_controller.create_file_upload_box(storage_alias=alias)
+        return await upload_controller.create_file_upload_box(
+            storage_alias=box_creation.storage_alias,
+            max_size=box_creation.max_size,
+        )
     except UploadControllerPort.UnknownStorageAliasError as error:
         raise http_exceptions.HttpUnknownStorageAliasError() from error
     except Exception as error:
@@ -174,17 +191,18 @@ async def create_box(
 
 @router.patch(
     "/boxes/{box_id}",
-    summary="Update a FileUploadBox (lock/unlock/archive)",
+    summary="Update a FileUploadBox (lock/unlock/archive/resize)",
     operation_id="updateBox",
     status_code=status.HTTP_204_NO_CONTENT,
     response_description="FileUploadBox successfully updated",
     responses={
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
-        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxVersionOutdated"],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxVersionOutdated"]
+        | ERROR_RESPONSES["boxMaxSizeTooLow"],
     },
 )
 @TRACER.start_as_current_span("routes.update_box")
-async def update_box(
+async def update_box(  # noqa: C901, PLR0912
     box_id: UUID4,
     box_update: rest_models.BoxUpdateRequest,
     work_order: Annotated[
@@ -193,39 +211,52 @@ async def update_box(
     ],
     upload_controller: dummies.UploadControllerDummy,
 ) -> None:
-    """Update a FileUploadBox to lock it, unlock it, or archive it.
+    """Update a FileUploadBox state or max_size.
 
-    Request body must contain a `state` field indicating the target state of the box,
-    as well as a `version` field indicating the expected current version of the box.
-    Requires ChangeFileBoxWorkOrder token from the UOS. Users are only allowed to lock
-    the box; a Data Steward role is required to do everything else.
+    Request body must contain a `version` field (for optimistic locking) plus either
+    a `state` field indicating the target state or a `max_size` field with the
+    new size limit. Requires ChangeFileBoxWorkOrder token from the UOS. When updating
+    state, the work type must match the target state. When updating max_size, the
+    work type must be 'resize'. Users are only allowed to lock the box; a Data Steward
+    role is required to do everything else.
     """
-    required_work_type = BOX_STATE_TO_WORK_TYPE.get(box_update.state)
-    if (
-        work_order.box_id != box_id
-        or not required_work_type
-        or work_order.work_type != required_work_type
-    ):
+    if box_update.state is not None:
+        required_work_type = BOX_STATE_TO_WORK_TYPE.get(box_update.state)
+        if not required_work_type:
+            raise http_exceptions.HttpNotAuthorizedError()
+    else:  # the validator guarantees that max_size is set in this case
+        required_work_type = "resize"
+
+    if work_order.box_id != box_id or work_order.work_type != required_work_type:
         raise http_exceptions.HttpNotAuthorizedError()
 
     try:
-        match box_update.state:
-            case "locked":
-                await upload_controller.lock_file_upload_box(
-                    box_id=box_id, version=box_update.version
-                )
-            case "open":
-                await upload_controller.unlock_file_upload_box(
-                    box_id=box_id, version=box_update.version
-                )
-            case "archived":
-                await upload_controller.archive_file_upload_box(
-                    box_id=box_id, version=box_update.version
-                )
+        if box_update.max_size is not None:
+            await upload_controller.update_box_max_size(
+                box_id=box_id, version=box_update.version, max_size=box_update.max_size
+            )
+        else:
+            match box_update.state:
+                case "locked":
+                    await upload_controller.lock_file_upload_box(
+                        box_id=box_id, version=box_update.version
+                    )
+                case "open":
+                    await upload_controller.unlock_file_upload_box(
+                        box_id=box_id, version=box_update.version
+                    )
+                case "archived":
+                    await upload_controller.archive_file_upload_box(
+                        box_id=box_id, version=box_update.version
+                    )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
     except UploadControllerPort.BoxVersionError as error:
         raise http_exceptions.HttpBoxVersionError(box_id=box_id) from error
+    except UploadControllerPort.BoxMaxSizeTooLowError as error:
+        raise http_exceptions.HttpMaxSizeTooLowError(
+            box_id=box_id, max_size=error.max_size, current_size=error.current_size
+        ) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
@@ -283,6 +314,7 @@ async def get_box_uploads(
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"]
         | ERROR_RESPONSES["fileUploadAlreadyExists"]
         | ERROR_RESPONSES["orphanedMultipartUpload"],
+        status.HTTP_507_INSUFFICIENT_STORAGE: ERROR_RESPONSES["boxMaxSizeExceeded"],
     },
 )
 @TRACER.start_as_current_span("routes.create_file_upload")
@@ -321,6 +353,13 @@ async def create_file_upload(
     except UploadControllerPort.BoxStateError as error:
         raise http_exceptions.HttpBoxStateError(
             box_id=box_id, box_state=error.box_state
+        ) from error
+    except UploadControllerPort.BoxMaxSizeExceededError as error:
+        raise http_exceptions.HttpBoxMaxSizeExceededError(
+            box_id=box_id,
+            max_size=error.max_size,
+            current_size=error.current_size,
+            file_alias=file_alias,
         ) from error
     except UploadControllerPort.FileUploadAlreadyExists as error:
         raise http_exceptions.HttpFileUploadAlreadyExistsError(

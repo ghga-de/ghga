@@ -116,6 +116,31 @@ class UploadControllerPort(ABC):
             )
             super().__init__(msg)
 
+    class BoxMaxSizeTooLowError(UploadError):
+        """Raised when the requested max_size is less than the box's current committed size."""
+
+        def __init__(self, *, box_id: UUID4, max_size: int, current_size: int):
+            self.max_size = max_size
+            self.current_size = current_size
+            msg = (
+                f"Cannot set max_size to {max_size} for box {box_id} because"
+                f" {current_size} bytes are already committed."
+            )
+            super().__init__(msg)
+
+    class BoxMaxSizeExceededError(UploadError):
+        """Raised when adding a new FileUpload would exceed the box's total size limit."""
+
+        def __init__(self, *, box_id: UUID4, max_size: int, current_size: int):
+            self.max_size = max_size
+            self.current_size = current_size
+
+            msg = (
+                f"Adding this file to box {box_id} would exceed the box's"
+                " maximum total size limit."
+            )
+            super().__init__(msg)
+
     class FileUploadAlreadyExists(UploadError):
         """Raised when a FileUpload can't be created for a given box ID and file alias
         because one already exists.
@@ -179,6 +204,7 @@ class UploadControllerPort(ABC):
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
+        - `BoxMaxSizeExceededError` if adding the file would exceed the box's size limit.
         - `FileUploadAlreadyExists` if there's already a FileUpload for this alias.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAlreadyInProgressError` if an upload is already in progress.
@@ -238,12 +264,32 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def create_file_upload_box(self, *, storage_alias: str) -> UUID4:
+    async def create_file_upload_box(
+        self, *, storage_alias: str, max_size: int
+    ) -> UUID4:
         """Create a new FileUploadBox with the given S3 storage alias.
         Returns the UUID4 id of the created FileUploadBox.
 
+        Args:
+        - `storage_alias`: The S3 storage alias for uploads within this box.
+        - `max_size`: The maximum total bytes allowed across all in-progress uploads.
+
         Raises:
         - `UnknownStorageAliasError` if the storage alias is not known.
+        """
+        ...
+
+    @abstractmethod
+    async def update_box_max_size(
+        self, *, box_id: UUID4, version: int, max_size: int
+    ) -> None:
+        """Update the max_size of an existing FileUploadBox.
+
+        Raises:
+        - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
+        - `BoxVersionError` if the supplied version doesn't match the current version.
+        - `BoxMaxSizeTooLowError` if the new max_size is smaller than what has
+            already been uploaded.
         """
         ...
 

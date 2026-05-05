@@ -60,7 +60,7 @@ async def test_create_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
     and a 200 if the token is correct (and request succeeds).
     """
     uos_jwk = config.uos_jwk
-    body = {"storage_alias": "HD01"}
+    body = {"storage_alias": "HD01", "max_size": 1073741824}
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
     core_mock.create_file_upload_box.return_value = TEST_BOX_ID
@@ -111,12 +111,43 @@ async def test_update_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
     response = await rest_client.patch(url, json=body, headers=wrong_work_token_header)
     assert response.status_code == 403
 
-    # Now the happy case
+    # Now the happy case for state-only update
     good_token_header = utils.change_file_box_token_header(
         box_id=TEST_BOX_ID, jwk=uos_jwk
     )
     response = await rest_client.patch(url, json=body, headers=good_token_header)
     assert response.status_code == 204
+
+    # max_size-only update requires "resize" work type
+    resize_body = {"max_size": 1073741824, "version": 0}
+    wrong_work_for_resize = utils.change_file_box_token_header(
+        box_id=TEST_BOX_ID, work_type="lock", jwk=uos_jwk
+    )
+    response = await rest_client.patch(
+        url, json=resize_body, headers=wrong_work_for_resize
+    )
+    assert response.status_code == 403
+
+    # Test max_size update with right work type
+    resize_token_header = utils.change_file_box_token_header(
+        box_id=TEST_BOX_ID, work_type="resize", jwk=uos_jwk
+    )
+    response = await rest_client.patch(
+        url, json=resize_body, headers=resize_token_header
+    )
+    assert response.status_code == 204
+
+    # Pydantic model should cause 422 if both state and max_size are supplied
+    combined_body = {"state": "locked", "max_size": 1073741824, "version": 0}
+    response = await rest_client.patch(
+        url, json=combined_body, headers=resize_token_header
+    )
+    assert response.status_code == 422
+
+    # Omitting both state and max_size should return a 422 as well
+    empty_body = {"version": 0}
+    response = await rest_client.patch(url, json=empty_body, headers=good_token_header)
+    assert response.status_code == 422
 
 
 async def test_view_box_endpoint_auth(config: ConfigFixture, app_fixture: AppFixture):
@@ -369,7 +400,7 @@ async def test_create_box_endpoint_error_handling(
 ):
     """Test that the endpoint correctly translates errors from the core."""
     uos_jwk = config.uos_jwk
-    body = {"storage_alias": "HD01"}
+    body = {"storage_alias": "HD01", "max_size": 1073741824}
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
     core_mock.create_file_upload_box.side_effect = core_error
@@ -412,6 +443,31 @@ async def test_update_box_endpoint_error_handling(
         headers=token_header,
     )
     assert response.json()["description"] == str(http_error)
+
+
+async def test_update_box_max_size_below_current_error_handling(
+    config: ConfigFixture, app_fixture: AppFixture
+):
+    """Test that BoxMaxSizeTooLowError is correctly translated to HTTP 409."""
+    uos_jwk = config.uos_jwk
+    body = {"max_size": 100, "version": 0}
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.update_box_max_size.side_effect = (
+        UploadControllerPort.BoxMaxSizeTooLowError(
+            box_id=TEST_BOX_ID, max_size=100, current_size=200
+        )
+    )
+    token_header = utils.change_file_box_token_header(
+        box_id=TEST_BOX_ID, work_type="resize", jwk=uos_jwk
+    )
+    response = await rest_client.patch(
+        f"/boxes/{TEST_BOX_ID}", json=body, headers=token_header
+    )
+    expected = http_exceptions.HttpMaxSizeTooLowError(
+        box_id=TEST_BOX_ID, max_size=100, current_size=200
+    )
+    assert response.json()["description"] == str(expected)
 
 
 @pytest.mark.parametrize(
@@ -470,6 +526,17 @@ async def test_view_box_endpoint_error_handling(
             http_exceptions.HttpOrphanedMultipartUploadError(file_alias="test_file"),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
+        (
+            UploadControllerPort.BoxMaxSizeExceededError(
+                box_id=TEST_BOX_ID, max_size=9001, current_size=8000
+            ),
+            http_exceptions.HttpBoxMaxSizeExceededError(
+                box_id=TEST_BOX_ID,
+                max_size=9001,
+                current_size=8000,
+                file_alias="test_file",
+            ),
+        ),
     ],
     ids=[
         "BoxNotFound",
@@ -478,6 +545,7 @@ async def test_view_box_endpoint_error_handling(
         "UnknownStorageAlias",
         "UploadAlreadyInProgressError",
         "InternalError",
+        "BoxMaxSizeExceededError",
     ],
 )
 async def test_create_file_upload_endpoint_error_handling(

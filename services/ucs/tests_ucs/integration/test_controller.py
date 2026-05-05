@@ -68,7 +68,10 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             in_topic=config.file_upload_box_topic
         ) as box_recorder:
             token_header = utils.create_file_box_token_header(jwk=uos_jwk)
-            box_creation_body = {"storage_alias": "test"}
+            box_creation_body = {
+                "storage_alias": "test",
+                "max_size": utils.TEST_MAX_BOX_SIZE,
+            }
             response = await rest_client.post(
                 "/boxes", json=box_creation_body, headers=token_header
             )
@@ -83,6 +86,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             "version": 0,
             "state": "open",
             "size": 0,
+            "max_size": utils.TEST_MAX_BOX_SIZE,
             "file_count": 0,
             "storage_alias": "test",
         }, "Payload was wrong for new file upload box event"
@@ -233,7 +237,9 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     """
     controller = joint_fixture.upload_controller
     async with set_correlation_id(uuid4()):
-        box_id = await controller.create_file_upload_box(storage_alias="test")
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
             alias="test-file",
@@ -299,7 +305,9 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     rest_client = joint_fixture.rest_client
     controller = joint_fixture.upload_controller
     async with set_correlation_id(uuid4()):
-        box_id = await controller.create_file_upload_box(storage_alias="test")
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
             alias="test-file",
@@ -430,7 +438,9 @@ async def test_orphaned_s3_upload_in_file_create(joint_fixture: JointFixture, ca
     # Create a box first
     correlation_id = uuid4()
     async with set_correlation_id(correlation_id):
-        box_id = await controller.create_file_upload_box(storage_alias="test")
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
 
     # Simulate the scenario by manually creating an S3 upload first
     # This simulates the orphaned state where S3 has an upload but no DB record exists
@@ -491,7 +501,7 @@ async def test_file_upload_index(joint_fixture: JointFixture, monkeypatch):
 
     async with set_correlation_id(uuid4()):
         box_id = await joint_fixture.upload_controller.create_file_upload_box(
-            storage_alias="test"
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
         )
         _ = await joint_fixture.upload_controller.initiate_file_upload(
             box_id=box_id,
@@ -521,7 +531,9 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
 
     # Create a box and initiate a file upload
     async with set_correlation_id(uuid4()):
-        box_id = await controller.create_file_upload_box(storage_alias="test")
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
             alias="test-file",
@@ -628,7 +640,9 @@ async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog
 
     # Create a FileUpload with an active MPU
     async with set_correlation_id(uuid4()):
-        box_id = await controller.create_file_upload_box(storage_alias="test")
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
             alias="test-file",

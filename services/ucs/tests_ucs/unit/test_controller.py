@@ -16,6 +16,7 @@
 """Tests for the UploadController class"""
 
 from asyncio import sleep
+from contextlib import nullcontext
 from datetime import timedelta
 from uuid import uuid4
 
@@ -35,6 +36,7 @@ from tests_ucs.fixtures.utils import (
     DECRYPTED_SIZE,
     ENCRYPTED_SIZE,
     PART_SIZE,
+    TEST_MAX_BOX_SIZE,
     make_file_upload,
 )
 from ucs.core.models import FileUpload
@@ -51,7 +53,7 @@ async def create_default_bucket(rig: JointRig):
 
 async def test_create_new_box(rig: JointRig):
     """Test creating a new FileUploadBox"""
-    box_id = await rig.controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     assert rig.file_upload_box_dao.latest.id == box_id
     assert rig.file_upload_box_dao.latest.version == 0
     assert rig.file_upload_box_dao.latest.state == "open"
@@ -61,11 +63,10 @@ async def test_create_new_file_upload(rig: JointRig):
     """Test creating a new FileUpload"""
     # First create a FileUploadBox
     file_upload_dao = rig.file_upload_dao
-    controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Then create a FileUpload within the box
-    file_id, _ = await controller.initiate_file_upload(
+    file_id, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
@@ -86,11 +87,10 @@ async def test_create_new_file_upload(rig: JointRig):
 async def test_get_part_url(rig: JointRig):
     """Test getting a file part upload URL"""
     # First create a FileUploadBox
-    controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Then create a FileUpload within the box
-    file_id, _ = await controller.initiate_file_upload(
+    file_id, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
@@ -100,7 +100,9 @@ async def test_get_part_url(rig: JointRig):
 
     # Now get the part upload URL
     part_no = 1
-    result_url = await controller.get_part_upload_url(file_id=file_id, part_no=part_no)
+    result_url = await rig.controller.get_part_upload_url(
+        file_id=file_id, part_no=part_no
+    )
 
     # Verify the URL was returned
     assert result_url.startswith("https://s3.example.com/")
@@ -109,10 +111,10 @@ async def test_get_part_url(rig: JointRig):
 async def test_complete_file_upload(rig: JointRig):
     """Test completing a multipart file upload"""
     # First create a FileUploadBox
-    controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Then create a FileUpload within the box
+    controller = rig.controller
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -178,15 +180,15 @@ async def test_complete_file_upload(rig: JointRig):
 @pytest.mark.parametrize("complete_before_delete", [True, False])
 async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
     """Test deleting a FileUpload from a FileUploadBox"""
-    controller = rig.controller
     file_upload_box_dao = rig.file_upload_box_dao
     file_upload_dao = rig.file_upload_dao
     bucket_id, object_storage = rig.object_storages.for_alias("test")
 
     # First create a FileUploadBox
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Then create a FileUpload within the box
+    controller = rig.controller
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -224,18 +226,76 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
     assert file_upload_box_dao.latest.size == 0
 
 
+async def test_update_box_max_size(rig: JointRig):
+    """Test updating the max_size of a FileUploadBox"""
+    file_upload_box_dao = rig.file_upload_box_dao
+    box_id = await rig.create_default_box()
+
+    new_max_size = TEST_MAX_BOX_SIZE * 2
+    await rig.controller.update_box_max_size(
+        box_id=box_id, version=0, max_size=new_max_size
+    )
+
+    assert file_upload_box_dao.latest.max_size == new_max_size
+    assert file_upload_box_dao.latest.version == 1
+
+
+async def test_update_box_max_size_errors(rig: JointRig):
+    """Test that update_box_max_size raises the expected errors."""
+    # BoxNotFound
+    with pytest.raises(UploadControllerPort.BoxNotFoundError):
+        await rig.controller.update_box_max_size(
+            box_id=uuid4(), version=0, max_size=1234
+        )
+
+    # BoxVersionOutdated
+    box_id = await rig.create_default_box()
+    with pytest.raises(UploadControllerPort.BoxVersionError):
+        await rig.controller.update_box_max_size(
+            box_id=box_id, version=6, max_size=1234
+        )
+
+
+async def test_update_box_max_size_below_committed(rig: JointRig):
+    """Test that setting max_size below committed bytes raises BoxMaxSizeTooLowError."""
+    controller = rig.controller
+    box_id = await rig.create_default_box()
+
+    file_id, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    object_id = rig.file_upload_dao.latest.object_id
+    await controller.complete_file_upload(
+        box_id=box_id,
+        file_id=file_id,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{object_id}",
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+    )
+
+    box = rig.file_upload_box_dao.latest
+    with pytest.raises(UploadControllerPort.BoxMaxSizeTooLowError):
+        await controller.update_box_max_size(
+            box_id=box_id, version=box.version, max_size=box.size - 1
+        )
+
+
 async def test_lock_file_upload_box(rig: JointRig):
     """Test locking an unlocked FileUploadBox"""
     # First create a FileUploadBox (starts open by default)
     file_upload_box_dao = rig.file_upload_box_dao
-    controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Verify the box starts open
     assert file_upload_box_dao.latest.state == "open"
 
     # Now lock the box
-    await controller.lock_file_upload_box(box_id=box_id, version=0)
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
 
     # Verify the box is now locked
     assert file_upload_box_dao.latest.state == "locked"
@@ -244,17 +304,16 @@ async def test_lock_file_upload_box(rig: JointRig):
 async def test_unlock_file_upload_box(rig: JointRig):
     """Test unlocking a locked FileUploadBox"""
     file_upload_box_dao = rig.file_upload_box_dao
-    controller = rig.controller
 
     # First create a FileUploadBox
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Lock the box first (version 0 → 1)
-    await controller.lock_file_upload_box(box_id=box_id, version=0)
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
     assert file_upload_box_dao.latest.state == "locked"
 
     # Now unlock the box (version 1 → 2)
-    await controller.unlock_file_upload_box(box_id=box_id, version=1)
+    await rig.controller.unlock_file_upload_box(box_id=box_id, version=1)
 
     # Verify the box is now unlocked
     assert file_upload_box_dao.latest.state == "open"
@@ -262,11 +321,10 @@ async def test_unlock_file_upload_box(rig: JointRig):
 
 async def test_lock_box_version_error(rig: JointRig):
     """Test that BoxVersionError is raised when the wrong version is supplied for lock."""
-    controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     with pytest.raises(UploadControllerPort.BoxVersionError) as exc_info:
-        await controller.lock_file_upload_box(box_id=box_id, version=99)
+        await rig.controller.lock_file_upload_box(box_id=box_id, version=99)
 
     assert str(box_id) in str(exc_info.value)
     # Box should remain unlocked
@@ -275,12 +333,11 @@ async def test_lock_box_version_error(rig: JointRig):
 
 async def test_unlock_box_version_error(rig: JointRig):
     """Test that BoxVersionError is raised when the wrong version is supplied for unlock."""
-    controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
-    await controller.lock_file_upload_box(box_id=box_id, version=0)
+    box_id = await rig.create_default_box()
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
 
     with pytest.raises(UploadControllerPort.BoxVersionError) as exc_info:
-        await controller.unlock_file_upload_box(box_id=box_id, version=0)
+        await rig.controller.unlock_file_upload_box(box_id=box_id, version=0)
 
     assert str(box_id) in str(exc_info.value)
     # Box should remain locked
@@ -289,12 +346,11 @@ async def test_unlock_box_version_error(rig: JointRig):
 
 async def test_get_box_uploads(rig: JointRig):
     """Test getting file IDs for a given box ID"""
-    controller = rig.controller
-
     # First create a FileUploadBox
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Create multiple FileUploads within the box and complete them
+    controller = rig.controller
     file_ids = []
     for i in range(3):
         file_id, _ = await controller.initiate_file_upload(
@@ -316,7 +372,7 @@ async def test_get_box_uploads(rig: JointRig):
         file_ids.append(file_id)
 
     # Create a second box with different files to test isolation
-    other_box_id = await controller.create_file_upload_box(storage_alias="test")
+    other_box_id = await rig.create_default_box()
     other_file_ids = []
     for i in range(2):
         other_file_id, _ = await controller.initiate_file_upload(
@@ -338,7 +394,7 @@ async def test_get_box_uploads(rig: JointRig):
         other_file_ids.append(other_file_id)
 
     # Create a third, empty box
-    empty_box_id = await controller.create_file_upload_box(storage_alias="test")
+    empty_box_id = await rig.create_default_box()
 
     # Get the file uploads for the first box - should be sorted by alias
     results = await controller.get_box_file_info(box_id=box_id)
@@ -366,7 +422,9 @@ async def test_create_box_with_unknown_storage_alias(rig: JointRig):
 
     # Should raise UnknownStorageAliasError
     with pytest.raises(UploadControllerPort.UnknownStorageAliasError) as exc_info:
-        await controller.create_file_upload_box(storage_alias=unknown_storage_alias)
+        await controller.create_file_upload_box(
+            storage_alias=unknown_storage_alias, max_size=TEST_MAX_BOX_SIZE
+        )
 
     # Verify the exception message contains the storage alias
     assert unknown_storage_alias in str(exc_info.value)
@@ -405,17 +463,16 @@ async def test_create_file_upload_when_box_locked(rig: JointRig):
     """Test error handling in the case where the user tries to create a FileUpload
     in a locked FileUploadBox.
     """
-    controller = rig.controller
     file_upload_box_dao = rig.file_upload_box_dao
 
     # First create a FileUploadBox and lock it (version 0 → 1)
-    box_id = await controller.create_file_upload_box(storage_alias="test")
-    await controller.lock_file_upload_box(box_id=box_id, version=0)
+    box_id = await rig.create_default_box()
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
     assert file_upload_box_dao.latest.state == "locked"
 
     # Try to create a FileUpload in the locked box - should raise BoxStateError
     with pytest.raises(UploadControllerPort.BoxStateError) as exc_info:
-        await controller.initiate_file_upload(
+        await rig.controller.initiate_file_upload(
             box_id=box_id,
             alias="test_file",
             decrypted_size=DECRYPTED_SIZE,
@@ -463,7 +520,7 @@ async def test_delete_file_upload_when_box_locked(rig: JointRig):
     file_upload_dao = rig.file_upload_dao
 
     # First create a FileUploadBox and FileUpload
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -493,13 +550,11 @@ async def test_delete_file_upload_when_upload_missing(rig: JointRig):
     """Test error handling in the case where the user tries to delete a FileUpload
     that doesn't exist.
     """
-    controller = rig.controller
-
     # Create a FileUploadBox
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Try to delete a FileUpload that doesn't exist - this should NOT raise an error
-    await controller.remove_file_upload(box_id=box_id, file_id=uuid4())
+    await rig.controller.remove_file_upload(box_id=box_id, file_id=uuid4())
 
 
 async def test_delete_file_upload_with_s3_error(rig: JointRig):
@@ -509,7 +564,7 @@ async def test_delete_file_upload_with_s3_error(rig: JointRig):
     controller = rig.controller
 
     # Create a FileUploadBox and a FileUpload
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -574,7 +629,7 @@ async def test_lock_box_with_incomplete_upload(rig: JointRig):
     file_upload_box_dao = rig.file_upload_box_dao
 
     # Create a FileUploadBox and a FileUpload
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     file_id1, _ = await controller.initiate_file_upload(
         box_id=box_id,
@@ -610,13 +665,12 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
     """Test error handling in the case where the user tries to complete a FileUpload
     for a box ID that doesn't exist.
     """
-    controller = rig.controller
     file_upload_box_dao = rig.file_upload_box_dao
     file_upload_dao = rig.file_upload_dao
 
     # Create a FileUploadBox and a FileUpload
-    box_id = await controller.create_file_upload_box(storage_alias="test")
-    file_id, _ = await controller.initiate_file_upload(
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
@@ -634,7 +688,7 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
 
     # Try to complete the file upload for the now missing box
     with pytest.raises(UploadControllerPort.BoxNotFoundError) as exc_info:
-        await controller.complete_file_upload(
+        await rig.controller.complete_file_upload(
             box_id=box_id,
             file_id=file_id,
             unencrypted_checksum="sha256:unencrypted_checksum_here",
@@ -653,14 +707,13 @@ async def test_complete_missing_file_upload(rig: JointRig):
     that doesn't exist.
     """
     # Create a box first
-    controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
 
     # Try to complete a file upload that doesn't exist
     non_existent_file_id = uuid4()
 
     with pytest.raises(UploadControllerPort.FileUploadNotFound) as exc_info:
-        await controller.complete_file_upload(
+        await rig.controller.complete_file_upload(
             box_id=box_id,
             file_id=non_existent_file_id,
             unencrypted_checksum="sha256:unencrypted_checksum_here",
@@ -682,7 +735,7 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
     controller = rig.controller
 
     # Create a FileUploadBox and a FileUpload with a valid storage alias
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -727,7 +780,7 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
     controller = rig.controller
 
     # Create a FileUploadBox and a FileUpload
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -772,7 +825,7 @@ async def test_complete_file_upload_checksum_mismatch(rig: JointRig):
     controller = rig.controller
 
     # Create a FileUploadBox and a FileUpload
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -813,7 +866,7 @@ async def test_get_part_upload_url_with_unknown_storage_alias(rig: JointRig):
     """
     # Create a FileUploadBox and a FileUpload with a valid storage alias
     controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -842,7 +895,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found(rig: JointRig):
     """
     # Create a FileUploadBox and a FileUpload
     controller = rig.controller
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -900,7 +953,7 @@ async def test_initiate_upload_after_failed(rig: JointRig):
     controller = rig.controller
     file_upload_dao = rig.file_upload_dao
 
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id_1, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -951,7 +1004,7 @@ async def test_initiate_upload_after_cancelled(rig: JointRig):
     controller = rig.controller
     file_upload_dao = rig.file_upload_dao
 
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id_1, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -1000,7 +1053,7 @@ async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
     controller = rig.controller
     file_upload_dao = rig.file_upload_dao
 
-    box_id = await controller.create_file_upload_box(storage_alias="test")
+    box_id = await rig.create_default_box()
     file_id_1, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
@@ -1040,6 +1093,127 @@ async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
     # Original FileUpload must be untouched
     assert len(file_upload_dao.resources) == 1
     assert (await file_upload_dao.get_by_id(file_id_1)).state == "inbox"
+
+
+@pytest.mark.parametrize(
+    "max_size, pre_existing_sizes, expect_error",
+    [
+        (DECRYPTED_SIZE, [], False),
+        (DECRYPTED_SIZE - 1, [], True),
+        (DECRYPTED_SIZE * 2, [DECRYPTED_SIZE, DECRYPTED_SIZE], True),
+    ],
+    ids=["at_exact_limit", "one_byte_over", "aggregate_exceeded"],
+)
+async def test_box_size_limit(
+    rig: JointRig,
+    max_size: int,
+    pre_existing_sizes: list[int],
+    expect_error: bool,
+):
+    """Box size limit: at the exact limit (no error), one byte over (error),
+    and aggregate in-progress uploads that push the total over the limit (error).
+    """
+    controller = rig.controller
+    box_id = await controller.create_file_upload_box(
+        storage_alias="test", max_size=max_size
+    )
+    for i, size in enumerate(pre_existing_sizes):
+        await controller.initiate_file_upload(
+            box_id=box_id,
+            alias=f"existing_{i}",
+            decrypted_size=size,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+
+    with (
+        pytest.raises(UploadControllerPort.BoxMaxSizeExceededError)
+        if expect_error
+        else nullcontext()
+    ):
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="new_file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+        assert rig.file_upload_dao.latest.id == file_id
+
+
+async def test_finished_uploads_count_toward_limit(rig: JointRig):
+    """Test that when calculating the progress towards the size quota, completed uploads
+    are also taken into account rather than only the in-progress uploads. Also check
+    that failed and cancelled uploads are ignored.
+    """
+    controller = rig.controller
+    # Box fits exactly 2 files
+    box_id = await controller.create_file_upload_box(
+        storage_alias="test", max_size=DECRYPTED_SIZE * 2
+    )
+    # Upload and complete file1 — now box.size == DECRYPTED_SIZE
+    file_id1, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="file1",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await controller.complete_file_upload(
+        box_id=box_id,
+        file_id=file_id1,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{rig.file_upload_dao.latest.object_id}",
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+    )
+    assert rig.file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+    # file2 fits exactly (box.size + 0 init + DECRYPTED_SIZE == max_size)
+    file_id2, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="file2",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # file3 would exceed: box.size (DECRYPTED_SIZE) + in_progress (DECRYPTED_SIZE) + new > max
+    with pytest.raises(UploadControllerPort.BoxMaxSizeExceededError):
+        await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="file3",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+
+    # Cancel file2. quota consumption stays at DECRYPTED_SIZE (only file1 counts now)
+    await controller.remove_file_upload(box_id=box_id, file_id=file_id2)
+    assert rig.file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+    # Create an upload and mark it as failed to show failed uploads are also ignored.
+    failed_file_id, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="failed_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    failed_upload = await rig.file_upload_dao.get_by_id(failed_file_id)
+    failed_upload.state = "failed"
+    await rig.file_upload_dao.update(failed_upload)
+
+    # file3 now fits: box.size (DECRYPTED_SIZE) + 0 in-progress + DECRYPTED_SIZE == max_size.
+    # The cancelled file2 and the failed upload are both excluded from the calculation.
+    file_id3, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="file3",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    assert rig.file_upload_dao.latest.id == file_id3
 
 
 def _make_matching_event(file_upload: FileUpload) -> FileInternallyRegistered:

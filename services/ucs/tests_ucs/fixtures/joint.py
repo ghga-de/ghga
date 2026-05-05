@@ -38,10 +38,12 @@ from hexkit.providers.s3.testutils import S3Fixture
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.providers.testing.s3 import InMemObjectStorage
 from jwcrypto.jwk import JWK
+from pydantic import UUID4
 
 from tests_ucs.fixtures import ConfigFixture
 from tests_ucs.fixtures.config import get_config
 from tests_ucs.fixtures.in_mem_obj_storage import InMemS3ObjectStorages
+from tests_ucs.fixtures.utils import TEST_MAX_BOX_SIZE
 from ucs.adapters.outbound.s3 import S3Client
 from ucs.config import Config
 from ucs.core import models
@@ -130,6 +132,12 @@ class JointRig:
     object_storages: ObjectStorages
     controller: UploadController
     s3_client: S3ClientPort
+
+    async def create_default_box(self) -> UUID4:
+        """Create a box for the "test" storage alias with `max_size=TEST_MAX_BOX_SIZE`"""
+        return await self.controller.create_file_upload_box(
+            storage_alias="test", max_size=TEST_MAX_BOX_SIZE
+        )
 
 
 InMemFileUploadBoxDao = new_mock_dao_class(dto_model=FileUploadBox, id_field="id")

@@ -34,6 +34,7 @@ TOKEN_LIFESPAN = 30  # seconds
 DECRYPTED_SIZE = 10737418240
 ENCRYPTED_SIZE = 10742005884
 PART_SIZE = 5245120
+TEST_MAX_BOX_SIZE = DECRYPTED_SIZE * 10  # Large enough for most test scenarios
 TEST_STORAGE_ALIAS = "test"  # Should match the test config
 TEST_BUCKET = "test-inbox"
 
@@ -58,7 +59,7 @@ def create_file_box_token_header(*, jwk: JWK) -> dict[str, str]:
 def change_file_box_token_header(
     *,
     box_id: UUID = uuid4(),
-    work_type: Literal["lock", "unlock", "archive"] = "lock",
+    work_type: Literal["lock", "unlock", "archive", "resize"] = "lock",
     jwk: JWK,
 ) -> dict[str, str]:
     """Generate ChangeFileBoxWorkOrder token for testing.
