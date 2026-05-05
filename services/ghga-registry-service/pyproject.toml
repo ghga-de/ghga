@@ -24,9 +24,9 @@ name = "rs"
 version = "0.1.0"
 description = "GHGA Registry Service - a service for ingesting and archiving metadata from data submitters."
 dependencies = [
-    "typer >= 0.21.1",
+    "typer >= 0.25",
     "ghga-service-commons[api,auth] >= 7.0",
-    "ghga-event-schemas ~= 12.0",
+    "ghga-event-schemas ~= 13.0",
     "hexkit[akafka,mongodb,opentelemetry] >= 8.1",
 ]
 

@@ -32,6 +32,7 @@ from rs.core import models
 from rs.core.rdub_manager import RDUBManager
 from rs.ports.inbound.files import FileControllerPort
 from rs.ports.outbound.http import AccessClientPort, FileBoxClientPort
+from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
 
@@ -106,6 +107,7 @@ async def populate_boxes(rig: JointRig):
             description=f"Description {i}",
             storage_alias="HD01",
             data_steward_id=TEST_DS_ID,
+            max_size=TEST_MAX_SIZE,
         )
         await sleep(0.001)  # insert pause to ensure different timestamps for sorting
         box_ids.append(box_id)
@@ -119,6 +121,7 @@ async def test_create_research_data_upload_box(rig: JointRig):
         description="Just a test",
         storage_alias="HD01",
         data_steward_id=TEST_DS_ID,
+        max_size=TEST_MAX_SIZE,
     )
 
     box = rig.box_dao.latest
@@ -133,6 +136,7 @@ async def test_create_research_data_upload_box(rig: JointRig):
     assert box.last_changed - now_utc_ms_prec() < timedelta(seconds=5)
     assert box.state == "open"
     assert box.file_upload_box_state == "open"
+    assert box.max_size == TEST_MAX_SIZE
 
 
 async def test_update_research_data_upload_box_happy(
@@ -318,6 +322,7 @@ async def test_upsert_file_upload_box_happy(rig: JointRig, populated_boxes: list
         state="locked",
         file_count=5,
         size=1024000,
+        max_size=TEST_MAX_SIZE,
         storage_alias="HD01",
     )
 
@@ -347,6 +352,7 @@ async def test_upsert_file_upload_box_not_found(rig: JointRig):
         state="open",
         file_count=3,
         size=512000,
+        max_size=TEST_MAX_SIZE,
         storage_alias="HD02",
     )
 
@@ -1104,3 +1110,100 @@ async def test_archive_box_file_upload_box_version_error(
     unchanged_box = await rig.box_dao.get_by_id(box_id)
     assert unchanged_box.state == "locked"  # Still locked, not archived
     assert unchanged_box.version == original_version  # Version rolled back
+
+
+async def test_update_box_max_size(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that updating max_size persists the new value and calls resize on UCS."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    new_max_size = TEST_MAX_SIZE * 2
+
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title=None,
+        description=None,
+        state=None,
+        max_size=new_max_size,
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    updated_box = await rig.box_dao.get_by_id(box_id)
+    assert updated_box.max_size == new_max_size
+    assert updated_box.version == box.version + 1
+    rig.file_upload_box_client.resize_file_upload_box.assert_called_once_with(  # type: ignore
+        box_id=box.file_upload_box_id,
+        version=box.file_upload_box_version,
+        max_size=new_max_size,
+    )
+
+
+async def test_resize_box_fub_max_size_too_low(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that FUBMaxSizeTooLowError from UCS is translated into BoxMaxSizeTooLowError
+    and that the local box state is rolled back.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    original_version = box.version
+
+    rig.file_upload_box_client.resize_file_upload_box = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.FUBMaxSizeTooLowError("Size too low")
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxMaxSizeTooLowError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state=None,
+            max_size=1,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    unchanged_box = await rig.box_dao.get_by_id(box_id)
+    assert unchanged_box.version == original_version
+    assert unchanged_box.max_size == TEST_MAX_SIZE
+
+
+async def test_resize_box_fub_version_error(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that FUBVersionError from UCS during resize is translated into VersionError
+    and that the local box state is rolled back.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    original_version = box.version
+
+    rig.file_upload_box_client.resize_file_upload_box = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.FUBVersionError("Version mismatch")
+    )
+
+    with pytest.raises(rig.rdub_manager.VersionError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state=None,
+            max_size=TEST_MAX_SIZE * 2,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    unchanged_box = await rig.box_dao.get_by_id(box_id)
+    assert unchanged_box.version == original_version
+
+
+async def test_update_box_state_and_max_size_exclusive(rig: JointRig):
+    """Test that passing both state and max_size to update raises ValueError."""
+    with pytest.raises(ValueError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=uuid4(),
+            version=0,
+            title=None,
+            description=None,
+            state="locked",
+            max_size=TEST_MAX_SIZE,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )

@@ -59,6 +59,7 @@ async def test_submission(
         description="Description of Box A",
         storage_alias="HD01",
         data_steward_id=utils.TEST_DS_ID,
+        max_size=utils.TEST_MAX_SIZE,
     )
 
     # Mock the UCS call to list files in the FileUploadBox

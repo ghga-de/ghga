@@ -53,6 +53,12 @@ components:
           description: Describes the upload box in more detail
           title: Description
           type: string
+        max_size:
+          description: Maximum number of bytes allowed to be uploaded to the box across
+            all files
+          exclusiveMinimum: 0.0
+          title: Max Size
+          type: integer
         storage_alias:
           description: S3 storage alias to use for uploads
           minLength: 1
@@ -67,6 +73,7 @@ components:
       - title
       - description
       - storage_alias
+      - max_size
       title: CreateUploadBoxRequest
       type: object
     FileUploadWithAccession:
@@ -377,9 +384,14 @@ components:
           format: date-time
           title: Last Changed
           type: string
+        max_size:
+          description: The maximum number of bytes allowed to be uploaded to the box
+            across all files.
+          title: Max Size
+          type: integer
         size:
           default: 0
-          description: The total size of all files in the box
+          description: The total size of all files in the box, in bytes.
           title: Size
           type: integer
         state:
@@ -412,6 +424,7 @@ components:
       - file_upload_box_id
       - file_upload_box_version
       - file_upload_box_state
+      - max_size
       - storage_alias
       title: research_data_upload_box
       type: object
@@ -424,6 +437,13 @@ components:
           - type: 'null'
           description: Updated description
           title: Description
+        max_size:
+          anyOf:
+          - exclusiveMinimum: 0.0
+            type: integer
+          - type: 'null'
+          description: Updated maximum size in bytes
+          title: Max Size
         state:
           anyOf:
           - enum:

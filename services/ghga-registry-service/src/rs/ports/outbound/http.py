@@ -18,7 +18,7 @@
 from abc import ABC, abstractmethod
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4
+from pydantic import UUID4, PositiveInt
 
 from rs.core.models import (
     FileUploadWithAccession,
@@ -111,8 +111,13 @@ class FileBoxClientPort(ABC):
     class FUBVersionError(RuntimeError):
         """Raised when the requested version of a FileUploadBox is out of date."""
 
+    class FUBMaxSizeTooLowError(RuntimeError):
+        """Raised when the new max_size is smaller than the bytes already uploaded."""
+
     @abstractmethod
-    async def create_file_upload_box(self, *, storage_alias: str) -> UUID4:
+    async def create_file_upload_box(
+        self, *, storage_alias: str, max_size: PositiveInt
+    ) -> UUID4:
         """Create a new FileUploadBox in owning service.
 
         Raises:
@@ -158,5 +163,18 @@ class FileBoxClientPort(ABC):
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
+        """
+        ...
+
+    @abstractmethod
+    async def resize_file_upload_box(
+        self, *, box_id: UUID4, version: int, max_size: PositiveInt
+    ) -> None:
+        """Resize a FileUploadBox in the owning service.
+
+        Raises:
+            FUBVersionError if the remote box version differs from `version`.
+            FUBMaxSizeTooLowError if the new max_size is smaller than bytes already uploaded.
+            OperationError if there's a problem with the operation.
         """
         ...

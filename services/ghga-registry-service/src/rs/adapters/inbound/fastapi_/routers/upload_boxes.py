@@ -84,6 +84,7 @@ async def update_research_data_upload_box(
             title=request.title,
             description=request.description,
             state=request.state,
+            max_size=request.max_size,
             auth_context=auth_context,
         )
     except RDUBManagerPort.BoxAccessError as err:
@@ -94,6 +95,7 @@ async def update_research_data_upload_box(
         RDUBManagerPort.ArchivalPrereqsError,
         RDUBManagerPort.VersionError,
         RDUBManagerPort.StateChangeError,
+        RDUBManagerPort.BoxMaxSizeTooLowError,
     ) as err:
         raise HTTPException(status_code=409, detail=str(err)) from err
     except Exception as err:
@@ -304,6 +306,7 @@ async def create_research_data_upload_box(
             title=request.title,
             description=request.description,
             storage_alias=request.storage_alias,
+            max_size=request.max_size,
             data_steward_id=UUID(auth_context.id),
         )
         return box_id

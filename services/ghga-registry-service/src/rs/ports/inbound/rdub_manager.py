@@ -19,7 +19,7 @@ from abc import ABC, abstractmethod
 
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4
+from pydantic import UUID4, PositiveInt
 
 from rs.core.models import (
     PID,
@@ -65,6 +65,9 @@ class RDUBManagerPort(ABC):
         references a version of the resource that is not current.
         """
 
+    class BoxMaxSizeTooLowError(RuntimeError):
+        """Raised when the requested max_size is smaller than the bytes already uploaded."""
+
     class StateChangeError(RuntimeError):
         """Raised when there is an attempt to make an invalid state change for
         a Research Data Upload Box.
@@ -84,6 +87,7 @@ class RDUBManagerPort(ABC):
         title: str,
         description: str,
         storage_alias: str,
+        max_size: PositiveInt,
         data_steward_id: UUID4,
     ) -> UUID4:
         """Create a new research data upload box.
@@ -109,8 +113,9 @@ class RDUBManagerPort(ABC):
         version: int,
         title: str | None,
         description: str | None,
-        state: UploadBoxState | None,
         auth_context: AuthContext,
+        state: UploadBoxState | None = None,
+        max_size: PositiveInt | None = None,
     ) -> None:
         """Update a research data upload box.
 
@@ -122,6 +127,8 @@ class RDUBManagerPort(ABC):
             StateChangeError: If the requested state transition is invalid.
             OperationError: If there's a problem updating the corresponding FileUploadBox.
             ArchivalPrereqsError: If trying to archive the box and prerequisites aren't met.
+            BoxSizeTooSmallError: If the new max_size is smaller than the bytes already uploaded.
+            ValueError: If state and max_size are both specified.
         """
         ...
 

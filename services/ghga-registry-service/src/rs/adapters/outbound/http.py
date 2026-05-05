@@ -22,7 +22,7 @@ from uuid import UUID
 import httpx
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from jwcrypto import jwk
-from pydantic import UUID4, Field, HttpUrl, SecretStr
+from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr
 from pydantic_settings import BaseSettings
 
 from rs.constants import HTTPX_TIMEOUT
@@ -32,6 +32,7 @@ from rs.core.models import (
     CreateFileBoxWorkOrder,
     FileUploadWithAccession,
     GrantId,
+    ResizeFileBoxWorkOrder,
     UploadGrant,
     ViewFileBoxWorkOrder,
 )
@@ -290,14 +291,16 @@ class FileBoxClient(FileBoxClientPort):
         signed_wot = sign_work_order_token(wot, self._signing_key)
         return {"Authorization": f"Bearer {signed_wot}"}
 
-    async def create_file_upload_box(self, *, storage_alias: str) -> UUID4:
+    async def create_file_upload_box(
+        self, *, storage_alias: str, max_size: PositiveInt
+    ) -> UUID4:
         """Create a new FileUploadBox in owning service.
 
         Raises:
             OperationError if there's a problem with the operation.
         """
         headers = self._auth_header(CreateFileBoxWorkOrder())
-        body = {"storage_alias": storage_alias}
+        body = {"storage_alias": storage_alias, "max_size": max_size}
         response = await self._client.post(
             f"{self._ucs_url}/boxes", headers=headers, json=body, timeout=HTTPX_TIMEOUT
         )
@@ -483,3 +486,67 @@ class FileBoxClient(FileBoxClientPort):
                 },
             )
             raise self.OperationError("Failed to archive FileUploadBox.")
+
+    async def resize_file_upload_box(
+        self, *, box_id: UUID4, version: int, max_size: PositiveInt
+    ) -> None:
+        """Resize a FileUploadBox in the owning service.
+
+        Raises:
+            FUBVersionError if the remote box version differs from `version`.
+            FUBMaxSizeTooLowError if the new max_size is smaller than bytes already uploaded.
+            OperationError if there's a problem with the operation.
+        """
+        wot = ResizeFileBoxWorkOrder(box_id=box_id)
+        headers = self._auth_header(wot)
+        body = {"version": version, "max_size": max_size}
+        response = await self._client.patch(
+            f"{self._ucs_url}/boxes/{box_id}",
+            headers=headers,
+            json=body,
+            timeout=HTTPX_TIMEOUT,
+        )
+        if response.status_code == 204:
+            return
+
+        if response.status_code == 409:
+            detail = response.json()
+            exception_id = detail["exception_id"]
+            if exception_id == "boxMaxSizeTooLow":
+                log.error(
+                    "Failed to resize FileUploadBox %s because the new max_size %i is"
+                    + " smaller than the bytes already uploaded.",
+                    box_id,
+                    max_size,
+                    extra={
+                        "box_id": box_id,
+                        "max_size": max_size,
+                        "response_text": response.text,
+                    },
+                )
+                raise self.FUBMaxSizeTooLowError(
+                    f"New max_size {max_size} is smaller than the bytes already uploaded."
+                )
+            elif exception_id == "boxVersionOutdated":
+                log.error(
+                    "Failed to resize FileUploadBox %s because the version specified"
+                    + " in the request is out of date.",
+                    box_id,
+                    extra={
+                        "box_id": box_id,
+                        "version": version,
+                        "response_text": response.text,
+                    },
+                )
+                raise self.FUBVersionError(
+                    "Requested FileUploadBox version is out of date."
+                )
+        log.error(
+            "Error resizing FileUploadBox ID %s in external service.",
+            box_id,
+            extra={
+                "status_code": response.status_code,
+                "response_text": response.text,
+            },
+        )
+        raise self.OperationError("Failed to resize FileUploadBox.")

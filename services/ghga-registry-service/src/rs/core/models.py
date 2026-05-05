@@ -15,7 +15,7 @@
 
 """Defines dataclasses for holding business-logic data."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from ghga_event_schemas.pydantic_ import (
     FileUpload,
@@ -31,9 +31,11 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    PositiveInt,
     StringConstraints,
     ValidationInfo,
     field_validator,
+    model_validator,
 )
 
 # Note: shared classes re-exported to avoid importing from ghga_event_schemas everywhere
@@ -53,6 +55,7 @@ __all__ = [
     "GrantId",
     "GrantWithBoxInfo",
     "ResearchDataUploadBox",
+    "ResizeFileBoxWorkOrder",
     "SubmitAccessionMapWorkOrder",
     "UpdateUploadBoxRequest",
     "UploadBoxState",
@@ -94,6 +97,13 @@ class ChangeFileBoxWorkOrder(BaseWorkOrderToken):
     box_id: UUID4 = Field(..., description="ID of the box to change")
 
 
+class ResizeFileBoxWorkOrder(BaseWorkOrderToken):
+    """Work order token for resizing a FileUploadBox."""
+
+    work_type: Literal["resize"] = "resize"
+    box_id: UUID4 = Field(..., description="ID of the box to resize")
+
+
 class ViewFileBoxWorkOrder(BaseWorkOrderToken):
     """Work order token for viewing FileUploadBox contents."""
 
@@ -120,6 +130,10 @@ class CreateUploadBoxRequest(BaseModel):
     storage_alias: str = Field(
         ..., description="S3 storage alias to use for uploads", min_length=1
     )
+    max_size: PositiveInt = Field(
+        ...,
+        description="Maximum number of bytes allowed to be uploaded to the box across all files",
+    )
 
 
 class CreateUploadBoxResponse(BaseModel):
@@ -135,6 +149,16 @@ class UpdateUploadBoxRequest(BaseModel):
     title: str | None = Field(default=None, description="Updated title")
     description: str | None = Field(default=None, description="Updated description")
     state: UploadBoxState | None = Field(default=None, description="Updated state")
+    max_size: PositiveInt | None = Field(
+        default=None, description="Updated maximum size in bytes"
+    )
+
+    @model_validator(mode="after")
+    def state_and_max_size_are_exclusive(self) -> "Self":
+        """Validate that state and max_size are not both set in the same request."""
+        if self.state is not None and self.max_size is not None:
+            raise ValueError("Cannot update state and max_size in the same request.")
+        return self
 
 
 class GrantId(BaseModel):

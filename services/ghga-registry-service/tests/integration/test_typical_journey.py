@@ -26,6 +26,7 @@ from pytest_httpx import HTTPXMock
 
 from rs.core.models import GrantId
 from tests.fixtures.joint import JointFixture
+from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
 
@@ -92,6 +93,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
             description="A test upload box",
             storage_alias="test-storage",
             data_steward_id=ds_user_id,
+            max_size=TEST_MAX_SIZE,
         )
     assert audit_event_recorder.recorded_events
     audit_event = audit_event_recorder.recorded_events[0]
@@ -151,6 +153,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
         "state": "open",
         "file_count": 1,
         "size": 1024000,
+        "max_size": TEST_MAX_SIZE,
         "storage_alias": "test-storage",
     }
 

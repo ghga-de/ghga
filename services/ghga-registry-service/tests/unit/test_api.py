@@ -33,7 +33,7 @@ from rs.core.models import (
 from rs.inject import prepare_rest_app
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.http import FileBoxClientPort
-from tests.fixtures.utils import TEST_BOX_ID, TEST_DS_ID
+from tests.fixtures.utils import TEST_BOX_ID, TEST_DS_ID, TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
 
@@ -79,6 +79,7 @@ async def test_get_research_data_upload_box(
             file_upload_box_version=0,
             file_upload_box_state="open",
             storage_alias="HD",
+            max_size=TEST_MAX_SIZE,
         )
         ghga_registry.rdub_manager.get_research_data_upload_box.return_value = box
         response = await rest_client.get(url, headers=user_auth_headers)
@@ -124,6 +125,7 @@ async def test_create_research_data_upload_box(
             "title": "Test Box",
             "description": "Test description",
             "storage_alias": "HD01",
+            "max_size": TEST_MAX_SIZE,
         }
 
         # unauthenticated
@@ -250,6 +252,16 @@ async def test_update_research_data_upload_box(
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (
             RDUBManagerPort.StateChangeError(old_state="archived", new_state="open")
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=user_auth_headers
+        )
+        assert response.status_code == 409
+
+        # handle box max size too low error from core
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (
+            RDUBManagerPort.BoxMaxSizeTooLowError()
         )
         response = await rest_client.patch(
             url, json=request_data, headers=user_auth_headers
@@ -533,6 +545,7 @@ async def test_get_boxes(
             file_upload_box_version=0,
             file_upload_box_state="open",
             storage_alias="HD01",
+            max_size=TEST_MAX_SIZE,
         ),
         ResearchDataUploadBox(
             version=0,
@@ -546,6 +559,7 @@ async def test_get_boxes(
             file_upload_box_version=0,
             file_upload_box_state="open",
             storage_alias="HD01",
+            max_size=TEST_MAX_SIZE,
         ),
     ]
 
@@ -766,3 +780,30 @@ async def test_submit_accession_map(
             url, json=request_data, headers=ds_auth_headers
         )
         assert response.status_code == 500
+
+
+@pytest.mark.parametrize(
+    "request_body",
+    [
+        {"version": 0, "state": "locked", "max_size": TEST_MAX_SIZE},
+        {"version": 0, "max_size": 0},
+        {"version": 0, "max_size": -1},
+    ],
+)
+async def test_update_box_invalid_request_body(
+    config: Config, ds_auth_headers, request_body
+):
+    """Test that the PATCH /upload-boxes endpoint rejects invalid request bodies with 422.
+
+    Covers two model-level constraints: state and max_size are mutually exclusive,
+    and max_size must be a positive integer when provided.
+    """
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=AsyncMock()) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}"
+        response = await rest_client.patch(
+            url, json=request_body, headers=ds_auth_headers
+        )
+        assert response.status_code == 422

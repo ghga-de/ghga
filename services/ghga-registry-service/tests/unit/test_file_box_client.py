@@ -20,12 +20,15 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.utils import now_utc_ms_prec
+from jwcrypto.jwk import JWK
 from pytest_httpx import HTTPXMock
 
 from rs.adapters.outbound.http import FileBoxClient
 from rs.config import Config
 from rs.core.models import FileUploadWithAccession
+from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
 
@@ -38,18 +41,24 @@ async def test_create_file_upload_box(
     """Test the create_file_upload_box function"""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     httpx_mock.add_response(201, json=str(TEST_BOX_ID))
-    box_id = await file_upload_box_client.create_file_upload_box(storage_alias="HD01")
+    box_id = await file_upload_box_client.create_file_upload_box(
+        storage_alias="HD01", max_size=TEST_MAX_SIZE
+    )
     assert box_id == TEST_BOX_ID, "Failed happy path"
 
     # Check off-normal status code
     httpx_mock.add_response(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
-        await file_upload_box_client.create_file_upload_box(storage_alias="HD01")
+        await file_upload_box_client.create_file_upload_box(
+            storage_alias="HD01", max_size=TEST_MAX_SIZE
+        )
 
     # Check with successful status code but garbled response body
     httpx_mock.add_response(201, json="id123")
     with pytest.raises(FileBoxClient.OperationError):
-        await file_upload_box_client.create_file_upload_box(storage_alias="HD01")
+        await file_upload_box_client.create_file_upload_box(
+            storage_alias="HD01", max_size=TEST_MAX_SIZE
+        )
 
 
 async def test_lock_file_upload_box(
@@ -173,4 +182,48 @@ async def test_archive_file_upload_box(
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.archive_file_upload_box(
             box_id=TEST_BOX_ID, version=0
+        )
+
+
+async def test_resize_file_upload_box(
+    config: Config,
+    httpx_mock: HTTPXMock,
+    httpx_client: httpx.AsyncClient,
+    work_order_jwk: JWK,
+):
+    """Test the resize_file_upload_box function"""
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+
+    # Happy path - verify request body and WOT work_type/box_id
+    httpx_mock.add_response(204)
+    await file_upload_box_client.resize_file_upload_box(
+        box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
+    )
+    request = httpx_mock.get_requests()[0]
+    assert json.loads(request.content) == {"version": 0, "max_size": TEST_MAX_SIZE}
+
+    raw_token = request.headers["authorization"].removeprefix("Bearer ")
+    wot_claims = decode_and_validate_token(raw_token, work_order_jwk)
+    assert wot_claims["work_type"] == "resize"
+    assert wot_claims["box_id"] == str(TEST_BOX_ID)
+
+    # Make sure 409 "boxVersionOutdated" is translated as FUBVersionError
+    httpx_mock.add_response(409, json={"exception_id": "boxVersionOutdated"})
+    with pytest.raises(FileBoxClient.FUBVersionError):
+        await file_upload_box_client.resize_file_upload_box(
+            box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
+        )
+
+    # Make sure 409 "boxMaxSizeTooLow" is translated as FUBMaxSizeTooLowError
+    httpx_mock.add_response(409, json={"exception_id": "boxMaxSizeTooLow"})
+    with pytest.raises(FileBoxClient.FUBMaxSizeTooLowError):
+        await file_upload_box_client.resize_file_upload_box(
+            box_id=TEST_BOX_ID, version=0, max_size=1
+        )
+
+    # Make sure any other non-204 response is translated as OperationError
+    httpx_mock.add_response(500, json={"exception_id": "miscError"})
+    with pytest.raises(FileBoxClient.OperationError):
+        await file_upload_box_client.resize_file_upload_box(
+            box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
         )

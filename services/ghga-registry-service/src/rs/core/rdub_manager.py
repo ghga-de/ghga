@@ -22,7 +22,7 @@ from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4
+from pydantic import UUID4, PositiveInt
 
 from rs.constants import VALID_STATE_TRANSITIONS
 from rs.core.models import (
@@ -76,6 +76,7 @@ class RDUBManager(RDUBManagerPort):
         title: str,
         description: str,
         storage_alias: str,
+        max_size: PositiveInt,
         data_steward_id: UUID4,
     ) -> UUID4:
         """Create a new research data upload box.
@@ -93,7 +94,7 @@ class RDUBManager(RDUBManagerPort):
         """
         # Create FileUploadBox in external service
         file_upload_box_id = await self._file_upload_box_client.create_file_upload_box(
-            storage_alias=storage_alias
+            storage_alias=storage_alias, max_size=max_size
         )
 
         # Create ResearchDataUploadBox
@@ -108,6 +109,7 @@ class RDUBManager(RDUBManagerPort):
             file_upload_box_version=0,
             file_upload_box_state="open",
             storage_alias=storage_alias,
+            max_size=max_size,
         )
 
         # Store in repository & create audit record
@@ -122,8 +124,9 @@ class RDUBManager(RDUBManagerPort):
         version: int,
         title: str | None,
         description: str | None,
-        state: UploadBoxState | None,
         auth_context: AuthContext,
+        state: UploadBoxState | None = None,
+        max_size: PositiveInt | None = None,
     ) -> None:
         """Update a research data upload box.
 
@@ -135,7 +138,11 @@ class RDUBManager(RDUBManagerPort):
             StateChangeError: If the requested state transition is invalid.
             OperationError: If there's a problem updating the corresponding FileUploadBox.
             ArchivalPrereqsError: If trying to archive the box and prerequisites aren't met.
+            ValueError: If state and max_size are both specified.
         """
+        if state is not None and max_size is not None:
+            raise ValueError("Cannot specify both state and max_size in same call")
+
         # Get existing box if user has access to it
         box = await self.get_research_data_upload_box(
             box_id=box_id, auth_context=auth_context
@@ -158,6 +165,7 @@ class RDUBManager(RDUBManagerPort):
             "title": title,
             "description": description,
             "state": state,
+            "max_size": max_size,
         }
         changed_fields = {k: v for k, v in update.items() if v and getattr(box, k) != v}
         if not changed_fields:
@@ -180,37 +188,16 @@ class RDUBManager(RDUBManagerPort):
         updated_box.last_changed = now_utc_ms_prec()
         updated_box.version += 1
 
-        # If state is not changed, we can just update, emit audit log, and return
-        if "state" not in changed_fields:
-            await self._box_dao.update(updated_box)
-            await self._audit_repository.log_box_updated(
-                box=updated_box, user_id=user_id
+        if "state" in changed_fields:
+            await self._apply_state_update(
+                box=box, updated_box=updated_box, user_id=user_id
             )
-            return
-
-        # Make sure the state change is valid, then update attributes and local DB copy
-        self._check_state_change_is_valid(
-            old_state=box.state, new_state=updated_box.state
-        )
-        updated_box.file_upload_box_state = updated_box.state
-        updated_box.file_upload_box_version += 1
-        await self._box_dao.update(updated_box)
-
-        # Take the appropriate action for the state change and roll back if it fails
-        try:
-            await self._handle_state_change(old_box=box, updated_box=updated_box)
-        except Exception:
-            log.warning(
-                "Failed to update FUB %s, rolling back changes for RDUB %s",
-                box.file_upload_box_id,
-                box_id,
+        elif "max_size" in changed_fields:
+            await self._apply_max_size_update(
+                box=box, updated_box=updated_box, user_id=user_id
             )
-            await self._box_dao.update(box)
-            raise
         else:
-            await self._audit_repository.log_box_updated(
-                box=updated_box, user_id=user_id
-            )
+            await self._apply_metadata_update(updated_box=updated_box, user_id=user_id)
 
     def _check_state_change_is_valid(
         self, *, old_state: UploadBoxState, new_state: UploadBoxState
@@ -312,6 +299,118 @@ class RDUBManager(RDUBManagerPort):
             )
             raise self.ArchivalPrereqsError(
                 f"The following files are missing an accession: {unassigned_files}"
+            )
+
+    async def _apply_metadata_update(
+        self,
+        *,
+        updated_box: ResearchDataUploadBox,
+        user_id: UUID,
+    ) -> None:
+        """Persist a title/description-only change and write the audit record."""
+        await self._box_dao.update(updated_box)
+        await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
+
+    async def _apply_max_size_update(
+        self,
+        *,
+        box: ResearchDataUploadBox,
+        updated_box: ResearchDataUploadBox,
+        user_id: UUID,
+    ) -> None:
+        """Resize the FileUploadBox, persist the change, and write the audit record.
+
+        Rolls back the local DAO write and re-raises on any client error.
+
+        Raises:
+            VersionError: FUB version is out of date.
+            BoxMaxSizeTooLowError: New max_size is smaller than bytes already uploaded.
+        """
+        updated_box.file_upload_box_version += 1
+        await self._box_dao.update(updated_box)
+        try:
+            await self._file_upload_box_client.resize_file_upload_box(
+                box_id=box.file_upload_box_id,
+                version=box.file_upload_box_version,
+                max_size=updated_box.max_size,
+            )
+        except FileBoxClientPort.FUBVersionError as version_err:
+            log.error(
+                "Can't resize FUB %s for RDUB %s because the FUB version is out of date.",
+                box.file_upload_box_id,
+                box.id,
+                extra={
+                    "box_id": box.id,
+                    "file_upload_box_id": box.file_upload_box_id,
+                    "file_upload_box_version": box.file_upload_box_version,
+                },
+            )
+            await self._box_dao.update(box)
+            raise self.VersionError(
+                f"File Upload Box {box.file_upload_box_id} version is out of date."
+            ) from version_err
+        except FileBoxClientPort.FUBMaxSizeTooLowError as size_err:
+            log.error(
+                "Can't resize FUB %s for RDUB %s because the new max_size is smaller"
+                + " than the bytes already uploaded.",
+                box.file_upload_box_id,
+                box.id,
+                extra={
+                    "box_id": box.id,
+                    "file_upload_box_id": box.file_upload_box_id,
+                    "max_size": updated_box.max_size,
+                },
+            )
+            await self._box_dao.update(box)
+            raise self.BoxMaxSizeTooLowError(str(size_err)) from size_err
+        except Exception:
+            log.warning(
+                "Failed to resize FUB %s, rolling back changes for RDUB %s",
+                box.file_upload_box_id,
+                box.id,
+            )
+            await self._box_dao.update(box)
+            raise
+        else:
+            await self._audit_repository.log_box_updated(
+                box=updated_box, user_id=user_id
+            )
+
+    async def _apply_state_update(
+        self,
+        *,
+        box: ResearchDataUploadBox,
+        updated_box: ResearchDataUploadBox,
+        user_id: UUID,
+    ) -> None:
+        """Validate the state transition, persist, dispatch _handle_state_change, and audit.
+
+        Rolls back the local DAO write on failure.
+
+        Raises:
+            StateChangeError: The requested transition is not in VALID_STATE_TRANSITIONS.
+            VersionError: FUB version is out of date.
+            ArchivalPrereqsError: Archival prerequisites not met.
+        """
+        self._check_state_change_is_valid(
+            old_state=box.state, new_state=updated_box.state
+        )
+        updated_box.file_upload_box_state = updated_box.state
+        updated_box.file_upload_box_version += 1
+        await self._box_dao.update(updated_box)
+        try:
+            await self._handle_state_change(old_box=box, updated_box=updated_box)
+        except Exception:
+            log.warning(
+                "Failed to update FUB %s, rolling back changes for RDUB %s",
+                box.file_upload_box_id,
+                box.id,
+            )
+            await self._box_dao.update(box)
+            raise
+        else:
+            await self._audit_repository.log_box_updated(
+                box=updated_box, user_id=user_id
             )
 
     async def grant_upload_access(  # noqa: PLR0913
@@ -477,6 +576,7 @@ class RDUBManager(RDUBManagerPort):
                 "file_upload_box_state": file_upload_box.state,
                 "file_count": file_upload_box.file_count,
                 "size": file_upload_box.size,
+                "max_size": file_upload_box.max_size,
                 "storage_alias": file_upload_box.storage_alias,
             }
             updated_model = research_data_upload_box.model_copy(update=new)

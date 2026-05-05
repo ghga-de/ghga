@@ -23,6 +23,7 @@ BASE_DIR = Path(__file__).parent.resolve()
 TOKEN_LIFESPAN = 30  # seconds
 TEST_DS_ID = UUID("f698158d-8417-4368-bb45-349277bc45ee")
 TEST_BOX_ID = UUID("bf344cd4-0c1b-434a-93d1-36a11b6b02d9")
+TEST_MAX_SIZE = 10 * 1024**3  # 10 GiB
 INVALID_HEADER: dict[str, str] = {"Authorization": "Bearer ab12"}
 
 DS_AUTH_CLAIMS = {

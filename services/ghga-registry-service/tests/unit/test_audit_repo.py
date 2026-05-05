@@ -34,6 +34,7 @@ from rs.adapters.outbound.audit import AuditRepository
 from rs.adapters.outbound.event_pub import EventPubTranslator
 from rs.config import Config
 from rs.core.models import ResearchDataUploadBox
+from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
 
@@ -101,6 +102,7 @@ async def test_log_box_created():
         file_upload_box_version=0,
         file_upload_box_state="open",
         storage_alias="HD01",
+        max_size=TEST_MAX_SIZE,
     )
 
     # Call log_box_created
@@ -133,6 +135,7 @@ async def test_log_box_updated():
         file_upload_box_state="open",
         size=10000,
         storage_alias="HD01",
+        max_size=TEST_MAX_SIZE,
     )
 
     # Call log_box_updated
