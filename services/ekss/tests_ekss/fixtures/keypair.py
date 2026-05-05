@@ -60,16 +60,24 @@ def keypair_fixture() -> Generator[KeypairFixture]:
         passphrase = DEFAULT_CONFIG.private_key_passphrase
         if passphrase:
             generate_keypair(
-                seckey=sk_path, pubkey=pk_path, passphrase=passphrase.encode()
+                seckey=sk_path,
+                pubkey=pk_path,
+                passphrase=passphrase.encode(),
+                comment=None,
             )
             generate_keypair(
                 seckey=user_sk_path,
                 pubkey=user_pk_path,
                 passphrase=passphrase.encode(),
+                comment=None,
             )
         else:
-            generate_keypair(seckey=sk_path, pubkey=pk_path)
-            generate_keypair(seckey=user_sk_path, pubkey=user_pk_path)
+            generate_keypair(
+                seckey=sk_path, pubkey=pk_path, passphrase=None, comment=None
+            )
+            generate_keypair(
+                seckey=user_sk_path, pubkey=user_pk_path, passphrase=None, comment=None
+            )
         os.umask(original_umask)
 
         ekss_sk = get_private_key(sk_path, callback=lambda: passphrase)
