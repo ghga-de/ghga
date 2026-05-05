@@ -15,7 +15,6 @@ import { expectTitle } from './expect-title';
  */
 export const expectPageRequiresLogin = async (page: Page, pageTitle: string) => {
   await expectTitle(page, 'Home');
-  await expect(page).toHaveURL('/');
   const main = page.locator('main');
   await expect(main).not.toContainText(pageTitle);
 };

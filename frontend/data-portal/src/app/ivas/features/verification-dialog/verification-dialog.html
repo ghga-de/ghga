@@ -5,7 +5,7 @@
     <strong>{{ address() }}</strong
     >. Please enter it here:
   </p>
-  <form defaultButton="submit-code" (ngSubmit)="onSubmit()">
+  <form novalidate defaultButton="submit-code" (submit)="onSubmit($event)">
     <mat-form-field class="w-full sm:w-auto">
       <mat-label>Verification code</mat-label>
       <input
@@ -17,10 +17,10 @@
         (input)="onInput($event)"
       />
     </mat-form-field>
-    <mat-error>{{
-      verificationError() ? 'Verification failed. Please try again.' : ''
-    }}</mat-error>
   </form>
+  @if (verificationError()) {
+    <mat-error class="mt-3">Verification failed. Please try again.</mat-error>
+  }
 </div>
 <div mat-dialog-actions cdkTrapFocus>
   <button

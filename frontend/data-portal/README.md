@@ -197,10 +197,30 @@ We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing 
 
 Comprehensive end-to-end tests for real backend behavior are maintained in the separate GHGA archive test bed repository. The e2e tests in this repository focus on frontend behavior and expected API contracts.
 
-- `npm run e2e` - run e2e-tests in headless mode
-- `npm run e2e:headed` - run e2e tests in headed mode
-- `npm run e2e:debug` - run e2e tests in headed mode with Playwright inspector
-- `npm run e2e:report` - open HTML report for e2e tests
+- `pnpm e2e` - run e2e-tests in headless mode on Chromium (fast local default)
+- `pnpm e2e:all` - run e2e-tests in headless mode on all configured browsers using `--workers=2`
+- `pnpm e2e:headed` - run e2e tests in headed mode
+- `pnpm e2e:debug` - run e2e tests in headed mode with Playwright inspector
+- `pnpm e2e:report` - open HTML report for e2e tests
+
+Worker configuration:
+
+- Default is `1` worker for stability.
+- For faster local runs with the same command, do `export PLAYWRIGHT_WORKERS=<number of workers>`.
+- If tests get flaky, lower the value (or return to `1`).
+
+Recommendations for writing stable e2e tests:
+
+- Assert stable end states (final URL, final title, final visible content), not transient intermediate states.
+- Use small bounded retries for known flaky UI transitions (menu/dialog open, click-triggered navigation).
+- Keep retries minimal (usually 1-2 attempts) and always retain a strict final assertion.
+
+Note: The Playwright HTML reporter is configured to **not auto-open** at the end of `pnpm e2e` runs, so test commands terminate cleanly in CI and local terminals.
+
+Reports are still generated in `playwright-report/` and can be viewed on demand:
+
+- Open the report file directly: `playwright-report/index.html`
+- Or start the Playwright report server manually: `pnpm e2e:report`
 
 Like for unit testing, you can also [use the VS Code extension for Playwright](https://playwright.dev/docs/getting-started-vscode) to run tests interactively using the test explorer in the side bar. VS Code is able to support different test providers (like Vitest and Playwright) along with each other.
 

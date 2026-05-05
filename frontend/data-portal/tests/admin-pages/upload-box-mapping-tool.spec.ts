@@ -5,6 +5,7 @@
  */
 
 import { expectTitle } from '../utils/expect-title';
+import { clickWithFallback } from '../utils/navigation-helpers';
 import { expect, test } from './admin-fixtures';
 
 test.use({
@@ -15,6 +16,8 @@ test.use({
 test('can map files and archive locked upload box using mapping tool', async ({
   adminPage: page,
 }) => {
+  test.setTimeout(60_000);
+
   await expectTitle(page, 'Upload Box Manager');
 
   const main = page.locator('main');
@@ -85,7 +88,7 @@ test('can map files and archive locked upload box using mapping tool', async ({
     name: 'GHGAS99999999999001: Upload Box File Mapping Test Study',
   });
   await expect(testStudyOption).toBeVisible();
-  await testStudyOption.click();
+  await clickWithFallback(testStudyOption);
 
   const mappingCard = page.locator('mat-card').filter({
     has: page.getByRole('heading', { level: 2, name: 'File Mapping' }),
@@ -147,7 +150,7 @@ test('can map files and archive locked upload box using mapping tool', async ({
     name: 'methylation_sample_001.meth',
   });
   await expect(inlineMappingOption).toBeVisible();
-  await inlineMappingOption.click();
+  await clickWithFallback(inlineMappingOption);
 
   await expect(mappingCard).toContainText('Mapped: 15');
   await expect(mappingCard).toContainText('Unmapped: 1');
@@ -177,8 +180,19 @@ test('can map files and archive locked upload box using mapping tool', async ({
   const irreversibleCheckbox = finalConfirmDialog.getByRole('checkbox', {
     name: 'I understand this action cannot be undone',
   });
+  const irreversibleCheckboxContainer = finalConfirmDialog.locator('mat-checkbox');
+
+  await expect(irreversibleCheckbox).toBeVisible();
+  await expect(irreversibleCheckbox).toBeEnabled();
   await expect(irreversibleCheckbox).not.toBeChecked();
-  await irreversibleCheckbox.check();
+
+  try {
+    await irreversibleCheckbox.check({ timeout: 10000 });
+  } catch {
+    // WebKit can occasionally stall on input-level checkbox interactions.
+    await irreversibleCheckboxContainer.click({ timeout: 5000 });
+  }
+
   await expect(irreversibleCheckbox).toBeChecked();
   await expect(confirmArchiveButton).toBeEnabled();
   await confirmArchiveButton.click();

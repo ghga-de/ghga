@@ -60,6 +60,9 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
   - Test framework: Playwright
   - Run individual tests with `playwright test TEST-FILTER`.
   - You don’t need to start the app manually; Playwright starts it via config in `playwright.config.ts`.
+  - Prefer assertions on stable end states (URL/title/visible content) over transient intermediate states.
+  - For known flaky UI transitions (menus/dialogs/navigation), use small bounded retries in shared test helpers rather than ad-hoc per-test logic.
+  - Keep retries minimal (usually 1-2) and always keep a strict final assertion.
 - Docs: `pnpm docs`
 - README table of contents: `pnpm toc` (updates the region between `<!-- toc -->` and `<!-- tocstop -->`)
 

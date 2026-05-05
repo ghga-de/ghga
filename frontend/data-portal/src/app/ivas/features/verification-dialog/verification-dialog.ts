@@ -45,7 +45,7 @@ import { NotificationService } from '@app/shared/services/notification';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VerificationDialogComponent {
-  #dialogRef = inject(MatDialogRef<VerificationDialogComponent, string>);
+  #dialogRef = inject(MatDialogRef<VerificationDialogComponent, boolean>);
   #notify = inject(NotificationService);
   #ivaService = inject(IvaService);
   protected data = inject<{ id: string; address: string }>(MAT_DIALOG_DATA);
@@ -78,19 +78,17 @@ export class VerificationDialogComponent {
    * @param event The input event object
    */
   onInput(event: Event): void {
-    event.preventDefault();
     const target = event.target as HTMLInputElement;
-    target.value = target.value
+    const sanitized = target.value
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '')
       .slice(0, 6);
-    this.codeForm.code().value.set(target.value);
-    if (
-      this.codeForm.code().invalid() ||
-      this.codeForm.code().value() === this.#previousSubmission()
-    )
-      return;
-    this.onSubmit();
+    target.value = sanitized;
+    this.codeForm.code().value.set(sanitized);
+    this.verificationError.set(false);
+    if (!this.#previousSubmission() && !this.disabled()) {
+      void this.onSubmit();
+    }
   }
 
   /**
@@ -139,12 +137,13 @@ export class VerificationDialogComponent {
 
   /**
    * Complete the verification and pass the code
+   * @param event - Optional form submit event.
    */
-  async onSubmit(): Promise<void> {
-    if (this.#isProcessing()) return;
-    const code = this.codeForm.code().value();
-    if (!code || this.codeForm.code().invalid()) return;
+  async onSubmit(event?: Event): Promise<void> {
+    event?.preventDefault();
+    if (this.disabled()) return;
     this.#isProcessing.set(true);
+    const code = this.codeForm.code().value();
     this.#previousSubmission.set(code);
     const verified = await this.submitVerificationCode(this.data.id, code);
     if (verified) {

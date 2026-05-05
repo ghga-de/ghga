@@ -6,6 +6,10 @@
 
 import { defineConfig, devices } from '@playwright/test';
 
+const parsedWorkers = Number.parseInt(process.env.PLAYWRIGHT_WORKERS ?? '', 10);
+const workerCount =
+  Number.isInteger(parsedWorkers) && parsedWorkers > 0 ? parsedWorkers : 1;
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -26,12 +30,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests (they can show a wrong test as failing) */
-  workers: 1,
+  /* Default to 1 worker for stability; override with PLAYWRIGHT_WORKERS. */
+  workers: workerCount,
   /* Stop after first failure */
   maxFailures: 1,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  /* Reporter to use. Keep HTML report generation, but never auto-open it. */
+  reporter: [['html', { open: 'never' }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */

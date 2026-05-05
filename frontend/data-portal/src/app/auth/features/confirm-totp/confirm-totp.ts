@@ -70,8 +70,8 @@ export class ConfirmTotpComponent {
     // Reset error state when user starts typing
     this.verificationError.set(false);
     // Auto-submit only once
-    if (!this.#previousSubmission()) {
-      this.onSubmit();
+    if (!this.#previousSubmission() && !this.disabled()) {
+      void this.onSubmit();
     }
   }
 

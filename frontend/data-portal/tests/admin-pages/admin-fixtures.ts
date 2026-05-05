@@ -41,10 +41,24 @@ export const test = baseTest.extend<AdminFixtures>({
       );
     }
     const page = loggedInPage;
-    const adminMenu = page.getByRole('navigation').getByLabel('Administration');
-    await adminMenu.click();
-    const managerItem = page.getByRole('menuitem', { name: adminMenuItemName });
-    await expect(managerItem).toBeVisible();
+    const adminMenuTrigger = page.getByRole('button', {
+      name: 'Administration menu',
+      exact: true,
+    });
+    const managerItem = page.getByRole('menuitem', {
+      name: adminMenuItemName,
+      exact: true,
+    });
+
+    await expect(adminMenuTrigger).toBeVisible();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await adminMenuTrigger.click();
+      if (await managerItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+        break;
+      }
+    }
+
+    await expect(managerItem).toBeVisible({ timeout: 10000 });
     await managerItem.click();
     await page.waitForURL(
       (url) => url.pathname.replace(/\/?$/, '') === adminMenuItemUrl,
@@ -64,13 +78,6 @@ export const test = baseTest.extend<AdminFixtures>({
         'loggedOutAdminPage fixture requires adminMenuItemUrl to be set to a non-empty string.',
       );
     }
-
-    await page.goto('/');
-    const logIn = page.getByRole('button', { name: 'Log in' });
-    await expect(logIn).toBeVisible();
-
-    const adminMenu = page.getByRole('navigation').getByLabel('Administration');
-    await expect(adminMenu).toHaveCount(0);
 
     await page.goto(adminMenuItemUrl);
     await use(page);

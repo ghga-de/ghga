@@ -6,15 +6,24 @@
 
 import { expect, test } from '@playwright/test';
 import { expectTitle } from '../utils/expect-title';
+import { clickAndWaitForUrl } from '../utils/navigation-helpers';
 
 test('can browse data', async ({ page }) => {
   await page.goto('/');
 
-  const browseDataLink = page.getByText('Browse Data').first();
-  await expect(browseDataLink).toBeVisible();
-  await browseDataLink.click();
+  const headerNavigation = page.getByRole('navigation', {
+    name: 'Header Navigation',
+  });
+  const browseDataLink = headerNavigation.getByRole('link', {
+    name: 'Browse Data',
+    exact: true,
+  });
 
-  await expect(page).toHaveURL('/browse');
+  await expect(browseDataLink).toBeVisible();
+  await clickAndWaitForUrl(page, browseDataLink, '/browse', {
+    perAttemptTimeout: 5000,
+    finalTimeout: 10000,
+  });
 
   const main = page.locator('main');
   await expect(main).toContainText('Total Datasets:26');
@@ -47,14 +56,28 @@ test('can view a dataset summary', async ({ page }) => {
 test('can navigate to dataset details', async ({ page }) => {
   await page.goto('/browse');
   const main = page.locator('main');
+  await expect(main).toContainText('Total Datasets:26', { timeout: 15000 });
+  await expect(main).toContainText('GHGAD12345678901236');
 
-  await main.getByText('GHGAD12345678901236').click();
+  const resultPanel = main
+    .locator('mat-expansion-panel')
+    .filter({ hasText: 'GHGAD12345678901236' })
+    .first();
+
+  const openSummary = resultPanel.getByRole('button', {
+    name: 'GHGAD12345678901236',
+  });
+  await expect(openSummary).toBeVisible();
+  await openSummary.click();
 
   await expect(page).toHaveURL('/browse');
 
-  const button = page.getByLabel('GHGAD12345678901236').getByText('Dataset Details');
-  await expect(button).toBeVisible();
-  await button.click();
+  const datasetDetailsLink = resultPanel.getByRole('link', {
+    name: 'Dataset Details',
+    exact: true,
+  });
+  await expect(datasetDetailsLink).toBeVisible();
+  await datasetDetailsLink.click();
 
   await expect(page).toHaveURL('/dataset/GHGAD12345678901236');
 
