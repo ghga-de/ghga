@@ -63,10 +63,6 @@ class FileUploadBox(event_schemas.FileUploadBox):
     """A class representing a box that bundles files belonging to the same upload."""
 
 
-class ResearchDataUploadBox(event_schemas.ResearchDataUploadBox):
-    """A class representing a ResearchDataUploadBox."""
-
-
 class FileUpload(event_schemas.FileUpload):
     """A FileUpload.
 
