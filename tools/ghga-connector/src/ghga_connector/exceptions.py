@@ -485,6 +485,17 @@ class UploadBoxLockedError(RuntimeError):
         super().__init__(msg)
 
 
+class UploadBoxSizeExceededError(RuntimeError):
+    """Raised when adding a file would exceed the box's maximum size limit."""
+
+    def __init__(self, *, file_alias: str, file_upload_box_id: UUID4):
+        msg = (
+            f"Cannot add file '{file_alias}' to upload box {file_upload_box_id}"
+            " because it would exceed the box's maximum total size limit."
+        )
+        super().__init__(msg)
+
+
 class UploadFileError(_FileUploadError):
     """Raised when there's a problem trying to upload a file part."""
 

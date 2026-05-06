@@ -99,6 +99,12 @@ class UploadClient:
                     file_upload_box_id=file_upload_box_id,
                     file_alias=file_alias,
                 )
+            case 507:
+                if response.json()["exception_id"] == "boxMaxSizeExceeded":
+                    raise exceptions.UploadBoxSizeExceededError(
+                        file_alias=file_alias,  # type: ignore
+                        file_upload_box_id=file_upload_box_id,  # type: ignore
+                    )
 
         # If we didn't find a matching case, raise default error
         msg = f"Upload API returned status code {status_code}"

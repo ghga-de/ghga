@@ -350,6 +350,24 @@ async def test_delete_file(upload_client: UploadClient, httpx_mock: HTTPXMock):
             FILE_ID,
             exceptions.OrphanedUploadError,
         ),
+        # 507 status code - boxMaxSizeExceeded
+        (
+            507,
+            {"exception_id": "boxMaxSizeExceeded"},
+            TEST_FUB_ID,
+            FILE_ALIAS,
+            FILE_ID,
+            exceptions.UploadBoxSizeExceededError,
+        ),
+        # 507 status code - no matching exception id
+        (
+            507,
+            {"exception_id": "nosuchexceptionid"},
+            TEST_FUB_ID,
+            FILE_ALIAS,
+            FILE_ID,
+            exceptions.UnexpectedError,
+        ),
         # 400 status codes - no matching exception id
         (
             400,

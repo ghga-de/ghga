@@ -20,6 +20,7 @@ import signal
 
 from pydantic import SecretBytes
 
+from ghga_connector import exceptions
 from ghga_connector.core import CLIMessageDisplay
 from ghga_connector.core.crypt.encryption import Crypt4GHEncryptor
 from ghga_connector.core.uploading.api_calls import UploadClient
@@ -78,7 +79,18 @@ async def upload_files_from_list(
         log.info("Initializing upload for %s", file_info.alias)
         log.debug("Full file path is %s", str(file_info.path.resolve()))
 
-        file_id, storage_alias = await uploader.initiate_file_upload()
+        try:
+            file_id, storage_alias = await uploader.initiate_file_upload()
+        except Exception as err:
+            CLIMessageDisplay.failure(str(err))
+
+            # Exit if the error is because the upload box lacks sufficient space
+            if isinstance(err.__cause__, exceptions.UploadBoxSizeExceededError):
+                CLIMessageDisplay.failure(
+                    "Upload process stopped. If applicable, any previously completed"
+                    + " file uploads remain uploaded."
+                )
+                return
         log.info(
             "File upload successfully initialized for %s."
             + " The generated file ID is %s and the assigned storage alias is %s.",
