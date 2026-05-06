@@ -523,10 +523,13 @@ async def test_file_upload_index(joint_fixture: JointFixture, monkeypatch):
 async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     """Test the normal path of receiving an InterrogationSuccess event and deleting
     the file from the S3 bucket.
+
+    This also checks that UCS doesn't try to delete the interrogated file from the
+    interrogation bucket.
     """
     controller = joint_fixture.upload_controller
     s3_storage = joint_fixture.s3.storage
-    bucket_id = joint_fixture.bucket_id
+    inbox_bucket_id = joint_fixture.bucket_id
     config = joint_fixture.config
 
     # Create a box and initiate a file upload
@@ -570,7 +573,7 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
 
     # Verify the file exists in S3
     file_exists_before = await s3_storage.does_object_exist(
-        bucket_id=bucket_id, object_id=object_id
+        bucket_id=inbox_bucket_id, object_id=object_id
     )
     assert file_exists_before
 
@@ -583,18 +586,46 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     assert file_uploads_before[0]["state"] == "inbox"
 
     # Create and publish an InterrogationSuccess event
+    interrogation_bucket_id = "interrogation"
+    interrogated_object_id = uuid4()
     interrogation_success = InterrogationSuccess(
         file_id=file_id,
         secret_id="test-secret-123",
         storage_alias="test",
-        bucket_id=bucket_id,
-        object_id=UUID(object_id),
+        bucket_id=interrogation_bucket_id,
+        object_id=interrogated_object_id,
         interrogated_at=now_utc_ms_prec(),
         encrypted_parts_md5=["abc123"],
         encrypted_parts_sha256=["def456"],
         encrypted_size=utils.ENCRYPTED_SIZE,
     )
 
+    # Put an object into the interrogation bucket to simulated DHFS's work
+    await s3_storage.create_bucket(interrogation_bucket_id)
+    upload_id = await s3_storage.init_multipart_upload(
+        bucket_id=interrogation_bucket_id,
+        object_id=str(interrogated_object_id),
+    )
+    upload_url = await s3_storage.get_part_upload_url(
+        upload_id=upload_id,
+        bucket_id=interrogation_bucket_id,
+        object_id=str(interrogated_object_id),
+        part_number=1,
+    )
+    response = httpx.put(url=upload_url, content=b"some content does not matter what")
+    assert response.status_code == 200, "Failed to upload dummy re-encrypted object"
+    await s3_storage.complete_multipart_upload(
+        upload_id=upload_id,
+        bucket_id=interrogation_bucket_id,
+        object_id=str(interrogated_object_id),
+    )
+    # Need to double check that the object is there before proceeding
+    interrogation_file_exists = await s3_storage.does_object_exist(
+        bucket_id=interrogation_bucket_id, object_id=str(interrogated_object_id)
+    )
+    assert interrogation_file_exists, "Dummy object not present in interrogation bucket"
+
+    # Dummy object is in place, now we can publish the InterrogationSuccess event
     await joint_fixture.kafka.publish_event(
         payload=interrogation_success.model_dump(mode="json"),
         type_=config.interrogation_success_type,
@@ -604,11 +635,16 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     # Consume the event
     await joint_fixture.event_subscriber.run(forever=False)
 
-    # Verify the file has been deleted from S3
+    # Verify the file has been deleted from the inbox but NOT from interrogation
     file_exists_after = await s3_storage.does_object_exist(
-        bucket_id=bucket_id, object_id=object_id
+        bucket_id=inbox_bucket_id, object_id=object_id
     )
-    assert not file_exists_after
+    assert not file_exists_after, "Object was not deleted from inbox like it should be"
+
+    interrogation_file_exists = await s3_storage.does_object_exist(
+        bucket_id=interrogation_bucket_id, object_id=str(interrogated_object_id)
+    )
+    assert interrogation_file_exists, "Object was deleted from interrogation bucket"
 
     # Verify the FileUpload state was updated
     file_uploads_after = file_upload_collection.find().to_list()

@@ -766,13 +766,13 @@ class UploadController(UploadControllerPort):
         """
         file_id = report.file_id
         try:
-            file_upload = await self._file_upload_dao.get_by_id(file_id)
+            old_file_upload = await self._file_upload_dao.get_by_id(file_id)
         except ResourceNotFoundError as err:
             error = self.FileUploadNotFound(file_id=file_id)
             log.error(error, extra={"file_id": file_id})
             raise error from err
 
-        match file_upload.state:
+        match old_file_upload.state:
             case "init":
                 log.warning(
                     "Ignoring interrogation report for FileUpload %s since it is still"
@@ -782,25 +782,30 @@ class UploadController(UploadControllerPort):
                 return
             case "inbox":
                 # Update the FileUpload's parameters using the InterrogationReport
-                file_upload.state = "interrogated"
-                file_upload.state_updated = now_utc_ms_prec()
-                file_upload.secret_id = report.secret_id
-                file_upload.encrypted_parts_md5 = report.encrypted_parts_md5
-                file_upload.encrypted_parts_sha256 = report.encrypted_parts_sha256
-                file_upload.bucket_id = report.bucket_id
-                file_upload.object_id = report.object_id
-                file_upload.encrypted_size = report.encrypted_size
-                log.debug("Marking FileUpload %s as '%s'", file_id, file_upload.state)
-                await self._file_upload_dao.update(file_upload)
+                updated_file_upload = old_file_upload.model_copy(deep=True)
+                updated_file_upload.state = "interrogated"
+                updated_file_upload.state_updated = now_utc_ms_prec()
+                updated_file_upload.secret_id = report.secret_id
+                updated_file_upload.encrypted_parts_md5 = report.encrypted_parts_md5
+                updated_file_upload.encrypted_parts_sha256 = (
+                    report.encrypted_parts_sha256
+                )
+                updated_file_upload.bucket_id = report.bucket_id
+                updated_file_upload.object_id = report.object_id
+                updated_file_upload.encrypted_size = report.encrypted_size
+                log.debug(
+                    "Marking FileUpload %s as '%s'", file_id, updated_file_upload.state
+                )
+                await self._file_upload_dao.update(updated_file_upload)
             case _:
                 log.info(
                     "FileUpload %s was already marked as '%s', so it's likely"
                     + " this interrogation report has been processed already.",
                     file_id,
-                    file_upload.state,
+                    old_file_upload.state,
                 )
 
-        await self._remove_completed_file_upload(file_upload=file_upload)
+        await self._remove_completed_file_upload(file_upload=old_file_upload)
 
     async def process_interrogation_failure(
         self, *, report: InterrogationFailure
