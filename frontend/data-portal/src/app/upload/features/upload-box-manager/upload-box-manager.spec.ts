@@ -25,6 +25,7 @@ const TEST_UPLOAD_BOX: ResearchDataUploadBox = {
   file_count: 3,
   size: 123456,
   storage_alias: 'TUE01',
+  max_size: 10_000_000_000_000,
 };
 
 /**

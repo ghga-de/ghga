@@ -36,6 +36,7 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
       file_count: 3,
       size: 123456789,
       storage_alias: 'TUE01',
+      max_size: 10_000_000_000_000,
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
@@ -48,6 +49,7 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
       file_count: 12,
       size: 987654321,
       storage_alias: 'HD02',
+      max_size: 15_000_000_000_000,
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
@@ -60,6 +62,7 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
       file_count: 0,
       size: 0,
       storage_alias: 'TUE01',
+      max_size: 7_500_000_000_000,
     },
   ],
 };
@@ -290,6 +293,7 @@ describe('UploadBoxService', () => {
       title: 'New Test Box',
       description: 'A box created in a test',
       storage_alias: 'TUE01',
+      max_size: 2_000_000_000_000,
     };
     const createdId = '0a36607a-b53f-49ed-bf3e-a5f2dbc68099';
 
@@ -319,6 +323,7 @@ describe('UploadBoxService', () => {
       title: 'Bad Box',
       description: 'A box that will fail',
       storage_alias: 'INVALID',
+      max_size: 2_000_000_000_000,
     };
 
     let caughtError: HttpErrorResponse | undefined;

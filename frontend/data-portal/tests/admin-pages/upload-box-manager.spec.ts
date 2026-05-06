@@ -145,6 +145,9 @@ test('validates required fields in the create upload box dialog', async ({
   await dialog.getByRole('combobox', { name: 'Storage location' }).click();
   await page.getByRole('option', { name: 'Tübingen 1' }).click();
 
+  await expect(okButton).toBeDisabled();
+  await dialog.getByLabel('Size limit (in TiB)').fill('1');
+
   await expect(okButton).toBeEnabled();
 
   await dialog.getByRole('button', { name: 'Cancel' }).click();
@@ -164,6 +167,7 @@ test('can create an upload box from the manager page', async ({ adminPage: page 
   await dialog.getByLabel('Description').fill('Created via E2E coverage test');
   await dialog.getByRole('combobox', { name: 'Storage location' }).click();
   await page.getByRole('option', { name: 'Heidelberg 2' }).click();
+  await dialog.getByLabel('Size limit (in TiB)').fill('1');
   await dialog.getByRole('button', { name: 'OK' }).click();
 
   const notification = page.locator('app-custom-snack-bar');

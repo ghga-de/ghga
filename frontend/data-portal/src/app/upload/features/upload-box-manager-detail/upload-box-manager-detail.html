@@ -67,7 +67,10 @@
             </p>
             <p>
               <strong class="inline-block w-40">Files / Size:</strong>
-              <span>{{ box.file_count }} files, {{ box.size | parseBytes }}</span>
+              <span
+                >{{ box.file_count }} files using {{ box.size | parseBytes }} of
+                {{ box.max_size | parseBytes }}</span
+              >
             </p>
           </mat-card-content>
         </mat-card>

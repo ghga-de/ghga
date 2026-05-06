@@ -24,15 +24,15 @@ describe('ParseBytesPipe', () => {
     expect(result).toBe('750\u00A0B');
   });
 
-  it('should return 25 KB for 25 * 2^10 Bytes', () => {
+  it('should return 25 KiB for 25 * 2^10 Bytes', () => {
     const pipe = new ParseBytes();
     const result = pipe.transform(25 * 2 ** 10);
-    expect(result).toBe('25\u00A0kB');
+    expect(result).toBe('25\u00A0KiB');
   });
 
-  it('should return 2.5 MB for 2.5 * 2^20 Bytes', () => {
+  it('should return 2.5 MiB for 2.5 * 2^20 Bytes', () => {
     const pipe = new ParseBytes();
     const result = pipe.transform(2.5 * 2 ** 20);
-    expect(result).toBe('2.5\u00A0MB');
+    expect(result).toBe('2.5\u00A0MiB');
   });
 });

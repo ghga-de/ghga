@@ -23,6 +23,7 @@ export interface ResearchDataUploadBoxBase {
   title: string;
   description: string;
   storage_alias: string;
+  max_size: number; // in bytes
 }
 
 /** All data describing a Research Data Upload Box */

@@ -87,7 +87,7 @@ test('can navigate to dataset details', async ({ page }) => {
   await expect(main).toContainText('Test dataset with some details for testing.');
 
   await expect(main).toContainText('Test study description.');
-  await expect(main).toContainText('List of files (12 total, 6.16 GB)');
+  await expect(main).toContainText('List of files (12 total, 6.16 GiB)');
 
   // files table should not yet be visible
   await expect(main).not.toContainText('File ID');

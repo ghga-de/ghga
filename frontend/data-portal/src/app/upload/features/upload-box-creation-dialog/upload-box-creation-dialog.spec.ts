@@ -70,7 +70,37 @@ describe('UploadBoxCreationDialogComponent', () => {
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
   });
 
+  it('should configure size limit step to 1 TiB', () => {
+    const sizeInput = screen.getByRole('spinbutton', {
+      name: 'Size limit (in TiB)',
+    });
+
+    expect(sizeInput).toHaveAttribute('step', '1');
+  });
+
   it('should enable OK with multiline description when all fields are set', async () => {
+    const titleInput = screen.getByRole('textbox', { name: 'Title' });
+    const descriptionInput = screen.getByRole('textbox', {
+      name: 'Description',
+    });
+    const locationSelect = screen.getByRole('combobox', {
+      name: 'Storage location',
+    });
+    const sizeInput = screen.getByRole('spinbutton', {
+      name: 'Size limit (in TiB)',
+    });
+
+    await userEvent.type(titleInput, 'New Box');
+    await userEvent.type(descriptionInput, 'First line{enter}Second line');
+    await userEvent.click(locationSelect);
+    await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
+    await userEvent.type(sizeInput, '2.5');
+    fixture.detectChanges();
+
+    expect(screen.getByRole('button', { name: /^ok$/i })).toBeEnabled();
+  });
+
+  it('should keep OK disabled when size limit is missing', async () => {
     const titleInput = screen.getByRole('textbox', { name: 'Title' });
     const descriptionInput = screen.getByRole('textbox', {
       name: 'Description',
@@ -80,12 +110,56 @@ describe('UploadBoxCreationDialogComponent', () => {
     });
 
     await userEvent.type(titleInput, 'New Box');
-    await userEvent.type(descriptionInput, 'First line{enter}Second line');
+    await userEvent.type(descriptionInput, 'Description');
     await userEvent.click(locationSelect);
     await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
     fixture.detectChanges();
 
-    expect(screen.getByRole('button', { name: /^ok$/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
+  });
+
+  it('should keep OK disabled when size limit is below 1 GiB', async () => {
+    const titleInput = screen.getByRole('textbox', { name: 'Title' });
+    const descriptionInput = screen.getByRole('textbox', {
+      name: 'Description',
+    });
+    const locationSelect = screen.getByRole('combobox', {
+      name: 'Storage location',
+    });
+    const sizeInput = screen.getByRole('spinbutton', {
+      name: 'Size limit (in TiB)',
+    });
+
+    await userEvent.type(titleInput, 'New Box');
+    await userEvent.type(descriptionInput, 'Description');
+    await userEvent.click(locationSelect);
+    await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
+    await userEvent.type(sizeInput, '0.0009');
+    fixture.detectChanges();
+
+    expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
+  });
+
+  it('should keep OK disabled when size limit exceeds 1,000,000 TiB', async () => {
+    const titleInput = screen.getByRole('textbox', { name: 'Title' });
+    const descriptionInput = screen.getByRole('textbox', {
+      name: 'Description',
+    });
+    const locationSelect = screen.getByRole('combobox', {
+      name: 'Storage location',
+    });
+    const sizeInput = screen.getByRole('spinbutton', {
+      name: 'Size limit (in TiB)',
+    });
+
+    await userEvent.type(titleInput, 'New Box');
+    await userEvent.type(descriptionInput, 'Description');
+    await userEvent.click(locationSelect);
+    await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
+    await userEvent.type(sizeInput, '1000000.0001');
+    fixture.detectChanges();
+
+    expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
   });
 
   it('should close without result on cancel', () => {
@@ -103,17 +177,22 @@ describe('UploadBoxCreationDialogComponent', () => {
     const locationSelect = screen.getByRole('combobox', {
       name: 'Storage location',
     });
+    const sizeInput = screen.getByRole('spinbutton', {
+      name: 'Size limit (in TiB)',
+    });
 
     await userEvent.type(titleInput, '  New Box  ');
     await userEvent.type(descriptionInput, '  Description  ');
     await userEvent.click(locationSelect);
     await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
+    await userEvent.type(sizeInput, '1.25');
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
 
     expect(uploadBoxService.createUploadBox).toHaveBeenCalledWith({
       title: 'New Box',
       description: 'Description',
       storage_alias: 'TUE01',
+      max_size: 1374389534720,
     });
     expect(mockDialogRef.close).toHaveBeenCalledWith('new-box-id');
     expect(mockNotificationService.showError).not.toHaveBeenCalled();
@@ -131,11 +210,15 @@ describe('UploadBoxCreationDialogComponent', () => {
     const locationSelect = screen.getByRole('combobox', {
       name: 'Storage location',
     });
+    const sizeInput = screen.getByRole('spinbutton', {
+      name: 'Size limit (in TiB)',
+    });
 
     await userEvent.type(titleInput, 'New Box');
     await userEvent.type(descriptionInput, 'Description');
     await userEvent.click(locationSelect);
     await userEvent.click(await screen.findByRole('option', { name: 'Heidelberg 2' }));
+    await userEvent.type(sizeInput, '0.5');
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
     fixture.detectChanges();
 

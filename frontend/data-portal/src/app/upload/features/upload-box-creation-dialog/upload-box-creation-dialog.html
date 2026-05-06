@@ -21,6 +21,11 @@
       </mat-select>
     </mat-form-field>
 
+    <mat-form-field>
+      <mat-label>Size limit (in TiB)</mat-label>
+      <input matInput type="number" step="1" [formField]="boxForm.max_size_tb" />
+    </mat-form-field>
+
     @if (creationError()) {
       <p class="text-error">There was an error creating the Upload Box.</p>
     }

@@ -277,6 +277,7 @@ export class UploadBoxService {
       title: data.title,
       description: data.description,
       storage_alias: data.storage_alias,
+      max_size: data.max_size,
       last_changed: new Date().toISOString(),
       changed_by: this.#auth.user()?.id ?? '',
       file_count: 0,

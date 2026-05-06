@@ -90,6 +90,8 @@ export class UploadBoxManagerListComponent {
         return uploadBox.file_count;
       case 'size':
         return uploadBox.size;
+      case 'limit':
+        return uploadBox.max_size;
       case 'location':
         return this.getStorageLocationLabel(uploadBox.storage_alias);
       case 'last_change':
