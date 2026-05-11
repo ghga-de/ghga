@@ -33,11 +33,11 @@ cmd: wps run-rest
 # cmd: wps consume-events
 
 _topics:
-  uploadBoxTopic:
+  researchDataUploadBoxTopic:
     # as consumer
     topic:
-      name: upload_box_topic
-      value: upload-boxes
+      name: research_data_upload_box_topic
+      value: research-data-upload-boxes
     kafkaUser:
       operations:
         - Read
@@ -67,6 +67,14 @@ _topics:
     topic:
       name: null
       value: retry
+    kafkaUser:
+      operations:
+        - Read
+  # as consumer
+  accessionMapTopic:
+    topic:
+      name: accession_map_topic
+      value: accession-maps
     kafkaUser:
       operations:
         - Read

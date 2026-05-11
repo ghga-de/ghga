@@ -46,3 +46,8 @@ file_staged_type: internal_file_staged
 
 file_interrogations_topic: interrogations
 interrogation_success_type: file_interrogation_success
+
+file_upload_topic: file-uploads
+
+accession_map_topic: accession-maps
+research_data_upload_box_topic: research-data-upload-boxes

@@ -16,7 +16,6 @@ serviceName: fis-rest
 
 config:
   host: 0.0.0.0
-  private_key_path: <Please fill>
   vault_url: http://vault:8200
   vault_path: ekss
   mongo_dsn: null
@@ -24,6 +23,7 @@ config:
   db_version_collection: "fisDbVersions"
   migration_wait_sec: 10
   enable_opentelemetry: false
+  ekss_api_url: http://encryption-key-store:8080
 
 cmd: fis run-rest
 
@@ -33,9 +33,19 @@ _topics:
     topic:
       name: file_interrogations_topic
       value: interrogations
-    type:
-      name: interrogation_success_type
-      value: file_interrogation_success
+    types:
+      - name: interrogation_success_type
+        value: file_interrogation_success
+      - name: interrogation_failure_type
+        value: file_interrogation_failed
     kafkaUser:
       operations:
         - Write
+  fileUpload:
+    # as consumer
+    topic:
+      name: file_upload_topic
+      value: file-uploads
+    kafkaUser:
+      operations:
+        - Read

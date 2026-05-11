@@ -1,0 +1,28 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+{{- if .Values.kafkaUser.enabled }}
+
+{{- $found_reflector := false }}
+{{- range $index, $service := (lookup "apps/v1" "Deployment" "" "").items }}
+{{- if eq $service.metadata.name "reflector" }} 
+    {{- $found_reflector = true }}
+{{- end }}
+{{- end }}
+
+{{- if not $found_reflector }}
+  Could not find reflector in the cluster. It is required to copy the TLS secrets from strimzi's namespace to the release namespace.
+  To install reflector run:
+    $ helm repo add emberstack https://emberstack.github.io/helm-charts
+    $ helm repo update
+    $ helm upgrade --install reflector emberstack/reflector
+{{- end }}
+
+{{- if empty (lookup "v1" "Secret" .Values.kafkaUser.caCertSecretName .Release.Namespace) }}
+
+Could not find Kafka cluster ca certificate secret in release namespace.
+
+{{- end }}
+
+{{- end }}

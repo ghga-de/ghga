@@ -1,0 +1,91 @@
+image:
+  repository: "ghga/upload-controller-service"
+
+configPrefix: ucs
+
+# Service parameters
+
+# Service base path
+apiBasePath: /ucs/
+# Name of the database
+mongodb:
+  dbName: upload-controller
+
+# This parameter is used as Kafka's group id
+serviceName: ucs-consumer
+
+config:
+  mongo_dsn: null
+  host: "0.0.0.0"
+  object_storages: {}
+  kafka_enable_dlq: true
+  enable_opentelemetry: false
+  db_version_collection: "ucsDbVersions"
+  migration_wait_sec: 10
+  wps_auth_config: '{}'
+  uos_auth_config: '{}'
+
+cmd: ucs run-rest
+# cmd: ucs consume-events
+
+_topics:
+  fileUploadValidationSuccess:
+    # as producer
+    topic:
+      name: file_interrogations_topic
+      value: interrogations
+    types:
+      - name: interrogation_success_type
+        value: file_interrogation_success
+      - name: interrogation_failure_type
+        value: file_interrogation_failed
+    kafkaUser:
+      operations:
+        - Write
+  filesToRegister:
+    # as consumer
+    topic:
+      name: file_internally_registered_topic
+      value: internal-registrations
+    types:
+      - name: file_internally_registered_type
+        value: internal_file_registered
+    kafkaUser:
+      operations:
+        - Read
+  filesToDelete:
+    # as consumer
+    topic:
+      name: file_deletion_request_topic
+      value: purges
+    type:
+      name: file_deletion_request_type
+      value: file_deletion_requested
+    kafkaUser:
+      operations:
+        - Read
+  deadLetterQueue:
+  # as producer
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  deadLetterQueueRetry:
+  # as consumer
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read
+  fileUpload:
+    # as consumer
+    topic:
+      name: file_upload_topic
+      value: file-uploads
+    kafkaUser:
+      operations:
+        - Read
+

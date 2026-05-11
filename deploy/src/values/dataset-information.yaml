@@ -85,3 +85,11 @@ _topics:
     kafkaUser:
       operations:
         - Read
+  # as consumer
+  accessionMapTopic:
+    topic:
+      name: accession_map_topic
+      value: accession-maps
+    kafkaUser:
+      operations:
+        - Read

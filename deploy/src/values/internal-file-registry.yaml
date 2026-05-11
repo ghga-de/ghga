@@ -66,17 +66,6 @@ _topics:
     kafkaUser:
       operations:
         - Read
-  filesToRegister:
-    # as consumer
-    topic:
-      name: file_interrogations_topic
-      value: interrogations
-    type:
-      name: interrogation_success_type
-      value: file_interrogation_success
-    kafkaUser:
-      operations:
-        - Read
   filesToStage:
     # as consumer
     topic:
@@ -101,6 +90,14 @@ _topics:
     topic:
       name: null
       value: retry
+    kafkaUser:
+      operations:
+        - Read
+  fileUpload:
+    # as consumer
+    topic:
+      name: file_upload_topic
+      value: file-uploads
     kafkaUser:
       operations:
         - Read
