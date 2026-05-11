@@ -152,6 +152,16 @@ class UploadControllerPort(ABC):
             )
             super().__init__(msg)
 
+    class PartSizeError(UploadError):
+        """Raised when the specified part size is invalid: too small, too large,
+        or would result in more parts than S3 allows.
+        """
+
+        def __init__(self, *, file_alias: str, part_size: int):
+            self.part_size = part_size
+            msg = f"The part size {part_size} for file '{file_alias}' is invalid."
+            super().__init__(msg)
+
     class FileUploadAlreadyExists(UploadError):
         """Raised when a FileUpload can't be created for a given box ID and file alias
         because one already exists.
@@ -220,6 +230,8 @@ class UploadControllerPort(ABC):
         - `FileUploadAlreadyExists` if there's already a FileUpload for this alias.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAlreadyInProgressError` if an upload is already in progress.
+        - `PartSizeError` if the specified part size would results in more
+            parts than S3 allows, or is smaller or larger than what S3 allows.
         """
         ...
 

@@ -39,6 +39,7 @@ from tests_ucs.fixtures.utils import (
     TEST_MAX_BOX_SIZE,
     make_file_upload,
 )
+from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.core.models import FileUpload
 from ucs.ports.inbound.controller import UploadControllerPort
 
@@ -1272,6 +1273,39 @@ async def test_concurrent_upload_cap(rig: JointRig):
             decrypted_size=1,
             encrypted_size=1,
             part_size=PART_SIZE,
+        )
+
+
+@pytest.mark.parametrize(
+    "part_size, encrypted_size, expect_error",
+    [
+        (PART_SIZE, ENCRYPTED_SIZE, False),
+        (0, ENCRYPTED_SIZE, True),
+        (MIN_PART_SIZE - 1, ENCRYPTED_SIZE, True),
+        (MAX_PART_SIZE + 1, ENCRYPTED_SIZE, True),
+        (MIN_PART_SIZE, MIN_PART_SIZE * (MAX_PART_COUNT + 1), True),
+    ],
+    ids=["valid", "zero", "too_small", "too_large", "too_many_parts"],
+)
+async def test_part_size_validation(
+    rig: JointRig,
+    part_size: int,
+    encrypted_size: int,
+    expect_error: bool,
+):
+    """Test the part size validation with the happy path and the failure modes."""
+    box_id = await rig.create_default_box()
+    with (
+        pytest.raises(UploadControllerPort.PartSizeError)
+        if expect_error
+        else nullcontext()
+    ):
+        _, _ = await rig.controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test_file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=encrypted_size,
+            part_size=part_size,
         )
 
 

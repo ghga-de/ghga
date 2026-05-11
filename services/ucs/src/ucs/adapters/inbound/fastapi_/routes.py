@@ -140,6 +140,14 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpTooManyOpenUploadsError.get_body_model(),
     },
+    "invalidPartSize": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- invalidPartSize: The specified part size is invalid (too small,"
+            + " too large, or would result in too many parts)."
+        ),
+        "model": http_exceptions.HttpPartSizeError.get_body_model(),
+    },
 }
 
 # For the update_box endpoint, map the work type required to change to a given box state
@@ -317,7 +325,8 @@ async def get_box_uploads(
     response_model=rest_models.FileUploadCreationResponse,
     response_description="The file_id of the newly created FileUpload",
     responses={
-        status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["noSuchStorage"],
+        status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["noSuchStorage"]
+        | ERROR_RESPONSES["invalidPartSize"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"]
         | ERROR_RESPONSES["fileUploadAlreadyExists"]
@@ -327,7 +336,7 @@ async def get_box_uploads(
     },
 )
 @TRACER.start_as_current_span("routes.create_file_upload")
-async def create_file_upload(
+async def create_file_upload(  # noqa: C901
     box_id: UUID4,
     file_upload_creation: rest_models.FileUploadCreationRequest,
     work_order: Annotated[
@@ -386,6 +395,10 @@ async def create_file_upload(
     except UploadControllerPort.UploadAlreadyInProgressError as error:
         raise http_exceptions.HttpOrphanedMultipartUploadError(
             file_alias=file_alias
+        ) from error
+    except UploadControllerPort.PartSizeError as error:
+        raise http_exceptions.HttpPartSizeError(
+            file_alias=file_alias, part_size=error.part_size
         ) from error
     except Exception as error:
         log.error(error, exc_info=True)

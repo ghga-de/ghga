@@ -16,6 +16,7 @@
 """Implements the UploadController class to manage file uploads"""
 
 import logging
+from math import ceil
 from typing import Any
 from uuid import uuid4
 
@@ -29,6 +30,7 @@ from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from ucs.config import Config
+from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.core.models import FileUpload, FileUploadBasics, FileUploadBox
 from ucs.ports.inbound.controller import UploadControllerPort
 from ucs.ports.outbound.dao import (
@@ -248,9 +250,13 @@ class UploadController(UploadControllerPort):
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
+        - `BoxMaxSizeExceededError` if adding the file would exceed the box's size limit.
+        - `TooManyOpenUploadsError` if the box is already at the concurrent upload limit.
         - `FileUploadAlreadyExists` if there's already a FileUpload for this alias.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAlreadyInProgressError` if an upload is already in progress.
+        - `PartSizeError` if the specified part size would results in more
+            parts than S3 allows, or is smaller or larger than what S3 allows.
         """
         extra: dict[str, Any] = {"box_id": box_id, "alias": alias}
         # Get the box and resolve S3 storage details
@@ -290,6 +296,14 @@ class UploadController(UploadControllerPort):
             )
             log.error(error, extra=extra)
             raise error
+
+        # Ensure part size is okay - verify size & implied part count. Min and Max part
+        #  size are enforced by the pydantic model at ingress, but double-checked here
+        if (
+            not (MIN_PART_SIZE <= part_size <= MAX_PART_SIZE)
+            or ceil(encrypted_size / part_size) > MAX_PART_COUNT
+        ):
+            raise self.PartSizeError(file_alias=alias, part_size=part_size)
 
         file_id = uuid4()
         object_id = uuid4()

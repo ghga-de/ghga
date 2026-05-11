@@ -20,6 +20,8 @@ from typing import Literal, TypeVar
 from ghga_event_schemas.pydantic_ import UploadBoxState
 from pydantic import UUID4, BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
+from ucs.constants import MAX_PART_SIZE, MIN_PART_SIZE
+
 
 class BoxCreationRequest(BaseModel):
     """Request body for creating a new FileUploadBox."""
@@ -71,10 +73,11 @@ class FileUploadCreationRequest(BaseModel):
     encrypted_size: int = Field(
         ..., description="The size of the encrypted file in bytes", ge=1
     )
-    part_size: int = Field(
+    part_size: PositiveInt = Field(
         ...,
         description="The number of bytes in each file part (last part may be smaller)",
-        ge=1,
+        ge=MIN_PART_SIZE,
+        le=MAX_PART_SIZE,
     )
 
     @model_validator(mode="after")

@@ -25,6 +25,7 @@ from ghga_service_commons.api.testing import AsyncTestClient
 
 from tests_ucs.fixtures import ConfigFixture, utils
 from ucs.adapters.inbound.fastapi_ import http_exceptions
+from ucs.constants import MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.inject import prepare_rest_app
 from ucs.ports.inbound.controller import UploadControllerPort
 
@@ -545,6 +546,10 @@ async def test_view_box_endpoint_error_handling(
                 box_id=TEST_BOX_ID, max_concurrent=3
             ),
         ),
+        (
+            UploadControllerPort.PartSizeError(file_alias="test_file", part_size=1000),
+            http_exceptions.HttpPartSizeError(file_alias="test_file", part_size=1000),
+        ),
     ],
     ids=[
         "BoxNotFound",
@@ -555,9 +560,10 @@ async def test_view_box_endpoint_error_handling(
         "InternalError",
         "BoxMaxSizeExceededError",
         "TooManyOpenUploadsError",
+        "PartSizeError",
     ],
 )
-async def test_create_file_upload_endpoint_error_handling(
+async def test_create_file_upload_endpoint_error_translation(
     config: ConfigFixture,
     core_error: Exception,
     http_error: Exception,
@@ -603,6 +609,36 @@ async def test_create_file_upload_endpoint_model_validator(
         "part_size": utils.PART_SIZE,
     }
     rest_client = app_fixture.rest_client
+    token_header = utils.create_file_token_header(
+        box_id=TEST_BOX_ID, alias="test_file", jwk=wps_jwk
+    )
+    response = await rest_client.post(
+        f"/boxes/{TEST_BOX_ID}/uploads",
+        json=body,
+        headers=token_header,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "part_size",
+    [0, MIN_PART_SIZE - 1, MAX_PART_SIZE + 1],
+    ids=["zero", "too_small", "too_large"],
+)
+async def test_create_file_upload_endpoint_part_size_validation(
+    config: ConfigFixture, app_fixture: AppFixture, part_size: int
+):
+    """Test the validation for part_size"""
+    wps_jwk = config.wps_jwk
+    body = {
+        "alias": "test_file",
+        "decrypted_size": utils.DECRYPTED_SIZE,
+        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "part_size": part_size,
+    }
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.initiate_file_upload.side_effect = RuntimeError("Shouldn't call the core")
     token_header = utils.create_file_token_header(
         box_id=TEST_BOX_ID, alias="test_file", jwk=wps_jwk
     )

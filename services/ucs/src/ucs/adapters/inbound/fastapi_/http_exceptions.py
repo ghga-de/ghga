@@ -330,9 +330,33 @@ class HttpTooManyOpenUploadsError(HttpCustomExceptionBase):
             status_code=status_code,
             description=(
                 f"Box {box_id} already has {max_concurrent} in-progress upload(s)."
-                " Cancel or complete an existing upload before starting another."
+                + " Cancel or complete an existing upload before starting another."
             ),
             data={"box_id": str(box_id), "max_concurrent": max_concurrent},
+        )
+
+
+class HttpPartSizeError(HttpCustomExceptionBase):
+    """Thrown when the specified part size is invalid."""
+
+    exception_id = "invalidPartSize"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        file_alias: str
+        part_size: int
+
+    def __init__(self, *, file_alias: str, part_size: int, status_code: int = 400):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=(
+                f"The part size {part_size} for file '{file_alias}' is invalid."
+                + " It must be between 5 MiB and 5 GiB and no less than 1/10000th of"
+                + " the total file size."
+            ),
+            data={"file_alias": file_alias, "part_size": part_size},
         )
 
 
