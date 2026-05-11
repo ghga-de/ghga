@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.10",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "sms"
-version = "4.3.1"
+version = "4.4.0"
 description = "State Management Service - Provides a REST API for basic infrastructure technology state management."
 dependencies = [
-    "typer >= 0.19",
+    "typer >= 0.25",
     "ghga-service-commons[api] >= 7.0",
-    "hexkit[mongodb,s3,akafka] >= 8.0",
+    "hexkit[mongodb,s3,akafka] >= 8.1",
     "hvac>=2",
 ]
 
