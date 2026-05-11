@@ -99,6 +99,8 @@ class UploadClient:
                     file_upload_box_id=file_upload_box_id,
                     file_alias=file_alias,
                 )
+            case 429:
+                raise exceptions.TooManyRequestsError()
             case 507:
                 if response.json()["exception_id"] == "boxMaxSizeExceeded":
                     raise exceptions.UploadBoxSizeExceededError(

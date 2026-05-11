@@ -430,8 +430,19 @@ class S3UploadMissingError(RuntimeError):
         super().__init__(msg)
 
 
-class StartUploadError(RuntimeError):
-    """Raised when an issue is encountered during the initialization of a multipart upload"""
+class TooManyRequestsError(RuntimeError):
+    """Raised when the Upload API returns 429 Too Many Requests during file upload init.
+
+    This should not normally occur since uploads are processed sequentially, and
+    indicates (possibly) an issue in the central services.
+    """
+
+    def __init__(self):
+        msg = (
+            "The Upload API returned 429, indicating that at least one upload must"
+            + " finish before you can start another upload."
+        )
+        super().__init__(msg)
 
 
 class UnauthorizedAPICallError(RuntimeError):

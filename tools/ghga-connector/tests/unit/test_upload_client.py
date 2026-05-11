@@ -359,6 +359,15 @@ async def test_delete_file(upload_client: UploadClient, httpx_mock: HTTPXMock):
             FILE_ID,
             exceptions.UploadBoxSizeExceededError,
         ),
+        # 429 status code
+        (
+            429,
+            {"exception_id": "tooManyOpenUploads"},
+            TEST_FUB_ID,
+            FILE_ALIAS,
+            FILE_ID,
+            exceptions.TooManyRequestsError,
+        ),
         # 507 status code - no matching exception id
         (
             507,

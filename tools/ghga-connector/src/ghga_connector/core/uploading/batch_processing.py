@@ -91,6 +91,9 @@ async def upload_files_from_list(
                     + " file uploads remain uploaded."
                 )
                 return
+
+            # For other errors, go to next file because there's nothing else to do here
+            continue
         log.info(
             "File upload successfully initialized for %s."
             + " The generated file ID is %s and the assigned storage alias is %s.",

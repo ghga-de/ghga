@@ -18,11 +18,16 @@
 import asyncio
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
 from ghga_connector import exceptions
+from ghga_connector.constants import (
+    MAX_RETRIES,
+    MAX_UPLOAD_BACKOFF_SEC,
+    UPLOAD_RETRY_BACKOFF_SEC,
+)
 from ghga_connector.core.crypt.checksums import Checksums
 from ghga_connector.core.crypt.encryption import FileProcessor
 from ghga_connector.core.uploading.uploader import Uploader
@@ -202,6 +207,72 @@ async def test_upload_file_complete_error_raises_complete_file_upload_error():
         with pytest.raises(exceptions.CompleteFileUploadError):
             encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
             await uploader.upload_file(encryptor=encryptor)
+
+
+async def test_initiate_file_upload_retries_on_429_with_increasing_backoff():
+    """Test that initiate_file_upload() can return/finish correctly if the nth attempt
+    is successful.
+    """
+    with NamedTemporaryFile() as f:
+        # Use a mock UploadClient that errors on the first two calls but succeeds on #3.
+        upload_client = AsyncMock()
+        upload_client.create_file_upload.side_effect = [
+            exceptions.TooManyRequestsError(),
+            exceptions.TooManyRequestsError(),
+            (FILE_ID, TEST_STORAGE_ALIAS2),
+        ]
+        uploader = make_uploader(Path(f.name), upload_client=upload_client)
+
+        # Patch the sleep method so we don't actually wait
+        with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await uploader.initiate_file_upload()
+
+        # The eventual success must be returned unchanged to the caller.
+        assert result == (FILE_ID, TEST_STORAGE_ALIAS2)
+
+        # Should have slept twice (two retries)
+        assert mock_sleep.await_count == 2
+
+        # Examine/confirm the sleep args were correct
+        assert mock_sleep.call_args_list == [
+            call(min(UPLOAD_RETRY_BACKOFF_SEC * (2**0), MAX_UPLOAD_BACKOFF_SEC)),
+            call(min(UPLOAD_RETRY_BACKOFF_SEC * (2**1), MAX_UPLOAD_BACKOFF_SEC)),
+        ]
+
+
+async def test_initiate_file_upload_raises_after_exhausted_429_retries():
+    """When create_file_upload raises TooManyRequestsError, initiate_file_upload
+    should sleep MAX_RETRIES times then re-raise the error as CreateFileUploadError
+    after retrying MAX_RETRIES times.
+    """
+    with NamedTemporaryFile() as f:
+        # Use a mock UploadClient set to raise TooManyRequestsError
+        upload_client = AsyncMock()
+        upload_client.create_file_upload.side_effect = exceptions.TooManyRequestsError()
+        uploader = make_uploader(Path(f.name), upload_client=upload_client)
+
+        # Patch sleep() so we don't actually wait (and we can check the args later)
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            pytest.raises(exceptions.CreateFileUploadError) as exc_info,
+        ):
+            await uploader.initiate_file_upload()
+
+        # Verify that the TooManyRequestsError was raised from the TooManyRequestsErr
+        assert isinstance(exc_info.value.__cause__, exceptions.TooManyRequestsError)
+
+        # Verify that we did the correct number of retries
+        assert upload_client.create_file_upload.call_count == MAX_RETRIES + 1
+
+        # One sleep per retry
+        assert mock_sleep.await_count == MAX_RETRIES
+
+        # Confirm the sleep duration for each retry
+        expected_sleep_calls = [
+            call(min(UPLOAD_RETRY_BACKOFF_SEC * (2**n), MAX_UPLOAD_BACKOFF_SEC))
+            for n in range(MAX_RETRIES)
+        ]
+        assert mock_sleep.call_args_list == expected_sleep_calls
 
 
 async def test_semaphore_initialized_with_max_concurrent_uploads():
