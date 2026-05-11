@@ -22,15 +22,28 @@ from hexkit.utils import now_utc_ms_prec
 
 from dhfs import __version__
 from dhfs.config import Config
+from dhfs.core.interrogator import InterrogatorPort
 from dhfs.inject import prepare_interrogation_bucket_cleaner, prepare_interrogator
 
 log = logging.getLogger(__name__)
 
 
+def _configure_logging(config: Config):
+    """Silence log messages from libraries and set up structured logging.
+
+    Loggers defined in `config.library_logger_names` will be set to
+    `config.library_log_level`. If the general `config.log_level` is higher, then that
+    takes precedence. This provides granular control over DHFS's logging output.
+    """
+    configure_logging(config=config)
+    for logger in config.library_logger_names:
+        logging.getLogger(logger).setLevel(config.library_log_level)
+
+
 async def run_interrogator(forever: bool = True):
     """Run the file interrogation and re-encryption process."""
     config = Config()  # type: ignore
-    configure_logging(config=config)
+    _configure_logging(config=config)
     log.info("DHFS version %s starting.", __version__)
     async with prepare_interrogator(config=config) as interrogator:
         if forever:
@@ -38,24 +51,33 @@ async def run_interrogator(forever: bool = True):
                 try:
                     start = now_utc_ms_prec()
                     await interrogator.interrogate_new_files()
-                except Exception:
-                    log.warning(
-                        "An unhandled exception occurred (see logs for more details)."
-                        + " Beginning fresh interrogation loop.",
-                        exc_info=True,
+                except InterrogatorPort.CriticalError as err:
+                    log.critical(
+                        "DHFS cannot continue processing until the following error is resolved: %s",
+                        err,
                     )
-                finally:
-                    stop = now_utc_ms_prec()
-                    if (
-                        timediff := (stop - start).seconds
-                    ) < config.min_run_interval_seconds:
-                        sleep_duration = config.min_run_interval_seconds - timediff
-                        log.info(
-                            "Waiting %i seconds because minimum run interval is set to %i.",
-                            sleep_duration,
-                            config.min_run_interval_seconds,
-                        )
-                        await sleep(sleep_duration)
+                    return
+                except Exception as err:
+                    log.error(
+                        "An unhandled exception caused the current batch of file"
+                        + " processing to fail. If this keeps occurring, try running"
+                        + " with log_level set to DEBUG for more information.",
+                        extra={"exc": err},
+                    )
+
+                stop = now_utc_ms_prec()
+                if (
+                    timediff := (stop - start).seconds
+                ) < config.min_run_interval_seconds:
+                    sleep_duration = config.min_run_interval_seconds - timediff
+                    log.info(
+                        "Waiting %i seconds before beginning the next round of file"
+                        + " processing because the minimum run interval is set to"
+                        + " %i seconds.",
+                        sleep_duration,
+                        config.min_run_interval_seconds,
+                    )
+                    await sleep(sleep_duration)
         else:
             await interrogator.interrogate_new_files()
 
@@ -63,7 +85,7 @@ async def run_interrogator(forever: bool = True):
 async def perform_cleanup():
     """Run the S3 'interrogation' bucket cleanup routine."""
     config = Config()  # type: ignore
-    configure_logging(config=config)
+    _configure_logging(config=config)
     log.info("Cleanup routine starting. Current DHFS version is %s.", __version__)
     async with prepare_interrogation_bucket_cleaner(config=config) as cleaner:
         await cleaner.scan_and_clean()

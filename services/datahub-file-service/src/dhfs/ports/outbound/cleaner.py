@@ -23,13 +23,6 @@ __all__ = ["S3CleanerPort"]
 class S3CleanerPort(ABC):
     """A class that performs post-interrogation S3 bucket cleanup"""
 
-    class S3CleanupError(RuntimeError):
-        """Raised when there's a problem deleting one or more objects from S3"""
-
-        def __init__(self, *, failed_deletion_count: int):
-            msg = f"Failed to delete {failed_deletion_count} file(s) during cleanup."
-            super().__init__(msg)
-
     @abstractmethod
     async def scan_and_clean(self):
         """Get a list of all objects in the 'interrogation' bucket, then query the

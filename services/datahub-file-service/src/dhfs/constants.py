@@ -24,6 +24,7 @@ __all__ = [
     "JWT_AUD",
     "JWT_ISS",
     "NONCE_LENGTH",
+    "SQUASHED_LOGGERS",
 ]
 
 AUTH_TOKEN_VALID_SECONDS = 60
@@ -35,3 +36,13 @@ ENCRYPTION_SECRET_LENGTH = 32
 DOWNLOAD_URL_LIFESPAN = 300  # five minutes
 DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - 5
 URL_CACHE_SIZE = 250
+SQUASHED_LOGGERS = [
+    "httpx",
+    "crypt4gh",
+    "hexkit",
+    "ghga_service_commons",
+    "boto3",
+    "botocore",
+    "httpcore",
+    "urllib3",
+]

@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.10",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dhfs"
-version = "1.0.3"
+version = "1.1.0"
 description = "Data Hub File Service - a service enabling file inspection and re-encryption at Data Hubs"
 dependencies = [
     "typer >= 0.19.1",

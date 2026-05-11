@@ -17,7 +17,6 @@
 
 import logging
 
-from dhfs.config import Config
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.cleaner import S3CleanerPort
 from dhfs.ports.outbound.s3 import S3ClientPort
@@ -33,13 +32,11 @@ class S3Cleaner(S3CleanerPort):
     def __init__(
         self,
         *,
-        config: Config,
         central_client: CentralClientPort,
         s3_client: S3ClientPort,
     ):
         self._central_client = central_client
         self._s3_client = s3_client
-        self._interrogation_storage_alias = config.interrogation_bucket_id
 
     async def scan_and_clean(self):
         """Get a list of all objects in the 'interrogation' bucket, then query the
@@ -50,18 +47,16 @@ class S3Cleaner(S3CleanerPort):
 
         Can also raise underlying errors from the S3 client or the CentralClient.
         """
-        log.info("Starting interrogation bucket cleanup scan.")
-
-        # TODO: Incomplete MPU cleanup - hexkit currently lacks a 'list ongoing MPUs' method
+        # TODO: Finish MPU cleanup - hexkit now has the abilities needed
         try:
             object_ids = await self._s3_client.list_files_in_interrogation_bucket()
-        except Exception as exc:
+        except Exception as err:
             log.error(
-                "Failed to list files in interrogation bucket: %s.",
-                exc,
-                exc_info=True,
+                "Cleanup failed because DHFS couldn't get a list of the object IDs"
+                + " currently residing in the interrogation bucket. Error text: %s",
+                err,
             )
-            raise
+            return
 
         if not object_ids:
             log.info("No files to clean up, exiting.")
@@ -74,17 +69,9 @@ class S3Cleaner(S3CleanerPort):
             removable_objects = await self._central_client.get_removable_files(
                 object_ids=object_ids
             )
-        except Exception as exc:
-            log.error(
-                "Failed to fetch removable files from Central API: %s.",
-                exc,
-                exc_info=True,
-            )
-            raise
-
-        log.info(
-            "Central API indicates %d file(s) can be removed.", len(removable_objects)
-        )
+        except Exception as err:
+            log.error("Failed to determine which objects can be removed: %s", err)
+            return
 
         if not removable_objects:
             log.info("No files marked for removal, exiting.")
@@ -97,24 +84,19 @@ class S3Cleaner(S3CleanerPort):
         for object_id in removable_objects:
             try:
                 await self._s3_client.remove_file(object_id=object_id)
-            except Exception as exc:
-                log.error(
-                    "Failed to delete file %s: %s",
-                    object_id,
-                    exc,
-                    exc_info=True,
-                )
+            except Exception:
                 failed_deletions.append(object_id)
             else:
                 deleted_count += 1
-                log.debug("Successfully deleted file: %s", object_id)
 
         log.info(
-            "Cleanup complete: %d file(s) deleted successfully, %d failed.",
+            "Cleanup completed%s: %d file(s) deleted successfully, %d failed.",
+            " with errors" if failed_deletions else "",
             deleted_count,
             len(failed_deletions),
+            extra=(
+                {"objects_unable_to_delete": failed_deletions}
+                if failed_deletions
+                else {}
+            ),
         )
-
-        if failed_deletions:
-            log.warning("Failed to delete the following files: %s", failed_deletions)
-            raise self.S3CleanupError(failed_deletion_count=len(failed_deletions))

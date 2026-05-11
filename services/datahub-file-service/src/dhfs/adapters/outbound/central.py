@@ -97,15 +97,6 @@ class CentralClient(CentralClientPort):
         """Create an authorization header with a bearer token containing a fresh JWT"""
         return {"Authorization": f"Bearer {self._make_jwt()}"}
 
-    def _log_if_upgrade_required(self, status_code: int) -> None:
-        """Log a hard-coded message if the Central API indicates DHFS is outdated."""
-        if status_code == 426:
-            log.error(
-                "The GHGA Central API has rejected this request (HTTP 426): this DHFS"
-                " installation is outdated. Please upgrade DHFS by following GHGA's"
-                " upgrade documentation."
-            )
-
     def _response_to_object_id_list(self, response: httpx.Response) -> list[str]:
         """Returns a list of strings from an httpx Response.
 
@@ -119,9 +110,7 @@ class CentralClient(CentralClientPort):
             ):
                 raise TypeError("Response did not contain a list of strings")
         except (JSONDecodeError, TypeError) as err:
-            error = self.ResponseFormatError(str(response.url))
-            log.error(error, exc_info=True)
-            raise error from err
+            raise self.ResponseFormatError(str(response.url)) from err
         return body
 
     def _response_to_file_upload_list(
@@ -136,18 +125,17 @@ class CentralClient(CentralClientPort):
             body = response.json()
             return list(map(models.FileUpload.model_validate, body))
         except (JSONDecodeError, ValidationError, TypeError) as err:
-            error = self.ResponseFormatError(str(response.url))
-            log.error(error, exc_info=True)
-            raise error from err
+            raise self.ResponseFormatError(str(response.url)) from err
 
     async def fetch_new_uploads(self) -> list[models.FileUpload]:
         """Fetch a list of files that need to be interrogated and re-encrypted.
 
         Raises:
         - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         """
         url = f"{self._base_url}/storages/{self._storage_alias}/uploads"
-        log.info("Fetching new uploads from %s.", url)
+        log.debug("Fetching new uploads from %s.", url)
         try:
             response = await self._httpx_client.get(
                 url=url, headers=self._auth_headers()
@@ -157,10 +145,9 @@ class CentralClient(CentralClientPort):
             response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 200:
-            self._log_if_upgrade_required(status_code)
-            error = self.CentralAPIError(url=url, status_code=status_code)
-            log.error(error)
-            raise error
+            if status_code == 426:
+                raise self.UpgradeRequiredError()
+            raise self.CentralAPIError(url=url, status_code=status_code)
 
         return self._response_to_file_upload_list(response)
 
@@ -172,9 +159,10 @@ class CentralClient(CentralClientPort):
 
         Raises:
         - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         """
         url = f"{self._base_url}/storages/{self._storage_alias}/uploads/can_remove"
-        log.info(
+        log.debug(
             "Querying GHGA Central API about removability of %i files (URL is %s).",
             len(object_ids),
             url,
@@ -188,13 +176,12 @@ class CentralClient(CentralClientPort):
             response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 200:
-            self._log_if_upgrade_required(status_code)
-            error = self.CentralAPIError(url=url, status_code=status_code)
-            log.error(error)
-            raise error
+            if status_code == 426:
+                raise self.UpgradeRequiredError()
+            raise self.CentralAPIError(url=url, status_code=status_code)
 
         removable = self._response_to_object_id_list(response)
-        log.info("Central API indicated %i file(s) can be removed.", len(removable))
+        log.debug("Central API indicated %i file(s) can be removed.", len(removable))
         return removable
 
     async def submit_interrogation_report(
@@ -204,14 +191,20 @@ class CentralClient(CentralClientPort):
 
         Raises:
         - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         """
         body = report.model_dump(mode="json")
         url = f"{self._base_url}/storages/{self._storage_alias}/interrogation-reports"
-        log.info(
-            "Submitting %s interrogation report for file %s to %s.",
-            "success" if report.passed else "failure",
+        msg = (
+            "was successfully re-encrypted"
+            if report.passed
+            else "could not be re-encrypted"
+        )
+        log.debug(
+            "File %s: Informing GHGA Central that the file %s.",
             report.file_id,
-            url,
+            msg,
+            extra={"file_id": report.file_id, "passed": report.passed, "url": url},
         )
 
         # Encrypt secret (core class doesn't know central api public key)
@@ -229,11 +222,12 @@ class CentralClient(CentralClientPort):
             response = retry_error.last_attempt.result()
 
         if (status_code := response.status_code) != 201:
-            self._log_if_upgrade_required(status_code)
-            error = self.CentralAPIError(url=url, status_code=status_code)
-            log.error(error)
-            raise error
+            if status_code == 426:
+                raise self.UpgradeRequiredError()
+            raise self.CentralAPIError(url=url, status_code=status_code)
 
         log.info(
-            "Successfully submitted interrogation report for file %s.", report.file_id
+            "File %s: Submitted report to GHGA Central indicating that the file %s.",
+            report.file_id,
+            msg,
         )

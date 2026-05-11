@@ -14,12 +14,14 @@
 # limitations under the License.
 """Integration tests for the S3Cleaner class"""
 
+import unittest.mock
+
 import httpx
 import pytest
 from hexkit.providers.s3.testutils import temp_file_object
 from pytest_httpx import HTTPXMock
 
-from dhfs.adapters.outbound.http import ConnectionFailedError
+from dhfs.ports.outbound.s3 import S3ClientPort
 from tests.fixtures.joint import JointFixture
 
 pytestmark = [
@@ -83,22 +85,86 @@ async def test_cleaner_successful(
     )
 
     # Run the scan and clean operation
-    with caplog.at_level("INFO"):
+    with caplog.at_level("DEBUG"):
         await joint_fixture.s3_cleaner.scan_and_clean()
+
+    # Verify log messages based on test case
+    if removable_files == file_ids:  # "All" test case
+        assert "Central API indicated 3 file(s) can be removed." in caplog.text
+        assert (
+            "Cleanup completed: 3 file(s) deleted successfully, 0 failed."
+            in caplog.text
+        )
+    elif not removable_files:  # "None" test case
+        assert "No files marked for removal, exiting." in caplog.text
 
     # Check that only the removable_files were deleted from the bucket
     remaining_files = await joint_fixture.s3.storage.list_all_object_ids(interrogation)
     assert set(remaining_files) == set(file_ids) - set(removable_files)
 
-    # Verify log messages based on test case
-    if removable_files == file_ids:  # "All" test case
-        assert "Starting interrogation bucket cleanup scan." in caplog.text
-        assert "Central API indicates 3 file(s) can be removed." in caplog.text
-        assert (
-            "Cleanup complete: 3 file(s) deleted successfully, 0 failed." in caplog.text
-        )
-    elif not removable_files:  # "None" test case
-        assert "No files marked for removal, exiting." in caplog.text
+
+async def test_cleaner_some_files_failed(
+    joint_fixture: JointFixture,
+    httpx_mock: HTTPXMock,
+    caplog,
+):
+    """Test behavior and logs of cleaner when some files aren't cleaned up properly"""
+    # Pre-populate some objects in the interrogation bucket
+    interrogation = joint_fixture.config.interrogation_bucket_id
+    file_ids = [
+        "18d50867-fbef-4a32-8f70-e81766383980",
+        "1969264c-3abe-44e6-8db9-65612d6c6a90",
+        "a7084f3d-f4cb-4333-853c-bc1e400f14ba",
+    ]
+    failing_file_id = file_ids[0]
+
+    for file_id in file_ids:
+        with temp_file_object(bucket_id=interrogation, object_id=file_id) as file:
+            await joint_fixture.s3.populate_file_objects([file])
+
+    assert set(
+        await joint_fixture.s3.storage.list_all_object_ids(interrogation)
+    ) == set(file_ids)
+
+    # Mock central API to mark all files as removable
+    url = (
+        f"{joint_fixture.config.central_api_url}/storages/{joint_fixture.config.storage_alias}"
+        + "/uploads/can_remove"
+    )
+    httpx_mock.add_response(
+        status_code=200,
+        json=file_ids,
+        url=url,
+        method="POST",
+    )
+
+    # Patch remove_file to raise an error for one specific file, letting the others succeed
+    original_remove_file = joint_fixture.s3_cleaner._s3_client.remove_file  # type: ignore
+
+    async def failing_remove_file(*, object_id: str) -> None:
+        if object_id == failing_file_id:
+            raise S3ClientPort.S3CleanupError(
+                bucket_id=interrogation, object_id=object_id
+            )
+        await original_remove_file(object_id=object_id)
+
+    with unittest.mock.patch.object(
+        joint_fixture.s3_cleaner._s3_client,  # type: ignore
+        "remove_file",
+        new=failing_remove_file,
+    ):
+        with caplog.at_level("INFO"):
+            await joint_fixture.s3_cleaner.scan_and_clean()
+
+    # Verify the log reflects the partial failure
+    assert (
+        "Cleanup completed with errors: 2 file(s) deleted successfully, 1 failed."
+        in caplog.text
+    )
+
+    # The file that failed to delete should still be in the bucket
+    remaining_files = await joint_fixture.s3.storage.list_all_object_ids(interrogation)
+    assert set(remaining_files) == {failing_file_id}
 
 
 async def test_no_files_in_interrogation_bucket(
@@ -145,12 +211,9 @@ async def test_central_api_unreachable(joint_fixture: JointFixture, caplog):
         with temp_file_object(bucket_id=interrogation, object_id=str(file_id)) as file:
             await joint_fixture.s3.populate_file_objects([file])
 
-    # The cleaner should raise an exception when unable to reach the API
-    with caplog.at_level("ERROR"), pytest.raises(ConnectionFailedError):
+    with caplog.at_level("ERROR"):
         await joint_fixture.s3_cleaner.scan_and_clean()
-
-    # Verify the error was logged
-    assert "Failed to fetch removable files from Central API" in caplog.text
+    assert "Failed to determine which objects can be removed" in caplog.text
 
     # Verify that no files were deleted (operation failed before deletion)
     remaining_files = await joint_fixture.s3.storage.list_all_object_ids(interrogation)

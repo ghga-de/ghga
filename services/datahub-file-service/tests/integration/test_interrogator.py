@@ -24,7 +24,6 @@ from pytest_httpx import HTTPXMock
 
 from dhfs.adapters.outbound.s3 import S3Client
 from dhfs.core.models import FileUpload
-from dhfs.ports.outbound.interrogator import InterrogatorPort
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
     EncryptedObject,
@@ -252,7 +251,9 @@ async def test_api_down_during_report_submission(
     )
 
 
-async def test_file_not_in_inbox(joint_fixture: JointFixture, httpx_mock: HTTPXMock):
+async def test_file_not_in_inbox(
+    joint_fixture: JointFixture, httpx_mock: HTTPXMock, caplog
+):
     """Make sure we abort the interrogation without reporting failure if an
     expected file isn't found in the inbox.
     """
@@ -281,9 +282,16 @@ async def test_file_not_in_inbox(joint_fixture: JointFixture, httpx_mock: HTTPXM
         json=[file_upload.model_dump(mode="json")],
     )
 
-    # Try to interrogate but expect a FileNotFoundError
-    with pytest.raises(InterrogatorPort.FileNotFoundError):
+    # Try to interrogate - will get a log about it but no error (so dhfs can continue)
+    err_msg = (
+        f"File {file_upload.id}: Unable to conclusively process file - will retry"
+        + f" later. Reason: The file {file_upload.id}, under object ID"
+        + f" {file_upload.object_id} was not found in the inbox"
+    )
+    with caplog.at_level("WARNING"):
+        caplog.clear()
         await joint_fixture.interrogator.interrogate_new_files()
+    assert err_msg in caplog.text
 
 
 async def test_file_decryption_error(
@@ -386,10 +394,14 @@ async def test_file_decryption_error(
 
 
 async def test_etag_doesnt_match_local_md5(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock, monkeypatch
+    joint_fixture: JointFixture, httpx_mock: HTTPXMock, monkeypatch, caplog
 ):
-    """Make sure that the Interrogator performs cleanup and calls report_failure()
-    if the md5 checksums don't match.
+    """Make sure that an ETag mismatch is treated as an inconclusive error.
+
+    A mismatch here most likely indicates a problem on our end (the file passed
+    checks in the Upload Controller Service), so we do NOT report failure to the
+    Central API. Instead we log a warning, clean up the re-encrypted object, and
+    let the file be retried on the next invocation.
     """
     # Create the inbox bucket
     config = joint_fixture.config
@@ -431,47 +443,47 @@ async def test_etag_doesnt_match_local_md5(
         json=[file_upload.model_dump(mode="json")],
     )
 
-    # Track the failure reports received
-    received_reports = []
-
-    def capture_report(request: httpx.Request) -> httpx.Response:
-        """Callback to capture failure reports sent to the API"""
-        payload = json.loads(request.read().decode("utf-8"))
-        received_reports.append(payload)
-        return httpx.Response(status_code=201, json={})
-
-    # Mock the report submission endpoint
+    # Guard: if any report is submitted, the test should fail immediately
     url_for_reports = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-    httpx_mock.add_callback(capture_report, url=url_for_reports)
 
-    # Monkeypatch the S3Client's complete_upload method
-    # to return a mismatched ETag
+    def report_should_not_be_called(request: httpx.Request) -> httpx.Response:
+        raise RuntimeError("No interrogation report should have been submitted!")
+
+    httpx_mock.add_callback(report_should_not_be_called, url=url_for_reports)
+
+    # Patch complete_upload to return a wrong ETag, simulating an S3 integrity mismatch
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
     original_complete = s3_client.complete_upload
 
     async def complete_with_wrong_etag(
         upload_id: str, object_id: str, part_count: int
     ) -> str:
-        """Return a wrong ETag to simulate checksum mismatch"""
         await original_complete(
             upload_id=upload_id, object_id=object_id, part_count=part_count
         )
-        return "wrong-etag-12345-99"  # Fake ETag that won't match
+        return "wrong-etag-12345-99"
 
     monkeypatch.setattr(s3_client, "complete_upload", complete_with_wrong_etag)
 
-    # Process files - should handle the checksum mismatch error
-    await joint_fixture.interrogator.interrogate_new_files()
+    with caplog.at_level("INFO"):
+        await joint_fixture.interrogator.interrogate_new_files()
 
-    # Verify that a failure report was submitted
-    assert len(received_reports) == 1, "Expected one failure report"
-    report = received_reports[0]
-    assert report["passed"] is False, "Report should indicate failure"
-    assert report["file_id"] == str(file_upload.id)
-    assert report["reason"] is not None, "Reason field should exist"
+    # Verify the ETag mismatch warning was logged
+    assert (
+        "The S3 ETag (MD5 checksum) doesn't match the locally calculated value."
+        in caplog.text
+    )
 
-    # Verify that the interrogation bucket is empty (file was removed after mismatch)
+    # Verify the file was cleaned up from the interrogation bucket
+    assert "Removed object from the" in caplog.text
+    assert "bucket - cleanup complete." in caplog.text
+
+    # Verify the inconclusive-retry warning was logged (no report sent, retry later)
+    assert "Unable to conclusively process file - will retry later." in caplog.text
+    assert "Encrypted content checksum did not match the expected value." in caplog.text
+
+    # Verify the interrogation bucket is empty after cleanup
     interrogation_files = await s3_client.list_files_in_interrogation_bucket()
     assert interrogation_files == [], (
-        "Interrogation bucket should be empty after checksum mismatch"
+        "Interrogation bucket should be empty after ETag mismatch cleanup"
     )

@@ -260,9 +260,41 @@
     },
     "interrogation_bucket_id": {
       "default": "interrogation",
-      "description": "The name for the S3 'interrogation' bucket",
+      "description": "The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS.",
       "title": "Interrogation Bucket Id",
       "type": "string"
+    },
+    "library_log_level": {
+      "default": "CRITICAL",
+      "description": "The log level to use for libraries. This option can be used in tandem with log_level to view DEBUG logs from DHFS without the noise of third-party libraries. Will be overridden by log_level if log_level is higher. By default, this is set to CRITICAL, which will suppress all logs with a log level lower than CRITICAL.",
+      "enum": [
+        "CRITICAL",
+        "ERROR",
+        "WARNING",
+        "INFO",
+        "DEBUG",
+        "TRACE"
+      ],
+      "title": "Library Log Level",
+      "type": "string"
+    },
+    "library_logger_names": {
+      "default": [
+        "httpx",
+        "crypt4gh",
+        "hexkit",
+        "ghga_service_commons",
+        "boto3",
+        "botocore",
+        "httpcore",
+        "urllib3"
+      ],
+      "description": "The list of logger names to target with library_log_level.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Library Logger Names",
+      "type": "array"
     }
   },
   "required": [

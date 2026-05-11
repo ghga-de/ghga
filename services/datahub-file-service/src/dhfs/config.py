@@ -19,13 +19,14 @@ import logging
 from pathlib import Path
 
 from hexkit.config import config_from_yaml
-from hexkit.log import LoggingConfig
+from hexkit.log import LoggingConfig, LogLevel
 from hexkit.providers.s3 import S3Config
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 from dhfs.adapters.outbound.central import CentralClientConfig
 from dhfs.adapters.outbound.http import HttpClientConfig
+from dhfs.constants import SQUASHED_LOGGERS
 
 SERVICE_NAME: str = "dhfs"
 
@@ -69,10 +70,29 @@ class Config(
 
     interrogation_bucket_id: str = Field(
         default="interrogation",
-        description="The name for the S3 'interrogation' bucket",
+        description=(
+            "The name for the S3 'interrogation' bucket, which houses re-encrypted"
+            + " files until they are copied to permanent storage by IFRS."
+        ),
     )
     service_name: str = Field(
         default=SERVICE_NAME, description="Short name of this service"
+    )
+
+    library_log_level: LogLevel = Field(
+        default="CRITICAL",
+        description=(
+            "The log level to use for libraries. This option can be used in tandem with"
+            + " log_level to view DEBUG logs from DHFS without the noise of third-party"
+            + " libraries. Will be overridden by log_level if log_level is higher."
+            + " By default, this is set to CRITICAL, which will suppress all logs"
+            + " with a log level lower than CRITICAL."
+        ),
+    )
+
+    library_logger_names: list[str] = Field(
+        default=SQUASHED_LOGGERS,
+        description="The list of logger names to target with library_log_level.",
     )
 
     @field_validator("client_reraise_from_retry_error")
@@ -80,7 +100,7 @@ class Config(
     def enforce_client_reraise_from_retry_error_false(cls, value: bool) -> bool:
         """Enforce the False setting for client_reraise_from_retry_error"""
         if value:
-            log.info(
+            log.debug(
                 "Forcing config value `client_reraise_from_retry_error` to False, as"
                 + " that is the only supported value for this application."
             )

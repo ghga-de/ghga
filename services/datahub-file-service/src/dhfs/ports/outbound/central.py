@@ -35,6 +35,17 @@ class CentralClientPort(ABC):
             )
             super().__init__(msg)
 
+    class UpgradeRequiredError(RuntimeError):
+        """Raised when GHGA Central claims this DHFS instance is outdated"""
+
+        def __init__(self) -> None:
+            msg = (
+                "The GHGA Central API has rejected this request (HTTP 426): this DHFS"
+                + " installation is outdated. Please upgrade DHFS by following GHGA's"
+                + " upgrade documentation."
+            )
+            super().__init__(msg)
+
     class CentralAPIError(RuntimeError):
         """Raised when something goes wrong with a call to the Central API"""
 
