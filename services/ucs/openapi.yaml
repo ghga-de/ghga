@@ -542,6 +542,40 @@ components:
       properties: {}
       title: HttpS3UploadNotFoundErrorData
       type: object
+    HttpTooManyOpenUploadsError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpTooManyOpenUploadsErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: tooManyOpenUploads
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpTooManyOpenUploadsError
+      type: object
+    HttpTooManyOpenUploadsErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+        max_concurrent:
+          title: Max Concurrent
+          type: integer
+      required:
+      - box_id
+      - max_concurrent
+      title: HttpTooManyOpenUploadsErrorData
+      type: object
     HttpUnknownStorageAliasError:
       additionalProperties: false
       properties:
@@ -893,6 +927,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpTooManyOpenUploadsError'
+          description: 'Exceptions by ID:
+
+            - tooManyOpenUploads: The box already has the maximum number of concurrent
+            in-progress uploads.'
         '507':
           content:
             application/json:

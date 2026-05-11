@@ -670,6 +670,13 @@
         []
       ],
       "title": "Cors Exposed Headers"
+    },
+    "max_concurrent_uploads_per_box": {
+      "default": 5,
+      "description": "Maximum number of in-progress FileUploads allowed per box at any one time. When a new upload would exceed this count, the request is rejected with 429 Too Many Requests.",
+      "exclusiveMinimum": 0,
+      "title": "Max Concurrent Uploads Per Box",
+      "type": "integer"
     }
   },
   "required": [

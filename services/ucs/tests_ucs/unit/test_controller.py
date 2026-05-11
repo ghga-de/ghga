@@ -1216,6 +1216,65 @@ async def test_finished_uploads_count_toward_limit(rig: JointRig):
     assert rig.file_upload_dao.latest.id == file_id3
 
 
+async def test_concurrent_upload_cap(rig: JointRig):
+    """Concurrent upload cap by trying to create a new FileUpload when the current
+    file count is below the limit and at the limit.
+    """
+    limit = rig.config.max_concurrent_uploads_per_box
+    box_id = await rig.controller.create_file_upload_box(
+        storage_alias="test", max_size=TEST_MAX_BOX_SIZE
+    )
+    # Use all of our in-flight quota
+    for i in range(limit):
+        _ = await rig.controller.initiate_file_upload(
+            box_id=box_id,
+            alias=f"existing_{i}",
+            decrypted_size=1,
+            encrypted_size=1,
+            part_size=PART_SIZE,
+        )
+
+    # Trigger the new error by trying to start another upload
+    with pytest.raises(UploadControllerPort.TooManyOpenUploadsError):
+        _ = await rig.controller.initiate_file_upload(
+            box_id=box_id,
+            alias="new_file",
+            decrypted_size=1,
+            encrypted_size=1,
+            part_size=PART_SIZE,
+        )
+
+    # Now complete a file to free up a slot
+    await rig.controller.complete_file_upload(
+        box_id=box_id,
+        file_id=rig.file_upload_dao.latest.id,
+        unencrypted_checksum="abc",
+        encrypted_checksum=f"etag_for_{rig.file_upload_dao.latest.object_id}",
+        encrypted_parts_md5=["a1", "b2"],
+        encrypted_parts_sha256=["a1", "b2"],
+    )
+
+    # Test that we can now upload a file again
+    _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="new_file",
+        decrypted_size=1,
+        encrypted_size=1,
+        part_size=PART_SIZE,
+    )
+
+    # And finally check that crossing the limit once again triggers the error
+    # Trigger the new error by trying to start another upload
+    with pytest.raises(UploadControllerPort.TooManyOpenUploadsError):
+        _ = await rig.controller.initiate_file_upload(
+            box_id=box_id,
+            alias="new_file",
+            decrypted_size=1,
+            encrypted_size=1,
+            part_size=PART_SIZE,
+        )
+
+
 def _make_matching_event(file_upload: FileUpload) -> FileInternallyRegistered:
     """Create a FileInternallyRegistered event that matches the given FileUpload."""
     return FileInternallyRegistered(

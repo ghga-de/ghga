@@ -265,12 +265,25 @@ class UploadController(UploadControllerPort):
         extra["storage_alias"] = storage_alias
         extra["bucket_id"] = bucket_id
 
+        # Get both box size + in progress size and the number of in progress files
         current_size = box.size
+        in_progress_count = 0
         async for upload in self._file_upload_dao.find_all(
             mapping={"box_id": box.id, "state": "init"}
         ):
             current_size += upload.decrypted_size
+            in_progress_count += 1
 
+        # Ensure that another upload is allowed at the moment
+        max_concurrent = self._config.max_concurrent_uploads_per_box
+        if in_progress_count >= max_concurrent:
+            error = self.TooManyOpenUploadsError(
+                box_id=box.id, max_concurrent=max_concurrent
+            )
+            log.error(error, extra=extra)
+            raise error
+
+        # Ensure file size doesn't exceed box limit
         if current_size + decrypted_size > box.max_size:
             error = self.BoxMaxSizeExceededError(
                 box_id=box.id, max_size=box.max_size, current_size=current_size

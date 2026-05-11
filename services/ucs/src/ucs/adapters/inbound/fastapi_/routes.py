@@ -132,6 +132,14 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpMaxSizeTooLowError.get_body_model(),
     },
+    "tooManyOpenUploads": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- tooManyOpenUploads: The box already has the maximum number"
+            + " of concurrent in-progress uploads."
+        ),
+        "model": http_exceptions.HttpTooManyOpenUploadsError.get_body_model(),
+    },
 }
 
 # For the update_box endpoint, map the work type required to change to a given box state
@@ -315,6 +323,7 @@ async def get_box_uploads(
         | ERROR_RESPONSES["fileUploadAlreadyExists"]
         | ERROR_RESPONSES["orphanedMultipartUpload"],
         status.HTTP_507_INSUFFICIENT_STORAGE: ERROR_RESPONSES["boxMaxSizeExceeded"],
+        status.HTTP_429_TOO_MANY_REQUESTS: ERROR_RESPONSES["tooManyOpenUploads"],
     },
 )
 @TRACER.start_as_current_span("routes.create_file_upload")
@@ -360,6 +369,11 @@ async def create_file_upload(
             max_size=error.max_size,
             current_size=error.current_size,
             file_alias=file_alias,
+        ) from error
+    except UploadControllerPort.TooManyOpenUploadsError as error:
+        raise http_exceptions.HttpTooManyOpenUploadsError(
+            box_id=box_id,
+            max_concurrent=error.max_concurrent,
         ) from error
     except UploadControllerPort.FileUploadAlreadyExists as error:
         raise http_exceptions.HttpFileUploadAlreadyExistsError(

@@ -307,6 +307,35 @@ class HttpBoxMaxSizeExceededError(HttpCustomExceptionBase):
         )
 
 
+class HttpTooManyOpenUploadsError(HttpCustomExceptionBase):
+    """Thrown when a box already has the maximum number of concurrent in-progress uploads."""
+
+    exception_id = "tooManyOpenUploads"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        box_id: UUID4
+        max_concurrent: int
+
+    def __init__(
+        self,
+        *,
+        box_id: UUID4,
+        max_concurrent: int,
+        status_code: int = 429,
+    ):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=(
+                f"Box {box_id} already has {max_concurrent} in-progress upload(s)."
+                " Cancel or complete an existing upload before starting another."
+            ),
+            data={"box_id": str(box_id), "max_concurrent": max_concurrent},
+        )
+
+
 class HttpNotAuthorizedError(HttpCustomExceptionBase):
     """Thrown when the user is not authorized to perform the requested action."""
 

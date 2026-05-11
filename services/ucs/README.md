@@ -612,6 +612,8 @@ The service requires the following configuration parameters:
   ```
 
 
+- <a id="properties/max_concurrent_uploads_per_box"></a>**`max_concurrent_uploads_per_box`** *(integer)*: Maximum number of in-progress FileUploads allowed per box at any one time. When a new upload would exceed this count, the request is rejected with 429 Too Many Requests. Exclusive minimum: `0`. Default: `5`.
+
 ## Definitions
 
 

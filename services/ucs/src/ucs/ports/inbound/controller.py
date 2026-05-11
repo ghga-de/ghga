@@ -141,6 +141,17 @@ class UploadControllerPort(ABC):
             )
             super().__init__(msg)
 
+    class TooManyOpenUploadsError(UploadError):
+        """Raised when a box already has the configured maximum number of in-progress uploads."""
+
+        def __init__(self, *, box_id: UUID4, max_concurrent: int):
+            self.max_concurrent = max_concurrent
+            msg = (
+                f"Box {box_id} already has {max_concurrent} in-progress upload(s)."
+                " Cancel or complete an existing upload before starting another."
+            )
+            super().__init__(msg)
+
     class FileUploadAlreadyExists(UploadError):
         """Raised when a FileUpload can't be created for a given box ID and file alias
         because one already exists.
@@ -205,6 +216,7 @@ class UploadControllerPort(ABC):
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
         - `BoxMaxSizeExceededError` if adding the file would exceed the box's size limit.
+        - `TooManyOpenUploadsError` if the box is already at the concurrent upload limit.
         - `FileUploadAlreadyExists` if there's already a FileUpload for this alias.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAlreadyInProgressError` if an upload is already in progress.

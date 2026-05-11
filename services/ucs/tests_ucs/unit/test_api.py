@@ -537,6 +537,14 @@ async def test_view_box_endpoint_error_handling(
                 file_alias="test_file",
             ),
         ),
+        (
+            UploadControllerPort.TooManyOpenUploadsError(
+                box_id=TEST_BOX_ID, max_concurrent=3
+            ),
+            http_exceptions.HttpTooManyOpenUploadsError(
+                box_id=TEST_BOX_ID, max_concurrent=3
+            ),
+        ),
     ],
     ids=[
         "BoxNotFound",
@@ -546,6 +554,7 @@ async def test_view_box_endpoint_error_handling(
         "UploadAlreadyInProgressError",
         "InternalError",
         "BoxMaxSizeExceededError",
+        "TooManyOpenUploadsError",
     ],
 )
 async def test_create_file_upload_endpoint_error_handling(

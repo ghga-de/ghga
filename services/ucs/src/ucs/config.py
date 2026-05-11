@@ -23,6 +23,7 @@ from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
+from pydantic import Field, PositiveInt
 from pydantic_settings import BaseSettings
 
 from ucs.adapters.inbound.event_sub import EventSubConfig
@@ -52,3 +53,11 @@ class Config(
     """Config parameters and their defaults."""
 
     service_name: str = SERVICE_NAME
+    max_concurrent_uploads_per_box: PositiveInt = Field(
+        default=5,
+        description=(
+            "Maximum number of in-progress FileUploads allowed per box"
+            " at any one time. When a new upload would exceed this count, the request is"
+            " rejected with 429 Too Many Requests."
+        ),
+    )

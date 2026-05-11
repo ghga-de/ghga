@@ -36,6 +36,7 @@ kafka_ssl_password: ''
 log_format: null
 log_level: INFO
 log_traceback: true
+max_concurrent_uploads_per_box: 5
 migration_max_wait_sec: null
 migration_wait_sec: 10
 mongo_dsn: '**********'
