@@ -68,9 +68,9 @@ The flag defaults to `false`, preserving backwards compatibility with all existi
 
 When validating a datapack against a schema with `global_unique_ids: true`:
 
-1. Collect all resource IDs across all classes into a single flat list.
-2. Detect duplicates.
-3. If any ID appears in more than one class, raise a validation error that names the conflicting ID and every class in which it appears.
+1. Build a dict `{resource_id: [class_name, ...]}` by iterating over every class and appending the class name to the list for each of its resource IDs.
+2. Filter the dict for entries whose list has more than one element — these are the collisions.
+3. For each collision, raise a validation error that names the conflicting resource ID and every class in which it appears.
 
 ##### 1.2. Serialization fix (frozen dicts / circular reference)
 
