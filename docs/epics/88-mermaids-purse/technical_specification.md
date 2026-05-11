@@ -13,34 +13,39 @@ Epic planning and implementation follow the
 
 This epic delivers four related improvements to the schemapack/metldata ecosystem and the em-transformation-service:
 
-1. **Schemapack GUID support** — an opt-in `global_unique_ids` flag ensures resource IDs are unique across all classes in a datapack.
-2. **Metldata transformation additions** — the `duplicate_class` transformation is retained but updated to raise an error when the input schema enforces globally unique IDs, since duplicating a class would produce ID collisions; the new `add_class` transformation is added to support building aggregate transformation workflows.
-3. **Metldata workflow runner API** — the internal `TransformationHandler` loop is encapsulated behind a clean `WorkflowRunner` public class that separates model derivation from data transformation, eliminating the API leakage that currently forces third-party services to manage low-level transformation details.
-4. **em-transformation-service updates** — the service adopts `WorkflowRunner` to replace its manual transformation loop, and its aggregate workflow configuration is rewritten using the new GUID-compatible transformations.
+1. **Schemapack GUID support** — an opt-in `global_unique_ids` flag in the schemapack schema enforces globally unique resource IDs across all classes in validated datapacks. 
+2. **Metldata transformation additions** — the `duplicate_class` transformation is retained but updated to raise an error when the input schema enforces globally unique IDs, since duplicating a class would produce ID collisions; the new `add_class` transformation is added to support building aggregate stats transformation workflow.
+3. **Metldata implement aggregate stats workflow** - aggregate stats workflow is rewritten using the new GUID-compatible transformations.
+4. **Metldata workflow runner API** — the internal `TransformationHandler` loop is encapsulated behind a clean `WorkflowRunner` public class that separates model derivation from data transformation, eliminating the API leakage that currently forces third-party services to manage low-level transformation details.
+5. Changes to the **GHGA metadata schema** (schemapack branch) to reflect the new design where `Publication` is not a separate class but embedded in `Study` content.
+6. Forking and releasing jsonsubschema with a bug fix to support enum values with regex metacharacters, which currently causes incorrect validation results against the GHGA metadata schema.
+7. **em-transformation-service updates** — the service adopts `WorkflowRunner` to replace its manual transformation loop.
 
 ### Terminology
 
 `Global Unique ID (GUID)`: A resource identifier that is unique not just within a single class but across all classes in a schemapack schema. GHGA accessions are an example: every Study, Sample, Dataset, etc. receives a globally unique accession.
 
-`Model Derivation`: Running a workflow's transformation steps on an input schema to compute the output schema. This is done at configuration/startup time, once, independently of any data.
+`Model Derivation`: Running a workflow's transformation steps on an input schema to compute the output schema. 
 
-`Data Transformation`: Running a workflow's transformation steps on a datapack to produce a transformed datapack. This is done at runtime, once per incoming datapack.
+`Data Transformation`: Running a workflow's transformation steps on a datapack to produce a transformed datapack.
 
-`Transformation Registry`: A mapping from transformation names (strings) to their `TransformationDefinition` objects. It is the authoritative lookup table used when resolving workflow step names to executable transformations.
+`Transformation Registry`: A mapping from transformation names to their `TransformationDefinition` objects. It is the authoritative lookup table used when resolving workflow step names to executable transformations.
 
 `WorkflowRunner`: The new high-level public class in metldata that executes a workflow. It exposes `transform_model` and `transform_data` as independent operations, hiding the internal `TransformationHandler` loop.
 
-`Aggregate Workflow`: A metldata workflow that produces differently-structured representation of an ingress schema — for example, transforming a relational Experimental Metadata Ingress Model (EMIM) into a Universal Discovery Model (UDM). Requires the ability to introduce new classes (`add_class`) in addition to the existing content-and-relation transformations.
+`Aggregate Stats Workflow`: A GHGA-specific metldata workflow that produces another representation of the GHGA ingress model that is optimised for aggregate statistics queries. 
 
 `Universal Discovery Model (UDM)`: The common target schema to which all EMIMs are transformed, serving as the basis for data queries and data display in the GHGA Data Portal.
 
 ### Included/Required
 
-#### 1. Schemapack: Global Unique ID Support
+#### 1. SchemaPack
+
+##### 1.1. Global Unique ID Support
 
 Schemapack shall support an opt-in `global_unique_ids` boolean flag at the schema level. When `true`, every resource ID across every class in a conforming datapack must be unique.
 
-##### Schema definition
+**Schema definition**
 
 ```yaml
 schemapack: 5.0.0
@@ -59,7 +64,7 @@ classes:
 
 The flag defaults to `false`, preserving backwards compatibility with all existing schemapacks and datapacks.
 
-##### Datapack validation
+**Datapack validation**
 
 When validating a datapack against a schema with `global_unique_ids: true`:
 
@@ -67,21 +72,27 @@ When validating a datapack against a schema with `global_unique_ids: true`:
 2. Detect duplicates.
 3. If any ID appears in more than one class, raise a validation error that names the conflicting ID and every class in which it appears.
 
-##### Serialization fix (frozen dicts / circular reference)
+##### 1.2. Serialization fix (frozen dicts / circular reference)
 
 Schemapack's serialization of `DataPack` objects (which use frozen dicts internally) currently triggers `ValueError: Circular reference detected (id repeated)` in naive client code. The fix shall be applied inside schemapack so that client code requires no workarounds.
 
-#### 2. Metldata: `duplicate_class` Compatibility with Global Unique IDs
+#### 2. Metldata 
 
-The `duplicate_class` transformation shall be retained without a per-step model-assumption check for `global_unique_ids`. Adding such a check at the `duplicate_class` step would be too strict: a workflow that duplicates a class and then deletes it in a later step produces no ID collision in the final output, yet a per-step check would reject it.
+##### 2.1 `duplicate_class` Compatibility with Global Unique IDs
 
-This is consistent with the existing metldata behaviour: when the no-intermediate-validation flag is set, model compatibility is not enforced after every step — only at the workflow boundaries. The `global_unique_ids` uniqueness constraint follows the same rule: it is enforced only at **workflow output validation** (the final step), not during intermediate steps. If the output schema of a workflow still has `global_unique_ids: true` and the output datapack contains duplicate IDs across classes, the post-workflow validation raises an error at that point.
+This section does not include any changes to `duplicate_class` itself, which continues to function as it currently does. It only clarifies how the presence of `global_unique_ids` in the schema affects the validation of workflow outputs that use `duplicate_class`.
 
-#### 3. Metldata: `add_class` Transformation
+The `duplicate_class` transformation shall be retained in the transformation registry; the `global_unique_ids` constraint does not conflict with its presence. There are two scenarios to consider:
+1. The schema does not have `global_unique_ids` set. The `duplicate_class` transformation works as it currently does, with no issues.
+2. The schema has `global_unique_ids: true`. If a workflow duplicates a class and later deletes it, the final output contains no ID collision. Transient ID collisions introduced by `duplicate_class` within a workflow are permitted — the `global_unique_ids` constraint is enforced only on the final workflow output, not on intermediate steps.
+
+The second scenario is consistent with the existing metldata behaviour: when the no-intermediate-validation flag is set, model compatibility is not enforced after every step — only at the workflow boundaries. The `global_unique_ids` uniqueness constraint follows the same rule: it is enforced only at **workflow output validation** (the final step), not during intermediate steps. If the output schema of a workflow still has `global_unique_ids: true` and the output datapack contains duplicate IDs across classes, the post-workflow validation raises an error at that point.
+
+##### 2.2. `add_class` Transformation
 
 A new `add_class` transformation creates an empty class in the schema. It does not copy or duplicate any existing class. The new class has no resources in the datapack initially; downstream transformation steps are responsible for populating it.
 
-##### Configuration model
+**Configuration model**
 
 ```python
 class RelationDefinition(BaseModel):
@@ -96,27 +107,28 @@ class AddClassConfig(BaseModel):
     class_name: str                                    # PascalCase; must not already exist in the schema
     id_property_name: str                              # the property used as the resource ID
     content_schema: dict                               # a valid JSON Schema object for the class content
-    relations: dict[str, RelationDefinition] | None = None  # optional; default no relations
+    relations: dict[str, RelationDefinition] = Field(default_factory=dict)
     description: str | None = None
 ```
 
 Relations are declared at class-creation time when they are known upfront. Each key is the relation name (snake_case); the value specifies the target class and multiplicity/mandatory flags matching the schemapack relation definition format. All referenced target classes must already exist in the schema — `add_class` raises `ModelAssumptionError` if any target class is missing.
 
-**How to populate this newly added class and the relations are a question mark. 
-**
-##### Model transformation
+**Open question:** How will the newly added class and its relations be populated?
+
+
+**Model transformation**
 
 - Add the new `ClassDefinition` (with content schema and any declared relations) to the schemapack.
 - Raise `ModelAssumptionError` if a class with `class_name` already exists.
 - Raise `ModelAssumptionError` if any `target_class` in `relations` does not exist in the schema.
 
-##### Data transformation
+**Data transformation**
 
 How will we populate the data for the newly added class? 
 
-#### 4. Metldata: `WorkflowRunner` — Separated Model and Data Transformation
+##### 2.3. `WorkflowRunner` — Separated Model and Data Transformation
 
-##### Problem
+**Problem**
 
 Third-party services that use metldata to run transformation workflows (e.g., em-transformation-service) currently interact with `TransformationHandler` directly:
 
@@ -136,7 +148,7 @@ for step in workflow.workflow.operations:
 
 This couples model derivation and data transformation into one loop. The em-transformation-service needs them separate: it derives all output schemas once at startup, then transforms datapacks individually at runtime. The existing `WorkflowHandler.run()` does not support this split either.
 
-##### Solution: `WorkflowRunner`
+**Solution: `WorkflowRunner`**
 
 ```python
 class WorkflowRunner:
@@ -213,14 +225,37 @@ def validate_workflow(
 
 `WorkflowRunner` shall be importable from `metldata.workflow.runner`. The existing `WorkflowHandler` and `TransformationHandler` remain available internally but are not part of the public API.
 
-#### 5. GHGA Metadata Schema (schemapack branch): Publication as Study Content
+
+
+##### 2.4. Aggregate Stats Workflow Integration Test
+
+An end-to-end integration test shall be added to metldata that exercises all the new capabilities introduced in this epic together: a `global_unique_ids` input schema, `add_class`, `duplicate_class` failing correctly on such a schema, and `WorkflowRunner` running model derivation and data transformation separately.
+
+The test uses a representative aggregate stats workflow and verifies `global_unique_ids: true` The input schemapack has the flag set; validation correctly rejects datapacks with duplicate IDs across classes.
+
+
+##### 2.5. Performance Benchmark of the Aggregate Stats Workflow
+
+A performance benchmark shall be run against the full EMIM → aggregate stats workflow using the Epignostix dataset as a representative real-world input. The benchmark will be done via cProfile library. The goal is to establish a baseline transformation time before the workflow is deployed to production.
+
+Results are recorded and attached to the epic. They inform whether any transformation steps are unexpectedly slow and whether further optimisation is needed before shipping. If any single step accounts for a disproportionate share of the total time, it is flagged for investigation.
+
+
+
+#### 3. GHGA Metadata Schema (schemapack branch)
+
+##### 3.1. Publication as Study Content
 
 In the LinkML-based GHGA metadata schema, `Publication` is a first-class entity with its own class and a `study` relation pointing back to `Study`. In the schemapack-based revision of the GHGA metadata schema, this design is changed: **`Publication` is not modelled as a separate class**. Instead, publication data is embedded directly in the `Study` content schema as an inline array of publication objects.
 
 The `Study` content schema shall include a `publications` property containing an array of objects with the relevant publication fields (e.g., `doi`, `title`, `abstract`, `author`, `year`, `journal`, `xref`). There is no `Publication` class and no `study` relation on a publication resource.
 
+##### 3.2. Updating schema dependencies based on the change
 
-#### 6. em-transformation-service: Adopt `WorkflowRunner`
+Moving the Publication class under Study content has implications for the ghga-transpiler library and the metadata-schema schemapack branch's generate_xlsx.py script. Both need to be updated to reflect the new schema structure.
+
+
+#### 4. em-transformation-service: Adopt `WorkflowRunner`
 
 The em-transformation-service currently drives workflow execution by manually iterating over transformation steps and managing `TransformationHandler` instances directly. This must be replaced with `WorkflowRunner` once it is available.
 
@@ -230,23 +265,8 @@ The em-transformation-service currently drives workflow execution by manually it
 
 After the change, the service no longer imports `TransformationHandler`, manages intermediate schema state, or resolves transformation names from the registry directly. A `WorkflowRunner` instance is constructed once per route at config-validation time and reused for every data transformation on that route.
 
-#### 7. Metldata: Aggregate Workflow Integration Test
 
-An end-to-end integration test shall be added to metldata that exercises all the new capabilities introduced in this epic together: a `global_unique_ids` input schema, `add_class`, `duplicate_class` failing correctly on such a schema, and `WorkflowRunner` running model derivation and data transformation separately.
-
-The test uses a representative aggregate workflow — modelled on the EMIM → UDM transformation — and verifies:
-
-- **`global_unique_ids: true` schema.** The input schemapack has the flag set; validation correctly rejects datapacks with duplicate IDs across classes.
-
-
-#### 8. Metldata: Performance Benchmark of the Aggregate Workflow
-
-A performance benchmark shall be run against the full EMIM → UDM aggregate workflow using the Epignostix dataset as a representative real-world input. The goal is to establish a baseline transformation time before the workflow is deployed to production.
-
-Results are recorded and attached to the epic. They inform whether any transformation steps are unexpectedly slow and whether further optimisation is needed before shipping. If any single step accounts for a disproportionate share of the total time, it is flagged for investigation.
-
-
-#### 9. Metldata: Fix `jsonsubschema` Enum Regex Bug
+#### 5. `jsonsubschema` Enum Bug Fix
 
 Metldata depends on the `jsonsubschema` library (IBM) for JSON Schema subset validation. The library is not actively maintained and contains a known bug: in `_canonicalization.py`, enum values are converted to regex patterns using bare string concatenation (`"^" + str(x) + "$"`) without escaping regex metacharacters. Any enum value containing a special character such as `^`, `*`, `+`, or `.` is therefore misinterpreted as a regex operator, causing incorrect validation results.
 
@@ -263,7 +283,7 @@ Concretely:
 5. Identify the specific GHGA CV value that triggers the bug and add a regression test to metldata that fails without the fix and passes with it.
 
 
-**Another issue with the library.** The library only supports JSON Schema draft 4. The GHGA metadata schema declares `$schema: https://json-schema.org/draft/2019-09/schema`. Keywords introduced after draft 4 (e.g., `$defs`, `unevaluatedProperties`) are silently ignored or mishandled, making subset validation unreliable for schemas that use draft 2019-09 features. Will we tackle this issue somehow? or will we fix the version to draft 4 in our content schemas? 
+**Another issue with the library.** The library only supports JSON Schema draft 4. The GHGA metadata schema declares `$schema: https://json-schema.org/draft/2019-09/schema`. Keywords introduced after draft 4 (e.g., `$defs`, `unevaluatedProperties`) are silently ignored or mishandled, making subset validation unreliable for schemas that use draft 2019-09 features. We will not tackle this in the scope of this epic. But it is something to consider for the future usage of that library. 
 
 ## User Journeys
 
@@ -274,7 +294,7 @@ Concretely:
 2. When they run `schemapack validate` against a conforming datapack, validation succeeds only if all resource IDs are distinct across all classes.
 3. If a collision is present — e.g., the Study `GHGAS00001` and a Sample also named `GHGAS00001` — validation fails with a clear error naming the conflicting ID and the two classes that claim it.
 
-### Journey 2: Workflow Author Builds an Aggregate Workflow with `add_class`
+### Journey 2: Workflow Author Builds an Aggregate Stats Workflow with `add_class`
 
 1. A transformation workflow author is designing the EMIM → UDM workflow.
 2. The UDM requires a derived class that has no direct counterpart in the EMIM and must be constructed from content spread across existing EMIM classes.
@@ -307,6 +327,8 @@ Concretely:
 ### Not included
 
 - A `add_relation` or `delete_relation` transformation — not required for the current aggregate workflow. (or is it?)
+- jsonsubschema library upgrade to a version that supports JSON Schema draft 2019-09 or later. 
+
 
 ## Human Resource/Time Estimation
 
