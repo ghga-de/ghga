@@ -450,6 +450,41 @@ class UploadController(UploadControllerPort):
             log.error(error, extra=extra)
             raise error
 
+    async def _verify_object_size(self, *, file_upload: FileUpload) -> None:
+        """Verify that the S3 object size matches the declared encrypted_size.
+
+        If the sizes don't match, marks the FileUpload as failed and raises
+        UploadSizeMismatchError.
+        """
+        file_id = file_upload.id
+        object_id = file_upload.object_id
+        try:
+            actual_size = await self._s3_client.get_object_size(
+                file_upload=file_upload, object_id=object_id
+            )
+        except S3ClientPort.UnknownStorageAliasError as err:
+            raise self.UnknownStorageAliasError(
+                storage_alias=file_upload.storage_alias
+            ) from err
+
+        if actual_size != file_upload.encrypted_size:
+            file_upload.state = "failed"
+            file_upload.state_updated = now_utc_ms_prec()
+            file_upload.failure_reason = "Actual object size didn't match expected size"
+            await self._file_upload_dao.update(file_upload)
+            error = self.UploadSizeMismatchError(file_id=file_id)
+            log.error(
+                error,
+                extra={
+                    "bucket_id": file_upload.bucket_id,
+                    "file_id": file_id,
+                    "object_id": object_id,
+                    "expected_size": file_upload.encrypted_size,
+                    "actual_size": actual_size,
+                },
+            )
+            raise error
+
     async def complete_file_upload(  # noqa: PLR0913
         self,
         *,
@@ -471,6 +506,7 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
+        - `UploadSizeMismatchError` if the object size doesn't match the declared encrypted_size.
         - `ChecksumMismatchError` if the checksums don't match.
         """
         # Get the FileUploadBox instance and verify that it is unlocked
@@ -509,6 +545,9 @@ class UploadController(UploadControllerPort):
             file_upload=file_upload,
             expected_checksum=encrypted_checksum,
         )
+
+        # Verify that the actual object size matches the declared encrypted_size
+        await self._verify_object_size(file_upload=file_upload)
 
         # Update local collections now that S3 upload is successfully completed
         file_upload.state = "inbox"

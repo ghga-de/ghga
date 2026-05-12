@@ -234,6 +234,28 @@ class HttpChecksumMismatchError(HttpCustomExceptionBase):
         )
 
 
+class HttpUploadSizeMismatchError(HttpCustomExceptionBase):
+    """Thrown when the actual uploaded object size doesn't match the declared encrypted_size."""
+
+    exception_id = "uploadSizeMismatch"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        file_id: UUID4
+
+    def __init__(self, *, file_id: UUID4, status_code: int = 400):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=(
+                f"The actual size of the uploaded object for file {file_id}"
+                + " doesn't match the declared encrypted_size."
+            ),
+            data={"file_id": str(file_id)},
+        )
+
+
 class HttpMaxSizeTooLowError(HttpCustomExceptionBase):
     """Thrown when the requested max_size is less than the box's current committed size."""
 

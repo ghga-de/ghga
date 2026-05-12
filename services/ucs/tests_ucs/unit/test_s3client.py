@@ -169,6 +169,21 @@ async def test_get_object_etag(s3_client: S3ClientPort):
     assert etag == f"etag_for_{file_upload.object_id}"
 
 
+async def test_get_object_size(s3_client: S3ClientPort):
+    """Test that the size of a completed upload is returned."""
+    file_upload = make_file_upload()
+    upload_id = await s3_client.init_multipart_upload(
+        file_upload_basics=_to_basics(file_upload)
+    )
+    file_upload = file_upload.model_copy(update={"s3_upload_id": upload_id})
+    await s3_client.complete_multipart_upload(file_upload=file_upload)
+
+    size = await s3_client.get_object_size(
+        file_upload=file_upload, object_id=file_upload.object_id
+    )
+    assert size == 1024  # the dummy value returned by the InMem S3 fixture
+
+
 async def test_delete_inbox_file_completed(
     s3_client: S3ClientPort, object_storages: ObjectStorages
 ):
@@ -268,6 +283,11 @@ async def test_unknown_storage_alias_raises_error(s3_client: S3ClientPort):
 
     with pytest.raises(S3ClientPort.UnknownStorageAliasError):
         await s3_client.get_object_etag(
+            file_upload=file_upload, object_id=file_upload.object_id
+        )
+
+    with pytest.raises(S3ClientPort.UnknownStorageAliasError):
+        await s3_client.get_object_size(
             file_upload=file_upload, object_id=file_upload.object_id
         )
 

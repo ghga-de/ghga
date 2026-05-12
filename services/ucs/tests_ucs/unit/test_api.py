@@ -717,6 +717,10 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
                 box_id=TEST_BOX_ID, file_id=TEST_FILE_ID
             ),
         ),
+        (
+            UploadControllerPort.UploadSizeMismatchError(file_id=TEST_FILE_ID),
+            http_exceptions.HttpUploadSizeMismatchError(file_id=TEST_FILE_ID),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
     ids=[
@@ -724,10 +728,11 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
         "LockedBox",
         "FileUploadNotFound",
         "UploadCompletionError",
+        "UploadSizeMismatchError",
         "InternalError",
     ],
 )
-async def test_complete_file_upload_endpoint_error_handling(
+async def test_complete_file_upload_endpoint_error_translation(
     config: ConfigFixture,
     core_error: Exception,
     http_error: Exception,

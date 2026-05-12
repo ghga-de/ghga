@@ -35,7 +35,9 @@ from ucs.constants import FILE_UPLOADS_COLLECTION
 from ucs.ports.inbound.controller import UploadControllerPort
 
 pytestmark = pytest.mark.asyncio()
-CONTENT = "a" * 1024
+CONTENT = "a" * 10 * 1024 * 1024  # 10 MiB
+ENCRYPTED_SIZE = len(CONTENT)
+DECRYPTED_SIZE = ENCRYPTED_SIZE - 124
 
 
 def calc_expected_encrypted_checksum(content: str) -> str:
@@ -92,12 +94,10 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         }, "Payload was wrong for new file upload box event"
 
         # Make the temp test file
-        temp_file.write(("abcdefghij" * (1024 * 1024)).encode())
+        temp_file.write(CONTENT.encode())
         temp_file.flush()
 
-        expected_encrypted_checksum = calc_expected_encrypted_checksum(
-            "abcdefghij" * (1024 * 1024)
-        )
+        expected_encrypted_checksum = calc_expected_encrypted_checksum(CONTENT)
 
         # Create a FileUpload
         async with kafka.record_events(
@@ -108,8 +108,8 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             )
             file_creation_body = {
                 "alias": "test_file",
-                "decrypted_size": utils.DECRYPTED_SIZE,
-                "encrypted_size": utils.ENCRYPTED_SIZE,
+                "decrypted_size": DECRYPTED_SIZE,
+                "encrypted_size": ENCRYPTED_SIZE,
                 "part_size": utils.PART_SIZE,
             }
             response = await rest_client.post(
@@ -243,8 +243,8 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
             alias="test-file",
-            decrypted_size=utils.DECRYPTED_SIZE,
-            encrypted_size=utils.ENCRYPTED_SIZE,
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
             part_size=utils.PART_SIZE,
         )
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
@@ -311,8 +311,8 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
             alias="test-file",
-            decrypted_size=utils.DECRYPTED_SIZE,
-            encrypted_size=utils.ENCRYPTED_SIZE,
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
             part_size=utils.PART_SIZE,
         )
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
@@ -368,8 +368,8 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     )
     body = {
         "alias": "test-file",
-        "decrypted_size": utils.DECRYPTED_SIZE,
-        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "decrypted_size": DECRYPTED_SIZE,
+        "encrypted_size": ENCRYPTED_SIZE,
         "part_size": utils.PART_SIZE,
     }
     response = await rest_client.post(
@@ -457,8 +457,8 @@ async def test_orphaned_s3_upload_in_file_create(joint_fixture: JointFixture, ca
     )
     body = {
         "alias": "test-file",
-        "decrypted_size": utils.DECRYPTED_SIZE,
-        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "decrypted_size": DECRYPTED_SIZE,
+        "encrypted_size": ENCRYPTED_SIZE,
         "part_size": utils.PART_SIZE,
     }
     with (
@@ -506,16 +506,16 @@ async def test_file_upload_index(joint_fixture: JointFixture, monkeypatch):
         _ = await joint_fixture.upload_controller.initiate_file_upload(
             box_id=box_id,
             alias="file1",
-            decrypted_size=utils.DECRYPTED_SIZE,
-            encrypted_size=utils.ENCRYPTED_SIZE,
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
             part_size=utils.PART_SIZE,
         )
         with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
             _ = await joint_fixture.upload_controller.initiate_file_upload(
                 box_id=box_id,
                 alias="file1",
-                decrypted_size=utils.DECRYPTED_SIZE,
-                encrypted_size=utils.ENCRYPTED_SIZE,
+                decrypted_size=DECRYPTED_SIZE,
+                encrypted_size=ENCRYPTED_SIZE,
                 part_size=utils.PART_SIZE,
             )
 
@@ -540,8 +540,8 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
             alias="test-file",
-            decrypted_size=utils.DECRYPTED_SIZE,
-            encrypted_size=utils.ENCRYPTED_SIZE,
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
             part_size=utils.PART_SIZE,
         )
 
@@ -597,7 +597,7 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
         interrogated_at=now_utc_ms_prec(),
         encrypted_parts_md5=["abc123"],
         encrypted_parts_sha256=["def456"],
-        encrypted_size=utils.ENCRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
     )
 
     # Put an object into the interrogation bucket to simulated DHFS's work
@@ -682,8 +682,8 @@ async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
             alias="test-file",
-            decrypted_size=utils.DECRYPTED_SIZE,
-            encrypted_size=utils.ENCRYPTED_SIZE,
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
             part_size=utils.PART_SIZE,
         )
 

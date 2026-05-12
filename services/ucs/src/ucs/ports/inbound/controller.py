@@ -208,6 +208,16 @@ class UploadControllerPort(ABC):
             )
             super().__init__(msg)
 
+    class UploadSizeMismatchError(RuntimeError):
+        """Raised when the actual S3 object size doesn't match the declared encrypted_size."""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = (
+                f"The actual size of the uploaded object for file {file_id}"
+                + " doesn't match the declared encrypted_size."
+            )
+            super().__init__(msg)
+
     @abstractmethod
     async def initiate_file_upload(
         self,

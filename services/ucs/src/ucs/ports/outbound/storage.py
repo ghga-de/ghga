@@ -142,6 +142,16 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
+    async def get_object_size(
+        self, *, file_upload: FileUpload, object_id: UUID4
+    ) -> int:
+        """Return the size in bytes of an object in the inbox bucket.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+        """
+
+    @abstractmethod
     async def abort_multipart_upload(self, *, file_upload: FileUpload) -> None:
         """Abort an in-progress multipart upload. Tolerates a missing upload.
 

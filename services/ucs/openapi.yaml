@@ -392,36 +392,6 @@ components:
       - box_state
       title: HttpBoxStateErrorData
       type: object
-    HttpChecksumMismatchError:
-      additionalProperties: false
-      properties:
-        data:
-          $ref: '#/components/schemas/HttpChecksumMismatchErrorData'
-        description:
-          description: A human readable message to the client explaining the cause
-            of the exception.
-          title: Description
-          type: string
-        exception_id:
-          const: checksumMismatch
-          title: Exception Id
-          type: string
-      required:
-      - data
-      - description
-      - exception_id
-      title: HttpChecksumMismatchError
-      type: object
-    HttpChecksumMismatchErrorData:
-      properties:
-        file_id:
-          format: uuid4
-          title: File Id
-          type: string
-      required:
-      - file_id
-      title: HttpChecksumMismatchErrorData
-      type: object
     HttpFileUploadNotFoundError:
       additionalProperties: false
       properties:
@@ -695,6 +665,36 @@ components:
       - box_id
       - file_id
       title: HttpUploadCompletionErrorData
+      type: object
+    HttpUploadSizeMismatchError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpUploadSizeMismatchErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: uploadSizeMismatch
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpUploadSizeMismatchError
+      type: object
+    HttpUploadSizeMismatchErrorData:
+      properties:
+        file_id:
+          format: uuid4
+          title: File Id
+          type: string
+      required:
+      - file_id
+      title: HttpUploadSizeMismatchErrorData
       type: object
     ValidationError:
       properties:
@@ -1094,11 +1094,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpChecksumMismatchError'
+                $ref: '#/components/schemas/HttpUploadSizeMismatchError'
           description: 'Exceptions by ID:
 
-            - checksumMismatch: The user-supplied encrypted checksum doesn''t match
-            S3.'
+            - uploadSizeMismatch: The actual object size doesn''t match the declared
+            encrypted_size.'
         '404':
           content:
             application/json:

@@ -117,6 +117,13 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpChecksumMismatchError.get_body_model(),
     },
+    "uploadSizeMismatch": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- uploadSizeMismatch: The actual object size doesn't match the declared encrypted_size."
+        ),
+        "model": http_exceptions.HttpUploadSizeMismatchError.get_body_model(),
+    },
     "boxMaxSizeExceeded": {
         "description": (
             "Exceptions by ID:"
@@ -469,7 +476,8 @@ async def get_part_upload_url(
     status_code=status.HTTP_204_NO_CONTENT,
     response_description="File upload completed successfully",
     responses={
-        status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["checksumMismatch"],
+        status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["checksumMismatch"]
+        | ERROR_RESPONSES["uploadSizeMismatch"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
         | ERROR_RESPONSES["fileUploadNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
@@ -521,6 +529,8 @@ async def complete_file_upload(
         ) from error
     except UploadControllerPort.ChecksumMismatchError as error:
         raise http_exceptions.HttpChecksumMismatchError(file_id=file_id) from error
+    except UploadControllerPort.UploadSizeMismatchError as error:
+        raise http_exceptions.HttpUploadSizeMismatchError(file_id=file_id) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error

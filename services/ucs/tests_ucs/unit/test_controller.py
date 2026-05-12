@@ -43,6 +43,8 @@ from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.core.models import FileUpload
 from ucs.ports.inbound.controller import UploadControllerPort
 
+MIN_SLEEP = 0.001
+
 pytestmark = pytest.mark.asyncio()
 
 
@@ -151,7 +153,7 @@ async def test_complete_file_upload(rig: JointRig):
     assert file_upload_box_dao.latest.file_count == 1
 
     # Now repeat the process to ensure the box stats are incremented, not overwritten
-    await sleep(0.1)
+    await sleep(MIN_SLEEP)
     other_decrypted_size = DECRYPTED_SIZE * 2  # this file is bigger
     other_encrypted_size = int(other_decrypted_size * 1.05)
     file_id2, _ = await controller.initiate_file_upload(
@@ -818,6 +820,56 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
     assert file_upload_box_dao.latest.file_count == 0
 
 
+async def test_complete_file_upload_size_mismatch(rig: JointRig):
+    """Test that UploadSizeMismatchError is raised and the FileUpload is marked 'failed'
+    when the actual S3 object size doesn't match the declared encrypted_size.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    file_upload = rig.file_upload_dao.latest
+    assert file_upload.state == "init"
+    state_updated = file_upload.state_updated
+
+    # Sleep so we can check for the timestamp difference
+    await sleep(MIN_SLEEP)
+
+    # Patch get_object_size to return a wrong size for this object
+    _, storage = rig.object_storages.for_alias("test")
+
+    async def wrong_size(*args, **kwargs):
+        return ENCRYPTED_SIZE + 1
+
+    storage.get_object_size = wrong_size
+
+    # Now try to complete the upload. Should get the UploadSizeMismatchError.
+    object_id = rig.file_upload_dao.latest.object_id
+    with pytest.raises(UploadControllerPort.UploadSizeMismatchError):
+        await rig.controller.complete_file_upload(
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="sha256:unencrypted_checksum_here",
+            encrypted_checksum=f"etag_for_{object_id}",
+            encrypted_parts_md5=["abc123"],
+            encrypted_parts_sha256=["def456"],
+        )
+
+    # Make sure the FileUpload attributes are updated
+    file_upload = rig.file_upload_dao.latest
+    assert file_upload.state == "failed"
+    assert file_upload.state_updated > state_updated
+    assert not file_upload.inbox_upload_completed
+    assert not file_upload.completed
+    assert rig.file_upload_box_dao.latest.size == 0
+    assert rig.file_upload_box_dao.latest.file_count == 0
+
+
 async def test_complete_file_upload_checksum_mismatch(rig: JointRig):
     """Test to make sure the FileUpload is marked as 'failed' if the UploadController
     raises a ChecksumMismatchError.
@@ -839,7 +891,7 @@ async def test_complete_file_upload_checksum_mismatch(rig: JointRig):
     assert file_upload.state == "init"
     state_updated = file_upload.state_updated
 
-    await sleep(0.1)  # short sleep for differentiating timestamps
+    await sleep(MIN_SLEEP)  # short sleep for differentiating timestamps
 
     # Provide a wrong checksum to trigger a ChecksumMismatchError
     with pytest.raises(UploadControllerPort.ChecksumMismatchError):
@@ -1344,14 +1396,14 @@ async def test_handle_internal_file_registration(rig: JointRig):
     # Now insert the FileUpload and run the event handling function
     await rig.file_upload_dao.insert(file_upload)
 
-    await sleep(0.1)  # sleep so that timestamp comparisons are valid
+    await sleep(MIN_SLEEP)  # sleep so that timestamp comparisons are valid
     await rig.controller.process_internal_file_registration(registration_metadata=event)
     updated_file_upload = await rig.file_upload_dao.get_by_id(file_upload.id)
     assert updated_file_upload.state == "archived"
     assert updated_file_upload.state_updated > file_upload.state_updated
 
     # Now reprocess the event - should get no errors and timestamp should be unchanged
-    await sleep(0.1)  # sleep so that timestamp comparisons are valid
+    await sleep(MIN_SLEEP)  # sleep so that timestamp comparisons are valid
     await rig.controller.process_internal_file_registration(registration_metadata=event)
     final_file_upload = await rig.file_upload_dao.get_by_id(file_upload.id)
     assert final_file_upload.state == "archived"
