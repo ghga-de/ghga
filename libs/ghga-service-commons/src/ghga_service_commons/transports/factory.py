@@ -40,10 +40,8 @@ class CompositeTransportFactory:
         If provided, a custom base_transport class is used and any limits are ignored.
         Those have to be provided directly to the custom base_transport passed into this method.
         """
-        base_transport = (
-            base_transport or AsyncHTTPTransport(limits=limits)
-            if limits
-            else AsyncHTTPTransport()
+        base_transport = base_transport or (
+            AsyncHTTPTransport(limits=limits) if limits else AsyncHTTPTransport()
         )
         ratelimiting_transport = AsyncRateLimitingTransport(
             config=config, transport=base_transport
