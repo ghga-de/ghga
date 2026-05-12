@@ -11,7 +11,7 @@ Epic planning and implementation follow the
 
 ### Outline
 
-This epic delivers four related improvements to the schemapack/metldata ecosystem and the em-transformation-service:
+This epic delivers seven related improvements to the schemapack/metldata ecosystem and the em-transformation-service:
 
 1. **Schemapack GUID support** — an opt-in `global_unique_ids` flag in the schemapack schema enforces globally unique resource IDs across all classes in validated datapacks. 
 2. **Metldata transformation additions** — the `duplicate_class` transformation is retained but updated to raise an error when the input schema enforces globally unique IDs, since duplicating a class would produce ID collisions; the new `add_class` transformation is added to support building aggregate stats transformation workflow.
@@ -76,9 +76,9 @@ When validating a datapack against a schema with `global_unique_ids: true`:
 
 Schemapack's serialization of `DataPack` objects (which use frozen dicts internally) currently triggers `ValueError: Circular reference detected (id repeated)` in naive client code. The fix shall be applied inside schemapack so that client code requires no workarounds.
 
-#### 2. Metldata 
+#### 2. Metldata
 
-##### 2.1 `duplicate_class` Compatibility with Global Unique IDs
+##### 2.1. `duplicate_class` Compatibility with Global Unique IDs
 
 This section does not include any changes to `duplicate_class` itself, which continues to function as it currently does. It only clarifies how the presence of `global_unique_ids` in the schema affects the validation of workflow outputs that use `duplicate_class`.
 
@@ -88,7 +88,41 @@ The `duplicate_class` transformation shall be retained in the transformation reg
 
 The second scenario is consistent with the existing metldata behaviour: when the no-intermediate-validation flag is set, model compatibility is not enforced after every step — only at the workflow boundaries. The `global_unique_ids` uniqueness constraint follows the same rule: it is enforced only at **workflow output validation** (the final step), not during intermediate steps. If the output schema of a workflow still has `global_unique_ids: true` and the output datapack contains duplicate IDs across classes, the post-workflow validation raises an error at that point.
 
-##### 2.2. `add_class` Transformation
+Two test cases should be added to ensure:
+1. When no-intermediate-validation flag is set, a workflow that uses `duplicate_class` and produces a final schema with `global_unique_ids: true` does not raise an error given that the output datapack has no ID collisions across classes.
+2. When intermediate validation is enabled, the same workflow raises an error at the step where `duplicate_class` is applied, since the intermediate schema at that point contains duplicate IDs across classes.
+
+
+##### 2.2. Implications of Globally Unique IDs in Transformation Workflows
+
+In GHGA, the ingress schema does not enforce globally unique IDs: a data submitter may use the same alias across multiple classes, provided it is unique within each class. The aggregate stats workflow, however, must produce a derived schema that does enforce globally unique IDs, because the UDM uses GHGA accessions as resource IDs and those accessions are globally unique.
+
+To bridge this constraint change between input and output schemas, the `replace_resource_ids` transformation must be extended with an optional argument specifying whether the replacement IDs are expected to be globally unique across classes:
+
+```yaml
+class_name: File
+global_unique_ids: true
+```
+
+This argument defaults to `false`, preserving compatibility with existing behaviour. When set to `true`, the transformation sets `global_unique_ids: true` on the output schemapack, signalling that the output schema enforces the globally-unique constraint.
+
+No additional validation logic is required: the post-transformation validation step will enforce the `global_unique_ids` constraint on the output schemapack and verify the transformed datapack against it.
+
+##### 2.3. `add_class` Transformation
+
+> **Under discussion.** The arguments below question whether `add_class` is necessary given the existing capabilities of `duplicate_class`.
+
+**Arguments against `add_class`**
+
+One of the requirements mentioned was the need to create new classes in the derived schema that have no direct counterpart in the input schema. This is thought to be necessary for the aggregate stats workflow, which needs to construct a new class that aggregates content from multiple existing classes.
+
+Forming a new class in the model is straightforward. Populating it with data is not. The new class cannot contain any resource that was not present in the original datapack, because this is a transformation — not the introduction of brand new resources that are referenced nowhere in the datapack. Given that a resource already exists and the downstream inferences have been made to populate the content of the new class, what is needed is a copy-resource operation from the original class to the new class. This is not fundamentally different from the `duplicate_class` transformation: it still introduces transient non-unique global IDs in intermediate steps, and it still copies data from one class to another. The only difference is that `duplicate_class` copies an entire class at once, whereas populating an `add_class`-created class would operate at the individual resource level.
+
+It would also be possible to set a different content schema for the new class via `add_class`, but the existing content transformation already covers that use case.
+
+One potentially missing primitive in `duplicate_class` is relation deletion. In the current aggregation workflow, the duplicated class inherits all relations from the source class. Those relations are removed indirectly when the classes that are no longer needed are deleted — their removal cascades to any references pointing at them, which clears the duplicated class's relations as a side effect. A `delete_relation` transformation would make this explicit, allowing a duplicated class's relations to be modified without having to delete other classes.
+
+**Previous design**
 
 A new `add_class` transformation creates an empty class in the schema. It does not copy or duplicate any existing class. The new class has no resources in the datapack initially; downstream transformation steps are responsible for populating it.
 
@@ -115,7 +149,6 @@ Relations are declared at class-creation time when they are known upfront. Each 
 
 **Open question:** How will the newly added class and its relations be populated?
 
-
 **Model transformation**
 
 - Add the new `ClassDefinition` (with content schema and any declared relations) to the schemapack.
@@ -124,9 +157,10 @@ Relations are declared at class-creation time when they are known upfront. Each 
 
 **Data transformation**
 
-How will we populate the data for the newly added class? 
+How will we populate the data for the newly added class?
 
-##### 2.3. `WorkflowRunner` — Separated Model and Data Transformation
+
+##### 2.4. `WorkflowRunner` — Separated Model and Data Transformation
 
 **Problem**
 
@@ -198,7 +232,7 @@ output_schema = runner.transform_model(input_schema)
 output_data = runner.transform_data(data, input_schema, annotation)
 ```
 
-##### Public API surface for metldata
+###### Public API Surface
 
 The following are the stable public exports:
 
@@ -227,14 +261,14 @@ def validate_workflow(
 
 
 
-##### 2.4. Aggregate Stats Workflow Integration Test
+##### 2.5. Aggregate Stats Workflow Integration Test
 
 An end-to-end integration test shall be added to metldata that exercises all the new capabilities introduced in this epic together: a `global_unique_ids` input schema, `add_class`, `duplicate_class` failing correctly on such a schema, and `WorkflowRunner` running model derivation and data transformation separately.
 
-The test uses a representative aggregate stats workflow and verifies `global_unique_ids: true` The input schemapack has the flag set; validation correctly rejects datapacks with duplicate IDs across classes.
+The test uses a representative aggregate stats workflow and verifies that `global_unique_ids: true` is enforced: the input schemapack has the flag set, and validation correctly rejects datapacks with duplicate IDs across classes.
 
 
-##### 2.5. Performance Benchmark of the Aggregate Stats Workflow
+##### 2.6. Performance Benchmark of the Aggregate Stats Workflow
 
 A performance benchmark shall be run against the full EMIM → aggregate stats workflow using the Epignostix dataset as a representative real-world input. The benchmark will be done via cProfile library. The goal is to establish a baseline transformation time before the workflow is deployed to production.
 
