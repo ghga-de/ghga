@@ -251,6 +251,24 @@ async def test_delete_file(upload_client: UploadClient, httpx_mock: HTTPXMock):
             FILE_ID,
             exceptions.ChecksumMismatchError,
         ),
+        # 400 status code - invalidPartSize
+        (
+            400,
+            {"exception_id": "invalidPartSize"},
+            TEST_FUB_ID,
+            FILE_ALIAS,
+            FILE_ID,
+            exceptions.InvalidPartSize,
+        ),
+        # 400 status code - uploadSizeMismatch
+        (
+            400,
+            {"exception_id": "uploadSizeMismatch"},
+            TEST_FUB_ID,
+            FILE_ALIAS,
+            FILE_ID,
+            exceptions.UploadSizeMismatchError,
+        ),
         # 400 status code - no matching exception id
         (
             400,

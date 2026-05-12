@@ -222,6 +222,17 @@ class InvalidFileUploadError(RuntimeError):
         super().__init__(msg)
 
 
+class InvalidPartSize(RuntimeError):
+    """Raised when the server rejects the upload initialization due to an invalid part size."""
+
+    def __init__(self):
+        message = (
+            "The file upload could not be initialized because an acceptable part size"
+            " could not be determined."
+        )
+        super().__init__(message)
+
+
 class InvalidWorkPackageToken(RuntimeError):
     """Thrown when the work package string pasted by the user could not be parsed"""
 
@@ -531,6 +542,17 @@ class UploadNotRegisteredError(RuntimeError):
             "because this upload does not exist."
         )
         super().__init__(message)
+
+
+class UploadSizeMismatchError(RuntimeError):
+    """Raised when the size of the uploaded file doesn't match the declared size."""
+
+    def __init__(self):
+        msg = (
+            "The size of the uploaded file does not match the size declared when the"
+            " upload was initiated."
+        )
+        super().__init__(msg)
 
 
 class WellKnownValueNotFound(RuntimeError):
