@@ -11,35 +11,27 @@ jsonsubschema also enables static type checking on different components of a sys
 
 The details of JSON subschema are covered in the [ISSTA 2021 paper](https://dl.acm.org/doi/10.1145/3460319.3464796) by Andrew Habib, Avraham Shinnar, Martin Hirzel, and Michael Pradel, the original authors of this library.
 
-## I) Obtaining the tool
+## I) Installation
 
 ### Requirements
 
-* Python 3.8
-* Other Python dependencies will be installed during the below setup process
+* Python 3.13+
 
-You can either install subschema from the source code from GitHub or the PyPI package.
-
-### A) Install from GitHub source code
-
-Execute the following:
+### A) Install from PyPI
 
 ```sh
-git clone https://github.com/ghga-de/ghga-jsonsubschema.git 
-cd jsonsubschema
-python setup.py install
-cd ..
+pip install ghga-jsonsubschema
 ```
 
-### B) Install from PyPI
-
-Execute the following:
+### B) Install from source
 
 ```sh
-pip install jsonsubschema
+git clone https://github.com/ghga-de/ghga-jsonsubschema.git
+cd ghga-jsonsubschema
+uv sync
 ```
 
-## II) Running  subschema
+## II) Running subschema
 
 JSON subschema provides two usage interfaces:
 
@@ -52,15 +44,15 @@ echo '{"type": ["null", "string"]}' > s1.json
 echo '{"type": ["string", "null"], "not": {"enum": [""]}}' > s2.json
 ```
 
-1. Invoke the CLI by executing:
+2. Invoke the CLI by executing:
 
 ```sh
-python -m jsonsubschema.cli s2.json s1.json
+python -m jsonsubschema s2.json s1.json
 ```
 
 ### B) Python API
 
-```sh
+```python
 from jsonsubschema import isSubschema
 
 def main():
@@ -73,10 +65,28 @@ if __name__ == "__main__":
     main()
 ```
 
+## III) Development
+
+Set up a local development environment:
+
+```sh
+uv sync --extra dev
+uv run pre-commit install
+```
+
+Run the test suite:
+
+```sh
+uv run pytest tests/
+```
+
+Run the test suite with coverage:
+
+```sh
+uv run coverage run -m pytest tests/
+uv run coverage report
+```
+
 ## License
 
-jsonsubschema is distributed under the terms of the Apache 2.0 License, see [LICENSE.txt](LICENSE.txt).
-
-## Contributions
-
-json-subschema is still at an early phase of development and we welcome contributions.
+This repository is distributed under the terms of the Apache 2.0 License, see [LICENSE.txt](LICENSE.txt).

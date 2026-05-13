@@ -1,3 +1,5 @@
+"""Tests for JSON Schema const keyword subtype checking."""
+
 import unittest
 
 from jsonsubschema import isSubschema
@@ -89,7 +91,7 @@ class TestConst(unittest.TestCase):
 
 class TestEnumNotSupported(unittest.TestCase):
     def test_array(self) -> None:
-        s1 = {"const": []}
+        s1: dict = {"const": []}
         s2 = {"type": "array"}
 
         with self.subTest():
@@ -99,7 +101,7 @@ class TestEnumNotSupported(unittest.TestCase):
             self.assertRaises(UnsupportedEnumCanonicalization, isSubschema, s2, s1)
 
     def test_object(self) -> None:
-        s1 = {"const": {}}
+        s1: dict = {"const": {}}
         s2 = {"type": "object"}
 
         with self.subTest():

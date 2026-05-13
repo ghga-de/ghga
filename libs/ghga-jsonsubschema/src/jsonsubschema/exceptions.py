@@ -1,7 +1,7 @@
-'''
+"""
 Created on May 11, 2020
 @author: Andrew Habib
-'''
+"""
 
 
 class _UnsupportedCase(Exception):
@@ -22,35 +22,37 @@ class UnsupportedRecursiveRef(_CanonicalizationError):
         self.which_side = which_side
 
     def __str__(self):
-        return f'Recursive schemas are not supported. {self.which_side} is recursive.'
+        """Return human-readable error message."""
+        return f"Recursive schemas are not supported. {self.which_side} is recursive."
 
 
 class UnsupportedEnumCanonicalization(_CanonicalizationError):
-
     def __init__(self, tau, schema):
         self.tau = tau
         self.schema = schema
 
     def __str__(self):
-        return f'Canonicalizing an enum schema of type {self.tau} is not supported.'
+        """Return human-readable error message."""
+        return f"Canonicalizing an enum schema of type {self.tau} is not supported."
 
 
 class UnsupportedNegatedObject(_SubtypeCheckError):
-
     def __init__(self, schema):
         self.schema = schema
 
     def __str__(self):
-        return f'Object negation at {self.schema} is not supported.'
+        """Return human-readable error message."""
+        return f"Object negation at {self.schema} is not supported."
 
 
 class UnsupportedNegatedArray(_SubtypeCheckError):
-
     def __init__(self, schema):
         self.schema = schema
 
     def __str__(self):
-        return f'Array negation at {self.schema} is not supported.'
+        """Return human-readable error message."""
+        return f"Array negation at {self.schema} is not supported."
+
 
 # class UnsupportedSchemaType(_Error):
 #     '''
