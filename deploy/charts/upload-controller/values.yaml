@@ -29,6 +29,14 @@ cmd: ucs run-rest
 # cmd: ucs consume-events
 
 _topics:
+  uploadBoxTopic:
+    # as consumer
+    topic:
+      name: file_upload_box_topic
+      value: file-upload-boxes
+    kafkaUser:
+      operations:
+        - Write
   fileUploadValidationSuccess:
     # as producer
     topic:
