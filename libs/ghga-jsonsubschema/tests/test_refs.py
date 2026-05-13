@@ -1,7 +1,7 @@
-'''
+"""
 Created on Oct. 25, 2019
 @author: Andrew Habib
-'''
+"""
 
 import unittest
 
@@ -10,16 +10,13 @@ from jsonsubschema.exceptions import UnsupportedRecursiveRef
 
 
 class TestSimpleRefs(unittest.TestCase):
-
     def test_1(self):
-        s1 = {'definitions': {'bom': {'type': 'string'},
-                              'tak': {'type': 'integer'}},
-              'type': 'object', 'properties':
-              {'foo': {'$ref': '#/definitions/bom',
-                       'type': 'integer'}}}
-        s2 = {'type': 'object',
-              'properties': {
-                  'foo': {'type': 'string'}}}
+        s1 = {
+            "definitions": {"bom": {"type": "string"}, "tak": {"type": "integer"}},
+            "type": "object",
+            "properties": {"foo": {"$ref": "#/definitions/bom", "type": "integer"}},
+        }
+        s2 = {"type": "object", "properties": {"foo": {"type": "string"}}}
 
         with self.subTest():
             self.assertTrue(isSubschema(s1, s2))
@@ -27,14 +24,15 @@ class TestSimpleRefs(unittest.TestCase):
             self.assertTrue(isSubschema(s2, s1))
 
     def test_2(self):
-        s1 = {'definitions': {'bom': {'type': 'string'},
-                              'tak': {'type': 'integer'}},
-              'type': 'object', 'properties':
-              {'foo': {'$ref': '#/definitions/bom',
-                       'type': 'integer'}}}
-        s2 = {'type': 'object',
-              'properties': {
-                  'foo': {'type': 'string', 'pattern': 'a'}}}
+        s1 = {
+            "definitions": {"bom": {"type": "string"}, "tak": {"type": "integer"}},
+            "type": "object",
+            "properties": {"foo": {"$ref": "#/definitions/bom", "type": "integer"}},
+        }
+        s2 = {
+            "type": "object",
+            "properties": {"foo": {"type": "string", "pattern": "a"}},
+        }
 
         with self.subTest():
             self.assertFalse(isSubschema(s1, s2))
@@ -43,7 +41,6 @@ class TestSimpleRefs(unittest.TestCase):
 
 
 class TestRefs(unittest.TestCase):
-
     def test_1(self):
         s1 = {
             "type": "array",
@@ -52,9 +49,9 @@ class TestRefs(unittest.TestCase):
                 "positiveInteger": {
                     "type": "integer",
                     "minimum": 0,
-                    "exclusiveMinimum": True
+                    "exclusiveMinimum": True,
                 }
-            }
+            },
         }
         s2 = {
             "type": "array",
@@ -63,9 +60,9 @@ class TestRefs(unittest.TestCase):
                 "positiveInteger": {
                     "type": "integer",
                     "minimum": -1,
-                    "exclusiveMinimum": True
+                    "exclusiveMinimum": True,
                 }
-            }
+            },
         }
         with self.subTest():
             self.assertTrue(isSubschema(s1, s2))
@@ -92,21 +89,30 @@ class TestRefs(unittest.TestCase):
 
     @unittest.skip("Recursive schema; fails due to jsonschema failure case, not us")
     def test_2(self):
-        s1 = {"definitions": {"S": {"anyOf": [{"enum": [None]},
-                                              {"allOf": [{"items": [{"$ref": "#/definitions/S"},
-                                                                    {"$ref": "#/definitions/S"}],
-                                                          "maxItems": 2,
-                                                          "minItems": 2,
-                                                          "type": "array"},
-                                                         {"not": {"type": "array",
-                                                                  "uniqueItems": True}}
-                                                         ]
-                                               }
-                                              ]
-                                    }
-                              },
-              "$ref": "#/definitions/S"
-              }
+        s1 = {
+            "definitions": {
+                "S": {
+                    "anyOf": [
+                        {"enum": [None]},
+                        {
+                            "allOf": [
+                                {
+                                    "items": [
+                                        {"$ref": "#/definitions/S"},
+                                        {"$ref": "#/definitions/S"},
+                                    ],
+                                    "maxItems": 2,
+                                    "minItems": 2,
+                                    "type": "array",
+                                },
+                                {"not": {"type": "array", "uniqueItems": True}},
+                            ]
+                        },
+                    ]
+                }
+            },
+            "$ref": "#/definitions/S",
+        }
 
         s2 = {"enum": [None]}
 
@@ -125,15 +131,13 @@ class TestRefs(unittest.TestCase):
                         "children": {
                             "type": "array",
                             "items": {"$ref": "#/definitions/person"},
-                            "default": []
-                        }
-                    }
+                            "default": [],
+                        },
+                    },
                 }
             },
             "type": "object",
-            "properties": {
-                "person": {"$ref": "#/definitions/person"}
-            }
+            "properties": {"person": {"$ref": "#/definitions/person"}},
         }
 
         s2 = {"enum": [None]}

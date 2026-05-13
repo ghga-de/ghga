@@ -1,6 +1,9 @@
+"""Tests for checker utility functions (top, bot, is_top, is_bot)."""
+
+import unittest
+
 from jsonsubschema._canonicalization import simplify_schema_and_embed_checkers
 from jsonsubschema._checkers import JSONbot, JSONtop, is_bot, is_top
-import unittest
 
 
 class TestIsTop(unittest.TestCase):
@@ -28,7 +31,9 @@ class TestIsBot(unittest.TestCase):
         self.assertTrue(is_bot(JSONbot()))
 
     def test_uninhabited_schema_is_bot(self) -> None:
-        uninhabited_schema = simplify_schema_and_embed_checkers({"type": "integer", "minimum": 2, "maximum": 1})
+        uninhabited_schema = simplify_schema_and_embed_checkers(
+            {"type": "integer", "minimum": 2, "maximum": 1}
+        )
         self.assertTrue(is_bot(uninhabited_schema))
 
     def test_zero_is_not_bot(self) -> None:

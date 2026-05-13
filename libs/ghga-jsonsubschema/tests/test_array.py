@@ -1,7 +1,7 @@
-'''
+"""
 Created on May 30, 2019
 @author: Andrew Habib
-'''
+"""
 
 import unittest
 
@@ -9,18 +9,14 @@ from jsonsubschema import isSubschema
 
 
 class TestArraySubtype(unittest.TestCase):
-
     def test_identity(self):
-        s1 = {"type": "array",
-              "minItems": 5, "maxItems:": 10}
+        s1 = {"type": "array", "minItems": 5, "maxItems:": 10}
         s2 = s1
         self.assertTrue(isSubschema(s1, s2))
 
     def test_min_max(self):
-        s1 = {"type": "array",
-              "minItems": 5, "maxItems:": 10}
-        s2 = {"type": "array",
-              "minItems": 1, "maxItems:": 20}
+        s1 = {"type": "array", "minItems": 5, "maxItems:": 10}
+        s2 = {"type": "array", "minItems": 1, "maxItems:": 20}
         with self.subTest():
             self.assertTrue(isSubschema(s1, s2))
         with self.subTest():
@@ -74,7 +70,7 @@ class TestArraySubtype(unittest.TestCase):
         with self.subTest():
             self.assertTrue(isSubschema(s2, s1))
 
-    def test_dictItems_listItems1(self):
+    def test_dict_items_list_items1(self):
         s1 = {"type": "array", "items": {"type": "string"}}
         s2 = {"type": "array", "items": [{"type": "string"}]}
         with self.subTest():
@@ -82,49 +78,41 @@ class TestArraySubtype(unittest.TestCase):
         with self.subTest():
             self.assertFalse(isSubschema(s2, s1))
 
-    def test_dictItems_listItems2(self):
+    def test_dict_items_list_items2(self):
         s1 = {"type": "array", "items": {"type": "string"}}
-        s2 = {"type": "array", "items": [
-            {"type": "string"}, {"type": "string"}]}
+        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "string"}]}
         with self.subTest():
             self.assertTrue(isSubschema(s1, s2))
         with self.subTest():
             self.assertFalse(isSubschema(s2, s1))
 
-    def test_dictItems_listItems3(self):
+    def test_dict_items_list_items3(self):
         s1 = {"type": "array", "items": [{"type": "string"}]}
-        s2 = {"type": "array", "items": [
-            {"type": "string"}, {"type": "number"}]}
+        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
         with self.subTest():
             self.assertFalse(isSubschema(s1, s2))
         with self.subTest():
             self.assertTrue(isSubschema(s2, s1))
 
-    def test_dictItems_listItems4(self):
-        s1 = {"type": "array", "items": [
-            {"type": "string"}], "additionalItems": False}
-        s2 = {"type": "array", "items": [
-            {"type": "string"}, {"type": "number"}]}
+    def test_dict_items_list_items4(self):
+        s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": False}
+        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
         with self.subTest():
             self.assertTrue(isSubschema(s1, s2))
         with self.subTest():
             self.assertFalse(isSubschema(s2, s1))
 
-    def test_dictItems_listItems5(self):
-        s1 = {"type": "array", "items": [
-            {"type": "string"}], "additionalItems": True}
-        s2 = {"type": "array", "items": [
-            {"type": "string"}, {"type": "number"}]}
+    def test_dict_items_list_items5(self):
+        s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": True}
+        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
         with self.subTest():
             self.assertFalse(isSubschema(s1, s2))
         with self.subTest():
             self.assertTrue(isSubschema(s2, s1))
 
-    def test_dictItems_listItems6(self):
-        s1 = {"type": "array", "items": [
-            {"type": "string"}], "additionalItems": {}}
-        s2 = {"type": "array", "items": [
-            {"type": "string"}, {"type": "number"}]}
+    def test_dict_items_list_items6(self):
+        s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": {}}
+        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
         with self.subTest():
             self.assertFalse(isSubschema(s1, s2))
         with self.subTest():
@@ -132,32 +120,34 @@ class TestArraySubtype(unittest.TestCase):
 
 
 class TestNestedArray(unittest.TestCase):
-
     def test_1(self):
         s1 = {
-            '$schema': 'http://json-schema.org/draft-04/schema#',
-            'type': 'array',
-            'minItems': 150,
-            'maxItems': 150,
-            'items': {
-                    'type': 'array',
-                    'minItems': 4,
-                    'maxItems': 4,
-                    'items': {
-                        'type': 'number'}}}
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "array",
+            "minItems": 150,
+            "maxItems": 150,
+            "items": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {"type": "number"},
+            },
+        }
 
         s2 = {
-            'description': 'Features; the outer array is over samples.',
-            'anyOf': [{
-                'type': 'array',
-                'items': {
-                        'type': 'string'}}, {
-                'type': 'array',
-                'items': {
-                        'type': 'array',
-                        'minItems': 1,
-                        'maxItems': 1,
-                        'items': {
-                            'type': 'string'}}}]}
+            "description": "Features; the outer array is over samples.",
+            "anyOf": [
+                {"type": "array", "items": {"type": "string"}},
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 1,
+                        "items": {"type": "string"},
+                    },
+                },
+            ],
+        }
 
         self.assertFalse(isSubschema(s1, s2))

@@ -1,0 +1,165 @@
+[build-system]
+requires = ["setuptools>=2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+readme = "README.md"
+authors = [
+    { name = "Andrew Habib", email = "andrew.a.habib@gmail.com" },
+    { name = "Avraham Shinnar" },
+    { name = "Martin Hirzel" },
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
+]
+maintainers = [
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
+]
+requires-python = ">=3.13"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+name = "ghga-jsonsubschema"
+version = "0.1.0"
+description = "A tool to check whether a JSON schema is subset/subschema of another JSON schema."
+dependencies = [
+    "greenery>=4.2,<5",
+    "jsonref>=1.1,<2",
+    "jsonschema>=4.26,<5",
+    "portion>=2.6,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage[toml]>=7",
+    "mypy>=2.1",
+    "pre-commit>=4",
+    "pytest>=9",
+    "ruff>=0.15",
+]
+
+[project.license]
+text = "Apache 2.0"
+
+[project.urls]
+Repository = "https://github.com/ghga-de/ghga-jsonsubschema"
+
+[project.scripts]
+jsonsubschema = "jsonsubschema.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+]
+line-length = 88
+src = [
+    "src",
+    "tests",
+    "scripts",
+]
+target-version = "py313"
+
+[tool.ruff.lint]
+fixable = [
+    "UP",
+    "I",
+    "D",
+    "RUF022",
+]
+ignore = [
+    "E111",
+    "E114",
+    "E116",
+    "PLW",
+    "RUF001",
+    "RUF010",
+    "RUF012",
+    "N818",
+    "B008",
+    "PLR2004",
+    "D205",
+    "D400",
+    "D401",
+    "D107",
+    "D206",
+    "D300",
+    "UP040",
+    "PLC0206",
+]
+select = [
+    "C90",
+    "F",
+    "I",
+    "S",
+    "B",
+    "N",
+    "UP",
+    "PL",
+    "RUF",
+    "SIM",
+    "D",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = [
+    "PL",
+    "S",
+    "SIM",
+    "D",
+]
+# TODO: Add proper docstrings to all public methods and classes in src/, then remove these ignores.
+"src/jsonsubschema/*.py" = [
+    "D101",  # Missing docstring in public class
+    "D102",  # Missing docstring in public method
+]
+"tests/*" = [
+    "S",
+    "SIM",
+    "PLR",
+    "B011",
+    "D101",
+    "D102",
+]
+"__init__.py" = [
+    "D",
+    # TODO: Rename public API names to snake_case (breaking change, needs major version bump):
+    # isSubschema -> is_subschema, meetSchemas -> meet_schemas, joinSchemas -> join_schemas,
+    # isEquivalent -> is_equivalent, canonicalizeSchema -> canonicalize_schema
+    "N816",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+disable_error_code = "import"
+show_error_codes = true
+exclude = ["build/lib/"]
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+no_site_packages = false
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+
+[tool.coverage.run]
+branch = true
+source = ["jsonsubschema"]
+omit = ["*/jsonsubschema/cli.py"]
+
+[tool.coverage.paths]
+source = ["src", "**/lib/python*/site-packages"]
