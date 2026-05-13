@@ -5,7 +5,7 @@ Contains changes by The GHGA Authors.
 SPDX-License-Identifier: Apache-2.0
 """
 
-from jsonsubschema import isSubschema
+from jsonsubschema import is_subschema
 
 
 def test_1():
@@ -117,7 +117,7 @@ def test_1():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_2():
@@ -224,7 +224,7 @@ def test_2():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_3():
@@ -335,7 +335,7 @@ def test_3():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_4():
@@ -446,7 +446,7 @@ def test_4():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_5():
@@ -557,7 +557,7 @@ def test_5():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_6():
@@ -672,7 +672,7 @@ def test_6():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_7():
@@ -779,7 +779,7 @@ def test_7():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_8():
@@ -890,7 +890,7 @@ def test_8():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_9():
@@ -1001,7 +1001,7 @@ def test_9():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_10():
@@ -1112,7 +1112,7 @@ def test_10():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_11():
@@ -1227,7 +1227,7 @@ def test_11():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_12():
@@ -1338,7 +1338,7 @@ def test_12():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_13():
@@ -1449,7 +1449,7 @@ def test_13():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_14():
@@ -1556,7 +1556,7 @@ def test_14():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_15():
@@ -1667,7 +1667,7 @@ def test_15():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_16():
@@ -1778,7 +1778,7 @@ def test_16():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_17():
@@ -1889,7 +1889,7 @@ def test_17():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_18():
@@ -2004,7 +2004,7 @@ def test_18():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_19():
@@ -2111,7 +2111,7 @@ def test_19():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_20():
@@ -2222,7 +2222,7 @@ def test_20():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_21():
@@ -2333,7 +2333,7 @@ def test_21():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_22():
@@ -2444,7 +2444,7 @@ def test_22():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_23():
@@ -2559,7 +2559,7 @@ def test_23():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_24():
@@ -2670,7 +2670,7 @@ def test_24():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_25():
@@ -2781,7 +2781,7 @@ def test_25():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_26():
@@ -2888,7 +2888,7 @@ def test_26():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_27():
@@ -2999,7 +2999,7 @@ def test_27():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_28():
@@ -3110,7 +3110,7 @@ def test_28():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_29():
@@ -3221,7 +3221,7 @@ def test_29():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_30():
@@ -3336,7 +3336,7 @@ def test_30():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_31():
@@ -3443,7 +3443,7 @@ def test_31():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_32():
@@ -3554,7 +3554,7 @@ def test_32():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_33():
@@ -3665,7 +3665,7 @@ def test_33():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_34():
@@ -3776,7 +3776,7 @@ def test_34():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_35():
@@ -3891,7 +3891,7 @@ def test_35():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_36():
@@ -4002,7 +4002,7 @@ def test_36():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_37():
@@ -4113,7 +4113,7 @@ def test_37():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_38():
@@ -4220,7 +4220,7 @@ def test_38():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_39():
@@ -4331,7 +4331,7 @@ def test_39():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_40():
@@ -4442,7 +4442,7 @@ def test_40():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_41():
@@ -4553,7 +4553,7 @@ def test_41():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_42():
@@ -4668,7 +4668,7 @@ def test_42():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_43():
@@ -4775,7 +4775,7 @@ def test_43():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_44():
@@ -4886,7 +4886,7 @@ def test_44():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_45():
@@ -4997,7 +4997,7 @@ def test_45():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_46():
@@ -5108,7 +5108,7 @@ def test_46():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_47():
@@ -5223,7 +5223,7 @@ def test_47():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_48():
@@ -5334,7 +5334,7 @@ def test_48():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_49():
@@ -5350,7 +5350,7 @@ def test_49():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_50():
@@ -5366,7 +5366,7 @@ def test_50():
         "properties": {"boosting_type": {"not": {"enum": ["rf"]}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_51():
@@ -5383,7 +5383,7 @@ def test_51():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_52():
@@ -5396,7 +5396,7 @@ def test_52():
         "properties": {"subsample_freq": {"not": {}}, "subsample": {"not": {}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_53():
@@ -5413,7 +5413,7 @@ def test_53():
         "properties": {"boosting_type": {"not": {"enum": ["rf", "goss"]}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_54():
@@ -5434,7 +5434,7 @@ def test_54():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_55():
@@ -5451,7 +5451,7 @@ def test_55():
         "properties": {"subsample_freq": {"not": {}}, "subsample": {"not": {}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_56():
@@ -5464,7 +5464,7 @@ def test_56():
         "properties": {"boosting_type": {"not": {"enum": ["rf", "goss"]}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_57():
@@ -5481,7 +5481,7 @@ def test_57():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_58():
@@ -5498,7 +5498,7 @@ def test_58():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_59():
@@ -5616,7 +5616,7 @@ def test_59():
         ],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_60():
@@ -5734,7 +5734,7 @@ def test_60():
         ],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_61():
@@ -5750,7 +5750,7 @@ def test_61():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_62():
@@ -5766,7 +5766,7 @@ def test_62():
         "properties": {"boosting_type": {"not": {"enum": ["rf"]}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_63():
@@ -5783,7 +5783,7 @@ def test_63():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_64():
@@ -5796,7 +5796,7 @@ def test_64():
         "properties": {"subsample_freq": {"not": {}}, "subsample": {"not": {}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_65():
@@ -5813,7 +5813,7 @@ def test_65():
         "properties": {"boosting_type": {"not": {"enum": ["rf", "goss"]}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_66():
@@ -5834,7 +5834,7 @@ def test_66():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_67():
@@ -5851,7 +5851,7 @@ def test_67():
         "properties": {"subsample_freq": {"not": {}}, "subsample": {"not": {}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_68():
@@ -5864,7 +5864,7 @@ def test_68():
         "properties": {"boosting_type": {"not": {"enum": ["rf", "goss"]}}},
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_69():
@@ -5881,7 +5881,7 @@ def test_69():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_70():
@@ -5898,7 +5898,7 @@ def test_70():
         },
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_71():
@@ -6016,7 +6016,7 @@ def test_71():
         ],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_72():
@@ -6134,7 +6134,7 @@ def test_72():
         ],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_73():
@@ -6171,7 +6171,7 @@ def test_73():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_74():
@@ -6208,7 +6208,7 @@ def test_74():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_75():
@@ -6254,7 +6254,7 @@ def test_75():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_76():
@@ -6300,7 +6300,7 @@ def test_76():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_77():
@@ -6337,7 +6337,7 @@ def test_77():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_78():
@@ -6374,7 +6374,7 @@ def test_78():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_79():
@@ -6420,7 +6420,7 @@ def test_79():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_80():
@@ -6466,7 +6466,7 @@ def test_80():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_81():
@@ -6503,7 +6503,7 @@ def test_81():
         "required": ["compute_full_tree"],
     }
 
-    assert isSubschema(s1, s2)
+    assert is_subschema(s1, s2)
 
 
 def test_82():
@@ -6542,7 +6542,7 @@ def test_82():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_83():
@@ -6579,7 +6579,7 @@ def test_83():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_84():
@@ -6625,7 +6625,7 @@ def test_84():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_85():
@@ -6662,7 +6662,7 @@ def test_85():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_86():
@@ -6699,7 +6699,7 @@ def test_86():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_87():
@@ -6736,7 +6736,7 @@ def test_87():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_88():
@@ -6773,7 +6773,7 @@ def test_88():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_89():
@@ -6810,7 +6810,7 @@ def test_89():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_90():
@@ -6847,7 +6847,7 @@ def test_90():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_91():
@@ -6893,7 +6893,7 @@ def test_91():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_92():
@@ -6930,7 +6930,7 @@ def test_92():
         "required": ["compute_full_tree"],
     }
 
-    assert isSubschema(s1, s2)
+    assert is_subschema(s1, s2)
 
 
 def test_93():
@@ -6976,7 +6976,7 @@ def test_93():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_94():
@@ -7013,7 +7013,7 @@ def test_94():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_95():
@@ -7050,7 +7050,7 @@ def test_95():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_96():
@@ -7087,7 +7087,7 @@ def test_96():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_97():
@@ -7124,7 +7124,7 @@ def test_97():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_98():
@@ -7161,7 +7161,7 @@ def test_98():
         "required": ["compute_full_tree"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_99():
@@ -7186,7 +7186,7 @@ def test_99():
         "required": ["svd_solver", "n_components", "whiten"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_100():
@@ -7212,7 +7212,7 @@ def test_100():
         "required": ["svd_solver", "n_components", "whiten"],
     }
 
-    assert isSubschema(s1, s2)
+    assert is_subschema(s1, s2)
 
 
 def test_101():
@@ -7237,7 +7237,7 @@ def test_101():
         "required": ["svd_solver", "n_components", "whiten"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_102():
@@ -7263,7 +7263,7 @@ def test_102():
         "required": ["svd_solver", "n_components", "whiten"],
     }
 
-    assert isSubschema(s1, s2)
+    assert is_subschema(s1, s2)
 
 
 def test_103():
@@ -7362,7 +7362,7 @@ def test_103():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_104():
@@ -7457,7 +7457,7 @@ def test_104():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_105():
@@ -7556,7 +7556,7 @@ def test_105():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_106():
@@ -7655,7 +7655,7 @@ def test_106():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_107():
@@ -7754,7 +7754,7 @@ def test_107():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_108():
@@ -7857,7 +7857,7 @@ def test_108():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_109():
@@ -7952,7 +7952,7 @@ def test_109():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_110():
@@ -8051,7 +8051,7 @@ def test_110():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_111():
@@ -8150,7 +8150,7 @@ def test_111():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_112():
@@ -8249,7 +8249,7 @@ def test_112():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_113():
@@ -8352,7 +8352,7 @@ def test_113():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_114():
@@ -8451,7 +8451,7 @@ def test_114():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_115():
@@ -8540,7 +8540,7 @@ def test_115():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_116():
@@ -8625,7 +8625,7 @@ def test_116():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_117():
@@ -8714,7 +8714,7 @@ def test_117():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_118():
@@ -8813,7 +8813,7 @@ def test_118():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_119():
@@ -8902,7 +8902,7 @@ def test_119():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_120():
@@ -8991,7 +8991,7 @@ def test_120():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_121():
@@ -9084,7 +9084,7 @@ def test_121():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_122():
@@ -9179,7 +9179,7 @@ def test_122():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_123():
@@ -9278,7 +9278,7 @@ def test_123():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_124():
@@ -9363,7 +9363,7 @@ def test_124():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_125():
@@ -9452,7 +9452,7 @@ def test_125():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_126():
@@ -9541,7 +9541,7 @@ def test_126():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_127():
@@ -9640,7 +9640,7 @@ def test_127():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_128():
@@ -9743,7 +9743,7 @@ def test_128():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_129():
@@ -9842,7 +9842,7 @@ def test_129():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_130():
@@ -9931,7 +9931,7 @@ def test_130():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_131():
@@ -10024,7 +10024,7 @@ def test_131():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
 
 
 def test_132():
@@ -10113,4 +10113,4 @@ def test_132():
         "required": ["presort"],
     }
 
-    assert not isSubschema(s1, s2)
+    assert not is_subschema(s1, s2)
