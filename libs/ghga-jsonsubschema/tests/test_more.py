@@ -1,6 +1,8 @@
-"""
-Created on July 11, 2019
-@author: Andrew Habib
+"""Additional tests for subschema checking edge cases.
+
+Originally created on July 11, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import unittest

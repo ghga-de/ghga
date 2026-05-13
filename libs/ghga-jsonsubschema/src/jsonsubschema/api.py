@@ -1,6 +1,8 @@
-"""
-Created on June 24, 2019
-@author: Andrew Habib
+"""Public API for JSON Schema subtype checking.
+
+Originally created on June 24, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import jsonref

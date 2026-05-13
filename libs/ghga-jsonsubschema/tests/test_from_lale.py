@@ -1,6 +1,8 @@
-"""
-Created on Aug. 24, 2019
-@author: Andrew Habib
+"""Tests derived from the Lale machine learning pipeline project.
+
+Originally created on August 24, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import unittest

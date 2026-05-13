@@ -1,6 +1,8 @@
-"""
-Created on August 6, 2019
-@author: Andrew Habib
+"""Public interface and exports for the jsonsubschema package.
+
+Originally created on August 6, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 from jsonsubschema import _canonicalization, api, config

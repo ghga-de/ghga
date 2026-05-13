@@ -1,6 +1,8 @@
-"""
-Created on June 24, 2019
-@author: Andrew Habib
+"""Command-line interface for jsonsubschema.
+
+Originally created on June 24, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import argparse
