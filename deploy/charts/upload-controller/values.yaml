@@ -22,21 +22,11 @@ config:
   enable_opentelemetry: false
   db_version_collection: "ucsDbVersions"
   migration_wait_sec: 10
-  wps_auth_config: '{}'
-  uos_auth_config: '{}'
 
 cmd: ucs run-rest
 # cmd: ucs consume-events
 
 _topics:
-  uploadBoxTopic:
-    # as consumer
-    topic:
-      name: file_upload_box_topic
-      value: file-upload-boxes
-    kafkaUser:
-      operations:
-        - Write
   fileUploadValidationSuccess:
     # as producer
     topic:
@@ -96,4 +86,11 @@ _topics:
     kafkaUser:
       operations:
         - Read
-
+  uploadBoxTopic:
+    # as consumer
+    topic:
+      name: file_upload_box_topic
+      value: file-upload-boxes
+    kafkaUser:
+      operations:
+        - Write
