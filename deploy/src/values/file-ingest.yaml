@@ -16,10 +16,7 @@ serviceName: fis-rest
 
 config:
   host: 0.0.0.0
-  vault_url: http://vault:8200
-  vault_path: ekss
   mongo_dsn: null
-  token_hashes: []
   db_version_collection: "fisDbVersions"
   migration_wait_sec: 10
   enable_opentelemetry: false
