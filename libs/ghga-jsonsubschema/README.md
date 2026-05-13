@@ -9,21 +9,21 @@ For any two JSON schemas s1 and s2, s1 <: s2 (reads s1 is subschema/subtype of s
 jsonsubschema is very useful in analysing schema evolution and ensuring that newer schema versions are backward compatible.
 jsonsubschema also enables static type checking on different components of a system that uses JSON schema to describe data interfaces among the system's different components.
 
-The details of JSON subschema are covered in the [ISSTA 2021 paper](https://dl.acm.org/doi/10.1145/3460319.3464796) by Andrew Habib, Avraham Shinnar, Martin Hirzel, and Michael Pradel, the original authors of this library.
+For a practical overview of the architecture, purpose, and usage of this library, please see [DETAILS.md](DETAILS.md). For the formal foundations and deep technical details, please refer to the [ISSTA 2021 paper](https://dl.acm.org/doi/10.1145/3460319.3464796) by Andrew Habib, Avraham Shinnar, Martin Hirzel, and Michael Pradel, the original authors of this library.
 
-## I) Installation
+## Installation
 
 ### Requirements
 
 * Python 3.13+
 
-### A) Install from PyPI
+### Install from PyPI
 
 ```sh
 pip install ghga-jsonsubschema
 ```
 
-### B) Install from source
+### Install from source
 
 ```sh
 git clone https://github.com/ghga-de/ghga-jsonsubschema.git
@@ -31,26 +31,26 @@ cd ghga-jsonsubschema
 uv sync
 ```
 
-## II) Running subschema
+## Running subschema
 
 JSON subschema provides two usage interfaces:
 
-### A) CLI interface
+### CLI interface
 
-1. Create two JSON schema examples by executing the following:
+First, create two JSON schema examples by executing the following:
 
 ```sh
 echo '{"type": ["null", "string"]}' > s1.json
-echo '{"type": ["string", "null"], "not": {"enum": [""]}}' > s2.json
+echo '{"type": ["string", "null"], "not": {"enum": [""]}} > s2.json
 ```
 
-2. Invoke the CLI by executing:
+Then, invoke the CLI by executing:
 
 ```sh
 python -m jsonsubschema s2.json s1.json
 ```
 
-### B) Python API
+### Python API
 
 ```python
 from jsonsubschema import is_subschema
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     main()
 ```
 
-## III) Development
+## Development
 
 Set up a local development environment:
 
@@ -86,6 +86,15 @@ Run the test suite with coverage:
 uv run coverage run -m pytest tests/
 uv run coverage report
 ```
+
+## Changes made by GHGA
+
+This fork introduces several key updates compared to the original `ibm/jsonsubschema` repository:
+
+* Public API names have been changed to align with PEP 8.
+* The minimum required Python version is now 3.13.
+* Packaging uses more modern conventions.
+* Tests have been converted from `unittest` to `pytest`.
 
 ## License
 
