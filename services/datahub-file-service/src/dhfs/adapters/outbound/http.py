@@ -38,7 +38,7 @@ __all__ = [
     "raise_if_connection_failed",
 ]
 
-USER_AGENT = f"DataHubFileService/{__version__}"
+USER_AGENT = f"GHGA DataHubFileService/{__version__}"
 
 
 class HttpClientConfig(CompositeCacheConfig):

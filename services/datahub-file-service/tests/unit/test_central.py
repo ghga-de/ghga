@@ -204,7 +204,7 @@ async def test_report_submission(config: Config, central_client, httpx_mock: HTT
     # Define an httpx_mock callback to let us inspect the request body
     def callback(request: httpx.Request):
         user_agent = request.headers.get("User-Agent")
-        assert user_agent == f"DataHubFileService/{__version__}"
+        assert user_agent == f"GHGA DataHubFileService/{__version__}"
         body = json.load(request)  # type: ignore
         interrogated_at = datetime.fromisoformat(body["interrogated_at"])
         assert interrogated_at - now_utc_ms_prec() < timedelta(seconds=3)
