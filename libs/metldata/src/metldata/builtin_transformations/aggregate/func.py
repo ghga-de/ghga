@@ -28,7 +28,7 @@ from metldata.builtin_transformations.aggregate.models import (
 )
 from metldata.transform.base import MetadataTransformationError
 
-_FUNCTION_REGISTRY = {}
+_FUNCTION_REGISTRY: dict[str, type["AggregationFunction"]] = {}
 
 
 class AggregationFunction(ABC):
