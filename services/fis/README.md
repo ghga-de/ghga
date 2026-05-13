@@ -15,13 +15,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/file-ingest-service):
 ```bash
-docker pull ghga/file-ingest-service:11.0.1
+docker pull ghga/file-ingest-service:11.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/file-ingest-service:11.0.1 .
+docker build -t ghga/file-ingest-service:11.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -29,7 +29,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/file-ingest-service:11.0.1 --help
+docker run -p 8080:8080 ghga/file-ingest-service:11.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -590,6 +590,21 @@ The service requires the following configuration parameters:
       "HD": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}",
       "TU": "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
   }
+  ```
+
+
+- <a id="properties/dhfs_version_constraint"></a>**`dhfs_version_constraint`** *(string, required)*: A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error.
+
+
+  Examples:
+
+  ```json
+  ">=1.0.0,<2.0.0"
+  ```
+
+
+  ```json
+  "~=2.0"
   ```
 
 

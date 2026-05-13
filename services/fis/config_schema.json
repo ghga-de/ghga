@@ -576,6 +576,15 @@
       ],
       "title": "Data Hub Auth Keys",
       "type": "object"
+    },
+    "dhfs_version_constraint": {
+      "description": "A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error.",
+      "examples": [
+        ">=1.0.0,<2.0.0",
+        "~=2.0"
+      ],
+      "title": "Dhfs Version Constraint",
+      "type": "string"
     }
   },
   "required": [
@@ -590,7 +599,8 @@
     "db_name",
     "db_version_collection",
     "migration_wait_sec",
-    "data_hub_auth_keys"
+    "data_hub_auth_keys",
+    "dhfs_version_constraint"
   ],
   "title": "ModSettings",
   "type": "object"

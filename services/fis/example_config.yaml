@@ -25,6 +25,7 @@ data_hub_auth_keys:
   TU: '{"crv":"P-256","kty":"EC","x":"1XAs84RlUVBlMlE8l_4rTTlSYWDeQiLH21iTDLKTIM8","y":"cySDIURnb35Z6kv5FaidwIiwMcpFCnwKVausc9o8BRs"}'
 db_name: dev
 db_version_collection: fisDbVersions
+dhfs_version_constraint: ~=2.0
 docs_url: /docs
 ekss_api_url: http://127.0.0.1/ekss
 enable_opentelemetry: false

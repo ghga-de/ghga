@@ -18,11 +18,13 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException, Request, status
+from packaging.specifiers import SpecifierSet
+from packaging.version import InvalidVersion, Version
 from pydantic import UUID4
 
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.http_authorization import JWT, require_data_hub_jwt
-from fis.constants import TRACER
+from fis.constants import DHFS_USER_AGENT_PREFIX, OLD_DHFS_USER_AGENT_PREFIX, TRACER
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 
@@ -30,33 +32,75 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def log_user_agent_header(
-    request: Request, endpoint_description: str, storage_alias: str = ""
+def check_and_log_user_agent_header(
+    *,
+    request: Request,
+    endpoint_description: str,
+    dhfs_version_constraint: str,
+    storage_alias: str = "",
 ) -> None:
     """Log a structured message from the User-Agent header.
 
     Expects the format 'ClientName/1.0.0'. Adapts the message for a missing or
     malformed header, or a missing storage alias.
+
+    If the User-Agent indicates the request comes from a DHFS instance, the DHFS version
+    is evaluated against the configured allowable range. Disallowed versions result
+    in a 426 Upgrade Required response.
     """
-    raw_user_agent_header = request.headers.get("user-agent")
-    extra = {"user_agent": raw_user_agent_header}
+    raw_user_agent = request.headers.get("user-agent")
+    extra = {
+        "user_agent": raw_user_agent,
+        "storage_alias": storage_alias,
+        "dhfs_version_constraint": dhfs_version_constraint,
+    }
+    alias_part = f", originating from {storage_alias}" if storage_alias else ""
+    client_part = raw_user_agent
 
-    parts = (raw_user_agent_header or "").split("/")
+    accepted = True
+    parts = (raw_user_agent or "").split("/")
 
-    client_part = raw_user_agent_header
+    # Note: this is a naive implementation and we might want/need to use regex later
     if (len(parts) == 2) and all(parts):
         extra["client_name"] = parts[0]
         extra["client_version"] = parts[1]
-        client_part = f"from {parts[0]}, version {parts[1]}"
+        version_part = parts[1]
+        client_part = f"from {parts[0]}, version {version_part}"
 
-    alias_part = f", originating from {storage_alias}" if storage_alias else ""
-    log.info(
-        "Received request %s for the %s endpoint%s.",
-        client_part,
-        endpoint_description,
-        alias_part,
-        extra=extra,
-    )
+        # If the User Agent specifies DHFS, enforce the version requirement
+        if parts[0] in [DHFS_USER_AGENT_PREFIX, OLD_DHFS_USER_AGENT_PREFIX]:
+            try:
+                accepted = Version(version_part) in SpecifierSet(
+                    dhfs_version_constraint
+                )
+            except InvalidVersion:
+                # Invalid version would come from version_part, not dhfs_version_constraint
+                #  as the latter is already screened during config instantiation.
+                accepted = False
+
+    # Log all requests either way
+    if accepted:
+        log.info(
+            "Received request %s for the %s endpoint%s.",
+            client_part,
+            endpoint_description,
+            alias_part,
+            extra=extra,
+        )
+    else:
+        log.warning(
+            "Rejected request from DHFS version %s, which doesn't satisfy constraint %s.",
+            version_part,
+            dhfs_version_constraint,
+            extra=extra,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_426_UPGRADE_REQUIRED,
+            detail=(
+                "Data Hub File Service must satisfy the following version"
+                + f" constraint(s): {dhfs_version_constraint}"
+            ),
+        )
 
 
 @router.get(
@@ -66,9 +110,16 @@ def log_user_agent_header(
     status_code=200,
 )
 @TRACER.start_as_current_span("routes.health")
-async def health(request: Request):
+async def health(
+    request: Request,
+    _dhfs_version_constraint: dummies.DhfsVersionConstraint,
+):
     """Used to test if this service is alive"""
-    log_user_agent_header(request, "health")
+    check_and_log_user_agent_header(
+        request=request,
+        endpoint_description="health",
+        dhfs_version_constraint=_dhfs_version_constraint,
+    )
     return {"status": "OK"}
 
 
@@ -85,9 +136,15 @@ async def list_uploads(
     request: Request,
     interrogator: dummies.InterrogatorPort,
     _token: Annotated[JWT, require_data_hub_jwt],
+    _dhfs_version_constraint: dummies.DhfsVersionConstraint,
 ) -> list[models.BaseFileInformation]:
     """Return a list of not-yet-interrogated files for a Data Hub (storage_alias)"""
-    log_user_agent_header(request, "list_uploads", storage_alias)
+    check_and_log_user_agent_header(
+        request=request,
+        dhfs_version_constraint=_dhfs_version_constraint,
+        endpoint_description="list_uploads",
+        storage_alias=storage_alias,
+    )
     try:
         return await interrogator.get_files_not_yet_interrogated(
             storage_alias=storage_alias
@@ -111,12 +168,18 @@ async def get_removable_files(
     request: Request,
     interrogator: dummies.InterrogatorPort,
     _token: Annotated[JWT, require_data_hub_jwt],
+    _dhfs_version_constraint: dummies.DhfsVersionConstraint,
     object_ids: list[UUID4] = Body(),
 ) -> list[UUID4]:
     """Returns a subset of the provided object ID list containing the IDs of all S3
     objects which may be now removed from the interrogation bucket.
     """
-    log_user_agent_header(request, "get_removable_files", storage_alias)
+    check_and_log_user_agent_header(
+        request=request,
+        dhfs_version_constraint=_dhfs_version_constraint,
+        endpoint_description="get_removable_files",
+        storage_alias=storage_alias,
+    )
     try:
         return [
             o for o in object_ids if await interrogator.check_if_removable(object_id=o)
@@ -144,10 +207,16 @@ async def post_interrogation_report(
     request: Request,
     interrogator: dummies.InterrogatorPort,
     _token: Annotated[JWT, require_data_hub_jwt],
+    _dhfs_version_constraint: dummies.DhfsVersionConstraint,
     report: models.InterrogationReportWithSecret = Body(),
 ) -> None:
     """Post an InterrogationReport"""
-    log_user_agent_header(request, "post_interrogation_report", storage_alias)
+    check_and_log_user_agent_header(
+        request=request,
+        dhfs_version_constraint=_dhfs_version_constraint,
+        endpoint_description="post_interrogation_report",
+        storage_alias=storage_alias,
+    )
     try:
         await interrogator.handle_interrogation_report(report=report)
     except InterrogationHandlerPort.FileNotFoundError as err:

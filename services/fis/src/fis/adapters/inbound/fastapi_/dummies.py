@@ -26,5 +26,7 @@ from fis.ports.inbound.interrogation import InterrogationHandlerPort
 
 interrogator_dummy = DependencyDummy("interrogator_port")
 auth_providers_dummy = DependencyDummy("auth_providers_dummy")
+dhfs_version_constraint_dummy = DependencyDummy("dhfs_version_constraint_dummy")
 
 InterrogatorPort = Annotated[InterrogationHandlerPort, Depends(interrogator_dummy)]
+DhfsVersionConstraint = Annotated[str, Depends(dhfs_version_constraint_dummy)]

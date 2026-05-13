@@ -24,7 +24,7 @@ from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from hexkit.utils import now_utc_ms_prec
 from jwcrypto.jwk import JWK
 
-from fis.constants import GHGA
+from fis.constants import DHFS_USER_AGENT_PREFIX, GHGA, OLD_DHFS_USER_AGENT_PREFIX
 from fis.core import models
 from tests_fis.fixtures.joint import JointRig
 from tests_fis.fixtures.utils import create_file_under_interrogation
@@ -65,12 +65,11 @@ def jwt_factory(data_hub_jwks):
 
 
 ROUTES_LOGGER = "fis.adapters.inbound.fastapi_.routes"
-TEST_USER_AGENT = "DataHubFileService/1.0.0"
+TEST_USER_AGENT = f"{DHFS_USER_AGENT_PREFIX}/2.0.0"
+WRONG_USER_AGENT = f"{DHFS_USER_AGENT_PREFIX}/1.0.4"
 
 
-async def test_health(
-    rest_client: AsyncTestClient, rig: JointRig, caplog: pytest.LogCaptureFixture
-):
+async def test_health(rest_client: AsyncTestClient, caplog: pytest.LogCaptureFixture):
     """Test the GET /health endpoint"""
     url = "/health"
     response = await rest_client.get(url)
@@ -78,7 +77,10 @@ async def test_health(
 
     # No User-Agent header → logged as unknown client, no storage alias
     with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
-        await rest_client.get(url, headers={"User-Agent": "Boto3/1.2.3 Python/3.12"})
+        response = await rest_client.get(
+            url, headers={"User-Agent": "Boto3/1.2.3 Python/3.12"}
+        )
+        assert response.status_code == 200
     assert "Boto3/1.2.3 Python/3.12" in caplog.text
     assert "health endpoint" in caplog.text
     assert "originating from" not in caplog.text
@@ -86,11 +88,33 @@ async def test_health(
 
     # With User-Agent header → client name and version logged, still no storage alias
     with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
-        await rest_client.get(url, headers={"User-Agent": TEST_USER_AGENT})
-    assert "DataHubFileService" in caplog.text
-    assert "1.0.0" in caplog.text
+        response = await rest_client.get(url, headers={"User-Agent": TEST_USER_AGENT})
+        assert response.status_code == 200
+    assert DHFS_USER_AGENT_PREFIX in caplog.text
+    assert "2.0.0" in caplog.text
     assert "health endpoint" in caplog.text
     assert "originating from" not in caplog.text
+
+    # Non-DHFS client in proper Name/version format is not version-filtered
+    response = await rest_client.get(
+        url, headers={"User-Agent": "SomeOtherClient/1.0.4"}
+    )
+    assert response.status_code == 200
+
+    # DHFS with an unparsable version string is rejected
+    response = await rest_client.get(
+        url, headers={"User-Agent": f"{DHFS_USER_AGENT_PREFIX}/not-a-version"}
+    )
+    assert response.status_code == 426
+
+    # With unaccepted DHFS version, 426
+    response = await rest_client.get(url, headers={"User-Agent": WRONG_USER_AGENT})
+    assert response.status_code == 426
+
+    # DHFS pre-v2 User Agent string should get rejected
+    prev2_header = {"User-Agent": f"{OLD_DHFS_USER_AGENT_PREFIX}/1.0.4"}
+    response = await rest_client.get(url, headers=prev2_header)
+    assert response.status_code == 426
 
 
 async def test_list_uploads(
@@ -111,8 +135,15 @@ async def test_list_uploads(
     response = await rest_client.get(url, headers=wrong_hub_headers)
     assert response.status_code == 403
 
-    # Verify that this works:
-    correct_headers = jwt_factory.auth_header(HUB1)
+    # Verify wrong DHFS version but right auth header returns 426
+    right_auth_headers = jwt_factory.auth_header(HUB1)
+    right_auth_headers["user-agent"] = WRONG_USER_AGENT
+    response = await rest_client.get(url, headers=right_auth_headers)
+    assert response.status_code == 426
+
+    # Verify that right auth header and right DHFS version result in success
+    correct_headers = right_auth_headers
+    correct_headers["user-agent"] = TEST_USER_AGENT
     response = await rest_client.get(url, headers=correct_headers)
     assert response.status_code == 200
     assert response.json() == []
@@ -139,8 +170,8 @@ async def test_list_uploads(
             url,
             headers={**jwt_factory.auth_header(HUB1), "User-Agent": TEST_USER_AGENT},
         )
-    assert "DataHubFileService" in caplog.text
-    assert "1.0.0" in caplog.text
+    assert DHFS_USER_AGENT_PREFIX in caplog.text
+    assert "2.0.0" in caplog.text
     assert HUB1 in caplog.text
 
 
@@ -181,8 +212,17 @@ async def test_get_removable_files(
     )
     assert response.status_code == 403
 
-    # Verify that this works with correct auth
+    # Verify wrong DHFS version but right auth header returns 426
+    right_auth_headers = jwt_factory.auth_header(HUB1)
+    right_auth_headers["user-agent"] = WRONG_USER_AGENT
+    response = await rest_client.post(
+        url, json=[str(id) for id in file_ids], headers=right_auth_headers
+    )
+    assert response.status_code == 426
+
+    # Verify that this works with correct auth and correct DHFS version
     correct_headers = jwt_factory.auth_header(HUB1)
+    correct_headers["user-agent"] = TEST_USER_AGENT
     response = await rest_client.post(
         url, json=[str(id) for id in file_ids], headers=correct_headers
     )
@@ -211,8 +251,8 @@ async def test_get_removable_files(
             json=[],
             headers={**correct_headers, "User-Agent": TEST_USER_AGENT},
         )
-    assert "DataHubFileService" in caplog.text
-    assert "1.0.0" in caplog.text
+    assert DHFS_USER_AGENT_PREFIX in caplog.text
+    assert "2.0.0" in caplog.text
     assert HUB1 in caplog.text
 
 
@@ -256,6 +296,7 @@ async def test_post_interrogation_report(
 
     # Submit interrogation report with valid token
     correct_headers = jwt_factory.auth_header(HUB1)
+    correct_headers["user-agent"] = TEST_USER_AGENT
     response = await rest_client.post(url, json=success_report, headers=correct_headers)
     assert response.status_code == 201
 
@@ -322,13 +363,15 @@ async def test_post_interrogation_report(
     )
     assert response.status_code == 422
 
-    # Verify user agent logging includes client name and storage alias
+    # Verify wrong DHFS version but right auth header returns 426
+    correct_headers["user-agent"] = WRONG_USER_AGENT  # temporarily override
+    response = await rest_client.post(url, json=success_report, headers=correct_headers)
+    assert response.status_code == 426
+
+    # Now the happy case: check user agent logging includes client name and storage alias
+    correct_headers["user-agent"] = TEST_USER_AGENT  # restore correct value
     with caplog.at_level(logging.INFO, logger=ROUTES_LOGGER):
-        await rest_client.post(
-            url,
-            json=success_report,
-            headers={**correct_headers, "User-Agent": TEST_USER_AGENT},
-        )
-    assert "DataHubFileService" in caplog.text
-    assert "1.0.0" in caplog.text
+        await rest_client.post(url, json=success_report, headers=correct_headers)
+    assert DHFS_USER_AGENT_PREFIX in caplog.text
+    assert "2.0.0" in caplog.text
     assert HUB1 in caplog.text

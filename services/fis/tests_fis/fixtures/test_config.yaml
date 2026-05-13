@@ -14,3 +14,4 @@ ekss_api_url: http://127.0.0.1/ekss
 data_hub_auth_keys:  # overridden by config fixture
   HD: '{"crv":"P-256","kty":"EC","x":"nix0eRNBLpSOQqEa63MB48FwKinZYpPL2G9QZEEAFGQ","y":"UEQBvFFSJmS95tBZCR1paF97jnwOZUyjKaE4aY6aaCk"}'
   TU: '{"crv":"P-256","kty":"EC","x":"1XAs84RlUVBlMlE8l_4rTTlSYWDeQiLH21iTDLKTIM8","y":"cySDIURnb35Z6kv5FaidwIiwMcpFCnwKVausc9o8BRs"}'
+dhfs_version_constraint: ~=2.0
