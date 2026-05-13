@@ -246,7 +246,7 @@ Since upstream maintainers are unresponsive, the solution is to **fork `jsonsubs
 4. Update metldata's dependency to reference the GHGA fork.
 5. Add a regression test to metldata using the specific GHGA CV value that triggers the bug; the test must fail without the fix and pass with it.
 
-**Note:** `jsonsubschema` only supports JSON Schema draft 4. The GHGA metadata schema uses draft 2019-09, so keywords like `$defs` and `unevaluatedProperties` are silently ignored or mishandled. This is out of scope for this epic but should be considered before further reliance on this library.
+**Note:** `jsonsubschema` only supports JSON Schema draft 4. The GHGA metadata schema uses draft 2019-09, so keywords like `$defs` and `unevaluatedProperties` are silently ignored or mishandled. Upgrading the library to support draft 2019-09 is out of scope for this epic; it is tracked as a parallel side task and has already been claimed by a team developer.
 
 ## User Journeys
 
