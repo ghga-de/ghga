@@ -182,55 +182,10 @@ for step in workflow.workflow.operations:
 
 This couples model derivation and data transformation into one loop. The em-transformation-service needs them separate: it derives all output schemas once at startup, then transforms datapacks individually at runtime. The existing `WorkflowHandler.run()` does not support this split either.
 
-**Solution: `WorkflowRunner`**
+**Solution: Refactor`WorkflowHandler`**
 
-```python
-class WorkflowRunner:
-    def __init__(
-        self,
-        workflow: Workflow,
-        transformation_registry: TransformationRegistry | None = None,
-    ) -> None:
-        """
-        Uses the default built-in registry when transformation_registry is None.
-        Validates the workflow against the registry at construction time.
-        """
-        ...
+`WorkflowHandler` is restructured so that model derivation and data transformation become two distinct phases. In `__init__`, the handler walks the workflow once: for each step it builds a `WorkflowStepHandler`, derives the step's output schema via the underlying `TransformationHandler`, and stores the resulting `TransformationHandler` instances in an internal list. The final output schema is exposed as a public attribute. The `WorkflowStepHandler.run(data, annotation)` method is reduced to a thin loop over the cached `TransformationHandler` instances, invoking transform_data on each in order and returning the `WorkflowResult`. This allows third-party consumers — such as em-transformation-service — to pay the schema-derivation cost once at `WorkflowHandler` initiation, and then call `run()` repeatedly per datapack without touching the `transformation_registry`, `config_cls`, or `TransformationHandler `directly. Boundary validation behavior (validate the first step's input, validate the last step's output) is preserved by passing the appropriate flags when constructing each handler in `__init__`.
 
-    def transform_model(self, input_schema: SchemaPack) -> SchemaPack:
-        """
-        Run the model-transformation phase of every workflow step in order.
-        Validates the input schema before the first step and the output schema
-        after the last step. Returns the final transformed schema.
-        """
-        ...
-
-    def transform_data(
-        self,
-        data: DataPack,
-        input_schema: SchemaPack,
-        annotation: SubmissionAnnotation,
-    ) -> DataPack:
-        """
-        Run the data-transformation phase of every workflow step in order.
-        Derives the intermediate schemas internally (equivalent to transform_model
-        applied step-by-step) — callers do not manage schema state.
-        Validates the input data before the first step and the output data
-        after the last step. Returns the final transformed datapack.
-        """
-        ...
-```
-
-The intended usage in a third-party service becomes:
-
-```python
-# At config/startup time (model derivation)
-runner = WorkflowRunner(workflow=my_workflow)
-output_schema = runner.transform_model(input_schema)
-
-# At runtime (data transformation, per incoming datapack)
-output_data = runner.transform_data(data, input_schema, annotation)
-```
 
 ###### Public API Surface
 
@@ -238,26 +193,9 @@ The following are the stable public exports:
 
 | Name                          | Kind     | Purpose                                                      |
 | ----------------------------- | -------- | ------------------------------------------------------------ |
-| `WorkflowRunner`              | class    | High-level workflow execution (this epic)                    |
+| `WorkflowHandler`             | class    | High-level workflow execution (this epic)                    |
 | `get_transformation_registry` | function | Returns the default registry                                 |
 | `validate_workflow`           | function | Validates a workflow against a registry without executing it |
-
-`validate_workflow` signature:
-
-```python
-def validate_workflow(
-    workflow: Workflow,
-    transformation_registry: TransformationRegistry | None = None,
-) -> None:
-    """
-    Raises WorkflowValidationError if any step name is not in the registry
-    or if step configurations are invalid. Uses the default registry when
-    transformation_registry is None.
-    """
-    ...
-```
-
-`WorkflowRunner` shall be importable from `metldata.workflow.runner`. The existing `WorkflowHandler` and `TransformationHandler` remain available internally but are not part of the public API.
 
 
 
