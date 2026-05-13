@@ -41,7 +41,7 @@ class Crypt4GHConfig(BaseSettings):
         examples=["./key.sec"],
         description="Path to the Data Hub's Crypt4GH private key file",
     )
-    crypt4gh_private_key_passphrase: str | None = Field(
+    data_hub_crypt4gh_private_key_passphrase: str | None = Field(
         default=None,
         description=(
             "Passphrase needed to read the content of the private key file. "
@@ -69,7 +69,7 @@ class Config(
     )
 
     interrogation_bucket_id: str = Field(
-        default="interrogation",
+        default=...,
         description=(
             "The name for the S3 'interrogation' bucket, which houses re-encrypted"
             + " files until they are copied to permanent storage by IFRS."

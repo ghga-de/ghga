@@ -51,7 +51,7 @@ def make_interrogation_success_report(storage_alias: str) -> InterrogationReport
     return InterrogationReport(
         file_id=uuid4(),
         storage_alias=storage_alias,
-        bucket_id="interrogation",
+        bucket_id="hub1-interrogation",
         object_id=uuid4(),
         interrogated_at=now_utc_ms_prec(),
         passed=True,

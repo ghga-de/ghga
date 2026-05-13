@@ -60,7 +60,7 @@ class Interrogator(InterrogatorPort):
         self._data_hub_private_key = SecretBytes(
             get_private_key(
                 config.data_hub_crypt4gh_private_key_path,
-                lambda: config.crypt4gh_private_key_passphrase,
+                lambda: config.data_hub_crypt4gh_private_key_passphrase,
             )
         )
         self._s3_client = s3_client
@@ -125,7 +125,7 @@ class Interrogator(InterrogatorPort):
 
         try:
             return self._extract_secret(envelope=envelope)
-        except (crypt4gh.header.CryptoError, ValueError) as err:
+        except ValueError as err:
             # Failed to decrypt envelope - interrogation failed - no cleanup needed
             raise self.FileEnvelopeDecryptionError() from err
 
@@ -133,8 +133,8 @@ class Interrogator(InterrogatorPort):
         """Extract file encryption/decryption secret from envelope.
 
         Raises:
-        - CryptoError if the envelope cannot be decrypted with the data hub's private key.
-        - ValueError if the secrets list returned by Crypt4GH is not 1 element long.
+        - ValueError if the envelope cannot be decrypted with the data hub's private
+            key or if the secrets list returned by Crypt4GH is not 1 element long.
         """
         envelope_stream = io.BytesIO(envelope)
         keys = [(0, self._data_hub_private_key.get_secret_value(), None)]
@@ -143,7 +143,9 @@ class Interrogator(InterrogatorPort):
         )
         if (count := len(session_keys)) != 1:
             raise ValueError(f"Expected session key count to be 1, not {count}")
-        return SecretBytes(session_keys[0])
+
+        # crypt4gh v1.8.6 returns session key as bytearray instead of bytes
+        return SecretBytes(bytes(session_keys[0]))
 
     async def _fetch_and_decrypt_part(
         self,

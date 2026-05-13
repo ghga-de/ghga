@@ -3,6 +3,7 @@ storage_alias: TESTHUB
 s3_endpoint_url: http://localstack:4566
 s3_access_key_id: test
 s3_secret_access_key: test
+interrogation_bucket_id: hub1-interrogation
 central_api_url: http://127.0.0.1:8000/central
 central_api_crypt4gh_public_key: aGDOl3gNlqhIsI0Hd3febLjoOpvq+X/2YyTW1xknWHw=
 data_hub_crypt4gh_private_key_path: "./keys/key.sec"

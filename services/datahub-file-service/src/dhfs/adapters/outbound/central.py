@@ -57,7 +57,7 @@ class CentralClientConfig(BaseSettings):
             "An alias identifying the Data Hub at which this instance of DHFS is"
             + " running. This value should be set in coordination with GHGA Central."
         ),
-        examples=["HD", "TUE", "B"],
+        examples=["HD01", "TUE01", "B01"],
     )
 
 

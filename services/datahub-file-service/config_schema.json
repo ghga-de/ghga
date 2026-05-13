@@ -94,7 +94,7 @@
       "title": "Data Hub Crypt4Gh Private Key Path",
       "type": "string"
     },
-    "crypt4gh_private_key_passphrase": {
+    "data_hub_crypt4gh_private_key_passphrase": {
       "anyOf": [
         {
           "type": "string"
@@ -105,7 +105,7 @@
       ],
       "default": null,
       "description": "Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted.",
-      "title": "Crypt4Gh Private Key Passphrase"
+      "title": "Data Hub Crypt4Gh Private Key Passphrase"
     },
     "central_api_crypt4gh_public_key": {
       "description": "The Crypt4GH public key used by the Central API. This is used to encrypt new file encryption secrets.",
@@ -133,9 +133,9 @@
     "storage_alias": {
       "description": "An alias identifying the Data Hub at which this instance of DHFS is running. This value should be set in coordination with GHGA Central.",
       "examples": [
-        "HD",
-        "TUE",
-        "B"
+        "HD01",
+        "TUE01",
+        "B01"
       ],
       "title": "Storage Alias",
       "type": "string"
@@ -259,7 +259,6 @@
       "type": "integer"
     },
     "interrogation_bucket_id": {
-      "default": "interrogation",
       "description": "The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS.",
       "title": "Interrogation Bucket Id",
       "type": "string"
@@ -306,7 +305,8 @@
     "s3_endpoint_url",
     "s3_access_key_id",
     "s3_secret_access_key",
-    "service_instance_id"
+    "service_instance_id",
+    "interrogation_bucket_id"
   ],
   "title": "ModSettings",
   "type": "object"
