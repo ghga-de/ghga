@@ -36,13 +36,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/internal-file-registry-service):
 ```bash
-docker pull ghga/internal-file-registry-service:7.0.1
+docker pull ghga/internal-file-registry-service:7.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/internal-file-registry-service:7.0.1 .
+docker build -t ghga/internal-file-registry-service:7.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -50,7 +50,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/internal-file-registry-service:7.0.1 --help
+docker run -p 8080:8080 ghga/internal-file-registry-service:7.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -517,24 +517,8 @@ The service requires the following configuration parameters:
 ## Definitions
 
 
-- <a id="%24defs/S3Config"></a>**`S3Config`** *(object)*: S3-specific config params.
-Inherit your config class from this class if you need
-to talk to an S3 service in the backend.<br>  Args:
-    s3_endpoint_url (str): The URL to the S3 endpoint.
-    s3_access_key_id (str):
-        Part of credentials for login into the S3 service. See:
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
-    s3_secret_access_key (str):
-        Part of credentials for login into the S3 service. See:
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
-    s3_session_token (str | None):
-        Optional part of credentials for login into the S3 service. See:
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
-    aws_config_ini (Path | None):
-        Path to a config file for specifying more advanced S3 parameters.
-        This should follow the format described here:
-        https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file
-        Defaults to None. Cannot contain additional properties.
+- <a id="%24defs/S3Config"></a>**`S3Config`** *(object)*: S3-specific config params.<br>  Inherit your config class from this class if you need to talk
+to an S3 service in the backend. Cannot contain additional properties.
 
   - <a id="%24defs/S3Config/properties/s3_endpoint_url"></a>**`s3_endpoint_url`** *(string, required)*: URL to the S3 API.
 
