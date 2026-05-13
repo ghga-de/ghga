@@ -108,7 +108,7 @@ async def test_get_part_url(rig: JointRig):
     )
 
     # Verify the URL was returned
-    assert result_url.startswith("https://s3.example.com/")
+    assert result_url.startswith("https://storage.test/test-inbox/")
 
 
 async def test_complete_file_upload(rig: JointRig):

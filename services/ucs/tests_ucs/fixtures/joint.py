@@ -36,7 +36,7 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
-from hexkit.providers.testing.s3 import InMemObjectStorage
+from hexkit.providers.testing.objstorage import InMemObjectStorage
 from jwcrypto.jwk import JWK
 from pydantic import UUID4
 

@@ -19,7 +19,7 @@ import pytest
 import pytest_asyncio
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
 from hexkit.protocols.objstorage import ObjectStorageProtocol
-from hexkit.providers.testing.s3 import InMemObjectStorage
+from hexkit.providers.testing.objstorage import InMemObjectStorage
 
 from tests_ucs.fixtures import ConfigFixture
 from tests_ucs.fixtures.in_mem_obj_storage import InMemS3ObjectStorages

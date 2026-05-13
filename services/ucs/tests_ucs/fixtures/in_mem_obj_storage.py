@@ -38,7 +38,5 @@ class InMemS3ObjectStorages(ObjectStorages):
         try:
             return node_config.bucket, self._data[node_config.bucket]
         except KeyError:
-            self._data[node_config.bucket] = S3ObjectStorage(
-                config=node_config.credentials
-            )
+            self._data[node_config.bucket] = S3ObjectStorage()  # type: ignore
             return node_config.bucket, self._data[node_config.bucket]
