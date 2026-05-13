@@ -1,6 +1,8 @@
-"""
-Created on Oct. 25, 2019
-@author: Andrew Habib
+"""Tests for JSON Schema $ref resolution in subschema checking.
+
+Originally created on October 25, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import unittest

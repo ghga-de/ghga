@@ -1,6 +1,8 @@
-"""
-Created on June 7, 2019
-@author: Andrew Habib
+"""JSON Schema type and keyword constants.
+
+Originally created on June 7, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import operator

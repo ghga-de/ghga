@@ -1,6 +1,8 @@
-"""
-Created on May 24, 2019
-@author: Andrew Habib
+"""Utility functions for JSON Schema processing.
+
+Originally created on May 24, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import copy

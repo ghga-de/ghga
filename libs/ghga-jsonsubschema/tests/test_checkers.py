@@ -1,4 +1,9 @@
-"""Tests for checker utility functions (top, bot, is_top, is_bot)."""
+"""Tests for checker utility functions (top, bot, is_top, is_bot).
+
+Originally created by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
+"""
 
 import unittest
 

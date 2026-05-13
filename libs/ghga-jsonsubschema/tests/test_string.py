@@ -1,6 +1,8 @@
-"""
-Created on July 11, 2019
-@author: Andrew Habib
+"""Tests for string type subschema checking.
+
+Originally created on July 11, 2019 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import unittest

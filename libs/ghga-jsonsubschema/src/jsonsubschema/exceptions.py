@@ -1,6 +1,8 @@
-"""
-Created on May 11, 2020
-@author: Andrew Habib
+"""Custom exceptions for jsonsubschema.
+
+Originally created on May 11, 2020 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 

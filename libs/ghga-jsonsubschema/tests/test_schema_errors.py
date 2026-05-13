@@ -1,6 +1,8 @@
-"""
-Created on April 24, 2020
-@author: Andrew Habib
+"""Tests for invalid schema error handling.
+
+Originally created on April 24, 2020 by Andrew Habib.
+Contains changes by The GHGA Authors.
+SPDX-License-Identifier: Apache-2.0
 """
 
 import unittest
