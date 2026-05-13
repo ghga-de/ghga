@@ -22,8 +22,6 @@ config:
   enable_opentelemetry: false
   db_version_collection: "ucsDbVersions"
   migration_wait_sec: 10
-  wps_auth_config: '{}'
-  uos_auth_config: '{}'
 
 cmd: ucs run-rest
 # cmd: ucs consume-events
