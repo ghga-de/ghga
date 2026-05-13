@@ -46,7 +46,7 @@ charts:
   metldata:
     name: metldata
     description: metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing.
-    appVersion: "4.0.8"
+    appVersion: "4.0.9"
   notification:
     name: notification
     description: Notification service
@@ -78,7 +78,7 @@ charts:
   work-package:
     name: work-package
     description: Work package service
-    appVersion: "7.2.1"
+    appVersion: "10.0.0"
   registry-service:
     name: registry-service
     description: GHGA Registry Service
