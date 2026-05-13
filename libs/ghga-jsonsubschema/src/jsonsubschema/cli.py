@@ -10,6 +10,8 @@ import argparse
 from jsonsubschema._utils import load_json_file
 from jsonsubschema.api import is_subschema
 
+__all__ = ["main"]
+
 
 def main():
     """CLI entry point for jsonsubschema"""

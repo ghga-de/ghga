@@ -5,15 +5,23 @@ Contains changes by The GHGA Authors.
 SPDX-License-Identifier: Apache-2.0
 """
 
-from jsonsubschema import _canonicalization, api, config
-from jsonsubschema import exceptions as exceptions
+from jsonsubschema import exceptions
+from jsonsubschema._canonicalization import canonicalize_schema
+from jsonsubschema.api import (
+    is_equivalent,
+    is_subschema,
+    join_schemas,
+    meet_schemas,
+)
+from jsonsubschema.config import set_debug, set_warn_uninhabited
 
-isSubschema = api.is_subschema
-meetSchemas = api.meet
-joinSchemas = api.join
-isEquivalent = api.is_equivalent
-
-canonicalizeSchema = _canonicalization.canonicalize_schema
-
-set_debug = config.set_debug
-set_warn_uninhabited = config.set_warn_uninhabited
+__all__ = [
+    "canonicalize_schema",
+    "exceptions",
+    "is_equivalent",
+    "is_subschema",
+    "join_schemas",
+    "meet_schemas",
+    "set_debug",
+    "set_warn_uninhabited",
+]

@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import pytest
 
-from jsonsubschema import isEquivalent, isSubschema
+from jsonsubschema import is_equivalent, is_subschema
 
 # Tests with paper examples
 
@@ -96,14 +96,14 @@ def test_obj():
         ]
     }
 
-    assert isSubschema(s1, s2)
+    assert is_subschema(s1, s2)
 
 
 def test_simple_list_of_type():
     s1 = {"type": ["array", "object"]}
     s2 = {"type": ["object", "array"]}
 
-    assert isEquivalent(s1, s2)
+    assert is_equivalent(s1, s2)
 
 
 def test_equiv_multiple_case():
@@ -112,39 +112,39 @@ def test_equiv_multiple_case():
     s3 = {"anyOf": [{"type": "string", "pattern": ".{1,}"}, {"enum": [None]}]}
     s4 = {"anyOf": [{"type": "string"}, {"type": "null"}], "not": {"enum": [""]}}
 
-    assert isEquivalent(s1, s2)
-    assert isEquivalent(s1, s3)
-    assert isEquivalent(s1, s4)
-    assert isEquivalent(s2, s3)
-    assert isEquivalent(s2, s4)
-    assert isEquivalent(s3, s4)
+    assert is_equivalent(s1, s2)
+    assert is_equivalent(s1, s3)
+    assert is_equivalent(s1, s4)
+    assert is_equivalent(s2, s3)
+    assert is_equivalent(s2, s4)
+    assert is_equivalent(s3, s4)
 
 
 def test_bool_enum():
     s1 = {"type": "boolean", "enum": [True], "not": {"enum": [True]}}
     s2: dict = {"allOf": [{}, {"not": {}}]}
-    assert isSubschema(s1, s2)
-    assert isEquivalent(s1, s2)
+    assert is_subschema(s1, s2)
+    assert is_equivalent(s1, s2)
 
 
 def test_bool_enum2():
     s1 = {"enum": [True, False]}
     s2 = {"enum": [True]}
-    assert isSubschema(s2, s1)
-    assert not isSubschema(s1, s2)
-    assert not isEquivalent(s1, s2)
+    assert is_subschema(s2, s1)
+    assert not is_subschema(s1, s2)
+    assert not is_equivalent(s1, s2)
 
     s3 = {"allOf": [s1, s2]}
-    assert isSubschema(s3, s1)
-    assert isSubschema(s3, s2)
-    assert not isSubschema(s1, s3)
-    assert isEquivalent(s2, s3)
+    assert is_subschema(s3, s1)
+    assert is_subschema(s3, s2)
+    assert not is_subschema(s1, s3)
+    assert is_equivalent(s2, s3)
 
     s4 = {"anyOf": [s1, s2]}
-    assert isSubschema(s1, s4)
-    assert isSubschema(s2, s4)
-    assert not isSubschema(s4, s2)
-    assert isEquivalent(s1, s4)
+    assert is_subschema(s1, s4)
+    assert is_subschema(s2, s4)
+    assert not is_subschema(s4, s2)
+    assert is_equivalent(s1, s4)
 
 
 @pytest.mark.skip(reason="Unsupported array join")
@@ -175,8 +175,8 @@ def test_union_of_tuples():
             },
         ]
     }
-    assert isSubschema(s2, s1)
-    assert isEquivalent(s1, s2)
+    assert is_subschema(s2, s1)
+    assert is_equivalent(s1, s2)
 
 
 # Tests with BigchainDB examples
@@ -247,7 +247,7 @@ def test_transaction_create():
         },
     }
 
-    assert isEquivalent(v1, v2)
+    assert is_equivalent(v1, v2)
 
 
 def test_transaction_transfer():
@@ -305,7 +305,7 @@ def test_transaction_transfer():
         },
     }
 
-    assert isEquivalent(v1, v2)
+    assert is_equivalent(v1, v2)
 
 
 def test_transaction_create_transfer():
@@ -427,11 +427,11 @@ def test_transaction_create_transfer():
         },
     }
 
-    assert not isSubschema(transfer_v1, create_v1)
-    assert not isSubschema(transfer_v2, create_v2)
+    assert not is_subschema(transfer_v1, create_v1)
+    assert not is_subschema(transfer_v2, create_v2)
 
-    assert not isSubschema(create_v1, transfer_v1)
-    assert not isSubschema(create_v2, transfer_v2)
+    assert not is_subschema(create_v1, transfer_v1)
+    assert not is_subschema(create_v2, transfer_v2)
 
 
 def test_transaction():
@@ -945,9 +945,9 @@ def test_transaction():
         },
     }
 
-    assert not isSubschema(v1, v2)
+    assert not is_subschema(v1, v2)
 
-    assert not isSubschema(v2, v1)
+    assert not is_subschema(v2, v1)
 
 
 def test_transaction_vote_transaction_validator_election():
@@ -1039,6 +1039,6 @@ def test_transaction_vote_transaction_validator_election():
         },
     }
 
-    assert isSubschema(transaction_validator_election, transaction_vote)
+    assert is_subschema(transaction_validator_election, transaction_vote)
 
-    assert not isSubschema(transaction_vote, transaction_validator_election)
+    assert not is_subschema(transaction_vote, transaction_validator_election)

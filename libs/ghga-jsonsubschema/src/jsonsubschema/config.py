@@ -7,6 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 
 import jsonschema
 
+__all__ = [
+    "set_debug",
+    "set_json_validator_version",
+    "set_warn_uninhabited",
+]
+
 VALIDATOR = jsonschema.Draft4Validator  # Which schema validator draft to use
 PRINT_DB = False  # Print debugging info?
 WARN_UNINHABITED = False  # Enable uninhabited types warning?

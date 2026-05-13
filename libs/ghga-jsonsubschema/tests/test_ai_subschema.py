@@ -806,8 +806,8 @@ def test_dataset_op():
             op_schema = globals()[op_name + "_schema"]
             ds_schema = globals()[ds_name + "_schema"]
             # try:
-            result = jsonsubschema.isSubschema(ds_schema, op_schema)
-            # result = jsonsubschema.isSubschema(ds_schema, op_schema)
+            result = jsonsubschema.is_subschema(ds_schema, op_schema)
+            # result = jsonsubschema.is_subschema(ds_schema, op_schema)
             # assert result == expected[op_name][ds_name], f'dataset {ds_name} operator {op_name}'
             assert result == expected[op_name][ds_name]
             count += 1
@@ -829,7 +829,7 @@ def test_dataset_op():
 
 #             # op_schema = json.load(open(op_file, "r"))
 #             # ds_schema = json.load(open(ds_file, "r"))
-#             # result = jsonsubschema.isSubschema(ds_schema, op_schema)
+#             # result = jsonsubschema.is_subschema(ds_schema, op_schema)
 
 #             # assert result == expected[op_name][ds_name], f'dataset {ds_name} operator {op_name}'
 #             with self.subTest(f'dataset {ds_name} operator {op_name}: {i,j}'):

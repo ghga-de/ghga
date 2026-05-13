@@ -13,6 +13,13 @@ from jsonsubschema._canonicalization import (
 )
 from jsonsubschema.exceptions import UnsupportedRecursiveRef
 
+__all__ = [
+    "is_equivalent",
+    "is_subschema",
+    "join_schemas",
+    "meet_schemas",
+]
+
 
 def prepare_operands(s1, s2):
     """Resolve $ref, canonicalize, and embed checker objects into both schemas."""
@@ -52,18 +59,18 @@ def is_subschema(s1, s2):
     return s1.is_subtype(s2)
 
 
-def meet(s1, s2):
+def meet_schemas(s1, s2):
     """Entry point for schema meet operation."""
     s1, s2 = prepare_operands(s1, s2)
     return s1.meet(s2)
 
 
-def join(s1, s2):
-    """Entry point for schema meet operation."""
+def join_schemas(s1, s2):
+    """Entry point for schema join operation."""
     s1, s2 = prepare_operands(s1, s2)
     return s1.join(s2)
 
 
 def is_equivalent(s1, s2):
-    """Entry point for schema equivalence check operation."""
+    """Entry point for schema equivalence check."""
     return is_subschema(s1, s2) and is_subschema(s2, s1)

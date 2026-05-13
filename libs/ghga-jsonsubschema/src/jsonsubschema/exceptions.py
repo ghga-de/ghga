@@ -5,6 +5,13 @@ Contains changes by The GHGA Authors.
 SPDX-License-Identifier: Apache-2.0
 """
 
+__all__ = [
+    "UnsupportedEnumCanonicalization",
+    "UnsupportedNegatedArray",
+    "UnsupportedNegatedObject",
+    "UnsupportedRecursiveRef",
+]
+
 
 class _UnsupportedCase(Exception):
     pass

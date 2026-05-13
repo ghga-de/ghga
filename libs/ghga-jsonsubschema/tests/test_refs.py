@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import pytest
 
-from jsonsubschema import isSubschema
+from jsonsubschema import is_subschema
 from jsonsubschema.exceptions import UnsupportedRecursiveRef
 
 # Tests for simple $refs
@@ -21,8 +21,8 @@ def test_simple_ref_1():
     }
     s2 = {"type": "object", "properties": {"foo": {"type": "string"}}}
 
-    assert isSubschema(s1, s2)
-    assert isSubschema(s2, s1)
+    assert is_subschema(s1, s2)
+    assert is_subschema(s2, s1)
 
 
 def test_simple_ref_2():
@@ -36,8 +36,8 @@ def test_simple_ref_2():
         "properties": {"foo": {"type": "string", "pattern": "a"}},
     }
 
-    assert not isSubschema(s1, s2)
-    assert isSubschema(s2, s1)
+    assert not is_subschema(s1, s2)
+    assert is_subschema(s2, s1)
 
 
 # Tests for $refs
@@ -66,20 +66,20 @@ def test_refs_1():
             }
         },
     }
-    assert isSubschema(s1, s2)
-    assert not isSubschema(s2, s1)
+    assert is_subschema(s1, s2)
+    assert not is_subschema(s2, s1)
 
     s3 = {"type": "array", "items": {"type": "integer"}}
-    assert isSubschema(s1, s3)
-    assert isSubschema(s2, s3)
+    assert is_subschema(s1, s3)
+    assert is_subschema(s2, s3)
 
     s4 = {"type": "array", "items": {"type": "string"}}
-    assert not isSubschema(s1, s4)
-    assert not isSubschema(s2, s4)
+    assert not is_subschema(s1, s4)
+    assert not is_subschema(s2, s4)
 
     s4 = {"type": "string"}
-    assert not isSubschema(s1, s4)
-    assert not isSubschema(s2, s4)
+    assert not is_subschema(s1, s4)
+    assert not is_subschema(s2, s4)
 
 
 @pytest.mark.skip(
@@ -114,7 +114,7 @@ def test_refs_2():
     s2 = {"enum": [None]}
 
     with pytest.raises(UnsupportedRecursiveRef) as exc_info:
-        isSubschema(s2, s1)
+        is_subschema(s2, s1)
     print(exc_info.value)
 
 
@@ -140,5 +140,5 @@ def test_refs_3():
     s2 = {"enum": [None]}
 
     with pytest.raises(UnsupportedRecursiveRef) as exc_info:
-        isSubschema(s2, s1)
+        is_subschema(s2, s1)
     print(exc_info.value)

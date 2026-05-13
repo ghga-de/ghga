@@ -134,13 +134,6 @@ max-complexity = 10
     "D102",
     "D103",
 ]
-"__init__.py" = [
-    "D",
-    # TODO: Rename public API names to snake_case (breaking change, needs major version bump):
-    # isSubschema -> is_subschema, meetSchemas -> meet_schemas, joinSchemas -> join_schemas,
-    # isEquivalent -> is_equivalent, canonicalizeSchema -> canonicalize_schema
-    "N816",
-]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
