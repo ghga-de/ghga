@@ -739,7 +739,7 @@ paths:
 
 
         Requires CreateFileBoxWorkOrder token and only allowed for Data Stewards via
-        the UOS.
+        the RS.
 
         Request body should contain the storage alias to use for uploads within the
         box.
@@ -790,7 +790,7 @@ paths:
 
         a `state` field indicating the target state or a `max_size` field with the
 
-        new size limit. Requires ChangeFileBoxWorkOrder token from the UOS. When updating
+        new size limit. Requires ChangeFileBoxWorkOrder token from the RS. When updating
 
         state, the work type must match the target state. When updating max_size,
         the
@@ -852,7 +852,7 @@ paths:
 
         Returns the list of FileUploads for completed uploads in the specified box.
 
-        Requires ViewFileBoxWorkOrder token from the UOS.'
+        Requires ViewFileBoxWorkOrder token from the RS.'
       operationId: getBoxUploads
       parameters:
       - in: path

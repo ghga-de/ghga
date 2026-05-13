@@ -480,7 +480,7 @@ The service requires the following configuration parameters:
 
 - <a id="properties/wps_auth_config"></a>**`wps_auth_config`** *(required)*: Refer to *[#/$defs/AuthConfig](#%24defs/AuthConfig)*.
 
-- <a id="properties/uos_auth_config"></a>**`uos_auth_config`** *(required)*: Refer to *[#/$defs/AuthConfig](#%24defs/AuthConfig)*.
+- <a id="properties/rs_auth_config"></a>**`rs_auth_config`** *(required)*: Refer to *[#/$defs/AuthConfig](#%24defs/AuthConfig)*.
 
 - <a id="properties/host"></a>**`host`** *(string)*: IP of the host. Default: `"127.0.0.1"`.
 

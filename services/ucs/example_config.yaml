@@ -53,15 +53,15 @@ object_storages:
 openapi_url: /openapi.json
 otel_trace_sampling_rate: 1.0
 port: 8080
-service_instance_id: '001'
-service_name: ucs
-timeout_keep_alive: 90
-uos_auth_config:
+rs_auth_config:
   auth_algs:
   - ES256
   auth_check_claims: {}
   auth_key: '{}'
   auth_map_claims: {}
+service_instance_id: '001'
+service_name: ucs
+timeout_keep_alive: 90
 workers: 1
 wps_auth_config:
   auth_algs:

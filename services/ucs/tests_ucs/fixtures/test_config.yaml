@@ -18,7 +18,7 @@ db_version_collection: ucsDbVersions
 wps_auth_config:
   auth_key: "{}"
   auth_check_claims: {}
-uos_auth_config:
+rs_auth_config:
   auth_key: "{}"
   auth_check_claims: {}
 file_interrogations_topic: file-interrogations

@@ -59,7 +59,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
     some of the core behavior branches.
     """
     wps_jwk = joint_fixture.wps_jwk
-    uos_jwk = joint_fixture.uos_jwk
+    rs_jwk = joint_fixture.rs_jwk
     kafka = joint_fixture.kafka
     config = joint_fixture.config
     rest_client = joint_fixture.rest_client
@@ -69,7 +69,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         async with kafka.record_events(
             in_topic=config.file_upload_box_topic
         ) as box_recorder:
-            token_header = utils.create_file_box_token_header(jwk=uos_jwk)
+            token_header = utils.create_file_box_token_header(jwk=rs_jwk)
             box_creation_body = {
                 "storage_alias": "test",
                 "max_size": utils.TEST_MAX_BOX_SIZE,
@@ -181,7 +181,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
             in_topic=config.file_upload_box_topic
         ) as box_recorder:
             lock_box_token_header = utils.change_file_box_token_header(
-                box_id=box_id, jwk=uos_jwk
+                box_id=box_id, jwk=rs_jwk
             )
             box_update_body = {"state": "locked", "version": 1}
             response = await rest_client.patch(
@@ -209,7 +209,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         # Box version is 2 after locking.
         box_update_body = {"state": "open", "version": 2}
         unlock_box_token_header = utils.change_file_box_token_header(
-            box_id=box_id, work_type="unlock", jwk=uos_jwk
+            box_id=box_id, work_type="unlock", jwk=rs_jwk
         )
         response = await rest_client.patch(
             f"/boxes/{box_id}",

@@ -32,10 +32,10 @@ from ucs.constants import SERVICE_NAME
 
 
 class PublicKeyConfig(BaseSettings):
-    """Auth config for WPS and UOS keys"""
+    """Auth config for WPS and RS keys"""
 
     wps_auth_config: AuthConfig
-    uos_auth_config: AuthConfig
+    rs_auth_config: AuthConfig
 
 
 @config_from_yaml(prefix=SERVICE_NAME)

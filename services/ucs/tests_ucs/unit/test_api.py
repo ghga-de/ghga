@@ -60,7 +60,7 @@ async def test_create_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
     a 401 if the work type is incorrect,
     and a 200 if the token is correct (and request succeeds).
     """
-    uos_jwk = config.uos_jwk
+    rs_jwk = config.rs_jwk
     body = {"storage_alias": "HD01", "max_size": 1073741824}
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
@@ -73,11 +73,11 @@ async def test_create_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
     assert response.status_code == 401
 
     # generate a token with the wrong work type for this action
-    bad_token_header = utils.change_file_box_token_header(jwk=uos_jwk)
+    bad_token_header = utils.change_file_box_token_header(jwk=rs_jwk)
     response = await rest_client.post("/boxes", json=body, headers=bad_token_header)
     assert response.status_code == 401
 
-    good_token_header = utils.create_file_box_token_header(jwk=uos_jwk)
+    good_token_header = utils.create_file_box_token_header(jwk=rs_jwk)
     response = await rest_client.post("/boxes", json=body, headers=good_token_header)
     assert response.status_code == 201
 
@@ -87,7 +87,7 @@ async def test_update_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
     a 403 if auth is supplied but for another resource/work type,
     and a 204 if the token is correct (and request succeeds).
     """
-    uos_jwk = config.uos_jwk
+    rs_jwk = config.rs_jwk
     body = {"state": "locked", "version": 0}
     rest_client = app_fixture.rest_client
 
@@ -101,20 +101,20 @@ async def test_update_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
     assert response.status_code == 401
 
     # Supply a token with the correct work type but the wrong box ID -- should get a 403
-    wrong_id_token_header = utils.change_file_box_token_header(jwk=uos_jwk)
+    wrong_id_token_header = utils.change_file_box_token_header(jwk=rs_jwk)
     response = await rest_client.patch(url, json=body, headers=wrong_id_token_header)
     assert response.status_code == 403
 
     # Supply the wrong work type for the given state -- should return 403
     wrong_work_token_header = utils.change_file_box_token_header(
-        box_id=TEST_BOX_ID, work_type="unlock", jwk=uos_jwk
+        box_id=TEST_BOX_ID, work_type="unlock", jwk=rs_jwk
     )
     response = await rest_client.patch(url, json=body, headers=wrong_work_token_header)
     assert response.status_code == 403
 
     # Now the happy case for state-only update
     good_token_header = utils.change_file_box_token_header(
-        box_id=TEST_BOX_ID, jwk=uos_jwk
+        box_id=TEST_BOX_ID, jwk=rs_jwk
     )
     response = await rest_client.patch(url, json=body, headers=good_token_header)
     assert response.status_code == 204
@@ -122,7 +122,7 @@ async def test_update_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
     # max_size-only update requires "resize" work type
     resize_body = {"max_size": 1073741824, "version": 0}
     wrong_work_for_resize = utils.change_file_box_token_header(
-        box_id=TEST_BOX_ID, work_type="lock", jwk=uos_jwk
+        box_id=TEST_BOX_ID, work_type="lock", jwk=rs_jwk
     )
     response = await rest_client.patch(
         url, json=resize_body, headers=wrong_work_for_resize
@@ -131,7 +131,7 @@ async def test_update_box_endpoint_auth(config: ConfigFixture, app_fixture: AppF
 
     # Test max_size update with right work type
     resize_token_header = utils.change_file_box_token_header(
-        box_id=TEST_BOX_ID, work_type="resize", jwk=uos_jwk
+        box_id=TEST_BOX_ID, work_type="resize", jwk=rs_jwk
     )
     response = await rest_client.patch(
         url, json=resize_body, headers=resize_token_header
@@ -156,7 +156,7 @@ async def test_view_box_endpoint_auth(config: ConfigFixture, app_fixture: AppFix
     a 403 if a structurally valid auth token is supplied but doesn't match the
     requested resource, and a 200 if the token is correct (and request succeeds).
     """
-    uos_jwk = config.uos_jwk
+    rs_jwk = config.rs_jwk
     rest_client = app_fixture.rest_client
 
     url = f"/boxes/{TEST_BOX_ID}/uploads"
@@ -166,20 +166,16 @@ async def test_view_box_endpoint_auth(config: ConfigFixture, app_fixture: AppFix
     response = await rest_client.get(url, headers=INVALID_HEADER)
     assert response.status_code == 401
 
-    wrong_box_id = utils.view_file_box_token_header(jwk=uos_jwk)
+    wrong_box_id = utils.view_file_box_token_header(jwk=rs_jwk)
     response = await rest_client.get(url, headers=wrong_box_id)
     assert response.status_code == 403
 
     # generate a different kind of token with otherwise correct params
-    wrong_work_type = utils.change_file_box_token_header(
-        jwk=uos_jwk, box_id=TEST_BOX_ID
-    )
+    wrong_work_type = utils.change_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
     response = await rest_client.get(url, headers=wrong_work_type)
     assert response.status_code == 401
 
-    good_token_header = utils.view_file_box_token_header(
-        jwk=uos_jwk, box_id=TEST_BOX_ID
-    )
+    good_token_header = utils.view_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
     response = await rest_client.get(url, headers=good_token_header)
     assert response.status_code == 200
 
@@ -400,12 +396,12 @@ async def test_create_box_endpoint_error_handling(
     app_fixture: AppFixture,
 ):
     """Test that the endpoint correctly translates errors from the core."""
-    uos_jwk = config.uos_jwk
+    rs_jwk = config.rs_jwk
     body = {"storage_alias": "HD01", "max_size": 1073741824}
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
     core_mock.create_file_upload_box.side_effect = core_error
-    token_header = utils.create_file_box_token_header(jwk=uos_jwk)
+    token_header = utils.create_file_box_token_header(jwk=rs_jwk)
     response = await rest_client.post("/boxes", json=body, headers=token_header)
     assert response.json()["description"] == str(http_error)
 
@@ -432,12 +428,12 @@ async def test_update_box_endpoint_error_handling(
     app_fixture: AppFixture,
 ):
     """Test that the endpoint correctly translates errors from the core."""
-    uos_jwk = config.uos_jwk
+    rs_jwk = config.rs_jwk
     body = {"state": "locked", "version": 0}
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
     core_mock.lock_file_upload_box.side_effect = core_error
-    token_header = utils.change_file_box_token_header(box_id=TEST_BOX_ID, jwk=uos_jwk)
+    token_header = utils.change_file_box_token_header(box_id=TEST_BOX_ID, jwk=rs_jwk)
     response = await rest_client.patch(
         f"/boxes/{TEST_BOX_ID}",
         json=body,
@@ -450,7 +446,7 @@ async def test_update_box_max_size_below_current_error_handling(
     config: ConfigFixture, app_fixture: AppFixture
 ):
     """Test that BoxMaxSizeTooLowError is correctly translated to HTTP 409."""
-    uos_jwk = config.uos_jwk
+    rs_jwk = config.rs_jwk
     body = {"max_size": 100, "version": 0}
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
@@ -460,7 +456,7 @@ async def test_update_box_max_size_below_current_error_handling(
         )
     )
     token_header = utils.change_file_box_token_header(
-        box_id=TEST_BOX_ID, work_type="resize", jwk=uos_jwk
+        box_id=TEST_BOX_ID, work_type="resize", jwk=rs_jwk
     )
     response = await rest_client.patch(
         f"/boxes/{TEST_BOX_ID}", json=body, headers=token_header
@@ -489,11 +485,11 @@ async def test_view_box_endpoint_error_handling(
     app_fixture: AppFixture,
 ):
     """Test that the endpoint correctly translates errors from the core."""
-    uos_jwk = config.uos_jwk
+    rs_jwk = config.rs_jwk
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
     core_mock.get_box_file_info.side_effect = core_error
-    token_header = utils.view_file_box_token_header(jwk=uos_jwk, box_id=TEST_BOX_ID)
+    token_header = utils.view_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
     response = await rest_client.get(
         f"/boxes/{TEST_BOX_ID}/uploads",
         headers=token_header,

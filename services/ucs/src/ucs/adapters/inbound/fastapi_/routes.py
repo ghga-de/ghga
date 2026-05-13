@@ -196,7 +196,7 @@ async def create_box(
 ) -> UUID4:
     """Create a new FileUploadBox.
 
-    Requires CreateFileBoxWorkOrder token and only allowed for Data Stewards via the UOS.
+    Requires CreateFileBoxWorkOrder token and only allowed for Data Stewards via the RS.
     Request body should contain the storage alias to use for uploads within the box.
     Returns the box_id of the newly created FileUploadBox.
     """
@@ -238,7 +238,7 @@ async def update_box(  # noqa: C901, PLR0912
 
     Request body must contain a `version` field (for optimistic locking) plus either
     a `state` field indicating the target state or a `max_size` field with the
-    new size limit. Requires ChangeFileBoxWorkOrder token from the UOS. When updating
+    new size limit. Requires ChangeFileBoxWorkOrder token from the RS. When updating
     state, the work type must match the target state. When updating max_size, the
     work type must be 'resize'. Users are only allowed to lock the box; a Data Steward
     role is required to do everything else.
@@ -308,7 +308,7 @@ async def get_box_uploads(
     """Retrieve list of FileUploads for a FileUploadBox.
 
     Returns the list of FileUploads for completed uploads in the specified box.
-    Requires ViewFileBoxWorkOrder token from the UOS.
+    Requires ViewFileBoxWorkOrder token from the RS.
     """
     if work_order.box_id != box_id:
         raise http_exceptions.HttpNotAuthorizedError()
