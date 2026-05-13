@@ -5,35 +5,28 @@ Contains changes by The GHGA Authors.
 SPDX-License-Identifier: Apache-2.0
 """
 
-import unittest
-
 from jsonsubschema import isSubschema
 
 
-class TestNull(unittest.TestCase):
-    def test_null1(self):
-        s1 = {"enum": [None]}
-        s2 = {"type": "null"}
+def test_null1():
+    s1 = {"enum": [None]}
+    s2 = {"type": "null"}
 
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertTrue(isSubschema(s2, s1))
+    assert isSubschema(s1, s2)
+    assert isSubschema(s2, s1)
 
-    def test_null2(self):
-        s1 = {"type": "null"}
-        s2: dict = {}
 
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertFalse(isSubschema(s2, s1))
+def test_null2():
+    s1 = {"type": "null"}
+    s2: dict = {}
 
-    def test_null3(self):
-        s1 = {"enum": [None]}
-        s2 = {"enum": [0]}
+    assert isSubschema(s1, s2)
+    assert not isSubschema(s2, s1)
 
-        with self.subTest():
-            self.assertFalse(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertFalse(isSubschema(s2, s1))
+
+def test_null3():
+    s1 = {"enum": [None]}
+    s2 = {"enum": [0]}
+
+    assert not isSubschema(s1, s2)
+    assert not isSubschema(s2, s1)
