@@ -5,151 +5,139 @@ Contains changes by The GHGA Authors.
 SPDX-License-Identifier: Apache-2.0
 """
 
-import unittest
-
 from jsonsubschema import isSubschema
 
-
-class TestArraySubtype(unittest.TestCase):
-    def test_identity(self):
-        s1 = {"type": "array", "minItems": 5, "maxItems:": 10}
-        s2 = s1
-        self.assertTrue(isSubschema(s1, s2))
-
-    def test_min_max(self):
-        s1 = {"type": "array", "minItems": 5, "maxItems:": 10}
-        s2 = {"type": "array", "minItems": 1, "maxItems:": 20}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertFalse(isSubschema(s2, s1))
-
-    def test_unique(self):
-        s1 = {"type": "array", "uniqueItems": True}
-        s2 = {"type": "array", "uniqueItems": False}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertFalse(isSubschema(s2, s1))
-
-    def test_empty_items1(self):
-        s1 = {"type": "array"}
-        s2 = {"type": "array", "items": {}}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertTrue(isSubschema(s2, s1))
-
-    def test_empty_items2(self):
-        s1 = {"type": "array", "additionalItems": False}
-        s2 = {"type": "array", "items": {}}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertTrue(isSubschema(s2, s1))
-
-    def test_empty_items3(self):
-        s1 = {"type": "array", "items": [{}, {}], "additionalItems": False}
-        s2 = {"type": "array", "items": {}}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertFalse(isSubschema(s2, s1))
-
-    def test_empty_items4(self):
-        s1 = {"type": "array", "items": [{}, {}], "additionalItems": True}
-        s2 = {"type": "array", "items": {}}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertTrue(isSubschema(s2, s1))
-
-    def test_empty_items5(self):
-        s1 = {"type": "array", "items": [{}, {}], "additionalItems": False}
-        s2 = {"type": "array", "items": [{}], "additionalItems": False}
-        with self.subTest():
-            self.assertFalse(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertTrue(isSubschema(s2, s1))
-
-    def test_dict_items_list_items1(self):
-        s1 = {"type": "array", "items": {"type": "string"}}
-        s2 = {"type": "array", "items": [{"type": "string"}]}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertFalse(isSubschema(s2, s1))
-
-    def test_dict_items_list_items2(self):
-        s1 = {"type": "array", "items": {"type": "string"}}
-        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "string"}]}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertFalse(isSubschema(s2, s1))
-
-    def test_dict_items_list_items3(self):
-        s1 = {"type": "array", "items": [{"type": "string"}]}
-        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
-        with self.subTest():
-            self.assertFalse(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertTrue(isSubschema(s2, s1))
-
-    def test_dict_items_list_items4(self):
-        s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": False}
-        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
-        with self.subTest():
-            self.assertTrue(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertFalse(isSubschema(s2, s1))
-
-    def test_dict_items_list_items5(self):
-        s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": True}
-        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
-        with self.subTest():
-            self.assertFalse(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertTrue(isSubschema(s2, s1))
-
-    def test_dict_items_list_items6(self):
-        s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": {}}
-        s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
-        with self.subTest():
-            self.assertFalse(isSubschema(s1, s2))
-        with self.subTest():
-            self.assertTrue(isSubschema(s2, s1))
+# Tests for array subtype
 
 
-class TestNestedArray(unittest.TestCase):
-    def test_1(self):
-        s1 = {
-            "$schema": "http://json-schema.org/draft-04/schema#",
+def test_identity():
+    s1 = {"type": "array", "minItems": 5, "maxItems:": 10}
+    s2 = s1
+    assert isSubschema(s1, s2)
+
+
+def test_min_max():
+    s1 = {"type": "array", "minItems": 5, "maxItems:": 10}
+    s2 = {"type": "array", "minItems": 1, "maxItems:": 20}
+    assert isSubschema(s1, s2)
+    assert not isSubschema(s2, s1)
+
+
+def test_unique():
+    s1 = {"type": "array", "uniqueItems": True}
+    s2 = {"type": "array", "uniqueItems": False}
+    assert isSubschema(s1, s2)
+    assert not isSubschema(s2, s1)
+
+
+def test_empty_items1():
+    s1 = {"type": "array"}
+    s2 = {"type": "array", "items": {}}
+    assert isSubschema(s1, s2)
+    assert isSubschema(s2, s1)
+
+
+def test_empty_items2():
+    s1 = {"type": "array", "additionalItems": False}
+    s2 = {"type": "array", "items": {}}
+    assert isSubschema(s1, s2)
+    assert isSubschema(s2, s1)
+
+
+def test_empty_items3():
+    s1 = {"type": "array", "items": [{}, {}], "additionalItems": False}
+    s2 = {"type": "array", "items": {}}
+    assert isSubschema(s1, s2)
+    assert not isSubschema(s2, s1)
+
+
+def test_empty_items4():
+    s1 = {"type": "array", "items": [{}, {}], "additionalItems": True}
+    s2 = {"type": "array", "items": {}}
+    assert isSubschema(s1, s2)
+    assert isSubschema(s2, s1)
+
+
+def test_empty_items5():
+    s1 = {"type": "array", "items": [{}, {}], "additionalItems": False}
+    s2 = {"type": "array", "items": [{}], "additionalItems": False}
+    assert not isSubschema(s1, s2)
+    assert isSubschema(s2, s1)
+
+
+def test_dict_items_list_items1():
+    s1 = {"type": "array", "items": {"type": "string"}}
+    s2 = {"type": "array", "items": [{"type": "string"}]}
+    assert isSubschema(s1, s2)
+    assert not isSubschema(s2, s1)
+
+
+def test_dict_items_list_items2():
+    s1 = {"type": "array", "items": {"type": "string"}}
+    s2 = {"type": "array", "items": [{"type": "string"}, {"type": "string"}]}
+    assert isSubschema(s1, s2)
+    assert not isSubschema(s2, s1)
+
+
+def test_dict_items_list_items3():
+    s1 = {"type": "array", "items": [{"type": "string"}]}
+    s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
+    assert not isSubschema(s1, s2)
+    assert isSubschema(s2, s1)
+
+
+def test_dict_items_list_items4():
+    s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": False}
+    s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
+    assert isSubschema(s1, s2)
+    assert not isSubschema(s2, s1)
+
+
+def test_dict_items_list_items5():
+    s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": True}
+    s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
+    assert not isSubschema(s1, s2)
+    assert isSubschema(s2, s1)
+
+
+def test_dict_items_list_items6():
+    s1 = {"type": "array", "items": [{"type": "string"}], "additionalItems": {}}
+    s2 = {"type": "array", "items": [{"type": "string"}, {"type": "number"}]}
+    assert not isSubschema(s1, s2)
+    assert isSubschema(s2, s1)
+
+
+# Tests for nested array
+
+
+def test_1():
+    s1 = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "array",
+        "minItems": 150,
+        "maxItems": 150,
+        "items": {
             "type": "array",
-            "minItems": 150,
-            "maxItems": 150,
-            "items": {
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {"type": "number"},
+        },
+    }
+
+    s2 = {
+        "description": "Features; the outer array is over samples.",
+        "anyOf": [
+            {"type": "array", "items": {"type": "string"}},
+            {
                 "type": "array",
-                "minItems": 4,
-                "maxItems": 4,
-                "items": {"type": "number"},
-            },
-        }
-
-        s2 = {
-            "description": "Features; the outer array is over samples.",
-            "anyOf": [
-                {"type": "array", "items": {"type": "string"}},
-                {
+                "items": {
                     "type": "array",
-                    "items": {
-                        "type": "array",
-                        "minItems": 1,
-                        "maxItems": 1,
-                        "items": {"type": "string"},
-                    },
+                    "minItems": 1,
+                    "maxItems": 1,
+                    "items": {"type": "string"},
                 },
-            ],
-        }
+            },
+        ],
+    }
 
-        self.assertFalse(isSubschema(s1, s2))
+    assert not isSubschema(s1, s2)

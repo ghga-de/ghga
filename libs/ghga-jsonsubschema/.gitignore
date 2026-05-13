@@ -3,9 +3,13 @@ __pypackages__/
 *.py[ocd]
 *.egg-info
 
+*.lock
+
 .coverage
 htmlcov
 .mypy_cache
+.pytest_cache
+.ruff_cache
 
 build
 dist
@@ -13,6 +17,7 @@ dist
 *.env
 .venv
 
+.claude
 .vscode
 
 *.json
