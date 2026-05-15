@@ -14,7 +14,7 @@ charts:
   dataset-information:
     name: dataset-information
     description: Dataset Information Service
-    appVersion: "6.0.0"
+    appVersion: "6.0.1"
   dead-letter-queue:
     name: dead-letter-queue
     description: DLQ service
@@ -22,7 +22,7 @@ charts:
   download-controller:
     name: download-controller
     description: This service implements the GA4GH DRS, while providing the option to serve files from localstack S3.
-    appVersion: "9.0.0"
+    appVersion: "9.1.0"
   upload-controller:
     name: upload-controller
     description: This service manages file uploads.
@@ -30,15 +30,15 @@ charts:
   encryption-key-store:
     name: encryption-key-store
     description: providing crypt4gh file secret extraction, storage and envelope generation
-    appVersion: "5.0.0"
+    appVersion: "5.0.1"
   file-ingest:
     name: file-ingest
     description: A lightweight service to propagate file upload metadata to the GHGA file backend services
-    appVersion: "11.0.1"
+    appVersion: "11.1.0"
   internal-file-registry:
     name: internal-file-registry
     description: This service acts as a registry for the internal location and representation of files.
-    appVersion: "7.0.1"
+    appVersion: "7.1.0"
   mass:
     name: mass
     description: Metadata Artifact Search Service
