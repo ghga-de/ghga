@@ -183,3 +183,17 @@ async def test_check_box_access(
     httpx_mock.add_exception(httpx.RequestError("Network error"))
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.check_box_access(user_id=TEST_USER_ID, box_id=TEST_BOX_ID)
+
+
+async def test_get_upload_access_grants_omits_none_query_params(
+    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+):
+    """Ensure unset filters are omitted from query params while False is preserved."""
+    access_client = AccessClient(config=config, httpx_client=httpx_client)
+
+    httpx_mock.add_response(200, json=[])
+    grants = await access_client.get_upload_access_grants(valid=False)
+    assert grants == []
+
+    request = httpx_mock.get_requests()[0]
+    assert dict(request.url.params) == {"valid": "false"}

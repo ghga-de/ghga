@@ -502,7 +502,7 @@ info:
   description: A service providing a web-accessible management and auth layer over
     upload-path file services.
   title: GHGA Registry Service
-  version: 1.0.0
+  version: 1.0.1
 openapi: 3.1.0
 paths:
   /health:

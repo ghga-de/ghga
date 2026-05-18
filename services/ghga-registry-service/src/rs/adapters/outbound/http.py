@@ -166,6 +166,7 @@ class AccessClient(AccessClientPort):
             "box_id": str(box_id) if box_id is not None else box_id,
             "valid": valid,
         }
+        params = {key: value for key, value in params.items() if value is not None}
 
         url = f"{self._access_url}/upload-access/grants"
         response = await self._client.get(url, params=params, timeout=HTTPX_TIMEOUT)
