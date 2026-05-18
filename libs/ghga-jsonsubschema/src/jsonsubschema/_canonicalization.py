@@ -26,6 +26,10 @@ BOT: dict = {"not": {}}
 
 
 def canonicalize_schema(obj):
+    # {"enum": []} is uninhabited; intercept before validate_schema rejects it
+    if utils.is_dict(obj) and obj.get("enum") == []:
+        return BOT
+
     # First, make sure the given json is a valid json schema.
     # should throw jsonschema.SchemaError on unknown types
     utils.validate_schema(obj)
