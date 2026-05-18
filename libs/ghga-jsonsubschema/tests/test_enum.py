@@ -85,6 +85,27 @@ def test_enum_regex_string():
     assert not is_subschema(s2, s1)
 
 
+def test_enum_special_chars():
+    """Test enum values with regex special characters like +, *, ?, ., etc."""
+    # Test with + sign
+    s1 = {"enum": ["a+b"]}
+    s2 = {"enum": ["a+b", "c+d"]}
+    assert is_subschema(s1, s2)
+    assert not is_subschema(s2, s1)
+
+    # Test with various regex special chars
+    s3 = {"enum": [".", "*", "?", "+", "[", "]", "(", ")", "{", "}", "|", "\\"]}
+    s4 = {"enum": ["."]}
+    assert not is_subschema(s3, s4)
+    assert is_subschema(s4, s3)
+
+    # Test that different special char strings are not equivalent
+    s5 = {"enum": ["a+b"]}
+    s6 = {"enum": ["a*b"]}
+    assert not is_subschema(s5, s6)
+    assert not is_subschema(s6, s5)
+
+
 # Tests for enum/const not supported for arrays and objects
 
 
