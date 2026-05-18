@@ -47,3 +47,24 @@ def test_cli_readme_example(schema_files, monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["jsonsubschema", lhs_path, rhs_path])
     main()
     assert capsys.readouterr().out.strip() == "LHS <: RHS True"
+
+
+def test_cli_missing_required_arguments(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["jsonsubschema"])
+    with pytest.raises(SystemExit):
+        main()
+
+
+def test_cli_invalid_json_input(tmp_path, monkeypatch, capsys):
+    lhs = tmp_path / "lhs.json"
+    rhs = tmp_path / "rhs.json"
+    lhs.write_text("{invalid json")
+    rhs.write_text("{}")
+
+    monkeypatch.setattr("sys.argv", ["jsonsubschema", str(lhs), str(rhs)])
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert "LHS file:" in capsys.readouterr().out

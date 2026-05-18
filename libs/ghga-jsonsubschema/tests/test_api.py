@@ -84,3 +84,8 @@ def test_api_join():
     assert join_schemas(s1, s1) == s1
 
     assert join_schemas(s2, s2) == s2
+
+
+def test_api_is_equivalent_false():
+
+    assert not is_equivalent(s1, s2)
