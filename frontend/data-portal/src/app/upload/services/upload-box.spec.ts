@@ -226,6 +226,47 @@ describe('UploadBoxService', () => {
     expect(service.getStorageLocationLabel('UNKNOWN')).toBe('UNKNOWN');
   });
 
+  it('should expose storage location options from labels even without upload boxes', async () => {
+    service.loadStorageLabels();
+    testBed.tick();
+
+    const labelsReq = httpMock.expectOne(
+      'http://mock.dev/.well-known/values/storage_labels',
+    );
+    labelsReq.flush({
+      storage_labels: { B01: 'Berlin', TUE01: 'Tübingen 1' },
+    });
+
+    await Promise.resolve();
+
+    expect(service.uploadBoxes()).toEqual([]);
+    expect(service.uploadBoxLocationOptions()).toEqual([
+      { value: 'B01', label: 'Berlin' },
+      { value: 'TUE01', label: 'Tübingen 1' },
+    ]);
+  });
+
+  it('should expose only WKVS storage location options', async () => {
+    service.loadAllUploadBoxes();
+    testBed.tick();
+
+    const req = httpMock.expectOne('http://mock.dev/rs/upload-boxes');
+    req.flush(TEST_BOX_RETRIEVAL_RESULTS);
+
+    const labelsReq = httpMock.expectOne(
+      'http://mock.dev/.well-known/values/storage_labels',
+    );
+    labelsReq.flush({
+      storage_labels: { B01: 'Berlin' },
+    });
+
+    await Promise.resolve();
+
+    expect(service.uploadBoxLocationOptions()).toEqual([
+      { value: 'B01', label: 'Berlin' },
+    ]);
+  });
+
   it('should expose empty upload box signals when upload box retrieval fails', async () => {
     service.loadAllUploadBoxes();
     testBed.tick();

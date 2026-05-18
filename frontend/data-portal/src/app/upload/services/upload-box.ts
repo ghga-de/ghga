@@ -183,24 +183,14 @@ export class UploadBoxService {
   });
 
   /**
-   * All locations available in the loaded upload boxes.
-   */
-  uploadBoxLocations = computed(() => {
-    const uniqueLocations = new Set<string>(
-      this.uploadBoxes().map((box: ResearchDataUploadBox) => box.storage_alias),
-    );
-    return Array.from(uniqueLocations).sort((left, right) => left.localeCompare(right));
-  });
-
-  /**
    * All available upload-box locations including display labels.
    */
   uploadBoxLocationOptions = computed(() => {
     const labels = this.storageLabels.error() ? {} : this.storageLabels.value();
-    return this.uploadBoxLocations()
+    return Object.keys(labels)
       .map((locationAlias) => ({
         value: locationAlias,
-        label: labels[locationAlias] ?? locationAlias,
+        label: labels[locationAlias],
       }))
       .sort((left, right) => left.label.localeCompare(right.label));
   });

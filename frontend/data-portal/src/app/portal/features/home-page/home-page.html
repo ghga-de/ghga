@@ -39,17 +39,19 @@
   </div>
 </section>
 @defer (on idle) {
-<app-global-stats />
+  <app-global-stats />
 }
 <section>
   <h2>About GHGA</h2>
   <h3>The German Human Genome‑Phenome Archive</h3>
   <div class="grid grid-cols-12">
-    <div class="col-span-12 flex md:col-span-4 lg:col-span-3 2xl:col-span-2">
+    <div
+      class="col-span-12 flex items-start md:col-span-4 lg:col-span-3 2xl:col-span-2"
+    >
       <img
         ngSrc="assets/images/ghga-logo-full-orange.png"
         alt="GHGA Logo"
-        class="object-contain"
+        class="h-auto w-full object-contain"
         loading="lazy"
         decoding="async"
         fetchpriority="low"

@@ -45,7 +45,6 @@ class MockUploadBoxService {
     state: undefined,
     location: undefined,
   });
-  uploadBoxLocations = () => [];
   uploadBoxLocationOptions = () => [];
   filteredUploadBoxes = () => this.#uploadBoxes();
   storageLabels = {
