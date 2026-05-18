@@ -39,7 +39,7 @@ _topics:
         value: file_interrogation_failed
     kafkaUser:
       operations:
-        - Write
+        - Read
   filesToRegister:
     # as consumer
     topic:

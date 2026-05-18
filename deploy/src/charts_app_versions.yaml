@@ -79,8 +79,8 @@ charts:
     name: work-package
     description: Work package service
     appVersion: "10.0.0"
-  registry-service:
-    name: registry-service
+  registry:
+    name: registry
     description: GHGA Registry Service
     appVersion: "1.0.0"
   auth-km-jobs:
