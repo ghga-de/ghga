@@ -5,13 +5,13 @@ Contains changes by The GHGA Authors.
 SPDX-License-Identifier: Apache-2.0
 """
 
-import copy
 import fractions
 import json
 import math
 import numbers
 import re
 import sys
+from contextlib import suppress
 
 import jsonschema
 import portion
@@ -37,10 +37,6 @@ def is_int_equiv(i):
     return isinstance(i, int) or (isinstance(i, float) and float(i).is_integer())
 
 
-# def is_float(i):
-#     return isinstance(i, float)
-
-
 def is_num(i):
     if isinstance(i, bool):
         return False
@@ -51,10 +47,6 @@ def is_bool(i):
     return isinstance(i, bool)
 
 
-# def is_null(i):
-#     isinstance(i, type(None))
-
-
 def is_list(i):
     return isinstance(i, list)
 
@@ -63,44 +55,23 @@ def is_dict(i):
     return isinstance(i, dict)
 
 
-# def is_empty_dict_or_none(i):
-#     return i == {} or i == None
-
-
-# def is_dict_or_true(i):
-#     return isinstance(i, dict) or i == True
-
-
 def validate_schema(s):
     return config.VALIDATOR.check_schema(s)
 
 
 def get_valid_enum_vals(enum, s):
-    # copy eum into set for two reasons:
-    # 1- we need to modify a different copy from what we iterate on
-    # 2- hashing elements into set and back to list will guarantee
-    # the list is ordered and hence JSONschema __eq__ with enums should work.
-    vals = copy.deepcopy(enum)
+    valid_vals = []
     for i in enum:
-        try:
+        with suppress(jsonschema.ValidationError):
             jsonschema.validate(instance=i, schema=s)
-        except jsonschema.ValidationError:
-            vals.remove(i)
-    # try:
-    #     return sorted(vals)
-    # except TypeError:
-    # return list(vals)
-    return vals
+            valid_vals.append(i)
+    return valid_vals
 
 
 def get_typed_enum_vals(enum, t):
     if t == "integer":
-        enum = filter(lambda i: not isinstance(i, bool), enum)
-    # try:
-    #     return sorted(filter(lambda i: isinstance(i, definitions.JtypesToPyTypes[t]), enum))
-    # except TypeError:
-    #     return list(filter(lambda i: isinstance(i, definitions.JtypesToPyTypes[t]), enum))
-    return list(filter(lambda i: isinstance(i, definitions.JtypesToPyTypes[t]), enum))
+        enum = (i for i in enum if not isinstance(i, bool))
+    return [i for i in enum if isinstance(i, definitions.JtypesToPyTypes[t])]
 
 
 def print_db(*args):
@@ -110,12 +81,6 @@ def print_db(*args):
         else:
             print()
 
-
-# def one(iterable):
-#     for i in range(len(iterable)):
-#         if iterable[i]:
-#             return not (any(iterable[:i]) or any(iterable[i+1:]))
-#     return False
 
 #
 # To avoid regex bottlenecks, instead of using '.*'
@@ -157,8 +122,6 @@ def regex_unanchor(p):
             p = p[:-1]
         elif p[-2:] != ".*":
             p = p + ".*"
-    # else:  # case p == "" the empty string
-    #     p = ".*"
     return p
 
 
@@ -205,19 +168,6 @@ def regex_is_subset(s1, s2):
         return parse(s2).equivalent(parse(".*"))
 
 
-# def regex_isProperSubset(s1, s2):
-#     ''' regex proper subset is quite expensive to compute
-#         so we try to break it into two separate checks,
-#         and do the more expensive check, only if the
-#         cheaper one passes first. '''
-
-#     s1 = parse(s1).reduce()
-#     s2 = parse(s2).reduce()
-#     if not s1.equivalent(s2):
-#         return (s1 & s2.everythingbut()).empty()
-#     return False
-
-
 def string_range_to_regex(min, max):
     if min > max:
         raise ValueError(f"min ({min}) must be <= max ({max})")
@@ -249,9 +199,6 @@ def lcm(x, y):
     elif is_int(x) and is_int(y):
         return x * y / math.gcd(int(x), int(y))
     else:
-        # import warnings
-        # with warnings.catch_warnings():
-        #     warnings.filterwarnings("ignore", category=DeprecationWarning)
         return x * y / float_gcd(x, y)
 
 
@@ -259,19 +206,11 @@ def gcd(x, y):
     bad_values = [
         None,
     ]  # portion.inf, -portion.inf, None]
-    if x in bad_values:
-        if y in bad_values:
-            return None
-        else:
-            return None
-    elif y in bad_values:
+    if x in bad_values or y in bad_values:
         return None
     elif is_int(x) and is_int(y):
         return math.gcd(int(x), int(y))
     else:
-        # import warnings
-        # with warnings.catch_warnings():
-        #     warnings.filterwarnings("ignore", category=DeprecationWarning)
         return float_gcd(x, y)
 
 
@@ -288,29 +227,13 @@ def float_gcd(a, b):
     return float(fa)
 
 
-# def decrementFloat(f):
-#     if f == 0.0:
-#         return sys.float_info.min
-#     m, e = math.frexp(f)
-#     return math.ldexp(m - sys.float_info.epsilon / 2, e)
-
-
-# def incrementFloat(f):
-#     if f == 0.0:
-#         return sys.float_info.min
-#     m, e = math.frexp(f)
-#     return math.ldexp(m + sys.float_info.epsilon / 2, e)
-
-
 def generate_range_with_multiple_of_or(range_, pos_mul_of):
-    print(pos_mul_of)
     if pos_mul_of:
         for i in range_:
             if any(i % k == 0 for k in pos_mul_of):
                 yield i
     else:
         for i in range_:
-            # if any(i % k == 0 for k in pos_mul_of):
             yield i
 
 

@@ -139,24 +139,24 @@ def canonicalize_single_type(d):
 
 
 def canonicalize_list_of_types(d):
-    t = set(d.get("type"))
-    if t == definitions.JallTypes and not set(d.keys()).intersection(
+    schema_types = set(d.get("type"))
+    if schema_types == definitions.JallTypes and not set(d.keys()).intersection(
         definitions.JtypesRestrictionKeywords
     ):
         return JSONtop()
 
-    anyofs = []
-    for t_i in t:
-        if t_i in definitions.Jtypes:
-            s_i = copy.deepcopy(d)
-            s_i["type"] = t_i
-            s_i = canonicalize_single_type(s_i)
-            anyofs.append(s_i)
+    any_of_schemas = []
+    for schema_type in schema_types:
+        if schema_type in definitions.Jtypes:
+            typed_schema = copy.deepcopy(d)
+            typed_schema["type"] = schema_type
+            typed_schema = canonicalize_single_type(typed_schema)
+            any_of_schemas.append(typed_schema)
 
         # jsonschema validation in the begining prevents
         # reaching this case. So we don't need this.
         # else:
-        # print("Unknown schema type {} at: {}".format(t_i, t))
+        # print("Unknown schema type {} at: {}".format(schema_type, schema_types))
         # print(d)
         # print("Exiting...")
         # sys.exit(1)
@@ -164,7 +164,7 @@ def canonicalize_list_of_types(d):
     # if len(anyofs) == 1:
     #     return anyofs[0]
     # elif len(anyofs) > 1:
-    return {"anyOf": anyofs}
+    return {"anyOf": any_of_schemas}
 
 
 def canonicalize_enum(d):
@@ -199,44 +199,44 @@ def canonicalize_connectors(d):
 
     # Single connector.
     if len(connectors) == 1 and not lhs_kw_without_connectors:
-        c = connectors.pop()
+        connector = connectors.pop()
 
-        if c == "not":
+        if connector == "not":
             d["not"] = canonicalize_dict(d["not"])
             return canonicalize_not(d)
 
-        elif c == "oneOf":
-            if len(d[c]) == 1:
-                return canonicalize_dict(d[c].pop())
-            anyofs = []
-            for i in range(len(d[c])):
-                one = [d[c][i]]
-                nots = [{"not": j} for j in d[c][:i]] + [
-                    {"not": j} for j in d[c][i + 1 :]
-                ]
-                allofs = one + nots
-                anyofs.append({"allOf": allofs})
-            return canonicalize_connectors({"anyOf": anyofs})
+        elif connector == "oneOf":
+            if len(d[connector]) == 1:
+                return canonicalize_dict(d[connector].pop())
+            any_of_schemas = []
+            for index in range(len(d[connector])):
+                selected_schema = [d[connector][index]]
+                negated_others = [
+                    {"not": schema} for schema in d[connector][:index]
+                ] + [{"not": schema} for schema in d[connector][index + 1 :]]
+                all_of_schemas = selected_schema + negated_others
+                any_of_schemas.append({"allOf": all_of_schemas})
+            return canonicalize_connectors({"anyOf": any_of_schemas})
 
         # Here, the connector is either allOf or oneOf
         # So we better simplify them before proceeding more.
         else:
-            d[c] = [canonicalize_dict(i) for i in d[c]]
+            d[connector] = [canonicalize_dict(schema) for schema in d[connector]]
             # return d
             simplified = simplify_schema_and_embed_checkers(d)
             return simplified
 
     # Connector + other keywords. Combine them first.
     else:
-        allofs = []
-        for c in connectors:
-            allofs.append(canonicalize_dict({c: d[c]}))
-            del d[c]
+        all_of_schemas = []
+        for connector in connectors:
+            all_of_schemas.append(canonicalize_dict({connector: d[connector]}))
+            del d[connector]
         if lhs_kw_without_connectors:
-            allofs.append(
+            all_of_schemas.append(
                 canonicalize_dict({k: d[k] for k in lhs_kw_without_connectors})
             )
-        return {"allOf": allofs}
+        return {"allOf": all_of_schemas}
         # return simplify_schema_and_embed_checkers({"allOf": allofs})
 
 
@@ -254,21 +254,21 @@ def canonicalize_not(d):
 
     connectors = definitions.Jconnectors.intersection(negated_schema.keys())
     if connectors and len(connectors) == 1:
-        c = connectors.pop()
+        connector = connectors.pop()
         # Case "not: {"not": {...}}
         # Return positive schema (2 nots cancel each other)
-        if c == "not":
+        if connector == "not":
             return negated_schema["not"]
 
-        elif c == "anyOf":
-            allofs = []
-            for i in negated_schema["anyOf"]:
-                allofs.append(canonicalize_not({"not": i}))
-            return {"allOf": allofs}
+        elif connector == "anyOf":
+            all_of_schemas = []
+            for schema in negated_schema["anyOf"]:
+                all_of_schemas.append(canonicalize_not({"not": schema}))
+            return {"allOf": all_of_schemas}
 
         # Should not reach here. Should be canonicalized and
         # simplified by now.
-        elif c == "allOf":
+        elif connector == "allOf":
             # anyofs = []
             # for i in negated_schema["allOf"]:
             #     anyofs.append(canonicalize_not({"not": i}))
@@ -289,7 +289,7 @@ def rewrite_enum(d):  # noqa: C901
     ret: dict | None = None
 
     if t == "string":
-        pattern = "|".join(map(lambda x: "^" + str(re.escape(x)) + "$", enum))
+        pattern = "|".join(f"^{re.escape(str(x))}$" for x in enum)
         ret = {"type": "string", "pattern": pattern}
 
     if t == "integer":
