@@ -36,21 +36,16 @@ def prepare_operands(s1, s2):
     # and rhs schemas  before starting the subtype checking.
     # This also validates input schemas and canonicalized schemas.
 
-    # At the moment, recursive/circual refs are not supported and hence, canonicalization
-    # throws a RecursionError.
-    try:
-        _s1 = simplify_schema_and_embed_checkers(canonicalize_schema(s1))
-    except RecursionError:
-        # avoid cluttering output by unchaining the recursion error
-        raise UnsupportedRecursiveRef(s1, "LHS") from None
+    def _canonicalize_or_raise(schema, side):
+        # At the moment, recursive/circular refs are not supported and hence,
+        # canonicalization throws a RecursionError.
+        try:
+            return simplify_schema_and_embed_checkers(canonicalize_schema(schema))
+        except RecursionError:
+            # avoid cluttering output by unchaining the recursion error
+            raise UnsupportedRecursiveRef(schema, side) from None
 
-    try:
-        _s2 = simplify_schema_and_embed_checkers(canonicalize_schema(s2))
-    except RecursionError:
-        # avoid cluttering output by unchaining the recursion error
-        raise UnsupportedRecursiveRef(s2, "RHS") from None
-
-    return _s1, _s2
+    return _canonicalize_or_raise(s1, "LHS"), _canonicalize_or_raise(s2, "RHS")
 
 
 def is_subschema(s1, s2):
