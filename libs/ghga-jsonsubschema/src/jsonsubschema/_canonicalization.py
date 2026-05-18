@@ -283,51 +283,39 @@ def canonicalize_not(d):
         sys.exit(">>>>>> Ewwwww! Shouldn't be here during canonicalization. <<<<<<")
 
 
-def rewrite_enum(d):  # noqa: C901
+def rewrite_enum(d):
     t = d.get("type")
     enum = d.get("enum")
-    ret: dict | None = None
 
-    if t == "string":
-        pattern = "|".join(f"^{re.escape(str(x))}$" for x in enum)
-        ret = {"type": "string", "pattern": pattern}
+    match t:
+        case "string":
+            pattern = "|".join(f"^{re.escape(str(x))}$" for x in enum)
+            ret: dict = {"type": "string", "pattern": pattern}
+        case "integer":
+            ret = {
+                "anyOf": [{"type": "integer", "minimum": i, "maximum": i} for i in enum]
+            }
+        case "number":
+            items = []
+            for i in enum:
+                if utils.is_int_equiv(i):
+                    items.append({"type": "integer", "minimum": i, "maximum": i})
+                elif math.isnan(i):
+                    items.append({"type": "number", "enum": [_nan]})
+                else:
+                    items.append({"type": "number", "minimum": i, "maximum": i})
+            ret = {"anyOf": items}
+        case "boolean":
+            return d
+        case "null":
+            return {"type": "null"}
+        case "array" | "object":
+            raise UnsupportedEnumCanonicalization(tau=t, schema=d)
+        case _:
+            return None
 
-    if t == "integer":
-        ret = {"anyOf": []}
-        for i in enum:
-            ret["anyOf"].append(
-                # {"type": "number", "minimum": i, "maximum": i, "multipleOf": 1}) # check test_numeric/test_join_mulof10
-                {"type": "integer", "minimum": i, "maximum": i}
-            )
-
-    if t == "number":
-        ret = {"anyOf": []}
-        for i in enum:
-            if utils.is_int_equiv(i):
-                ret["anyOf"].append({"type": "integer", "minimum": i, "maximum": i})
-            elif math.isnan(i):
-                ret["anyOf"].append({"type": "number", "enum": [_nan]})
-            else:
-                ret["anyOf"].append({"type": "number", "minimum": i, "maximum": i})
-
-    if t == "boolean":
-        # booleans are allowed to keep enums,
-        # since there are only two values.
-        return d
-
-    if t == "null":
-        # null schema should be rewritten without enum
-        # it is a single value anyways.
-        return {"type": "null"}
-
-    if ret:
-        ret["enum"] = enum
-        return ret
-        # return canonicalize_dict(ret)
-
-    # Unsupported cases of rewriting enums
-    elif t in {"array", "object"}:
-        raise UnsupportedEnumCanonicalization(tau=t, schema=d)
+    ret["enum"] = enum
+    return ret
 
 
 def simplify_schema_and_embed_checkers(s):  # noqa: C901, PLR0912

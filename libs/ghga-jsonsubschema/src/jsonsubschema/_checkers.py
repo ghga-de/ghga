@@ -702,31 +702,34 @@ class JSONTypeNumber(JSONTypeNumeric):
     def _is_subtype(self, s):
 
         def _is_number_subtype(s1, s2):
-            if s2.type == "number":
-                if s1.has_enum():
-                    return super().subtype_enum(s2)
-                is_sub_interval = s1.interval in s2.interval
-                if not is_sub_interval:
-                    print_db("num__00")
-                    return False
-                if JSONTypeNumeric._multipleof_compatible(s1.multipleOf, s2.multipleOf):
-                    print_db("num__01")
-                    return True
-            elif s2.type == "integer":
-                is_sub_interval = s1.interval in s2.interval
-                if not is_sub_interval:
-                    print_db("num__02")
-                    return False
-                if utils.is_int_equiv(s1.multipleOf) and (
-                    JSONTypeNumeric._multipleof_compatible_integer_rhs(
+            match s2.type:
+                case "number":
+                    if s1.has_enum():
+                        return super().subtype_enum(s2)
+                    is_sub_interval = s1.interval in s2.interval
+                    if not is_sub_interval:
+                        print_db("num__00")
+                        return False
+                    if JSONTypeNumeric._multipleof_compatible(
                         s1.multipleOf, s2.multipleOf
-                    )
-                ):
-                    print_db("num__03")
-                    return True
-            else:
-                print_db("num__04")
-                return False
+                    ):
+                        print_db("num__01")
+                        return True
+                case "integer":
+                    is_sub_interval = s1.interval in s2.interval
+                    if not is_sub_interval:
+                        print_db("num__02")
+                        return False
+                    if utils.is_int_equiv(s1.multipleOf) and (
+                        JSONTypeNumeric._multipleof_compatible_integer_rhs(
+                            s1.multipleOf, s2.multipleOf
+                        )
+                    ):
+                        print_db("num__03")
+                        return True
+                case _:
+                    print_db("num__04")
+                    return False
 
         return super().is_subtype_handle_rhs(s, _is_number_subtype)
 
@@ -877,106 +880,91 @@ class JSONTypeArray(JSONschema):
         if utils.is_list(self.items_) and len(self.items_) == self.maxItems:
             self.additionalItems = False
 
-    def _meet(self, s):  # noqa: C901, PLR0915
+    def _meet(self, s):
+        return super().meet_handle_rhs(s, JSONTypeArray._compute_array_meet)
 
-        def _meet_array(s1, s2):  # noqa: C901, PLR0912, PLR0915
-            if s2.type == "array":
-                # ret = {}
-                # ret["type"] = "array"
-                # ret["minItems"] = max(s1.minItems, s2.minItems)
-                # ret["maxItems"] = min(s1.maxItems, s2.maxItems)
-                # ret["uniqueItems"] = s1.uniqueItems or s2.uniqueItems
-                ret = JSONTypeArray({})
-                # ret["type"] = "array"
-                ret.minItems = max(s1.minItems, s2.minItems)
-                ret.maxItems = min(s1.maxItems, s2.maxItems)
-                ret.uniqueItems = s1.uniqueItems or s2.uniqueItems
+    @staticmethod
+    def _compute_array_meet(s1, s2):  # noqa: C901, PLR0912, PLR0915
+        if s2.type == "array":
+            # ret = {}
+            # ret["type"] = "array"
+            # ret["minItems"] = max(s1.minItems, s2.minItems)
+            # ret["maxItems"] = min(s1.maxItems, s2.maxItems)
+            # ret["uniqueItems"] = s1.uniqueItems or s2.uniqueItems
+            ret = JSONTypeArray({})
+            # ret["type"] = "array"
+            ret.minItems = max(s1.minItems, s2.minItems)
+            ret.maxItems = min(s1.maxItems, s2.maxItems)
+            ret.uniqueItems = s1.uniqueItems or s2.uniqueItems
 
-                def meet_array_items_dict_list(s1, s2, ret):
-                    if not (utils.is_dict(s1.items_) and utils.is_list(s2.items_)):
-                        raise ValueError(
-                            "Violating meet_array_items_dict_list condition: 's1.items is dict' and 's2.items is list'"
-                        )
+            def meet_array_items_dict_list(s1, s2, ret):
+                if not (utils.is_dict(s1.items_) and utils.is_list(s2.items_)):
+                    raise ValueError(
+                        "Violating meet_array_items_dict_list condition: 's1.items is dict' and 's2.items is list'"
+                    )
 
-                    itms = []
-                    for i in s2.items_:
-                        r = i.meet(s1.items_)
-                        if not (is_bot(r) or r.is_uninhabited()):
-                            itms.append(r)
-                        else:
-                            break
+                itms = []
+                for i in s2.items_:
+                    r = i.meet(s1.items_)
+                    if not (is_bot(r) or r.is_uninhabited()):
+                        itms.append(r)
+                    else:
+                        break
 
-                    ret.items_ = itms
+                ret.items_ = itms
 
-                    if s2.additionalItems == True:
-                        ret.additionalItems = copy.deepcopy(s1.items_)
-                    elif s2.additionalItems == False:
-                        ret.additionalItems = False
-                    elif utils.is_dict(s2.additionalItems):
-                        add_items = s2.additionalItems.meet(s1.items_)
-                        ret.additionalItems = False if is_bot(add_items) else add_items
-                    return ret
+                if s2.additionalItems == True:
+                    ret.additionalItems = copy.deepcopy(s1.items_)
+                elif s2.additionalItems == False:
+                    ret.additionalItems = False
+                elif utils.is_dict(s2.additionalItems):
+                    add_items = s2.additionalItems.meet(s1.items_)
+                    ret.additionalItems = False if is_bot(add_items) else add_items
+                return ret
 
-                if utils.is_dict(s1.items_):
-                    if utils.is_dict(s2.items_):
-                        ret.items_ = s1.items_.meet(s2.items_)
+            if utils.is_dict(s1.items_):
+                if utils.is_dict(s2.items_):
+                    ret.items_ = s1.items_.meet(s2.items_)
 
-                    elif utils.is_list(s2.items_):
-                        ret = meet_array_items_dict_list(s1, s2, ret)
+                elif utils.is_list(s2.items_):
+                    ret = meet_array_items_dict_list(s1, s2, ret)
 
-                elif utils.is_list(s1.items_):
-                    if utils.is_dict(s2.items_):
-                        ret = meet_array_items_dict_list(s2, s1, ret)
+            elif utils.is_list(s1.items_):
+                if utils.is_dict(s2.items_):
+                    ret = meet_array_items_dict_list(s2, s1, ret)
 
-                    elif utils.is_list(s2.items_):
-                        self_len = len(s1.items_)
-                        s_len = len(s2.items_)
+                elif utils.is_list(s2.items_):
+                    self_len = len(s1.items_)
+                    s_len = len(s2.items_)
 
-                        def meet_array_additional_items_list_list(s1, s2):
-                            if utils.is_bool(s1.additionalItems) and utils.is_bool(
-                                s2.additionalItems
-                            ):
+                    def meet_array_additional_items_list_list(s1, s2):
+                        match (s1.additionalItems, s2.additionalItems):
+                            case (bool(), bool()):
                                 ad = s1.additionalItems and s2.additionalItems
-                            elif utils.is_dict(s1.additionalItems):
+                            case (JSONschema(), _):
                                 ad = s1.additionalItems.meet(s2.additionalItems)
-                            elif utils.is_dict(s2.additionalItems):
+                            case (_, JSONschema()):
                                 ad = s2.additionalItems.meet(s1.additionalItems)
-                            return False if is_bot(ad) else ad
+                        return False if is_bot(ad) else ad
 
-                        def meet_array_longlist_shorterlist(s1, s2, ret):
-                            s1_len = len(s1.items_)
-                            s2_len = len(s2.items_)
-                            if s1_len <= s2_len:
-                                raise ValueError(
-                                    "Violating meet_array_longlist_shorterlist condition: 's1.len > s2.len'"
-                                )
-                            itms = []
-                            for i, j in zip(s1.items_, s2.items_, strict=False):
-                                r = i.meet(j)
-                                if not (is_bot(r) or r.is_uninhabited()):
-                                    itms.append(r)
-                                else:
-                                    ad = False
-                                    break
+                    def meet_array_longlist_shorterlist(s1, s2, ret):
+                        s1_len = len(s1.items_)
+                        s2_len = len(s2.items_)
+                        if s1_len <= s2_len:
+                            raise ValueError(
+                                "Violating meet_array_longlist_shorterlist condition: 's1.len > s2.len'"
+                            )
+                        itms = []
+                        for i, j in zip(s1.items_, s2.items_, strict=False):
+                            r = i.meet(j)
+                            if not (is_bot(r) or r.is_uninhabited()):
+                                itms.append(r)
                             else:
-                                for i in range(s2_len, s1_len):
-                                    r = s1.items_[i].meet(s2.additionalItems)
-                                    if not (is_bot(r) or r.is_uninhabited()):
-                                        itms.append(r)
-                                    else:
-                                        ad = False
-                                        break
-                                else:
-                                    ad = meet_array_additional_items_list_list(s1, s2)
-
-                            ret.additionalItems = ad
-                            ret.items_ = itms
-                            return ret
-
-                        if self_len == s_len:
-                            itms = []
-                            for i, j in zip(s1.items_, s2.items_, strict=False):
-                                r = i.meet(j)
+                                ad = False
+                                break
+                        else:
+                            for i in range(s2_len, s1_len):
+                                r = s1.items_[i].meet(s2.additionalItems)
                                 if not (is_bot(r) or r.is_uninhabited()):
                                     itms.append(r)
                                 else:
@@ -985,144 +973,158 @@ class JSONTypeArray(JSONschema):
                             else:
                                 ad = meet_array_additional_items_list_list(s1, s2)
 
-                            ret.additionalItems = ad
-                            ret.items_ = itms
+                        ret.additionalItems = ad
+                        ret.items_ = itms
+                        return ret
 
-                        elif self_len > s_len:
-                            ret = meet_array_longlist_shorterlist(s1, s2, ret)
+                    if self_len == s_len:
+                        itms = []
+                        for i, j in zip(s1.items_, s2.items_, strict=False):
+                            r = i.meet(j)
+                            if not (is_bot(r) or r.is_uninhabited()):
+                                itms.append(r)
+                            else:
+                                ad = False
+                                break
+                        else:
+                            ad = meet_array_additional_items_list_list(s1, s2)
 
-                        elif self_len < s_len:
-                            ret = meet_array_longlist_shorterlist(s2, s1, ret)
-                ret.update_internal_state()
-                return ret
+                        ret.additionalItems = ad
+                        ret.items_ = itms
 
-            else:
-                return JSONbot()
+                    elif self_len > s_len:
+                        ret = meet_array_longlist_shorterlist(s1, s2, ret)
 
-        return super().meet_handle_rhs(s, _meet_array)
+                    elif self_len < s_len:
+                        ret = meet_array_longlist_shorterlist(s2, s1, ret)
+            ret.update_internal_state()
+            return ret
 
-    def _is_subtype(self, s):  # noqa: C901, PLR0915
+        else:
+            return JSONbot()
 
-        def _is_array_subtype(s1, s2):  # noqa: C901, PLR0911, PLR0912, PLR0915
-            if s2.type != "array":
-                return False
-            if s1.has_enum():
-                return super().subtype_enum(s2)
-            #
-            # -- minItems and maxItems
-            is_sub_interval = s1.interval in s2.interval
-            if not is_sub_interval:
-                print_db("__01__")
-                return False
-            #
-            # -- uniqueItemsue
-            # TODO Double-check. Could be more subtle?
-            if not s1.uniqueItems and s2.uniqueItems:
-                print_db("__02__")
-                return False
-            #
-            # -- items = {not empty}
-            # no need to check additionalItems
-            if utils.is_dict(s1.items_):
-                if utils.is_dict(s2.items_):
-                    print_db(s1.items_)
-                    print_db(s2.items_)
-                    if s1.items_.is_subtype(s2.items_):
-                        print_db("__05__")
+    def _is_subtype(self, s):
+        return super().is_subtype_handle_rhs(s, JSONTypeArray._compute_array_subtype)
+
+    @staticmethod
+    def _compute_array_subtype(s1, s2):  # noqa: C901, PLR0911, PLR0912, PLR0915
+        if s2.type != "array":
+            return False
+        if s1.has_enum():
+            return s1.subtype_enum(s2)
+        #
+        # -- minItems and maxItems
+        is_sub_interval = s1.interval in s2.interval
+        if not is_sub_interval:
+            print_db("__01__")
+            return False
+        #
+        # -- uniqueItemsue
+        # TODO Double-check. Could be more subtle?
+        if not s1.uniqueItems and s2.uniqueItems:
+            print_db("__02__")
+            return False
+        #
+        # -- items = {not empty}
+        # no need to check additionalItems
+        if utils.is_dict(s1.items_):
+            if utils.is_dict(s2.items_):
+                print_db(s1.items_)
+                print_db(s2.items_)
+                if s1.items_.is_subtype(s2.items_):
+                    print_db("__05__")
+                    return True
+                else:
+                    print_db("__06__")
+                    return False
+            elif utils.is_list(s2.items_):
+                if s2.additionalItems == False:
+                    print_db("__07__")
+                    return False
+                elif s2.additionalItems == True:
+                    for i in s2.items_:
+                        if not s1.items_.is_subtype(i):
+                            print_db("__08__")
+                            return False
+                    print_db("__09__")
+                    return True
+                elif utils.is_dict(s2.additionalItems):
+                    for i in s2.items_:
+                        if not s1.items_.is_subtype(i):
+                            print_db("__10__")
+                            return False
+                    print_db(type(s1.items_), s1.items_)
+                    print_db(type(s2.additionalItems), s2.additionalItems)
+                    if s1.items_.is_subtype(s2.additionalItems):
+                        print_db("__11__")
                         return True
                     else:
-                        print_db("__06__")
+                        print_db("__12__")
                         return False
-                elif utils.is_list(s2.items_):
-                    if s2.additionalItems == False:
-                        print_db("__07__")
+        elif utils.is_list(s1.items_):
+            print_db("lhs is list")
+            if utils.is_dict(s2.items_):
+                if s1.additionalItems == False:
+                    for i in s1.items_:
+                        if not i.is_subtype(s2.items_):
+                            print_db("__13__")
+                            return False
+                    print_db("__14__")
+                    return True
+                elif s1.additionalItems == True:
+                    for i in s1.items_:
+                        if not i.is_subtype(s2.items_):
+                            return False
+                        # since s1.additional items is True,
+                        # then TOP should also be a subtype of
+                        # s2.items
+                    return bool(JSONtop().is_subtype(s2.items_))
+                elif utils.is_dict(s1.additionalItems):
+                    for i in s1.items_:
+                        if not i.is_subtype(s2.items_):
+                            return False
+                    return bool(s1.additionalItems.is_subtype(s2.items_))
+            # now lhs and rhs are lists
+            elif utils.is_list(s2.items_):
+                print_db("lhs & rhs are lists")
+                len1 = len(s1.items_)
+                len2 = len(s2.items_)
+                for i, j in zip(s1.items_, s2.items_, strict=False):
+                    if not i.is_subtype(j):
                         return False
-                    elif s2.additionalItems == True:
-                        for i in s2.items_:
-                            if not s1.items_.is_subtype(i):
-                                print_db("__08__")
-                                return False
-                        print_db("__09__")
+                if len1 == len2:
+                    print_db("len1 == len2")
+                    if s1.additionalItems == s2.additionalItems:
                         return True
-                    elif utils.is_dict(s2.additionalItems):
-                        for i in s2.items_:
-                            if not s1.items_.is_subtype(i):
-                                print_db("__10__")
-                                return False
-                        print_db(type(s1.items_), s1.items_)
-                        print_db(type(s2.additionalItems), s2.additionalItems)
-                        if s1.items_.is_subtype(s2.additionalItems):
-                            print_db("__11__")
-                            return True
-                        else:
-                            print_db("__12__")
-                            return False
-            elif utils.is_list(s1.items_):
-                print_db("lhs is list")
-                if utils.is_dict(s2.items_):
-                    if s1.additionalItems == False:
-                        for i in s1.items_:
-                            if not i.is_subtype(s2.items_):
-                                print_db("__13__")
-                                return False
-                        print_db("__14__")
+                    elif s1.additionalItems == True and s2.additionalItems == False:
+                        return False
+                    elif s1.additionalItems == False and s2.additionalItems == True:
                         return True
-                    elif s1.additionalItems == True:
-                        for i in s1.items_:
-                            if not i.is_subtype(s2.items_):
-                                return False
-                            # since s1.additional items is True,
-                            # then TOP should also be a subtype of
-                            # s2.items
-                        return bool(JSONtop().is_subtype(s2.items_))
-                    elif utils.is_dict(s1.additionalItems):
-                        for i in s1.items_:
-                            if not i.is_subtype(s2.items_):
-                                return False
-                        return bool(s1.additionalItems.is_subtype(s2.items_))
-                # now lhs and rhs are lists
-                elif utils.is_list(s2.items_):
-                    print_db("lhs & rhs are lists")
-                    len1 = len(s1.items_)
-                    len2 = len(s2.items_)
-                    for i, j in zip(s1.items_, s2.items_, strict=False):
-                        if not i.is_subtype(j):
-                            return False
-                    if len1 == len2:
-                        print_db("len1 == len2")
-                        if s1.additionalItems == s2.additionalItems:
-                            return True
-                        elif s1.additionalItems == True and s2.additionalItems == False:
-                            return False
-                        elif s1.additionalItems == False and s2.additionalItems == True:
-                            return True
-                        else:
-                            return s1.additionalItems.is_subtype(s2.additionalItems)
-                    elif len1 > len2:
-                        diff = len1 - len2
-                        for i in range(len1 - diff, len1):
-                            if s2.additionalItems == False:
-                                return False
-                            elif s2.additionalItems == True:
-                                return True
-                            elif not s1.items_[i].is_subtype(s2.additionalItems):
-                                print_db("9999")
-                                return False
-                        print_db("8888")
-                        return True
-                    else:  # len2 > len 1
-                        diff = len2 - len1
-                        for i in range(len2 - diff, len2):
-                            if s1.additionalItems == False:
-                                return True
-                            elif (
-                                s1.additionalItems == True
-                                or not s1.additionalItems.is_subtype(s2.items_[i])
-                            ):
-                                return False
+                    else:
                         return s1.additionalItems.is_subtype(s2.additionalItems)
-
-        return super().is_subtype_handle_rhs(s, _is_array_subtype)
+                elif len1 > len2:
+                    diff = len1 - len2
+                    for i in range(len1 - diff, len1):
+                        if s2.additionalItems == False:
+                            return False
+                        elif s2.additionalItems == True:
+                            return True
+                        elif not s1.items_[i].is_subtype(s2.additionalItems):
+                            print_db("9999")
+                            return False
+                    print_db("8888")
+                    return True
+                else:  # len2 > len 1
+                    diff = len2 - len1
+                    for i in range(len2 - diff, len2):
+                        if s1.additionalItems == False:
+                            return True
+                        elif (
+                            s1.additionalItems == True
+                            or not s1.additionalItems.is_subtype(s2.items_[i])
+                        ):
+                            return False
+                    return s1.additionalItems.is_subtype(s2.additionalItems)
 
     @staticmethod
     def neg(s):
@@ -1136,6 +1138,12 @@ class JSONTypeArray(JSONschema):
             return bool_to_constructor["anyOf"](
                 {"anyOf": get_default_types_except("array")}
             )
+
+
+def _merge_with_meet(d1, d2):
+    result = {k: d1[k].meet(d2[k]) if k in d2 else d1[k] for k in d1}
+    result.update({k: d2[k] for k in d2 if k not in d1})
+    return result
 
 
 class JSONTypeObject(JSONschema):
@@ -1210,266 +1218,239 @@ class JSONTypeObject(JSONschema):
         #     for k in p.keys():
         #         self.patternProperties[k] = p[k]
 
-    def _meet(self, s):  # noqa: C901
+    def _meet(self, s):
+        return super().meet_handle_rhs(s, JSONTypeObject._compute_object_meet)
 
-        def _meet_object(s1, s2):  # noqa: C901, PLR0912
-            if s2.type == "object":
-                ret = JSONTypeObject({})
-                ret.required = list(set(s1.required).union(s2.required))
-                ret.minProperties = max(s1.minProperties, s2.minProperties)
-                ret.maxProperties = min(s1.maxProperties, s2.maxProperties)
-                if utils.is_bool(s1.additionalProperties) and utils.is_bool(
-                    s2.additionalProperties
-                ):
+    @staticmethod
+    def _compute_object_meet(s1, s2):
+        if s2.type == "object":
+            ret = JSONTypeObject({})
+            ret.required = list(set(s1.required).union(s2.required))
+            ret.minProperties = max(s1.minProperties, s2.minProperties)
+            ret.maxProperties = min(s1.maxProperties, s2.maxProperties)
+            match (s1.additionalProperties, s2.additionalProperties):
+                case (bool(), bool()):
                     ad = s1.additionalProperties and s2.additionalProperties
-                elif utils.is_dict(s1.additionalProperties):
+                case (JSONschema(), _):
                     ad = s1.additionalProperties.meet(s2.additionalProperties)
-                elif utils.is_dict(s2.additionalProperties):
+                case (_, JSONschema()):
                     ad = s2.additionalProperties.meet(s1.additionalProperties)
-                ret.additionalProperties = False if is_bot(ad) else ad
-                #
-                # For meet of properties and patternProperties,
-                # no need to check whether a key is valid against  patternProperties of the other schema
-                # or to calculate intersections among patternProperties of both schemas
-                # cuz the validator takes care of this during validation of actual instances.
-                # For efficiency, we just include all key in properties and patternProperties of both schemas.
-                # We only have to handle exactly matching keys in both properties and patternProperties.
-                #
-                properties = {}
-                for k in s1.properties:
-                    if k in s2.properties:
-                        properties[k] = s1.properties[k].meet(s2.properties[k])
-                    else:
-                        properties[k] = s1.properties[k]
-                for k in s2.properties:
-                    if k not in s1.properties:
-                        properties[k] = s2.properties[k]
-                ret.properties = properties
-                p_properties = {}
-                for k in s1.patternProperties:
-                    if k in s2.patternProperties:
-                        p_properties[k] = s1.patternProperties[k].meet(
-                            s2.patternProperties[k]
-                        )
-                    else:
-                        p_properties[k] = s1.patternProperties[k]
-                for k in s2.patternProperties:
-                    if k not in s1.patternProperties:
-                        p_properties[k] = s2.patternProperties[k]
-                ret.patternProperties = p_properties
-                ret.update_internal_state()
-                return ret
-            else:
-                return JSONbot()
+            ret.additionalProperties = False if is_bot(ad) else ad
+            #
+            # For meet of properties and patternProperties,
+            # no need to check whether a key is valid against  patternProperties of the other schema
+            # or to calculate intersections among patternProperties of both schemas
+            # cuz the validator takes care of this during validation of actual instances.
+            # For efficiency, we just include all key in properties and patternProperties of both schemas.
+            # We only have to handle exactly matching keys in both properties and patternProperties.
+            #
+            ret.properties = _merge_with_meet(s1.properties, s2.properties)
+            ret.patternProperties = _merge_with_meet(
+                s1.patternProperties, s2.patternProperties
+            )
+            ret.update_internal_state()
+            return ret
+        else:
+            return JSONbot()
 
-        return super().meet_handle_rhs(s, _meet_object)
+    def _is_subtype(self, s):
+        return super().is_subtype_handle_rhs(s, JSONTypeObject._compute_object_subtype)
 
-    def _is_subtype(self, s):  # noqa: C901, PLR0915
+    @staticmethod
+    def _compute_object_subtype(s1, s2):  # noqa: C901, PLR0911, PLR0912, PLR0915
+        """The general intuition is that a json object with more keys is more restrictive
+        than a similar object with fewer keys.
 
-        def _is_object_subtype(s1, s2):  # noqa: C901, PLR0911, PLR0912, PLR0915
-            """The general intuition is that a json object with more keys is more restrictive
-            than a similar object with fewer keys.
+        E.g.: if corresponding keys have same schemas, then
+        {name: {..}, age: {..}} <: {name: {..}}
+        {name: {..}, age: {..}} />: {name: {..}}
 
-            E.g.: if corresponding keys have same schemas, then
-            {name: {..}, age: {..}} <: {name: {..}}
-            {name: {..}, age: {..}} />: {name: {..}}
+        So the subtype checking is divided into two major parts:
+        I) lhs keys/patterns/additional should be a superset of rhs
+        II) schemas of comparable keys should have lhs <: rhs
+        """
+        if s2.type != "object":
+            return False
+        if s1.has_enum():
+            return s1.subtype_enum(s2)
+        # Check properties range
+        is_sub_interval = s1.interval in s2.interval
+        if not is_sub_interval:
+            print_db(s1.interval, s1)
+            print_db(s2.interval, s2)
+            print_db("__00__")
+            return False
+        #
+        # else:
+        #     # If ranges are ok, check another trivial case of almost identical objects.
+        #     # This is some sort of performance heuristic.
+        #     if set(s1.required).issuperset(s2.required) \
+        #         and s1.properties == s2.properties \
+        #         and s1.patternProperties == s2.patternProperties \
+        #         and (s1.additionalProperties == s2.additionalProperties
+        #              or (utils.is_dict(s1.additionalProperties)
+        #                  and s1.additionalProperties.is_subtype(s2.additionalProperties))):
+        #         print_db("__01__")
+        #         return True
+        # #
 
-            So the subtype checking is divided into two major parts:
-            I) lhs keys/patterns/additional should be a superset of rhs
-            II) schemas of comparable keys should have lhs <: rhs
+        def get_schema_for_key(k, s):
+            """Searches for matching key and get the corresponding schema(s).
+            Returns iterable because if a key matches more than one pattern,
+            that key schema has to match all corresponding patterns schemas.
             """
-            if s2.type != "object":
-                return False
-            if s1.has_enum():
-                return super().subtype_enum(s2)
-            # Check properties range
-            is_sub_interval = s1.interval in s2.interval
-            if not is_sub_interval:
-                print_db(s1.interval, s1)
-                print_db(s2.interval, s2)
-                print_db("__00__")
-                return False
-            #
-            # else:
-            #     # If ranges are ok, check another trivial case of almost identical objects.
-            #     # This is some sort of performance heuristic.
-            #     if set(s1.required).issuperset(s2.required) \
-            #         and s1.properties == s2.properties \
-            #         and s1.patternProperties == s2.patternProperties \
-            #         and (s1.additionalProperties == s2.additionalProperties
-            #              or (utils.is_dict(s1.additionalProperties)
-            #                  and s1.additionalProperties.is_subtype(s2.additionalProperties))):
-            #         print_db("__01__")
-            #         return True
-            # #
-
-            def get_schema_for_key(k, s):
-                """Searches for matching key and get the corresponding schema(s).
-                Returns iterable because if a key matches more than one pattern,
-                that key schema has to match all corresponding patterns schemas.
-                """
-                if k in s.properties:
-                    return [s.properties[k]]
-                else:
-                    ret = []
-                    for k_ in s.patternProperties:
-                        if utils.regex_matches_string(k_, k):
-                            # in case a key has to be checked against patternProperties,
-                            # it has to adhere to all schemas which have pattern matching the key.
-                            ret.append(s.patternProperties[k_])
-                    if ret:
-                        return ret
-
-                return [s.additionalProperties]
-
-            # Check that required keys satisfy subtyping.
-            # lhs required keys should be superset of rhs required keys.
-            if not set(s1.required).issuperset(s2.required):
-                print_db("__02__")
-                return False
-            # If required keys are properly defined, check their corresponding
-            # schemas and make sure they are subtypes.
-            # This is required because you could have a required key which does not
-            # have an explicit schema defined by the json object.
-
+            if k in s.properties:
+                return [s.properties[k]]
             else:
-                for k in set(s1.required).intersection(s2.required):
-                    for lhs_ in get_schema_for_key(k, s1):
-                        for rhs_ in get_schema_for_key(k, s2):
-                            if lhs_:
-                                if rhs_:
-                                    if not lhs_.is_subtype(rhs_):
-                                        print_db(k, "LHS", lhs_, "RHS", rhs_)
-                                        print_db("!!__03__")
-                                        return False
-                                else:
-                                    print_db("__04__")
-                                    return False
-
-            extra_keys_on_rhs = set(s2.properties.keys()).difference(
-                s1.properties.keys()
-            )
-            for k in extra_keys_on_rhs.copy():
-                if all(map(is_top, get_schema_for_key(k, s2))):
-                    extra_keys_on_rhs.remove(k)
-                    continue
-                for k_ in s1.patternProperties:
+                ret = []
+                for k_ in s.patternProperties:
                     if utils.regex_matches_string(k_, k):
-                        extra_keys_on_rhs.remove(k)
-            # if extra_keys_on_rhs:
-            # if not s1.additionalProperties:
-            #     print_db("?__05__")
+                        # in case a key has to be checked against patternProperties,
+                        # it has to adhere to all schemas which have pattern matching the key.
+                        ret.append(s.patternProperties[k_])
+                if ret:
+                    return ret
+
+            return [s.additionalProperties]
+
+        # Check that required keys satisfy subtyping.
+        # lhs required keys should be superset of rhs required keys.
+        if not set(s1.required).issuperset(s2.required):
+            print_db("__02__")
+            return False
+        # If required keys are properly defined, check their corresponding
+        # schemas and make sure they are subtypes.
+        # This is required because you could have a required key which does not
+        # have an explicit schema defined by the json object.
+
+        else:
+            for k in set(s1.required).intersection(s2.required):
+                for lhs_ in get_schema_for_key(k, s1):
+                    for rhs_ in get_schema_for_key(k, s2):
+                        if lhs_:
+                            if rhs_:
+                                if not lhs_.is_subtype(rhs_):
+                                    print_db(k, "LHS", lhs_, "RHS", rhs_)
+                                    print_db("!!__03__")
+                                    return False
+                            else:
+                                print_db("__04__")
+                                return False
+
+        extra_keys_on_rhs = set(s2.properties.keys()).difference(s1.properties.keys())
+        for k in extra_keys_on_rhs.copy():
+            if all(map(is_top, get_schema_for_key(k, s2))):
+                extra_keys_on_rhs.remove(k)
+                continue
+            for k_ in s1.patternProperties:
+                if utils.regex_matches_string(k_, k):
+                    extra_keys_on_rhs.remove(k)
+        # if extra_keys_on_rhs:
+        # if not s1.additionalProperties:
+        #     print_db("?__05__")
+        #     return False
+        # else:
+        for _k in extra_keys_on_rhs:
+            if is_bot(s1.additionalProperties):
+                continue
+            elif is_top(s1.additionalProperties):
+                print_db("__06__")
+                return False
+            # for s in get_schema_for_key(k, s1):
+            #     if not is_bot(s):
+            #         continue
+            #     elif is_bot(s2.):
+            #         return False
+            # print("-->", s)
+            # if is_top(s) and not is_top(s2.properties[k]) or not s.is_subtype(s2.properties[k]):
+            #     print_db("__06__")
             #     return False
-            # else:
-            for _k in extra_keys_on_rhs:
-                if is_bot(s1.additionalProperties):
-                    continue
-                elif is_top(s1.additionalProperties):
-                    print_db("__06__")
-                    return False
-                # for s in get_schema_for_key(k, s1):
-                #     if not is_bot(s):
-                #         continue
-                #     elif is_bot(s2.):
-                #         return False
-                # print("-->", s)
-                # if is_top(s) and not is_top(s2.properties[k]) or not s.is_subtype(s2.properties[k]):
-                #     print_db("__06__")
-                #     return False
 
-            extra_patterns_on_rhs = set(s2.patternProperties.keys()).difference(
-                s1.patternProperties.keys()
-            )
-            for k in extra_patterns_on_rhs.copy():
-                for k_ in s1.patternProperties:
-                    if utils.regex_is_subset(k, k_):
-                        extra_patterns_on_rhs.remove(k)
-            if extra_patterns_on_rhs:
-                if not s1.additionalProperties:
-                    print_db("__07__")
-                    return False
-                else:
-                    for k in extra_patterns_on_rhs:
-                        if not s1.additionalProperties.is_subtype(
-                            s2.patternProperties[k]
-                        ):
-                            try:  # means regex k is infinite
-                                parse(k).cardinality()
-                            except OverflowError:
-                                print_db("__08__")
-                                return False
-            #
-            # missing_props_from_lhs = set(
-            #     s2.properties.keys()) - set(s1.properties.keys())
-            # for k in missing_props_from_lhs:
-            #     for k_ in s1.patternProperties.keys():
-            #         if utils.regex_matches_string(k_, k):
-            #             if not s1.patternProperties[k_].is_subtype(s2.properties[k]):
-            #                 return False
-
-            # Now, lhs has a patternProperty which is subtype of a property on the rhs.
-            # Ideally, at this point, I'd like to check that EVERY property matched by
-            # this pattern also exist on the rhs.
-            # from greenery.lego import parse
-            # p = parse(k_)
-            # try:
-            # p.cardinality
-
-            # first, matching properties should be subtype pairwise
-            unmatched_lhs_props_keys = set(s1.properties.keys())
-            for k in s1.properties:
-                if k in s2.properties:
-                    unmatched_lhs_props_keys.discard(k)
-                    if not s1.properties[k].is_subtype(s2.properties[k]):
-                        return False
-                # for the remaining keys, make sure they either don't exist
-                # in rhs or if they, then their schemas should be sub-type
-                else:
-                    for k_ in s2.patternProperties:
-                        # if utils.regex_is_subset(k, k_):
-                        if utils.regex_matches_string(k_, k):
-                            unmatched_lhs_props_keys.discard(k)
-                            if not s1.properties[k].is_subtype(
-                                s2.patternProperties[k_]
-                            ):
-                                return False
-
-            # second, matching patternProperties should be subtype pairwise
-            unmatched_lhs_p_props_keys = set(s1.patternProperties.keys())
-            for k in s1.patternProperties:
-                for k_ in s2.patternProperties:
-                    if utils.regex_is_subset(k_, k):
-                        unmatched_lhs_p_props_keys.discard(k)
-                        if not s1.patternProperties[k].is_subtype(
-                            s2.patternProperties[k_]
-                        ):
-                            return False
-            # third,
-
-            # fourth,
-            if s2.additionalProperties == True:
-                return True
-            elif s2.additionalProperties == False:
-                return not (
-                    s1.additionalProperties == True
-                    or unmatched_lhs_props_keys
-                    or unmatched_lhs_p_props_keys
-                )
+        extra_patterns_on_rhs = set(s2.patternProperties.keys()).difference(
+            s1.patternProperties.keys()
+        )
+        for k in extra_patterns_on_rhs.copy():
+            for k_ in s1.patternProperties:
+                if utils.regex_is_subset(k, k_):
+                    extra_patterns_on_rhs.remove(k)
+        if extra_patterns_on_rhs:
+            if not s1.additionalProperties:
+                print_db("__07__")
+                return False
             else:
-                for k in unmatched_lhs_props_keys:
-                    if not s1.properties[k].is_subtype(s2.additionalProperties):
-                        return False
-                for k in unmatched_lhs_p_props_keys:
-                    if not s1.patternProperties[k].is_subtype(s2.additionalProperties):
-                        return False
-                if s1.additionalProperties == True:
-                    return False
-                elif s1.additionalProperties == False:
-                    return True
-                else:
-                    return s1.additionalProperties.is_subtype(s2.additionalProperties)
+                for k in extra_patterns_on_rhs:
+                    if not s1.additionalProperties.is_subtype(s2.patternProperties[k]):
+                        try:  # means regex k is infinite
+                            parse(k).cardinality()
+                        except OverflowError:
+                            print_db("__08__")
+                            return False
+        #
+        # missing_props_from_lhs = set(
+        #     s2.properties.keys()) - set(s1.properties.keys())
+        # for k in missing_props_from_lhs:
+        #     for k_ in s1.patternProperties.keys():
+        #         if utils.regex_matches_string(k_, k):
+        #             if not s1.patternProperties[k_].is_subtype(s2.properties[k]):
+        #                 return False
 
-        return super().is_subtype_handle_rhs(s, _is_object_subtype)
+        # Now, lhs has a patternProperty which is subtype of a property on the rhs.
+        # Ideally, at this point, I'd like to check that EVERY property matched by
+        # this pattern also exist on the rhs.
+        # from greenery.lego import parse
+        # p = parse(k_)
+        # try:
+        # p.cardinality
+
+        # first, matching properties should be subtype pairwise
+        unmatched_lhs_props_keys = set(s1.properties.keys())
+        for k in s1.properties:
+            if k in s2.properties:
+                unmatched_lhs_props_keys.discard(k)
+                if not s1.properties[k].is_subtype(s2.properties[k]):
+                    return False
+            # for the remaining keys, make sure they either don't exist
+            # in rhs or if they, then their schemas should be sub-type
+            else:
+                for k_ in s2.patternProperties:
+                    # if utils.regex_is_subset(k, k_):
+                    if utils.regex_matches_string(k_, k):
+                        unmatched_lhs_props_keys.discard(k)
+                        if not s1.properties[k].is_subtype(s2.patternProperties[k_]):
+                            return False
+
+        # second, matching patternProperties should be subtype pairwise
+        unmatched_lhs_p_props_keys = set(s1.patternProperties.keys())
+        for k in s1.patternProperties:
+            for k_ in s2.patternProperties:
+                if utils.regex_is_subset(k_, k):
+                    unmatched_lhs_p_props_keys.discard(k)
+                    if not s1.patternProperties[k].is_subtype(s2.patternProperties[k_]):
+                        return False
+        # third,
+
+        # fourth,
+        if s2.additionalProperties == True:
+            return True
+        elif s2.additionalProperties == False:
+            return not (
+                s1.additionalProperties == True
+                or unmatched_lhs_props_keys
+                or unmatched_lhs_p_props_keys
+            )
+        else:
+            for k in unmatched_lhs_props_keys:
+                if not s1.properties[k].is_subtype(s2.additionalProperties):
+                    return False
+            for k in unmatched_lhs_p_props_keys:
+                if not s1.patternProperties[k].is_subtype(s2.additionalProperties):
+                    return False
+            if s1.additionalProperties == True:
+                return False
+            elif s1.additionalProperties == False:
+                return True
+            else:
+                return s1.additionalProperties.is_subtype(s2.additionalProperties)
 
     @staticmethod
     def neg(s):
