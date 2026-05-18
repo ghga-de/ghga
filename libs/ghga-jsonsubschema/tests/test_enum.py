@@ -61,7 +61,6 @@ def test_enum_uninhabited2():
     assert is_subschema(s2, s1)
 
 
-@pytest.mark.skip(reason="jsonschema.exceptions.SchemaError: [] is too short (enum)")
 def test_enum_uninhabited3():
     s1: dict = {"enum": []}
     s2 = {"type": "boolean"}
@@ -70,7 +69,6 @@ def test_enum_uninhabited3():
     assert not is_subschema(s2, s1)
 
 
-@pytest.mark.skip(reason="jsonschema.exceptions.SchemaError: [] is too short (enum)")
 def test_enum_uninhabited4():
     s1: dict = {"enum": []}
     s2: dict = {"not": {}}
