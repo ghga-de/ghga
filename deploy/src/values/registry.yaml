@@ -1,0 +1,85 @@
+image:
+  repository: "ghga/ghga-registry-service"
+
+configPrefix: rs
+
+# Service parameters
+
+# Service base path
+apiBasePath: /rs/
+# Name of the database
+mongodb:
+  dbName: registry
+
+# This parameter is used as Kafka's group id
+serviceName: rs-rest
+
+# Those values are directly injected into the service's configuration
+config:
+  host: 0.0.0.0
+  mongo_dsn: null
+  kafka_enable_dlq: true
+  enable_opentelemetry: false
+  service_instance_id: 'rs_1'
+  service_name: rs
+  access_url: http://claims-repository:8080
+  ucs_url: http://upload-controller:8080
+  auth_key: '{}'
+  work_order_signing_key: '{}'
+
+cmd: rs run-rest
+# cmd: dins consume-events
+
+_topics:
+
+  uploadBoxTopic:
+    # as consumer
+    topic:
+      name: file_upload_box_topic
+      value: file-upload-boxes
+    kafkaUser:
+      operations:
+        - Read
+  researchDataUploadBoxTopic:
+    # as consumer
+    topic:
+      name: research_data_upload_box_topic
+      value: research-data-upload-boxes
+    kafkaUser:
+      operations:
+        - Read
+  deadLetterQueue:
+  # as producer
+    topic:
+      name: kafka_dlq_topic
+      value: dlq
+    kafkaUser:
+      operations:
+        - Write
+  deadLetterQueueRetry:
+  # as consumer
+    topic:
+      name: null
+      value: retry
+    kafkaUser:
+      operations:
+        - Read
+  accessionMapTopic:
+  # as producer
+    topic:
+      name: accession_map_topic
+      value: accession-maps
+    kafkaUser:
+      operations:
+        - Write
+  auditRecordTopic:
+  # as producer
+    topic:
+      name: audit_record_topic
+      value: audit-records
+    type:
+      name: audit_record_type
+      value: audit_record_logged
+    kafkaUser:
+      operations:
+        - Write
