@@ -14,6 +14,10 @@ mongodb:
 # This parameter is used as Kafka's group id
 serviceName: wps-consumer
 
+migrationInitContainer:
+ args:
+  - wps migrate-db
+
 config:
   auth_key: '{}'
   mongo_dsn: null

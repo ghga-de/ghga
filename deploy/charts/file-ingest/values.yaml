@@ -24,12 +24,16 @@ config:
 
 cmd: fis run-rest
 
+migrationInitContainer:
+ args:
+  - fis migrate-db
+
 _topics:
   fileUploadValidationSuccess:
     # as producer
     topic:
       name: file_interrogations_topic
-      value: interrogations
+      value: file-interrogations
     types:
       - name: interrogation_success_type
         value: file_interrogation_success

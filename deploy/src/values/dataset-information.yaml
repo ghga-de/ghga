@@ -29,7 +29,7 @@ _topics:
     # as consumer
     topic:
       name: file_internally_registered_topic
-      value: internal-registrations
+      value: file-internal-registrations
     types:
       - name: file_internally_registered_type
         value: internal_file_registered

@@ -21,12 +21,16 @@ config:
 
 cmd: ifrs consume-events
 
+migrationInitContainer:
+ args:
+  - ifrs migrate-db
+
 _topics:
   fileDeletedEvent:
     # as producer
     topic:
       name: file_deleted_topic
-      value: internal-registrations
+      value: file-downloads
     types:
       - name: file_deleted_type
         value: internal_file_deleted
@@ -37,7 +41,7 @@ _topics:
     # as producer
     topic:
       name: file_internally_registered_topic
-      value: internal-registrations
+      value: file-internal-registrations
     types:
       - name: file_internally_registered_type
         value: internal_file_registered
@@ -48,7 +52,7 @@ _topics:
     # as producer
     topic:
       name: file_staged_topic
-      value: staged-files
+      value: internal-staged-files
     types:
       - name: file_staged_type
         value: internal_file_staged
@@ -70,7 +74,7 @@ _topics:
     # as consumer
     topic:
       name: files_to_stage_topic
-      value: staging-requests
+      value: file-staging-requests
     type:
       name: files_to_stage_type
       value: file_staging_requested

@@ -25,26 +25,26 @@ access_request_denied_type: access_request_denied
 file_deletion_request_topic: purges
 file_deletion_request_type: file_deletion_requested
 
-file_internally_registered_topic: internal-registrations
+file_internally_registered_topic: file-internal-registrations
 file_internally_registered_type: internal_file_registered
 
-file_registered_for_download_topic: downloads
+file_registered_for_download_topic: file-downloads
 file_registered_for_download_type: drs_object_registered
 
 # this one (file deleted) is different for each service. The one below is for the DCS
-file_deleted_topic: downloads
+file_deleted_topic: file-downloads
 file_deleted_type: drs_object_deleted
 
-download_served_topic: downloads
+download_served_topic: file-downloads
 download_served_type: drs_object_served
 
-files_to_stage_topic: staging-requests
+files_to_stage_topic: file-staging-requests
 files_to_stage_type: file_staging_requested
 
-file_staged_topic: staged-files
+file_staged_topic: internal-staged-files
 file_staged_type: internal_file_staged
 
-file_interrogations_topic: interrogations
+file_interrogations_topic: file-interrogations
 interrogation_success_type: file_interrogation_success
 
 file_upload_topic: file-uploads

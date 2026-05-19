@@ -10,7 +10,7 @@ charts:
   data-portal-ui:
     name: data-portal-ui
     description: The Metadata Search Service is a service for providing a unified search interface over a metadata store.
-    appVersion: "2.5.3"
+    appVersion: "2.5.4"
   dataset-information:
     name: dataset-information
     description: Dataset Information Service
@@ -82,7 +82,7 @@ charts:
   registry:
     name: registry
     description: GHGA Registry Service
-    appVersion: "1.0.0"
+    appVersion: "1.0.1"
   auth-km-jobs:
     name: auth-km-jobs
     description: This job is to refresh the internal and external auth keys.
