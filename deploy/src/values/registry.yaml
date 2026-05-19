@@ -47,7 +47,7 @@ _topics:
       value: research-data-upload-boxes
     kafkaUser:
       operations:
-        - Read
+        - Write
   deadLetterQueue:
   # as producer
     topic:
