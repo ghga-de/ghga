@@ -63,7 +63,7 @@ class GlobalValidationPlugin(ABC):
 
 class ClassValidationPlugin(ABC):
     """Abstract class for defining class-scoped validation plugin. Instances
-    of implemeting concrete classes perform validation with respect to one
+    of implementing concrete classes perform validation with respect to one
     specific schemapack class.
     """
 

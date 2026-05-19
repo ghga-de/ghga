@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=80.10",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "schemapack"
-version = "4.1.0"
+version = "4.2.0"
 description = "Make your JSON Schemas sociable and create linked data models."
 dependencies = [
     "pydantic >=2, <3",

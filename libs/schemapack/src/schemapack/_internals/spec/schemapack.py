@@ -43,7 +43,7 @@ from schemapack.spec.custom_types import (
 )
 from schemapack.utils import read_json_or_yaml_mapping
 
-SupportedSchemaPackVersions = Literal["3.0.0", "3.1.0", "4.0.0"]
+SupportedSchemaPackVersions = Literal["3.0.0", "3.1.0", "4.0.0", "4.1.0", "4.2.0"]
 SUPPORTED_SCHEMA_PACK_VERSIONS = typing.get_args(SupportedSchemaPackVersions)
 
 
@@ -373,6 +373,14 @@ class SchemaPack(_FrozenNoExtraBaseModel):
             + " Corresponding datapacks must define a root resource of this class."
             + "If not specified , i.e. set to None (the default), the datapack must not"
             + " specify a root resource."
+        ),
+    )
+    globallyUniqueIds: bool = Field(  # noqa: N815 - following JSON conventions
+        default=False,
+        description=(
+            "If true, resource IDs must be unique across all classes, i.e. no two resources"
+            " from different classes may share the same ID. If false (the default), IDs only"
+            " need to be unique within their respective class."
         ),
     )
 

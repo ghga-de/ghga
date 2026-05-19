@@ -42,7 +42,7 @@ from schemapack._internals.spec.custom_types import (
 )
 from schemapack._internals.utils import thaw
 
-SupportedDataPackVersions = Literal["3.0.0", "3.1.0", "4.0.0"]
+SupportedDataPackVersions = Literal["3.0.0", "3.1.0", "4.0.0", "4.1.0", "4.2.0"]
 SUPPORTED_DATA_PACK_VERSIONS = typing.get_args(SupportedDataPackVersions)
 
 

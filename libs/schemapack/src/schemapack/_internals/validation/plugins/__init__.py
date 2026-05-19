@@ -23,6 +23,9 @@ from schemapack._internals.validation.plugins.content_schema import (
 from schemapack._internals.validation.plugins.expected_root import (
     ExpectedRootValidationPlugin,
 )
+from schemapack._internals.validation.plugins.globally_unique_ids import (
+    GloballyUniqueIdsValidationPlugin,
+)
 from schemapack._internals.validation.plugins.missing_class import (
     MissingClassSlotValidationPlugin,
 )
@@ -54,6 +57,7 @@ from schemapack._internals.validation.plugins.unknown_relations import (
 __all__ = [
     "ContentSchemaValidationPlugin",
     "ExpectedRootValidationPlugin",
+    "GloballyUniqueIdsValidationPlugin",
     "MissingClassSlotValidationPlugin",
     "MissingMandatoryOriginValidationPlugin",
     "MissingMandatoryTargetValidationPlugin",

@@ -1,0 +1,21 @@
+schemapack: 4.2.0
+description: A simple schemapack # with no root class but with descriptions.
+classes:
+  A:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+  B:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/AnyObject.schema.json
+    relations:
+      b:
+        targetClass: A
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true
+globallyUniqueIds: True
