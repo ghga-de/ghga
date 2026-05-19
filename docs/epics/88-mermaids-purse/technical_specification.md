@@ -11,15 +11,14 @@ Epic planning and implementation follow the
 
 ### Outline
 
-This epic delivers seven related improvements to the schemapack/metldata ecosystem and the em-transformation-service:
+This epic delivers six related improvements to the schemapack/metldata ecosystem and the em-transformation-service:
 
 1. **Schemapack GUID support** — an opt-in `globallyUniqueIds` flag in the schemapack schema enforces globally unique resource IDs across all classes in validated datapacks.
 2. **Metldata transformation additions** — `duplicate_class` is retained; the new `add_class` transformation is added to support the aggregate stats workflow.
 3. **Metldata aggregate stats workflow** — the aggregate stats workflow is rewritten using the new GUID-compatible transformations.
 4. **Metldata `WorkflowRunner` API** — `WorkflowHandler` is refactored to separate model derivation from data transformation. A new public `WorkflowRunner` class and a `validate_workflow` convenience function are added.
-5. **GHGA metadata schema** (schemapack branch) — `Publication` is removed as a standalone class and embedded as inline content in `Study`.
-6. **`jsonsubschema` fork** — `jsonsubschema` is forked under the GHGA organisation to ship a bug fix for enum values containing regex metacharacters.
-7. **em-transformation-service updates** — the service adopts `WorkflowRunner` to replace its manual transformation loop.
+5. **`jsonsubschema` fork** — `jsonsubschema` is forked under the GHGA organisation to ship a bug fix for enum values containing regex metacharacters.
+6. **em-transformation-service updates** — the service adopts `WorkflowRunner` to replace its manual transformation loop.
 
 ### Terminology
 
@@ -106,32 +105,35 @@ This argument defaults to `false`. When set to `true`, the transformation sets `
 
 ##### 2.3. `add_class` Transformation
 
-> **Under discussion.** See the arguments below for an open question about whether `add_class` is necessary.
 
-**Proposed design**
+The need for the `add_class` transformation comes from the new design of the metadata schema, which removed administrative metadata from the current schema. The classes removed are `Study`, `Publication`, `Dataset`, `DataAccessPolicy`, and `DataAccessCommittee`. This also results in removing the `dataset` property from the file-related classes: `IndividualSupportingFile`, `ExperimentMethodSupportingFile`, `ResearchDataFile`, `AnalysisMethodSupportingFile`, and `ProcessDataFile`.
 
-A new `add_class` transformation creates an empty class in the schema. It does not copy or duplicate any existing class. The new class has no resources initially; downstream transformation steps populate it.
+This necessitates merging the Persisted Administrative Metadata (PAM) back into the EMIM before transforming it into the UDM via the aggregate stats workflow. PAM will be part of the annotations published by the study-registry-service.
+
+**Assumptions**
+
+The class being added will not exist in the schema.
+If the newly added class has a relation, the target class of that relation must exist in the schema.
 
 **Configuration model**
 
 ```python
-class RelationDefinition(BaseModel):
-    target_class: str
-    mandatory_origin: bool = False
-    mandatory_target: bool = False
-    multiple_origin: bool = False
-    multiple_target: bool = False
-    description: str | None = None
-
 class AddClassConfig(BaseModel):
     class_name: str                                    # PascalCase; must not already exist in the schema
     id_property_name: str                              # the property used as the resource ID
     content_schema: dict                               # a valid JSON Schema object for the class content
-    relations: dict[str, RelationDefinition] = Field(default_factory=dict)
     description: str | None = None
-```
+    relations: list[Relation] | None = None                 # optional list of relations from the new class to existing classes
 
-Relations are declared at class-creation time when known upfront. Each key is the relation name (snake_case); the value specifies the target class and multiplicity/mandatory flags matching the schemapack relation definition format. All referenced target classes must already exist — `add_class` raises `ModelAssumptionError` if any are missing.
+
+class Relation(BaseModel):
+    relation_name: str
+    description: str | None = None
+    target_class: str
+    target_resource_id_field: str                       # the property in the target class used to reference the target resource ID
+    mandatory: MandatoryRelationSpec
+    multiple: MultipleRelationSpec
+```
 
 **Model transformation**
 
@@ -141,15 +143,190 @@ Relations are declared at class-creation time when known upfront. Each key is th
 
 **Data transformation**
 
-> **Open question:** How will the newly added class be populated with data?
+For the class declared in `config.class_name`, the transformation inserts the resources sourced from the PAM into the DataPack. Each PAM resource is processed individually and split into two parts before being written:
 
-**Arguments against `add_class`**
+Content — properties that match the JSON Schema declared in `config.content_schema` are kept under the resource's content.
+Relations — for every entry in `config.relations`, the property named by `target_resource_id_field` is read from the incoming PAM record, removed from content, and written as a relation under `relations.<relation_name>` with `targetClass = target_class` and `targetResources` set to the value(s) read.
 
-The need for `add_class` arises from a requirement to create classes in the derived schema with no direct counterpart in the input schema. However, populating such a class with data is not straightforward: it can only contain resources that already exist in the datapack. Given that, the required operation is essentially a copy-resource from an existing class — structurally similar to `duplicate_class`, but at the individual resource level rather than the class level. `duplicate_class` already handles the whole-class case, and content transformations cover schema changes.
+The resource ID itself is taken from the PAM record under the name given by `config.id_property_name` and used as the key under `resources.<class_name>`.
 
-What may be missing is explicit relation deletion. Currently, a duplicated class's relations are cleared only as a side effect of deleting other classes whose removal cascades to references. A `delete_relation` transformation would make this explicit, and may make `add_class` unnecessary.
+##### 2.4. `infer_relation_from_content` Transformation
 
-##### 2.4. `WorkflowRunner` — Separated Model and Data Transformation
+The need for the `infer_relation_from_content` transformation comes from the new design of the metadata schema. After the `add_class` transformation re-introduces `Dataset` into the EMIM, the `Dataset` content carries a flat list of file resource IDs under the `files` property. These IDs span the five file classes — `ResearchDataFile`, `ProcessDataFile`, `IndividualSupportingFile`, `ExperimentMethodSupportingFile`, `AnalysisMethodSupportingFile`. The dataset back-reference that used to exist on each of these file classes must be reconstructed before the aggregate stats workflow can run path inferences such as `Dataset<(dataset)ResearchDataFile…`.
+
+This transformation walks the flat ID listing on a source class, resolves each ID to the file class it belongs to, and writes a relation pointing back to the source class on the resolved resource. It differs from infer_relation in that the source of the link information is a content property holding resource IDs, not an existing relation path.
+
+**Assumptions**
+
+The source class declared in the configuration must exist in the schema and must declare the content property holding the ID listing.
+The candidate target classes declared in the configuration must exist in the schema.
+The relation name declared in the configuration must not already exist on any of the candidate target classes.
+Each resource ID held by the source content property must resolve to a resource in exactly one of the candidate target classes. An unresolvable ID, or an ID present in more than one candidate class, is a data transformation error.
+
+**Configuration model**
+
+```python
+class InferRelationFromContentConfig(BaseModel):
+    source_class: str                          # class holding the ID listing (e.g. Dataset)
+    source_content_property: str               # name of the property on source_class holding the flat list of IDs
+    new_relation_name: str                     # name of the relation to add on each resolved target resource
+    target_classes: list[str]                  # candidate classes where the listed IDs may be resolved
+    description: str | None = None
+    mandatory: MandatoryRelationSpec
+    multiple: MultipleRelationSpec
+```
+```yaml
+
+source_class: Dataset
+source_content_property: files
+new_relation_name: dataset
+description: "Reconstruct the dataset back-reference on each file class by resolving the flat list of file IDs held on Dataset.content.files."
+target_classes:
+  - ResearchDataFile
+  - ProcessDataFile
+  - IndividualSupportingFile
+  - ExperimentMethodSupportingFile
+  - AnalysisMethodSupportingFile
+mandatory: # example, not actual relation spec
+  origin: false
+  target: false
+multiple: # example, not actual relation spec
+  origin: true
+  target: false
+```
+**Model transformation**
+
+For each class listed in `config.target_classes`, the transformation adds a relation declaration named `config.new_relation_name` whose `targetClass` is `config.source_class`, with `mandatory` and `multiple` taken from the configuration. The source class itself is not modified; the content property listing the IDs is left in place. If the listing is no longer wanted in the final output, it can be removed by a subsequent `transform_content` step.
+
+**Data transformation**
+
+The transformation first builds a global mapping from each ID listed under source_content_property to the set of source resources that reference it. Iterating resources.<source_class_name> once produces:
+
+
+file_id_1 → [DS_A, DS_B]
+file_id_2 → [DS_A]
+file_id_3 → [DS_B, DS_C]
+...
+The keys of this mapping form the set of all referenced IDs across all source resources. This set is intersected with the resource IDs present under resources.<class_name> for the class being processed in this invocation. For each ID in the intersection, the corresponding set of source resource IDs is read from the mapping and written to relations.<relation_name>.targetResources on that resource.
+
+IDs outside the intersection belong to other classes and are left untouched — they will be picked up by their own invocations.
+
+##### 2.5. Aggregate Stats Workflow: Adding Back PAM Classes via `add_class`
+
+The classes that will be added back to the EMIM via the aggregate stats workflow are `Study`, `Publication`, `Dataset`. Dataset will have DAC and DAP inlined, so they will not appear as separate classes in the intermediate or final schema. These classes will be added back to the EMIM via the `add_class` transformation.
+
+The config for adding the Study class back into the EMIM via `add_class` transformation looks like this:
+
+```yaml
+class_name: Study
+description: "A Study class added back to the EMIM via add_class transformation"
+id_property_name: accession
+content_schema: {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "description": "A Study.",
+    "properties": {
+      "title": { "type": "string" },
+      "description": { "type": "string" },
+      "types": { "type": "array", "items": { "type": "string" }},
+      "affiliations": { "type": "array", "items": { "type": "string" }}
+    },
+    "required": ["title", "description", "types", "affiliations"],
+    "type": "object"
+  }
+```
+
+Some classes that will be added will have a relation to another class. The config for adding `Publication` will look like this
+
+```yaml
+class_name: Publication
+description: "A Publication class added back to the EMIM via add_class transformation"
+id_property_name: accession
+content_schema: {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "description": "A Publication.",
+    "properties": {
+      "title": { "type": "string" },
+      "abstract": { "type": ["string", "null"] },
+      "authors": { "type": "array", "items": { "type": "string" } },
+      "year": { "type": "integer" },
+      "journal": { "type": ["string", "null"] },
+      "doi": { "type": ["string", "null"] }
+    },
+    "required": ["title", "authors", "year"],
+    "type": "object"
+  }
+relations:
+  - relation_name: study
+    description: "A relation from Publication to Study."
+    target_class: Study
+    target_resource_id_field: study_id
+    mandatory: MandatoryRelationSpec # placeholder; defined during implementation
+    multiple: MultipleRelationSpec # placeholder; defined during implementation
+```
+Note that the `Publication` published via study-registry-service has a `study_id` attribute that is used in the `add_class` transformation to create a relation between `Publication` and `Study`.
+
+The config for `Dataset` will look like this:
+
+```yaml
+class_name: Dataset
+description: "A Dataset class added back to the EMIM via add_class transformation"
+id_property_name: accession
+content_schema: {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "description": "A Dataset.",
+    "properties": {
+      "id": { "type": "string" },
+      "title": { "type": "string" },
+      "description": { "type": "string" },
+      "types": { "type": "array", "items": { "type": "string" } },
+      "study_id": { "type": "string" },
+      "dap": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "text": { "type": "string" },
+          "url": { "type": ["string", "null"], "format": "uri" },
+          "duo_permission_id": { "type": "string" },
+          "duo_modifier_ids": { "type": "array", "items": { "type": "string" } },
+          "dac_id": { "type": "string" }
+        },
+        "required": ["id", "name", "description", "text", "duo_permission_id", "duo_modifier_ids", "dac_id"]
+      },
+      "dac": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "institute": { "type": "string" }
+        },
+        "required": ["id", "name", "email", "institute"]
+      },
+      "files": { "type": "array", "items": { "type": "string" } }
+    },
+    "required": ["id", "title", "description", "types", "study_id", "dap", "dac", "files"],
+    "type": "object"
+  }
+relations:
+  - relation_name: study
+    description: "A relation from Dataset to Study."
+    target_class: Study
+    target_resource_id_field: study_id
+    mandatory: MandatoryRelationSpec
+    multiple: MultipleRelationSpec
+```
+**Open questions:**
+- The PAM annotation also carries `created: Date`, `changed: Date`, and `active: bool`. Should these be included in the content schema, or can they be ignored since they are not needed for the aggregate stats workflow?
+- Should DAC and DAP be received as separate classes or inlined into the Dataset content schema? (The example above uses inline.)
+
+##### 2.6. `WorkflowRunner` — Separated Model and Data Transformation
 
 **Problem**
 
@@ -195,33 +372,19 @@ The following are the stable public exports from `metldata.__init__`:
 
 
 
-##### 2.5. Aggregate Stats Workflow Integration Test
+##### 2.7. Aggregate Stats Workflow Integration Test
 
-An end-to-end integration test shall be added to metldata exercising all new capabilities together: a `globallyUniqueIds` schema, `add_class` (pending resolution of section 2.3), correct error behaviour for `duplicate_class` when intermediate validation is enabled, and `WorkflowRunner` running model derivation and data transformation independently.
+An end-to-end integration test shall be added to metldata exercising all new capabilities together: a `globallyUniqueIds` schema, `add_class` (pending resolution of open questions in section 2.5), correct error behaviour for `duplicate_class` when intermediate validation is enabled, and `WorkflowRunner` running model derivation and data transformation independently.
 
 The test uses a representative aggregate stats workflow and verifies that the `globallyUniqueIds` constraint is enforced on the output: validation rejects datapacks with duplicate IDs across classes.
 
 
-##### 2.6. Performance Benchmark of the Aggregate Stats Workflow
+##### 2.8. Performance Benchmark of the Aggregate Stats Workflow
 
 A performance benchmark shall be run against the full EMIM → aggregate stats workflow using the Epignostix dataset as a representative input. Profiling is done via `cProfile`. The goal is to establish a baseline transformation time before production deployment. Results are attached to the epic. Any step that accounts for a disproportionate share of total time is flagged for investigation.
 
 
-
-#### 3. GHGA Metadata Schema (schemapack branch)
-
-##### 3.1. Publication as Study Content
-
-In the LinkML-based GHGA metadata schema, `Publication` is a first-class entity with a `study` relation back to `Study`. In the schemapack-based revision, this design changes: **`Publication` is no longer a separate class**. Publication data is embedded directly in `Study` content as an inline array of publication objects.
-
-The `Study` content schema shall include a `publications` property: an array of objects with relevant fields (e.g., `doi`, `title`, `abstract`, `author`, `year`, `journal`, `xref`). There is no `Publication` class and no `study` relation on a publication resource.
-
-##### 3.2. Updating Schema Dependencies
-
-Embedding `Publication` in `Study` requires updates to the `ghga-transpiler` library and the `generate_xlsx.py` script in the metadata-schema schemapack branch. Both must be updated to reflect the new schema structure.
-
-
-#### 4. em-transformation-service: Adopt `WorkflowRunner`
+#### 3. em-transformation-service: Adopt `WorkflowRunner`
 
 The em-transformation-service currently drives workflow execution by manually iterating over transformation steps and managing `TransformationHandler` instances. This must be replaced with `WorkflowRunner`.
 
@@ -232,7 +395,7 @@ The em-transformation-service currently drives workflow execution by manually it
 After the change, the service no longer imports `TransformationHandler`, manages intermediate schema state, or resolves transformation names from the registry directly. A `WorkflowRunner` instance is constructed once per route at config-validation time and reused for all data transformations on that route.
 
 
-#### 5. `jsonsubschema` Enum Bug Fix
+#### 4. `jsonsubschema` Enum Bug Fix
 
 Metldata depends on `jsonsubschema` (IBM) for JSON Schema subset validation. The library is unmaintained and contains a known bug: in `_canonicalization.py`, enum values are converted to regex patterns via bare string concatenation (`"^" + str(x) + "$"`) without escaping regex metacharacters. Enum values containing characters such as `+`, `*`, or `.` are therefore misinterpreted as regex operators, producing incorrect validation results.
 
@@ -258,11 +421,11 @@ Since upstream maintainers are unresponsive, the solution is to **fork `jsonsubs
 
 ### Journey 2: Workflow Author Builds an Aggregate Stats Workflow with `add_class`
 
-1. A workflow author designing the EMIM → UDM workflow needs a derived class with no direct counterpart in the EMIM, constructed from content spread across existing classes.
-2. The author adds an `add_class` step specifying the class name, `id_property_name`, and the content JSON Schema.
-3. Subsequent steps (e.g., `transform_content`) populate the new class from existing class resources.
+1. A workflow author designing the EMIM → UDM workflow needs to reintroduce administrative classes (e.g., `Study`, `Dataset`) that are absent from the experimental EMIM but present in PAM annotations.
+2. The author adds an `add_class` step specifying the class name, `id_property_name`, content JSON Schema, and any relations to existing classes.
+3. Subsequent steps (e.g., `infer_relation_from_content`) reconstruct relations between the new class and existing resources.
 4. The workflow validates with `validate_workflow(workflow)` without errors.
-5. `WorkflowRunner(workflow=workflow, input_model=emim_schema).model` produces the UDM schema with the new class present.
+5. `WorkflowRunner(workflow=workflow, input_model=emim_schema).model` produces the derived schema with the new class present.
 
 ### Journey 3: em-transformation-service Derives Models and Transforms Data Independently
 
@@ -280,14 +443,11 @@ Since upstream maintainers are unresponsive, the solution is to **fork `jsonsubs
 - The serialization fix for frozen dicts should be shipped as a patch release of schemapack before or alongside the main changes in this epic.
 
 
-### Optional
-
-- A `copy_class` transformation: creates a new class as a structural copy of an existing class but assigns fresh resource IDs rather than duplicating them.
-
 ### Not Included
 
-- An `add_relation` or `delete_relation` transformation — not required for the current aggregate workflow.
+- `delete_relation` transformation — not required for the current aggregate workflow.
 - `jsonsubschema` upgrade to support JSON Schema draft 2019-09 or later.
+- The changes to the ghga-metadata-schema
 
 
 ## Human Resource/Time Estimation
