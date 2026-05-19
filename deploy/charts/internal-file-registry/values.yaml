@@ -30,7 +30,7 @@ _topics:
     # as producer
     topic:
       name: file_deleted_topic
-      value: file-downloads
+      value: file-deletions
     types:
       - name: file_deleted_type
         value: internal_file_deleted
@@ -41,7 +41,7 @@ _topics:
     # as producer
     topic:
       name: file_internally_registered_topic
-      value: file-internal-registrations
+      value: internal-registrations
     types:
       - name: file_internally_registered_type
         value: internal_file_registered
@@ -52,7 +52,7 @@ _topics:
     # as producer
     topic:
       name: file_staged_topic
-      value: internal-staged-files
+      value: staged-files
     types:
       - name: file_staged_type
         value: internal_file_staged
@@ -74,7 +74,7 @@ _topics:
     # as consumer
     topic:
       name: files_to_stage_topic
-      value: file-staging-requests
+      value: staging-requests
     type:
       name: files_to_stage_type
       value: file_staging_requested
