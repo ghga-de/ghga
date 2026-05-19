@@ -41,7 +41,7 @@ First, create two JSON schema examples by executing the following:
 
 ```sh
 echo '{"type": ["null", "string"]}' > s1.json
-echo '{"type": ["string", "null"], "not": {"enum": [""]}} > s2.json
+echo '{"type": ["string", "null"], "not": {"enum": [""]}}' > s2.json
 ```
 
 Then, invoke the CLI by executing:
@@ -83,18 +83,18 @@ uv run pytest tests/
 Run the test suite with coverage:
 
 ```sh
-uv run coverage run -m pytest tests/
-uv run coverage report
+uv run pytest --cov tests/
 ```
 
 ## Changes made by GHGA
 
-This fork introduces several key updates compared to the original `ibm/jsonsubschema` repository:
+This fork is based on the latest unreleased main branch of [IBM/jsonsubschema](https://github.com/ibm/jsonsubschema) and introduces additional changes:
 
 * Public API names have been changed to align with PEP 8.
 * The minimum required Python version is now 3.13.
 * Packaging uses more modern conventions.
 * Tests have been converted from `unittest` to `pytest`.
+* An empty `enum` is now treated as an uninhabited schema.
 
 ## License
 
