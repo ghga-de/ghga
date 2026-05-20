@@ -12,11 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Service specific constants."""
 
-from opentelemetry import trace
-
-SERVICE_NAME = "dcs"
-TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
-DCS_PERSISTED_EVENTS_COLLECTION = "dcsPersistedEvents"
-DRS_OBJECTS_COLLECTION = "drs_objects"
+"""Tests for migrations"""

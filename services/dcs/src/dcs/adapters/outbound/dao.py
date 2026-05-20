@@ -17,6 +17,7 @@
 
 from hexkit.protocols.dao import DaoFactoryProtocol
 
+from dcs.constants import DRS_OBJECTS_COLLECTION
 from dcs.core import models
 from dcs.ports.outbound.dao import DrsObjectDaoPort
 
@@ -26,7 +27,7 @@ async def get_drs_dao(*, dao_factory: DaoFactoryProtocol) -> DrsObjectDaoPort:
     DaoFactoryProtocol.
     """
     return await dao_factory.get_dao(
-        name="drs_objects",
+        name=DRS_OBJECTS_COLLECTION,
         dto_model=models.AccessTimeDrsObject,
         id_field="file_id",
     )

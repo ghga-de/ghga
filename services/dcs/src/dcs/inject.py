@@ -34,6 +34,7 @@ from dcs.adapters.outbound.event_pub import EventPubTranslator
 from dcs.adapters.outbound.http.api_calls import get_configured_httpx_client
 from dcs.adapters.outbound.http.secrets import SecretsClient
 from dcs.config import Config
+from dcs.constants import DCS_PERSISTED_EVENTS_COLLECTION
 from dcs.core.auth_policies import WorkOrderContext
 from dcs.core.bucket_cleanup import DownloadBucketCleaner
 from dcs.core.data_repository import DataRepository
@@ -61,7 +62,7 @@ async def get_persistent_publisher(
                 config.file_registered_for_download_topic,
             },
             topics_not_stored={config.files_to_stage_topic},
-            collection_name="dcsPersistedEvents",
+            collection_name=DCS_PERSISTED_EVENTS_COLLECTION,
         ) as persistent_publisher,
     ):
         yield persistent_publisher
