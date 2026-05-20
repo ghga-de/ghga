@@ -1,0 +1,47 @@
+# Multi-stage Dockerfile for building a hardened image for the data portal
+
+# Define the non-dev base-image
+ARG BASE=dhi.io/node:26-alpine3.23
+
+# BUILDER: a container to build the service dist directory
+FROM ${BASE}-sfw-ent-dev AS builder
+# install pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
+# install static web server
+RUN apk add --no-cache curl jq sudo which && mkdir -p /usr/local/bin
+RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sed 's/_clibtype="gnu"/_clibtype="musl"/' | sh
+# build the service
+WORKDIR /service
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
+COPY . .
+RUN pnpm build
+# create base package.json with just name and version
+RUN jq '{name, version, type}' package.json > ./package.json.run
+# extract js-yaml and its dependencies for runtime
+RUN mkdir -p /tmp/runtime-deps && \
+    cp -rL node_modules/js-yaml /tmp/runtime-deps/
+# create empty config.js so it can be copied to the runner with correct ownership
+RUN touch ./dist/data-portal/browser/config.js
+
+# RUNNER: a container to run the service
+FROM ${BASE} AS runner
+ARG UID=1000
+WORKDIR /app
+# install dist directory and run script
+COPY --chown=${UID}:${UID} --from=builder /service/dist/data-portal/browser ./dist
+# install static web server
+COPY --from=builder /usr/local/bin/static-web-server /usr/local/bin/static-web-server
+# copy the base package.json with name and version
+COPY --chown=${UID}:${UID} --from=builder /service/package.json.run ./package.json
+# install run script
+COPY --chown=${UID}:${UID} run.js ./run.mjs
+# copy runtime dependencies (js-yaml with resolved symlinks)
+COPY --chown=${UID}:${UID} --from=builder /tmp/runtime-deps/js-yaml ./node_modules/js-yaml
+# install configuration files
+COPY --chown=${UID}:${UID} data-portal.default.yaml .
+COPY --chown=${UID}:${UID} sws.toml .
+USER ${UID}
+
+ENTRYPOINT ["node"]
+CMD ["/app/run.mjs"]

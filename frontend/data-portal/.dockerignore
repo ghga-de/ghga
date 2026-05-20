@@ -1,0 +1,42 @@
+# Version control
+.git/
+.github/
+
+# Dependencies and caches
+node_modules/
+.pnpm-store/
+.angular/cache/
+
+# Build artifacts
+dist/
+out-tsc/
+
+# Tests
+tests/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Documentation
+docs/
+documentation/
+
+# Dev tooling
+.devcontainer/
+.claude/
+.husky/
+.vscode/
+.idea/
+
+# Secrets and local config
+*.env
+*.local.yml
+*.pem
+*.key
+.ssl/
+
+# Logs and system files
+*.log
+.DS_Store
