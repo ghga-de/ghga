@@ -72,7 +72,7 @@ EXPECTED_MIGRATED_DRS_OBJECTS: list[dict[str, Any]] = [
 ]
 
 OLD_PERSISTED_EVENTS: list[dict[str, Any]] = [
-    {
+    {  # FileDownloadServed
         "_id": "staging-downloads:GHGAF62145458747015",
         "topic": "staging-downloads",
         "type_": "drs_object_registered",
@@ -89,7 +89,7 @@ OLD_PERSISTED_EVENTS: list[dict[str, Any]] = [
         "published": True,
         "event_id": UUID("5b04fe60-1436-46ca-aeec-a7fc6aaaf33f"),
     },
-    {
+    {  # FileRegisteredForDownload with old str-value target_object_id
         "_id": "staging-downloads:GHGAF91819066635026",
         "topic": "staging-downloads",
         "type_": "drs_object_served",
@@ -107,6 +107,25 @@ OLD_PERSISTED_EVENTS: list[dict[str, Any]] = [
         "created": TEST_DATETIME,
         "published": True,
         "event_id": UUID("a5343581-25c8-45d2-ac53-f850c02bcea9"),
+    },
+    {  # FileRegisteredForDownload with newer UUID-value target_object_id
+        "_id": "staging-downloads:GHGAF92819066635026",
+        "topic": "staging-downloads",
+        "type_": "drs_object_served",
+        "payload": {
+            "file_id": "GHGAF92819066635026",
+            "target_object_id": UUID("a6370254-3555-4f77-b939-572452770aa5"),
+            "target_bucket_id": "outbox-staging",
+            "s3_endpoint_alias": "B01",
+            "decrypted_sha256": "e5b844cc57f57094ea4585e235f36c78c1cd222262bb89d53c94dcb4d6b3e55d",
+            "context": "unknown",
+        },
+        "key": "GHGAF92819066635026",
+        "headers": {},
+        "correlation_id": UUID("7a0f695a-f91c-4acd-91c3-ea2a52cfceff"),
+        "created": TEST_DATETIME,
+        "published": True,
+        "event_id": UUID("61788c24-de12-44a7-8367-60398cdd907b"),
     },
 ]
 
@@ -145,5 +164,24 @@ EXPECTED_MIGRATED_PERSISTED_EVENTS: list[dict[str, Any]] = [
         "created": TEST_DATETIME,
         "published": False,
         "event_id": UUID("a5343581-25c8-45d2-ac53-f850c02bcea9"),
+    },
+    {
+        "_id": "staging-downloads:bb4262e4-1d12-4313-ac21-c2b16fb5e7aa",
+        "topic": "staging-downloads",
+        "type_": "drs_object_served",
+        "payload": {
+            "file_id": UUID("bb4262e4-1d12-4313-ac21-c2b16fb5e7aa"),
+            "target_object_id": UUID("a6370254-3555-4f77-b939-572452770aa5"),
+            "target_bucket_id": "outbox-staging",
+            "storage_alias": "B01",
+            "decrypted_sha256": "e5b844cc57f57094ea4585e235f36c78c1cd222262bb89d53c94dcb4d6b3e55d",
+            "context": "unknown",
+        },
+        "key": "bb4262e4-1d12-4313-ac21-c2b16fb5e7aa",
+        "headers": {},
+        "correlation_id": UUID("7a0f695a-f91c-4acd-91c3-ea2a52cfceff"),
+        "created": TEST_DATETIME,
+        "published": False,
+        "event_id": UUID("61788c24-de12-44a7-8367-60398cdd907b"),
     },
 ]

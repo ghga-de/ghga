@@ -81,7 +81,8 @@ async def update_event(doc: Document) -> Document:
     # There are only two event types in the collection at this time:
     # FileDownloadServed event:
     if "target_object_id" in payload:
-        payload["target_object_id"] = UUID(payload["target_object_id"])
+        if isinstance(payload["target_object_id"], str):
+            payload["target_object_id"] = UUID(payload["target_object_id"])
         payload["storage_alias"] = payload.pop("s3_endpoint_alias")
     else:
         # FileRegisteredForDownload event:
