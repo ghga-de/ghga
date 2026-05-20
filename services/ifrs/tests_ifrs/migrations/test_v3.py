@@ -33,6 +33,10 @@ async def test_v3_migration(mongodb: MongoDbFixture):
     and ifrsPersistedEvents collections for the Sarcastic Fringehead epic.
     """
     config = get_config(sources=[mongodb.config])
+    bucket_ids: dict[str, str] = {
+        storage_alias: content.bucket
+        for storage_alias, content in config.object_storages.items()
+    }
     db = mongodb.client[config.db_name]
     events_collection = db["ifrsPersistedEvents"]
     metadata_collection = db["file_metadata"]
@@ -42,8 +46,7 @@ async def test_v3_migration(mongodb: MongoDbFixture):
         {
             "_id": f"GHGA00{i}",
             "upload_date": now_utc_ms_prec(),
-            "storage_alias": "test-storage",
-            "bucket_id": "test-bucket",
+            "storage_alias": list(bucket_ids)[i],
             "object_id": uuid4(),
             "decryption_secret_id": f"secret-{i}",
             "content_offset": 0,
@@ -63,7 +66,7 @@ async def test_v3_migration(mongodb: MongoDbFixture):
             "_id": derive_file_id_from_accession(old_doc["_id"]),
             "archive_date": old_doc["upload_date"],
             "storage_alias": old_doc["storage_alias"],
-            "bucket_id": old_doc["bucket_id"],
+            "bucket_id": bucket_ids[str(old_doc["storage_alias"])],
             "object_id": old_doc["object_id"],
             "secret_id": old_doc["decryption_secret_id"],
             "decrypted_size": old_doc["decrypted_size"],

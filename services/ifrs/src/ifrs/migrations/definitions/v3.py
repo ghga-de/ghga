@@ -22,11 +22,19 @@ from uuid import UUID
 from hexkit.providers.mongodb.migrations import Document, MigrationDefinition
 from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
 
+from ifrs.config import Config
 from ifrs.core.models import FileMetadata
 
 # Collection names defined as constants
 IFRS_PERSISTED_EVENTS = "ifrsPersistedEvents"
 FILE_METADATA = "file_metadata"
+
+# Get permanent bucket names for each storage alias
+CONFIG = Config()
+BUCKET_IDS: dict[str, str] = {
+    storage_alias: content.bucket
+    for storage_alias, content in CONFIG.object_storages.items()
+}
 
 
 def derive_file_id_from_accession(accession: str) -> UUID:
@@ -39,13 +47,14 @@ def derive_file_id_from_accession(accession: str) -> UUID:
 async def update_file_metadata(doc: Document) -> Document:
     """Update file metadata, skipping already updated docs.
 
-    If a doc has the `archive_date` field, it has already been updated.
+    If a doc has the `archive_date` and `bucket_id` fields, it has already been updated.
     """
-    if "archive_date" in doc:
+    if "archive_date" in doc and "bucket_id" in doc:
         return doc
 
     doc["_id"] = derive_file_id_from_accession(doc["_id"])
     doc["archive_date"] = doc.pop("upload_date")
+    doc["bucket_id"] = BUCKET_IDS[doc["storage_alias"]]  # Allow KeyError here
     doc["secret_id"] = doc.pop("decryption_secret_id")
     doc["part_size"] = doc.pop("encrypted_part_size")
     doc["encrypted_size"] = doc.pop("object_size")
