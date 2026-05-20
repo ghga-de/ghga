@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -90,7 +91,11 @@ export class UserIvaListComponent implements OnInit {
       },
       error: (err) => {
         console.debug(err);
-        this.#notify.showError('Verification request failed');
+        const message =
+          (err as HttpErrorResponse)?.status === 429
+            ? 'Too many verification requests today'
+            : 'Verification request failed';
+        this.#notify.showError(message);
       },
     });
   }

@@ -118,6 +118,11 @@ export class VerificationDialogComponent {
                 'The entered verification code was invalid. Please enter the submitted code correctly.',
               );
               break;
+            case 410:
+              this.#notify.showError(
+                'The verification request has expired. IVA has been reverted to unverified.',
+              );
+              break;
             case 429:
               this.#notify.showError(
                 'Too many attempts at entering a code. IVA has been reverted to unverified.',

@@ -136,4 +136,26 @@ describe('VerificationDialogComponent', () => {
 
     expect(fixture.debugElement.query(By.css('mat-error'))).not.toBeNull();
   });
+
+  it('should show expired request error for status 410', async () => {
+    ivaService.validateCodeForIva.mockReturnValue(throwError(() => ({ status: 410 })));
+
+    const result = await component.submitVerificationCode('iva-123', 'ABC123');
+
+    expect(result).toBe(false);
+    expect(mockNotificationService.showError).toHaveBeenCalledWith(
+      'The verification request has expired. IVA has been reverted to unverified.',
+    );
+  });
+
+  it('should show rate limit error for status 429', async () => {
+    ivaService.validateCodeForIva.mockReturnValue(throwError(() => ({ status: 429 })));
+
+    const result = await component.submitVerificationCode('iva-123', 'ABC123');
+
+    expect(result).toBe(false);
+    expect(mockNotificationService.showError).toHaveBeenCalledWith(
+      'Too many attempts at entering a code. IVA has been reverted to unverified.',
+    );
+  });
 });
