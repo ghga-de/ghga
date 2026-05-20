@@ -141,7 +141,7 @@ to install the dependencies.
 
 ### Dependency overrides
 
-`package.json` currently contains the following `pnpm.overrides` entries. Review these from time to time and remove overrides that are no longer necessary.
+The project uses a `.pnpmfile.cjs` file to manage dependency overrides. The following entries are currently in use. Review these from time to time and remove overrides that are no longer necessary.
 
 - `@angular-devkit/core@21.1.0>picomatch: 4.0.4`
   - Reason: `@compodoc/compodoc@1.2.1` depends on `@angular-devkit/schematics@21.1.0`, which pulls `@angular-devkit/core@21.1.0` and `picomatch@4.0.3`.
@@ -155,13 +155,13 @@ to install the dependencies.
   - Reason: `@compodoc/compodoc@1.2.1` transitively depends on `uuid@8.3.2` (via `@compodoc/live-server` and `http-auth`), which has a buffer bounds check vulnerability ([GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq)).
   - Removal criteria: remove once Compodoc updates its dependencies to pull `uuid>=14.0.0`.
 
-After adding, changing, or removing overrides, run `pnpm install` to refresh `pnpm-lock.yaml`.
+After adding, changing, or removing overrides in `.pnpmfile.cjs`, run `pnpm install` to refresh `pnpm-lock.yaml`.
 
 ---
 
 **NOTE**
 
-You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`. You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies.
+You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`. You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies. Configuration of pnpm overrides should be done in `.pnpmfile.cjs` rather than in `package.json`.
 
 ---
 

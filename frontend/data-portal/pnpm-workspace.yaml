@@ -1,9 +1,9 @@
-onlyBuiltDependencies:
-  - '@compodoc/compodoc'
-  - '@parcel/watcher'
-  - '@tailwindcss/oxide'
-  - esbuild
-  - lmdb
-  - msgpackr-extract
-  - msw
-  - unrs-resolver
+allowBuilds:
+  '@compodoc/compodoc': true
+  '@parcel/watcher': true
+  '@tailwindcss/oxide': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  msw: true
+  unrs-resolver: true
