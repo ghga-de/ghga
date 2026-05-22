@@ -39,4 +39,16 @@ config:
     part_size_mb: 100                    # ~100MB per part
     file_size_mb: 1000                   # Test file size in MB (auto-created in /data)
 
+  github:
+      app_id: 1234
+      installation_id: 1234
+      private_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        ...
+        -----END RSA PRIVATE KEY-----
+      repo_name: ghga-de/devops-datahub-monitor
+      branch: "main"
+      prefix: ""
+      commit: "Bot commit"
+
   nodes: {}
