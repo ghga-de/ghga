@@ -27,7 +27,7 @@ vaultAgent:
 extraVolumes:
   - name: data
     emptyDir:
-      sizeLimit: 1Gi
+      sizeLimit: 10Gi
 
 extraVolumeMounts:
   - name: data
