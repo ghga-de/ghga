@@ -47,13 +47,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/auth-service):
 ```bash
-docker pull ghga/auth-service:9.0.1
+docker pull ghga/auth-service:10.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/auth-service:9.0.1 .
+docker build -t ghga/auth-service:10.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -61,7 +61,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/auth-service:9.0.1 --help
+docker run -p 8080:8080 ghga/auth-service:10.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -376,8 +376,10 @@ The service requires the following configuration parameters:
   ```
 
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
-- <a id="properties/max_ivas"></a>**`max_ivas`** *(integer)*: Maximum number of IVAs a user can create per day and in total. Default: `5`.
-- <a id="properties/max_iva_verification_attempts"></a>**`max_iva_verification_attempts`** *(integer)*: Maximum number of verification attempts for an IVA. Default: `10`.
+- <a id="properties/max_ivas"></a>**`max_ivas`** *(integer)*: Maximum number of IVAs a user can create per day and in total. Exclusive minimum: `0`. Default: `5`.
+- <a id="properties/max_iva_verification_attempts"></a>**`max_iva_verification_attempts`** *(integer)*: Maximum number of verification attempts for an IVA. Exclusive minimum: `0`. Default: `10`.
+- <a id="properties/max_iva_code_validity_days"></a>**`max_iva_code_validity_days`** *(integer)*: Maximum number of days an IVA verification code is valid. Exclusive minimum: `0`. Default: `7`.
+- <a id="properties/max_iva_codes_per_day"></a>**`max_iva_codes_per_day`** *(integer)*: Maximum number of verification code requests per IVA and day. Exclusive minimum: `0`. Default: `3`.
 - <a id="properties/auto_send_iva_code_for_types"></a>**`auto_send_iva_code_for_types`** *(array)*: IVA types for which verification codes are sent automatically. Default: `["Phone"]`.
   - <a id="properties/auto_send_iva_code_for_types/items"></a>**Items**: Refer to *[#/$defs/IvaType](#%24defs/IvaType)*.
 - <a id="properties/totp_issuer"></a>**`totp_issuer`** *(string)*: Issuer name for TOTP provisioning URIs. Default: `"GHGA"`.

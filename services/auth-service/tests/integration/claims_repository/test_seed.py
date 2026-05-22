@@ -121,6 +121,7 @@ async def test_add_data_steward(
     assert iva["state"] == "Unverified"
     assert iva["verification_attempts"] == 0
     assert iva["verification_code_hash"] is None
+    assert iva["verification_until"] is None
     creation_date = iva["created"]
     time_diff = now_utc_ms_prec() - creation_date
     assert -1 < time_diff.total_seconds() < 5

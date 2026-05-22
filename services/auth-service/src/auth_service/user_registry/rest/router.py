@@ -554,6 +554,7 @@ async def unverify_iva(
         401: {"description": "Not authorized to request verification codes for IVAs."},
         404: {"description": "The IVA was not found."},
         409: {"description": "The IVA does not have the proper state."},
+        429: {"description": "Too many verification code requests for this IVA today."},
     },
     status_code=204,
 )
@@ -580,6 +581,11 @@ async def request_code_for_iva(
     except user_registry.IvaUnexpectedStateError as error:
         raise HTTPException(
             status_code=409, detail="The IVA does not have the proper state."
+        ) from error
+    except user_registry.IvaTooManyCodesError as error:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many verification code requests for this IVA today.",
         ) from error
     except user_registry.UserRegistryIvaError as error:
         raise HTTPException(
@@ -696,6 +702,7 @@ async def confirm_code_for_iva_transmitted(
         403: {"description": "The submitted verification code was invalid."},
         404: {"description": "The IVA was not found."},
         409: {"description": "The IVA does not have the proper state."},
+        410: {"description": "The verification request for this IVA has expired."},
         422: {"description": "Validation error in submitted verification data."},
         429: {"description": "Too many attempts, IVA was reset to unverified state."},
     },
@@ -730,6 +737,11 @@ async def validate_code_for_iva(
         raise HTTPException(
             status_code=429,
             detail="Too many attempts, IVA was reset to unverified state.",
+        ) from error
+    except user_registry.IvaVerificationTooLateError as error:
+        raise HTTPException(
+            status_code=410,
+            detail="The verification request for this IVA has expired.",
         ) from error
     except user_registry.UserRegistryIvaError as error:
         raise HTTPException(

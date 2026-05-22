@@ -1009,7 +1009,7 @@ info:
   license:
     name: Apache 2.0
   title: Auth Service API
-  version: 9.0.1
+  version: 10.0.0
 openapi: 3.1.0
 paths:
   /download-access/grants:
@@ -1407,6 +1407,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+        '429':
+          description: Too many verification code requests for this IVA today.
       security:
       - HTTPBearer: []
       summary: Request verification code for an IVA
@@ -1477,6 +1479,8 @@ paths:
           description: The IVA was not found.
         '409':
           description: The IVA does not have the proper state.
+        '410':
+          description: The verification request for this IVA has expired.
         '422':
           description: Validation error in submitted verification data.
         '429':

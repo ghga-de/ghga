@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import suppress
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -75,6 +76,8 @@ class UserRegistry(UserRegistryPort):
         """Initialize the user registry."""
         self._max_ivas = config.max_ivas
         self._max_iva_verification_attempts = config.max_iva_verification_attempts
+        self._max_iva_code_validity_days = config.max_iva_code_validity_days
+        self._max_iva_codes_per_day = config.max_iva_codes_per_day
         self._auto_send_iva_code_for_types = set(config.auto_send_iva_code_for_types)
         self._user_dao = user_dao
         self._iva_dao = iva_dao
@@ -145,7 +148,7 @@ class UserRegistry(UserRegistryPort):
         return user
 
     async def get_user_with_roles(self, user_id: UUID4) -> UserWithRoles:
-        """Get user data including all roles.
+        """Get user data including all roles, independent of IVAs.
 
         The roles are returned even if the user is inactive or has no IVAs.
 
@@ -277,7 +280,8 @@ class UserRegistry(UserRegistryPort):
         # then first check the daily limit
         today = now_utc_ms_prec().replace(hour=0, minute=0, second=0, microsecond=0)
         created_today = user.ivas_created_today or PeriodCounter(date=today, count=0)
-        if created_today.date == today and created_today.count >= self._max_ivas:
+        iva_count_today = created_today.count if created_today.date == today else 0
+        if iva_count_today >= self._max_ivas:
             raise self.TooManyIVAsError(user_id=user_id)
         # then also check the total limit
         try:
@@ -290,7 +294,7 @@ class UserRegistry(UserRegistryPort):
         if any(iva.type == data.type and iva.value == data.value for iva in ivas):
             raise self.TooManyIVAsError(user_id=user_id)
         # update the counter
-        created_today = PeriodCounter(date=today, count=created_today.count + 1)
+        created_today = PeriodCounter(date=today, count=iva_count_today + 1)
         await self._user_dao.update(
             user.model_copy(update={"ivas_created_today": created_today})
         )
@@ -452,6 +456,7 @@ class UserRegistry(UserRegistryPort):
             state=IvaState.UNVERIFIED,
             verification_code_hash=None,
             verification_attempts=0,
+            verification_until=None,
         )
         if notify:
             # send a notification to the user
@@ -465,7 +470,8 @@ class UserRegistry(UserRegistryPort):
         Also notifies the user and a data steward if not specified otherwise.
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
-        an IvaRetrievalError, an IvaUnexpectedStateError or an IvaModificationError.
+        an IvaRetrievalError, an IvaUnexpectedStateError,
+        an IvaTooManyCodesError, or an IvaModificationError.
 
         If a user ID is specified, and the IVA does not belong to the user,
         then an IvaDoesNotExistError is raised.
@@ -473,7 +479,20 @@ class UserRegistry(UserRegistryPort):
         iva = await self.get_iva(iva_id, user_id=user_id)
         if iva.state is not IvaState.UNVERIFIED:
             raise self.IvaUnexpectedStateError(iva_id=iva_id, state=iva.state)
-        iva = await self.update_iva(iva, state=IvaState.CODE_REQUESTED)
+        today = now_utc_ms_prec().replace(hour=0, minute=0, second=0, microsecond=0)
+        codes_created_today = iva.codes_created_today or PeriodCounter(
+            date=today, count=0
+        )
+        code_requests = (
+            codes_created_today.count if codes_created_today.date == today else 0
+        )
+        if code_requests >= self._max_iva_codes_per_day:
+            raise self.IvaTooManyCodesError(iva_id=iva_id)
+        iva = await self.update_iva(
+            iva,
+            state=IvaState.CODE_REQUESTED,
+            codes_created_today=PeriodCounter(date=today, count=code_requests + 1),
+        )
         if iva.type in self._auto_send_iva_code_for_types:
             code = await self.create_iva_verification_code(iva_id)
             await self._event_pub.publish_iva_send_code(iva=iva, code=code)
@@ -500,6 +519,8 @@ class UserRegistry(UserRegistryPort):
             state=IvaState.CODE_CREATED,
             verification_code_hash=hash_code(code),
             verification_attempts=0,
+            verification_until=now_utc_ms_prec()
+            + timedelta(days=self._max_iva_code_validity_days),
         )
         return code
 
@@ -537,7 +558,8 @@ class UserRegistry(UserRegistryPort):
 
         May raise a UserRegistryIvaError, which can be an IvaDoesNotExistError,
         an IvaRetrievalError, an IvaUnexpectedStateError,
-        an IvaTooManyVerificationAttemptsError or an IvaModificationError.
+        an IvaTooManyVerificationAttemptsError, an IvaVerificationTooLateError,
+        or an IvaModificationError.
 
         If a user ID is specified, and the IVA does not belong to the user,
         then an IvaDoesNotExistError is raised.
@@ -549,22 +571,37 @@ class UserRegistry(UserRegistryPort):
         ):
             raise self.IvaUnexpectedStateError(iva_id=iva_id, state=iva.state)
         too_many = iva.verification_attempts >= self._max_iva_verification_attempts
-        validated = not too_many and validate_code(code, iva.verification_code_hash)
+        too_late = (
+            iva.verification_until < now_utc_ms_prec()
+            if iva.verification_until
+            else False
+        )
+        validated = (
+            not too_many
+            and not too_late
+            and validate_code(code, iva.verification_code_hash)
+        )
         change: dict[str, Any] = {}
-        if too_many:
+        if too_many or too_late:
             change.update(state=IvaState.UNVERIFIED)
         elif validated:
             change.update(state=IvaState.VERIFIED)
-        if too_many or validated:
-            change.update(verification_code_hash=None, verification_attempts=0)
+        if too_many or too_late or validated:
+            change.update(
+                verification_code_hash=None,
+                verification_attempts=0,
+                verification_until=None,
+            )
         else:
             change.update(verification_attempts=iva.verification_attempts + 1)
         iva = await self.update_iva(iva, **change)
-        if notify and (too_many or validated):
+        if notify and (too_many or too_late or validated):
             # send a notification to the data steward
             await self._event_pub.publish_iva_state_changed(iva=iva)
         if too_many:
             raise self.IvaTooManyVerificationAttemptsError(iva_id=iva_id)
+        if too_late:
+            raise self.IvaVerificationTooLateError(iva_id=iva_id)
         return validated
 
     async def reset_verified_ivas(self, user_id: UUID4, *, notify: bool = True) -> None:

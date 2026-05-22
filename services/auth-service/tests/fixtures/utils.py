@@ -59,7 +59,7 @@ from auth_service.user_registry.models.ivas import (
     IvaState,
     IvaType,
 )
-from auth_service.user_registry.models.users import User
+from auth_service.user_registry.models.users import PeriodCounter, User
 from auth_service.user_registry.ports.event_pub import (
     EventPublisherPort,
 )
@@ -599,6 +599,8 @@ class MockUserRegistry(UserRegistry):
         state: IvaState = IvaState.UNVERIFIED,
         verification_code_hash: str | None = None,
         verification_attempts: int = 0,
+        verification_until: UTCDatetime | None = None,
+        codes_created_today: PeriodCounter | None = None,
         created: UTCDatetime | None = None,
         changed: UTCDatetime | None = None,
     ):
@@ -612,6 +614,8 @@ class MockUserRegistry(UserRegistry):
                 user_id=user_id or self.dummy_user.id,
                 verification_code_hash=verification_code_hash,
                 verification_attempts=verification_attempts,
+                verification_until=verification_until,
+                codes_created_today=codes_created_today,
                 created=created or now_utc_ms_prec(),
                 changed=changed or now_utc_ms_prec(),
             )

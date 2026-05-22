@@ -26,6 +26,7 @@ from pydantic import UUID4, ConfigDict, Field, ValidationInfo, field_validator
 
 from ..core.validation import validate_phone_number
 from . import BaseDto
+from .users import PeriodCounter
 
 __all__ = [
     "Iva",
@@ -77,12 +78,19 @@ class IvaInternalData(BaseDto):
     """Internal data of an IVA (not exposed via the API)"""
 
     user_id: UUID4 = Field(default=..., description="Internal user ID")
+    codes_created_today: PeriodCounter | None = Field(
+        default=None,
+        description="Number of verification codes requested for the IVA today",
+    )
     verification_code_hash: str | None = Field(
         default=None, description="Salted hash of the verification code for the IVA"
     )
     verification_attempts: int = Field(
         default=0,
         description="Number of failed verification attempts for the verification code",
+    )
+    verification_until: UTCDatetime | None = Field(
+        default=None, description="The date and time when the verification code expires"
     )
 
 

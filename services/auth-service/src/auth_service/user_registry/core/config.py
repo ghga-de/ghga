@@ -17,7 +17,7 @@
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, PositiveInt
 from pydantic_settings import BaseSettings
 
 from ..models.ivas import IvaType
@@ -31,15 +31,21 @@ __all__ = ["INITIAL_USER_STATUS", "UserRegistryConfig"]
 class UserRegistryConfig(BaseSettings):
     """Configuration for the user registry."""
 
-    max_ivas: int = Field(
+    max_ivas: PositiveInt = Field(
         default=5,
         description="Maximum number of IVAs a user can create per day and in total",
     )
-
-    max_iva_verification_attempts: int = Field(
+    max_iva_verification_attempts: PositiveInt = Field(
         default=10, description="Maximum number of verification attempts for an IVA"
     )
-
+    max_iva_code_validity_days: PositiveInt = Field(
+        default=7,
+        description="Maximum number of days an IVA verification code is valid",
+    )
+    max_iva_codes_per_day: PositiveInt = Field(
+        default=3,
+        description="Maximum number of verification code requests per IVA and day",
+    )
     auto_send_iva_code_for_types: list[IvaType] = Field(
         default=[IvaType.PHONE],
         description="IVA types for which verification codes are sent automatically",
