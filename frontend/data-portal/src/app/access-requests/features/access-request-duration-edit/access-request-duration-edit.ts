@@ -8,10 +8,10 @@ import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
   inject,
   input,
+  OnInit,
   output,
   signal,
 } from '@angular/core';
@@ -29,7 +29,7 @@ import { ConfigService } from '@app/shared/services/config';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
-  timeZoneToUTC,
+  localDateToContractIsoUtc,
 } from '@app/shared/utils/date-formats';
 
 /**
@@ -241,31 +241,16 @@ export class AccessRequestDurationEditComponent implements OnInit {
   save = () => {
     const { fromDate: selectedFrom, untilDate: selectedUntil } = this.formModel();
     if (selectedFrom && selectedUntil) {
-      const from = new Date(selectedFrom);
-      const until = new Date(selectedUntil);
-      const fromDate = timeZoneToUTC(
-        from.getFullYear(),
-        from.getMonth(),
-        from.getDate(),
-      );
-      const untilDate = timeZoneToUTC(
-        until.getFullYear(),
-        until.getMonth(),
-        until.getDate(),
-        true,
-      );
-      if (from && until) {
-        const fromISO = fromDate.toISOString();
-        const untilISO = untilDate.toISOString();
-        if (this.isModified()) {
-          const saveMap = new Map<keyof AccessRequest, string>();
-          saveMap.set('access_starts', fromISO);
-          saveMap.set('access_ends', untilISO);
-          this.saved.emit(saveMap);
-          this.edited.emit(['access_ends', false]);
-        }
-        this.isOpen.set(false);
+      const fromISO = localDateToContractIsoUtc(selectedFrom);
+      const untilISO = localDateToContractIsoUtc(selectedUntil, true);
+      if (this.isModified()) {
+        const saveMap = new Map<keyof AccessRequest, string>();
+        saveMap.set('access_starts', fromISO);
+        saveMap.set('access_ends', untilISO);
+        this.saved.emit(saveMap);
+        this.edited.emit(['access_ends', false]);
       }
+      this.isOpen.set(false);
     }
   };
 }

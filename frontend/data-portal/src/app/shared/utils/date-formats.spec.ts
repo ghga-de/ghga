@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { timeZoneToUTC } from './date-formats';
+import { localDateToContractIsoUtc, timeZoneToUTC } from './date-formats';
 
 describe('Date Formats', () => {
   describe('timeZoneToUTC', () => {
@@ -37,6 +37,18 @@ describe('Date Formats', () => {
       // 2025-01-01 23:59:59.999 Berlin time should be 2025-01-01 22:59:59.999 UTC (CET = UTC+1)
       const result = timeZoneToUTC(2025, 0, 1, true);
       expect(result.toISOString()).toBe('2025-01-01T22:59:59.999Z');
+    });
+  });
+
+  describe('localDateToContractIsoUtc', () => {
+    it('should convert start of day to ISO UTC with Berlin boundaries', () => {
+      const result = localDateToContractIsoUtc(new Date(2025, 7, 1));
+      expect(result).toBe('2025-07-31T22:00:00.000Z');
+    });
+
+    it('should convert end of day to ISO UTC with Berlin boundaries', () => {
+      const result = localDateToContractIsoUtc(new Date(2025, 7, 1), true);
+      expect(result).toBe('2025-08-01T21:59:59.999Z');
     });
   });
 });

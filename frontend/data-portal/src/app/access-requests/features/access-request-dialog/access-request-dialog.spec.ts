@@ -13,7 +13,21 @@ import {
   MatDialogRef,
 } from '@angular/material/dialog';
 import { ConfigService } from '@app/shared/services/config';
+import { localDateToContractIsoUtc } from '@app/shared/utils/date-formats';
 import { AccessRequestDialogComponent } from './access-request-dialog';
+
+const mockDialogRef = {
+  close: vitest.fn(),
+};
+
+const mockDialogData = {
+  datasetID: 'GHGAD12345678901234',
+  email: 'user@example.test',
+  description: '',
+  fromDate: undefined,
+  untilDate: undefined,
+  userId: 'user-1',
+};
 
 const mockConfig = {
   base_url: 'https://portal.test',
@@ -49,12 +63,13 @@ describe('AccessRequestDialogComponent', () => {
   let fixture: ComponentFixture<AccessRequestDialogComponent>;
 
   beforeEach(async () => {
+    mockDialogRef.close.mockReset();
     await TestBed.configureTestingModule({
       imports: [AccessRequestDialogComponent, MatDialogModule],
       providers: [
         provideNativeDateAdapter(),
-        { provide: MatDialogRef, useValue: {} },
-        { provide: MAT_DIALOG_DATA, useValue: {} },
+        { provide: MatDialogRef, useValue: mockDialogRef },
+        { provide: MAT_DIALOG_DATA, useValue: mockDialogData },
         { provide: ConfigService, useValue: mockConfig },
       ],
     }).compileComponents();
@@ -67,5 +82,29 @@ describe('AccessRequestDialogComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should submit with ISO UTC dates based on service-contract day boundaries', () => {
+    const fromDate = new Date(component.todayMidnight);
+    const untilDate = new Date(component.todayMidnight);
+    untilDate.setDate(untilDate.getDate() + mockConfig.access_grant_min_days);
+
+    component.updateUntilRangeForFromValue(fromDate);
+    component.updateFromRangeForUntilValue(untilDate);
+    (component as any).model.set({
+      description: 'Need access for analysis',
+      fromDate,
+      untilDate,
+      email: 'user@example.test',
+    });
+
+    component.submit();
+
+    expect(mockDialogRef.close).toHaveBeenCalledTimes(1);
+    const payload = mockDialogRef.close.mock.calls[0][0];
+    expect(payload.fromDate.toISOString()).toBe(localDateToContractIsoUtc(fromDate));
+    expect(payload.untilDate.toISOString()).toBe(
+      localDateToContractIsoUtc(untilDate, true),
+    );
   });
 });

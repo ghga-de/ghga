@@ -312,6 +312,8 @@ describe('UploadGrantCreationComponent', () => {
         expect(payload.user_id).toBe(testUser.id);
         expect(payload.box_id).toBe(testBox.id);
         expect(payload.iva_id).toBe(testIvas[0].id);
+        expect(payload.valid_from).toMatch(/\.\d{3}Z$/);
+        expect(payload.valid_until).toMatch(/\.\d{3}Z$/);
       });
 
       it('should pass the user metadata to createUploadGrant', () => {

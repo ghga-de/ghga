@@ -34,21 +34,15 @@ import { IvaService } from '@app/ivas/services/iva';
 import { UserExtIdPipe } from '@app/shared/pipes/user-ext-id-pipe';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
-import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
+import {
+  DATE_INPUT_FORMAT_HINT,
+  localDateToContractIsoUtc,
+} from '@app/shared/utils/date-formats';
 import { UploadGrantBase, VALID_GRANT_DAYS } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 
 /** Max users to show in the search results list */
 const MAX_USER_RESULTS = 10;
-
-/**
- * Formats a Date as an ISO date-only string (YYYY-MM-DD).
- * @param date - the date to format
- * @returns the formatted date string
- */
-function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 /**
  * Page for creating a new upload grant for a specific upload box.
@@ -296,8 +290,8 @@ export class UploadGrantCreationComponent implements OnInit {
       user_id: user.id,
       iva_id: this.selectedIvaId() ?? null,
       box_id: this.boxId(),
-      valid_from: toIsoDate(from),
-      valid_until: toIsoDate(until),
+      valid_from: localDateToContractIsoUtc(from),
+      valid_until: localDateToContractIsoUtc(until, true),
     };
     this.#uploadBoxService
       .createUploadGrant(payload, {

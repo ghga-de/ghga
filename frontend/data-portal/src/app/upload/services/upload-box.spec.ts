@@ -598,8 +598,8 @@ describe('UploadBoxService', () => {
       user_id: 'user-abc',
       iva_id: null,
       box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
-      valid_from: '2026-01-01',
-      valid_until: '2026-12-31',
+      valid_from: '2026-01-01T00:00:00.000Z',
+      valid_until: '2026-12-31T23:59:59.999Z',
     };
     const USER = {
       name: 'Alice Example',

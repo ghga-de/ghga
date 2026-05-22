@@ -77,3 +77,25 @@ export function timeZoneToUTC(
   const offset = utcDate.getTime() - tzAsUtc.getTime();
   return new Date(utcDate.getTime() + offset);
 }
+
+/**
+ * Convert a selected local calendar date to an ISO UTC timestamp using
+ * service-contract timezone day boundaries.
+ * @param date - local calendar date selected by the user
+ * @param end - whether to convert to end of day (23:59:59.999)
+ * @param timeZone - the IANA timezone name
+ * @returns ISO UTC timestamp with `Z`
+ */
+export function localDateToContractIsoUtc(
+  date: Date,
+  end: boolean = false,
+  timeZone: string = DEFAULT_TIME_ZONE,
+): string {
+  return timeZoneToUTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    end,
+    timeZone,
+  ).toISOString();
+}

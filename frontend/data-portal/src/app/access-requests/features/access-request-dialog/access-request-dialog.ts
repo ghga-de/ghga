@@ -27,7 +27,10 @@ import { MatFormField, MatHint, MatLabel } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AccessRequestDetailData } from '@app/access-requests/models/access-requests';
 import { ConfigService } from '@app/shared/services/config';
-import { DATE_INPUT_FORMAT_HINT, timeZoneToUTC } from '@app/shared/utils/date-formats';
+import {
+  DATE_INPUT_FORMAT_HINT,
+  localDateToContractIsoUtc,
+} from '@app/shared/utils/date-formats';
 
 /**
  * This component contains a form for all the data needed for an access request.
@@ -211,22 +214,11 @@ export class AccessRequestDialogComponent {
     if (!this.requestForm().valid()) return;
     const { description, email: emailValue, fromDate, untilDate } = this.model();
     if (!fromDate || !untilDate) return;
-    const from = timeZoneToUTC(
-      fromDate.getFullYear(),
-      fromDate.getMonth(),
-      fromDate.getDate(),
-    );
-    const until = timeZoneToUTC(
-      untilDate.getFullYear(),
-      untilDate.getMonth(),
-      untilDate.getDate(),
-      true,
-    );
     this.dialogRef.close({
       ...this.data,
       description,
-      fromDate: from,
-      untilDate: until,
+      fromDate: new Date(localDateToContractIsoUtc(fromDate)),
+      untilDate: new Date(localDateToContractIsoUtc(untilDate, true)),
       email: emailValue,
     });
   }
