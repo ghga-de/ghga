@@ -107,9 +107,11 @@ class Crypt4GHEncryptor:
 
         # Create a separate buffer for content that has yet to be encrypted
         unprocessed_bytes = b""
-        for part_number, file_part in enumerate(
-            read_file_parts(file=file, part_size=self._part_size), start=1
-        ):
+        # S3 PartNumbers must be sequential — track them independently of the
+        # plaintext-chunk index, which would skip when a trailing read does not
+        # push the upload buffer past `part_size`.
+        s3_part_number = 0
+        for file_part in read_file_parts(file=file, part_size=self._part_size):
             # Update the unencrypted content's checksum
             self.checksums.update_decrypted_sha256(file_part)
 
@@ -127,7 +129,8 @@ class Crypt4GHEncryptor:
                 current_part = self._get_current_part_and_update_checksum(
                     upload_buffer=upload_buffer,
                 )
-                yield part_number, current_part
+                s3_part_number += 1
+                yield s3_part_number, current_part
 
                 # Trim the yielded/uploaded part from the front of the upload buffer
                 upload_buffer = upload_buffer[self._part_size :]
@@ -142,8 +145,8 @@ class Crypt4GHEncryptor:
             current_part = self._get_current_part_and_update_checksum(
                 upload_buffer=upload_buffer,
             )
-            part_number += 1  # manually increment part number now
-            yield part_number, current_part
+            s3_part_number += 1
+            yield s3_part_number, current_part
             upload_buffer = upload_buffer[self._part_size :]
 
         # Now anything left in upload buffer is less than full part size. Yield it too.
@@ -151,8 +154,8 @@ class Crypt4GHEncryptor:
             current_part = self._get_current_part_and_update_checksum(
                 upload_buffer=upload_buffer,
             )
-            part_number += 1
-            yield part_number, upload_buffer
+            s3_part_number += 1
+            yield s3_part_number, upload_buffer
 
         # Finally, verify the encrypted size and raise an error if it doesn't match.
         if self._ciphertext_size != self.expected_ciphertext_size:

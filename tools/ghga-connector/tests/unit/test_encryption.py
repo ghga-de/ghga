@@ -119,3 +119,59 @@ def test_process_file_encrypted_checksum_count_matches_part_count(private_key):
     assert len(parts) > 1
     assert len(encryptor.checksums.encrypted_parts_md5) == len(parts)
     assert len(encryptor.checksums.encrypted_parts_sha256) == len(parts)
+
+
+def test_process_file_yields_sequential_part_numbers(private_key):
+    """Regression test: process_file must yield sequential S3 part numbers (1, 2, 3, …).
+
+    The bug: process_file used the plaintext-file-chunk index (from enumerate) as the
+    S3 PartNumber.  When a trailing chunk is too small to push the upload buffer past
+    part_size, that iteration's index is consumed without a yield.  The post-loop then
+    does `part_number += 1` from that stale index, skipping a number, which causes S3
+    to receive a part with a PartNumber higher than the total number of parts uploaded,
+    ultimately causing multipart-upload validation to fail or, worse, silently assemble
+    a corrupt object.
+
+    How to reproduce:
+    - part_size = 2 * CIPHER_SEGMENT_SIZE (131 128 bytes)
+    - file size = part_size + 1              (131 129 bytes)
+
+    Trace through the original code (envelope is 124 B and stays at the front of
+    upload_buffer until it gets yielded as part of the first part):
+      Read 1 (131 128 B plaintext): 2 complete crypt4gh segments consume 131 072 B
+        -> 131 128 encrypted bytes; 56 B remainder in unprocessed_bytes
+        -> upload_buffer == envelope (124) + 131 128 = 131 252 >= part_size
+        -> yield (part_number=1, first 131 128 B) ✓
+        -> upload_buffer trimmed to the trailing 124 B
+      Read 2 (1 B): combined with 56 B remainder = 57 B < SEGMENT_SIZE
+        -> 0 complete segments -> 0 encrypted bytes -> buffer stays at 124 B
+        -> 124 < part_size -> NO yield  (but enumerate's part_number advances to 2!)
+      Post-loop: encrypt the 57-B incomplete segment -> 85 B
+        -> upload_buffer = 124 + 85 = 209 B  -> skip the while loop
+        -> part_number += 1 -> part_number = 3 -> yield (3, 209 B)  <-- BUG
+
+    After the fix (sequential s3_part_number counter):
+      Same reads, but the post-loop yields (s3_part_number=2, 209 B)  <-- CORRECT
+    """
+    # part_size = exactly 2 cipher segments so that the first read fills the buffer
+    # to precisely part_size (plus envelope), and the one extra byte forces a
+    # second (partial) read whose remainder never satisfies a full segment.
+    part_size = 2 * CIPHER_SEGMENT_SIZE  # 131 128 bytes
+    file_size = part_size + 1  # 131 129 bytes
+
+    encryptor = Crypt4GHEncryptor(
+        part_size=part_size,
+        my_private_key=private_key,
+        file_size=file_size,
+        storage_alias=TEST_STORAGE_ALIAS1,
+    )
+    yielded_part_numbers = [
+        pn for pn, _ in run_process_file(encryptor, b"x" * file_size)
+    ]
+
+    expected = list(range(1, len(yielded_part_numbers) + 1))
+    assert yielded_part_numbers == expected, (
+        f"'process_file' yielded non-sequential S3 part numbers: {yielded_part_numbers} "
+        f"(expected {expected}).\nGaps in PartNumbers cause multipart-upload failures "
+        "or silent data corruption."
+    )
