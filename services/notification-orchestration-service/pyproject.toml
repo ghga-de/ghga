@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "nos"
-version = "8.2.1"
+version = "9.0.0"
 description = "The Notification Orchestration Service controls the creation of notification events."
 dependencies = [
     "typer >= 0.24",
