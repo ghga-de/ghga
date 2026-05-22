@@ -183,7 +183,7 @@ class AccessClient(AccessClientPort):
             raise self.AccessAPIError(msg)
 
         try:
-            grants = [UploadGrant.model_validate(**grant) for grant in response.json()]
+            grants = [UploadGrant.model_validate(grant) for grant in response.json()]
             return grants
         except Exception as err:
             msg = "Failed to extract grant information from response."
