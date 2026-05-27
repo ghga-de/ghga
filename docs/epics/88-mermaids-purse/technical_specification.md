@@ -255,6 +255,7 @@ This couples model derivation and data transformation in one loop. The em-transf
 - **`__init__`**: eagerly derives all intermediate schemas; exposes the final schema via the read-only `.model` property.
 - **`run_workflow(data, annotation)`**: applies data transformations using the cached `TransformationHandler` instances; may be called once per datapack without re-deriving schemas.
 
+
 3. `validate_workflow()`:
 
 - Location: `src/metldata/workflow/validate.py`
@@ -330,14 +331,6 @@ Since upstream maintainers are unresponsive, the solution is to **fork `jsonsubs
 2. The derived schema is exposed via `runner.model`, stored alongside the route, and used to validate incoming data.
 3. When an `AnnotatedEMPack` arrives, the service calls `runner.run_workflow(data=data, annotation=annotation)` to produce the derived datapack — without managing `TransformationHandler` instances or intermediate schema state.
 4. The resulting datapack is validated against the pre-derived output schema and published.
-
-## Additional Implementation Details
-
-- `globallyUniqueIds` defaults to `false`. No existing schemapack or datapack needs modification.
-- `WorkflowRunner` eagerly derives all intermediate schemas at construction time. `.run_workflow()` only applies data transformations using the cached `TransformationHandler` instances. The two operations are fully independent: `.model` may be accessed without ever calling `.run_workflow()`, and vice versa.
-- Boundary validation is preserved: input schema/data is validated against the first step's assumptions; output schema/data is validated against the last step's output model.
-- `WorkflowRunner` embeds the built-in transformation registry. Callers that need a custom registry (e.g., for testing) can supply one explicitly.
-- The serialization fix for frozen dicts should be shipped as a patch release of schemapack before or alongside the main changes in this epic.
 
 
 ### Not Included
