@@ -185,25 +185,8 @@ class InferRelationFromContentConfig(BaseModel):
     mandatory: MandatoryRelationSpec
     multiple: MultipleRelationSpec
 ```
-```yaml
 
-source_class: Dataset
-source_content_property: files
-new_relation_name: dataset
-description: "Reconstruct the dataset back-reference on each file class by resolving the flat list of file IDs held on Dataset.content.files."
-target_classes:
-  - ResearchDataFile
-  - ProcessDataFile
-  - IndividualSupportingFile
-  - ExperimentMethodSupportingFile
-  - AnalysisMethodSupportingFile
-mandatory: # example, not actual relation spec
-  origin: false
-  target: false
-multiple: # example, not actual relation spec
-  origin: true
-  target: false
-```
+See the [Appendix](#appendix-pam-transformation-configurations) for the concrete configuration used in the aggregate stats workflow.
 **Model transformation**
 
 - For each class in `config.target_classes`, add a relation declaration named `config.new_relation_name` with `targetClass = config.source_class` and `mandatory`/`multiple` from the configuration.
@@ -231,7 +214,7 @@ The classes that will be added back to the EMIM via the aggregate stats workflow
 2. `Publication`, 
 3. `Dataset`. 
 
-`Dataset` will have `DataAccessCommittee` and `DataAccessPolicy` inlined, so they will not appear as separate classes in the intermediate or final schema. The full `add_class` configurations for these classes are in the [Appendix](#appendix-add_class-configurations-for-pam-classes).
+`Dataset` will have `DataAccessCommittee` and `DataAccessPolicy` inlined, so they will not appear as separate classes in the intermediate or final schema. The full `add_class` configurations for these classes are in the [Appendix](#appendix-pam-transformation-configurations).
 
 ##### 2.6. `WorkflowRunner` — Separated Model and Data Transformation
 
@@ -370,12 +353,11 @@ Number of sprints required: 3
 
 Number of developers required: 2
 
-## Appendix: `add_class` Configurations for PAM Classes
+## Appendix: PAM Transformation Configurations
 
-This section contains the full `add_class` configurations for the PAM classes reintroduced into the EMIM by the aggregate stats workflow.
+### `add_class`
 
-
-### Study
+#### Study
 
 ```yaml
 class_name: Study
@@ -396,7 +378,7 @@ content_schema: {
   }
 ```
 
-### Publication
+#### Publication
 
 The `Publication` published via study-registry-service carries a `study_id` attribute, which the `add_class` transformation uses to create a relation from `Publication` to `Study`.
 
@@ -428,7 +410,7 @@ relations:
     multiple: MultipleRelationSpec # placeholder; defined during implementation
 ```
 
-### Dataset
+#### Dataset
 
 `DataAccessCommittee` and `DataAccessPolicy` are inlined into the `Dataset` content schema. The `files` property holds a flat list of file resource IDs, which is later resolved into per-file relations by the `infer_relation_from_content` transformation.
 
@@ -484,4 +466,29 @@ relations:
     target_resource_id_field: study_id
     mandatory: MandatoryRelationSpec
     multiple: MultipleRelationSpec
+```
+
+### `infer_relation_from_content`
+
+#### Dataset
+
+Reconstructs the `dataset` relation on each EMIM file class by resolving the flat list of file IDs held on `Dataset.content.files`.
+
+```yaml
+source_class: Dataset
+source_content_property: files
+new_relation_name: dataset
+description: "Reconstruct the dataset back-reference on each file class by resolving the flat list of file IDs held on Dataset.content.files."
+target_classes:
+  - ResearchDataFile
+  - ProcessDataFile
+  - IndividualSupportingFile
+  - ExperimentMethodSupportingFile
+  - AnalysisMethodSupportingFile
+mandatory: # placeholder; defined during implementation
+  origin: false
+  target: false
+multiple: # placeholder; defined during implementation
+  origin: true
+  target: false
 ```
