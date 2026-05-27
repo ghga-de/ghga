@@ -164,7 +164,7 @@ For the class declared in `config.class_name`, the transformation inserts the re
 
 The need for the `infer_relation_from_content` transformation comes from the new design of the metadata schema. After the `add_class` transformation re-introduces `Dataset` into the EMIM, the `Dataset` content carries a flat list of file resource IDs under the `files` property. These IDs span the EMIM file classes. The dataset back-reference that used to exist on each of these file classes must be reconstructed before the aggregate stats workflow can run path inferences such as `Dataset<(dataset)ResearchDataFile…`.
 
-This transformation walks the flat ID listing on a source class, resolves each ID to the file class it belongs to, and writes a relation pointing back to the source class on the resolved resource. It differs from infer_relation in that the source of the link information is a content property holding resource IDs, not an existing relation path.
+This transformation walks the flat ID listing on a source class, resolves each ID to the file class it belongs to, and writes a relation pointing back to the source class on the resolved resource. It differs from `infer_relation` in that the source of the link information is a content property holding resource IDs, not an existing relation path.
 
 **Assumptions**
 
@@ -209,10 +209,10 @@ file_id_3 → [DS_B, DS_C]
 
 ##### 2.5. Aggregate Stats Workflow: Adding Back PAM Classes via `add_class`
 
-The classes that will be added back to the EMIM via the aggregate stats workflow are 
-1. `Study`, 
-2. `Publication`, 
-3. `Dataset`. 
+The classes that will be added back to the EMIM via the aggregate stats workflow are:
+1. `Study`,
+2. `Publication`,
+3. `Dataset`.
 
 `Dataset` will have `DataAccessCommittee` and `DataAccessPolicy` inlined, so they will not appear as separate classes in the intermediate or final schema. The full `add_class` configurations for these classes are in the [Appendix](#appendix-pam-transformation-configurations).
 
@@ -274,7 +274,7 @@ The following are the stable public exports from `metldata.__init__`:
 
 ##### 2.7. Aggregate Stats Workflow Integration Test
 
-An end-to-end integration test shall be added to metldata exercising all new capabilities together: a `globallyUniqueIds` schema, `add_class` (pending resolution of open questions in section 2.5), correct error behaviour for `duplicate_class` when intermediate validation is enabled, and `WorkflowRunner` running model derivation and data transformation independently.
+An end-to-end integration test shall be added to metldata, exercising all new capabilities together: a `globallyUniqueIds` schema, `add_class` (pending resolution of open questions in section 2.5), correct error behaviour for `duplicate_class` when intermediate validation is enabled, and `WorkflowRunner` running model derivation and data transformation independently.
 
 The test uses a representative aggregate stats workflow and verifies that the `globallyUniqueIds` constraint is enforced on the output: validation rejects datapacks with duplicate IDs across classes.
 
@@ -337,7 +337,7 @@ Since upstream maintainers are unresponsive, the solution is to **fork `jsonsubs
 
 - `delete_relation` transformation — not required for the current aggregate workflow.
 - `jsonsubschema` upgrade to support JSON Schema draft 2019-09 or later.
-- The changes to the ghga-metadata-schema
+- The changes to the ghga-metadata-schema.
 
 
 ## Human Resource/Time Estimation
