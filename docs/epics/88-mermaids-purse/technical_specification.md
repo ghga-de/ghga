@@ -374,9 +374,6 @@ Number of developers required: 2
 
 This section contains the full `add_class` configurations for the PAM classes reintroduced into the EMIM by the aggregate stats workflow.
 
-**Open questions:**
-- The PAM annotation also carries `created: Date`, `changed: Date`, and `active: bool`. Should these be included in the content schemas, or can they be ignored since they are not needed for the aggregate stats workflow?
-- Should `DataAccessCommittee` and `DataAccessPolicy` be received as separate classes or inlined into the `Dataset` content schema? (The configurations below use inline.)
 
 ### Study
 
