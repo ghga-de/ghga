@@ -85,7 +85,7 @@ _topics:
       value: file-uploads
     kafkaUser:
       operations:
-        - Read
+        - Write
   uploadBoxTopic:
     # as consumer
     topic:
