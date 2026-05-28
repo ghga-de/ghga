@@ -11,12 +11,14 @@ This repository contains the front-end application for the GHGA data portal.
 - [Code scaffolding](#code-scaffolding)
 - [Building](#building)
 - [Package Manager](#package-manager)
+  - [Dependency overrides](#dependency-overrides)
 - [Linter, Commits, and Documentation](#linter-commits-and-documentation)
   - [Ease of use](#ease-of-use)
 - [Automated tests](#automated-tests)
   - [Unit-tests](#unit-tests)
   - [End-to-End tests](#end-to-end-tests)
     - [Issues relating to headed execution](#issues-relating-to-headed-execution)
+- [Analytics](#analytics)
 - [The Architecture Matrix](#the-architecture-matrix)
 - [AI assisted coding](#ai-assisted-coding)
 - [References](#references)
@@ -233,6 +235,10 @@ On macOs, you can use [XQuartz](https://www.xquartz.org/). On Windows with WSL 2
 The directory `/tmp/.X11-unix` should exist and should be mounted on the corresponding host directory, which is `/mnt/wslg/.X11-unix` for WSLg. If you run `ls /tmp/.X11-unix`, it should show `X0`. If that is not the case, you may need to add or modify volume mounts manually in the `docker-compose.local.yml` file, of which a suitable version is created for you on startup.
 
 You may also need to add `/tmp/.X11-unix` to the virtual file shares in Docker Desktop under Linux, and run `xhost +local:docker` on the host system.
+
+## Analytics
+
+This SPA uses Umami for event tracking. Every clickable item has a property `data-umami-event` that is globally unique and which should clearly identify both the action and the environment it is occurring in. Furthermore, there's a limit of 50 characters for these event names - otherwise they will be ignored by the backend.
 
 ## The Architecture Matrix
 
