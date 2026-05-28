@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for the WPS database migrations."""
+"""Tests for the V2 migration"""
 
 from asyncio import sleep
 from datetime import datetime, timedelta

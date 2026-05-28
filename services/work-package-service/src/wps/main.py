@@ -23,7 +23,7 @@ from wps.config import Config
 from wps.migrations import run_db_migrations
 from wps.prepare import prepare_consumer, prepare_rest_app
 
-DB_VERSION = 2
+DB_VERSION = 3
 
 
 async def run_rest_app() -> None:

@@ -13,9 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Database migration logic"""
-
-from .definitions import V2Migration, V3Migration
-from .entry import run_db_migrations
-
-__all__ = ["V2Migration", "V3Migration", "run_db_migrations"]
+"""Tests for migrations"""
