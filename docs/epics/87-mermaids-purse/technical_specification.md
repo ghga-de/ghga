@@ -195,7 +195,7 @@ See the [Appendix](#appendix-pam-transformation-configurations) for the concrete
 
 **Data transformation**
 
-The transformation first builds a global mapping from each ID listed under `source_content_property` to the set of source resources that reference it. Iterating `resources.<source_class_name>` once produces:
+1. Build a mapping from each ID listed under `source_content_property` to the resources that reference it, e.g. it produces:
 
 ```
 file_id_1 → [DS_A, DS_B]
@@ -204,8 +204,9 @@ file_id_3 → [DS_B, DS_C]
 ...
 ```
 
-- The keys of this mapping are intersected with the resource IDs present under `resources.<class_name>` for the class being processed. For each ID in the intersection, the corresponding set of source resource IDs is written to `relations.<relation_name>.targetResources` on that resource.
-- IDs outside the intersection belong to other classes and are left untouched — they will be picked up by their own invocations.
+2. The keys of this mapping are intersected with the resource IDs of the `config.target_classes`, e.g.: intersection with `ResearchDataFile` resources: file_id_1, file_id_2
+
+3. For each ID in the intersection, add the value from the mapping to its relations, `relations.<relation_name>.targetResources`, e.g. ResearchDataFiles -> file_id_1 -> relations -> dataset -> [DS_A, DS_B]
 
 ##### 2.5. Aggregate Stats Workflow: Adding Back PAM Classes via `add_class`
 
@@ -274,14 +275,14 @@ The following are the stable public exports from `metldata.__init__`:
 
 ##### 2.7. Aggregate Stats Workflow Integration Test
 
-An end-to-end integration test shall be added to metldata, exercising all new capabilities together: a `globallyUniqueIds` schema, `add_class` (pending resolution of open questions in section 2.5), correct error behaviour for `duplicate_class` when intermediate validation is enabled, and `WorkflowRunner` running model derivation and data transformation independently.
+An end-to-end integration test shall be added to metldata, exercising all new capabilities together: a `globallyUniqueIds` schema, `add_class`, correct error behaviour for `duplicate_class` when intermediate validation is enabled, and `WorkflowRunner` running model derivation and data transformation independently.
 
 The test uses a representative aggregate stats workflow and verifies that the `globallyUniqueIds` constraint is enforced on the output: validation rejects datapacks with duplicate IDs across classes.
 
 
 ##### 2.8. Performance Benchmark of the Aggregate Stats Workflow
 
-A performance benchmark shall be run against the full EMIM → aggregate stats workflow using the Epignostix dataset as a representative input. Profiling is done via `cProfile`. The goal is to establish a baseline transformation time before production deployment. Results are attached to the epic. Any step that accounts for a disproportionate share of total time is flagged for investigation.
+A performance benchmark shall be run against the full EMIM -> aggregate stats workflow using the Epignostix dataset as a representative input. Profiling is done via `cProfile`. The goal is to establish a baseline transformation time before production deployment. Results are attached to the epic. Any step that accounts for a disproportionate share of total time is flagged for investigation.
 
 
 #### 3. em-transformation-service: Adopt `WorkflowRunner`
@@ -319,7 +320,7 @@ Since upstream maintainers are unresponsive, the solution is to **fork `jsonsubs
 
 ### Journey 2: Workflow Author Builds an Aggregate Stats Workflow with `add_class`
 
-1. A workflow author designing the EMIM → UDM workflow needs to reintroduce administrative classes (e.g., `Study`, `Dataset`) that are absent from the experimental EMIM but present in PAM annotations.
+1. A workflow author designing the EMIM -> UDM workflow needs to reintroduce administrative classes (e.g., `Study`, `Dataset`) that are absent from the experimental EMIM but present in PAM annotations.
 2. The author adds an `add_class` step specifying the class name, `id_property_name`, content JSON Schema, and any relations to existing classes.
 3. Subsequent steps (e.g., `infer_relation_from_content`) reconstruct relations between the new class and existing resources.
 4. The workflow validates with `validate_workflow(workflow)` without errors.
