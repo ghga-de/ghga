@@ -36,14 +36,20 @@ from schemapack._internals.exceptions import (
     InequivalentSchemapacks,
 )
 from schemapack._internals.spec.schemapack import (
+    ClassDefinition,
     ClassRelation,
     MandatoryRelationSpec,
     MultipleRelationSpec,
+    SchemaPack,
 )
 from tests.fixtures.examples import (
     COMPARISON_SCHEMAPACK_PATHS,
     REPRESENTATIVE_SCHEMAPACK_PATHS,
     SCHEMAPACK_PAIRED_COMPARISON_PATHS,
+)
+from tests.fixtures.test_content_schema_objects import (
+    DATASET_CONTENT_WITH_ENUM,
+    DATASET_ID,
 )
 
 # Expected comparison results for each test case
@@ -250,3 +256,32 @@ def test_structurally_different_schemapacks():
     schema2 = load_schemapack(path2)
 
     assert not is_equal_schemapack(schema1, schema2)
+
+
+def test_inequivalent_schemapacks_with_special_enum_characters():
+    r"""Test that a schemapack is equivalent to itself when a property has an
+    enum containing regex metacharacters (e.g., '+', '.').
+
+    The IBM jsonsubschema library converted enum values to regex patterns
+    without escaping metacharacters. For 'VALUE+', this produced '^VALUE+$' where '+'
+    is a regex quantifier meaning 'one or more E', so the literal string 'VALUE+'
+    did not match its own pattern and broke reflexivity: isEquivalent(s, s) returned
+    False instead of True. ghga-jsonsubschema fixes this, producing '^VALUE\+$' which
+    correctly matches only the literal 'VALUE+'.
+
+    This test ensures that the fix is in place and that schemas with such enums are
+    correctly handled as literal values.
+    """
+    schema1 = SchemaPack(
+        schemapack="4.2.0",
+        classes=FrozenDict(
+            {
+                "Dataset": ClassDefinition(
+                    id=DATASET_ID, content=DATASET_CONTENT_WITH_ENUM
+                )
+            }
+        ),
+    )
+
+    assert is_equal_schemapack(schema1, schema1)
+    assert is_equivalent_schemapack(schema1, schema1)

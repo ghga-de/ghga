@@ -38,7 +38,7 @@ text = "Apache 2.0"
 
 [project.optional-dependencies]
 schema-comparison = [
-    "jsonsubschema >= 0.0.7",
+    "ghga-jsonsubschema >= 0.1.0",
 ]
 
 [project.urls]

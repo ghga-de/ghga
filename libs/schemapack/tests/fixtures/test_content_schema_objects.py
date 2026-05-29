@@ -23,6 +23,7 @@ DATASET_ID = IDSpec(propertyName="alias", description=None)
 
 DATASET_DESCRIPTION = "Dataset without relations"
 
+
 DATASET_CONTENT = FrozenDict(
     {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -42,3 +43,27 @@ DATASET_CONTENT = FrozenDict(
 )
 
 DATASET_RELATIONS = FrozenDict({})
+
+
+DATASET_CONTENT_WITH_ENUM = FrozenDict(
+    {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": False,
+        "description": "A file is an object that contains information generated from a process, either an Experiment or an Analysis.",
+        "properties": FrozenDict(
+            {
+                "checksum": FrozenDict({"type": "string"}),
+                "filename": FrozenDict({"type": "string"}),
+                "format": FrozenDict(
+                    {
+                        "type": "string",
+                        "enum": ["VALUE+"],
+                    }
+                ),
+                "size": FrozenDict({"type": "integer"}),
+            }
+        ),
+        "required": ("filename", "format", "checksum", "size"),
+        "type": "object",
+    }
+)

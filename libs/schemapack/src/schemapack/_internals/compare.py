@@ -16,7 +16,7 @@
 """Compare two schema definitions for semantic equality."""
 
 from arcticfreeze import FrozenDict
-from jsonsubschema import isEquivalent
+from jsonsubschema import is_equivalent
 
 from schemapack._internals.exceptions import (
     ComparisonError,
@@ -72,7 +72,7 @@ def compare_content_semantically(
 ) -> bool:
     """Compare two content schemas to determine whether they are equivalent."""
     try:
-        return isEquivalent(thaw(schema1), thaw(schema2))
+        return is_equivalent(thaw(schema1), thaw(schema2))
     except Exception as exp:
         raise ComparisonError("An error happened while comparing the schemas.") from exp
 
