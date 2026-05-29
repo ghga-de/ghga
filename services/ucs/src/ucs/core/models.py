@@ -84,3 +84,10 @@ class FileUpload(event_schemas.FileUpload):
     completed: UTCDatetime | None = Field(
         default=None, description="When the S3 multipart upload was completed"
     )
+
+
+class UploadActivity(BaseModel):
+    """Tracks last activity timestamp for an in-progress file upload."""
+
+    file_id: UUID4
+    last_activity: UTCDatetime

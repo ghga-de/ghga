@@ -259,6 +259,15 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
+    async def refresh_upload_activity(self, *, file_id: UUID4) -> None:
+        """Update the activity timestamp for an in-progress upload.
+
+        Exceptions are caught and logged so uploads aren't interrupted for something
+        that is only needed for cleanup.
+        """
+        ...
+
+    @abstractmethod
     async def complete_file_upload(  # noqa: PLR0913
         self,
         *,
@@ -418,5 +427,17 @@ class UploadControllerPort(ABC):
         Database objects are untouched.
 
         If no FileUpload with the given ID exists, merely logs a warning and returns.
+        """
+        ...
+
+    @abstractmethod
+    async def cleanup_stale_uploads(self) -> None:
+        """Abort stale in-progress multipart uploads and mark their FileUpload records
+        as 'cancelled'. Also aborts any orphaned S3 multipart uploads that have no
+        corresponding FileUpload record.
+
+        An upload is considered stale if its last-activity timestamp is older than
+        `config.multipart_upload_ttl_hours` hours. If no activity entry exists,
+        falls back to comparing the FileUpload's `initiated` timestamp.
         """
         ...

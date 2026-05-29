@@ -48,7 +48,7 @@ from ucs.adapters.outbound.s3 import S3Client
 from ucs.config import Config
 from ucs.core import models
 from ucs.core.controller import UploadController
-from ucs.core.models import FileUpload, FileUploadBox
+from ucs.core.models import FileUpload, FileUploadBox, UploadActivity
 from ucs.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from ucs.ports.inbound.controller import UploadControllerPort
 from ucs.ports.outbound.storage import S3ClientPort
@@ -129,6 +129,7 @@ class JointRig:
     config: Config
     file_upload_box_dao: BaseInMemDao[models.FileUploadBox]
     file_upload_dao: BaseInMemDao[models.FileUpload]
+    upload_activity_dao: BaseInMemDao[UploadActivity]
     object_storages: ObjectStorages
     controller: UploadController
     s3_client: S3ClientPort
@@ -142,6 +143,9 @@ class JointRig:
 
 InMemFileUploadBoxDao = new_mock_dao_class(dto_model=FileUploadBox, id_field="id")
 InMemFileUploadDao = new_mock_dao_class(dto_model=FileUpload, id_field="id")
+InMemUploadActivityDao = new_mock_dao_class(
+    dto_model=UploadActivity, id_field="file_id"
+)
 
 
 @pytest.fixture()
@@ -160,6 +164,7 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
     file_upload_box_dao = InMemFileUploadBoxDao()
     file_upload_dao = InMemFileUploadDao()
     object_storages = InMemS3ObjectStorages(config=_config)
+    upload_activity_dao = InMemUploadActivityDao()
     s3_client = S3Client(config=_config, object_storages=object_storages)
 
     # Patch get_object_size to return the encrypted_size stored in the FileUpload
@@ -180,6 +185,7 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
         config=(_config),
         file_upload_box_dao=(file_upload_box_dao),
         file_upload_dao=(file_upload_dao),
+        upload_activity_dao=upload_activity_dao,
         s3_client=s3_client,
     )
 
@@ -187,6 +193,7 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
         config=_config,
         file_upload_box_dao=file_upload_box_dao,
         file_upload_dao=file_upload_dao,
+        upload_activity_dao=upload_activity_dao,
         object_storages=object_storages,
         controller=controller,
         s3_client=s3_client,

@@ -614,6 +614,10 @@ The service requires the following configuration parameters:
 
 - <a id="properties/max_concurrent_uploads_per_box"></a>**`max_concurrent_uploads_per_box`** *(integer)*: Maximum number of in-progress FileUploads allowed per box at any one time. When a new upload would exceed this count, the request is rejected with 429 Too Many Requests. Exclusive minimum: `0`. Default: `5`.
 
+- <a id="properties/multipart_upload_ttl_hours"></a>**`multipart_upload_ttl_hours`** *(integer)*: Number of hours after which an in-progress FileUpload with no activity is considered stale and will be aborted by the cleanup job. Default: `72`.
+
+- <a id="properties/cleanup_interval_minutes"></a>**`cleanup_interval_minutes`** *(integer)*: How often (in minutes) the cleanup job runs. Default: `60`.
+
 ## Definitions
 
 

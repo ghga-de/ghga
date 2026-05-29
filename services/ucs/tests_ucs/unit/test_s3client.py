@@ -232,7 +232,11 @@ async def test_abort_multipart_upload(s3_client: S3ClientPort):
     )
     file_upload = file_upload.model_copy(update={"s3_upload_id": upload_id})
 
-    await s3_client.abort_multipart_upload(file_upload=file_upload)
+    await s3_client.abort_multipart_upload(
+        storage_alias=file_upload.storage_alias,
+        object_id=str(file_upload.object_id),
+        s3_upload_id=file_upload.s3_upload_id,
+    )
 
     # The multipart upload is gone — completing it should now fail
     with pytest.raises(S3ClientPort.S3UploadCompletionError):
@@ -242,7 +246,11 @@ async def test_abort_multipart_upload(s3_client: S3ClientPort):
 async def test_abort_multipart_upload_already_gone(s3_client: S3ClientPort):
     """Aborting a non-existent upload (already aborted or never started) succeeds silently."""
     file_upload = make_file_upload(s3_upload_id="not-real")
-    await s3_client.abort_multipart_upload(file_upload=file_upload)
+    await s3_client.abort_multipart_upload(
+        storage_alias=file_upload.storage_alias,
+        object_id=str(file_upload.object_id),
+        s3_upload_id=file_upload.s3_upload_id,
+    )
 
 
 async def test_abort_and_delete_raise_s3_upload_abort_error(
@@ -263,7 +271,11 @@ async def test_abort_and_delete_raise_s3_upload_abort_error(
         await s3_client.delete_inbox_file(file_upload=file_upload)
 
     with pytest.raises(S3ClientPort.S3UploadAbortError):
-        await s3_client.abort_multipart_upload(file_upload=file_upload)
+        await s3_client.abort_multipart_upload(
+            storage_alias=file_upload.storage_alias,
+            object_id=str(file_upload.object_id),
+            s3_upload_id=file_upload.s3_upload_id,
+        )
 
 
 async def test_unknown_storage_alias_raises_error(s3_client: S3ClientPort):
@@ -295,4 +307,8 @@ async def test_unknown_storage_alias_raises_error(s3_client: S3ClientPort):
         await s3_client.delete_inbox_file(file_upload=file_upload)
 
     with pytest.raises(S3ClientPort.UnknownStorageAliasError):
-        await s3_client.abort_multipart_upload(file_upload=file_upload)
+        await s3_client.abort_multipart_upload(
+            storage_alias=file_upload.storage_alias,
+            object_id=str(file_upload.object_id),
+            s3_upload_id=file_upload.s3_upload_id,
+        )

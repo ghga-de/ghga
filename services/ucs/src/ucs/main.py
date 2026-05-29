@@ -15,6 +15,7 @@
 
 """Top-level service functions"""
 
+import asyncio
 import logging
 
 from ghga_service_commons.api import run_server
@@ -23,6 +24,7 @@ from hexkit.opentelemetry import configure_opentelemetry
 
 from ucs.config import Config
 from ucs.inject import (
+    prepare_core,
     prepare_event_subscriber,
     prepare_outbox_publisher,
     prepare_rest_app,
@@ -66,3 +68,24 @@ async def consume_events(run_forever: bool = True):
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
+
+
+async def perform_cleanup(run_forever: bool = True) -> None:
+    """Run the periodic stale upload cleanup job."""
+    config = Config()
+    configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
+
+    async with prepare_core(config=config) as controller:
+        is_first_run = True
+        while run_forever or is_first_run:
+            is_first_run = False
+            log.info("Running stale upload cleanup job.")
+            await controller.cleanup_stale_uploads()
+            log.info("Stale upload cleanup job complete.")
+            if run_forever:
+                log.info(
+                    "Will run cleanup again in %i minutes.",
+                    config.cleanup_interval_minutes,
+                )
+                await asyncio.sleep(config.cleanup_interval_minutes * 60)

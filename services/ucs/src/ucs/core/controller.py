@@ -15,7 +15,9 @@
 
 """Implements the UploadController class to manage file uploads"""
 
+import contextlib
 import logging
+from datetime import timedelta
 from math import ceil
 from typing import Any
 from uuid import uuid4
@@ -25,18 +27,25 @@ from ghga_event_schemas.pydantic_ import (
     InterrogationFailure,
     InterrogationSuccess,
 )
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import NoHitsFoundError, UniqueConstraintViolationError
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from ucs.config import Config
 from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
-from ucs.core.models import FileUpload, FileUploadBasics, FileUploadBox
+from ucs.core.models import (
+    FileUpload,
+    FileUploadBasics,
+    FileUploadBox,
+    UploadActivity,
+)
 from ucs.ports.inbound.controller import UploadControllerPort
 from ucs.ports.outbound.dao import (
     FileUploadBoxDao,
     FileUploadDao,
     ResourceNotFoundError,
+    UploadActivityDao,
 )
 from ucs.ports.outbound.storage import S3ClientPort
 
@@ -52,11 +61,13 @@ class UploadController(UploadControllerPort):
         config: Config,
         file_upload_box_dao: FileUploadBoxDao,
         file_upload_dao: FileUploadDao,
+        upload_activity_dao: UploadActivityDao,
         s3_client: S3ClientPort,
     ):
         self._config = config
         self._file_upload_box_dao = file_upload_box_dao
         self._file_upload_dao = file_upload_dao
+        self._upload_activity_dao = upload_activity_dao
         self._s3_client = s3_client
 
     async def _get_box_at_version(
@@ -222,7 +233,12 @@ class UploadController(UploadControllerPort):
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         """
         try:
-            await self._s3_client.abort_multipart_upload(file_upload=file_upload)
+            await self._s3_client.abort_multipart_upload(
+                storage_alias=file_upload.storage_alias,
+                object_id=str(file_upload.object_id),
+                s3_upload_id=file_upload.s3_upload_id,
+                file_id=file_upload.id,
+            )
         except S3ClientPort.UnknownStorageAliasError as err:
             raise self.UnknownStorageAliasError(
                 storage_alias=file_upload.storage_alias
@@ -356,6 +372,12 @@ class UploadController(UploadControllerPort):
             initiated=initiated,
         )
         await self._insert_file_upload(box=box, file_upload=file_upload)
+
+        # Create upload activity entry (overwrite if one unexpectedly exists)
+        await self._upload_activity_dao.upsert(
+            UploadActivity(file_id=file_id, last_activity=now_utc_ms_prec())
+        )
+
         log.info(
             "FileUpload %s created for alias %s with S3 multipart upload ID %s.",
             file_id,
@@ -408,6 +430,21 @@ class UploadController(UploadControllerPort):
             raise self.UploadSessionNotFoundError(
                 bucket_id=file_upload.bucket_id, s3_upload_id=s3_upload_id
             ) from err
+
+    async def refresh_upload_activity(self, *, file_id: UUID4) -> None:
+        """Update the activity timestamp for an in-progress upload.
+
+        Exceptions are caught and logged so uploads aren't interrupted for something
+        that is only needed for cleanup.
+        """
+        try:
+            await self._upload_activity_dao.upsert(
+                UploadActivity(file_id=file_id, last_activity=now_utc_ms_prec())
+            )
+        except Exception:
+            log.exception(
+                "Failed to refresh activity entry for file %s.", file_id, exc_info=True
+            )
 
     async def _compare_checksums(
         self,
@@ -559,6 +596,14 @@ class UploadController(UploadControllerPort):
         file_upload.completed = now_utc_ms_prec()
         await self._file_upload_dao.update(file_upload)
 
+        # Delete the upload activity entry now that the upload is in the inbox
+        try:
+            await self._upload_activity_dao.delete(file_id)
+        except ResourceNotFoundError:
+            log.warning(
+                "Activity entry not found when completing upload for file %s.", file_id
+            )
+
         # Update the FileUploadBox with new size and file count
         await self._update_box_stats(box_id=box_id, version=box_version)
         log.info("DB data updated for upload completion of file %s", file_id)
@@ -593,6 +638,11 @@ class UploadController(UploadControllerPort):
         file_upload.state = "cancelled"
         file_upload.state_updated = now_utc_ms_prec()
         await self._file_upload_dao.update(file_upload)
+
+        # Delete the upload activity entry
+        with contextlib.suppress(ResourceNotFoundError):
+            await self._upload_activity_dao.delete(file_id)
+
         await self._update_box_stats(box_id=box_id, version=box.version)
         log.info("File %s deleted from box %s", file_id, box_id)
 
@@ -993,3 +1043,150 @@ class UploadController(UploadControllerPort):
         # This will result in a second FileUpload fetch, but alternative is to
         #  replicate removal logic here
         await self.remove_file_upload(box_id=file_upload.box_id, file_id=file_id)
+
+    async def cleanup_stale_uploads(self) -> None:
+        """Abort stale in-progress multipart uploads and mark their FileUpload records
+        as 'cancelled'. Also aborts any orphaned S3 multipart uploads that have no
+        corresponding FileUpload record.
+
+        An upload is considered stale if its last-activity timestamp is older than
+        `config.multipart_upload_ttl_hours` hours. If no activity entry exists,
+        falls back to comparing the FileUpload's `initiated` timestamp.
+        """
+        cutoff = now_utc_ms_prec() - timedelta(
+            hours=self._config.multipart_upload_ttl_hours
+        )
+        for storage_alias in self._config.object_storages:
+            await self._cleanup_stale_uploads_for_alias(
+                storage_alias=storage_alias, cutoff=cutoff
+            )
+
+    async def _find_stale_uploads(
+        self,
+        *,
+        ongoing_uploads: list[FileUpload],
+        cutoff: UTCDatetime,
+    ) -> list[FileUpload]:
+        """Return uploads from ongoing_uploads whose last activity is older than cutoff.
+
+        Falls back to the upload's `initiated` timestamp when no activity entry exists.
+        """
+        stale_uploads: list[FileUpload] = []
+        mapping = {"file_id": {"$in": [file.id for file in ongoing_uploads]}}
+        activities = {
+            activity.file_id: activity.last_activity
+            async for activity in self._upload_activity_dao.find_all(mapping=mapping)
+        }
+
+        for upload in ongoing_uploads:
+            try:
+                if activities[upload.id] <= cutoff:
+                    stale_uploads.append(upload)
+            except KeyError:
+                log.debug(
+                    "FileUpload %s did not have a matching upload activity entry, so"
+                    + " the initiated date of %s was referenced instead.",
+                    upload.id,
+                    upload.initiated.isoformat(),
+                    extra={"cutoff": cutoff},
+                )
+                if upload.initiated <= cutoff:
+                    stale_uploads.append(upload)
+        return stale_uploads
+
+    async def _cancel_stale_file_upload(
+        self, *, upload: FileUpload, storage_alias: str
+    ) -> None:
+        """Abort the S3 multipart upload and mark the FileUpload as 'cancelled'."""
+        try:
+            await self._remove_incomplete_file_upload(file_upload=upload)
+        except (self.UploadAbortError, self.UnknownStorageAliasError):
+            log.exception(
+                "Failed to abort S3 upload for stale file %s in alias '%s'.",
+                upload.id,
+                storage_alias,
+            )
+        upload.state = "cancelled"
+        upload.state_updated = now_utc_ms_prec()
+        await self._file_upload_dao.update(upload)
+        with contextlib.suppress(ResourceNotFoundError):
+            await self._upload_activity_dao.delete(upload.id)
+        log.info("Cleaned up stale upload %s (alias '%s')", upload.id, storage_alias)
+
+    async def _abort_orphaned_s3_uploads(
+        self,
+        *,
+        storage_alias: str,
+        orphaned_s3_uploads: dict[str, str],
+    ) -> None:
+        """Abort S3 multipart uploads that have no corresponding FileUpload record."""
+        for s3_upload_id, object_id in orphaned_s3_uploads.items():
+            try:
+                await self._s3_client.abort_multipart_upload(
+                    storage_alias=storage_alias,
+                    object_id=object_id,
+                    s3_upload_id=s3_upload_id,
+                )
+            except Exception:
+                log.exception(
+                    "Failed to abort orphaned S3 upload %s (object %s) for alias '%s'.",
+                    s3_upload_id,
+                    object_id,
+                    storage_alias,
+                )
+
+    async def _cleanup_stale_uploads_for_alias(
+        self,
+        *,
+        storage_alias: str,
+        cutoff: UTCDatetime,
+    ) -> None:
+        """Run stale upload cleanup for a single storage alias."""
+        # Fetch all in-progress uploads for this storage alias
+        ongoing_uploads = [
+            upload
+            async for upload in self._file_upload_dao.find_all(
+                mapping={"storage_alias": storage_alias, "state": "init"}
+            )
+        ]
+        known_object_ids = {str(upload.object_id) for upload in ongoing_uploads}
+
+        # Determine which of the ongoing uploads have been dormant since the cutoff time
+        stale_uploads = await self._find_stale_uploads(
+            ongoing_uploads=ongoing_uploads, cutoff=cutoff
+        )
+
+        # Get all active S3 multipart uploads in this storage's inbox bucket so we can
+        #  look for stale uploads that might have been abandoned due to errors or other
+        #  processes that orphaned them from any database records.
+        try:
+            active_s3_uploads = await self._s3_client.list_all_multipart_uploads(
+                storage_alias=storage_alias
+            )
+        except S3ClientPort.UnknownStorageAliasError:
+            log.error(
+                "Unknown storage alias '%s' during stale upload cleanup.", storage_alias
+            )
+            raise
+        except Exception:
+            log.error(
+                "Failed to list S3 multipart uploads for alias '%s'.", storage_alias
+            )
+            raise
+
+        # Find truly orphaned S3 uploads (object_id not matching any known init FileUpload)
+        orphaned_s3_uploads = {
+            s3_upload_id: object_id
+            for s3_upload_id, object_id in active_s3_uploads.items()
+            if object_id not in known_object_ids
+        }
+
+        # Cancel each of the stale uploads that have FileUpload entries in the DB
+        for upload in stale_uploads:
+            await self._cancel_stale_file_upload(
+                upload=upload, storage_alias=storage_alias
+            )
+
+        await self._abort_orphaned_s3_uploads(
+            storage_alias=storage_alias, orphaned_s3_uploads=orphaned_s3_uploads
+        )

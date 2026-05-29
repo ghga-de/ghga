@@ -244,7 +244,10 @@ class S3Client(S3ClientPort):
                 )
             except object_storage.MultiPartUploadAbortError as err:
                 error = self.S3UploadAbortError(
-                    file_id=file_id, s3_upload_id=s3_upload_id, bucket_id=bucket_id
+                    s3_upload_id=s3_upload_id,
+                    object_id=object_id,
+                    bucket_id=bucket_id,
+                    file_id=file_id,
                 )
                 log.error(
                     "Removed completely uploaded object from inbox, but also found"
@@ -275,45 +278,66 @@ class S3Client(S3ClientPort):
             bucket_id=bucket_id, object_id=str(object_id)
         )
 
-    async def abort_multipart_upload(self, *, file_upload: FileUpload) -> None:
+    async def abort_multipart_upload(
+        self,
+        *,
+        storage_alias: str,
+        object_id: str,
+        s3_upload_id: str,
+        file_id: UUID4 | None = None,
+    ) -> None:
         """Abort an in-progress multipart upload. Tolerates a missing upload.
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadAbortError` if the abort fails.
         """
-        file_id = file_upload.id
-        s3_upload_id = file_upload.s3_upload_id
-        bucket_id = file_upload.bucket_id
-        _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
+        bucket_id, object_storage = self._get_bucket_and_storage(storage_alias)
 
         try:
             log.debug(
-                "Attempting to abort S3 upload %s since it should exist.", s3_upload_id
+                "Attempting to abort S3 upload %s (object %s).", s3_upload_id, object_id
             )
             await object_storage.abort_multipart_upload(
                 upload_id=s3_upload_id,
                 bucket_id=bucket_id,
-                object_id=str(file_upload.object_id),
+                object_id=object_id,
             )
-            log.info("Successfully aborted S3 upload %s", s3_upload_id)
+            log.info(
+                "Aborted S3 multipart upload %s (object %s).", s3_upload_id, object_id
+            )
+        except object_storage.MultiPartUploadNotFoundError:
+            log.info(
+                "No multipart upload found with the ID %s. Presumed already aborted.",
+                s3_upload_id,
+            )
         except object_storage.MultiPartUploadAbortError as err:
             error = self.S3UploadAbortError(
-                file_id=file_id, s3_upload_id=s3_upload_id, bucket_id=bucket_id
+                s3_upload_id=s3_upload_id,
+                object_id=object_id,
+                bucket_id=bucket_id,
+                file_id=file_id,
             )
             log.error(
                 error,
                 exc_info=True,
                 extra={
-                    "file_id": file_id,
-                    "bucket_id": bucket_id,
-                    "storage_alias": file_upload.storage_alias,
                     "s3_upload_id": s3_upload_id,
+                    "object_id": object_id,
+                    "bucket_id": bucket_id,
+                    "storage_alias": storage_alias,
+                    "file_id": file_id,
                 },
             )
             raise error from err
-        except object_storage.MultiPartUploadNotFoundError:
-            # This corresponds to an inconsistency between the database and
-            # the storage, however, since this cancel method might be used to
-            # resolve this inconsistency, this exception will be ignored.
-            pass
+
+    async def list_all_multipart_uploads(self, *, storage_alias: str) -> dict[str, str]:
+        """Returns all active multipart uploads for the bucket associated with the alias.
+
+        Returns a dict of s3_upload_id -> object_id.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+        """
+        bucket_id, object_storage = self._get_bucket_and_storage(storage_alias)
+        return await object_storage.get_all_multipart_uploads(bucket_id=bucket_id)

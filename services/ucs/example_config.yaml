@@ -1,5 +1,6 @@
 api_root_path: ''
 auto_reload: false
+cleanup_interval_minutes: 60
 cors_allow_credentials: null
 cors_allowed_headers: null
 cors_allowed_methods: null
@@ -41,6 +42,7 @@ migration_max_wait_sec: null
 migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
+multipart_upload_ttl_hours: 72
 object_storages:
   test:
     bucket: inbox

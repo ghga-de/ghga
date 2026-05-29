@@ -18,7 +18,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, BackgroundTasks, status
 from pydantic import UUID4
 
 from ucs.adapters.inbound.fastapi_ import (
@@ -431,7 +431,7 @@ async def create_file_upload(  # noqa: C901
     },
 )
 @TRACER.start_as_current_span("routes.get_part_upload_url")
-async def get_part_upload_url(
+async def get_part_upload_url(  # noqa: PLR0913
     box_id: UUID4,
     file_id: UUID4,
     part_no: int,
@@ -440,6 +440,7 @@ async def get_part_upload_url(
         http_authorization.require_upload_file_work_order,
     ],
     upload_controller: dummies.UploadControllerDummy,
+    background_tasks: BackgroundTasks,
 ) -> str:
     """Get pre-signed S3 upload URL for a specific file part.
 
@@ -455,6 +456,9 @@ async def get_part_upload_url(
     try:
         presigned_url = await upload_controller.get_part_upload_url(
             file_id=file_id, part_no=part_no
+        )
+        background_tasks.add_task(
+            upload_controller.refresh_upload_activity, file_id=file_id
         )
     except UploadControllerPort.FileUploadNotFound as error:
         raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error

@@ -18,22 +18,24 @@
 # for convenience: forward errors that may be thrown by DAO instances:
 from abc import ABC, abstractmethod
 
-from hexkit.protocols.dao import ResourceAlreadyExistsError, ResourceNotFoundError
+from hexkit.protocols.dao import Dao, ResourceAlreadyExistsError, ResourceNotFoundError
 from hexkit.protocols.daopub import DaoPublisher
 
 from ucs.core import models
-from ucs.core.models import FileUploadBox
+from ucs.core.models import FileUploadBox, UploadActivity
 
 __all__ = [
     "FileUploadBoxDao",
     "FileUploadDao",
     "ResourceAlreadyExistsError",
     "ResourceNotFoundError",
+    "UploadActivityDao",
     "UploadDaoPublisherFactoryPort",
 ]
 
 FileUploadBoxDao = DaoPublisher[FileUploadBox]
 FileUploadDao = DaoPublisher[models.FileUpload]
+UploadActivityDao = Dao[UploadActivity]
 
 
 class UploadDaoPublisherFactoryPort(ABC):

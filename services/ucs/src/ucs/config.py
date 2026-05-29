@@ -61,3 +61,14 @@ class Config(
             " rejected with 429 Too Many Requests."
         ),
     )
+    multipart_upload_ttl_hours: int = Field(
+        default=72,
+        description=(
+            "Number of hours after which an in-progress FileUpload with no activity"
+            + " is considered stale and will be aborted by the cleanup job."
+        ),
+    )
+    cleanup_interval_minutes: int = Field(
+        default=60,
+        description="How often (in minutes) the cleanup job runs.",
+    )

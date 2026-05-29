@@ -16,15 +16,17 @@
 """DAO translators for accessing the database."""
 
 from ghga_event_schemas.configs import FileUploadBoxEventsConfig, FileUploadEventsConfig
+from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from hexkit.providers.mongodb import MongoDbIndex
 
 from ucs.constants import (
     FILE_UPLOAD_BOXES_COLLECTION,
     FILE_UPLOADS_COLLECTION,
+    UPLOAD_ACTIVITY_COLLECTION,
 )
-from ucs.core.models import FileUpload, FileUploadBox
-from ucs.ports.outbound.dao import UploadDaoPublisherFactoryPort
+from ucs.core.models import FileUpload, FileUploadBox, UploadActivity
+from ucs.ports.outbound.dao import UploadActivityDao, UploadDaoPublisherFactoryPort
 
 # The following FileUpload fields are UCS-only and excluded from outbox events
 FIELDS_NOT_PUBLISHED: set[str] = {
@@ -81,3 +83,14 @@ class UploadDaoPublisherFactory(UploadDaoPublisherFactoryPort):
                 )
             ],
         )
+
+
+async def get_upload_activity_dao(
+    *, dao_factory: DaoFactoryProtocol
+) -> UploadActivityDao:
+    """Get an UploadActivityDao for UploadActivity objects."""
+    return await dao_factory.get_dao(
+        name=UPLOAD_ACTIVITY_COLLECTION,
+        id_field="file_id",
+        dto_model=UploadActivity,
+    )

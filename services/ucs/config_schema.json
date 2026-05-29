@@ -677,6 +677,18 @@
       "exclusiveMinimum": 0,
       "title": "Max Concurrent Uploads Per Box",
       "type": "integer"
+    },
+    "multipart_upload_ttl_hours": {
+      "default": 72,
+      "description": "Number of hours after which an in-progress FileUpload with no activity is considered stale and will be aborted by the cleanup job.",
+      "title": "Multipart Upload Ttl Hours",
+      "type": "integer"
+    },
+    "cleanup_interval_minutes": {
+      "default": 60,
+      "description": "How often (in minutes) the cleanup job runs.",
+      "title": "Cleanup Interval Minutes",
+      "type": "integer"
     }
   },
   "required": [

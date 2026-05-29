@@ -283,6 +283,9 @@ async def test_get_file_part_upload_url_endpoint_auth(
     response = await rest_client.get(url, headers=good_token_header)
     assert response.status_code == 200
 
+    # Make sure the core's refresh_upload_activity() method was called
+    core_mock.refresh_upload_activity.assert_awaited_with(file_id=TEST_FILE_ID)
+
 
 async def test_complete_file_upload_endpoint_auth(
     config: ConfigFixture, app_fixture: AppFixture

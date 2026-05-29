@@ -27,7 +27,7 @@ from ghga_event_schemas.pydantic_ import (
     FileUploadState,
     InterrogationSuccess,
 )
-from hexkit.protocols.dao import UniqueConstraintViolationError
+from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
 
@@ -40,7 +40,7 @@ from tests_ucs.fixtures.utils import (
     make_file_upload,
 )
 from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
-from ucs.core.models import FileUpload
+from ucs.core.models import FileUpload, UploadActivity
 from ucs.ports.inbound.controller import UploadControllerPort
 
 MIN_SLEEP = 0.001
@@ -1450,3 +1450,243 @@ async def test_handle_internal_file_registration_state_error(
         await rig.controller.process_internal_file_registration(
             registration_metadata=event
         )
+
+
+async def test_upload_activity_lifecycle(rig: JointRig):
+    """Test that an UploadActivity entry is created when a FileUpload is initiated
+    and deleted when the upload is completed.
+    """
+    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Verify that UploadActivity and FileUpload exist
+    activity = await rig.upload_activity_dao.get_by_id(file_id)
+    assert activity.file_id == file_id
+
+    file_upload = rig.file_upload_dao.latest
+    assert file_upload.id == file_id
+
+    # Complete the upload
+    await rig.controller.complete_file_upload(
+        box_id=box_id,
+        file_id=file_id,
+        unencrypted_checksum="abc",
+        encrypted_checksum=f"etag_for_{file_upload.object_id}",
+        encrypted_parts_md5=["abc"],
+        encrypted_parts_sha256=["def"],
+    )
+
+    # UploadActivity entry should be gone
+    with pytest.raises(ResourceNotFoundError):
+        await rig.upload_activity_dao.get_by_id(file_id)
+
+
+async def test_upload_activity_deleted_on_abort(rig: JointRig):
+    """Test that the UploadActivity entry is deleted when a FileUpload is aborted."""
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Make sure the upload activity is there
+    await rig.upload_activity_dao.get_by_id(file_id)
+
+    # Remove the file upload
+    await rig.controller.remove_file_upload(box_id=box_id, file_id=file_id)
+
+    # UploadActivity entry should be gone
+    with pytest.raises(ResourceNotFoundError):
+        await rig.upload_activity_dao.get_by_id(file_id)
+
+
+async def test_cleanup_cancels_stale_file_upload(rig: JointRig):
+    """Test that the cleanup job sets the FileUpload state to 'cancelled' when
+    aborting a stale upload.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Backdate the activity entry so the upload appears stale (beyond the 72h TTL)
+    stale_timestamp = now_utc_ms_prec() - timedelta(hours=73)
+    await rig.upload_activity_dao.upsert(
+        UploadActivity(file_id=file_id, last_activity=stale_timestamp)
+    )
+
+    # Run the cleanup job
+    await rig.controller.cleanup_stale_uploads()
+
+    # Verify the FileUpload state is set to "cancelled"
+    file_upload = await rig.file_upload_dao.get_by_id(file_id)
+    assert file_upload.state == "cancelled"
+
+    # UploadActivity entry should be gone
+    with pytest.raises(ResourceNotFoundError):
+        await rig.upload_activity_dao.get_by_id(file_id)
+
+
+async def test_cleanup_falls_back_to_initiated_when_no_activity(rig: JointRig):
+    """Test that the cleanup job uses the FileUpload's initiated timestamp when no
+    UploadActivity entry exists, and still cancels the upload if that timestamp is older
+    than the cutoff allows.
+    """
+    file_upload = make_file_upload(state="init")
+    file_upload.initiated = now_utc_ms_prec() - timedelta(hours=73)
+    await rig.file_upload_dao.insert(file_upload)
+
+    # No activity entry is created for this file
+    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+
+    # Run the cleanup job and make sure the upload is still cancelled
+    await rig.controller.cleanup_stale_uploads()
+    refreshed = await rig.file_upload_dao.get_by_id(file_upload.id)
+    assert refreshed.state == "cancelled"
+
+
+async def test_cleanup_cancels_despite_s3_abort_failure(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that the cleanup job marks a stale upload as 'cancelled' even when the
+    S3 abort call raises an error.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    stale_timestamp = now_utc_ms_prec() - timedelta(hours=73)
+    await rig.upload_activity_dao.upsert(
+        UploadActivity(file_id=file_id, last_activity=stale_timestamp)
+    )
+
+    # Patch the abort_multipart_upload() method on the S3Client so it raises an error
+    file_upload = rig.file_upload_dao.latest
+
+    async def failing_abort(**kwargs):
+        raise rig.s3_client.S3UploadAbortError(
+            s3_upload_id=file_upload.s3_upload_id,
+            object_id=str(file_upload.object_id),
+            bucket_id=file_upload.bucket_id,
+        )
+
+    monkeypatch.setattr(rig.s3_client, "abort_multipart_upload", failing_abort)
+
+    # Run the cleanup job
+    await rig.controller.cleanup_stale_uploads()
+
+    # Make sure that the file upload is marked cancelled and activity entry removed
+    file_upload = await rig.file_upload_dao.get_by_id(file_id)
+    assert file_upload.state == "cancelled"
+    with pytest.raises(ResourceNotFoundError):
+        await rig.upload_activity_dao.get_by_id(file_id)
+
+
+async def test_activity_refresh_prevents_stale_cancellation(rig: JointRig):
+    """Test that requesting a part URL refreshes the activity timestamp, preventing
+    the upload from being treated as stale in a subsequent cleanup run.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Backdate the activity so that it WOULD get cleaned up if nothing intervened
+    stale_timestamp = now_utc_ms_prec() - timedelta(hours=73)
+    await rig.upload_activity_dao.upsert(
+        UploadActivity(file_id=file_id, last_activity=stale_timestamp)
+    )
+
+    # Refresh the activity timestamp
+    await rig.controller.refresh_upload_activity(file_id=file_id)
+
+    # Verify the activity timestamp has been updated
+    activity = await rig.upload_activity_dao.get_by_id(file_id)
+    assert activity.last_activity > stale_timestamp
+
+    # Run the cleanup job
+    await rig.controller.cleanup_stale_uploads()
+
+    # Verify the upload has not been cancelled
+    file_upload = await rig.file_upload_dao.get_by_id(file_id)
+    assert file_upload.state == "init"
+
+
+async def test_orphaned_abort_failure_does_not_stop_cleanup(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a failure aborting one orphaned S3 upload does not prevent the cleanup
+    job from attempting to abort the remaining orphaned uploads.
+    """
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+
+    # Create two orphaned S3 multipart uploads (no corresponding FileUpload records)
+    await object_storage.init_multipart_upload(
+        bucket_id=bucket_id, object_id=str(uuid4())
+    )
+    await object_storage.init_multipart_upload(
+        bucket_id=bucket_id, object_id=str(uuid4())
+    )
+
+    call_count = 0
+
+    async def always_failing_abort(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        raise rig.s3_client.S3UploadAbortError(
+            s3_upload_id="some_id", object_id="some_object", bucket_id="some_bucket"
+        )
+
+    monkeypatch.setattr(rig.s3_client, "abort_multipart_upload", always_failing_abort)
+
+    await rig.controller.cleanup_stale_uploads()
+
+    # Both orphaned uploads were attempted despite the first failure
+    assert call_count == 2
+
+
+async def test_refresh_activity_warns_and_recreates_when_missing(rig: JointRig):
+    """Test that _refresh_upload_activity logs a warning and recreates the entry
+    when the activity record is unexpectedly absent during a part URL request.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Manually delete the upload activity entry
+    await rig.upload_activity_dao.delete(file_id)
+
+    # Manually fetch a presigned part upload URL, which should recreate the entry
+    await rig.controller.refresh_upload_activity(file_id=file_id)
+    await sleep(0)  # yield to let the background task run
+
+    # Verify the entry now exists again
+    activity = await rig.upload_activity_dao.get_by_id(file_id)
+    assert activity.file_id == file_id

@@ -31,7 +31,7 @@ from hexkit.utils import now_utc_ms_prec
 from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.joint import JointFixture
 from ucs.adapters.outbound.dao import FIELDS_NOT_PUBLISHED
-from ucs.constants import FILE_UPLOADS_COLLECTION
+from ucs.constants import FILE_UPLOADS_COLLECTION, UPLOAD_ACTIVITY_COLLECTION
 from ucs.ports.inbound.controller import UploadControllerPort
 
 pytestmark = pytest.mark.asyncio()
@@ -733,3 +733,113 @@ async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog
         in record.message
         for record in caplog.records
     )
+
+
+async def test_cleanup_aborts_orphaned_s3_uploads(joint_fixture: JointFixture):
+    """Test that the cleanup job aborts S3 multipart uploads with no corresponding
+    FileUpload record, while leaving recently-initiated uploads untouched.
+    """
+    controller = joint_fixture.upload_controller
+    s3_storage = joint_fixture.s3.storage
+    bucket_id = joint_fixture.bucket_id
+
+    # Create a genuinely orphaned S3 multipart upload (no FileUpload DB record)
+    orphaned_object_id = str(uuid4())
+    orphaned_s3_upload_id = await s3_storage.init_multipart_upload(
+        bucket_id=bucket_id, object_id=orphaned_object_id
+    )
+
+    # Also create a proper FileUpload (recent — well within the TTL)
+    async with set_correlation_id(uuid4()):
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+
+    # Both uploads should be active before cleanup
+    active_uploads_before = await s3_storage.get_all_multipart_uploads(
+        bucket_id=bucket_id
+    )
+    assert orphaned_s3_upload_id in active_uploads_before
+    assert len(active_uploads_before) == 2
+
+    # Run the cleanup job
+    await controller.cleanup_stale_uploads()
+
+    # The orphaned upload should be aborted
+    active_uploads_after = await s3_storage.get_all_multipart_uploads(
+        bucket_id=bucket_id
+    )
+    assert orphaned_s3_upload_id not in active_uploads_after
+
+    # The recent FileUpload should remain in "init" state (not cancelled)
+    db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+    file_upload_doc = db[FILE_UPLOADS_COLLECTION].find_one({"_id": file_id})
+    assert file_upload_doc is not None
+    assert file_upload_doc["state"] == "init"
+
+    # Verify that the active upload is still alive in S3
+    assert file_upload_doc["s3_upload_id"] in active_uploads_after
+
+
+async def test_upload_activity_deleted_after_completion_failure(
+    joint_fixture: JointFixture,
+):
+    """Test that the UploadActivity entry is deleted when remove_file_upload is called
+    after a failed completion due to a checksum mismatch.
+    """
+    controller = joint_fixture.upload_controller
+    config = joint_fixture.config
+    db = joint_fixture.mongodb.client[config.db_name]
+    upload_activity_collection = db[UPLOAD_ACTIVITY_COLLECTION]
+
+    async with set_correlation_id(uuid4()):
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+
+    # Verify the activity entry was created
+    assert upload_activity_collection.find_one({"_id": file_id}) is not None
+
+    # Upload content and attempt completion with a wrong checksum
+    url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
+    response = httpx.put(url, content=CONTENT)
+    assert response.status_code == 200
+
+    async with set_correlation_id(uuid4()):
+        with pytest.raises(UploadControllerPort.ChecksumMismatchError):
+            await controller.complete_file_upload(
+                box_id=box_id,
+                file_id=file_id,
+                unencrypted_checksum="abc",
+                encrypted_checksum="definitely-wrong-checksum",
+                encrypted_parts_md5=["abc"],
+                encrypted_parts_sha256=["def"],
+            )
+
+    # The activity entry should still exist after the failed completion
+    assert upload_activity_collection.find_one({"_id": file_id}) is not None
+
+    # The FileUpload should be in "failed" state
+    file_upload_doc = db[FILE_UPLOADS_COLLECTION].find_one({"_id": file_id})
+    assert file_upload_doc is not None
+    assert file_upload_doc["state"] == "failed"
+
+    # Deleting the upload should clean up the activity entry
+    async with set_correlation_id(uuid4()):
+        await controller.remove_file_upload(box_id=box_id, file_id=file_id)
+
+    assert upload_activity_collection.find_one({"_id": file_id}) is None

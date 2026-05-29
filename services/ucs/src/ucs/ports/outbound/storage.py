@@ -70,10 +70,18 @@ class S3ClientPort(ABC):
     class S3UploadAbortError(RuntimeError):
         """Raised when aborting an S3 multipart upload results in an error."""
 
-        def __init__(self, *, file_id: UUID4, s3_upload_id: str, bucket_id: str):
+        def __init__(
+            self,
+            *,
+            s3_upload_id: str,
+            object_id: str,
+            bucket_id: str,
+            file_id: UUID4 | None = None,
+        ):
+            subject = f"file ID {file_id}" if file_id else f"object {object_id}"
             msg = (
                 f"Failed to abort S3 multipart upload with ID {s3_upload_id} for"
-                + f" file ID {file_id} in bucket ID {bucket_id}."
+                + f" {subject} in bucket ID {bucket_id}."
             )
             super().__init__(msg)
 
@@ -152,10 +160,27 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
-    async def abort_multipart_upload(self, *, file_upload: FileUpload) -> None:
+    async def abort_multipart_upload(
+        self,
+        *,
+        storage_alias: str,
+        object_id: str,
+        s3_upload_id: str,
+        file_id: UUID4 | None = None,
+    ) -> None:
         """Abort an in-progress multipart upload. Tolerates a missing upload.
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadAbortError` if the abort fails.
+        """
+
+    @abstractmethod
+    async def list_all_multipart_uploads(self, *, storage_alias: str) -> dict[str, str]:
+        """Returns all active multipart uploads for the bucket associated with the alias.
+
+        Returns a dict of s3_upload_id -> object_id.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
         """
