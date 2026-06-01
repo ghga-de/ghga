@@ -250,11 +250,10 @@ class S3Client(S3ClientPort):
         upload_id: str,
         object_id: str,
         part_no: int,
-        part_md5: bytes,
+        md5_base64: str,
     ) -> str:
         """Retrieve a presigned part upload URL for a given file part"""
         # Convert MD5 to base64 for S3
-        md5_base64 = base64.b64encode(part_md5).decode()
         try:
             return await self._storage.get_part_upload_url(
                 upload_id=upload_id,
@@ -287,16 +286,19 @@ class S3Client(S3ClientPort):
         - BucketNotFoundError if the interrogation bucket is missing.
         - UploadPartError if any other error causes the part upload to fail.
         """
+        md5_base64 = base64.b64encode(part_md5).decode()
         upload_url = await self._get_part_upload_url(
             upload_id=upload_id,
             object_id=object_id,
             part_no=part_no,
-            part_md5=part_md5,
+            md5_base64=md5_base64,
         )
 
         try:
             log.debug("Object %s: Uploading part number %i.", object_id, part_no)
-            response = await self._httpx_client.put(upload_url, content=part)
+            response = await self._httpx_client.put(
+                upload_url, content=part, headers={"Content-MD5": md5_base64}
+            )
         except RetryError as retry_error:
             check_for_request_errors(retry_error, upload_url)
             response = retry_error.last_attempt.result()
