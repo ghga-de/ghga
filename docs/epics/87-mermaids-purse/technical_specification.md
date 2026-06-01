@@ -94,18 +94,21 @@ Two test cases should be added to ensure:
 2. When intermediate validation is enabled, the same workflow raises an error at the step where `duplicate_class` is applied, since the intermediate schema at that point contains duplicate IDs across classes.
 
 
-##### 2.2. Implications of Globally Unique IDs in Transformation Workflows
+##### 2.2. `set_id_uniqueness_scope` transformation
 
 In GHGA, the ingress schema does not enforce globally unique IDs: submitters may reuse the same alias across multiple classes as long as each alias is unique within its class. The aggregate stats workflow must produce a derived schema that enforces globally unique IDs, because the UDM uses GHGA accessions — which are globally unique — as resource IDs.
 
-To bridge this constraint change between input and output schemas, the `replace_resource_ids` transformation shall be extended with an optional `globally_unique_ids` argument:
+To bridge this constraint change between input and output schemas, the `set_id_uniqueness_scope` transformation shall be implemented. It is a schema level transformation that sets the `globallyUniqueIds` flag on the output schema. It does not modify the datapack.
 
-```yaml
-class_name: File
-globally_unique_ids: true
+**Configuration model**
+
+```python
+  class SetIdUniquenessScopeConfig(BaseModel):
+    globally_unique_ids: bool
 ```
 
-This argument defaults to `false`. When set to `true`, the transformation sets `globallyUniqueIds: true` on the output schemapack. No additional validation logic is required: the post-transformation step validates the output automatically.
+
+No additional validation logic is required: the post-transformation step validates the output automatically.
 
 ##### 2.3. `add_class` Transformation
 
