@@ -15,16 +15,20 @@
 
 """Integration tests for the core"""
 
+import logging
+
 import pytest
 from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock
 
 from fis.core import models
+from fis.ports.outbound.dao import ResourceNotFoundError
 from tests_fis.fixtures.joint import JointFixture
 from tests_fis.fixtures.utils import create_file_under_interrogation
 
+pytestmark = pytest.mark.asyncio
 
-@pytest.mark.asyncio()
+
 async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMock):
     """Test the typical path of receiving a FileUpload event through archival."""
     # Create a FileUnderInterrogation and publish it to the file uploads topic
@@ -125,3 +129,67 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
         object_id=file.object_id
     )
     assert can_remove is True
+
+
+@pytest.mark.parametrize(
+    "state,expected_log_level,expected_msg_fragment",
+    [
+        ("cancelled", logging.INFO, "before the upload was finished"),
+        ("failed", logging.INFO, "before the upload was finished"),
+        ("interrogated", logging.WARNING, "This is unexpected"),
+        ("awaiting_archival", logging.WARNING, "This is unexpected"),
+        ("archived", logging.WARNING, "This is unexpected"),
+    ],
+)
+async def test_failure_before_inbox(
+    joint_fixture: JointFixture,
+    caplog,
+    state,
+    expected_log_level,
+    expected_msg_fragment,
+):
+    """Ensure FIS properly handles FileUpload events whose state skipped 'inbox'.
+
+    For 'cancelled' and 'failed', this is an expected edge case (the upload failed
+    before it was ever staged). For 'interrogated', 'awaiting_archival', and
+    'archived', it is unexpected but should still be handled gracefully (log +
+    ignore rather than raise).
+
+    The test publishes an 'init' event (which FIS ignores and does not store) and
+    then a second event with the target state. It verifies that:
+    - no record was ever written to the DB for the file
+    - the appropriate log message was emitted at the correct level
+    """
+    file = create_file_under_interrogation("HUB1")
+    file.state = "init"
+    topic = joint_fixture.config.file_upload_topic
+    await joint_fixture.kafka.publish_event(
+        payload=file.model_dump(),
+        type_="upserted",
+        topic=topic,
+        key=str(file.id),
+    )
+
+    # Consume the init file upload event — FIS should ignore it
+    await joint_fixture.outbox_consumer.run(forever=False)
+
+    file.state = state
+    await joint_fixture.kafka.publish_event(
+        payload=file.model_dump(),
+        type_="upserted",
+        topic=topic,
+        key=str(file.id),
+    )
+
+    with caplog.at_level(expected_log_level, logger="fis.core.interrogation"):
+        await joint_fixture.outbox_consumer.run(forever=False)
+
+    # The file should never have been written to the DB
+    with pytest.raises(ResourceNotFoundError):
+        await joint_fixture.file_dao.get_by_id(file.id)
+
+    # Verify the expected log message was emitted at the right level
+    assert any(
+        record.levelno == expected_log_level and expected_msg_fragment in record.message
+        for record in caplog.records
+    )

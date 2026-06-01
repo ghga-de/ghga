@@ -272,20 +272,21 @@ class InterrogationHandler(InterrogationHandlerPort):
             )
 
     async def process_file_upload(self, *, file: models.FileUnderInterrogation) -> None:
-        """Process a newly received file upload.
+        """Process a newly received file upload event.
 
-        Make sure we don't already have this file. If we don't, then add it to the DB.
-        If we do, see if this information is old or new. If old, ignore it.
-        If the received information is newer than what we have, and the state is
-        different, *and* the new state represents one of the end states, then update our
-        copy.
+        State-by-state behavior:
 
-        We don't track files that are only in the 'init' state, we only track them once
-        they reach 'inbox'. The transition from 'inbox' to 'interrogated' or from 'inbox'
-        to 'failed' is performed by the FIS in `.handle_interrogation_report()`. The
-        state 'awaiting_archival' is not of interest of the FIS and has no functional
-        difference from 'interrogated' from the perspective of the FIS. Therefore, the
-        only states of interest in this method are 'cancelled', 'failed', and 'archived'.
+        - 'init': ignored; FIS does not track files until they reach 'inbox'.
+        - 'inbox': insert into the DB if not already present (idempotent).
+        - 'cancelled' / 'failed': if the file is known, set can_remove=True and update.
+          If not known (i.e., it reached this terminal state before ever hitting 'inbox'),
+          log at INFO and ignore since this is a known possibility.
+        - 'archived': same update path as cancelled/failed (set can_remove=True). If the
+          file is unknown, log a warning and ignore.
+        - 'interrogated' / 'awaiting_archival': these transitions are owned by
+          handle_interrogation_report(), not by this method. If the file is known and
+          the incoming timestamp is newer, no update is performed here. If the file is
+          unknown (should not happen in normal operation), log a warning and ignore.
         """
         if file.state == "init":
             return
@@ -295,7 +296,26 @@ class InterrogationHandler(InterrogationHandlerPort):
                 return
 
         # If we make it past that block, then it is not new and we must compare.
-        local_file = await self._file_dao.get_by_id(file.id)
+        try:
+            local_file = await self._file_dao.get_by_id(file.id)
+        except ResourceNotFoundError:
+            if file.state in ["cancelled", "failed"]:
+                log.info(
+                    "Received event data for a %s FileUpload that FIS doesn't have."
+                    + " This means it probably reached that state before the upload"
+                    + " was finished. Ignoring.",
+                    file.state,
+                    extra={"file_id": file.id},
+                )
+                return
+            log.warning(
+                "Received event for a %s FileUpload that FIS never tracked."
+                + " This is unexpected. Ignoring since there wouldn't be anything"
+                + " for FIS to do anyway.",
+                file.state,
+                extra={"file_id": file.id},
+            )
+            return
 
         # Ignore if outdated
         if local_file.state_updated >= file.state_updated:
