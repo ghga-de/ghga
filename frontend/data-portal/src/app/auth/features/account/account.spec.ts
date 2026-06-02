@@ -42,13 +42,14 @@ class MockIvaService {
  * Mock the upload box service as needed by the account component
  */
 class MockUploadBoxService {
-  userGrants = {
+  boxRetrievalResults = {
     value: signal([]),
     error: signal(undefined),
     isLoading: signal(false),
     reload: () => undefined,
   };
-  loadUserGrants = () => undefined;
+  loadAllUploadBoxes = () => undefined;
+  uploadBoxes = () => [];
 }
 
 const MockConfigService = {

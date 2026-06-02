@@ -6,47 +6,16 @@
         <mat-card-title><h2>Research Data Upload Box</h2></mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <p><strong>Selected upload box:</strong> {{ grant.box_title }}</p>
+        <p><strong>Selected upload box:</strong> {{ box.title }}</p>
         <app-paragraphs
-          [text]="grant.box_description"
+          [text]="box.description"
           label="Description"
           pClasses="text-sm mb-0.5"
         />
       </mat-card-content>
     </mat-card>
 
-    <p class="w-full">
-      You have been granted upload access to this box from
-      {{ grant.valid_from | date: friendlyDateFormat }} to
-      {{ grant.valid_until | date: friendlyDateFormat }}.
-    </p>
-
-    @if (!iva()) {
-      <p class="flex items-center">
-        <span class="text-error"
-          ><mat-icon fontIcon="error" class="me-2 mt-1 shrink-0"></mat-icon></span
-        ><span class="text-error">Missing IVA</span>
-      </p>
-      <p>
-        We could not find an independent verification address (IVA) associated with this
-        grant. Please contact the helpdesk for assistance with this issue.
-      </p>
-    } @else if (iva()?.state !== 'Verified') {
-      <p class="flex items-center">
-        <span class="text-warning"
-          ><mat-icon fontIcon="warning" class="me-2 mt-1 shrink-0"></mat-icon
-        ></span>
-        <span
-          ><span class="text-warning">Unverified IVA:</span>
-          {{ (iva()!.type | IvaTypePipe).name }}: {{ iva()!.value }}</span
-        >
-      </p>
-      <p
-        >In order to upload data using this upload grant, the above independent
-        verification address (IVA) must still be verified. You can create an IVA and
-        request verification here on your user account page.</p
-      >
-    } @else if (tokenIsLoading()) {
+    @if (tokenIsLoading()) {
       <div class="mt-6 mb-3 flex items-center gap-3">
         <mat-spinner [diameter]="24"></mat-spinner>
         <p class="text-base">Creating your upload token...</p>
@@ -122,7 +91,7 @@
   >
     Close
   </button>
-  @if (iva()?.state === 'Verified' && !token() && !tokenError() && !tokenIsLoading()) {
+  @if (!token() && !tokenError() && !tokenIsLoading()) {
     <button
       mat-raised-button
       color="primary"
