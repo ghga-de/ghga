@@ -20,6 +20,7 @@ config:
   db_version_collection: "fisDbVersions"
   migration_wait_sec: 10
   enable_opentelemetry: false
+  kafka_enable_dlq: true
   ekss_api_url: http://encryption-key-store:8080
 
 cmd: fis run-rest
