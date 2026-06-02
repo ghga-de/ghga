@@ -26,7 +26,7 @@ charts:
   upload-controller:
     name: upload-controller
     description: This service manages file uploads.
-    appVersion: "12.1.0"
+    appVersion: "12.2.0"
   encryption-key-store:
     name: encryption-key-store
     description: providing crypt4gh file secret extraction, storage and envelope generation
@@ -34,7 +34,7 @@ charts:
   file-ingest:
     name: file-ingest
     description: A lightweight service to propagate file upload metadata to the GHGA file backend services
-    appVersion: "11.2.0"
+    appVersion: "11.2.1"
   internal-file-registry:
     name: internal-file-registry
     description: This service acts as a registry for the internal location and representation of files.
