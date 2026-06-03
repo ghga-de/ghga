@@ -30,6 +30,7 @@ from rs.core.models import (
     BaseWorkOrderToken,
     ChangeFileBoxWorkOrder,
     CreateFileBoxWorkOrder,
+    DeleteFileUploadWorkOrder,
     FileUploadWithAccession,
     GrantId,
     ResizeFileBoxWorkOrder,
@@ -551,3 +552,60 @@ class FileBoxClient(FileBoxClientPort):
             },
         )
         raise self.OperationError("Failed to resize FileUploadBox.")
+
+    async def delete_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
+        """Delete a FileUpload from a FileUploadBox in the owning service.
+
+        Raises:
+            OperationError if there's a problem with the operation.
+        """
+        wot = DeleteFileUploadWorkOrder(box_id=box_id, file_id=file_id)
+        headers = self._auth_header(wot)
+        response = await self._client.delete(
+            f"{self._ucs_url}/boxes/{box_id}/uploads/{file_id}",
+            headers=headers,
+            timeout=HTTPX_TIMEOUT,
+        )
+        if response.status_code == 204:
+            return
+
+        extra: dict[str, Any] = {
+            "box_id": box_id,
+            "file_id": file_id,
+            "response_text": response.text,
+            "status_code": response.status_code,
+        }
+
+        if response.status_code == 404:
+            log.error(
+                "FileUploadBox %s not found in external service when attempting to"
+                + " delete FileUpload %s. The RDUB and FUB states may be out of sync.",
+                box_id,
+                file_id,
+                extra=extra,
+            )
+            raise self.OperationError(
+                f"FileUploadBox {box_id} was not found in the external service."
+            )
+
+        if response.status_code == 409:
+            exception_id = response.json().get("exception_id")
+            if exception_id == "boxStateError":
+                log.error(
+                    "Cannot delete FileUpload %s from FileUploadBox %s because the box"
+                    + " is locked. The RS and UCS box states may be out of sync.",
+                    file_id,
+                    box_id,
+                    extra=extra,
+                )
+                raise self.FUBLockedError(
+                    f"FileUploadBox {box_id} is locked and cannot be modified."
+                )
+
+        log.error(
+            "Error deleting FileUpload %s from FileUploadBox %s.",
+            file_id,
+            box_id,
+            extra=extra,
+        )
+        raise self.OperationError(f"Failed to delete file upload {file_id}.")

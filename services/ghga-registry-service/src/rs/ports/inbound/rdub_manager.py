@@ -68,6 +68,12 @@ class RDUBManagerPort(ABC):
     class BoxMaxSizeTooLowError(RuntimeError):
         """Raised when the requested max_size is smaller than the bytes already uploaded."""
 
+    class BoxLockedError(RuntimeError):
+        """Raised when an operation cannot be performed because the box is locked."""
+
+        def __init__(self) -> None:
+            super().__init__("Cannot perform this operation while the box is locked.")
+
     class StateChangeError(RuntimeError):
         """Raised when there is an attempt to make an invalid state change for
         a Research Data Upload Box.
@@ -241,6 +247,26 @@ class RDUBManagerPort(ABC):
         with a chosen state.
 
         Returns a BoxRetrievalResults instance with the boxes and unpaginated count.
+        """
+        ...
+
+    @abstractmethod
+    async def delete_file_upload(
+        self,
+        *,
+        box_id: UUID4,
+        file_id: UUID4,
+        auth_context: AuthContext,
+    ) -> None:
+        """Delete a FileUpload from an upload box.
+
+        Requires either the Data Steward role or upload access to the box.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxAccessError: If the user doesn't have access to the box.
+            BoxLockedError: If the box is locked.
+            OperationError: If there's a problem communicating with the file box service.
         """
         ...
 

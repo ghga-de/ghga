@@ -46,6 +46,46 @@ log = logging.getLogger(__name__)
 box_router = APIRouter()
 
 
+@box_router.delete(
+    "/{box_id}/uploads/{file_id}",
+    summary="Delete file upload",
+    description="Delete a file upload from an upload box. Requires Data Steward role"
+    + " or upload access to the box.",
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        204: {"description": "File upload deleted successfully."},
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized."},
+        404: {"description": "Upload box not found."},
+        409: {"description": "File cannot be deleted while the box is locked."},
+    },
+)
+@TRACER.start_as_current_span("routes.delete_file_upload")
+async def delete_file_upload(
+    box_id: UUID,
+    file_id: UUID,
+    ghga_registry: dummies.GHGARegistryDummy,
+    auth_context: UserAuthContext,
+) -> None:
+    """Delete a file upload from an upload box."""
+    try:
+        await ghga_registry.rdub_manager.delete_file_upload(
+            box_id=box_id,
+            file_id=file_id,
+            auth_context=auth_context,
+        )
+    except RDUBManagerPort.BoxAccessError as err:
+        raise HttpNotAuthorizedError() from err
+    except RDUBManagerPort.BoxNotFoundError as err:
+        raise HttpBoxNotFoundError(box_id=box_id) from err
+    except RDUBManagerPort.BoxLockedError as err:
+        raise HTTPException(status_code=409, detail=str(err)) from err
+    except Exception as err:
+        log.error(err, exc_info=True)
+        raise HttpInternalError(message="Failed to delete file upload") from err
+
+
 @box_router.patch(
     "/{box_id}",
     summary="Update upload box",

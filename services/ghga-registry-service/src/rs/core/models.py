@@ -47,6 +47,7 @@ __all__ = [
     "CreateFileBoxWorkOrder",
     "CreateUploadBoxRequest",
     "CreateUploadBoxResponse",
+    "DeleteFileUploadWorkOrder",
     "FileAccession",
     "FileUpload",
     "FileUploadBox",
@@ -117,6 +118,14 @@ class SubmitAccessionMapWorkOrder(BaseWorkOrderToken):
     work_type: Literal["map"] = "map"
     user_id: UUID4
     study_id: PID
+
+
+class DeleteFileUploadWorkOrder(BaseWorkOrderToken):
+    """Work order token for deleting a FileUpload."""
+
+    work_type: Literal["delete"] = "delete"
+    box_id: UUID4 = Field(..., description="ID of the box containing the file")
+    file_id: UUID4 = Field(..., description="ID of the file upload to delete")
 
 
 # API Request/Response models

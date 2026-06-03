@@ -114,6 +114,9 @@ class FileBoxClientPort(ABC):
     class FUBMaxSizeTooLowError(RuntimeError):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
+    class FUBLockedError(RuntimeError):
+        """Raised when the FileUploadBox is locked and the operation cannot proceed."""
+
     @abstractmethod
     async def create_file_upload_box(
         self, *, storage_alias: str, max_size: PositiveInt
@@ -176,5 +179,15 @@ class FileBoxClientPort(ABC):
             FUBVersionError if the remote box version differs from `version`.
             FUBMaxSizeTooLowError if the new max_size is smaller than bytes already uploaded.
             OperationError if there's a problem with the operation.
+        """
+        ...
+
+    @abstractmethod
+    async def delete_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
+        """Delete a FileUpload from a FileUploadBox in the owning service.
+
+        Raises:
+            FUBLockedError if the FileUploadBox is locked.
+            OperationError if there's any other problem with the operation.
         """
         ...

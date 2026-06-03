@@ -1207,3 +1207,98 @@ async def test_update_box_state_and_max_size_exclusive(rig: JointRig):
             max_size=TEST_MAX_SIZE,
             auth_context=DATA_STEWARD_AUTH_CONTEXT,
         )
+
+
+async def test_delete_file_upload(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that Data Stewards and users with access may delete a FileUpload"""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    test_file_id = uuid4()
+
+    # Data steward can delete without an access check
+    await rig.rdub_manager.delete_file_upload(
+        box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+    )
+    rig.file_upload_box_client.delete_file_upload.assert_called_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, file_id=test_file_id
+    )
+    rig.access_client.check_box_access.assert_not_called()  # type: ignore
+
+    # User with access can also delete
+    rig.file_upload_box_client.delete_file_upload.reset_mock()  # type: ignore
+    rig.access_client.check_box_access.return_value = True  # type: ignore
+    await rig.rdub_manager.delete_file_upload(
+        box_id=box_id, file_id=test_file_id, auth_context=USER1_AUTH_CONTEXT
+    )
+    rig.file_upload_box_client.delete_file_upload.assert_called_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, file_id=test_file_id
+    )
+    rig.access_client.check_box_access.assert_called_once()  # type: ignore
+
+
+async def test_delete_file_error_handling(rig: JointRig, populated_boxes: list[UUID]):
+    """Test error translation from the FileBoxClient call"""
+    box_id = populated_boxes[0]
+    test_file_id = uuid4()
+
+    # FUBLockedError should be translated to BoxLockedError
+    rig.file_upload_box_client.delete_file_upload = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.FUBLockedError("Box is locked")
+    )
+    with pytest.raises(rig.rdub_manager.BoxLockedError):
+        await rig.rdub_manager.delete_file_upload(
+            box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+        )
+
+    # OperationError propagates unchanged
+    rig.file_upload_box_client.delete_file_upload = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.OperationError("Operation failed")
+    )
+    with pytest.raises(FileBoxClientPort.OperationError):
+        await rig.rdub_manager.delete_file_upload(
+            box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+        )
+
+
+async def test_delete_file_rejects_wrong_user(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that users are rejected if they don't have access to the given box"""
+    box_id = populated_boxes[0]
+    test_file_id = uuid4()
+
+    rig.access_client.check_box_access.return_value = False  # type: ignore
+    with pytest.raises(rig.rdub_manager.BoxAccessError):
+        await rig.rdub_manager.delete_file_upload(
+            box_id=box_id, file_id=test_file_id, auth_context=USER1_AUTH_CONTEXT
+        )
+
+    rig.file_upload_box_client.delete_file_upload.assert_not_called()  # type: ignore
+
+
+async def test_delete_file_box_locked_error(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that a BoxLockedError is raised if access is granted but the RDUB is locked.
+
+    Also verifies that no call is made to the FileBoxClient.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    test_file_id = uuid4()
+
+    # Lock the box
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title=None,
+        description=None,
+        state="locked",
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+    rig.file_upload_box_client.delete_file_upload.reset_mock()  # type: ignore
+
+    with pytest.raises(rig.rdub_manager.BoxLockedError):
+        await rig.rdub_manager.delete_file_upload(
+            box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+        )
+
+    rig.file_upload_box_client.delete_file_upload.assert_not_called()  # type: ignore

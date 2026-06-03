@@ -227,3 +227,41 @@ async def test_resize_file_upload_box(
         await file_upload_box_client.resize_file_upload_box(
             box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
         )
+
+
+async def test_delete_file_upload(
+    config: Config,
+    httpx_mock: HTTPXMock,
+    httpx_client: httpx.AsyncClient,
+    work_order_jwk: JWK,
+):
+    """Test the delete_file_upload function"""
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    test_file_id = uuid4()
+
+    # Happy path - verify WOT work_type/box_id/file_id
+    httpx_mock.add_response(204)
+    await file_upload_box_client.delete_file_upload(
+        box_id=TEST_BOX_ID, file_id=test_file_id
+    )  # no error == success
+    request = httpx_mock.get_requests()[0]
+    raw_token = request.headers["authorization"].removeprefix("Bearer ")
+    wot_claims = decode_and_validate_token(raw_token, work_order_jwk)
+    assert wot_claims["work_type"] == "delete"
+    assert wot_claims["box_id"] == str(TEST_BOX_ID)
+    assert wot_claims["file_id"] == str(test_file_id)
+
+    # Make sure 409/boxStateError is translated as FUBLockedError
+    httpx_mock.add_response(409, json={"exception_id": "boxStateError"})
+    with pytest.raises(FileBoxClient.FUBLockedError):
+        await file_upload_box_client.delete_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+
+    # Make sure 400, 404, and 500 are translated as OperationError
+    for status_code in (400, 404, 500):
+        httpx_mock.add_response(status_code, json="Some error occurred.")
+        with pytest.raises(FileBoxClient.OperationError):
+            await file_upload_box_client.delete_file_upload(
+                box_id=TEST_BOX_ID, file_id=test_file_id
+            )

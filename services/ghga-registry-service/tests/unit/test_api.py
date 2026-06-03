@@ -807,3 +807,81 @@ async def test_update_box_invalid_request_body(
             url, json=request_body, headers=ds_auth_headers
         )
         assert response.status_code == 422
+
+
+async def test_delete_file_upload(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test that the DELETE /upload-boxes/{box_id}/uploads/{file_id} endpoint makes a
+    call to the correct RDUBManager method and returns a 204.
+    """
+    rdub_manager = AsyncMock()
+    test_file_id = uuid4()
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}"
+
+        # unauthenticated
+        response = await rest_client.delete(url)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.delete(url, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # normal response with user auth (endpoint is accessible to non-DS users)
+        rdub_manager.rdub_manager.delete_file_upload.return_value = None
+        response = await rest_client.delete(url, headers=user_auth_headers)
+        rdub_manager.rdub_manager.delete_file_upload.assert_awaited_once()
+        assert response.status_code == 204
+
+        # normal response with data steward auth
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.delete_file_upload.reset_mock()
+        response = await rest_client.delete(url, headers=ds_auth_headers)
+        rdub_manager.rdub_manager.delete_file_upload.assert_awaited_once()
+        assert response.status_code == 204
+
+
+async def test_delete_file_upload_error_translation(config: Config, user_auth_headers):
+    """Test that the DELETE /upload-boxes/{box_id}/uploads/{file_id} endpoint translates
+    errors as expected.
+    """
+    rdub_manager = AsyncMock()
+    test_file_id = uuid4()
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}"
+
+        # handle box access error from core
+        rdub_manager.rdub_manager.delete_file_upload.side_effect = (
+            RDUBManagerPort.BoxAccessError()
+        )
+        response = await rest_client.delete(url, headers=user_auth_headers)
+        assert response.status_code == 403
+
+        # handle box not found error from core
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.delete_file_upload.side_effect = (
+            RDUBManagerPort.BoxNotFoundError(box_id=TEST_BOX_ID)
+        )
+        response = await rest_client.delete(url, headers=user_auth_headers)
+        assert response.status_code == 404
+
+        # handle box locked error from core
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.delete_file_upload.side_effect = (
+            RDUBManagerPort.BoxLockedError()
+        )
+        response = await rest_client.delete(url, headers=user_auth_headers)
+        assert response.status_code == 409
+
+        # handle other exception
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.delete_file_upload.side_effect = TypeError()
+        response = await rest_client.delete(url, headers=user_auth_headers)
+        assert response.status_code == 500
