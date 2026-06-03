@@ -82,7 +82,7 @@ charts:
   registry:
     name: registry
     description: GHGA Registry Service
-    appVersion: "2.0.0"
+    appVersion: "2.1.0"
   auth-km-jobs:
     name: auth-km-jobs
     description: This job is to refresh the internal and external auth keys.
