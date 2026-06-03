@@ -96,6 +96,36 @@ class UploadControllerPort(ABC):
             )
             super().__init__(msg)
 
+    class BucketMissingError(UploadError):
+        """Raised when the S3 bucket configured for the storage alias is missing
+        on the S3 backend. Indicates an infrastructure or configuration issue.
+        """
+
+        def __init__(self, *, bucket_id: str):
+            msg = f"S3 bucket with ID {bucket_id} does not exist."
+            super().__init__(msg)
+
+    class S3ObjectMissingError(UploadError):
+        """Raised when an object expected to be present in S3 cannot be found.
+        Indicates a state inconsistency between the database and S3.
+        """
+
+        def __init__(self, *, bucket_id: str, object_id: str):
+            msg = (
+                f"Object {object_id} expected to be present in bucket {bucket_id}"
+                + " was not found."
+            )
+            super().__init__(msg)
+
+    class S3OperationError(UploadError):
+        """Raised when an S3 operation fails with an error not covered by the
+        more specific exception types.
+        """
+
+        def __init__(self, *, details: str):
+            msg = f"Unexpected S3 operation failure: {details}"
+            super().__init__(msg)
+
     class BoxVersionError(UploadError):
         """Raised when the supplied box version doesn't match the current version in the DB."""
 
@@ -242,6 +272,8 @@ class UploadControllerPort(ABC):
         - `UploadAlreadyInProgressError` if an upload is already in progress.
         - `PartSizeError` if the specified part size would results in more
             parts than S3 allows, or is smaller or larger than what S3 allows.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         ...
 
@@ -255,6 +287,8 @@ class UploadControllerPort(ABC):
         - `FileUploadNotFound` if the FileUpload is not found.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadSessionNotFoundError` if the upload session can't be found.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         ...
 
@@ -290,6 +324,9 @@ class UploadControllerPort(ABC):
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
         - `ChecksumMismatchError` if the checksums don't match.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3ObjectMissingError` if the completed object can't be found in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         ...
 
@@ -303,6 +340,8 @@ class UploadControllerPort(ABC):
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         ...
 
@@ -391,6 +430,8 @@ class UploadControllerPort(ABC):
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         ...
 
@@ -404,6 +445,8 @@ class UploadControllerPort(ABC):
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         ...
 

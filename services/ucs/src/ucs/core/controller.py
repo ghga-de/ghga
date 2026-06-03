@@ -209,6 +209,8 @@ class UploadController(UploadControllerPort):
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
           If this occurs, developer intervention might be required.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         try:
             await self._s3_client.delete_inbox_file(file_upload=file_upload)
@@ -222,6 +224,10 @@ class UploadController(UploadControllerPort):
                 s3_upload_id=file_upload.s3_upload_id,
                 bucket_id=file_upload.bucket_id,
             ) from err
+        except S3ClientPort.BucketNotFoundError as err:
+            raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
+        except S3ClientPort.S3OperationError as err:
+            raise self.S3OperationError(details=str(err)) from err
 
     async def _remove_incomplete_file_upload(self, *, file_upload: FileUpload) -> None:
         """Abort an incomplete S3 multipart upload.
@@ -231,6 +237,8 @@ class UploadController(UploadControllerPort):
         Raises:
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         try:
             await self._s3_client.abort_multipart_upload(
@@ -249,6 +257,10 @@ class UploadController(UploadControllerPort):
                 s3_upload_id=file_upload.s3_upload_id,
                 bucket_id=file_upload.bucket_id,
             ) from err
+        except S3ClientPort.BucketNotFoundError as err:
+            raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
+        except S3ClientPort.S3OperationError as err:
+            raise self.S3OperationError(details=str(err)) from err
 
     async def initiate_file_upload(
         self,
@@ -354,6 +366,10 @@ class UploadController(UploadControllerPort):
             raise self.UploadAlreadyInProgressError(
                 file_id=file_id, bucket_id=bucket_id
             ) from err
+        except S3ClientPort.BucketNotFoundError as err:
+            raise self.BucketMissingError(bucket_id=bucket_id) from err
+        except S3ClientPort.S3OperationError as err:
+            raise self.S3OperationError(details=str(err)) from err
 
         # Build and insert the complete FileUpload record
         file_upload = FileUpload(
@@ -430,6 +446,10 @@ class UploadController(UploadControllerPort):
             raise self.UploadSessionNotFoundError(
                 bucket_id=file_upload.bucket_id, s3_upload_id=s3_upload_id
             ) from err
+        except S3ClientPort.BucketNotFoundError as err:
+            raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
+        except S3ClientPort.S3OperationError as err:
+            raise self.S3OperationError(details=str(err)) from err
 
     async def refresh_upload_activity(self, *, file_id: UUID4) -> None:
         """Update the activity timestamp for an in-progress upload.
@@ -468,6 +488,14 @@ class UploadController(UploadControllerPort):
             raise self.UnknownStorageAliasError(
                 storage_alias=file_upload.storage_alias
             ) from err
+        except S3ClientPort.BucketNotFoundError as err:
+            raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
+        except S3ClientPort.S3ObjectNotFoundError as err:
+            raise self.S3ObjectMissingError(
+                bucket_id=file_upload.bucket_id, object_id=str(object_id)
+            ) from err
+        except S3ClientPort.S3OperationError as err:
+            raise self.S3OperationError(details=str(err)) from err
 
         if actual_checksum != expected_checksum:
             # Mark upload as failed, then raise an error
@@ -503,6 +531,14 @@ class UploadController(UploadControllerPort):
             raise self.UnknownStorageAliasError(
                 storage_alias=file_upload.storage_alias
             ) from err
+        except S3ClientPort.BucketNotFoundError as err:
+            raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
+        except S3ClientPort.S3ObjectNotFoundError as err:
+            raise self.S3ObjectMissingError(
+                bucket_id=file_upload.bucket_id, object_id=str(object_id)
+            ) from err
+        except S3ClientPort.S3OperationError as err:
+            raise self.S3OperationError(details=str(err)) from err
 
         if actual_size != file_upload.encrypted_size:
             file_upload.state = "failed"
@@ -576,6 +612,10 @@ class UploadController(UploadControllerPort):
                 s3_upload_id=file_upload.s3_upload_id,
                 bucket_id=file_upload.bucket_id,
             ) from err
+        except S3ClientPort.BucketNotFoundError as err:
+            raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
+        except S3ClientPort.S3OperationError as err:
+            raise self.S3OperationError(details=str(err)) from err
 
         # Verify that the md5 checksum calculated by the connector matches the S3 etag
         await self._compare_checksums(
@@ -1100,12 +1140,17 @@ class UploadController(UploadControllerPort):
         """Abort the S3 multipart upload and mark the FileUpload as 'cancelled'."""
         try:
             await self._remove_incomplete_file_upload(file_upload=upload)
-        except (self.UploadAbortError, self.UnknownStorageAliasError):
-            log.exception(
+        except Exception:
+            # If there's a problem aborting the stale upload, log it but otherwise go on
+            log.error(
                 "Failed to abort S3 upload for stale file %s in alias '%s'.",
                 upload.id,
                 storage_alias,
+                exc_info=True,
             )
+
+        # Update FileUpload as cancelled regardless of whether S3 upload was aborted -
+        #  the next round of cleanup will catch it
         upload.state = "cancelled"
         upload.state_updated = now_utc_ms_prec()
         await self._file_upload_dao.update(upload)

@@ -17,6 +17,7 @@
 
 import hashlib
 from contextlib import nullcontext
+from datetime import timedelta
 from tempfile import NamedTemporaryFile
 from typing import Any
 from unittest.mock import patch
@@ -786,6 +787,81 @@ async def test_cleanup_aborts_orphaned_s3_uploads(joint_fixture: JointFixture):
 
     # Verify that the active upload is still alive in S3
     assert file_upload_doc["s3_upload_id"] in active_uploads_after
+
+
+async def test_cleanup_cancels_despite_s3_abort_failure(
+    joint_fixture: JointFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that the cleanup job marks a stale upload as 'cancelled' even when the
+    S3 abort call raises an error, and that the orphaned S3 upload is cleaned up on
+    the next run.
+
+    This is an integration-test-copy of the unit test by the same name, but this one
+    follows up by running the job a final time to ensure the upload is ultimately
+    cleaned up.
+    """
+    controller = joint_fixture.upload_controller
+    db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+    s3_storage = joint_fixture.s3.storage
+    bucket_id = joint_fixture.bucket_id
+
+    # Create a box and initiate a file upload
+    async with set_correlation_id(uuid4()):
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+
+    # Backdate the activity entry so the upload appears stale (beyond the 72h TTL)
+    stale_timestamp = now_utc_ms_prec() - timedelta(hours=73)
+    db[UPLOAD_ACTIVITY_COLLECTION].update_one(
+        {"_id": file_id}, {"$set": {"last_activity": stale_timestamp}}
+    )
+
+    # Get S3 details from the DB and patch abort_multipart_upload to raise an error
+    file_upload_doc = db[FILE_UPLOADS_COLLECTION].find_one({"_id": file_id})
+    assert file_upload_doc is not None
+    s3_upload_id = file_upload_doc["s3_upload_id"]
+    s3_client = joint_fixture.upload_controller._s3_client
+
+    async def failing_abort(**kwargs):
+        raise s3_client.S3UploadAbortError(
+            s3_upload_id=s3_upload_id,
+            object_id=str(file_upload_doc["object_id"]),
+            bucket_id=file_upload_doc["bucket_id"],
+        )
+
+    monkeypatch.setattr(s3_client, "abort_multipart_upload", failing_abort)
+
+    # Run the cleanup job
+    async with set_correlation_id(uuid4()):
+        await controller.cleanup_stale_uploads()
+
+    # The FileUpload should be marked 'cancelled' despite the S3 failure
+    file_upload_doc = db[FILE_UPLOADS_COLLECTION].find_one({"_id": file_id})
+    assert file_upload_doc is not None
+    assert file_upload_doc["state"] == "cancelled"
+
+    # The activity entry should have been removed
+    assert db[UPLOAD_ACTIVITY_COLLECTION].find_one({"_id": file_id}) is None
+
+    # The S3 multipart upload should still be alive (the abort failed)
+    uploads = await s3_storage.get_all_multipart_uploads(bucket_id=bucket_id)
+    assert s3_upload_id in uploads
+
+    # Undo the patch and run cleanup again — the leftover upload is now an orphan
+    # (no FileUpload in 'init' state) and should be aborted
+    monkeypatch.undo()
+    await controller.cleanup_stale_uploads()
+
+    uploads = await s3_storage.get_all_multipart_uploads(bucket_id=bucket_id)
+    assert s3_upload_id not in uploads
 
 
 async def test_upload_activity_deleted_after_completion_failure(

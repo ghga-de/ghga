@@ -85,6 +85,34 @@ class S3ClientPort(ABC):
             )
             super().__init__(msg)
 
+    class BucketNotFoundError(RuntimeError):
+        """Raised when the bucket configured for the storage alias is missing in S3.
+
+        Distinct from `UnknownStorageAliasError`, which means the alias itself
+        isn't configured. This means the alias is configured but the underlying
+        bucket does not exist on the S3 backend.
+        """
+
+        def __init__(self, *, bucket_id: str):
+            msg = f"S3 bucket with ID {bucket_id} does not exist."
+            super().__init__(msg)
+
+    class S3ObjectNotFoundError(RuntimeError):
+        """Raised when an object expected to exist in S3 cannot be found."""
+
+        def __init__(self, *, bucket_id: str, object_id: str):
+            msg = f"Object with ID {object_id} was not found in bucket ID {bucket_id}."
+            super().__init__(msg)
+
+    class S3OperationError(RuntimeError):
+        """Raised when an S3 operation fails with an error not covered by the
+        more specific exception types.
+        """
+
+        def __init__(self, *, operation: str, details: str):
+            msg = f"S3 operation '{operation}' failed: {details}"
+            super().__init__(msg)
+
     @abstractmethod
     def get_bucket_id_for_alias(self, *, storage_alias: str) -> str:
         """Retrieve the bucket ID for a given storage alias.
@@ -103,6 +131,8 @@ class S3ClientPort(ABC):
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `OrphanedMultipartUploadError` if an S3 upload is already in progress.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
         """
 
     @abstractmethod
@@ -114,6 +144,8 @@ class S3ClientPort(ABC):
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadNotFoundError` if the multipart upload can't be found in S3.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
         """
 
     @abstractmethod
@@ -125,6 +157,8 @@ class S3ClientPort(ABC):
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadCompletionError` if the upload cannot be completed or found.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
         """
 
     @abstractmethod
@@ -135,6 +169,9 @@ class S3ClientPort(ABC):
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3ObjectNotFoundError` if the object is not found in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
         """
 
     @abstractmethod
@@ -147,6 +184,8 @@ class S3ClientPort(ABC):
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadAbortError` if an abort is required but fails.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
         """
 
     @abstractmethod
@@ -157,6 +196,9 @@ class S3ClientPort(ABC):
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3ObjectNotFoundError` if the object is not found in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
         """
 
     @abstractmethod
@@ -173,6 +215,8 @@ class S3ClientPort(ABC):
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadAbortError` if the abort fails.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
         """
 
     @abstractmethod

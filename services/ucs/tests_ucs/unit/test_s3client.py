@@ -77,15 +77,28 @@ async def test_init_upload(s3_client: S3ClientPort):
     assert upload_id
 
 
-async def test_init_upload_with_existing_upload_in_progress(s3_client: S3ClientPort):
-    """Make sure the appropriate error is raised if there's already an upload in progress."""
+async def test_existing_uploads_translated_as_orphaned_error(
+    s3_client: S3ClientPort, object_storages: ObjectStorages
+):
+    """Test that init_multipart_upload() translates MultipleActiveUploadsError and
+    MultiPartUploadAlreadyExistsError into OrphanedMultipartUploadError.
+    """
     file_upload = make_file_upload()
-    await s3_client.init_multipart_upload(file_upload_basics=_to_basics(file_upload))
+    _, storage = object_storages.for_alias(TEST_STORAGE_ALIAS)
 
-    with pytest.raises(S3ClientPort.OrphanedMultipartUploadError):
-        await s3_client.init_multipart_upload(
-            file_upload_basics=_to_basics(file_upload)
-        )
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.MultipleActiveUploadsError("", "", [])
+
+    async def do_error2(*args, **kwargs):
+        raise ObjectStorageProtocol.MultiPartUploadAlreadyExistsError("", "")
+
+    for error_fn in [do_error, do_error2]:
+        storage.init_multipart_upload = error_fn  # type: ignore[method-assign]
+
+        with pytest.raises(S3ClientPort.OrphanedMultipartUploadError):
+            await s3_client.init_multipart_upload(
+                file_upload_basics=_to_basics(file_upload)
+            )
 
 
 async def test_get_part_upload_url(s3_client: S3ClientPort):
@@ -312,3 +325,143 @@ async def test_unknown_storage_alias_raises_error(s3_client: S3ClientPort):
             object_id=str(file_upload.object_id),
             s3_upload_id=file_upload.s3_upload_id,
         )
+
+    with pytest.raises(S3ClientPort.UnknownStorageAliasError):
+        await s3_client.abort_multipart_upload(
+            storage_alias=file_upload.storage_alias,
+            object_id=str(file_upload.object_id),
+            s3_upload_id=file_upload.s3_upload_id,
+            file_id=file_upload.id,
+        )
+
+    with pytest.raises(S3ClientPort.UnknownStorageAliasError):
+        await s3_client.list_all_multipart_uploads(
+            storage_alias=file_upload.storage_alias
+        )
+
+
+@pytest.mark.parametrize(
+    "method_name, storage_method_name",
+    [
+        ("init_multipart_upload", "init_multipart_upload"),
+        ("get_part_upload_url", "get_part_upload_url"),
+        ("complete_multipart_upload", "complete_multipart_upload"),
+        ("get_object_etag", "get_object_etag"),
+        ("get_object_size", "get_object_size"),
+        ("delete_inbox_file", "does_object_exist"),
+        ("abort_multipart_upload", "abort_multipart_upload"),
+        ("list_all_multipart_uploads", "get_all_multipart_uploads"),
+    ],
+)
+async def test_bucket_not_found_raises_bucket_not_found_error(
+    s3_client: S3ClientPort,
+    object_storages: ObjectStorages,
+    method_name: str,
+    storage_method_name: str,
+):
+    """Test that the S3Client translates hexkit's BucketNotFoundError into
+    S3ClientPort.BucketNotFoundError.
+    """
+    file_upload = make_file_upload(s3_upload_id="some-upload-id")
+    _, storage = object_storages.for_alias(TEST_STORAGE_ALIAS)
+
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.BucketNotFoundError(file_upload.bucket_id)
+
+    setattr(storage, storage_method_name, do_error)
+
+    kwargs: dict = {"file_upload": file_upload}
+    if method_name == "init_multipart_upload":
+        kwargs = {"file_upload_basics": _to_basics(file_upload)}
+    elif method_name == "get_part_upload_url":
+        kwargs["part_no"] = 1
+    elif method_name in ("get_object_etag", "get_object_size"):
+        kwargs["object_id"] = file_upload.object_id
+    elif method_name == "abort_multipart_upload":
+        kwargs = {
+            "storage_alias": file_upload.storage_alias,
+            "object_id": str(file_upload.object_id),
+            "s3_upload_id": file_upload.s3_upload_id,
+        }
+    elif method_name == "list_all_multipart_uploads":
+        kwargs = {"storage_alias": file_upload.storage_alias}
+
+    with pytest.raises(S3ClientPort.BucketNotFoundError):
+        await getattr(s3_client, method_name)(**kwargs)
+
+
+async def test_object_not_found_raises_s3_object_not_found_error(
+    s3_client: S3ClientPort,
+    object_storages: ObjectStorages,
+):
+    """Test that S3Client.get_object_etag() and .get_object_size() translate
+    ObjectNotFoundError into S3ClientPort.S3ObjectNotFoundError.
+    """
+    file_upload = make_file_upload()
+    _, storage = object_storages.for_alias(TEST_STORAGE_ALIAS)
+
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.ObjectNotFoundError(
+            bucket_id=file_upload.bucket_id, object_id=str(file_upload.object_id)
+        )
+
+    for method_name in ["get_object_etag", "get_object_size"]:
+        setattr(storage, method_name, do_error)
+
+        with pytest.raises(S3ClientPort.S3ObjectNotFoundError):
+            await getattr(s3_client, method_name)(
+                file_upload=file_upload, object_id=file_upload.object_id
+            )
+
+
+@pytest.mark.parametrize(
+    "method_name, storage_method_name, extra_kwargs",
+    [
+        ("init_multipart_upload", "init_multipart_upload", {}),
+        ("get_part_upload_url", "get_part_upload_url", {"part_no": 1}),
+        ("complete_multipart_upload", "complete_multipart_upload", {}),
+        ("get_object_etag", "get_object_etag", {"_object_id": True}),
+        ("get_object_size", "get_object_size", {"_object_id": True}),
+        ("delete_inbox_file", "does_object_exist", {}),
+        ("abort_multipart_upload", "abort_multipart_upload", {}),
+        ("list_all_multipart_uploads", "get_all_multipart_uploads", {}),
+    ],
+)
+async def test_generic_storage_error_raises_s3_operation_error(
+    s3_client: S3ClientPort,
+    object_storages: ObjectStorages,
+    method_name: str,
+    storage_method_name: str,
+    extra_kwargs: dict,
+):
+    """Make sure generic S3 error classes are are translated into
+    S3ClientPort.S3OperationError.
+    """
+    file_upload = make_file_upload(s3_upload_id="some-upload-id")
+    _, storage = object_storages.for_alias(TEST_STORAGE_ALIAS)
+
+    # Patch the given storage method with a function that raises a generic error
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.ObjectStorageProtocolError("test")
+
+    setattr(storage, storage_method_name, do_error)
+
+    # Declare any kwargs for the different method calls
+    kwargs: dict = {"file_upload": file_upload}
+    if method_name == "init_multipart_upload":
+        kwargs = {"file_upload_basics": _to_basics(file_upload)}
+    elif method_name == "abort_multipart_upload":
+        kwargs = {
+            "storage_alias": file_upload.storage_alias,
+            "object_id": str(file_upload.object_id),
+            "s3_upload_id": file_upload.s3_upload_id,
+        }
+    elif method_name == "list_all_multipart_uploads":
+        kwargs = {"storage_alias": file_upload.storage_alias}
+    if extra_kwargs.pop("_object_id", False):
+        kwargs["object_id"] = file_upload.object_id
+    kwargs.update(extra_kwargs)
+
+    # Call the method and verify that it was translated as the generic S3OperationError
+    with pytest.raises(S3ClientPort.S3OperationError):
+        await getattr(s3_client, method_name)(**kwargs)
