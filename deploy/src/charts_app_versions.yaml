@@ -10,7 +10,7 @@ charts:
   data-portal-ui:
     name: data-portal-ui
     description: The Metadata Search Service is a service for providing a unified search interface over a metadata store.
-    appVersion: "2.5.7"
+    appVersion: "2.5.8"
   dataset-information:
     name: dataset-information
     description: Dataset Information Service
