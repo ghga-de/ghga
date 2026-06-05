@@ -21,7 +21,6 @@ import logging
 from contextlib import suppress
 
 from ghga_event_schemas import pydantic_ as event_schemas
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from fis.config import Config
@@ -356,25 +355,21 @@ class InterrogationHandler(InterrogationHandlerPort):
         )
         return files
 
-    async def ack_file_cancellation(self, *, file_id: UUID4) -> None:
-        """Acknowledge the removal or cancellation of a FileUpload.
+    async def delete_file(self, *, file_id: UUID4) -> None:
+        """Delete a file and its interrogation report (if any) from the database.
 
-        Raises:
-        - FileNotFoundError if there's no file with the ID specified in the report.
+        This removes the entries from the database as a result of an upstream
+        deletion in UCS. The usual cause for this is the replacement of a failed or
+        cancelled FileUpload with a new instance for the same file alias.
+
+        If no matching entry is found, it is assumed that the entry was already deleted.
         """
-        # First make sure we have this file
+        with suppress(ResourceNotFoundError):
+            await self._interrogation_report_dao.delete(file_id)
+            log.info("Interrogation report deleted for file ID %s.", file_id)
+
         try:
-            file = await self._file_dao.get_by_id(file_id)
-        except ResourceNotFoundError as err:
-            log.error(
-                "Can't acknowledge file cancellation because no file with ID %s exists.",
-                file_id,
-            )
-            raise self.FileNotFoundError(file_id=file_id) from err
-
-        file.state = "cancelled"
-        file.state_updated = now_utc_ms_prec()
-        file.can_remove = True
-
-        await self._file_dao.update(file)
-        log.info("Acknowledged file cancellation for %s", file_id)
+            await self._file_dao.delete(file_id)
+            log.info("Local copy deleted for file ID %s.", file_id)
+        except ResourceNotFoundError:
+            log.info("Did not find file with ID %s; presumed already deleted.", file_id)

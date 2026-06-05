@@ -343,26 +343,35 @@ async def test_get_files_not_yet_interrogated(rig: JointRig):
     assert set(f.id for f in results_h2) == hub2_ids
 
 
-async def test_ack_file_cancellation(rig: JointRig):
-    """Test the `.ack_file_cancellation()` method"""
-    # Test file not found error
+@pytest.mark.parametrize("report_is_present", [True, False])
+async def test_delete_file(rig: JointRig, report_is_present: bool):
+    """Test the `.delete_file()` method"""
     file = create_file_under_interrogation(HUB1)
-    with pytest.raises(InterrogationHandlerPort.FileNotFoundError):
-        await rig.interrogation_handler.ack_file_cancellation(file_id=file.id)
 
-    # Insert a file
-    file.state = "inbox"
-    file.state_updated -= timedelta(hours=1)
+    # Deleting a file that doesn't exist should not raise an error
+    await rig.interrogation_handler.delete_file(file_id=file.id)
+
+    # Insert the file and an interrogation report, then delete
     await rig.file_dao.insert(file)
 
-    # Acknowledge the file cancellation
-    await rig.interrogation_handler.ack_file_cancellation(file_id=file.id)
+    if report_is_present:
+        report = models.InterrogationReport(
+            file_id=file.id,
+            storage_alias=file.storage_alias,
+            interrogated_at=now_utc_ms_prec(),
+            passed=False,
+            reason="Checksum mismatch",
+        )
+        await rig.interrogation_report_dao.insert(report)
+    await rig.interrogation_handler.delete_file(file_id=file.id)
 
-    # Verify file was updated
-    updated_file = await rig.file_dao.get_by_id(file.id)
-    assert updated_file.state == "cancelled"
-    assert updated_file.can_remove is True
-    assert updated_file.state_updated >= file.state_updated
+    # Verify both the file and its report (if present) are gone
+    with pytest.raises(ResourceNotFoundError):
+        await rig.file_dao.get_by_id(file.id)
+
+    if report_is_present:
+        with pytest.raises(ResourceNotFoundError):
+            await rig.interrogation_report_dao.get_by_id(file.id)
 
 
 async def test_report_handling_duplicate(rig: JointRig):

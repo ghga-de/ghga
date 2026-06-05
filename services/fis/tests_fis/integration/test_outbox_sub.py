@@ -80,4 +80,4 @@ async def test_deleted(kafka: KafkaFixture):
         await outbox_consumer.run(forever=False)
 
     # Verify that the outbox subscriber called the right core method
-    core_mock.ack_file_cancellation.assert_awaited_once_with(file_id=file.id)
+    core_mock.delete_file.assert_awaited_once_with(file_id=file.id)

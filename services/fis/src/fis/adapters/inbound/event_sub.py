@@ -59,4 +59,4 @@ class OutboxSubTranslator(DaoSubscriberProtocol):
     async def deleted(self, resource_id: str) -> None:
         """Consume event indicating the cancellation or removal of a FileUpload."""
         file_id = UUID(resource_id)  # this ID is canonically a UUID4
-        await self._interrogation_handler.ack_file_cancellation(file_id=file_id)
+        await self._interrogation_handler.delete_file(file_id=file_id)

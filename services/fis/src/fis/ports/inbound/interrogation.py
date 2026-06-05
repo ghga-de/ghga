@@ -110,9 +110,12 @@ class InterrogationHandlerPort(ABC):
         """Return a list of not-yet-interrogated files for a Data Hub"""
 
     @abstractmethod
-    async def ack_file_cancellation(self, *, file_id: UUID4) -> None:
-        """Acknowledge the removal or cancellation of a FileUpload.
+    async def delete_file(self, *, file_id: UUID4) -> None:
+        """Delete a file and its interrogation report (if any) from the database.
 
-        Raises:
-        - FileNotFoundError if there's no file with the ID specified in the report.
+        This removes the entries from the database as a result of an upstream
+        deletion in UCS. The usual cause for this is the replacement of a failed or
+        cancelled FileUpload with a new instance for the same file alias.
+
+        If no matching entry is found, it is assumed that the entry was already deleted.
         """
