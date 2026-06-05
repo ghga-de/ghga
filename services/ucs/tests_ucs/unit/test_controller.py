@@ -15,6 +15,7 @@
 
 """Tests for the UploadController class"""
 
+import logging
 from asyncio import sleep
 from contextlib import nullcontext
 from datetime import timedelta
@@ -1690,3 +1691,68 @@ async def test_refresh_activity_warns_and_recreates_when_missing(rig: JointRig):
     # Verify the entry now exists again
     activity = await rig.upload_activity_dao.get_by_id(file_id)
     assert activity.file_id == file_id
+
+
+async def test_initiate_file_upload_marks_failed_on_insert_kafka_error(
+    rig: JointRig,
+    caplog: pytest.LogCaptureFixture,
+):
+    """If a Kafka publishing error occurs during the FileUpload insert (or some other
+    kind of equivalent error), the FileUpload must be marked "failed" so that a
+    subsequent retry can replace it.
+
+    The test `test_initiate_upload_after_failed()` covers the process of starting a new
+    upload for the same essential file after a FileUpload is "failed".
+    """
+    box_id = await rig.create_default_box()
+
+    # Simulate the outbox publisher scenario: MongoDB write succeeds (we call the real
+    # insert), then Kafka raises an error (the reason doesn't matter)
+    original_insert = rig.file_upload_dao.insert
+    original_upsert = rig.file_upload_dao.upsert
+
+    async def insert_then_fail(dto):
+        await original_insert(dto)
+        raise RuntimeError("First Error")
+
+    async def upsert_then_fail(dto):
+        await original_upsert(dto)
+        raise RuntimeError("Follow-up Error")
+
+    rig.file_upload_dao.insert = insert_then_fail
+    rig.file_upload_dao.upsert = upsert_then_fail
+
+    with caplog.at_level(logging.INFO, logger="ucs.core.controller"):
+        with pytest.raises(RuntimeError, match="First Error"):
+            await rig.controller.initiate_file_upload(
+                box_id=box_id,
+                alias="test-file",
+                decrypted_size=DECRYPTED_SIZE,
+                encrypted_size=ENCRYPTED_SIZE,
+                part_size=PART_SIZE,
+            )
+
+    controller_logs = [r for r in caplog.records if r.name == "ucs.core.controller"]
+    error_logs = [r for r in controller_logs if r.levelno == logging.ERROR]
+    warning_logs = [r for r in controller_logs if r.levelno == logging.WARNING]
+    info_logs = [r for r in controller_logs if r.levelno == logging.INFO]
+
+    assert len(error_logs) == 1
+    assert (
+        "Encountered an error while inserting FileUpload" in error_logs[0].getMessage()
+    )
+
+    assert len(warning_logs) == 1
+    assert "While marking FileUpload" in warning_logs[0].getMessage()
+
+    assert len(info_logs) == 1
+    assert "as 'failed' due to error during initiation" in info_logs[0].getMessage()
+
+    # The FileUpload was written to the DB but must now be marked 'failed'
+    assert len(rig.file_upload_dao.resources) == 1
+    stuck_upload = rig.file_upload_dao.latest
+    assert stuck_upload.state == "failed"
+    assert stuck_upload.failure_reason == "Internal error during upload initiation"
+
+    # Just double check that no UploadActivity was inserted
+    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]

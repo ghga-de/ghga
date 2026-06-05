@@ -28,7 +28,12 @@ from ghga_event_schemas.pydantic_ import (
     InterrogationSuccess,
 )
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.protocols.dao import NoHitsFoundError, UniqueConstraintViolationError
+from hexkit.protocols.dao import (
+    DaoError,
+    MultipleHitsFoundError,
+    NoHitsFoundError,
+    UniqueConstraintViolationError,
+)
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
@@ -101,8 +106,14 @@ class UploadController(UploadControllerPort):
     ) -> None:
         """Insert a new FileUpload, replacing a failed/cancelled one if needed.
 
+        If a unique constraint violation occurs, the existing upload is retrieved and
+        replaced when it is in a failed or cancelled state. If any other error occurs,
+        the upload is marked 'failed' so a subsequent retry can replace it, and the
+        error is re-raised. The associated S3 multipart upload is left for the cleanup
+        job to handle.
+
         Raises `FileUploadAlreadyExists` if an active FileUpload already exists for
-        this alias and box_id.
+        this alias and box_id (and is not failed or cancelled).
         """
         box_id = box.id
         alias = file_upload.alias
@@ -111,44 +122,105 @@ class UploadController(UploadControllerPort):
             await self._file_upload_dao.insert(file_upload)
         except UniqueConstraintViolationError as err:
             # If there's already a FileUpload in the box with this alias, retrieve it
+            logging_extras = {  # only for logging
+                "box_id": box.id,
+                "file_alias": file_upload.alias,
+                "new_file_upload_id": file_upload.id,
+            }
             try:
                 existing_upload = await self._file_upload_dao.find_one(
                     mapping={"box_id": box_id, "alias": alias}
                 )
-            except NoHitsFoundError:
+            except (NoHitsFoundError, MultipleHitsFoundError) as find_err:
                 # If we don't get any hits, something weird is going on. This isn't a
                 #  typical error to handle, so raise a RuntimeError
+                qty = "no" if isinstance(find_err, NoHitsFoundError) else "multiple"
                 msg = (
                     "Encountered an error indicating this FileUploadBox already"
-                    + f" has a FileUpload for the alias {alias}, but got no results"
+                    + f" has a FileUpload for the alias {alias}, but got {qty} results"
                     + " when trying to retrieve the existing FileUpload."
                 )
-                error = RuntimeError(msg)
-                log.critical(error, extra={"box_id": box.id, "file_alias": alias})
-                raise error from err
+                log.error(msg)
+                raise RuntimeError(msg) from err
+            except Exception as other_err:
+                # If another error occurs during find_one, log it too
+                msg = (
+                    "Encountered an error indicating this FileUploadBox already"
+                    + f" has a FileUpload for the alias {alias}, but received the"
+                    + f" following error while trying to investigate: {other_err}"
+                )
+                log.error(msg, extra=logging_extras)
+                raise RuntimeError(msg) from other_err
 
             # If retrieval succeeds, evaluate and attempt to replace the file upload
-            logging_extras = {  # only for logging
-                "box_id": box.id,
-                "file_alias": file_upload.alias,
-                "old_file_upload_id": existing_upload.id,
-                "old_state": existing_upload.state,
-                "new_file_upload_id": file_upload.id,
-            }
+            logging_extras["old_file_upload_id"] = existing_upload.id
+            logging_extras["old_state"] = existing_upload.state
             replaced = await self._try_to_replace_upload(
-                box=box,
                 existing_upload=existing_upload,
                 new_upload=file_upload,
                 logging_extras=logging_extras,
             )
+
+            # This means that the existing file is still "good" and needs explicit
+            #  cancellation/removal before a new upload can be started for this alias.
             if not replaced:
                 error = self.FileUploadAlreadyExists(alias=alias)
                 log.error(error, extra=logging_extras)
-                raise error from err
+                raise error from None  # don't need Unique* error in the trace
+        except Exception as err:
+            # This branch handles all other errors that *don't* signify an existing file
+            # If, e.g. kafka raises an error, delete the FileUpload so user can retry.
+            # To avoid more potential failure points, let active S3 upload linger until
+            #  the cleanup job takes care of it.
+            extra = {"box_id": file_upload.box_id, "file_alias": file_upload.alias}
+            log.error(
+                "Encountered an error while inserting FileUpload %s; it will be marked"
+                + " as 'failed'. Error: %s",
+                file_upload.id,
+                err,
+                extra=extra,
+            )
+
+            file_upload.state = "failed"
+            file_upload.state_updated = now_utc_ms_prec()
+            file_upload.failure_reason = "Internal error during upload initiation"
+            # If Kafka is the problem, this will also error but not until after the update
+            try:
+                # In case first write didn't actually land, use upsert
+                await self._file_upload_dao.upsert(file_upload)
+            except Exception as mark_failed_err:
+                # TODO: Update this section once Hexkit has defined errors for Kafka
+                if isinstance(mark_failed_err, DaoError):
+                    # Database errors should be raised, not suppressed
+                    log.error(
+                        "While marking FileUpload %s as 'failed', encountered another"
+                        + " database error: %s",
+                        file_upload.id,
+                        mark_failed_err,
+                        extra=extra,
+                    )
+                    raise mark_failed_err
+                else:
+                    log.warning(
+                        "While marking FileUpload %s as 'failed', encountered another error."
+                        + " If it's from Kafka, this is fine - just fix Kafka and run"
+                        + " the publish-all job. If it's not related to Kafka at all,"
+                        + " then this warrants further investigation. Error: %s",
+                        file_upload.id,
+                        mark_failed_err,
+                    )
+
+            # This is INFO level because it's normal procedure for cleanup.
+            log.info(
+                "Marked FileUpload %s as 'failed' due to error during initiation.",
+                file_upload.id,
+                extra=extra,
+            )
+            # Re-raise the exception
+            raise
 
     async def _try_to_replace_upload(
         self,
-        box: FileUploadBox,
         existing_upload: FileUpload,
         new_upload: FileUpload,
         logging_extras: dict[str, Any],
@@ -158,10 +230,16 @@ class UploadController(UploadControllerPort):
         If successful, this method will delete the old FileUpload and insert the new one.
         This does result in an outbox deletion event for the old FileUpload.
 
+        The old FileUpload is deleted, rather than re-used, to avoid complications with
+        downstream state management. Also, we can't have two FileUpload docs with the
+        same box ID and alias because it will violate the index.
+
         Returns a boolean indicating whether replacement was successful.
         """
         # Examine the existing FileUpload - it has to be either failed or cancelled to
         #  be replaced with the new submission. If not, we have to raise an error.
+        #  The user (or a DS) must first stop/remove the upload before it can be
+        #  replaced with a new one.
         if existing_upload.state not in ("failed", "cancelled"):
             return False
 
@@ -387,6 +465,8 @@ class UploadController(UploadControllerPort):
             s3_upload_id=s3_upload_id,
             initiated=initiated,
         )
+
+        # Extensive recovery/error handling occurs here:
         await self._insert_file_upload(box=box, file_upload=file_upload)
 
         # Create upload activity entry (overwrite if one unexpectedly exists)
