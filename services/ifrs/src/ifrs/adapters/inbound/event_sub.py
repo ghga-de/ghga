@@ -118,12 +118,17 @@ class FileUploadOutboxTranslator(DaoSubscriberProtocol[FileUpload]):
 
     @TRACER.start_as_current_span("FileUploadOutboxTranslator.deleted")
     async def deleted(self, resource_id: str) -> None:
-        """This should not be hit.
+        """Log occurrence and ignore event.
 
-        FileUploads are not deleted. Instead, their state is set to 'cancelled' or
-        'failed'. If we receive a deletion event for a FileUpload, there is an
-        inconsistency in implementation between services. The event should be sent
-        to the DLQ.
+        FileUploads are usually set to "cancelled" or "failed" rather than outright
+        deleted, but it can happen if a new upload is created for an alias in a box
+        which already had a previously associated FileUpload. The first FileUpload would
+        be deleted to allow the second one to be created. Then we would see a "deleted"
+        type event for the first item. IFRS does not act on these deletions, because
+        once archival has occurred, deletions should be triggered through the Purge
+        Controller Service and not the Upload Controller. And anything that hasn't been
+        archived yet is obviously not relevant to IFRS.
         """
-        log.error("Received deletion outbox event for FileUpload %s.", resource_id)
-        raise RuntimeError(f"Unexpected deletion event for FileUpload {resource_id}.")
+        log.info(
+            "Received deletion outbox event for FileUpload %s. Ignoring.", resource_id
+        )

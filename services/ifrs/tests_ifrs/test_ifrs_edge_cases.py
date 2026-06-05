@@ -324,6 +324,25 @@ async def test_handle_file_upload(
         mock.assert_not_awaited()
 
 
+async def test_file_upload_deletion_event(joint_fixture: JointFixture, caplog):
+    """Test that the "deleted"-type outbox events for FileUploads produces a log but
+    no error.
+    """
+    file_id = str(EXAMPLE_AWAITING_ARCHIVAL.id)
+    await joint_fixture.kafka.publish_event(
+        payload={},
+        type_="deleted",
+        topic=joint_fixture.config.file_upload_topic,
+        key=file_id,
+    )
+
+    caplog.clear()
+    caplog.set_level("INFO")
+    await joint_fixture.event_subscriber.run(forever=False)
+    log = f"Received deletion outbox event for FileUpload {file_id}. Ignoring."
+    assert log in caplog.messages
+
+
 async def test_error_during_copy_to_download_bucket(
     joint_fixture: JointFixture,
     caplog,
