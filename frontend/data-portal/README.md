@@ -146,16 +146,16 @@ to install the dependencies.
 The project uses a `.pnpmfile.cjs` file to manage dependency overrides. The following entries are currently in use. Review these from time to time and remove overrides that are no longer necessary.
 
 - `@angular-devkit/core@21.1.0>picomatch: 4.0.4`
-  - Reason: `@compodoc/compodoc@1.2.1` depends on `@angular-devkit/schematics@21.1.0`, which pulls `@angular-devkit/core@21.1.0` and `picomatch@4.0.3`.
+  - Reason: `@compodoc/compodoc@1.2.1` depends on `@angular-devkit/schematics@21.1.0`, which pulls `@angular-devkit/core@21.1.0` and `picomatch@4.0.3` (vulnerable to ReDoS).
   - Removal criteria: remove this override once Compodoc updates its Angular devkit dependency to a version that no longer resolves to the vulnerable `picomatch` version.
 
 - `@angular-devkit/core@21.1.0>ajv: >=8.18.0`
   - Reason: `@compodoc/compodoc@1.2.1` transitively depends on `ajv@8.17.1` (via `@angular-devkit/core`), which is vulnerable to ReDoS ([GHSA-2g4f-4pwh-qvx6](https://github.com/advisories/GHSA-2g4f-4pwh-qvx6)).
   - Removal criteria: remove once Compodoc updates its `@angular-devkit` dependency to a version that pulls `ajv>=8.18.0`.
 
-- `uuid: >=14.0.0`
-  - Reason: `@compodoc/compodoc@1.2.1` transitively depends on `uuid@8.3.2` (via `@compodoc/live-server` and `http-auth`), which has a buffer bounds check vulnerability ([GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq)).
-  - Removal criteria: remove once Compodoc updates its dependencies to pull `uuid>=14.0.0`.
+- `uuid: >=11.1.1` (applied to http-auth, @compodoc/compodoc, vis-network, vis-data)
+  - Reason: `@compodoc/compodoc@1.2.1` and related packages transitively depend on `uuid` versions with a buffer bounds check vulnerability ([GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq)).
+  - Removal criteria: remove once Compodoc updates its dependencies to pull `uuid>=11.1.1`.
 
 After adding, changing, or removing overrides in `.pnpmfile.cjs`, run `pnpm install` to refresh `pnpm-lock.yaml`.
 

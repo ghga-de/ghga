@@ -16,16 +16,25 @@ function readPackage(pkg) {
     pkg.dependencies.ajv = '>=8.18.0';
   }
 
+  // Override uuid to patch buffer bounds check vulnerability (GHSA-w5hq-g745-h8pq)
+  // This applies to all packages pulling uuid
+  if (
+    pkg.name === 'http-auth' ||
+    pkg.name === '@compodoc/compodoc' ||
+    pkg.name === 'vis-network' ||
+    pkg.name === 'vis-data'
+  ) {
+    pkg.dependencies ||= {};
+    if (pkg.dependencies.uuid) {
+      pkg.dependencies.uuid = '>=11.1.1';
+    }
+  }
+
   return pkg;
 }
 
 module.exports = {
   hooks: {
     readPackage,
-  },
-  // Force uuid to >=14.0.0 to patch buffer bounds check vulnerability (GHSA-w5hq-g745-h8pq)
-  // until @compodoc/compodoc updates its dependencies
-  overrides: {
-    'uuid': '>=14.0.0',
   },
 };

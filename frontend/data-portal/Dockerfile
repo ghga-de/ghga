@@ -7,14 +7,14 @@ RUN apk upgrade --no-cache --available
 # BUILDER: a container to build the service dist directory
 FROM base AS builder
 # install pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
+RUN corepack enable && corepack prepare pnpm@11.5.2 --activate
 # install static web server
 RUN apk add --no-cache curl jq sudo which
 RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sh
 # build the service
 WORKDIR /service
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
-RUN pnpm install --frozen-lockfile
+RUN HUSKY=0 pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 # create base package.json with just name and version
