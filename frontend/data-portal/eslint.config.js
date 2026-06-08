@@ -9,6 +9,8 @@ import header from 'eslint-plugin-header';
 import jsdoc from 'eslint-plugin-jsdoc';
 import prettier from 'eslint-plugin-prettier';
 import tseslint from 'typescript-eslint';
+import umamiEventMaxLength from './eslint-local-rules/umami-event-max-length.js';
+
 const { configs: angularConfigs } = pkg;
 
 header.rules.header.meta.schema = false;
@@ -397,11 +399,17 @@ export default [
     },
     plugins: {
       '@angular-eslint/template': angularTemplate,
+      local: {
+        rules: {
+          'umami-event-max-length': umamiEventMaxLength,
+        },
+      },
     },
     rules: {
       ...angularTemplate.configs.recommended.rules,
       ...angularTemplate.configs.accessibility.rules,
       '@angular-eslint/template/no-positive-tabindex': 'error',
+      'local/umami-event-max-length': 'error',
     },
   },
   // Configuration for Markdown files
