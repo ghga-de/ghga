@@ -25,6 +25,7 @@ from tenacity import RetryError
 from ghga_connector import exceptions
 from ghga_connector.config import get_upload_api_url
 from ghga_connector.core.api_calls.utils import is_service_healthy
+from ghga_connector.core.uploading.structs import UploadedFileInfo
 from ghga_connector.core.work_package import WorkPackageClient
 
 __all__ = ["UploadClient"]
@@ -111,6 +112,40 @@ class UploadClient:
         # If we didn't find a matching case, raise default error
         msg = f"Upload API returned status code {status_code}"
         raise exceptions.UnexpectedError(msg)
+
+    async def get_box_uploads(self) -> list[UploadedFileInfo]:
+        """Contact the Upload API to list the FileUploads in the FileUploadBox.
+
+        Returns a list of UploadedFileInfo objects describing the box contents.
+        """
+        rdub_id, fub_id = await self._work_package_client.get_package_box_ids()
+
+        # A "view" WOT authorizes listing the contents of the box.
+        view_wot = await self._work_package_client.get_upload_wot(
+            work_type="view",
+            research_data_upload_box_id=rdub_id,
+            file_id=None,
+            alias=None,
+        )
+
+        url = f"{self._upload_api_url}/boxes/{fub_id}/uploads"
+        headers = _form_authorization_headers(view_wot)
+
+        try:
+            log.debug("Requesting box upload listing at url %s", url)
+            response = await self._client.get(url, headers=headers)
+        except RetryError as retry_error:
+            _check_for_request_errors(retry_error, url)
+            response = retry_error.last_attempt.result()
+
+        if response.status_code != 200:
+            self._handle_bad_status_codes(
+                status_code=response.status_code,
+                response=response,
+                file_upload_box_id=fub_id,
+            )
+
+        return [UploadedFileInfo.model_validate(item) for item in response.json()]
 
     async def create_file_upload(
         self,

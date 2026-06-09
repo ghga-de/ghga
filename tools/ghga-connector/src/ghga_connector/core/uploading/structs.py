@@ -21,7 +21,7 @@ from math import ceil
 from pathlib import Path
 
 import crypt4gh.lib
-from pydantic import computed_field
+from pydantic import UUID4, BaseModel, ConfigDict, Field, computed_field
 
 from ghga_connector.constants import (
     ENVELOPE_SIZE,
@@ -30,6 +30,23 @@ from ghga_connector.constants import (
 )
 
 log = logging.getLogger(__name__)
+
+
+class UploadedFileInfo(BaseModel):
+    """Summary information about a single FileUpload contained in a FileUploadBox.
+
+    This is a tolerant subset of the FileUpload payload returned by the Upload API's
+    box listing endpoint - any additional fields in the response are ignored.
+    """
+
+    # Allow population either by the response's "id" field or by the "file_id" name.
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    file_id: UUID4 = Field(alias="id")
+    alias: str
+    decrypted_size: int | None = None
+    encrypted_size: int | None = None
+    state: str | None = None
 
 
 class CoreFileInfo:

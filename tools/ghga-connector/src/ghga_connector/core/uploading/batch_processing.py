@@ -21,13 +21,47 @@ import signal
 from pydantic import SecretBytes
 
 from ghga_connector import exceptions
-from ghga_connector.core import CLIMessageDisplay
+from ghga_connector.core import CLIMessageDisplay, utils
 from ghga_connector.core.crypt.encryption import Crypt4GHEncryptor
 from ghga_connector.core.uploading.api_calls import UploadClient
-from ghga_connector.core.uploading.structs import FileInfoForUpload
+from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
 from ghga_connector.core.uploading.uploader import Uploader
 
 log = logging.getLogger(__name__)
+
+
+def parse_file_info_for_upload(file_info: list[str]) -> list[CoreFileInfo]:
+    """Given a list of strings, derive a file alias, path, and size from each item."""
+    items: list[CoreFileInfo] = []
+    for i, arg in enumerate(file_info, 1):
+        if not arg:
+            continue
+        if "," in arg:
+            alias, path = arg.split(",", 1)
+            alias = alias.strip()
+            if not path.strip():
+                raise RuntimeError(
+                    f"No path supplied for alias '{alias}' in arg #{i}. Verify input and"
+                    + " ensure that alias and file path are separated only by a comma"
+                    + " and no whitespace."
+                )
+            validated_path = utils.parse_file_upload_path(path)
+        else:
+            validated_path = utils.parse_file_upload_path(arg)
+            alias = validated_path.name
+        items.append(
+            CoreFileInfo(
+                alias=alias,
+                path=validated_path,
+                decrypted_size=validated_path.stat().st_size,
+            )
+        )
+
+    # Ensure unique aliases and file paths
+    for field_name in ["alias", "path"]:
+        utils.detect_duplicates([getattr(x, field_name) for x in items], field_name)
+
+    return items
 
 
 def _signal_handler(signum, frame):

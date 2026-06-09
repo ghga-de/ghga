@@ -133,6 +133,44 @@ async def test_create_file_upload_success(
         )
 
 
+async def test_get_box_uploads(upload_client: UploadClient, httpx_mock: HTTPXMock):
+    """Test that get_box_uploads requests a view WOT and parses the listing."""
+    url = f"{upload_client._upload_api_url}/boxes/{TEST_FUB_ID}/uploads"
+    response_body = [
+        {
+            "id": str(FILE_ID),
+            "alias": FILE_ALIAS,
+            "decrypted_size": 2048,
+            "encrypted_size": 4096,
+            "state": "inbox",
+            # An unexpected extra field should be ignored, not cause a failure
+            "some_unmodeled_field": "ignored",
+        }
+    ]
+    httpx_mock.add_response(200, url=url, method="GET", json=response_body)
+
+    uploads = await upload_client.get_box_uploads()
+
+    assert len(uploads) == 1
+    assert uploads[0].file_id == FILE_ID
+    assert uploads[0].alias == FILE_ALIAS
+    assert uploads[0].decrypted_size == 2048
+    assert uploads[0].state == "inbox"
+
+    # Check that we request a "view" WOT for the box
+    upload_client._work_package_client.get_upload_wot.assert_called_with(  # type: ignore
+        work_type="view",
+        research_data_upload_box_id=TEST_RDUB_ID,
+        file_id=None,
+        alias=None,
+    )
+
+    # Test that other status codes will trigger the error translation
+    httpx_mock.add_response(500, url=url, method="GET", json=[])
+    with pytest.raises(exceptions.UnexpectedError):
+        _ = await upload_client.get_box_uploads()
+
+
 async def test_get_part_upload_url(upload_client: UploadClient, httpx_mock: HTTPXMock):
     """Test that get_part_upload_url returns the presigned URL from the API."""
     url = (

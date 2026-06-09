@@ -15,12 +15,10 @@
 
 """Fixtures for testing the storage DAO"""
 
-import asyncio
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from pathlib import Path
 
-import pytest
 import pytest_asyncio
 from ghga_service_commons.utils.temp_files import big_temp_file
 from hexkit.providers.s3 import S3Config, S3ObjectStorage
@@ -136,12 +134,11 @@ class S3Fixture:
         )
 
 
-@pytest.fixture(scope="function", autouse=True)
-def reset_state(s3_fixture: S3Fixture):
+@pytest_asyncio.fixture(scope="function", autouse=True)
+async def reset_state(s3_fixture: S3Fixture):
     """Reset S3 state between tests"""
     yield
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(s3_fixture.reset_state())
+    await s3_fixture.reset_state()
 
 
 async def populate_storage(

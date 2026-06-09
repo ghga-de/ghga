@@ -24,7 +24,12 @@ import typer
 from ghga_connector import exceptions
 from ghga_connector.constants import C4GH
 from ghga_connector.core import CLIMessageDisplay
-from ghga_connector.core.main import async_download, async_upload, decrypt_file
+from ghga_connector.core.main import (
+    async_download,
+    async_ubox,
+    async_upload,
+    decrypt_file,
+)
 from ghga_connector.core.utils import modify_for_debug, strtobool
 
 cli = typer.Typer(no_args_is_help=True)
@@ -75,6 +80,38 @@ def upload(
 
 if strtobool(os.getenv("UPLOAD_ENABLED") or "false"):
     cli.command(no_args_is_help=True)(upload)
+
+
+@cli.command()
+def ubox(
+    my_public_key_path: Path = typer.Option(
+        "./key.pub",
+        help="The path to a public key from the key pair that was announced in the "
+        + "metadata. Defaults to key.pub in the current folder.",
+    ),
+    my_private_key_path: Path = typer.Option(
+        "./key.sec",
+        help="The path to a private key from the key pair that will be used to encrypt the "
+        + "crypt4gh envelope. Defaults to key.sec in the current folder.",
+    ),
+    passphrase: str | None = typer.Option(
+        None,
+        help="Passphrase for the encrypted private key. "
+        + "Only needs to be provided if the key is actually encrypted.",
+    ),
+    debug: bool = typer.Option(
+        False, help="Set this option in order to view traceback for errors."
+    ),
+):
+    """Open an interactive shell to manage an upload box (upload, ls, rm)."""
+    modify_for_debug(debug)
+    asyncio.run(
+        async_ubox(
+            my_public_key_path=my_public_key_path,
+            my_private_key_path=my_private_key_path,
+            passphrase=passphrase,
+        )
+    )
 
 
 @cli.command(no_args_is_help=True)

@@ -37,7 +37,7 @@ from ghga_connector.core.utils import get_work_package_token
 
 from .. import exceptions
 
-WorkType = Literal["create", "upload", "close", "delete"]
+WorkType = Literal["create", "upload", "close", "delete", "view"]
 
 
 class WorkPackageClient:

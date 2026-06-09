@@ -29,48 +29,18 @@ from ghga_connector.core.downloading.downloader import (
     handle_download_errors,
 )
 from ghga_connector.core.uploading.api_calls import UploadClient
-from ghga_connector.core.uploading.batch_processing import upload_files_from_list
+from ghga_connector.core.uploading.batch_processing import (
+    parse_file_info_for_upload,
+    upload_files_from_list,
+)
 from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
+from ghga_connector.core.uploading.ubox_shell import UboxShell
 from ghga_connector.core.work_package import WorkPackageClient
 
 from .. import exceptions
 from . import utils
 from .crypt import Crypt4GHDecryptor
 from .message_display import CLIMessageDisplay
-
-
-def parse_file_info_for_upload(file_info: list[str]) -> list[CoreFileInfo]:
-    """Given a list of strings, derive a file alias, path, and size from each item."""
-    items: list[CoreFileInfo] = []
-    for i, arg in enumerate(file_info, 1):
-        if not arg:
-            continue
-        if "," in arg:
-            alias, path = arg.split(",", 1)
-            alias = alias.strip()
-            if not path.strip():
-                raise RuntimeError(
-                    f"No path supplied for alias '{alias}' in arg #{i}. Verify input and"
-                    + " ensure that alias and file path are separated only by a comma"
-                    + " and no whitespace."
-                )
-            validated_path = utils.parse_file_upload_path(path)
-        else:
-            validated_path = utils.parse_file_upload_path(arg)
-            alias = validated_path.name
-        items.append(
-            CoreFileInfo(
-                alias=alias,
-                path=validated_path,
-                decrypted_size=validated_path.stat().st_size,
-            )
-        )
-
-    # Ensure unique aliases and file paths
-    for field_name in ["alias", "path"]:
-        utils.detect_duplicates([getattr(x, field_name) for x in items], field_name)
-
-    return items
 
 
 async def async_upload(
@@ -122,6 +92,31 @@ async def upload_files(
         my_private_key=my_private_key,
         max_concurrent_uploads=config.max_concurrent_uploads,
     )
+
+
+async def async_ubox(
+    *,
+    my_public_key_path: Path,
+    my_private_key_path: Path,
+    passphrase: str | None = None,
+):
+    """Launch an interactive shell for managing a single upload box.
+
+    Prompts for an access token (via the Work Package client), then opens a small
+    REPL exposing 'upload', 'ls' and 'rm' commands against the box.
+    """
+    my_public_key = utils.get_public_key(my_public_key_path)
+    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+
+    async with async_client() as client, set_runtime_config(client=client):
+        work_package_client = WorkPackageClient(
+            client=client, my_private_key=my_private_key, my_public_key=my_public_key
+        )
+        upload_client = UploadClient(
+            client=client, work_package_client=work_package_client
+        )
+        shell = UboxShell(upload_client=upload_client, my_private_key=my_private_key)
+        await shell.run()
 
 
 async def async_download(
