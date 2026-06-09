@@ -1,7 +1,16 @@
-def test_config(rendered_chart):
+from math import exp
+
+
+def test_config(rendered_chart, expected, release_name):
     manifests = rendered_chart("common.yaml", "config.yaml")
-    assert manifests["ConfigMap"]["data"]["config"] == "foo: bar\n"
-    print(manifests["ConfigMap"]["data"]["config"])
+    assert manifests["ConfigMap"]["data"]["config"] == expected("config", "configMap")["data"]
+    assert manifests["ConfigMap"]["metadata"]["name"] == f"{release_name}"
+    volume = manifests["Deployment"]["spec"]["template"]["spec"]["volumes"][0]
+    assert volume == expected("config", "volume")
+
+    mount = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["volumeMounts"][0]
+    assert mount == expected("config", "mount")
+
 
 
 def test_extra_volume(rendered_chart):
@@ -34,8 +43,31 @@ def test_kafka_user(rendered_chart, expected):
 
 def test_vault_agent(rendered_chart, release_name, expected):
     manifests = rendered_chart("vault_enabled.yaml")
+    exp = expected("vault_enabled", "podAnnotations")
+    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+
+    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
+    print(diff)
+    assert not diff, diff
+    
     assert (
         expected("vault_enabled", "podAnnotations").items()
+        <= manifests["Deployment"]["spec"]["template"]["metadata"][
+            "annotations"
+        ].items()
+    )
+
+def test_vault_single_template(rendered_chart, release_name, expected):
+    manifests = rendered_chart("vault_single_template.yaml")
+    exp = expected("vault_single_template", "podAnnotations")
+    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+
+    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
+    print(diff)
+    assert not diff, diff
+    
+    assert (
+        expected("vault_single_template", "podAnnotations").items()
         <= manifests["Deployment"]["spec"]["template"]["metadata"][
             "annotations"
         ].items()

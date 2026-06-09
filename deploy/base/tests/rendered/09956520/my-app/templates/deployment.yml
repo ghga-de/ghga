@@ -1,0 +1,129 @@
+---
+# Source: my-app/templates/deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-my-app
+  namespace: "test"
+  labels:
+    app.kubernetes.io/name: my-app
+    helm.sh/chart: my-app-21.1.0
+    app.kubernetes.io/instance: test-my-app
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "6.2.0"
+    app: test-my-app
+  annotations:
+    configmap-hash: 1129e97254d84f196776cc7d2bebc44b7258bfde2ba88fafafd47b673b645e81
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: my-app
+      app.kubernetes.io/instance: test-my-app
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        configmap-hash: 1129e97254d84f196776cc7d2bebc44b7258bfde2ba88fafafd47b673b645e81
+        vault.hashicorp.com/agent-cache-enable: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-pre-populate-only: "false"
+        vault.hashicorp.com/agent-run-as-same-user: "true"
+        vault.hashicorp.com/tls-skip-verify: "false"
+        vault.hashicorp.com/role: "test-my-app"
+        vault.hashicorp.com/agent-inject-command-crypt4ghInternalPub: |
+          kill -TERM $(pgrep python)
+        vault.hashicorp.com/agent-inject-file-crypt4ghInternalPub: /vault/secrets/internal.pub
+        vault.hashicorp.com/agent-inject-template-crypt4ghInternalPub: |
+          {{ with secret "secret/data/crypt4gh/keys" -}}
+          {{ index .Data.data "internal_pub" }}
+          {{- end }}
+        vault.hashicorp.com/agent-inject-command-service-secrets: |
+          kill -TERM $(pgrep python)
+        vault.hashicorp.com/agent-inject-secret-service-secrets: default-mongodb-mongodb/creds/test-my-app
+        vault.hashicorp.com/agent-inject-template-service-secrets: |
+          {{- with secret "default-mongodb-mongodb/creds/test-my-app" -}}
+          export TEST_DB="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
+          export DB_CONNECTION_STR=$TEST_DB
+          export MONGO_DSN=$TEST_DB
+          {{- end }}
+          {{ with secret "operational-secrets/data/unique/apps/archive/default/test-my-app" -}}
+          {{ if .Data.data }}{{- range $k, $v := .Data.data }}
+          export {{ $k }}='{{ $v }}'
+          {{- end }}{{- end }}{{- end }}
+          {{ with secret "secret/data/crypt4gh/keys" -}}
+          export C4GH_INTERNAL_KEY='{{ index .Data.data "internal_priv" }}'
+          {{- end }}
+          {{ with secret "secret/data/apps/api" -}}
+          export API_TOKEN='{{ index .Data.data "token" }}'
+          {{- end }}
+          {{ with secret "secret/data/apps/license" -}}
+          export LICENSE_KEY='{{ index .Data.data "license_key" }}'
+          {{- end }}
+        helm.sh/revision: "1"
+      labels:
+        app.kubernetes.io/name: my-app
+        helm.sh/chart: my-app-21.1.0
+        app.kubernetes.io/instance: test-my-app
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/version: "6.2.0"
+        app: test-my-app
+    spec:
+      securityContext:
+        fsGroup: 1000
+      serviceAccountName: test-my-app
+      
+      shareProcessNamespace: true
+      restartPolicy: Always
+      enableServiceLinks: true
+      containers:
+        - image: docker.io/:6.2.0
+          imagePullPolicy: IfNotPresent
+          
+          env:
+            - name: _CONFIG_YAML
+              value: /etc/config.yaml
+          name: test-my-app
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            limits:
+              cpu: 1500m
+              memory: 2048M
+            requests:
+              cpu: 1000m
+              memory: 1024M
+          volumeMounts:
+            - mountPath: /etc/config.yaml
+              name: config
+              readOnly: true
+              subPath: config.yaml
+      volumes:
+        - configMap:
+            items:
+            - key: config
+              path: config.yaml
+            name: test-my-app
+          name: config      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: test-my-app
+                    app.kubernetes.io/name: my-app
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+

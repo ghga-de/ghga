@@ -47,7 +47,7 @@ def _dependency_update():
 
 @pytest.fixture()
 def release_name():
-    return "test"
+    return "test-my-app"
 
 
 def _render_chart_case(composed_values: dict[str, Any], release_name: str) -> str:

@@ -1,0 +1,66 @@
+---
+# Source: my-app/templates/job.yml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-my-app
+  namespace: "test"
+  labels:
+    app.kubernetes.io/name: my-app
+    helm.sh/chart: my-app-21.1.0
+    app.kubernetes.io/instance: test-my-app
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "6.2.0"
+    app: test-my-app
+  annotations:
+    configmap-hash: 0dcb125707e03a51feab2716939f310bb506b3447bea1737f92deb6c1e82adce
+spec:
+  template:
+    metadata:
+      annotations:
+        configmap-hash: 0dcb125707e03a51feab2716939f310bb506b3447bea1737f92deb6c1e82adce
+        helm.sh/revision: "1"
+      labels:
+        app.kubernetes.io/name: my-app
+        helm.sh/chart: my-app-21.1.0
+        app.kubernetes.io/instance: test-my-app
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/version: "6.2.0"
+        app: test-my-app
+    spec:
+      securityContext:
+        fsGroup: 1000
+      shareProcessNamespace: false
+      restartPolicy: Never
+      serviceAccountName: test-my-app
+      containers:
+        - name: test-my-app
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          image: docker.io/busybox:latest
+          imagePullPolicy: Always
+          command:
+          - sh
+          - -c
+          args:
+          - sleep 100000000
+          volumeMounts:
+            - mountPath: /home/appuser/config.yaml
+              name: config
+              readOnly: true
+              subPath: config.yaml
+      volumes:
+          - configMap:
+              items:
+              - key: config
+                path: config.yaml
+              name: test-my-app
+            name: config

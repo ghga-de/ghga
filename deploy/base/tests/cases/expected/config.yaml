@@ -1,0 +1,19 @@
+configMap:
+  # data gets sorted by key, so baz comes before foo
+  data: |
+    foo: bar
+
+
+mount:
+  mountPath: /home/appuser/config.yaml
+  name: config
+  readOnly: true
+  subPath: config.yaml
+
+volume:
+  configMap:
+    items:
+    - key: config
+      path: config.yaml
+    name: test-my-app
+  name: config

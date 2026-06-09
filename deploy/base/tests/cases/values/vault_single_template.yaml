@@ -1,0 +1,37 @@
+vaultAgent:
+  singleTemplate: true
+  enabled: true
+  secrets:
+    mongodb:
+      enabled: true
+      parameterName: TEST_DB
+    service:
+      enabled: true
+    # rendered to a file on disk
+    crypt4ghInternalPub:
+      enabled: true
+      renderToFile: true
+      secretPath: secret/data/crypt4gh/keys
+      dataKey: internal_pub
+      mountPath: /vault/secrets/internal.pub
+
+    # rendered as an env-var export (no file)
+    crypt4ghInternalPriv:
+      enabled: true
+      renderToFile: false
+      secretPath: secret/data/crypt4gh/keys
+      dataKey: internal_priv
+      parameterName: c4gh_internal_key
+
+    # disabled — should produce no keys at all
+    crypt4ghExternalPriv:
+      enabled: false
+
+    generic:
+      apiToken:
+        path: secret/data/apps/api
+        dataKey: token
+        parameterName: api_token
+      licenseKey:
+        path: secret/data/apps/license
+        parameterName: license_key   # no dataKey -> falls back to parameterName

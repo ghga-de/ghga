@@ -1,0 +1,19 @@
+---
+# Source: my-app/templates/service.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-my-app
+  namespace: "test"
+  labels:
+    app.kubernetes.io/name: my-app
+    helm.sh/chart: my-app-21.1.0
+    app.kubernetes.io/instance: test-my-app
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "6.2.0"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: my-app
+    app.kubernetes.io/instance: test-my-app
+

@@ -40,7 +40,11 @@ spec:
         {{- .Values.podAnnotations | toYaml | nindent 8 }}
         {{- end }}
         {{- if .Values.vaultAgent.enabled }}
+        {{- if .Values.vaultAgent.singleTemplate }}
+        {{- include "ghga-common.vaultAgentAnnotationsSingleTemplate" . | nindent 8 }}
+        {{- else }}
         {{- include "ghga-common.vaultAgentAnnotations" . | nindent 8 }}
+        {{- end }}
         {{- end }}
         helm.sh/revision: {{ .Release.Revision | quote }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
