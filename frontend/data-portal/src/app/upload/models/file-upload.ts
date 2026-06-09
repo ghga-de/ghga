@@ -14,6 +14,28 @@ export type FileUploadState =
   | 'awaiting_archival'
   | 'archived';
 
+/** User-friendly display names for file upload states */
+export const FileUploadStatePrintable: Record<FileUploadState, string> = {
+  init: 'uploading…',
+  inbox: 're-encrypting…',
+  interrogated: 're-encrypted',
+  awaiting_archival: 'awaiting archival…',
+  archived: 'archived',
+  failed: 'failed',
+  cancelled: 'deleted',
+};
+
+/** State-specific text classes for file upload states */
+export const FileUploadStateClass: Record<FileUploadState, string> = {
+  init: 'text-warning',
+  inbox: 'text-warning',
+  interrogated: 'text-success',
+  awaiting_archival: 'text-warning',
+  archived: 'text-gray-600',
+  failed: 'text-error',
+  cancelled: 'text-error',
+};
+
 /** A file upload with its accession number */
 export interface FileUploadWithAccession {
   /** Unique identifier for the file upload */

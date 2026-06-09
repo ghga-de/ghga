@@ -39,11 +39,9 @@ import {
   UploadBoxState,
   UploadBoxStateClass,
 } from '@app/upload/models/box';
-import {
-  FileUploadState,
-  FileUploadWithAccession,
-} from '@app/upload/models/file-upload';
+import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
+import { FileUploadStatePipe } from '@app/upload/pipes/file-upload-state-pipe';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
 
@@ -63,6 +61,7 @@ import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapp
     RouterLink,
     Capitalise,
     ParseBytes,
+    FileUploadStatePipe,
     UploadBoxMappingComponent,
   ],
   providers: [CommonDatePipe],
@@ -203,28 +202,6 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   isGrantActive(grant: UploadGrant): boolean {
     const today = new Date().toISOString().slice(0, 10);
     return grant.valid_from <= today && today <= grant.valid_until;
-  }
-
-  /**
-   * Get the CSS class for a file upload status.
-   * @param state - the file upload state
-   * @returns the CSS class for the state
-   */
-  getFileStatusClass(state: FileUploadState): string {
-    switch (state) {
-      case 'interrogated':
-        return 'text-success';
-      case 'archived':
-        return 'text-gray-600';
-      case 'failed':
-      case 'cancelled':
-        return 'text-error';
-      case 'init':
-      case 'inbox':
-      case 'awaiting_archival':
-      default:
-        return 'text-warning';
-    }
   }
 
   /**

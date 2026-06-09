@@ -69,7 +69,7 @@ test('can map files and archive locked upload box using mapping tool', async ({
     .filter({ hasText: 'methylation_sample_001.meth' })
     .first();
   await expect(methStorageRow).toBeVisible();
-  await expect(methStorageRow).toContainText('interrogated');
+  await expect(methStorageRow).toContainText('re-encrypted');
   await expect(methStorageRow).toContainText('2 GiB');
 
   const studyCard = page.locator('mat-card').filter({
