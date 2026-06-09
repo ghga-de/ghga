@@ -461,10 +461,8 @@ async def test_revoke_upload_access_grant(
         assert response.status_code == 500
 
 
-async def test_get_upload_access_grants(
-    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
-):
-    """Test the GET /upload-grants endpoint"""
+async def test_get_upload_access_grants_auth_guard(config: Config, bad_auth_headers):
+    """Test auth guarding for GET /upload-grants."""
     rdub_manager = AsyncMock()
     async with (
         prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
@@ -472,44 +470,117 @@ async def test_get_upload_access_grants(
     ):
         url = "/upload-grants"
 
-        # unauthenticated
         response = await rest_client.get(url)
         assert response.status_code == 401
 
-        # bad credentials
         response = await rest_client.get(url, headers=bad_auth_headers)
         assert response.status_code == 401
 
-        # normal response but user is not a data steward (no data_steward role)
-        response = await rest_client.get(url, headers=user_auth_headers)
-        assert response.status_code == 403
 
-        test_grants = [
-            GrantWithBoxInfo(
-                id=uuid4(),
-                user_id=uuid4(),
-                iva_id=uuid4(),
-                box_id=TEST_BOX_ID,
-                created=now_utc_ms_prec(),
-                valid_from=now_utc_ms_prec(),
-                valid_until=now_utc_ms_prec() + timedelta(days=7),
-                user_name="Test User",
-                user_email="test@example.com",
-                user_title="Dr.",
-                box_title="Test Box",
-                box_description="Test box description",
-                box_state="open",
-                box_version=0,
-            )
-        ]
-        rdub_manager.rdub_manager.get_upload_access_grants.return_value = test_grants
+async def test_get_upload_access_grants_user_implicit_own(
+    config: Config, user_auth_headers
+):
+    """Test that regular users can fetch their own grants without user_id filter."""
+    rdub_manager = AsyncMock()
+    rdub_manager.rdub_manager.get_upload_access_grants.return_value = []
+
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-grants"
+        response = await rest_client.get(url, headers=user_auth_headers)
+        assert response.status_code == 200
+        rdub_manager.rdub_manager.get_upload_access_grants.assert_awaited_once_with(
+            user_id=TEST_DS_ID,
+            iva_id=None,
+            box_id=None,
+            valid=None,
+        )
+
+
+async def test_get_upload_access_grants_user_explicit_own(
+    config: Config, user_auth_headers
+):
+    """Test that regular users can fetch their own grants with explicit user_id."""
+    rdub_manager = AsyncMock()
+    rdub_manager.rdub_manager.get_upload_access_grants.return_value = []
+
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-grants"
+        response = await rest_client.get(
+            url,
+            headers=user_auth_headers,
+            params={"user_id": str(TEST_DS_ID), "valid": "true"},
+        )
+        assert response.status_code == 200
+        rdub_manager.rdub_manager.get_upload_access_grants.assert_awaited_once_with(
+            user_id=TEST_DS_ID,
+            iva_id=None,
+            box_id=None,
+            valid=True,
+        )
+
+
+async def test_get_upload_access_grants_user_other_user_forbidden(
+    config: Config, user_auth_headers
+):
+    """Test that regular users cannot fetch grants belonging to other users."""
+    rdub_manager = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-grants"
+        response = await rest_client.get(
+            url,
+            headers=user_auth_headers,
+            params={"user_id": str(uuid4())},
+        )
+        assert response.status_code == 403
+        rdub_manager.rdub_manager.get_upload_access_grants.assert_not_called()
+
+
+async def test_get_upload_access_grants_steward_can_query_all_and_filtered(
+    config: Config, ds_auth_headers
+):
+    """Test that data stewards can query all grants and apply arbitrary filters."""
+    rdub_manager = AsyncMock()
+    test_grants = [
+        GrantWithBoxInfo(
+            id=uuid4(),
+            user_id=uuid4(),
+            iva_id=uuid4(),
+            box_id=TEST_BOX_ID,
+            created=now_utc_ms_prec(),
+            valid_from=now_utc_ms_prec(),
+            valid_until=now_utc_ms_prec() + timedelta(days=7),
+            user_name="Test User",
+            user_email="test@example.com",
+            user_title="Dr.",
+            box_title="Test Box",
+            box_description="Test box description",
+            box_state="open",
+            box_version=0,
+        )
+    ]
+    rdub_manager.rdub_manager.get_upload_access_grants.return_value = test_grants
+
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-grants"
+
         response = await rest_client.get(url, headers=ds_auth_headers)
         assert response.status_code == 200
         assert response.json() == [
             grant.model_dump(mode="json") for grant in test_grants
         ]
 
-        # test with query parameters
         response = await rest_client.get(
             url,
             headers=ds_auth_headers,
@@ -517,9 +588,19 @@ async def test_get_upload_access_grants(
         )
         assert response.status_code == 200
 
-        # handle other exception
-        rdub_manager.reset_mock()
-        rdub_manager.rdub_manager.get_upload_access_grants.side_effect = TypeError()
+
+async def test_get_upload_access_grants_maps_unexpected_errors_to_500(
+    config: Config, ds_auth_headers
+):
+    """Test that unexpected manager errors are mapped to HTTP 500."""
+    rdub_manager = AsyncMock()
+    rdub_manager.rdub_manager.get_upload_access_grants.side_effect = TypeError()
+
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-grants"
         response = await rest_client.get(url, headers=ds_auth_headers)
         assert response.status_code == 500
 

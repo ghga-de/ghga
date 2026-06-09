@@ -23,10 +23,15 @@ from fastapi import APIRouter, Query, status
 from pydantic import UUID4
 
 from rs.adapters.inbound.fastapi_ import dummies
-from rs.adapters.inbound.fastapi_.auth import StewardAuthContext
+from rs.adapters.inbound.fastapi_.auth import (
+    StewardAuthContext,
+    UserAuthContext,
+    is_steward,
+)
 from rs.adapters.inbound.fastapi_.http_exceptions import (
     HttpGrantNotFoundError,
     HttpInternalError,
+    HttpNotAuthorizedError,
 )
 from rs.constants import TRACER
 from rs.core.models import GrantAccessRequest, GrantId, GrantWithBoxInfo
@@ -37,34 +42,38 @@ log = logging.getLogger(__name__)
 upload_grant_router = APIRouter()
 
 
-@upload_grant_router.delete(
-    "/{grant_id}",
-    summary="Revoke an upload access grant",
-    description="Revokes an existing upload access grant.",
+@upload_grant_router.post(
+    "",
+    summary="Grant upload access",
+    description="Grant upload access to a user for a single research data upload box."
+    + " Users cannot upload any files until they have been granted access to a box.",
+    status_code=status.HTTP_201_CREATED,
     responses={
-        204: {
-            "description": "Upload access grant has been revoked.",
-        },
+        201: {"description": "Upload access granted successfully."},
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
-        404: {"description": "The upload access grant was not found."},
+        422: {"description": "Validation error in request body."},
     },
-    status_code=204,
 )
-@TRACER.start_as_current_span("routes.revoke_upload_access_grant")
-async def revoke_upload_access_grant(
-    grant_id: UUID4,
+@TRACER.start_as_current_span("routes.grant_upload_access")
+async def grant_upload_access(
+    request: GrantAccessRequest,
     ghga_registry: dummies.GHGARegistryDummy,
     auth_context: StewardAuthContext,
-) -> None:
-    """Revoke an upload access grant."""
+) -> GrantId:
+    """Grant upload access to a user. Requires Data Steward role."""
     try:
-        await ghga_registry.rdub_manager.revoke_upload_access_grant(grant_id)
-    except RDUBManagerPort.GrantNotFoundError as err:
-        raise HttpGrantNotFoundError(grant_id=grant_id) from err
+        return await ghga_registry.rdub_manager.grant_upload_access(
+            user_id=request.user_id,
+            iva_id=request.iva_id,
+            box_id=request.box_id,
+            valid_from=request.valid_from,
+            valid_until=request.valid_until,
+            granting_user_id=UUID(auth_context.id),
+        )
     except Exception as err:
         log.error(err, exc_info=True)
-        raise HttpInternalError(message="Failed to revoke access grant") from err
+        raise HttpInternalError(message="Failed to grant upload access") from err
 
 
 @upload_grant_router.get(
@@ -88,7 +97,7 @@ async def revoke_upload_access_grant(
 @TRACER.start_as_current_span("routes.get_upload_access_grants")
 async def get_upload_access_grants(  # noqa: PLR0913
     ghga_registry: dummies.GHGARegistryDummy,
-    auth_context: StewardAuthContext,
+    auth_context: UserAuthContext,
     user_id: Annotated[
         UUID4 | None,
         Query(
@@ -128,6 +137,11 @@ async def get_upload_access_grants(  # noqa: PLR0913
     and by whether the grant is currently valid or not. Results are sorted by validity,
     user ID, IVA ID, box ID, and grant ID.
     """
+    if not is_steward(auth_context):
+        if user_id is None:
+            user_id = UUID(auth_context.id)
+        elif str(user_id) != auth_context.id:
+            raise HttpNotAuthorizedError()
     try:
         return await ghga_registry.rdub_manager.get_upload_access_grants(
             user_id=user_id, iva_id=iva_id, box_id=box_id, valid=valid
@@ -137,35 +151,31 @@ async def get_upload_access_grants(  # noqa: PLR0913
         raise HttpInternalError(message="Failed to get upload access grants") from err
 
 
-@upload_grant_router.post(
-    "",
-    summary="Grant upload access",
-    description="Grant upload access to a user for a single research data upload box."
-    + " Users cannot upload any files until they have been granted access to a box.",
-    status_code=status.HTTP_201_CREATED,
+@upload_grant_router.delete(
+    "/{grant_id}",
+    summary="Revoke an upload access grant",
+    description="Revokes an existing upload access grant.",
     responses={
-        201: {"description": "Upload access granted successfully."},
+        204: {
+            "description": "Upload access grant has been revoked.",
+        },
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
-        422: {"description": "Validation error in request body."},
+        404: {"description": "The upload access grant was not found."},
     },
+    status_code=204,
 )
-@TRACER.start_as_current_span("routes.grant_upload_access")
-async def grant_upload_access(
-    request: GrantAccessRequest,
+@TRACER.start_as_current_span("routes.revoke_upload_access_grant")
+async def revoke_upload_access_grant(
+    grant_id: UUID4,
     ghga_registry: dummies.GHGARegistryDummy,
     auth_context: StewardAuthContext,
-) -> GrantId:
-    """Grant upload access to a user. Requires Data Steward role."""
+) -> None:
+    """Revoke an upload access grant."""
     try:
-        return await ghga_registry.rdub_manager.grant_upload_access(
-            user_id=request.user_id,
-            iva_id=request.iva_id,
-            box_id=request.box_id,
-            valid_from=request.valid_from,
-            valid_until=request.valid_until,
-            granting_user_id=UUID(auth_context.id),
-        )
+        await ghga_registry.rdub_manager.revoke_upload_access_grant(grant_id)
+    except RDUBManagerPort.GrantNotFoundError as err:
+        raise HttpGrantNotFoundError(grant_id=grant_id) from err
     except Exception as err:
         log.error(err, exc_info=True)
-        raise HttpInternalError(message="Failed to grant upload access") from err
+        raise HttpInternalError(message="Failed to revoke access grant") from err
