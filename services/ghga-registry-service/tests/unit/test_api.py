@@ -241,12 +241,13 @@ async def test_update_research_data_upload_box(
         # handle version error from core
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (
-            RDUBManagerPort.VersionError()
+            RDUBManagerPort.BoxVersionError()
         )
         response = await rest_client.patch(
             url, json=request_data, headers=user_auth_headers
         )
         assert response.status_code == 409
+        assert response.json()["exception_id"] == "boxVersionOutdated"
 
         # handle state change error from core
         rdub_manager.reset_mock()
@@ -753,15 +754,31 @@ async def test_submit_accession_map(
         )
         assert response.status_code == 204
 
-        # handle accession map error from core
+        # Make sure file ID problems net us a 400 status code
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.store_accession_map.side_effect = (
-            RDUBManagerPort.AccessionMapError()
+            RDUBManagerPort.AccessionMapError(
+                "duplicate", error_type="duplicate_file_ids"
+            )
         )
         response = await rest_client.post(
             url, json=request_data, headers=ds_auth_headers
         )
         assert response.status_code == 400
+        assert response.json()["exception_id"] == "accessionMapError"
+        assert response.json()["data"]["error_type"] == "duplicate_file_ids"
+
+        # Make sure an archived box or accession conflict return a 409
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.store_accession_map.side_effect = (
+            RDUBManagerPort.AccessionMapError("archived", error_type="archived")
+        )
+        response = await rest_client.post(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 409
+        assert response.json()["exception_id"] == "accessionMapError"
+        assert response.json()["data"]["error_type"] == "archived"
 
         # handle box not found error from core
         rdub_manager.reset_mock()
@@ -773,6 +790,36 @@ async def test_submit_accession_map(
         )
         assert response.status_code == 404
 
+        # handle version error from core
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.store_accession_map.side_effect = (
+            RDUBManagerPort.BoxVersionError()
+        )
+        response = await rest_client.post(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 409
+        assert response.json()["exception_id"] == "boxVersionOutdated"
+
+        # handle accession conflict — immutable mapping would be overwritten
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.store_accession_map.side_effect = (
+            RDUBManagerPort.AccessionMapError(
+                "conflict",
+                error_type="accession_conflict",
+                conflicting_accessions=["GHGAF001", "GHGAF002"],
+            )
+        )
+        response = await rest_client.post(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 409
+        body = response.json()
+        assert body["exception_id"] == "accessionMapError"
+        assert body["data"]["error_type"] == "accession_conflict"
+        assert body["data"]["conflicting_accessions"] == ["GHGAF001", "GHGAF002"]
+        assert body["data"]["affected_file_ids"] == []
+
         # handle other exception
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.store_accession_map.side_effect = TypeError()
@@ -780,6 +827,100 @@ async def test_submit_accession_map(
             url, json=request_data, headers=ds_auth_headers
         )
         assert response.status_code == 500
+
+
+@pytest.mark.parametrize(
+    "error_kwargs,expected_data",
+    [
+        (
+            {"error_type": "archived"},
+            {
+                "error_type": "archived",
+                "conflicting_accessions": [],
+                "affected_file_ids": [],
+            },
+        ),
+        (
+            {
+                "error_type": "duplicate_file_ids",
+                "affected_file_ids": ["file-1", "file-2"],
+            },
+            {
+                "error_type": "duplicate_file_ids",
+                "conflicting_accessions": [],
+                "affected_file_ids": ["file-1", "file-2"],
+            },
+        ),
+        (
+            {
+                "error_type": "unknown_file_ids",
+                "affected_file_ids": ["file-3"],
+            },
+            {
+                "error_type": "unknown_file_ids",
+                "conflicting_accessions": [],
+                "affected_file_ids": ["file-3"],
+            },
+        ),
+        (
+            {
+                "error_type": "unmapped_file_ids",
+                "affected_file_ids": ["file-4", "file-5"],
+            },
+            {
+                "error_type": "unmapped_file_ids",
+                "conflicting_accessions": [],
+                "affected_file_ids": ["file-4", "file-5"],
+            },
+        ),
+        (
+            {
+                "error_type": "accession_conflict",
+                "conflicting_accessions": ["GHGAF001", "GHGAF002"],
+            },
+            {
+                "error_type": "accession_conflict",
+                "conflicting_accessions": ["GHGAF001", "GHGAF002"],
+                "affected_file_ids": [],
+            },
+        ),
+    ],
+)
+async def test_accession_map_error_translation(
+    config: Config,
+    ds_auth_headers,
+    error_kwargs,
+    expected_data,
+):
+    """Test that every AccessionMapError permutation translates to an HttpAccessionMapError
+    with the correct status code (409 for conflict/archived, 400 for file ID errors),
+    the correct exception_id, and the correct populated data fields.
+    """
+    rdub_manager = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/file-ids"
+        request_data = {
+            "box_version": 0,
+            "mapping": {"GHGAF001": str(uuid4()), "GHGAF002": str(uuid4())},
+            "study_id": "GHGA-STUDY-001",
+        }
+        rdub_manager.rdub_manager.store_accession_map.side_effect = (
+            RDUBManagerPort.AccessionMapError("", **error_kwargs)
+        )
+        response = await rest_client.post(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == (
+            409
+            if error_kwargs["error_type"] in {"archived", "accession_conflict"}
+            else 400
+        )
+        body = response.json()
+        assert body["exception_id"] == "accessionMapError"
+        assert body["data"] == expected_data
 
 
 @pytest.mark.parametrize(

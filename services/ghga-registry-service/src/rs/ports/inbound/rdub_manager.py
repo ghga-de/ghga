@@ -55,12 +55,37 @@ class RDUBManagerPort(ABC):
             super().__init__(msg)
 
     class AccessionMapError(RuntimeError):
-        """Raised when an operation fails for a reason directly related to the accession map."""
+        """Raised when an operation fails for a reason directly related to the accession map.
+
+        `error_type` is always set and indicates the specific failure:
+        - "archived": box is already archived; no item lists populated.
+        - "duplicate_file_ids": a file ID appears more than once; `affected_file_ids`
+          contains the duplicated IDs.
+        - "unknown_file_ids": map references file IDs not present in the box;
+          `affected_file_ids` contains them.
+        - "unmapped_file_ids": active box files are absent from the map;
+          `affected_file_ids` contains them.
+        - "accession_conflict": accessions already mapped to different file IDs
+          (immutability violation); `conflicting_accessions` contains them.
+        """
+
+        def __init__(
+            self,
+            message: str = "",
+            *,
+            error_type: str,
+            conflicting_accessions: list[str] | None = None,
+            affected_file_ids: list[str] | None = None,
+        ) -> None:
+            self.error_type = error_type
+            self.conflicting_accessions = conflicting_accessions or []
+            self.affected_file_ids = affected_file_ids or []
+            super().__init__(message)
 
     class ArchivalPrereqsError(RuntimeError):
         """Raised when the pre-requisites for box archival are not met."""
 
-    class VersionError(RuntimeError):
+    class BoxVersionError(RuntimeError):
         """Raised when changes to a resource can't be made because the request
         references a version of the resource that is not current.
         """
@@ -128,7 +153,7 @@ class RDUBManagerPort(ABC):
         Raises:
             BoxNotFoundError: If the research data upload box doesn't exist.
             BoxAccessError: If the user doesn't have access to the research data upload box.
-            VersionError: If the requested ResearchDataUploadBox version is outdated or
+            BoxVersionError: If the requested ResearchDataUploadBox version is outdated or
                 the FileUploadBox version is outdated when updating the FileUploadBox.
             StateChangeError: If the requested state transition is invalid.
             OperationError: If there's a problem updating the corresponding FileUploadBox.
@@ -287,8 +312,10 @@ class RDUBManagerPort(ABC):
         Check the specified ResearchDataUploadBox to verify it exists, that the version
         stated in the request is current, and that the box has not already been archived.
 
-        Next, checked the mapping to verify that every file ID is specified exactly
-        once (and thus mapping is 1:1).
+        Next, check the mapping to verify that every file ID is specified exactly
+        once (and thus mapping is 1:1). This does not mean that the mapping contains
+        all accessions in the study, just all the accessions associated with the upload
+        box.
 
         Then retrieve the latest list of files in the box from the File Box API to
         verify that:
@@ -299,11 +326,10 @@ class RDUBManagerPort(ABC):
 
         Raises:
             BoxNotFoundError: If the box doesn't exist
-            VersionError: If the requested ResearchDataUploadBox version is outdated
-            AccessionMapError: If
-            - the box is already archived, or
-            - the accession map includes a file ID that doesn't exist in the box, or
-            - any files are specified more than once, or
-            - any files in the box are left unmapped.
+            BoxVersionError: If the requested ResearchDataUploadBox version is outdated
+            AccessionMapError: In all cases `error_type` is set. See the class
+            docstring for the full mapping of `error_type` values to populated fields.
+            Raised when the box is archived, any file IDs are duplicated, unknown, or
+            unmapped, or any accessions conflict with existing immutable mappings.
         """
         ...

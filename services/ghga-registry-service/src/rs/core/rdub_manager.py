@@ -16,6 +16,7 @@
 """Logic for creating and managing ResearchDataUploadBoxes."""
 
 import logging
+from collections import Counter
 from typing import Any
 from uuid import UUID
 
@@ -134,7 +135,7 @@ class RDUBManager(RDUBManagerPort):
         Raises:
             BoxNotFoundError: If the research data upload box doesn't exist.
             BoxAccessError: If the user doesn't have access to the research data upload box.
-            VersionError: If the requested ResearchDataUploadBox version is outdated or
+            BoxVersionError: If the requested ResearchDataUploadBox version is outdated or
                 the FileUploadBox version is outdated when updating the FileUploadBox.
             StateChangeError: If the requested state transition is invalid.
             OperationError: If there's a problem updating the corresponding FileUploadBox.
@@ -160,7 +161,7 @@ class RDUBManager(RDUBManagerPort):
                     "requested_version": version,
                 },
             )
-            raise self.VersionError(f"Research Data Upload Box {box_id} has changed")
+            raise self.BoxVersionError(f"Research Data Upload Box {box_id} has changed")
 
         update = {
             "title": title,
@@ -252,7 +253,7 @@ class RDUBManager(RDUBManagerPort):
                             "request_file_upload_box_version": old_box.file_upload_box_version,
                         },
                     )
-                    raise self.VersionError(
+                    raise self.BoxVersionError(
                         f"File Upload Box {fub_id} version is out of date."
                     ) from version_err
             case _:
@@ -324,7 +325,7 @@ class RDUBManager(RDUBManagerPort):
         Rolls back the local DAO write and re-raises on any client error.
 
         Raises:
-            VersionError: FUB version is out of date.
+            BoxVersionError: FUB version is out of date.
             BoxMaxSizeTooLowError: New max_size is smaller than bytes already uploaded.
         """
         updated_box.file_upload_box_version += 1
@@ -347,7 +348,7 @@ class RDUBManager(RDUBManagerPort):
                 },
             )
             await self._box_dao.update(box)
-            raise self.VersionError(
+            raise self.BoxVersionError(
                 f"File Upload Box {box.file_upload_box_id} version is out of date."
             ) from version_err
         except FileBoxClientPort.FUBMaxSizeTooLowError as size_err:
@@ -390,7 +391,7 @@ class RDUBManager(RDUBManagerPort):
 
         Raises:
             StateChangeError: The requested transition is not in VALID_STATE_TRANSITIONS.
-            VersionError: FUB version is out of date.
+            BoxVersionError: FUB version is out of date.
             ArchivalPrereqsError: Archival prerequisites not met.
         """
         self._check_state_change_is_valid(
@@ -758,8 +759,10 @@ class RDUBManager(RDUBManagerPort):
         Check the specified ResearchDataUploadBox to verify it exists, that the version
         stated in the request is current, and that the box has not already been archived.
 
-        Next, checked the mapping to verify that every file ID is specified exactly
-        once (and thus mapping is 1:1).
+        Next, check the mapping to verify that every file ID is specified exactly
+        once (and thus mapping is 1:1). This does not mean that the mapping contains
+        all accessions in the study, just all the accessions associated with the upload
+        box.
 
         Then retrieve the latest list of files in the box from the File Box API to
         verify that:
@@ -770,7 +773,7 @@ class RDUBManager(RDUBManagerPort):
 
         Raises:
             BoxNotFoundError: If the box doesn't exist
-            VersionError: If the requested ResearchDataUploadBox version is outdated
+            BoxVersionError: If the requested ResearchDataUploadBox version is outdated
             AccessionMapError: If
             - the box is already archived, or
             - the accession map includes a file ID that doesn't exist in the box, or
@@ -792,7 +795,7 @@ class RDUBManager(RDUBManagerPort):
                 box_id,
                 box.version,
             )
-            raise self.VersionError("Research Data Upload Box has changed.")
+            raise self.BoxVersionError("Research Data Upload Box has changed.")
 
         # Don't allow changes to archived boxes
         if box.state == "archived":
@@ -802,23 +805,30 @@ class RDUBManager(RDUBManagerPort):
                 extra={"box_id": box_id},
             )
             raise self.AccessionMapError(
-                "Data already archived - accessions cannot be modified."
+                "Data already archived - accessions cannot be modified.",
+                error_type="archived",
             )
 
         # Make sure all file IDs are only specified once
-        unique_file_ids = set(accession_map.values())
-        if dupe_count := (len(accession_map) - len(unique_file_ids)):
+        duplicate_file_ids = [
+            str(file_id)
+            for file_id, count in Counter(accession_map.values()).items()
+            if count > 1
+        ]
+        if duplicate_file_ids:
             log.error(
                 "Duplicate file IDs in accession map for box %s.",
                 box_id,
                 extra={
                     "rdub_id": box_id,
                     "fub_id": box.file_upload_box_id,
-                    "duplicate_count": dupe_count,
+                    "duplicate_file_ids": duplicate_file_ids,
                 },
             )
             raise self.AccessionMapError(
-                f"Detected {dupe_count} file ID(s) specified more than once."
+                f"Detected {len(duplicate_file_ids)} file ID(s) specified more than once.",
+                error_type="duplicate_file_ids",
+                affected_file_ids=duplicate_file_ids,
             )
 
         # Get files list from File Box API
@@ -826,11 +836,13 @@ class RDUBManager(RDUBManagerPort):
             box_id=box.file_upload_box_id
         )
 
+        requested_file_ids = set(accession_map.values())
+
         # Make sure all specified file IDs are active uploads in the box
         file_ids_in_box = set(
             f.id for f in files if f.state not in ("cancelled", "failed")
         )
-        if invalid_ids := (unique_file_ids - file_ids_in_box):
+        if invalid_ids := (requested_file_ids - file_ids_in_box):
             log.error(
                 "Accession map for box %s included unknown file IDs.",
                 box_id,
@@ -842,11 +854,13 @@ class RDUBManager(RDUBManagerPort):
             )
             raise self.AccessionMapError(
                 "Invalid accession map. These file IDs are not in the box:"
-                + f" {', '.join(map(str, invalid_ids))}."
+                + f" {', '.join(map(str, invalid_ids))}.",
+                error_type="unknown_file_ids",
+                affected_file_ids=[str(fid) for fid in invalid_ids],
             )
 
         # Make sure all active files in the box are included in the mapping
-        if unmapped_ids := (file_ids_in_box - unique_file_ids):
+        if unmapped_ids := (file_ids_in_box - requested_file_ids):
             log.error(
                 "Accession map for box %s included unmapped file IDs.",
                 box_id,
@@ -858,13 +872,23 @@ class RDUBManager(RDUBManagerPort):
             )
             raise self.AccessionMapError(
                 "Invalid accession map. These file IDs still need to be mapped:"
-                f" {', '.join(map(str, unmapped_ids))}."
+                f" {', '.join(map(str, unmapped_ids))}.",
+                error_type="unmapped_file_ids",
+                affected_file_ids=[str(fid) for fid in unmapped_ids],
             )
 
         # Submit the accession map via the file controller
-        await self._file_controller.post_file_ids(
-            study_id=study_id, file_id_map=accession_map
-        )
+        try:
+            await self._file_controller.post_file_ids(
+                study_id=study_id, file_id_map=accession_map
+            )
+        except FileControllerPort.ConflictingAccessionError as err:
+            accessions = ", ".join(err.conflicting_accessions)
+            raise self.AccessionMapError(
+                f"The following accessions already have immutable mappings: {accessions}",
+                error_type="accession_conflict",
+                conflicting_accessions=err.conflicting_accessions,
+            ) from err
 
         # Bump the RDUB version number
         updated_box = box.model_copy(update={"version": box.version + 1})

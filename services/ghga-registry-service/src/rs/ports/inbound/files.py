@@ -25,11 +25,26 @@ from rs.core.models import FileAccession
 class FileControllerPort(ABC):
     """Inbound port for filename and file ID operations."""
 
+    class ConflictingAccessionError(RuntimeError):
+        """Raised when a request would overwrite one or more existing immutable
+        accession mappings.
+        """
+
+        def __init__(self, *, conflicting_accessions: list[str]) -> None:
+            self.conflicting_accessions = conflicting_accessions
+            accessions = ", ".join(conflicting_accessions)
+            super().__init__(f"Conflicting accession mappings: {accessions}")
+
     @abstractmethod
     async def post_file_ids(
         self, *, study_id: str, file_id_map: dict[FileAccession, UUID4]
     ) -> None:
-        """Store file accession to internal file ID mappings."""
+        """Store file accession to internal file ID mappings.
+
+        Raises:
+            ConflictingAccessionError: If any accession in the map already exists in the
+                DB with a different file_id. All conflicts are collected before raising.
+        """
 
     @abstractmethod
     async def get_accessions_by_file_ids(
