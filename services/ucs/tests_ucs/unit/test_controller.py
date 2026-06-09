@@ -361,7 +361,7 @@ async def test_get_box_uploads(rig: JointRig):
     # First create a FileUploadBox
     box_id = await rig.create_default_box()
 
-    # Create multiple FileUploads within the box and complete them
+    # Create multiple FileUploads within the box
     controller = rig.controller
     file_ids = []
     for i in range(3):
@@ -422,6 +422,45 @@ async def test_get_box_uploads(rig: JointRig):
     # Verify that we get an empty list for the third box
     no_ids = await controller.get_box_file_info(box_id=empty_box_id)
     assert no_ids == []
+
+
+async def test_get_box_uploads_retrieves_all_states(rig: JointRig):
+    """Make sure that get_box_file_info() lists all files regardless of state"""
+    # First create a FileUploadBox
+    box_id = await rig.create_default_box()
+    storage_alias = next(iter(rig.config.object_storages))
+    states: list[FileUploadState] = sorted(
+        [
+            "interrogated",
+            "awaiting_archival",
+            "archived",
+            "cancelled",
+            "failed",
+            "inbox",
+            "init",
+        ]
+    )
+    for state in states:
+        file_upload = FileUpload(
+            id=uuid4(),
+            box_id=box_id,
+            alias=state,
+            state=state,
+            s3_upload_id=f"upload_for_{state}.vcf",
+            state_updated=now_utc_ms_prec(),
+            storage_alias=storage_alias,
+            bucket_id="bucket1",
+            object_id=uuid4(),
+            decrypted_sha256="decrypted_hash",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+            initiated=now_utc_ms_prec(),
+        )
+        await rig.file_upload_dao.insert(file_upload)
+
+    files = await rig.controller.get_box_file_info(box_id=box_id)
+    assert [f.alias for f in files] == states
 
 
 async def test_create_box_with_unknown_storage_alias(rig: JointRig):

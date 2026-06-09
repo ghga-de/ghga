@@ -982,12 +982,9 @@ class UploadController(UploadControllerPort):
             log.error(error)
             raise error from err
 
-        # Box exists, now get all completed file uploads
+        # Box exists, now get all file uploads
         file_uploads = [
-            x
-            async for x in self._file_upload_dao.find_all(
-                mapping={"box_id": box_id, "inbox_upload_completed": True}
-            )
+            x async for x in self._file_upload_dao.find_all(mapping={"box_id": box_id})
         ]
         file_uploads.sort(key=lambda x: x.alias)
         return file_uploads
