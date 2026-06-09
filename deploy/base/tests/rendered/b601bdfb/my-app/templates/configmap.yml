@@ -1,0 +1,11 @@
+---
+# Source: my-app/templates/configmap.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-my-app
+  namespace: "test"
+data:
+  config: |
+    {}
+

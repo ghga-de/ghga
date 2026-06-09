@@ -1,5 +1,9 @@
 vaultAgent:
   singleTemplate: true
+  singleTemplateAppend: |
+    {{- with secret "test-append" -}}
+    export test-append="{{ .Data.data.value }}"
+    {{- end -}}
   enabled: true
   secrets:
     mongodb:

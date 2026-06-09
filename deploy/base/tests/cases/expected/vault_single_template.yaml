@@ -33,3 +33,6 @@ podAnnotations:
     {{ with secret "secret/data/apps/license" -}}
     export LICENSE_KEY='{{ index .Data.data "license_key" }}'
     {{- end }}
+    {{- with secret "test-append" -}}
+    export test-append="{{ .Data.data.value }}"
+    {{- end -}}

@@ -68,6 +68,10 @@ vault.hashicorp.com/agent-inject-template-{{ $name }}: |
 {{- $stanzas = append $stanzas (printf "{{ with secret %q -}}\nexport %s%s='{{ index .Data.data %q }}'\n{{- end }}" $g.path $envPrefix (upper $g.parameterName) $dk) -}}
 {{- end }}
 {{- end }}
+{{- /* optional: append arbitrary consul-template content to the combined file (raw, not tpl-processed) */ -}}
+{{- with .Values.vaultAgent.singleTemplateAppend }}
+{{- $stanzas = append $stanzas . -}}
+{{- end }}
 {{- /* emit the single combined template once, after every stanza is collected */ -}}
 {{- if $stanzas }}
 vault.hashicorp.com/agent-inject-command-service-secrets: |
