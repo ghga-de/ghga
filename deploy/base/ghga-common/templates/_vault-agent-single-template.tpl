@@ -13,7 +13,9 @@ vault.hashicorp.com/role: "{{ .Release.Name }}"
 {{- $secrets := .Values.vaultAgent.secrets -}}
 {{- $stanzas := list -}}
 {{- $primaryPath := "" -}}
-{{- /* MongoDB connection string (env-var: folded into the single file) */ -}}
+{{- /* MongoDB connection string (env-var: folded into the single file).
+       Single prefixed MONGO_DSN with the connection string inline -- the .env file is
+       read as dotenv (not shell-sourced), so $VAR cross-references are NOT expanded. */ -}}
 {{- with $secrets.mongodb }}
 {{- if .enabled }}
 {{- $path := .secretPath -}}
@@ -23,8 +25,7 @@ vault.hashicorp.com/role: "{{ .Release.Name }}"
 {{-   end -}}
 {{- end -}}
 {{- $primaryPath = $path -}}
-{{- $param := .parameterName | default "DB_URL" -}}
-{{- $stanzas = append $stanzas (printf "{{- with secret %q -}}\nexport %s%s=%q\nexport %sDB_CONNECTION_STR=$%s%s\nexport %sMONGO_DSN=$%s%s\n{{- end }}" $path $envPrefix $param .connectionString $envPrefix $envPrefix $param $envPrefix $envPrefix $param) -}}
+{{- $stanzas = append $stanzas (printf "{{- with secret %q -}}\nexport %sMONGO_DSN=%q\n{{- end }}" $path $envPrefix .connectionString) -}}
 {{- end }}
 {{- end }}
 {{- /* Service KV pairs (env-var: folded into the single file) */ -}}

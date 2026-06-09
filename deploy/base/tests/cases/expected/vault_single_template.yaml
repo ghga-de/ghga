@@ -18,9 +18,7 @@ podAnnotations:
   vault.hashicorp.com/agent-inject-secret-service-secrets: default-mongodb-mongodb/creds/test-my-app
   vault.hashicorp.com/agent-inject-template-service-secrets: |
     {{- with secret "default-mongodb-mongodb/creds/test-my-app" -}}
-    export TEST_DB="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
-    export DB_CONNECTION_STR=$TEST_DB
-    export MONGO_DSN=$TEST_DB
+    export MONGO_DSN="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
     {{- end }}
     {{ with secret "operational-secrets/data/unique/apps/archive/default/test-my-app" -}}
     {{ if .Data.data }}{{- range $k, $v := .Data.data }}
