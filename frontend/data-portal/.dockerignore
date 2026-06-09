@@ -5,10 +5,11 @@
 # Dependencies and caches
 node_modules/
 .pnpm-store/
-.angular/cache/
+.angular/
 
 # Build artifacts
 dist/
+tmp/
 out-tsc/
 
 # Tests
@@ -35,6 +36,7 @@ documentation/
 *.local.yml
 *.pem
 *.key
+*.rnd
 .ssl/
 
 # Logs and system files

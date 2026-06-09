@@ -13,7 +13,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | se
 # build the service
 WORKDIR /service
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
-RUN HUSKY=0 pnpm install --frozen-lockfile
+RUN HUSKY=0 CI=true pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
 # create base package.json with just name and version
