@@ -748,10 +748,13 @@ class UploadController(UploadControllerPort):
             log.info("File %s not found - presumed already deleted.", file_id)
             return
 
-        # Remove the file from S3 using slightly different approach based on if finished
-        if file_upload.inbox_upload_completed:
+        # Remove the file from S3 only if it's still in the inbox state. After that
+        #  point, the bucket ID and object ID will refer to another bucket for which UCS
+        #  has no write access.
+        if file_upload.state == "inbox":
             await self._remove_completed_file_upload(file_upload=file_upload)
-        else:
+        # Abort the upload if it still hasn't completed
+        elif file_upload.state == "init":
             await self._remove_incomplete_file_upload(file_upload=file_upload)
 
         # Update the file_upload to 'cancelled'
