@@ -548,7 +548,8 @@ async def complete_file_upload(
     response_description="FileUpload removed successfully",
     responses={
         status.HTTP_400_BAD_REQUEST: ERROR_RESPONSES["noSuchStorage"],
-        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
+        | ERROR_RESPONSES["fileUploadNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["uploadAbortError"],
     },
@@ -566,6 +567,7 @@ async def remove_file_upload(
     """Remove a FileUpload from the FileUploadBox.
 
     Deletes the FileUpload and tells S3 to cancel the multipart upload if applicable.
+    Returns 404 if the FileUpload or box does not exist.
     Requires a DeleteFileWorkOrder token from the WPS.
     """
     if work_order.box_id != box_id or work_order.file_id != file_id:
@@ -579,6 +581,8 @@ async def remove_file_upload(
         raise http_exceptions.HttpBoxStateError(
             box_id=box_id, box_state=error.box_state
         ) from error
+    except UploadControllerPort.FileUploadNotFound as error:
+        raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error
     except UploadControllerPort.UnknownStorageAliasError as error:
         raise http_exceptions.HttpUnknownStorageAliasError() from error
     except UploadControllerPort.UploadAbortError as error:

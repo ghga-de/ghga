@@ -660,8 +660,9 @@ async def test_remove_file_upload_when_upload_missing(rig: JointRig):
     # Create a FileUploadBox
     box_id = await rig.create_default_box()
 
-    # Try to delete a FileUpload that doesn't exist - this should NOT raise an error
-    await rig.controller.remove_file_upload(box_id=box_id, file_id=uuid4())
+    # Try to delete a FileUpload that doesn't exist - should raise FileUploadNotFound
+    with pytest.raises(UploadControllerPort.FileUploadNotFound):
+        await rig.controller.remove_file_upload(box_id=box_id, file_id=uuid4())
 
 
 async def test_delete_file_upload_with_s3_error(rig: JointRig):

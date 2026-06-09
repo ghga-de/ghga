@@ -744,9 +744,10 @@ class UploadController(UploadControllerPort):
         # Retrieve the FileUpload data
         try:
             file_upload = await self._file_upload_dao.get_by_id(file_id)
-        except ResourceNotFoundError:
-            log.info("File %s not found - presumed already deleted.", file_id)
-            return
+        except ResourceNotFoundError as err:
+            error = self.FileUploadNotFound(file_id=file_id)
+            log.error(error)
+            raise error from err
 
         # Remove the file from S3 only if it's still in the inbox state. After that
         #  point, the bucket ID and object ID will refer to another bucket for which UCS

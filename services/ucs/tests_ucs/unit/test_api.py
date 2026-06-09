@@ -775,6 +775,10 @@ async def test_complete_file_upload_endpoint_error_translation(
             http_exceptions.HttpUnknownStorageAliasError(),
         ),
         (
+            UploadControllerPort.FileUploadNotFound(file_id=TEST_FILE_ID),
+            http_exceptions.HttpFileUploadNotFoundError(file_id=TEST_FILE_ID),
+        ),
+        (
             UploadControllerPort.UploadAbortError(
                 file_id=TEST_FILE_ID,
                 s3_upload_id="test-upload",
@@ -788,6 +792,7 @@ async def test_complete_file_upload_endpoint_error_translation(
         "BoxNotFound",
         "LockedBox",
         "UnknownStorageAlias",
+        "FileUploadNotFound",
         "UploadAbortError",
         "InternalError",
     ],

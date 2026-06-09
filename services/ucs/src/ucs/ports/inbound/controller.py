@@ -338,6 +338,7 @@ class UploadControllerPort(ABC):
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
         - `BoxVersionError` if the box version changed before stats could be updated.
+        - `FileUploadNotFound` if the FileUpload does not exist.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         - `BucketMissingError` if the configured bucket does not exist in S3.
