@@ -79,7 +79,8 @@ class UploadDaoPublisherFactory(UploadDaoPublisherFactoryPort):
             autopublish=True,
             indexes=[
                 MongoDbIndex(
-                    fields={"box_id": 1, "alias": 1}, properties={"unique": True}
+                    fields={"box_id": 1, "alias": 1},
+                    properties={"unique": True, "sparse": True},
                 )
             ],
         )

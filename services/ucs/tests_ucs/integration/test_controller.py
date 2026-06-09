@@ -919,3 +919,33 @@ async def test_upload_activity_deleted_after_completion_failure(
         await controller.remove_file_upload(box_id=box_id, file_id=file_id)
 
     assert upload_activity_collection.find_one({"_id": file_id}) is None
+
+
+async def test_deletion_of_multiple_files(joint_fixture: JointFixture):
+    """Test that the sparse index prevents index collisions for multiple deleted items
+    in a single box.
+    """
+    controller = joint_fixture.upload_controller
+
+    async with set_correlation_id(uuid4()):
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
+        file_id1, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file1",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+        file_id2, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file2",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+
+        # Delete the files. No error means success
+        await controller._file_upload_dao.delete(file_id1)
+        await controller._file_upload_dao.delete(file_id2)
