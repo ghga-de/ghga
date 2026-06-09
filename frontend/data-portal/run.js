@@ -15,6 +15,8 @@ import { fileURLToPath } from 'url';
 const NAME = 'data-portal';
 const DEFAULT_BACKEND = 'https://data.staging.ghga.dev';
 
+const DOTENV_PATH = '/secrets/.env';
+
 const args = process.argv.slice(1);
 const DEV = args.includes('--dev');
 const WITH_BACKEND = args.includes('--with-backend');
@@ -41,8 +43,45 @@ function setVersion(settings) {
 }
 
 /**
+ * Parse a .env file and return its key-value pairs.
+ * Lines starting with # and empty lines are ignored.
+ * Values may be optionally quoted with single or double quotes.
+ *
+ * @param {string} filePath - Path to the .env file.
+ * @returns {Object} Parsed key-value pairs.
+ */
+function parseEnvFile(filePath) {
+  let content;
+  try {
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw e;
+    return {};
+  }
+  const result = {};
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    result[key] = value;
+  }
+  return result;
+}
+
+/**
  * Reads and merges configuration settings from default and specific YAML files.
  * Overrides settings with environment variables prefixed with the application name.
+ * Variables from the .env file at DOTENV_PATH are used as a fallback when a variable
+ * is not set in the process environment, but both take precedence over YAML settings.
  *
  * @returns {Object} The merged configuration settings.
  * @throws {Error} If there is an error reading the configuration files.
@@ -65,14 +104,20 @@ function readSettings() {
   // Merge the default and specific settings
   const settings = { ...defaultSettings, ...specificSettings };
 
-  // Override settings with environment variables
+  // Override settings with environment variables or .env file variables
   // (the env var name must be fully lower case or upper case, but not mixed)
+  // Process environment takes precedence over .env file, both override YAML settings.
+  const dotenv = parseEnvFile(DOTENV_PATH);
   const prefix = NAME.replaceAll('-', '_');
   for (const key in settings) {
     if (!settings.hasOwnProperty(key)) continue;
     const envVarName = `${prefix}_${key}`;
     const value = settings[key];
-    let envVarValue = process.env[envVarName] ?? process.env[envVarName.toUpperCase()];
+    let envVarValue =
+      process.env[envVarName] ??
+      process.env[envVarName.toUpperCase()] ??
+      dotenv[envVarName] ??
+      dotenv[envVarName.toUpperCase()];
     if (envVarValue === undefined) continue;
     const isObject = typeof value === 'object' && value !== null;
     if (isObject) {
