@@ -9,8 +9,6 @@
   "imagePullPolicy" (or .Values.migrationInitContainer.imagePullPolicy $defaultPullPolicy)
   "executable" .Values.migrationInitContainer.executable
   "executableArgs" .Values.migrationInitContainer.executableArgs
-  "cmd" .Values.migrationInitContainer.cmd
-  "args" .Values.migrationInitContainer.args
   "env" .Values.migrationInitContainer.env
   "resources" .Values.migrationInitContainer.resources
   "volumeMounts" .Values.migrationInitContainer.volumeMounts
@@ -22,9 +20,7 @@
 - name: {{ $container.name | default (printf "init-%d" $index) }}
   image: {{ $container.image | default (include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart)) }}
   imagePullPolicy: {{ $container.imagePullPolicy | default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }} 
-  {{- $initExec := or $container.executable $container.cmd -}}
-  {{- $initExecArgs := or $container.executableArgs $container.args -}}
-  {{- include "ghga-common.command-args" (list $ $initExec $initExecArgs $container.command) | nindent 2 }}
+  {{- include "ghga-common.command-args" (list $ .Values.executable .Values.executableArgs .Values.command)  | nindent 2 }}
   {{- if $container.env }}
   env: {{- toYaml $container.env | nindent 4 }}
   {{- end }}
