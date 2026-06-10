@@ -18,4 +18,6 @@ containerSecurityContext:
   # In Data-Portal-UI, node is user 1000 and appuser is user 1001
   runAsUser: 1001
 
-cmd: "node /home/appuser/run.mjs"
+executable: node
+executableArgs:
+  - /home/appuser/run.mjs

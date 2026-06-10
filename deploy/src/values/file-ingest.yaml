@@ -22,7 +22,9 @@ config:
   enable_opentelemetry: false
   ekss_api_url: http://encryption-key-store:8080
 
-cmd: fis run-rest
+executable: fis
+executableArgs:
+  - run-rest
 
 migrationInitContainer:
  args:

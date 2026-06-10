@@ -24,7 +24,9 @@ config:
   db_version_collection: "pcsDbVersions"
   migration_wait_sec: 10
 
-cmd: pcs run-rest
+executable: pcs
+executableArgs:
+  - run-rest
 
 _topics:
   filesToDelete:

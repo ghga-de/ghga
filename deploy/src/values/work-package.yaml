@@ -33,8 +33,11 @@ config:
   migration_wait_sec: 10
 
 
-cmd: wps run-rest
-# cmd: wps consume-events
+executable: wps
+executableArgs:
+  - run-rest
+# executableArgs:
+#   - consume-events
 
 _topics:
   researchDataUploadBoxTopic:
