@@ -1,3 +1,5 @@
+commandPrefix: "/usr/local/bin/"
+
 vaultAgent:
   singleTemplate: true
   singleTemplateAppend: |

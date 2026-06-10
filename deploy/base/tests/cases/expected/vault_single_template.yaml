@@ -38,4 +38,4 @@ podAnnotations:
     {{- end -}}
 
 command:
-- sleep 100000000
+- /usr/local/bin/sleep 100000000

@@ -14,6 +14,7 @@ exports:
     
     # This is the actual Kubernetes `command` field
     command: ["sh", "-c"]
+    commandPrefix: ""
 
     deployment:
       enabled: true
