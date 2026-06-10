@@ -27,6 +27,7 @@ from pytest_httpx import HTTPXMock
 
 from ghga_connector.core.client import async_client
 from ghga_connector.core.downloading.api_calls import DownloadClient
+from ghga_connector.core.downloading.structs import RetryResponse
 from ghga_connector.core.work_package import WorkPackageClient
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.utils import (
@@ -84,6 +85,50 @@ async def test_get_drs_object_caching(
         httpx_mock.add_response(json=FAKE_DRS_OBJECT, status_code=200)
         await download_client.get_drs_object(file_id)
         assert client.calls, "DRS object should NOT have been provided by the cache"
+
+
+async def test_retry_response_is_not_cached(
+    monkeypatch,
+    httpx_mock: HTTPXMock,
+    set_runtime_test_config,  # noqa: F811
+):
+    """Test that we don't serve 202/retry-after from the cache.
+
+    Regression test: previously the cached RetryResponse stuck around for the whole
+    cache TTL, so the staging poll loop kept reporting the file as "being staged" even
+    after it had actually been staged.
+    """
+    monkeypatch.setattr("ghga_connector.core.client.httpx.AsyncClient", RecordingClient)
+    async with async_client() as client:
+        assert isinstance(client, RecordingClient)
+        work_pkg_client = Mock()
+        work_pkg_client.get_download_wot = AsyncMock(return_value="fake-wot")
+        work_pkg_client.make_auth_headers = AsyncMock(return_value=httpx.Headers())
+
+        download_client = DownloadClient(
+            client=client, work_package_client=work_pkg_client
+        )
+
+        file_id = "test-file-id"
+
+        # First poll: file is still being staged -> 202 with a retry-after header
+        httpx_mock.add_response(status_code=202, headers={"retry-after": "1"})
+        response = await download_client.get_drs_object(file_id)
+
+        assert isinstance(response, RetryResponse)
+        assert client.calls
+
+        # The staging loop invalidates the cache on a RetryResponse so subsequent polls
+        #  query the live API again.
+        download_client.get_drs_object.cache_invalidate(file_id)
+        client.calls.clear()
+
+        # Second poll: the file is now staged -> the live API must be hit and the fresh
+        #  DRS object returned, NOT the cached RetryResponse.
+        httpx_mock.add_response(json=FAKE_DRS_OBJECT, status_code=200)
+        response = await download_client.get_drs_object(file_id)
+        assert client.calls, "Second poll should hit the network, not the stale cache"
+        assert response == FAKE_DRS_OBJECT
 
 
 async def test_get_work_order_token_caching(

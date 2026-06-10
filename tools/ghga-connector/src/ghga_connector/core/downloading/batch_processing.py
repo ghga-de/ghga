@@ -142,7 +142,10 @@ class FileStager:
             return
 
         if isinstance(response, RetryResponse):
-            # The file is not staged to the download bucket yet
+            # The file is not staged to the download bucket yet.
+            # Invalidate the cached "still staging" response so the next request
+            #  actually goes out to DCS
+            self._download_client.get_drs_object.cache_invalidate(file_id)
             self._unstaged_retry_times[file_id] = perf_counter() + response.retry_after
             CLIMessageDisplay.display(f"File {file_id} is (still) being staged.")
             return
