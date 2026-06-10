@@ -15,8 +15,9 @@ mongodb:
 serviceName: dcs-consumer
 
 migrationInitContainer:
- args:
-  - dcs migrate-db
+  executable: dcs
+  executableArgs:
+    - migrate-db
 
 config:
   auth_key: '{}'

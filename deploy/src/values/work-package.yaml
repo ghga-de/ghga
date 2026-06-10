@@ -15,8 +15,10 @@ mongodb:
 serviceName: wps-consumer
 
 migrationInitContainer:
- args:
-  - wps migrate-db
+  executable: wps
+  executableArgs:
+    - migrate-db
+
 
 config:
   auth_key: '{}'

@@ -24,8 +24,10 @@ executableArgs:
   - consume-events
 
 migrationInitContainer:
- args:
-  - ifrs migrate-db
+  executable: ifrs
+  executableArgs:
+    - migrate-db
+
 
 _topics:
   fileDeletedEvent:

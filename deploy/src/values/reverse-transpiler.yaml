@@ -45,8 +45,9 @@ executableArgs:
   - run-rest
 
 migrationInitContainer:
- args:
-  - rts migrate-db
+  executable: rts
+  executableArgs:
+  - migrate-db
 
 # executableArgs:
 #   - consume-events

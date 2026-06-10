@@ -27,8 +27,10 @@ executableArgs:
   - run-rest
 
 migrationInitContainer:
- args:
-  - fis migrate-db
+  executable: fis
+  executableArgs:
+    - migrate-db
+
 
 _topics:
   fileUploadValidationSuccess:
