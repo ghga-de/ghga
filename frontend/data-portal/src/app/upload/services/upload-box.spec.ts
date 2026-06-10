@@ -417,6 +417,36 @@ describe('UploadBoxService', () => {
     expect(caughtError?.status).toBe(409);
   });
 
+  it('should lock an upload box without a force flag by default', () => {
+    const id = TEST_BOX_RETRIEVAL_RESULTS.boxes[0].id;
+
+    let completed = false;
+    service.lockUploadBox(id, 1).subscribe({ complete: () => (completed = true) });
+
+    const req = httpMock.expectOne(`http://mock.dev/rs/upload-boxes/${id}`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ version: 1, state: UploadBoxState.locked });
+    expect('force' in req.request.body).toBe(false);
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(completed).toBe(true);
+  });
+
+  it('should add the force flag when locking is forced', () => {
+    const id = TEST_BOX_RETRIEVAL_RESULTS.boxes[0].id;
+
+    service.lockUploadBox(id, 1, true).subscribe();
+
+    const req = httpMock.expectOne(`http://mock.dev/rs/upload-boxes/${id}`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({
+      version: 1,
+      state: UploadBoxState.locked,
+      force: true,
+    });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
   describe('loadBoxGrants', () => {
     const BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
     const GRANT: UploadGrant = {

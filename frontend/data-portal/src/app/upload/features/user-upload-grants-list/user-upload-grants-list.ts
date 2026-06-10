@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -87,26 +88,78 @@ export class UserUploadGrantsListComponent {
       confirmText: 'Submit',
       callback: (confirmed) => {
         if (!confirmed) return;
-        this.submittingBoxId.set(grant.box_id);
-        this.#uploadBoxService
-          .updateUploadBox(grant.box_id, {
-            version: grant.box_version,
-            state: UploadBoxState.locked,
-          })
-          .subscribe({
-            next: () => {
-              this.submittingBoxId.set(null);
-              this.#notification.showSuccess(
-                'The upload box has been submitted successfully.',
-              );
-            },
-            error: () => {
-              this.submittingBoxId.set(null);
-              this.#notification.showError(
-                'Failed to submit the upload box. Please try again.',
-              );
-            },
-          });
+        this.#submitBox(grant, false);
+      },
+    });
+  }
+
+  /**
+   * Submit the upload box (set state to locked). When the backend rejects the
+   * submission with a 409 because some uploads are still incomplete, ask the
+   * user whether to force it and retry once with force=true.
+   * @param grant - the grant whose upload box should be submitted
+   * @param force - whether to submit despite incomplete uploads
+   */
+  #submitBox(grant: GrantWithBoxInfo, force: boolean): void {
+    this.submittingBoxId.set(grant.box_id);
+    this.#uploadBoxService
+      .lockUploadBox(grant.box_id, grant.box_version, force)
+      .subscribe({
+        next: () => {
+          this.submittingBoxId.set(null);
+          this.#notification.showSuccess(
+            'The upload box has been submitted successfully.',
+          );
+        },
+        error: (err: unknown) => {
+          // Offer the force option only on the first attempt and only when the
+          // conflict is specifically caused by incomplete uploads. A forced
+          // retry that still fails falls through to the generic message.
+          const incompleteUploads = force ? null : this.#incompleteUploads(err);
+          if (incompleteUploads) {
+            this.#confirmForceSubmit(grant, incompleteUploads.length);
+          } else {
+            this.submittingBoxId.set(null);
+            this.#notification.showError(
+              'Failed to submit the upload box. Please try again.',
+            );
+          }
+        },
+      });
+  }
+
+  /**
+   * Extract the incomplete uploads reported by a 409 submission conflict, which
+   * the user may override by forcing the submission.
+   * @param err - the error thrown by the submission request
+   * @returns the incomplete uploads, or null if this is not such a conflict
+   */
+  #incompleteUploads(err: unknown): unknown[] | null {
+    const response = err as HttpErrorResponse;
+    const data: unknown = response?.error?.data;
+    if (response?.status !== 409 || !data || typeof data !== 'object') return null;
+    const uploads = (data as { incomplete_uploads?: unknown }).incomplete_uploads;
+    return Array.isArray(uploads) ? uploads : null;
+  }
+
+  /**
+   * Ask the user whether to submit despite incomplete uploads. On confirmation,
+   * retry the submission with force=true; otherwise leave the box open.
+   * @param grant - the grant whose upload box should be submitted
+   * @param count - the number of still-incomplete file uploads
+   */
+  #confirmForceSubmit(grant: GrantWithBoxInfo, count: number): void {
+    const [are, uploads] = count === 1 ? ['is', 'upload'] : ['are', 'uploads'];
+    this.#confirmation.confirm({
+      title: 'Incomplete uploads detected!',
+      message: `Submission failed because there ${are} still ${count} incomplete file ${uploads}. Do you want to submit anyway?`,
+      confirmText: 'Submit anyway',
+      callback: (confirmed) => {
+        if (!confirmed) {
+          this.submittingBoxId.set(null);
+          return;
+        }
+        this.#submitBox(grant, true);
       },
     });
   }

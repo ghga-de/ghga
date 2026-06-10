@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
@@ -53,7 +54,7 @@ class MockUploadBoxService {
     reload: vitest.fn(),
   };
 
-  updateUploadBox = vitest.fn();
+  lockUploadBox = vitest.fn();
 
   /**
    * Test helper: set the loaded grants.
@@ -201,18 +202,15 @@ describe('UserUploadGrantsListComponent', () => {
       mockConfirmationService.confirm.mockImplementation(({ callback }) =>
         callback(true),
       );
-      uploadBoxService.updateUploadBox.mockReturnValue(of(undefined));
+      uploadBoxService.lockUploadBox.mockReturnValue(of(undefined));
       uploadBoxService.setGrants([openGrant]);
       fixture.detectChanges();
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
     });
 
-    it('should call updateUploadBox with box id, version, and locked state', () => {
-      expect(uploadBoxService.updateUploadBox).toHaveBeenCalledWith('box-001', {
-        version: 1,
-        state: UploadBoxState.locked,
-      });
+    it('should call lockUploadBox with box id, version, and no force', () => {
+      expect(uploadBoxService.lockUploadBox).toHaveBeenCalledWith('box-001', 1, false);
     });
 
     it('should show a success notification', () => {
@@ -231,7 +229,7 @@ describe('UserUploadGrantsListComponent', () => {
       mockConfirmationService.confirm.mockImplementation(({ callback }) =>
         callback(true),
       );
-      uploadBoxService.updateUploadBox.mockReturnValue(
+      uploadBoxService.lockUploadBox.mockReturnValue(
         throwError(() => new Error('Server error')),
       );
       uploadBoxService.setGrants([openGrant]);
@@ -251,6 +249,136 @@ describe('UserUploadGrantsListComponent', () => {
     });
   });
 
+  describe('submitBox - incomplete uploads conflict', () => {
+    /**
+     * Build a 409 conflict reporting incomplete uploads, matching the backend
+     * response that blocks locking a box with unfinished uploads.
+     * @param incompleteUploads - the still-incomplete upload IDs
+     * @returns an HttpErrorResponse with the conflict payload
+     */
+    const conflict = (incompleteUploads: string[]): HttpErrorResponse =>
+      new HttpErrorResponse({
+        status: 409,
+        error: { data: { incomplete_uploads: incompleteUploads } },
+      });
+
+    beforeEach(() => {
+      uploadBoxService.setGrants([openGrant]);
+    });
+
+    it('should force submission after confirmation when a 409 blocks the submission', async () => {
+      uploadBoxService.lockUploadBox
+        .mockReturnValueOnce(throwError(() => conflict(['file-2', 'file-3'])))
+        .mockReturnValueOnce(of(undefined));
+      // First confirm: the submit prompt. Second: the force-submit prompt.
+      mockConfirmationService.confirm
+        .mockImplementationOnce(({ callback }) => callback(true))
+        .mockImplementationOnce(({ callback }) => callback(true));
+      fixture.detectChanges();
+
+      screen.getByRole('button', { name: /submit this upload box/i }).click();
+      await fixture.whenStable();
+
+      expect(mockConfirmationService.confirm).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          message:
+            'Submission failed because there are still 2 incomplete file uploads. ' +
+            'Do you want to submit anyway?',
+          confirmText: 'Submit anyway',
+        }),
+      );
+      expect(uploadBoxService.lockUploadBox).toHaveBeenNthCalledWith(
+        1,
+        'box-001',
+        1,
+        false,
+      );
+      expect(uploadBoxService.lockUploadBox).toHaveBeenNthCalledWith(
+        2,
+        'box-001',
+        1,
+        true,
+      );
+      expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
+        'The upload box has been submitted successfully.',
+      );
+    });
+
+    it('should leave the box open when force submission is declined', async () => {
+      uploadBoxService.lockUploadBox.mockReturnValue(
+        throwError(() => conflict(['file-2'])),
+      );
+      mockConfirmationService.confirm
+        .mockImplementationOnce(({ callback }) => callback(true))
+        .mockImplementationOnce(({ callback }) => callback(false));
+      fixture.detectChanges();
+
+      screen.getByRole('button', { name: /submit this upload box/i }).click();
+      await fixture.whenStable();
+
+      expect(mockConfirmationService.confirm).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          message:
+            'Submission failed because there is still 1 incomplete file upload. ' +
+            'Do you want to submit anyway?',
+          confirmText: 'Submit anyway',
+        }),
+      );
+      expect(uploadBoxService.lockUploadBox).toHaveBeenCalledTimes(1);
+      expect(uploadBoxService.lockUploadBox).toHaveBeenCalledWith('box-001', 1, false);
+      expect(mockNotificationService.showError).not.toHaveBeenCalled();
+      expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+    });
+
+    it('should show the generic error when a forced submission still fails', async () => {
+      uploadBoxService.lockUploadBox
+        .mockReturnValueOnce(throwError(() => conflict(['file-2'])))
+        .mockReturnValueOnce(throwError(() => conflict(['file-2'])));
+      mockConfirmationService.confirm
+        .mockImplementationOnce(({ callback }) => callback(true))
+        .mockImplementationOnce(({ callback }) => callback(true));
+      fixture.detectChanges();
+
+      screen.getByRole('button', { name: /submit this upload box/i }).click();
+      await fixture.whenStable();
+
+      // Two confirmations total: the submit prompt and a single force prompt.
+      // The failed forced retry must not reopen the force prompt.
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(2);
+      expect(uploadBoxService.lockUploadBox).toHaveBeenCalledTimes(2);
+      expect(uploadBoxService.lockUploadBox).toHaveBeenNthCalledWith(
+        2,
+        'box-001',
+        1,
+        true,
+      );
+      expect(mockNotificationService.showError).toHaveBeenCalledWith(
+        'Failed to submit the upload box. Please try again.',
+      );
+    });
+
+    it('should show the generic error for a non-conflict failure without prompting to force', async () => {
+      uploadBoxService.lockUploadBox.mockReturnValue(
+        throwError(() => new Error('Server error')),
+      );
+      mockConfirmationService.confirm.mockImplementationOnce(({ callback }) =>
+        callback(true),
+      );
+      fixture.detectChanges();
+
+      screen.getByRole('button', { name: /submit this upload box/i }).click();
+      await fixture.whenStable();
+
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+      expect(uploadBoxService.lockUploadBox).toHaveBeenCalledTimes(1);
+      expect(mockNotificationService.showError).toHaveBeenCalledWith(
+        'Failed to submit the upload box. Please try again.',
+      );
+    });
+  });
+
   describe('submitBox - cancelled', () => {
     beforeEach(async () => {
       mockConfirmationService.confirm.mockImplementation(({ callback }) =>
@@ -262,8 +390,8 @@ describe('UserUploadGrantsListComponent', () => {
       await fixture.whenStable();
     });
 
-    it('should not call updateUploadBox', () => {
-      expect(uploadBoxService.updateUploadBox).not.toHaveBeenCalled();
+    it('should not call lockUploadBox', () => {
+      expect(uploadBoxService.lockUploadBox).not.toHaveBeenCalled();
     });
 
     it('should not show any notification', () => {

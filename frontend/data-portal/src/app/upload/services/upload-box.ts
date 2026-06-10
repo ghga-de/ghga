@@ -346,6 +346,32 @@ export class UploadBoxService {
   }
 
   /**
+   * Send a PATCH request to set the upload box state to locked (submitted).
+   * @param boxId - the ID of the upload box
+   * @param currentVersion - the current box version
+   * @param force - lock even if some file uploads are still incomplete
+   * @returns An observable that completes when the lock is accepted
+   */
+  lockUploadBox(
+    boxId: string,
+    currentVersion: number,
+    force = false,
+  ): Observable<void> {
+    const changes: ResearchDataUploadBoxUpdate = {
+      version: currentVersion,
+      state: UploadBoxState.locked,
+    };
+    // `force` makes the backend lock the box despite incomplete uploads; it is
+    // a request flag, not part of the persisted box state, so it is kept out of
+    // the local update below. The backend only accepts it on the open→locked
+    // transition, so it lives here rather than on the generic updateUploadBox.
+    const body = force ? { ...changes, force: true } : changes;
+    return this.#http
+      .patch<void>(`${this.#boxesUrl}/${encodeURIComponent(boxId)}`, body)
+      .pipe(tap(() => this.#updateUploadBoxLocally(boxId, changes)));
+  }
+
+  /**
    * Set the active filter for the upload box list.
    * @param filter - the filter to apply
    */
@@ -485,24 +511,15 @@ export class UploadBoxService {
    * Send a PATCH request to set the upload box state to archived.
    * @param boxId - the ID of the upload box
    * @param currentVersion - the current (post-mapping) box version
-   * @param force - archive even if some file uploads are still incomplete
    * @returns An observable that completes when the archive is accepted
    */
-  archiveUploadBox(
-    boxId: string,
-    currentVersion: number,
-    force = false,
-  ): Observable<void> {
+  archiveUploadBox(boxId: string, currentVersion: number): Observable<void> {
     const changes: ResearchDataUploadBoxUpdate = {
       version: currentVersion,
       state: UploadBoxState.archived,
     };
-    // `force` makes the backend archive despite incomplete uploads; it is a
-    // request flag, not part of the persisted box state, so it is kept out of
-    // the local update below.
-    const body = force ? { ...changes, force: true } : changes;
     return this.#http
-      .patch<void>(`${this.#boxesUrl}/${encodeURIComponent(boxId)}`, body)
+      .patch<void>(`${this.#boxesUrl}/${encodeURIComponent(boxId)}`, changes)
       .pipe(tap(() => this.#updateUploadBoxLocally(boxId, changes)));
   }
 
