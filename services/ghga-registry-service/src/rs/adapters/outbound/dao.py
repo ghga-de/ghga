@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Outbound DAO adapter — wires DTO models to MongoDB/Kafka via the outbox pattern."""
+"""Outbound DAO adapter - wires DTO models to MongoDB/Kafka via the outbox pattern."""
 
 from ghga_event_schemas.configs import (
     FileAccessionMappingEventsConfig,

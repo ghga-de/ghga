@@ -90,6 +90,13 @@ class RDUBManagerPort(ABC):
         references a version of the resource that is not current.
         """
 
+    class BoxIncompleteUploadsError(RuntimeError):
+        """Raised when locking is rejected because files have incomplete uploads."""
+
+        def __init__(self, *, incomplete_file_ids: list[UUID4]):
+            self.incomplete_file_ids = incomplete_file_ids
+            super().__init__(f"{len(incomplete_file_ids)} file(s) are incomplete.")
+
     class BoxTitleExistsError(RuntimeError):
         """Raised when trying to create an upload box with a title that already exists"""
 
@@ -151,6 +158,7 @@ class RDUBManagerPort(ABC):
         auth_context: AuthContext,
         state: UploadBoxState | None = None,
         max_size: PositiveInt | None = None,
+        force: bool = False,
     ) -> None:
         """Update a research data upload box.
 

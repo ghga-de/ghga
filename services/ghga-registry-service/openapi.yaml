@@ -435,6 +435,12 @@ components:
           - type: 'null'
           description: Updated description
           title: Description
+        force:
+          default: false
+          description: Force the state change even if prerequisites are not met. Only
+            relevant when locking a box; ignored for all other state changes.
+          title: Force
+          type: boolean
         max_size:
           anyOf:
           - exclusiveMinimum: 0.0

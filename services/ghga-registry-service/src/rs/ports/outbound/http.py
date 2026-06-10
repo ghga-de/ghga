@@ -114,6 +114,13 @@ class FileBoxClientPort(ABC):
     class FUBMaxSizeTooLowError(RuntimeError):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
+    class FUBIncompleteUploadsError(RuntimeError):
+        """Raised when locking is rejected because some files are still being uploaded."""
+
+        def __init__(self, *, incomplete_file_ids: list[UUID4]):
+            self.incomplete_file_ids = incomplete_file_ids
+            super().__init__(f"{len(incomplete_file_ids)} file(s) are incomplete.")
+
     class FUBLockedError(RuntimeError):
         """Raised when the FileUploadBox is locked and the operation cannot proceed."""
 
@@ -129,10 +136,13 @@ class FileBoxClientPort(ABC):
         ...
 
     @abstractmethod
-    async def lock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
+    async def lock_file_upload_box(
+        self, *, box_id: UUID4, version: int, force: bool = False
+    ) -> None:
         """Lock a FileUploadBox in the owning service.
 
         Raises:
+            FUBIncompleteUploadsError if files have incomplete uploads and force=False.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """

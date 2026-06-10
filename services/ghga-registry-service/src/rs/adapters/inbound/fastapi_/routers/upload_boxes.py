@@ -26,11 +26,15 @@ from rs.adapters.inbound.fastapi_ import dummies
 from rs.adapters.inbound.fastapi_.auth import StewardAuthContext, UserAuthContext
 from rs.adapters.inbound.fastapi_.http_exceptions import (
     HttpAccessionMapError,
+    HttpArchivalPrereqsError,
+    HttpBoxMaxSizeTooLowError,
     HttpBoxNotFoundError,
     HttpBoxTitleExistsError,
     HttpBoxVersionError,
+    HttpIncompleteUploadsError,
     HttpInternalError,
     HttpNotAuthorizedError,
+    HttpStateChangeError,
 )
 from rs.constants import TRACER
 from rs.core.models import (
@@ -128,6 +132,7 @@ async def update_research_data_upload_box(
             description=request.description,
             state=request.state,
             max_size=request.max_size,
+            force=request.force,
             auth_context=auth_context,
         )
     except RDUBManagerPort.BoxAccessError as err:
@@ -136,12 +141,16 @@ async def update_research_data_upload_box(
         raise HttpBoxNotFoundError(box_id=box_id) from err
     except RDUBManagerPort.BoxVersionError as err:
         raise HttpBoxVersionError() from err
-    except (
-        RDUBManagerPort.ArchivalPrereqsError,
-        RDUBManagerPort.StateChangeError,
-        RDUBManagerPort.BoxMaxSizeTooLowError,
-    ) as err:
-        raise HTTPException(status_code=409, detail=str(err)) from err
+    except RDUBManagerPort.BoxIncompleteUploadsError as err:
+        raise HttpIncompleteUploadsError(
+            incomplete_uploads=err.incomplete_file_ids
+        ) from err
+    except RDUBManagerPort.ArchivalPrereqsError as err:
+        raise HttpArchivalPrereqsError() from err
+    except RDUBManagerPort.StateChangeError as err:
+        raise HttpStateChangeError() from err
+    except RDUBManagerPort.BoxMaxSizeTooLowError as err:
+        raise HttpBoxMaxSizeTooLowError() from err
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to update upload box") from err

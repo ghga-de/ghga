@@ -20,12 +20,16 @@ from pydantic import UUID4, BaseModel
 
 __all__ = [
     "HttpAccessionMapError",
+    "HttpArchivalPrereqsError",
+    "HttpBoxMaxSizeTooLowError",
     "HttpBoxNotFoundError",
     "HttpBoxTitleExistsError",
     "HttpBoxVersionError",
     "HttpGrantNotFoundError",
+    "HttpIncompleteUploadsError",
     "HttpInternalError",
     "HttpNotAuthorizedError",
+    "HttpStateChangeError",
 ]
 
 
@@ -82,6 +86,48 @@ class HttpBoxTitleExistsError(HttpCustomExceptionBase):
             status_code=status_code,
             description=f"A ResearchDataUploadBox with the title '{title}' already exists.",
             data={"title": title},
+        )
+
+
+class HttpArchivalPrereqsError(HttpCustomExceptionBase):
+    """Thrown when archival prerequisites are not met (e.g. files missing accessions)."""
+
+    exception_id = "archivalPrereqsNotMet"
+
+    def __init__(self, *, status_code: int = 409):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="Archival prerequisites are not met.",
+            data={},
+        )
+
+
+class HttpBoxMaxSizeTooLowError(HttpCustomExceptionBase):
+    """Thrown when the requested max size is smaller than bytes already uploaded."""
+
+    exception_id = "boxMaxSizeTooLow"
+
+    def __init__(self, *, status_code: int = 409):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="The requested max size is lower than the bytes already uploaded.",
+            data={},
+        )
+
+
+class HttpStateChangeError(HttpCustomExceptionBase):
+    """Thrown when the requested box state transition is not permitted."""
+
+    exception_id = "invalidStateChange"
+
+    def __init__(self, *, status_code: int = 409):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="The requested state change is invalid.",
+            data={},
         )
 
 
@@ -148,6 +194,30 @@ class HttpNotAuthorizedError(HttpCustomExceptionBase):
             status_code=status_code,
             description="Not authorized",
             data={},
+        )
+
+
+class HttpIncompleteUploadsError(HttpCustomExceptionBase):
+    """Thrown when locking a box is rejected because files still have incomplete uploads."""
+
+    exception_id = "incompleteUploads"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        incomplete_uploads: list[UUID4]
+
+    def __init__(
+        self,
+        *,
+        incomplete_uploads: list[UUID4],
+        status_code: int = 409,
+    ):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="Cannot lock box: some files still have incomplete uploads.",
+            data={"incomplete_uploads": [str(fid) for fid in incomplete_uploads]},
         )
 
 

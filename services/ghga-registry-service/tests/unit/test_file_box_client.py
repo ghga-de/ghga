@@ -66,20 +66,53 @@ async def test_lock_file_upload_box(
 ):
     """Test the lock_file_upload_box function"""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+
+    # Happy path - force defaults to False
     httpx_mock.add_response(204)
-    await file_upload_box_client.lock_file_upload_box(
-        box_id=TEST_BOX_ID, version=0
-    )  # no error == success
+    await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
     assert json.loads(httpx_mock.get_requests()[0].content) == {
         "version": 0,
         "state": "locked",
+        "force": False,
     }
 
-    httpx_mock.add_response(409, json="Box out of date")
+    # Make sure force=True is forwarded in the request body
+    httpx_mock.add_response(204)
+    await file_upload_box_client.lock_file_upload_box(
+        box_id=TEST_BOX_ID, version=0, force=True
+    )
+
+    # Inspect the request body intercepted by httpx_mock
+    assert json.loads(httpx_mock.get_requests()[1].content) == {
+        "version": 0,
+        "state": "locked",
+        "force": True,
+    }
+
+    # 409 "boxVersionOutdated" -> FUBVersionError
+    httpx_mock.add_response(409, json={"exception_id": "boxVersionOutdated"})
     with pytest.raises(FileBoxClient.FUBVersionError):
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
 
-    # Check off-normal status code
+    # 409 "incompleteUploads" -> FUBIncompleteUploadsError with list of file IDs
+    incomplete_file_ids = [uuid4(), uuid4()]
+    httpx_mock.add_response(
+        409,
+        json={
+            "exception_id": "incompleteUploads",
+            "data": {
+                "incomplete_uploads": [
+                    [str(fid), f"alias-{i}"]
+                    for i, fid in enumerate(incomplete_file_ids)
+                ]
+            },
+        },
+    )
+    with pytest.raises(FileBoxClient.FUBIncompleteUploadsError) as exc_info:
+        await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
+    assert exc_info.value.incomplete_file_ids == incomplete_file_ids
+
+    # Non-409, non-204 -> OperationError
     httpx_mock.add_response(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)

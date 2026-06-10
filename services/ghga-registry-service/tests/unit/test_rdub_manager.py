@@ -179,11 +179,95 @@ async def test_update_research_data_upload_box_happy(
 
     # Make sure the correct FUB version was sent to the UCS
     rig.file_upload_box_client.lock_file_upload_box.assert_called_with(  # type: ignore
-        box_id=box.file_upload_box_id, version=box.version
+        box_id=box.file_upload_box_id, version=box.version, force=False
     )
 
     # Verify access client was not used because user is a Data Steward
     rig.access_client.check_box_access.assert_not_called()  # type: ignore
+
+
+async def test_lock_box_force_passed_through(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that force=True is forwarded to lock_file_upload_box."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title=None,
+        description=None,
+        state="locked",
+        force=True,
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    rig.file_upload_box_client.lock_file_upload_box.assert_called_with(  # type: ignore
+        box_id=box.file_upload_box_id, version=box.file_upload_box_version, force=True
+    )
+
+
+async def test_lock_box_incomplete_uploads_error(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that FUBIncompleteUploadsError is converted to BoxIncompleteUploadsError
+    and the box state is rolled back to open.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    assert box.state == "open"
+
+    incomplete_file_ids = [uuid4(), uuid4()]
+    rig.file_upload_box_client.lock_file_upload_box.side_effect = (  # type: ignore
+        FileBoxClientPort.FUBIncompleteUploadsError(
+            incomplete_file_ids=incomplete_file_ids
+        )
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxIncompleteUploadsError) as exc_info:
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="locked",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    assert exc_info.value.incomplete_file_ids == incomplete_file_ids
+
+    # Box should have been rolled back to open
+    rolled_back_box = await rig.box_dao.get_by_id(box_id)
+    assert rolled_back_box.state == "open"
+    assert rolled_back_box.version == box.version
+
+
+@pytest.mark.parametrize("target_state", ["open", "archived"])
+async def test_force_true_ignored_on_non_lock_transitions(
+    rig: JointRig, populated_boxes: list[UUID], caplog, target_state: str
+):
+    """Test that force=True is silently ignored (with a debug log) for unlock and archive."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    box.version = 1
+    await rig.box_dao.update(box)
+    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+
+    with caplog.at_level("DEBUG", logger="rs.core.rdub_manager"):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=1,
+            title=None,
+            description=None,
+            state=target_state,
+            force=True,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    debug_messages = [r.message for r in caplog.records if r.levelname == "DEBUG"]
+    assert any("force=True is ignored" in msg for msg in debug_messages)
 
 
 async def test_update_research_data_upload_box_unauthorized(

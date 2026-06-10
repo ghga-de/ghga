@@ -292,6 +292,24 @@ async def test_update_research_data_upload_box(
         )
         assert response.status_code == 500
 
+        # make sure the API translates the BoxIncompleteUploadsError correctly
+        rdub_manager.reset_mock()
+        incomplete_file_ids = [uuid4(), uuid4()]
+        rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (
+            RDUBManagerPort.BoxIncompleteUploadsError(
+                incomplete_file_ids=incomplete_file_ids
+            )
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=user_auth_headers
+        )
+        assert response.status_code == 409
+        body = response.json()
+        assert body["exception_id"] == "incompleteUploads"
+        assert body["data"]["incomplete_uploads"] == [
+            str(fid) for fid in incomplete_file_ids
+        ]
+
         # handle other exception
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (
@@ -301,6 +319,21 @@ async def test_update_research_data_upload_box(
             url, json=request_data, headers=user_auth_headers
         )
         assert response.status_code == 500
+
+        # force=True is forwarded to the manager
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = None
+        rdub_manager.rdub_manager.update_research_data_upload_box.return_value = None
+        response = await rest_client.patch(
+            url,
+            json={**request_data, "force": True},
+            headers=ds_auth_headers,
+        )
+        assert response.status_code == 204
+        call_kwargs = (
+            rdub_manager.rdub_manager.update_research_data_upload_box.call_args.kwargs
+        )
+        assert call_kwargs["force"] is True
 
 
 async def test_grant_upload_access(
@@ -895,7 +928,7 @@ async def test_submit_accession_map(
         assert response.status_code == 409
         assert response.json()["exception_id"] == "boxVersionOutdated"
 
-        # handle accession conflict — immutable mapping would be overwritten
+        # handle accession conflict - immutable mapping would be overwritten
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.store_accession_map.side_effect = (
             RDUBManagerPort.AccessionMapError(

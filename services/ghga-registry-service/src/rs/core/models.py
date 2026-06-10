@@ -166,6 +166,11 @@ class UpdateUploadBoxRequest(BaseModel):
     max_size: PositiveInt | None = Field(
         default=None, description="Updated maximum size in bytes"
     )
+    force: bool = Field(
+        default=False,
+        description="Force the state change even if prerequisites are not met."
+        " Only relevant when locking a box; ignored for all other state changes.",
+    )
 
     @model_validator(mode="after")
     def state_and_max_size_are_exclusive(self) -> "Self":
