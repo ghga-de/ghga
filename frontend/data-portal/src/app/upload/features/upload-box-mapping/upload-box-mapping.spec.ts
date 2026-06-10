@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,6 +16,7 @@ import { MetadataService } from '@app/metadata/services/metadata';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
+import { ConfirmDialogComponent } from '@app/shared/ui/confirm-dialog/confirm-dialog';
 import { UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { UploadBoxService } from '@app/upload/services/upload-box';
@@ -346,7 +348,7 @@ describe('UploadBoxMappingComponent', () => {
         'meta-3': 'file-3',
       },
     });
-    expect(uploadBoxService.archiveUploadBox).toHaveBeenCalledWith('box-1', 5);
+    expect(uploadBoxService.archiveUploadBox).toHaveBeenCalledWith('box-1', 5, false);
     expect(mockMappingStateService.clearSnapshot).toHaveBeenCalledWith('box-1');
     expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
       'File mapping submitted and upload box archived successfully.',
@@ -389,6 +391,146 @@ describe('UploadBoxMappingComponent', () => {
 
     component.onConfirmAndArchive();
 
+    expect(mockNotificationService.showError).toHaveBeenCalledWith(
+      'Mapping was submitted but archival failed.',
+    );
+  });
+
+  it('should force archival after confirmation when incomplete uploads block a 409 archival', async () => {
+    await createComponent({
+      studyAccession: TEST_STUDY.accession,
+      mappedField: 'alias',
+      manualMappings: [['meta-1', 'file-1']],
+    });
+    const archivedSpy = vitest.fn();
+    component.archived.subscribe(archivedSpy);
+    uploadBoxService.submitFileMapping.mockReturnValue(of(undefined));
+    uploadBoxService.archiveUploadBox
+      .mockReturnValueOnce(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 409,
+              error: { data: { incomplete_uploads: ['file-2', 'file-3'] } },
+            }),
+        ),
+      )
+      .mockReturnValueOnce(of(undefined));
+    // First dialog: the mapping confirmation. Second: the force-archival prompt.
+    mockDialog.open
+      .mockReturnValueOnce({ afterClosed: () => of(true) })
+      .mockReturnValueOnce({ afterClosed: () => of(true) });
+    mockDialog.open.mockClear();
+
+    component.onConfirmAndArchive();
+
+    expect(mockDialog.open).toHaveBeenCalledWith(
+      ConfirmDialogComponent,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          message:
+            'Archival failed because there are still 2 incomplete file uploads. Shall we archive anyway?',
+        }),
+      }),
+    );
+    expect(uploadBoxService.archiveUploadBox).toHaveBeenNthCalledWith(
+      1,
+      'box-1',
+      5,
+      false,
+    );
+    expect(uploadBoxService.archiveUploadBox).toHaveBeenNthCalledWith(
+      2,
+      'box-1',
+      5,
+      true,
+    );
+    expect(mockMappingStateService.clearSnapshot).toHaveBeenCalledWith('box-1');
+    expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
+      'File mapping submitted and upload box archived successfully.',
+    );
+    expect(archivedSpy).toHaveBeenCalled();
+  });
+
+  it('should leave the box non-archived when force archival is declined', async () => {
+    await createComponent({
+      studyAccession: TEST_STUDY.accession,
+      mappedField: 'alias',
+      manualMappings: [['meta-1', 'file-1']],
+    });
+    const archivedSpy = vitest.fn();
+    component.archived.subscribe(archivedSpy);
+    uploadBoxService.submitFileMapping.mockReturnValue(of(undefined));
+    uploadBoxService.archiveUploadBox.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { data: { incomplete_uploads: ['file-2'] } },
+          }),
+      ),
+    );
+    mockDialog.open
+      .mockReturnValueOnce({ afterClosed: () => of(true) })
+      .mockReturnValueOnce({ afterClosed: () => of(false) });
+    mockDialog.open.mockClear();
+
+    component.onConfirmAndArchive();
+
+    expect(uploadBoxService.archiveUploadBox).toHaveBeenCalledTimes(1);
+    expect(uploadBoxService.archiveUploadBox).toHaveBeenCalledWith('box-1', 5, false);
+    expect(mockNotificationService.showError).not.toHaveBeenCalled();
+    expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+    expect(archivedSpy).not.toHaveBeenCalled();
+    expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('should show the generic error when a forced archival still fails', async () => {
+    await createComponent({
+      studyAccession: TEST_STUDY.accession,
+      mappedField: 'alias',
+      manualMappings: [['meta-1', 'file-1']],
+    });
+    uploadBoxService.submitFileMapping.mockReturnValue(of(undefined));
+    uploadBoxService.archiveUploadBox
+      .mockReturnValueOnce(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 409,
+              error: { data: { incomplete_uploads: ['file-2'] } },
+            }),
+        ),
+      )
+      .mockReturnValueOnce(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 409,
+              error: { data: { incomplete_uploads: ['file-2'] } },
+            }),
+        ),
+      );
+    mockDialog.open
+      .mockReturnValueOnce({ afterClosed: () => of(true) })
+      .mockReturnValueOnce({ afterClosed: () => of(true) });
+    mockDialog.open.mockClear();
+
+    component.onConfirmAndArchive();
+
+    // Two dialogs total: the mapping confirmation and a single force prompt.
+    // The failed forced retry must not reopen the force prompt.
+    expect(mockDialog.open).toHaveBeenCalledTimes(2);
+    expect(
+      mockDialog.open.mock.calls.filter(([cmp]) => cmp === ConfirmDialogComponent),
+    ).toHaveLength(1);
+    expect(uploadBoxService.archiveUploadBox).toHaveBeenCalledTimes(2);
+    expect(uploadBoxService.archiveUploadBox).toHaveBeenNthCalledWith(
+      2,
+      'box-1',
+      5,
+      true,
+    );
     expect(mockNotificationService.showError).toHaveBeenCalledWith(
       'Mapping was submitted but archival failed.',
     );

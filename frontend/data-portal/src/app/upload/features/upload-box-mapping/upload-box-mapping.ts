@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -32,7 +33,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
-import { catchError, concatMap, of, startWith, switchMap, throwError } from 'rxjs';
+import { of, startWith, switchMap } from 'rxjs';
 
 import { EmFile } from '@app/metadata/models/dataset-information';
 import { Study } from '@app/metadata/models/study';
@@ -698,32 +699,91 @@ export class UploadBoxMappingComponent implements OnInit {
         study_id: studyId,
         mapping,
       })
-      .pipe(
-        catchError(() => throwError(() => 'mapping' as const)),
-        concatMap(() =>
-          this.#uploadBoxService
-            .archiveUploadBox(box.id, box.version + 1)
-            .pipe(catchError(() => throwError(() => 'archival' as const))),
-        ),
-      )
       .subscribe({
-        next: () => {
+        next: () => this.#archiveAfterMapping(box, false),
+        error: () => {
           this.isSubmitting.set(false);
-          this.#mappingStateService.clearSnapshot(box.id);
-          this.#notificationService.showSuccess(
-            'File mapping submitted and upload box archived successfully.',
-          );
-          this.archived.emit();
-        },
-        error: (phase: 'mapping' | 'archival') => {
-          this.isSubmitting.set(false);
-          this.#notificationService.showError(
-            phase === 'archival'
-              ? 'Mapping was submitted but archival failed.'
-              : 'Failed to submit the file mapping.',
-          );
+          this.#notificationService.showError('Failed to submit the file mapping.');
         },
       });
+  }
+
+  /**
+   * Archive the box after the mapping was submitted. When the backend rejects
+   * the archival with a 409 because some uploads are still incomplete, ask the
+   * user whether to force it and retry once with force=true.
+   * @param box - the upload box being archived
+   * @param force - whether to force archival despite incomplete uploads
+   */
+  #archiveAfterMapping(box: ResearchDataUploadBox, force: boolean): void {
+    this.#uploadBoxService.archiveUploadBox(box.id, box.version + 1, force).subscribe({
+      next: () => {
+        this.isSubmitting.set(false);
+        this.#mappingStateService.clearSnapshot(box.id);
+        this.#notificationService.showSuccess(
+          'File mapping submitted and upload box archived successfully.',
+        );
+        this.archived.emit();
+      },
+      error: (err: unknown) => {
+        // Offer the force option only on the first attempt and only when the
+        // conflict is specifically caused by incomplete uploads. A forced
+        // retry that still fails falls through to the generic message.
+        const incompleteUploads = force ? null : this.#incompleteUploads(err);
+        if (incompleteUploads) {
+          this.#confirmForceArchival(box, incompleteUploads.length);
+        } else {
+          this.isSubmitting.set(false);
+          this.#notificationService.showError(
+            'Mapping was submitted but archival failed.',
+          );
+        }
+      },
+    });
+  }
+
+  /**
+   * Extract the incomplete uploads reported by a 409 archival conflict, which
+   * the user may override by forcing the archival.
+   * @param err - the error thrown by the archival request
+   * @returns the incomplete uploads, or null if this is not such a conflict
+   */
+  #incompleteUploads(err: unknown): unknown[] | null {
+    const response = err as HttpErrorResponse;
+    const data: unknown = response?.error?.data;
+    if (response?.status !== 409 || !data || typeof data !== 'object') return null;
+    const uploads = (data as { incomplete_uploads?: unknown }).incomplete_uploads;
+    return Array.isArray(uploads) ? uploads : null;
+  }
+
+  /**
+   * Ask the user whether to force archival despite incomplete uploads. On
+   * confirmation, retry the archival with force=true; otherwise leave the box
+   * in its non-archived state.
+   * @param box - the upload box being archived
+   * @param count - the number of still-incomplete file uploads
+   */
+  #confirmForceArchival(box: ResearchDataUploadBox, count: number): void {
+    const uploads = count === 1 ? 'upload' : 'uploads';
+    const ref = this.#dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
+      ConfirmDialogComponent,
+      {
+        data: {
+          title: 'Archive upload box',
+          message: `Archival failed because there ${
+            count === 1 ? 'is' : 'are'
+          } still ${count} incomplete file ${uploads}. Shall we archive anyway?`,
+          confirmText: 'Archive anyway',
+        },
+      },
+    );
+    ref.afterClosed().subscribe((confirmed) => {
+      if (!confirmed) {
+        this.isSubmitting.set(false);
+        return;
+      }
+      this.#archiveAfterMapping(box, true);
+    });
   }
 
   /**

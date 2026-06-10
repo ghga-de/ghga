@@ -84,7 +84,7 @@
     "markdown-toc-gen": "^1.2.0",
     "msw": "^2.14.6",
     "postcss": "^8.5.15",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4.3.0",
     "ts-node": "^10.9.2",
