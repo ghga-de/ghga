@@ -28,6 +28,7 @@ import { DisplayUser, UserService } from '@app/auth/services/user';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
+import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import {
@@ -39,7 +40,10 @@ import {
   UploadBoxState,
   UploadBoxStateClass,
 } from '@app/upload/models/box';
-import { FileUploadWithAccession } from '@app/upload/models/file-upload';
+import {
+  FileUploadState,
+  FileUploadWithAccession,
+} from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
 import { FileUploadStatePipe } from '@app/upload/pipes/file-upload-state-pipe';
 import { UploadBoxService } from '@app/upload/services/upload-box';
@@ -73,6 +77,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   #userService = inject(UserService);
   #location = inject(NavigationTrackingService);
   #notificationService = inject(NotificationService);
+  #confirmationService = inject(ConfirmationService);
   #router = inject(Router);
   #isBackNavigation = this.#router.getCurrentNavigation()?.trigger === 'popstate';
 
@@ -169,11 +174,18 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   readonly grantColumns = ['grantee', 'status', 'validity', 'details'];
 
   /** Columns for the file uploads table. */
-  fileColumns = computed<string[]>(() =>
-    this.uploadBox()?.state === UploadBoxState.archived
-      ? ['alias', 'accession', 'size', 'uploaded']
-      : ['alias', 'status', 'size', 'uploaded'],
-  );
+  fileColumns = computed<string[]>(() => {
+    const state = this.uploadBox()?.state;
+    if (state === UploadBoxState.archived) {
+      return ['alias', 'accession', 'size', 'uploaded'];
+    }
+    const columns = ['alias', 'status', 'size', 'uploaded'];
+    // Files can only be deleted while the box is still open for uploads.
+    if (state === UploadBoxState.open) {
+      columns.push('delete');
+    }
+    return columns;
+  });
 
   /** The upload grants for this box. */
   grants = computed<UploadGrant[]>(() => this.#uploadBoxService.boxGrants.value());
@@ -212,6 +224,74 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     this.#cachedBox.set(undefined);
     const id = this.id();
     if (id) this.#uploadBoxService.loadUploadBox(id);
+  }
+
+  /**
+   * File states that may be deleted: still being uploaded (init), re-encrypted
+   * (inbox), or already re-encrypted (interrogated).
+   */
+  readonly #deletableFileStates: readonly FileUploadState[] = [
+    'init',
+    'inbox',
+    'interrogated',
+  ];
+
+  /**
+   * Whether the given file may be deleted. Only files in a deletable state
+   * within an open box can be removed.
+   * @param file - the file upload to check
+   * @returns true if the file can be deleted
+   */
+  canDeleteFile(file: FileUploadWithAccession): boolean {
+    return (
+      this.uploadBox()?.state === UploadBoxState.open &&
+      this.#deletableFileStates.includes(file.state)
+    );
+  }
+
+  /**
+   * Delete a file upload from the box. Files that are still being uploaded
+   * (init) are deleted right away; files that are being re-encrypted (inbox)
+   * or already re-encrypted (interrogated) require an extra confirmation first.
+   * @param file - the file upload to delete
+   */
+  deleteFile(file: FileUploadWithAccession): void {
+    const box = this.uploadBox();
+    if (!box) return;
+    if (file.state !== 'init') {
+      this.#confirmationService.confirm({
+        title: 'Confirm file deletion',
+        message:
+          `<p>Please confirm that the file <strong>${file.alias}</strong> shall be ` +
+          '<strong>deleted</strong> from this upload box.</p>',
+        cancelText: 'Cancel',
+        confirmText: 'Delete file',
+        confirmClass: 'error',
+        callback: (confirmed) => {
+          if (confirmed) this.#performFileDeletion(box.id, file);
+        },
+      });
+      return;
+    }
+    this.#performFileDeletion(box.id, file);
+  }
+
+  /**
+   * Perform the actual file deletion request and report the outcome.
+   * @param boxId - the ID of the upload box the file belongs to
+   * @param file - the file upload to delete
+   */
+  #performFileDeletion(boxId: string, file: FileUploadWithAccession): void {
+    this.#uploadBoxService.deleteFileUpload(boxId, file).subscribe({
+      next: () =>
+        this.#notificationService.showSuccess(
+          `The file "${file.alias}" has been deleted.`,
+        ),
+      error: () =>
+        this.#notificationService.showError(
+          `The file "${file.alias}" could not be deleted.`,
+        ),
+    });
   }
 
   /**

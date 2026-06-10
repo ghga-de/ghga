@@ -498,6 +498,56 @@ export class UploadBoxService {
   }
 
   /**
+   * Delete a file upload that is still being uploaded (init) or re-encrypted
+   * (inbox) from an open upload box. On success, removes the file from the local
+   * file list and adjusts the box file count and size so the detail view stays
+   * consistent without a re-fetch.
+   * @param boxId - the ID of the upload box the file belongs to
+   * @param file - the file upload to delete
+   * @returns An observable that completes when the file is deleted
+   */
+  deleteFileUpload(boxId: string, file: FileUploadWithAccession): Observable<void> {
+    const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads/${encodeURIComponent(file.id)}`;
+    // Any 2xx response is treated as success; HttpClient routes everything else
+    // to the error channel.
+    return this.#http
+      .delete<void>(url)
+      .pipe(tap(() => this.#deleteFileUploadLocally(boxId, file)));
+  }
+
+  /**
+   * Remove a deleted file upload from local state and adjust the box file count
+   * and size accordingly.
+   * @param boxId - the ID of the upload box the file belonged to
+   * @param file - the deleted file upload
+   */
+  #deleteFileUploadLocally(boxId: string, file: FileUploadWithAccession): void {
+    if (!this.boxFileUploads.error()) {
+      this.boxFileUploads.value.set(
+        this.boxFileUploads.value().filter((f) => f.id !== file.id),
+      );
+    }
+    const apply = (box: ResearchDataUploadBox): ResearchDataUploadBox => ({
+      ...box,
+      file_count: Math.max(0, box.file_count - 1),
+      size: Math.max(0, box.size - file.decrypted_size),
+    });
+    if (!this.uploadBox.error()) {
+      const box = this.uploadBox.value();
+      if (box && box.id === boxId) this.uploadBox.value.set(apply(box));
+    }
+    if (!this.boxRetrievalResults.error()) {
+      const current = this.boxRetrievalResults.value();
+      if (current.boxes.some((b) => b.id === boxId)) {
+        this.boxRetrievalResults.value.set({
+          count: current.count,
+          boxes: current.boxes.map((b) => (b.id === boxId ? apply(b) : b)),
+        });
+      }
+    }
+  }
+
+  /**
    * Revoke an upload grant by its ID.
    * @param id - the ID of the upload grant to revoke
    * @returns An observable that completes when the grant is revoked

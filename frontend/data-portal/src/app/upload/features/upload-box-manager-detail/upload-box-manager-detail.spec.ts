@@ -8,7 +8,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { uploadBoxes, uploadGrants } from '@app/../mocks/data';
+import { uploadBox1FileUploads, uploadBoxes, uploadGrants } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { UserService } from '@app/auth/services/user';
 import { MetadataService } from '@app/metadata/services/metadata';
@@ -16,10 +16,11 @@ import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
+import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
 import { UploadBoxManagerDetailComponent } from './upload-box-manager-detail';
 
@@ -34,7 +35,7 @@ class MockUploadBoxService {
   #singleBoxValue = signal<ResearchDataUploadBox | undefined>(undefined);
   #singleBoxLoading = signal<boolean>(false);
   #boxGrantsList = signal<UploadGrant[]>([]);
-  #fileUploadsList = signal<never[]>([]);
+  #fileUploadsList = signal<FileUploadWithAccession[]>([]);
 
   uploadBox = {
     value: this.#singleBoxValue.asReadonly(),
@@ -68,6 +69,7 @@ class MockUploadBoxService {
   addUploadGrant = vitest.fn();
   submitFileMapping = vitest.fn(() => of(undefined));
   archiveUploadBox = vitest.fn(() => of(undefined));
+  deleteFileUpload = vitest.fn(() => of(undefined));
 
   getStorageLocationLabel = (alias: string) =>
     this.storageLabels.value()[alias] ?? alias;
@@ -110,6 +112,14 @@ class MockUploadBoxService {
    */
   setBoxGrants(grants: UploadGrant[]): void {
     this.#boxGrantsList.set(grants);
+  }
+
+  /**
+   * Set the file uploads for the box file uploads resource.
+   * @param files - the file uploads to expose
+   */
+  setFileUploads(files: FileUploadWithAccession[]): void {
+    this.#fileUploadsList.set(files);
   }
 }
 
@@ -307,6 +317,82 @@ describe('UploadBoxManagerDetailComponent', () => {
       component.onBoxArchived();
       expect(uploadBoxService.loadUploadBox).toHaveBeenCalledTimes(callsBefore + 1);
       expect(uploadBoxService.loadUploadBox).toHaveBeenLastCalledWith(TEST_BOX.id);
+    });
+  });
+
+  describe('deleting a file', () => {
+    const initFile = uploadBox1FileUploads.find((file) => file.state === 'init')!;
+    const interrogatedFile = uploadBox1FileUploads.find(
+      (file) => file.state === 'interrogated',
+    )!;
+
+    beforeEach(async () => {
+      mockDialog.open.mockReset();
+      mockNotificationService.showSuccess.mockClear();
+      mockNotificationService.showError.mockClear();
+      uploadBoxService.deleteFileUpload.mockClear();
+      uploadBoxService.deleteFileUpload.mockReturnValue(of(undefined));
+
+      uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+      uploadBoxService.setFileUploads(uploadBox1FileUploads);
+      fixture.componentRef.setInput('id', TEST_BOX.id);
+      await fixture.whenStable();
+    });
+
+    it('should show a delete button for deletable files in an open box', () => {
+      expect(
+        screen.getByLabelText(`Delete file ${initFile.alias}`),
+      ).toBeInTheDocument();
+    });
+
+    it('should delete an init file directly without confirmation', async () => {
+      component.deleteFile(initFile);
+      await fixture.whenStable();
+
+      expect(mockDialog.open).not.toHaveBeenCalled();
+      expect(uploadBoxService.deleteFileUpload).toHaveBeenCalledWith(
+        TEST_BOX.id,
+        initFile,
+      );
+      expect(mockNotificationService.showSuccess).toHaveBeenCalled();
+      expect(mockNotificationService.showError).not.toHaveBeenCalled();
+    });
+
+    it('should ask for confirmation and delete on confirm for a re-encrypted file', async () => {
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+
+      component.deleteFile(interrogatedFile);
+      await fixture.whenStable();
+
+      expect(mockDialog.open).toHaveBeenCalledTimes(1);
+      expect(uploadBoxService.deleteFileUpload).toHaveBeenCalledWith(
+        TEST_BOX.id,
+        interrogatedFile,
+      );
+      expect(mockNotificationService.showSuccess).toHaveBeenCalled();
+    });
+
+    it('should not delete when the confirmation is cancelled', async () => {
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+      component.deleteFile(interrogatedFile);
+      await fixture.whenStable();
+
+      expect(mockDialog.open).toHaveBeenCalledTimes(1);
+      expect(uploadBoxService.deleteFileUpload).not.toHaveBeenCalled();
+      expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+    });
+
+    it('should show an error notification when deletion fails', async () => {
+      uploadBoxService.deleteFileUpload.mockReturnValueOnce(
+        throwError(() => new Error('failed')),
+      );
+
+      component.deleteFile(initFile);
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showError).toHaveBeenCalled();
+      expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
     });
   });
 });
