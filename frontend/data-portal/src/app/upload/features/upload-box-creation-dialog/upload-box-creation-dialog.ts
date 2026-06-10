@@ -20,6 +20,7 @@ import {
   required,
   validate,
 } from '@angular/forms/signals';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MatDialogActions,
@@ -69,7 +70,7 @@ export class UploadBoxCreationDialogComponent {
   locationOptions = this.#uploadBoxService.uploadBoxLocationOptions;
 
   isSubmitting = signal(false);
-  creationError = signal(false);
+  creationError = signal('');
 
   protected boxModel = signal({
     title: '',
@@ -115,7 +116,7 @@ export class UploadBoxCreationDialogComponent {
     if (!this.boxForm().valid() || this.isSubmitting()) return;
 
     this.isSubmitting.set(true);
-    this.creationError.set(false);
+    this.creationError.set('');
     const box = this.boxModel();
     const maxSizeTb = box.max_size_tb;
     if (maxSizeTb === null) {
@@ -133,12 +134,14 @@ export class UploadBoxCreationDialogComponent {
       next: (id) => {
         this.#dialogRef.close(id);
       },
-      error: () => {
-        this.creationError.set(true);
+      error: (err: unknown) => {
+        const message =
+          (err as HttpErrorResponse)?.status === 409
+            ? 'An Upload Box with the same title already exists.'
+            : 'Upload Box could not be created. Please try again.';
+        this.creationError.set(message);
         this.isSubmitting.set(false);
-        this.#notificationService.showError(
-          'Upload Box could not be created. Please try again.',
-        );
+        this.#notificationService.showError(message);
       },
     });
   }

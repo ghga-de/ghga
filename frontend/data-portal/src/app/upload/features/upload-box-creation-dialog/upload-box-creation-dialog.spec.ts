@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialogRef } from '@angular/material/dialog';
@@ -61,7 +62,7 @@ describe('UploadBoxCreationDialogComponent', () => {
   });
 
   it('should show dialog title and action buttons', () => {
-    expect(screen.getByText(/creeate a new upload box/i)).toBeVisible();
+    expect(screen.getByText(/create a new upload box/i)).toBeVisible();
     expect(screen.getByRole('button', { name: /cancel/i })).toBeVisible();
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeVisible();
   });
@@ -226,6 +227,41 @@ describe('UploadBoxCreationDialogComponent', () => {
     expect(mockNotificationService.showError).toHaveBeenCalledWith(
       'Upload Box could not be created. Please try again.',
     );
-    expect(screen.getByText(/error creating the upload box/i)).toBeVisible();
+    expect(
+      screen.getByText('Upload Box could not be created. Please try again.'),
+    ).toBeVisible();
+  });
+
+  it('should show a title-conflict error when create fails with a 409', async () => {
+    uploadBoxService.createUploadBox.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 409, statusText: 'Conflict' })),
+    );
+
+    const titleInput = screen.getByRole('textbox', { name: 'Title' });
+    const descriptionInput = screen.getByRole('textbox', {
+      name: 'Description',
+    });
+    const locationSelect = screen.getByRole('combobox', {
+      name: 'Storage location',
+    });
+    const sizeInput = screen.getByRole('spinbutton', {
+      name: 'Size limit (in TiB)',
+    });
+
+    await userEvent.type(titleInput, 'Existing Box');
+    await userEvent.type(descriptionInput, 'Description');
+    await userEvent.click(locationSelect);
+    await userEvent.click(await screen.findByRole('option', { name: 'Heidelberg 2' }));
+    await userEvent.type(sizeInput, '0.5');
+    await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
+    fixture.detectChanges();
+
+    expect(mockDialogRef.close).not.toHaveBeenCalled();
+    expect(mockNotificationService.showError).toHaveBeenCalledWith(
+      'An Upload Box with the same title already exists.',
+    );
+    expect(
+      screen.getByText('An Upload Box with the same title already exists.'),
+    ).toBeVisible();
   });
 });

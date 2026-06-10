@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Creeate a new Upload Box</h2>
+<h2 mat-dialog-title>Create a new Upload Box</h2>
 
 <mat-dialog-content>
   <form class="grid gap-3 pt-2">
@@ -27,7 +27,7 @@
     </mat-form-field>
 
     @if (creationError()) {
-      <p class="text-error">There was an error creating the Upload Box.</p>
+      <p class="text-error">{{ creationError() }}</p>
     }
   </form>
 </mat-dialog-content>

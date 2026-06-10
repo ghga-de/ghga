@@ -129,7 +129,7 @@ test('validates required fields in the create upload box dialog', async ({
   await createButton.click();
 
   const dialog = page.getByRole('dialog');
-  await expect(dialog).toContainText('Creeate a new Upload Box');
+  await expect(dialog).toContainText('Create a new Upload Box');
 
   const okButton = dialog.getByRole('button', { name: 'OK' });
   await expect(okButton).toBeDisabled();
