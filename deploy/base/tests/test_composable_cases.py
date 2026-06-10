@@ -80,5 +80,7 @@ def test_vault_single_template(rendered_chart, release_name, expected):
     )
 
     command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["command"]
+    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
     assert command == expected("vault_single_template", "command")
+    assert args == expected("vault_single_template", "args")
     

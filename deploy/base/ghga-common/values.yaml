@@ -16,6 +16,10 @@ exports:
     command: ["sh", "-c"]
     commandPrefix: ""
 
+    # Executable name and arguments (will be combined into a shell command)
+    executable: ""
+    executableArgs: []
+
     deployment:
       enabled: true
 

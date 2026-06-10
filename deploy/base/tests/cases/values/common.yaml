@@ -5,4 +5,6 @@ image:
 job:
   enabled: true
 
-cmd: sleep 100000000
+executable: sleep
+executableArgs:
+  - "100000000"
