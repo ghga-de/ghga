@@ -38,8 +38,4 @@ podAnnotations:
     {{- end -}}
 
 command:
-- sh
-- -c
-
-args:
 - sleep 100000000

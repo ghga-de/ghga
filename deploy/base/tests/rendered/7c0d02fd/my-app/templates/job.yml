@@ -101,9 +101,6 @@ spec:
           image: docker.io/busybox:latest
           imagePullPolicy: Always
           command:
-          - sh
-          - -c
-          args:
           - sleep 100000000
           env:
             - name: _CONFIG_YAML
