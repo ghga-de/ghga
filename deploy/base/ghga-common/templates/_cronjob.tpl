@@ -54,9 +54,7 @@ spec:
           containers:
           - image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart ) }}
             imagePullPolicy: {{ default (eq .Values.image.tag "latest" | ternary "Always" "IfNotPresent") .Values.image.pullPolicy }}
-            {{- $cronExec := or .Values.executable .Values.cmd -}}
-            {{- $cronExecArgs := or .Values.executableArgs .Values.args -}}
-            {{- include "ghga-common.command-args" (list $ $cronExec $cronExecArgs .Values.command) | nindent 12 }}
+            {{- include "ghga-common.command-args" (list $ .Values.executable .Values.executableArgs .Values.command)  | nindent 10 }}
             {{- $envVars := include "ghga-common.env-vars" $ | fromYaml | dig "envVars" list -}}
             {{- if $envVars }}
             env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
