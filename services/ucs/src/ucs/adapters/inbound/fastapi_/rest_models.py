@@ -48,6 +48,13 @@ class BoxUpdateRequest(BaseModel):
         ...,
         description="The expected current version of the box (for optimistic locking)",
     )
+    force: bool = Field(
+        default=False,
+        description=(
+            "Only applies when locking the box. If True, any uploads still in the"
+            " 'init' state will be aborted before locking proceeds."
+        ),
+    )
     model_config = ConfigDict(title="Box Update Request")
 
     @model_validator(mode="after")

@@ -675,8 +675,16 @@ class UploadController(UploadControllerPort):
             log.error(error, extra=extra)
             raise error from err
 
+        if file_upload.state in ("cancelled", "failed"):
+            error = self.FileUploadStateError(
+                file_id=file_id,
+                details=f"Cannot complete a FileUpload in the '{file_upload.state}' state.",
+            )
+            log.error(error, extra=extra)
+            raise error
+
         # Exit early if the FileUpload is complete (already in the inbox or archived)
-        if file_upload.inbox_upload_completed:
+        if file_upload.state != "init":
             log.info("FileUpload with ID %s already complete.", file_id)
             return
 
@@ -711,7 +719,6 @@ class UploadController(UploadControllerPort):
         file_upload.decrypted_sha256 = unencrypted_checksum
         file_upload.encrypted_parts_md5 = encrypted_parts_md5
         file_upload.encrypted_parts_sha256 = encrypted_parts_sha256
-        file_upload.inbox_upload_completed = True
         file_upload.state_updated = now_utc_ms_prec()
         file_upload.completed = now_utc_ms_prec()
         await self._file_upload_dao.update(file_upload)
@@ -857,29 +864,54 @@ class UploadController(UploadControllerPort):
         await self._file_upload_box_dao.update(box)
         log.info("Updated max_size for box %s to %s.", box_id, max_size)
 
-    async def lock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
+    async def lock_file_upload_box(
+        self, *, box_id: UUID4, version: int, force: bool = False
+    ) -> None:
         """Lock an existing FileUploadBox.
 
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
-        - `IncompleteUploadsError` if the FileUploadBox has incomplete FileUploads.
+        - `IncompleteUploadsError` if force is False and the box has incomplete FileUploads.
+        - `UploadAbortError` if force is True and aborting an in-progress upload fails.
         """
         box = await self._get_box_at_version(box_id=box_id, version=version)
 
         if box.state != "open":
             # This goes for archived boxes too
-            log.info("Box with ID %s already locked.", box_id)
+            log.info("Box with ID %s is already locked.", box_id)
             return
 
-        incomplete_files_cursor = self._file_upload_dao.find_all(
-            mapping={"box_id": box_id, "inbox_upload_completed": False}
-        )
-        file_ids = sorted([x.id async for x in incomplete_files_cursor])
-        if file_ids:
-            error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
-            log.error(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
-            raise error
+        incomplete_files = [
+            upload
+            async for upload in self._file_upload_dao.find_all(
+                mapping={"box_id": box_id, "state": "init"}
+            )
+        ]
+
+        if force:
+            for upload in incomplete_files:
+                await self._remove_incomplete_file_upload(file_upload=upload)
+                upload.state = "cancelled"
+                upload.state_updated = now_utc_ms_prec()
+                await self._file_upload_dao.update(upload)
+                with contextlib.suppress(ResourceNotFoundError):
+                    await self._upload_activity_dao.delete(upload.id)
+            if incomplete_files:
+                log.info(
+                    "Aborted %d in-progress upload(s) in box %s for forced lock.",
+                    len(incomplete_files),
+                    box_id,
+                )
+        else:
+            file_ids = sorted(
+                [(x.id, x.alias) for x in incomplete_files],
+                key=lambda entry: entry[1],
+            )
+            if file_ids:
+                error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
+                log.error(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
+                raise error
 
         box.version += 1
         box.state = "locked"
@@ -931,7 +963,10 @@ class UploadController(UploadControllerPort):
         files_not_interrogated_cursor = self._file_upload_dao.find_all(
             mapping={"box_id": box_id, "state": {"$in": ["init", "inbox"]}}
         )
-        file_ids = sorted([x.id async for x in files_not_interrogated_cursor])
+        file_ids = sorted(
+            [(x.id, x.alias) async for x in files_not_interrogated_cursor],
+            key=lambda entry: entry[1],
+        )
         if file_ids:
             error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
             log.error(error, extra={"box_id": box_id, "file_ids": str(file_ids)})

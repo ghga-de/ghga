@@ -155,6 +155,22 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpPartSizeError.get_body_model(),
     },
+    "fileUploadStateError": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- fileUploadStateError: The action is incompatible with the"
+            + " FileUpload's current state."
+        ),
+        "model": http_exceptions.HttpFileUploadStateError.get_body_model(),
+    },
+    "incompleteUploads": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- incompleteUploads: The box has in-progress uploads that must"
+            + " be completed or cancelled before it can be locked or archived."
+        ),
+        "model": http_exceptions.HttpIncompleteUploadsError.get_body_model(),
+    },
 }
 
 # For the update_box endpoint, map the work type required to change to a given box state
@@ -221,7 +237,9 @@ async def create_box(
     responses={
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxVersionOutdated"]
-        | ERROR_RESPONSES["boxMaxSizeTooLow"],
+        | ERROR_RESPONSES["boxMaxSizeTooLow"]
+        | ERROR_RESPONSES["incompleteUploads"],
+        status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["uploadAbortError"],
     },
 )
 @TRACER.start_as_current_span("routes.update_box")
@@ -262,7 +280,9 @@ async def update_box(  # noqa: C901, PLR0912
             match box_update.state:
                 case "locked":
                     await upload_controller.lock_file_upload_box(
-                        box_id=box_id, version=box_update.version
+                        box_id=box_id,
+                        version=box_update.version,
+                        force=box_update.force,
                     )
                 case "open":
                     await upload_controller.unlock_file_upload_box(
@@ -280,6 +300,12 @@ async def update_box(  # noqa: C901, PLR0912
         raise http_exceptions.HttpMaxSizeTooLowError(
             box_id=box_id, max_size=error.max_size, current_size=error.current_size
         ) from error
+    except UploadControllerPort.IncompleteUploadsError as error:
+        raise http_exceptions.HttpIncompleteUploadsError(
+            box_id=error.box_id, file_ids=error.file_ids
+        ) from error
+    except UploadControllerPort.UploadAbortError as error:
+        raise http_exceptions.HttpUploadAbortError() from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
@@ -484,7 +510,8 @@ async def get_part_upload_url(  # noqa: PLR0913
         | ERROR_RESPONSES["uploadSizeMismatch"],
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
         | ERROR_RESPONSES["fileUploadNotFound"],
-        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"]
+        | ERROR_RESPONSES["fileUploadStateError"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES[
             "s3UploadCompletionFailure"
         ],
@@ -527,6 +554,8 @@ async def complete_file_upload(
         ) from error
     except UploadControllerPort.FileUploadNotFound as error:
         raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error
+    except UploadControllerPort.FileUploadStateError as error:
+        raise http_exceptions.HttpFileUploadStateError(file_id=file_id) from error
     except UploadControllerPort.UploadCompletionError as error:
         raise http_exceptions.HttpUploadCompletionError(
             box_id=box_id, file_id=file_id

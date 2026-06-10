@@ -21,6 +21,12 @@ components:
     BoxUpdateRequest:
       description: Request body for updating a FileUploadBox.
       properties:
+        force:
+          default: false
+          description: Only applies when locking the box. If True, any uploads still
+            in the 'init' state will be aborted before locking proceeds.
+          title: Force
+          type: boolean
         max_size:
           anyOf:
           - exclusiveMinimum: 0.0
@@ -119,12 +125,6 @@ components:
           format: uuid4
           title: Id
           type: string
-        inbox_upload_completed:
-          default: false
-          description: Indicates whether the file has been completely uploaded to
-            the inbox.
-          title: Inbox Upload Completed
-          type: boolean
         initiated:
           description: When the S3 multipart upload was initiated
           format: date-time
@@ -422,43 +422,77 @@ components:
       - file_id
       title: HttpFileUploadNotFoundErrorData
       type: object
-    HttpMaxSizeTooLowError:
+    HttpFileUploadStateError:
       additionalProperties: false
       properties:
         data:
-          $ref: '#/components/schemas/HttpMaxSizeTooLowErrorData'
+          $ref: '#/components/schemas/HttpFileUploadStateErrorData'
         description:
           description: A human readable message to the client explaining the cause
             of the exception.
           title: Description
           type: string
         exception_id:
-          const: boxMaxSizeTooLow
+          const: fileUploadStateError
           title: Exception Id
           type: string
       required:
       - data
       - description
       - exception_id
-      title: HttpMaxSizeTooLowError
+      title: HttpFileUploadStateError
       type: object
-    HttpMaxSizeTooLowErrorData:
+    HttpFileUploadStateErrorData:
+      properties:
+        file_id:
+          format: uuid4
+          title: File Id
+          type: string
+      required:
+      - file_id
+      title: HttpFileUploadStateErrorData
+      type: object
+    HttpIncompleteUploadsError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpIncompleteUploadsErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: incompleteUploads
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpIncompleteUploadsError
+      type: object
+    HttpIncompleteUploadsErrorData:
       properties:
         box_id:
           format: uuid4
           title: Box Id
           type: string
-        current_size:
-          title: Current Size
-          type: integer
-        max_size:
-          title: Max Size
-          type: integer
+        file_ids:
+          items:
+            maxItems: 2
+            minItems: 2
+            prefixItems:
+            - format: uuid4
+              type: string
+            - type: string
+            type: array
+          title: File Ids
+          type: array
       required:
       - box_id
-      - max_size
-      - current_size
-      title: HttpMaxSizeTooLowErrorData
+      - file_ids
+      title: HttpIncompleteUploadsErrorData
       type: object
     HttpOrphanedMultipartUploadError:
       additionalProperties: false
@@ -730,7 +764,7 @@ info:
   description: A service managing uploads of file objects to an S3-compatible Object
     Storage.
   title: Upload Controller Service
-  version: 13.0.0
+  version: 14.0.0
 openapi: 3.1.0
 paths:
   /boxes:
@@ -829,17 +863,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpMaxSizeTooLowError'
+                $ref: '#/components/schemas/HttpIncompleteUploadsError'
           description: 'Exceptions by ID:
 
-            - boxMaxSizeTooLow: The requested max_size is less than the box''s current
-            committed size.'
+            - incompleteUploads: The box has in-progress uploads that must be completed
+            or cancelled before it can be locked or archived.'
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUploadAbortError'
+          description: 'Exceptions by ID:
+
+            - uploadAbortError: There was an error aborting the s3 multipart upload.'
       security:
       - HTTPBearer: []
       summary: Update a FileUploadBox (lock/unlock/archive/resize)
@@ -1113,10 +1155,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpBoxStateError'
+                $ref: '#/components/schemas/HttpFileUploadStateError'
           description: 'Exceptions by ID:
 
-            - boxStateError: The FileUploadBox''s state precludes the requested action.'
+            - fileUploadStateError: The action is incompatible with the FileUpload''s
+            current state.'
         '422':
           content:
             application/json:

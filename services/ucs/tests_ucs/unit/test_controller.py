@@ -148,7 +148,6 @@ async def test_complete_file_upload(rig: JointRig):
     assert file_upload_dao.latest.id == file_id
     assert file_upload_dao.latest.completed is not None
     assert completed - file_upload_dao.latest.completed < timedelta(seconds=5)
-    assert file_upload_dao.latest.inbox_upload_completed
     file_upload_box_dao = rig.file_upload_box_dao
     assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
     assert file_upload_box_dao.latest.file_count == 1
@@ -753,20 +752,37 @@ async def test_lock_box_with_incomplete_upload(rig: JointRig):
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    file_ids = sorted([file_id1, file_id2])
-
     # Attempt to lock the box while the upload is still incomplete
     with pytest.raises(UploadControllerPort.IncompleteUploadsError) as exc_info:
         await controller.lock_file_upload_box(box_id=box_id, version=0)
 
-    # Verify the exception is correct
-    assert (
-        str(exc_info.value)
-        == f"Cannot lock or archive box {box_id} because these files are incomplete: {file_ids}"
-    )
+    # Verify the exception carries the right IDs and aliases (sorted by alias)
+    assert exc_info.value.file_ids == [
+        (file_id1, "test_file"),
+        (file_id2, "test_file2"),
+    ]
 
     # Verify that the box is still open
     assert file_upload_box_dao.latest.state == "open"
+
+
+@pytest.mark.parametrize("terminal_state", ["failed", "cancelled"])
+async def test_lock_box_ignores_terminal_uploads(
+    rig: JointRig, terminal_state: FileUploadState
+):
+    """Locking with force=False must succeed when the only incomplete uploads
+    (inbox_upload_completed=False) are in a terminal state (failed/cancelled).
+    Those uploads are no longer active. The only state that should block locking
+    is 'init'.
+    """
+    box_id = await rig.create_default_box()
+
+    file_upload = make_file_upload(state=terminal_state)
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
+
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+    assert rig.file_upload_box_dao.latest.state == "locked"
 
 
 async def test_complete_file_upload_when_box_missing(rig: JointRig):
@@ -807,7 +823,32 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
 
     # Verify the exception contains the correct box_id
     assert str(box_id) in str(exc_info.value)
-    assert not file_upload_dao.latest.inbox_upload_completed
+
+
+@pytest.mark.parametrize("terminal_state", ["cancelled", "failed"])
+async def test_complete_file_upload_in_terminal_state(
+    rig: JointRig, terminal_state: FileUploadState
+):
+    """Completing a cancelled or failed FileUpload must raise FileUploadStateError
+    rather than attempting the S3 operation on an already-aborted or invalid upload.
+    """
+    box_id = await rig.create_default_box()
+    file_upload = make_file_upload(state=terminal_state)
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
+
+    with pytest.raises(UploadControllerPort.FileUploadStateError) as exc_info:
+        await rig.controller.complete_file_upload(
+            box_id=box_id,
+            file_id=file_upload.id,
+            unencrypted_checksum="sha256:checksum",
+            encrypted_checksum="md5:checksum",
+            encrypted_parts_md5=["abc123"],
+            encrypted_parts_sha256=["def456"],
+        )
+
+    assert str(file_upload.id) in str(exc_info.value)
+    assert terminal_state in str(exc_info.value)
 
 
 async def test_complete_missing_file_upload(rig: JointRig):
@@ -874,7 +915,6 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
 
     # Verify the exception message contains the unknown storage alias
     assert "does_not_exist" in str(exc_info.value)
-    assert not file_upload_dao.latest.inbox_upload_completed
     assert rig.file_upload_box_dao.latest.size == 0
     assert rig.file_upload_box_dao.latest.file_count == 0
 
@@ -919,7 +959,6 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
     # Verify the exception contains the S3 upload ID
     s3_upload_id = file_upload_dao.latest.s3_upload_id
     assert s3_upload_id in str(exc_info.value)
-    assert not rig.file_upload_dao.latest.inbox_upload_completed
     assert not file_upload_dao.latest.completed
     assert file_upload_box_dao.latest.size == 0
     assert file_upload_box_dao.latest.file_count == 0
@@ -969,7 +1008,6 @@ async def test_complete_file_upload_size_mismatch(rig: JointRig):
     file_upload = rig.file_upload_dao.latest
     assert file_upload.state == "failed"
     assert file_upload.state_updated > state_updated
-    assert not file_upload.inbox_upload_completed
     assert not file_upload.completed
     assert rig.file_upload_box_dao.latest.size == 0
     assert rig.file_upload_box_dao.latest.file_count == 0
@@ -1012,7 +1050,6 @@ async def test_complete_file_upload_checksum_mismatch(rig: JointRig):
     file_upload = rig.file_upload_dao.latest
     assert file_upload.state == "failed"
     assert file_upload.state_updated > state_updated
-    assert not file_upload.inbox_upload_completed
     assert not file_upload.completed
     assert file_upload_box_dao.latest.size == 0
     assert file_upload_box_dao.latest.file_count == 0

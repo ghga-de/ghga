@@ -71,10 +71,6 @@ class FileUpload(event_schemas.FileUpload):
     """
 
     # Note: The following are UCS-only fields
-    inbox_upload_completed: bool = Field(
-        default=False,
-        description="Indicates whether the file has been completely uploaded to the inbox.",
-    )
     s3_upload_id: str = Field(
         default=..., description="The ID of the S3 multipart upload"
     )
