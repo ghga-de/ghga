@@ -14,7 +14,7 @@ import { AuthService } from '@app/auth/services/auth';
 import { UserIvaListComponent } from '@app/ivas/features/user-iva-list/user-iva-list';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
 // eslint-disable-next-line boundaries/dependencies
-import { UserUploadBoxesListComponent } from '@app/upload/features/user-upload-boxes-list/user-upload-boxes-list';
+import { UserUploadGrantsListComponent } from '@app/upload/features/user-upload-grants-list/user-upload-grants-list';
 
 /**
  * This Component shows data about the current user and allows managing their IVAs.
@@ -29,7 +29,7 @@ import { UserUploadBoxesListComponent } from '@app/upload/features/user-upload-b
     ActiveAccessGrantsListComponent,
     UserIvaListComponent,
     ExternalLinkDirective,
-    UserUploadBoxesListComponent,
+    UserUploadGrantsListComponent,
   ],
   templateUrl: './account.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

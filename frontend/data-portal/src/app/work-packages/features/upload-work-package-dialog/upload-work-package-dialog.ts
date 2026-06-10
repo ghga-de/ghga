@@ -9,6 +9,7 @@ import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
   viewChild,
@@ -26,11 +27,13 @@ import {
 } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
+import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
 import { ParagraphsComponent } from '@app/shared/ui/paragraphs/paragraphs';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { getBackendErrorMessage, MaybeBackendError } from '@app/shared/utils/errors';
-import { ResearchDataUploadBox } from '@app/upload/models/box';
+import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadWorkPackageRequest } from '@app/work-packages/models/work-package';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
 import { PubkeyFieldComponent } from '@app/work-packages/ui/pubkey-input/pubkey-input';
@@ -51,6 +54,7 @@ import { PubkeyFieldComponent } from '@app/work-packages/ui/pubkey-input/pubkey-
     MatCardModule,
     ParagraphsComponent,
     DatePipe,
+    IvaTypePipe,
     PubkeyFieldComponent,
     FormField,
   ],
@@ -62,10 +66,18 @@ export class UploadWorkPackageDialogComponent {
   #dialogRef = inject(MatDialogRef<UploadWorkPackageDialogComponent>);
   #notify = inject(NotificationService);
   #wpService = inject(WorkPackageService);
+  #iva = inject(IvaService);
 
-  protected box = inject<ResearchDataUploadBox>(MAT_DIALOG_DATA);
-
+  protected grant = inject<GrantWithBoxInfo>(MAT_DIALOG_DATA);
+  protected iva = computed(() => {
+    if (!this.grant.iva_id || this.#iva.userIvas.error()) return undefined;
+    return this.#iva.userIvas.value().find((i) => i.id === this.grant.iva_id);
+  });
   protected readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+
+  constructor() {
+    this.#iva.loadUserIvas();
+  }
 
   protected model = signal({ pubkey: '' });
   protected pubkeyField = viewChild.required(PubkeyFieldComponent);
@@ -110,11 +122,11 @@ export class UploadWorkPackageDialogComponent {
    * Submit form to create and display a new upload token.
    */
   onCreateToken(): void {
-    if (!this.uploadForm().valid()) return;
+    if (!this.uploadForm().valid() || this.iva()?.state !== 'Verified') return;
 
     const workPackage: UploadWorkPackageRequest = {
       type: 'upload',
-      research_data_upload_box_id: this.box.id,
+      research_data_upload_box_id: this.grant.box_id,
       user_public_crypt4gh_key: this.pubkeyField().trimmedKey,
     };
 
