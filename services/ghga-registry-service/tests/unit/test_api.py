@@ -156,6 +156,19 @@ async def test_create_research_data_upload_box(
         assert response.status_code == 201
         assert response.json() == str(test_box_id)
 
+        # handle title collision / 409
+        ghga_registry.reset_mock()
+        ghga_registry.rdub_manager.create_research_data_upload_box.side_effect = (
+            RDUBManagerPort.BoxTitleExistsError()
+        )
+        response = await rest_client.post(
+            url, json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 409
+        assert response.json()["description"] == (
+            "A ResearchDataUploadBox with the title 'Test Box' already exists."
+        )
+
         # handle file box service error from core
         ghga_registry.reset_mock()
         ghga_registry.rdub_manager.create_research_data_upload_box.side_effect = (
@@ -1002,6 +1015,33 @@ async def test_accession_map_error_translation(
         body = response.json()
         assert body["exception_id"] == "accessionMapError"
         assert body["data"] == expected_data
+
+
+@pytest.mark.parametrize(
+    "blank_field",
+    ["title", "description", "storage_alias"],
+)
+async def test_create_box_rejects_blank_fields(
+    config: Config, ds_auth_headers, blank_field: str
+):
+    """Test that whitespace-only values for title, description, and storage_alias
+    are rejected with a 422.
+    """
+    base_data = {
+        "title": "Test Box",
+        "description": "Test description",
+        "storage_alias": "HD01",
+        "max_size": TEST_MAX_SIZE,
+    }
+    request_data = {**base_data, blank_field: "   "}
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=AsyncMock()) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        response = await rest_client.post(
+            "/upload-boxes", json=request_data, headers=ds_auth_headers
+        )
+        assert response.status_code == 422
 
 
 @pytest.mark.parametrize(

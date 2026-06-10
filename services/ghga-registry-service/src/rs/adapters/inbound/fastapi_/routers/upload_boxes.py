@@ -27,6 +27,7 @@ from rs.adapters.inbound.fastapi_.auth import StewardAuthContext, UserAuthContex
 from rs.adapters.inbound.fastapi_.http_exceptions import (
     HttpAccessionMapError,
     HttpBoxNotFoundError,
+    HttpBoxTitleExistsError,
     HttpBoxVersionError,
     HttpInternalError,
     HttpNotAuthorizedError,
@@ -350,6 +351,7 @@ async def get_research_data_upload_boxes(
         201: {"model": UUID4, "description": "Upload box created successfully."},
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
+        409: {"description": "A ResearchDataUploadBox with this title already exists."},
         422: {"description": "Validation error in request body."},
     },
 )
@@ -369,6 +371,8 @@ async def create_research_data_upload_box(
             data_steward_id=UUID(auth_context.id),
         )
         return box_id
+    except RDUBManagerPort.BoxTitleExistsError as err:
+        raise HttpBoxTitleExistsError(title=request.title) from err
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to create upload box") from err

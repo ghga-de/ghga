@@ -90,6 +90,9 @@ class RDUBManagerPort(ABC):
         references a version of the resource that is not current.
         """
 
+    class BoxTitleExistsError(RuntimeError):
+        """Raised when trying to create an upload box with a title that already exists"""
+
     class BoxMaxSizeTooLowError(RuntimeError):
         """Raised when the requested max_size is smaller than the bytes already uploaded."""
 
@@ -132,6 +135,7 @@ class RDUBManagerPort(ABC):
             The UUID of the newly created research data upload box
 
         Raises:
+            BoxTitleExistsError: If a box with the given title already exists.
             OperationError: If there's a problem creating a corresponding FileUploadBox.
         """
         ...

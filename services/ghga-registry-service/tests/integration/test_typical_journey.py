@@ -25,6 +25,7 @@ from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock
 
 from rs.core.models import GrantId
+from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import TEST_MAX_SIZE
 
@@ -334,3 +335,52 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert archived_box.state == "archived"
     assert archived_box.file_upload_box_state == "archived"
     assert archived_box.version == box_after_mapping.version + 1
+
+
+async def test_duplicate_box_title(joint_fixture: JointFixture, httpx_mock: HTTPXMock):
+    """Test that we get an error when trying to create a new RDUB with a title that
+    already exists.
+    """
+    config = joint_fixture.config
+    rdub_manager = joint_fixture.ghga_registry.rdub_manager
+    ds_user_id = uuid4()
+
+    # Create a box (requires data steward)
+    httpx_mock.add_response(
+        method="POST",
+        url=f"{config.ucs_url}/boxes",
+        status_code=201,
+        json=str(uuid4()),
+    )
+    async with (
+        joint_fixture.kafka.record_events(
+            in_topic=config.research_data_upload_box_topic
+        ) as box_event_recorder1,
+    ):
+        box_id = await rdub_manager.create_research_data_upload_box(
+            title="Test Box",
+            description="A test upload box",
+            storage_alias="test-storage",
+            data_steward_id=ds_user_id,
+            max_size=TEST_MAX_SIZE,
+        )
+
+    assert box_event_recorder1.recorded_events
+    assert len(box_event_recorder1.recorded_events) == 1
+    assert box_event_recorder1.recorded_events[0].payload["id"] == str(box_id)
+
+    # Now try to create another box with the same title
+    async with (
+        joint_fixture.kafka.record_events(
+            in_topic=config.research_data_upload_box_topic
+        ) as box_event_recorder2,
+    ):
+        with pytest.raises(RDUBManagerPort.BoxTitleExistsError):
+            _ = await rdub_manager.create_research_data_upload_box(
+                title="Test Box",
+                description="A test upload box",
+                storage_alias="test-storage",
+                data_steward_id=ds_user_id,
+                max_size=TEST_MAX_SIZE,
+            )
+    assert not box_event_recorder2.recorded_events

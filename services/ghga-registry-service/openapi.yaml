@@ -61,12 +61,10 @@ components:
           type: integer
         storage_alias:
           description: S3 storage alias to use for uploads
-          minLength: 1
           title: Storage Alias
           type: string
         title:
           description: Short meaningful name for the box
-          minLength: 1
           title: Title
           type: string
       required:
@@ -601,6 +599,8 @@ paths:
           description: Not authenticated.
         '403':
           description: Not authorized.
+        '409':
+          description: A ResearchDataUploadBox with this title already exists.
         '422':
           description: Validation error in request body.
       security:

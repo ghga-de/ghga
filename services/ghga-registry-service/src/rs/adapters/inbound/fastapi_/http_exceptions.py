@@ -21,6 +21,7 @@ from pydantic import UUID4, BaseModel
 __all__ = [
     "HttpAccessionMapError",
     "HttpBoxNotFoundError",
+    "HttpBoxTitleExistsError",
     "HttpBoxVersionError",
     "HttpGrantNotFoundError",
     "HttpInternalError",
@@ -62,6 +63,25 @@ class HttpAccessionMapError(HttpCustomExceptionBase):
                 "conflicting_accessions": conflicting_accessions or [],
                 "affected_file_ids": affected_file_ids or [],
             },
+        )
+
+
+class HttpBoxTitleExistsError(HttpCustomExceptionBase):
+    """Thrown when a FileUploadBox with the given title already exists."""
+
+    exception_id = "boxTitleExists"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        title: str
+
+    def __init__(self, *, title: str, status_code: int = 409):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=f"A ResearchDataUploadBox with the title '{title}' already exists.",
+            data={"title": title},
         )
 
 

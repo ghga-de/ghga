@@ -92,8 +92,19 @@ class RDUBManager(RDUBManagerPort):
             The UUID of the newly created research data upload box
 
         Raises:
+            BoxTitleExistsError: If a box with the given title already exists.
             OperationError: If there's a problem creating a corresponding FileUploadBox.
         """
+        # Title uniqueness check is done this way instead of via unique index to avoid
+        #  chicken-egg problem with dependent FUB-RDUB creation
+        if [x async for x in self._box_dao.find_all(mapping={"title": title})]:
+            log.error(
+                "ResearchDataUploadBox creation failed because a box with the title %s"
+                + " already exists.",
+                title,
+            )
+            raise self.BoxTitleExistsError()
+
         # Create FileUploadBox in external service
         file_upload_box_id = await self._file_upload_box_client.create_file_upload_box(
             storage_alias=storage_alias, max_size=max_size

@@ -66,5 +66,8 @@ async def get_box_dao(
         autopublish=True,
         dto_to_event=lambda dto: dto.model_dump(mode="json"),
         event_topic=config.research_data_upload_box_topic,
-        indexes=[MongoDbIndex(fields="file_upload_box_id")],
+        indexes=[
+            MongoDbIndex(fields="file_upload_box_id"),
+            MongoDbIndex(fields="title"),
+        ],
     )

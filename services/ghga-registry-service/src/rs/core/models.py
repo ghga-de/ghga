@@ -132,17 +132,22 @@ class DeleteFileUploadWorkOrder(BaseWorkOrderToken):
 class CreateUploadBoxRequest(BaseModel):
     """Request model for creating a new research data upload box."""
 
-    title: str = Field(
-        ..., description="Short meaningful name for the box", min_length=1
-    )
+    title: str = Field(..., description="Short meaningful name for the box")
     description: str = Field(..., description="Describes the upload box in more detail")
-    storage_alias: str = Field(
-        ..., description="S3 storage alias to use for uploads", min_length=1
-    )
+    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
     max_size: PositiveInt = Field(
         ...,
         description="Maximum number of bytes allowed to be uploaded to the box across all files",
     )
+
+    @field_validator("title", "description", "storage_alias")
+    @classmethod
+    def must_not_be_blank(cls, value: str) -> str:
+        """Reject strings that are empty or contain only whitespace."""
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Field must not be blank or whitespace-only.")
+        return stripped
 
 
 class CreateUploadBoxResponse(BaseModel):
