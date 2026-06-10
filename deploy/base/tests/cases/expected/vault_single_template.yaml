@@ -36,3 +36,10 @@ podAnnotations:
     {{- with secret "test-append" -}}
     export test-append="{{ .Data.data.value }}"
     {{- end -}}
+
+command:
+- sh
+- -c
+
+args:
+- sleep 100000000

@@ -2,13 +2,17 @@
 ghga-common.command-args will take the original run command and
 prepends it with a failsafe routine that injects all existing secrets from vault.
 
+In single-template mode the combined secrets file is consumed directly (e.g. as a
+dotenv env_file by the app), so the shell source-prepend is skipped and the original
+command runs unchanged.
+
 @param The original command to run the microservice
 */}}
 {{- define "ghga-common.command-args" -}}
 {{- if and (index . 1) (index . 2) }}
 {{- $argsList := (kindOf (index . 1) | eq "string") | ternary (list (index . 1)) (index . 1) }}
 {{- dict "command" (index . 2) | toYaml }}
-{{- if (index . 0).Values.vaultAgent.enabled -}}
+{{- if and (index . 0).Values.vaultAgent.enabled (not (index . 0).Values.vaultAgent.singleTemplate) -}}
 {{- $prependedArg := (print "if [ -d \"/vault/secrets\" ]; then for f in /vault/secrets/*; do if [ -f \"$f\" ]; then . \"$f\"; fi; done; fi; " (first $argsList) ";") }}
 {{- if (rest $argsList) -}}
 {{ $argsList = append (list $prependedArg) (rest $argsList) }}

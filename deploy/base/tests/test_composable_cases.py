@@ -42,7 +42,7 @@ def test_kafka_user(rendered_chart, expected):
 
 
 def test_vault_agent(rendered_chart, release_name, expected):
-    manifests = rendered_chart("vault_enabled.yaml")
+    manifests = rendered_chart("common.yaml", "vault_enabled.yaml")
     exp = expected("vault_enabled", "podAnnotations")
     got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
 
@@ -57,8 +57,14 @@ def test_vault_agent(rendered_chart, release_name, expected):
         ].items()
     )
 
+    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["command"]
+    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
+    assert command == expected("vault_enabled", "command")
+    assert args == expected("vault_enabled", "args")
+    
+
 def test_vault_single_template(rendered_chart, release_name, expected):
-    manifests = rendered_chart("vault_single_template.yaml")
+    manifests = rendered_chart("common.yaml", "vault_single_template.yaml")
     exp = expected("vault_single_template", "podAnnotations")
     got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
 
@@ -72,3 +78,9 @@ def test_vault_single_template(rendered_chart, release_name, expected):
             "annotations"
         ].items()
     )
+
+    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["command"]
+    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
+    assert command == expected("vault_single_template", "command")
+    assert args == expected("vault_single_template", "args")
+    

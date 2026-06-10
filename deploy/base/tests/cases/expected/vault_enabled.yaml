@@ -23,3 +23,11 @@ podAnnotations:
     {{ if .Data.data }}{{- range $k, $v := .Data.data }}
     export {{ $k }}='{{ $v }}'
     {{- end }}{{- end }}{{- end }}
+
+command:
+- sh
+- -c
+
+args:
+- if [ -d "/vault/secrets" ]; then for f in /vault/secrets/*; do if [ -f "$f" ]; then
+  . "$f"; fi; done; fi; sleep 100000000;
