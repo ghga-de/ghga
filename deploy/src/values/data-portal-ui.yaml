@@ -12,12 +12,21 @@ config:
 
 configMap:
   mountPath: /home/appuser/data-portal.yaml
+  # DHI
+  # mountPath: /app/data-portal.yaml
 
 containerSecurityContext:
   readOnlyRootFilesystem: false
   # In Data-Portal-UI, node is user 1000 and appuser is user 1001
   runAsUser: 1001
+  # For the DHI images
+  # runAsUser: 1000
 
 executable: node
 executableArgs:
   - /home/appuser/run.mjs
+  # DHI
+  # - /app/run.mjs
+
+# DHI
+# commandPrefix: /usr/bin/
