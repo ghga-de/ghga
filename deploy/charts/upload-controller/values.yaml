@@ -23,7 +23,10 @@ config:
   db_version_collection: "ucsDbVersions"
   migration_wait_sec: 10
 
-cmd: ucs run-rest
+
+executable: ucs
+executableArgs:
+  - run-rest
 # cmd: ucs consume-events
 
 _topics:

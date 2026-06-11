@@ -27,8 +27,9 @@ config:
   auth_key: '{}'
   work_order_signing_key: '{}'
 
-cmd: rs run-rest
-# cmd: dins consume-events
+executable: rs
+executableArgs:
+  - run-rest
 
 _topics:
 
