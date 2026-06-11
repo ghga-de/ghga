@@ -25,7 +25,7 @@ vault.hashicorp.com/role: "{{ .Release.Name }}"
 {{-   end -}}
 {{- end -}}
 {{- $primaryPath = $path -}}
-{{- $stanzas = append $stanzas (printf "{{- with secret %q -}}\nexport %sMONGO_DSN=%q\n{{- end }}" $path $envPrefix .connectionString) -}}
+{{- $stanzas = append $stanzas (printf "{{- with secret %q -}}\n%sMONGO_DSN=%q\n{{- end }}" $path $envPrefix .connectionString) -}}
 {{- end }}
 {{- end }}
 {{- /* Service KV pairs (env-var: folded into the single file) */ -}}
@@ -38,7 +38,7 @@ vault.hashicorp.com/role: "{{ .Release.Name }}"
 {{-   end -}}
 {{- end -}}
 {{- if eq $primaryPath "" }}{{- $primaryPath = $path -}}{{- end -}}
-{{- $stanzas = append $stanzas (printf "{{ with secret %q -}}\n{{ if .Data.data }}{{- range $k, $v := .Data.data }}\nexport %s{{ $k }}='{{ $v }}'\n{{- end }}{{- end }}{{- end }}" $path $envPrefix) -}}
+{{- $stanzas = append $stanzas (printf "{{ with secret %q -}}\n{{ if .Data.data }}{{- range $k, $v := .Data.data }}\n%s{{ $k }}='{{ $v }}'\n{{- end }}{{- end }}{{- end }}" $path $envPrefix) -}}
 {{- end }}
 {{- end }}
 {{- /* crypt4gh key pairs: renderToFile true -> own file+template key; false -> folded into the single file */ -}}
@@ -57,7 +57,7 @@ vault.hashicorp.com/agent-inject-template-{{ $name }}: |
   {{ print `{{ index .Data.data ` ($dataKey | quote) ` }}` }}
   {{ `{{- end }}` }}
 {{- else }}
-{{- $stanzas = append $stanzas (printf "{{ with secret %q -}}\nexport %s%s='{{ index .Data.data %q }}'\n{{- end }}" $secretPath $envPrefix (upper $parameterName) $dataKey) -}}
+{{- $stanzas = append $stanzas (printf "{{ with secret %q -}}\n%s%s='{{ index .Data.data %q }}'\n{{- end }}" $secretPath $envPrefix (upper $parameterName) $dataKey) -}}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -65,7 +65,7 @@ vault.hashicorp.com/agent-inject-template-{{ $name }}: |
 {{- with $secrets.generic }}
 {{- range $name, $g := . }}
 {{- $dk := hasKey $g "dataKey" | ternary $g.dataKey $g.parameterName -}}
-{{- $stanzas = append $stanzas (printf "{{ with secret %q -}}\nexport %s%s='{{ index .Data.data %q }}'\n{{- end }}" $g.path $envPrefix (upper $g.parameterName) $dk) -}}
+{{- $stanzas = append $stanzas (printf "{{ with secret %q -}}\n%s%s='{{ index .Data.data %q }}'\n{{- end }}" $g.path $envPrefix (upper $g.parameterName) $dk) -}}
 {{- end }}
 {{- end }}
 {{- /* optional: append arbitrary consul-template content to the combined file (raw, not tpl-processed) */ -}}

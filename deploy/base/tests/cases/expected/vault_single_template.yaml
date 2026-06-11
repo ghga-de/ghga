@@ -18,23 +18,23 @@ podAnnotations:
   vault.hashicorp.com/agent-inject-secret-service-secrets: default-mongodb-mongodb/creds/test-my-app
   vault.hashicorp.com/agent-inject-template-service-secrets: |
     {{- with secret "default-mongodb-mongodb/creds/test-my-app" -}}
-    export MONGO_DSN="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
+    MONGO_DSN="mongodb://{{username}}:{{password}}@mongodb:27017/admin"
     {{- end }}
     {{ with secret "operational-secrets/data/unique/apps/archive/default/test-my-app" -}}
     {{ if .Data.data }}{{- range $k, $v := .Data.data }}
-    export {{ $k }}='{{ $v }}'
+    {{ $k }}='{{ $v }}'
     {{- end }}{{- end }}{{- end }}
     {{ with secret "secret/data/crypt4gh/keys" -}}
-    export C4GH_INTERNAL_KEY='{{ index .Data.data "internal_priv" }}'
+    C4GH_INTERNAL_KEY='{{ index .Data.data "internal_priv" }}'
     {{- end }}
     {{ with secret "secret/data/apps/api" -}}
-    export API_TOKEN='{{ index .Data.data "token" }}'
+    API_TOKEN='{{ index .Data.data "token" }}'
     {{- end }}
     {{ with secret "secret/data/apps/license" -}}
-    export LICENSE_KEY='{{ index .Data.data "license_key" }}'
+    LICENSE_KEY='{{ index .Data.data "license_key" }}'
     {{- end }}
     {{- with secret "test-append" -}}
-    export test-append="{{ .Data.data.value }}"
+    test-append="{{ .Data.data.value }}"
     {{- end -}}
 
 command:
