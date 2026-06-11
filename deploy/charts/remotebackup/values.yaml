@@ -15,9 +15,9 @@ service:
 
 configPrefix: ""
 
-cmd: "remotebackup backup"
 executable: remotebackup
-executableArgs: ["backup"]
+executableArgs:
+  - backup
 
 configMap:
   mountPath: /home/appuser/.config.yaml

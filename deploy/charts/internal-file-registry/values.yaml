@@ -19,11 +19,15 @@ config:
   db_version_collection: "ifrsDbVersions"
   migration_wait_sec: 10
 
-cmd: ifrs consume-events
+executable: ifrs
+executableArgs:
+  - consume-events
 
 migrationInitContainer:
- args:
-  - ifrs migrate-db
+  executable: ifrs
+  executableArgs:
+    - migrate-db
+
 
 _topics:
   fileDeletedEvent:

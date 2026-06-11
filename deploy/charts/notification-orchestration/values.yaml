@@ -20,7 +20,8 @@ config:
   migration_wait_sec: 10
 
 
-cmd: nos
+executable: nos
+executableArgs: []
 
 _topics:
   accessRequestEvents:

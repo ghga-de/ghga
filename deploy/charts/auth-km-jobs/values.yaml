@@ -14,12 +14,13 @@ service:
 
 cronSchedule: "0 0 1 1 0"
 
-cmd: "run refresh-int-keys"
-executable: run
-executableArgs: ["refresh-int-keys"]
-# internal: run refresh-int-keys
-# external: run refresh-ext-keys
-# wps: run refresh-wps-keys
+executable: ""
+executableArgs:
+  - run refresh-int-keys
+# executableArgs:
+#   - run refresh-ext-keys
+# executableArgs:
+#   - run refresh-wps-keys
 
 configMap:
   enabled: false

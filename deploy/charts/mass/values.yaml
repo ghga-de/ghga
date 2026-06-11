@@ -33,8 +33,11 @@ config:
         name: Dataset title
   kafka_enable_dlq: true
 
-cmd: mass run-rest
-# cmd: mass consume-events
+executable: mass
+executableArgs:
+  - run-rest
+# executableArgs:
+#   - consume-events
 
 _topics:
   resourceChangeEvent:

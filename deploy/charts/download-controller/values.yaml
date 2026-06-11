@@ -15,8 +15,9 @@ mongodb:
 serviceName: dcs-consumer
 
 migrationInitContainer:
- args:
-  - dcs migrate-db
+  executable: dcs
+  executableArgs:
+    - migrate-db
 
 config:
   auth_key: '{}'
@@ -31,7 +32,9 @@ config:
   db_version_collection: "dcsDbVersions"
   migration_wait_sec: 10
 
-cmd: dcs run-rest
+executable: dcs
+executableArgs:
+  - run-rest
 # cmd: dcs consume-events
 
 _topics:

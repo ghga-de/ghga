@@ -41,7 +41,8 @@ config:
   db_version_collection: "nsDbVersions"
   migration_wait_sec: 10
 
-cmd: ns
+executable: ns
+executableArgs: []
 
 _topics:
   notificationEvent:

@@ -23,7 +23,8 @@ config:
   # Is set in the request
   vault_path: ""
 
-cmd: sms
+executable: sms
+executableArgs: []
 
 # SMS is just used for testing, it requires access to all topics to clear them
 kafkaTopicsParameters: false

@@ -17,4 +17,5 @@ config:
   ucs_api_url: http://upload-controller/upload
   wps_api_url: http://work-package/
 
-cmd: wkvs
+executable: wkvs
+executableArgs: []

@@ -25,7 +25,8 @@ authService:
     enabled: false
     name: authentication
 
-cmd: auth-service
+executable: auth-service
+executableArgs: []
 
 _topics:
   authEvents:

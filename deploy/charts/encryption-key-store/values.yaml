@@ -15,4 +15,5 @@ config:
   vault_path: ekss
   enable_opentelemetry: false
 
-cmd: ekss
+executable: ekss
+executableArgs: []

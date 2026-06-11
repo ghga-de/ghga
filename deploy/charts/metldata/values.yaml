@@ -30,7 +30,8 @@ config:
   publishable_artifacts:
   - "added_accessions"
 
-cmd: metldata
+executable: metldata
+executableArgs: []
 
 _topics:
   artifactsEvent:

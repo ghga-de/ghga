@@ -25,7 +25,9 @@ config:
   migration_wait_sec: 10
 
 
-cmd: ars run-rest
+executable: ars
+executableArgs:
+  - run-rest
 # cmd: ars consume-events
 
 _topics:

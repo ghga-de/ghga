@@ -40,13 +40,17 @@ config:
     data_access_committees: DataAccessCommittee
     publications: Publication
 
-cmd: rts run-rest
+executable: rts
+executableArgs:
+  - run-rest
 
 migrationInitContainer:
- args:
-  - rts migrate-db
+  executable: rts
+  executableArgs:
+  - migrate-db
 
-# cmd: rts consume-events
+# executableArgs:
+#   - consume-events
 
 _topics:
   artifactsEvent:
