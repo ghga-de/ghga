@@ -14,7 +14,7 @@ exports:
     
     # This is the actual Kubernetes `command` field
     command: ["sh", "-c"]
-    commandPrefix: ""
+    commandPrefix: /usr/local/bin/
 
     # Executable name and arguments (will be combined into a shell command)
     executable: ""
