@@ -188,6 +188,14 @@ class FileDoesNotExistError(RuntimeError):
         super().__init__(message)
 
 
+class FileNotInBoxError(RuntimeError):
+    """Raised when no upload with the given alias exists in the upload box."""
+
+    def __init__(self, *, file_alias: str):
+        message = f"No file with alias '{file_alias}' was found in the upload box."
+        super().__init__(message)
+
+
 class FileNotRegisteredError(RuntimeError):
     """Thrown when a request for a file returns a 404 error."""
 

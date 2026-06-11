@@ -267,6 +267,16 @@ async def test_delete_file(upload_client: UploadClient, httpx_mock: HTTPXMock):
     with pytest.raises(exceptions.UnexpectedError):
         await upload_client.delete_file(file_id=FILE_ID, file_alias=FILE_ALIAS)
 
+    # A "fileUploadNotFound" 404 means the file is no longer in the box
+    httpx_mock.add_response(
+        404,
+        url=url,
+        method="DELETE",
+        json={"exception_id": "fileUploadNotFound"},
+    )
+    with pytest.raises(exceptions.FileNotInBoxError):
+        await upload_client.delete_file(file_id=FILE_ID, file_alias=FILE_ALIAS)
+
 
 @pytest.mark.parametrize(
     "status_code, response_json, file_upload_box_id, file_alias, file_id, expected_error",
@@ -343,14 +353,14 @@ async def test_delete_file(upload_client: UploadClient, httpx_mock: HTTPXMock):
             FILE_ID,
             exceptions.InvalidBoxError,
         ),
-        # 404 status codes - fileUploadNotFound
+        # 404 status codes - fileUploadNotFound, alias known -> alias-based error
         (
             404,
             {"exception_id": "fileUploadNotFound"},
             TEST_FUB_ID,
             FILE_ALIAS,
             FILE_ID,
-            exceptions.InvalidFileUploadError,
+            exceptions.FileNotInBoxError,
         ),
         # 404 status codes - s3UploadDetailsNotFound
         (

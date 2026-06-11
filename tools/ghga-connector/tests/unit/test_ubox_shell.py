@@ -15,10 +15,12 @@
 
 """Unit tests for the interactive upload box shell."""
 
+import re
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
+import typer
 from prompt_toolkit.document import Document
 from pydantic import SecretBytes
 
@@ -33,6 +35,7 @@ from ghga_connector.core.uploading.ubox_shell import (
     _format_listing,
     _human_readable_size,
 )
+from ghga_connector.exceptions import FileNotInBoxError
 
 
 class FakeUploadClient(UploadClient):
@@ -119,6 +122,7 @@ def test_format_listing_contains_fields():
 @pytest.mark.parametrize(
     ("state", "expected"),
     [
+        ("init", "uploading..."),
         ("inbox", "re-encrypting..."),
         ("interrogated", "re-encrypted"),
         ("cancelled", "deleted"),
@@ -130,6 +134,42 @@ def test_format_listing_contains_fields():
 def test_display_state(state, expected):
     """Raw API states are mapped to user-facing labels."""
     assert ubox_shell._display_state(state) == expected
+
+
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    [
+        ("init", typer.colors.YELLOW),
+        ("inbox", typer.colors.YELLOW),
+        ("interrogated", typer.colors.GREEN),
+        ("cancelled", typer.colors.RED),
+        ("Cancelled", typer.colors.RED),  # case-insensitive
+        ("populated", None),  # unmapped states use the default colour
+        (None, None),
+    ],
+)
+def test_state_color(state, expected):
+    """Raw API states are mapped to display colours."""
+    assert ubox_shell._state_color(state) == expected
+
+
+def test_format_listing_colors_state_and_keeps_alignment():
+    """The STATE cell is colourised without disturbing column alignment."""
+    rows = [
+        _make_info("a.bam", decrypted_size=2048, state="interrogated"),
+        _make_info("longer-alias.bam", decrypted_size=2048, state="cancelled"),
+    ]
+    rendered = _format_listing(rows)
+
+    # The state value is wrapped in the expected colour code.
+    assert typer.style("re-encrypted", fg=typer.colors.GREEN) in rendered
+    assert typer.style("deleted", fg=typer.colors.RED) in rendered
+
+    # With the ANSI codes stripped, the columns still line up.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", rendered)
+    file_id_col = plain.splitlines()[0].index("FILE ID")
+    for line in plain.splitlines()[1:]:
+        assert line[file_id_col:].lstrip() == line[file_id_col:]
 
 
 @pytest.mark.asyncio
@@ -224,6 +264,26 @@ async def test_do_rm_unknown_alias(capsys):
 
     assert client.deleted == []
     assert "does-not-exist" in capsys.readouterr().err
+
+
+@pytest.mark.asyncio
+async def test_do_rm_delete_404(capsys):
+    """A 404 from the DELETE call is reported as the file not existing."""
+
+    class VanishingClient(FakeUploadClient):
+        async def delete_file(self, *, file_id, file_alias):
+            # Simulate the file being removed between listing and deletion.
+            raise FileNotInBoxError(file_alias=file_alias)
+
+    client = VanishingClient([_make_info("a.bam")])
+    shell = UboxShell(upload_client=client, my_private_key=SecretBytes(b""))
+
+    await shell._do_rm(["a.bam"])
+
+    captured = capsys.readouterr()
+    err_txt = "No file with alias 'a.bam' was found in the upload box."
+    assert captured.err.strip() == err_txt
+    assert "deleted" not in captured.out.lower()
 
 
 @pytest.mark.asyncio

@@ -417,6 +417,10 @@ def _handle_404(
         case "boxNotFound":
             raise exceptions.InvalidBoxError(work_package_id=work_package_id)
         case "fileUploadNotFound":
+            # Prefer the alias-based message when the caller knows the alias
+            # (e.g. deletion); fall back to the file ID for upload-path calls.
+            if file_alias is not None:
+                raise exceptions.FileNotInBoxError(file_alias=file_alias)
             raise exceptions.InvalidFileUploadError(
                 work_package_id=work_package_id,
                 file_id=file_id,  # type: ignore
