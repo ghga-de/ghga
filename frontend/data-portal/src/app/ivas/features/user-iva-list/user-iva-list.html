@@ -38,25 +38,25 @@
             <div class="min-w-64 text-center lg:text-start">
               @switch (iva.state) {
                 @case ('Verified') {
-                  <div class="text-bold text-success text-base">
+                  <div class="text-success text-base font-bold">
                     Address has been verified
                     <mat-icon class="align-bottom" fontIcon="verified_user"></mat-icon>
                   </div>
                 }
                 @case ('Unverified') {
-                  <div class="text-bold text-error text-base">
+                  <div class="text-error text-base font-bold">
                     Needs verification
                     <mat-icon class="align-bottom" fontIcon="gpp_bad"></mat-icon>
                   </div>
                 }
                 @case ('CodeTransmitted') {
-                  <div class="text-bold text-warning text-base">
+                  <div class="text-warning text-base font-bold">
                     Code has been sent
                     <mat-icon class="align-bottom" fontIcon="pin"></mat-icon>
                   </div>
                 }
                 @default {
-                  <div class="text-bold text-info text-base">
+                  <div class="text-info text-base font-bold">
                     Waiting for verification
                     <mat-icon class="align-bottom" fontIcon="pending"></mat-icon>
                   </div>

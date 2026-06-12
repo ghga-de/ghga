@@ -233,9 +233,11 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Whether metadata files are still loading */
   metadataFilesLoading = computed(() => this.#metadataFilesOrNull() === null);
 
-  /** Files in the upload box */
+  /** Files in the upload box (excluding deleted and failed ones) */
   boxFiles = computed<FileUploadWithAccession[]>(() =>
-    this.#uploadBoxService.boxFileUploads.value(),
+    this.#uploadBoxService.boxFileUploads
+      .value()
+      .filter((file) => file.state !== 'cancelled' && file.state !== 'failed'),
   );
 
   /** Whether upload box files are still loading */

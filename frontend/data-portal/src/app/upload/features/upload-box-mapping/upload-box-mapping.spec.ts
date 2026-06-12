@@ -257,6 +257,30 @@ describe('UploadBoxMappingComponent', () => {
     );
   });
 
+  it('should exclude deleted and failed files from the box files', () => {
+    uploadBoxService.setBoxFileUploads([
+      ...TEST_BOX_FILES,
+      {
+        ...TEST_BOX_FILES[0],
+        id: 'file-4',
+        alias: 'deleted.fastq.gz',
+        state: 'cancelled',
+      },
+      {
+        ...TEST_BOX_FILES[1],
+        id: 'file-5',
+        alias: 'failed.fastq.gz',
+        state: 'failed',
+      },
+    ]);
+
+    expect(component.boxFiles().map((file) => file.id)).toEqual([
+      'file-1',
+      'file-2',
+      'file-3',
+    ]);
+  });
+
   it('should confirm field changes before discarding manual mappings', async () => {
     await createComponent({
       studyAccession: TEST_STUDY.accession,

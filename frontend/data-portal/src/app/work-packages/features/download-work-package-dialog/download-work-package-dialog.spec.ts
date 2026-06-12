@@ -8,7 +8,6 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import {
   AccessGrantStatus,
   AccessGrantWithIva,
@@ -89,7 +88,7 @@ describe('DownloadWorkPackageDialogComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [DownloadWorkPackageDialogComponent, NoopAnimationsModule],
+      imports: [DownloadWorkPackageDialogComponent],
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: TEST_GRANT },
         { provide: MatDialogRef, useValue: dialogRef },

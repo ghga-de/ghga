@@ -7,7 +7,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { apply, form } from '@angular/forms/signals';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { PubkeyFieldComponent } from './pubkey-input';
 
 describe('PubkeyFieldComponent', () => {
@@ -16,7 +15,7 @@ describe('PubkeyFieldComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PubkeyFieldComponent, NoopAnimationsModule],
+      imports: [PubkeyFieldComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PubkeyFieldComponent);

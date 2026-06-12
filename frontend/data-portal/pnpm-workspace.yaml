@@ -7,3 +7,5 @@ allowBuilds:
   msgpackr-extract: true
   msw: true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - ngx-mat-input-tel@22.0.1

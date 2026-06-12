@@ -6,7 +6,6 @@
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import {
   provideRouter,
   TitleStrategy,
@@ -49,7 +48,6 @@ export const appConfig: ApplicationConfig = {
     ),
     // cache all GET requests by default
     provideHttpCache({ strategy: 'implicit' }),
-    provideAnimationsAsync(),
     { provide: MAT_DATE_LOCALE, useValue: DEFAULT_DATE_LOCALE },
     {
       provide: DATE_PIPE_DEFAULT_OPTIONS,

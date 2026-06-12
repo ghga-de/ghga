@@ -6,7 +6,6 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { provideAnimations } from '@angular/platform-browser/animations';
 import { datasetDetails, datasetInformation } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information';
@@ -98,7 +97,6 @@ describe('DatasetDetailsComponent', () => {
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: IvaService, useClass: MockIvaService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
-        provideAnimations(),
       ],
     })
       .overrideComponent(DatasetDetailsComponent, {

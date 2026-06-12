@@ -100,8 +100,10 @@ test('can map files and archive locked upload box using mapping tool', async ({
   await aliasRadio.check();
 
   await expect(mappingCard).toContainText('Files in Experimental Metadata: 16');
-  await expect(mappingCard).toContainText('Files in Upload Box: 15');
-  await expect(mappingCard).toContainText('Unmapped: 2');
+  // the failed file sample_003_R1.fastq.gz is excluded from the 15 box files,
+  // so the corresponding metadata file is counted as unmapped
+  await expect(mappingCard).toContainText('Files in Upload Box: 14');
+  await expect(mappingCard).toContainText('Unmapped: 3');
   await expect(mappingCard).toContainText('Unmapped: 1');
 
   await expect(mappingCard.getByText('some_unessential_data.csv')).toBeVisible();
@@ -117,6 +119,13 @@ test('can map files and archive locked upload box using mapping tool', async ({
     .first();
   await expect(methMetadataRow).toBeVisible();
   await expect(methMetadataRow).toContainText('unmapped');
+
+  const failedFileMetadataRow = mappingCard
+    .locator('tr')
+    .filter({ hasText: 'sample_003_R1.fastq.gz' })
+    .first();
+  await expect(failedFileMetadataRow).toBeVisible();
+  await expect(failedFileMetadataRow).toContainText('unmapped');
 
   const confirmMappingButton = mappingCard.getByRole('button', {
     name: 'Confirm mapping and archive',
@@ -152,9 +161,9 @@ test('can map files and archive locked upload box using mapping tool', async ({
   await expect(inlineMappingOption).toBeVisible();
   await clickWithFallback(inlineMappingOption);
 
-  await expect(mappingCard).toContainText('Mapped: 15');
-  await expect(mappingCard).toContainText('Unmapped: 1');
-  await expect(mappingCard).toContainText('Matches: 14');
+  await expect(mappingCard).toContainText('Mapped: 14');
+  await expect(mappingCard).toContainText('Unmapped: 2');
+  await expect(mappingCard).toContainText('Matches: 13');
   await expect(mappingCard).toContainText('Manual: 1');
 
   await confirmMappingButton.click();
@@ -166,7 +175,10 @@ test('can map files and archive locked upload box using mapping tool', async ({
   await expect(finalConfirmDialog).not.toContainText(
     'The following file in the upload box has not been mapped:',
   );
-  await expect(finalConfirmDialog).toContainText('some_unessential_data.csv');
+  await expect(finalConfirmDialog).toContainText(
+    '2 metadata files have not been mapped',
+  );
+  await expect(finalConfirmDialog).toContainText('sample_003_R1.fastq.gz');
 
   const cancelButton = finalConfirmDialog.getByRole('button', { name: 'Cancel' });
   const confirmArchiveButton = finalConfirmDialog.getByRole('button', {

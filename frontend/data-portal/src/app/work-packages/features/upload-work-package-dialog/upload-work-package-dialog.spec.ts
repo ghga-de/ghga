@@ -9,7 +9,6 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
@@ -86,7 +85,7 @@ describe('UploadWorkPackageDialogComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [UploadWorkPackageDialogComponent, NoopAnimationsModule],
+      imports: [UploadWorkPackageDialogComponent],
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: TEST_GRANT },
         { provide: MatDialogRef, useValue: dialogRef },
