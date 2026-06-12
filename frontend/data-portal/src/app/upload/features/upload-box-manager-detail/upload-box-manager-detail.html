@@ -72,6 +72,31 @@
                 {{ box.max_size | parseBytes }}</span
               >
             </p>
+            @if (box.state === 'open') {
+              <button
+                mat-raised-button
+                color="primary"
+                class="mt-4"
+                (click)="lockBox()"
+                [disabled]="isChangingState()"
+                data-umami-event="Upload Box Manager Detail Lock Box Clicked"
+              >
+                <mat-icon fontIcon="lock"></mat-icon>
+                Lock the box
+              </button>
+            } @else if (box.state === 'locked') {
+              <button
+                mat-raised-button
+                color="primary"
+                class="mt-4"
+                (click)="openBox()"
+                [disabled]="isChangingState()"
+                data-umami-event="Upload Box Manager Detail Open Box Clicked"
+              >
+                <mat-icon fontIcon="lock_open"></mat-icon>
+                Open the box again
+              </button>
+            }
           </mat-card-content>
         </mat-card>
 

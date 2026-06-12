@@ -447,6 +447,20 @@ describe('UploadBoxService', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
   });
 
+  it('should reopen an upload box', () => {
+    const id = TEST_BOX_RETRIEVAL_RESULTS.boxes[0].id;
+
+    let completed = false;
+    service.openUploadBox(id, 2).subscribe({ complete: () => (completed = true) });
+
+    const req = httpMock.expectOne(`http://mock.dev/rs/upload-boxes/${id}`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ version: 2, state: UploadBoxState.open });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(completed).toBe(true);
+  });
+
   describe('loadBoxGrants', () => {
     const BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
     const GRANT: UploadGrant = {

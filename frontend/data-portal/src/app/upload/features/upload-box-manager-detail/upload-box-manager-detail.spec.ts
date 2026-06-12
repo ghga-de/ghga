@@ -70,6 +70,8 @@ class MockUploadBoxService {
   submitFileMapping = vitest.fn(() => of(undefined));
   archiveUploadBox = vitest.fn(() => of(undefined));
   deleteFileUpload = vitest.fn(() => of(undefined));
+  lockUploadBox = vitest.fn(() => of(undefined));
+  openUploadBox = vitest.fn(() => of(undefined));
 
   getStorageLocationLabel = (alias: string) =>
     this.storageLabels.value()[alias] ?? alias;
@@ -393,6 +395,148 @@ describe('UploadBoxManagerDetailComponent', () => {
 
       expect(mockNotificationService.showError).toHaveBeenCalled();
       expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('changing the box state', () => {
+    beforeEach(() => {
+      mockDialog.open.mockReset();
+      mockNotificationService.showSuccess.mockClear();
+      mockNotificationService.showError.mockClear();
+      uploadBoxService.lockUploadBox.mockClear();
+      uploadBoxService.lockUploadBox.mockReturnValue(of(undefined));
+      uploadBoxService.openUploadBox.mockClear();
+      uploadBoxService.openUploadBox.mockReturnValue(of(undefined));
+    });
+
+    describe('when the box is open', () => {
+      beforeEach(async () => {
+        uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+        fixture.componentRef.setInput('id', TEST_BOX.id);
+        await fixture.whenStable();
+      });
+
+      it('should show the lock button but not the reopen button', () => {
+        expect(screen.getByRole('button', { name: /lock the box/i })).toBeVisible();
+        expect(
+          screen.queryByRole('button', { name: /open the box again/i }),
+        ).not.toBeInTheDocument();
+      });
+
+      it('should lock the box after confirmation', async () => {
+        mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+
+        component.lockBox();
+        await fixture.whenStable();
+
+        expect(mockDialog.open).toHaveBeenCalledTimes(1);
+        expect(uploadBoxService.lockUploadBox).toHaveBeenCalledWith(
+          TEST_BOX.id,
+          TEST_BOX.version,
+          false,
+        );
+        expect(mockNotificationService.showSuccess).toHaveBeenCalled();
+      });
+
+      it('should not lock the box when the confirmation is cancelled', async () => {
+        mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+        component.lockBox();
+        await fixture.whenStable();
+
+        expect(uploadBoxService.lockUploadBox).not.toHaveBeenCalled();
+        expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+      });
+
+      it('should offer to force the lock when uploads are incomplete', async () => {
+        mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+        const conflict = Object.assign(new Error('Conflict'), {
+          status: 409,
+          error: { data: { incomplete_uploads: ['file1', 'file2'] } },
+        });
+        uploadBoxService.lockUploadBox.mockReturnValueOnce(throwError(() => conflict));
+
+        component.lockBox();
+        await fixture.whenStable();
+
+        expect(mockDialog.open).toHaveBeenCalledTimes(2);
+        expect(uploadBoxService.lockUploadBox).toHaveBeenLastCalledWith(
+          TEST_BOX.id,
+          TEST_BOX.version,
+          true,
+        );
+        expect(mockNotificationService.showSuccess).toHaveBeenCalled();
+        expect(mockNotificationService.showError).not.toHaveBeenCalled();
+      });
+
+      it('should show an error notification when locking fails', async () => {
+        mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+        uploadBoxService.lockUploadBox.mockReturnValueOnce(
+          throwError(() => new Error('failed')),
+        );
+
+        component.lockBox();
+        await fixture.whenStable();
+
+        expect(mockNotificationService.showError).toHaveBeenCalled();
+        expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('when the box is locked', () => {
+      const lockedBox = uploadBoxes.boxes[1];
+
+      beforeEach(async () => {
+        uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+        fixture.componentRef.setInput('id', lockedBox.id);
+        await fixture.whenStable();
+      });
+
+      it('should show the reopen button but not the lock button', () => {
+        expect(
+          screen.getByRole('button', { name: /open the box again/i }),
+        ).toBeVisible();
+        expect(
+          screen.queryByRole('button', { name: /lock the box/i }),
+        ).not.toBeInTheDocument();
+      });
+
+      it('should reopen the box after confirmation', async () => {
+        mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+
+        component.openBox();
+        await fixture.whenStable();
+
+        expect(mockDialog.open).toHaveBeenCalledTimes(1);
+        expect(uploadBoxService.openUploadBox).toHaveBeenCalledWith(
+          lockedBox.id,
+          lockedBox.version,
+        );
+        expect(mockNotificationService.showSuccess).toHaveBeenCalled();
+      });
+
+      it('should not reopen the box when the confirmation is cancelled', async () => {
+        mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+        component.openBox();
+        await fixture.whenStable();
+
+        expect(uploadBoxService.openUploadBox).not.toHaveBeenCalled();
+        expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+      });
+
+      it('should show an error notification when reopening fails', async () => {
+        mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+        uploadBoxService.openUploadBox.mockReturnValueOnce(
+          throwError(() => new Error('failed')),
+        );
+
+        component.openBox();
+        await fixture.whenStable();
+
+        expect(mockNotificationService.showError).toHaveBeenCalled();
+        expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+      });
     });
   });
 });

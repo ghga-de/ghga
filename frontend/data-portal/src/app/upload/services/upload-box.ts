@@ -372,6 +372,23 @@ export class UploadBoxService {
   }
 
   /**
+   * Send a PATCH request to set the upload box state back to open.
+   * Used by data stewards to reopen a locked upload box.
+   * @param boxId - the ID of the upload box
+   * @param currentVersion - the current box version
+   * @returns An observable that completes when the reopening is accepted
+   */
+  openUploadBox(boxId: string, currentVersion: number): Observable<void> {
+    const changes: ResearchDataUploadBoxUpdate = {
+      version: currentVersion,
+      state: UploadBoxState.open,
+    };
+    return this.#http
+      .patch<void>(`${this.#boxesUrl}/${encodeURIComponent(boxId)}`, changes)
+      .pipe(tap(() => this.#updateUploadBoxLocally(boxId, changes)));
+  }
+
+  /**
    * Set the active filter for the upload box list.
    * @param filter - the filter to apply
    */

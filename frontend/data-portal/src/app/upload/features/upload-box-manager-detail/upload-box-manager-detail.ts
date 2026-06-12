@@ -216,6 +216,127 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     return grant.valid_from <= today && today <= grant.valid_until;
   }
 
+  /** Whether a box state change (lock or reopen) is currently in flight. */
+  isChangingState = signal<boolean>(false);
+
+  /**
+   * Ask for confirmation and, on approval, lock the upload box.
+   */
+  lockBox(): void {
+    const box = this.uploadBox();
+    if (!box) return;
+    this.#confirmationService.confirm({
+      title: 'Lock upload box?',
+      message:
+        'Locking the box prevents further file uploads by its users. ' +
+        'Are you sure you want to proceed?',
+      confirmText: 'Lock the box',
+      callback: (confirmed) => {
+        if (confirmed) this.#lockBox(box, false);
+      },
+    });
+  }
+
+  /**
+   * Lock the upload box (set state to locked). When the backend rejects the
+   * request with a 409 because some uploads are still incomplete, ask the
+   * user whether to force it and retry once with force=true.
+   * @param box - the upload box to lock
+   * @param force - whether to lock despite incomplete uploads
+   */
+  #lockBox(box: ResearchDataUploadBox, force: boolean): void {
+    this.isChangingState.set(true);
+    this.#uploadBoxService.lockUploadBox(box.id, box.version, force).subscribe({
+      next: () => {
+        this.isChangingState.set(false);
+        this.#notificationService.showSuccess('The upload box has been locked.');
+      },
+      error: (err: unknown) => {
+        // Offer the force option only on the first attempt and only when the
+        // conflict is specifically caused by incomplete uploads. A forced
+        // retry that still fails falls through to the generic message.
+        const incompleteUploads = force ? null : this.#incompleteUploads(err);
+        if (incompleteUploads) {
+          this.#confirmForceLock(box, incompleteUploads.length);
+        } else {
+          this.isChangingState.set(false);
+          this.#notificationService.showError(
+            'Failed to lock the upload box. Please try again.',
+          );
+        }
+      },
+    });
+  }
+
+  /**
+   * Extract the incomplete uploads reported by a 409 locking conflict, which
+   * the user may override by forcing the lock.
+   * @param err - the error thrown by the lock request
+   * @returns the incomplete uploads, or null if this is not such a conflict
+   */
+  #incompleteUploads(err: unknown): unknown[] | null {
+    const response = err as HttpErrorResponse;
+    const data: unknown = response?.error?.data;
+    if (response?.status !== 409 || !data || typeof data !== 'object') return null;
+    const uploads = (data as { incomplete_uploads?: unknown }).incomplete_uploads;
+    return Array.isArray(uploads) ? uploads : null;
+  }
+
+  /**
+   * Ask the user whether to lock despite incomplete uploads. On confirmation,
+   * retry the lock with force=true; otherwise leave the box open.
+   * @param box - the upload box to lock
+   * @param count - the number of still-incomplete file uploads
+   */
+  #confirmForceLock(box: ResearchDataUploadBox, count: number): void {
+    const [are, uploads] = count === 1 ? ['is', 'upload'] : ['are', 'uploads'];
+    this.#confirmationService.confirm({
+      title: 'Incomplete uploads detected!',
+      message: `Locking failed because there ${are} still ${count} incomplete file ${uploads}. Do you want to lock the box anyway?`,
+      confirmText: 'Lock anyway',
+      callback: (confirmed) => {
+        if (!confirmed) {
+          this.isChangingState.set(false);
+          return;
+        }
+        this.#lockBox(box, true);
+      },
+    });
+  }
+
+  /**
+   * Ask for confirmation and, on approval, reopen the locked upload box.
+   */
+  openBox(): void {
+    const box = this.uploadBox();
+    if (!box) return;
+    this.#confirmationService.confirm({
+      title: 'Reopen upload box?',
+      message:
+        'Reopening the box allows its users to upload files again. ' +
+        'Are you sure you want to proceed?',
+      confirmText: 'Open the box',
+      callback: (confirmed) => {
+        if (!confirmed) return;
+        this.isChangingState.set(true);
+        this.#uploadBoxService.openUploadBox(box.id, box.version).subscribe({
+          next: () => {
+            this.isChangingState.set(false);
+            this.#notificationService.showSuccess(
+              'The upload box has been opened again.',
+            );
+          },
+          error: () => {
+            this.isChangingState.set(false);
+            this.#notificationService.showError(
+              'Failed to open the upload box. Please try again.',
+            );
+          },
+        });
+      },
+    });
+  }
+
   /**
    * Handle the archived event from the mapping component by clearing the cached
    * box and reloading fresh data, so the UI transitions out of the locked state.
