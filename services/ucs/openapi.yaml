@@ -392,6 +392,36 @@ components:
       - box_state
       title: HttpBoxStateErrorData
       type: object
+    HttpBoxVersionError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpBoxVersionErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: boxVersionOutdated
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpBoxVersionError
+      type: object
+    HttpBoxVersionErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+      required:
+      - box_id
+      title: HttpBoxVersionErrorData
+      type: object
     HttpFileUploadNotFoundError:
       additionalProperties: false
       properties:
@@ -764,7 +794,7 @@ info:
   description: A service managing uploads of file objects to an S3-compatible Object
     Storage.
   title: Upload Controller Service
-  version: 14.0.0
+  version: 14.1.0
 openapi: 3.1.0
 paths:
   /boxes:
@@ -815,6 +845,78 @@ paths:
       tags:
       - UploadControllerService
   /boxes/{box_id}:
+    delete:
+      description: 'Remove a FileUploadBox and all its associated FileUploads.
+
+
+        Cancels any in-progress S3 uploads, removes inbox objects from S3, then deletes
+
+        the box and all its FileUploads from the database. Deletion is blocked if
+        the box
+
+        is archived, or if a `version` query parameter is supplied and doesn''t match
+        the
+
+        current box version. Requires a DeleteFileBoxWorkOrder token from the RS.'
+      operationId: removeFileUploadBox
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      - description: The expected current version of the box (optional optimistic
+          locking). If provided and outdated, the deletion is rejected.
+        in: query
+        name: version
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: The expected current version of the box (optional optimistic
+            locking). If provided and outdated, the deletion is rejected.
+          title: Version
+      responses:
+        '204':
+          description: FileUploadBox and all associated uploads removed successfully
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxNotFoundError'
+          description: 'Exceptions by ID:
+
+            - boxNotFound: The FileUploadBox with the given ID does not exist.'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxVersionError'
+          description: 'Exceptions by ID:
+
+            - boxVersionOutdated: The requested FileUploadBox version is outdated.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUploadAbortError'
+          description: 'Exceptions by ID:
+
+            - uploadAbortError: There was an error aborting the s3 multipart upload.'
+      security:
+      - HTTPBearer: []
+      summary: Remove a FileUploadBox and all its associated uploads
+      tags:
+      - UploadControllerService
     patch:
       description: 'Update a FileUploadBox state or max_size.
 

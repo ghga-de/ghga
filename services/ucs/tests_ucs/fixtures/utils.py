@@ -144,6 +144,16 @@ def delete_file_token_header(
     return _make_auth_header(work_order, jwk)
 
 
+def delete_file_box_token_header(
+    *,
+    box_id: UUID = uuid4(),
+    jwk: JWK,
+) -> dict[str, str]:
+    """Generate DeleteFileBoxWorkOrder token for testing."""
+    work_order = models.DeleteFileBoxWorkOrder(work_type="delete_box", box_id=box_id)
+    return _make_auth_header(work_order, jwk)
+
+
 def make_file_upload(
     *,
     storage_alias: str = TEST_STORAGE_ALIAS,

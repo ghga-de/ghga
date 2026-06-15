@@ -1897,3 +1897,165 @@ async def test_initiate_file_upload_marks_failed_on_insert_kafka_error(
 
     # Just double check that no UploadActivity was inserted
     assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+
+
+@pytest.mark.parametrize("box_state", ["open", "locked"])
+async def test_remove_file_upload_box_open_and_locked(rig: JointRig, box_state: str):
+    """Test that a box in 'open' or 'locked' state can be successfully deleted."""
+    box_id = await rig.create_default_box()
+    if box_state == "locked":
+        await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+
+    await rig.controller.remove_file_upload_box(box_id=box_id)
+
+    assert not rig.file_upload_box_dao.resources
+
+
+async def test_remove_file_upload_box_version_check(rig: JointRig):
+    """Test that supplying an outdated version raises BoxVersionError and leaves the
+    box intact, while supplying the current version allows deletion.
+    """
+    box_id = await rig.create_default_box()
+
+    with pytest.raises(UploadControllerPort.BoxVersionError) as exc_info:
+        await rig.controller.remove_file_upload_box(box_id=box_id, version=99)
+
+    assert str(box_id) in str(exc_info.value)
+    assert rig.file_upload_box_dao.resources
+
+    await rig.controller.remove_file_upload_box(box_id=box_id, version=0)
+    assert not rig.file_upload_box_dao.resources
+
+
+async def test_remove_file_upload_box_when_archived(rig: JointRig):
+    """Test that BoxStateError is raised when attempting to delete an archived box."""
+    box_id = await rig.create_default_box()
+    box = await rig.file_upload_box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.file_upload_box_dao.update(box)
+
+    with pytest.raises(UploadControllerPort.BoxStateError) as exc_info:
+        await rig.controller.remove_file_upload_box(box_id=box_id)
+
+    assert str(box_id) in str(exc_info.value)
+    assert rig.file_upload_box_dao.resources
+
+
+async def test_remove_file_upload_box_not_found(rig: JointRig):
+    """Test that BoxNotFoundError is raised for a non-existent box ID."""
+    non_existent_box_id = uuid4()
+
+    with pytest.raises(UploadControllerPort.BoxNotFoundError) as exc_info:
+        await rig.controller.remove_file_upload_box(box_id=non_existent_box_id)
+
+    assert str(non_existent_box_id) in str(exc_info.value)
+
+
+@pytest.mark.parametrize("bad_state", ["awaiting_archival", "archived"])
+async def test_remove_file_upload_box_with_invalid_file_state(
+    rig: JointRig, bad_state: FileUploadState
+):
+    """Test that FileUploadStateError is raised when a FileUpload is in 'awaiting_archival'
+    or 'archived' state, which indicates a data inconsistency.
+    """
+    box_id = await rig.create_default_box()
+    file_upload = make_file_upload(state=bad_state)
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
+
+    with pytest.raises(UploadControllerPort.FileUploadStateError) as exc_info:
+        await rig.controller.remove_file_upload_box(box_id=box_id)
+
+    assert str(file_upload.id) in str(exc_info.value)
+    assert rig.file_upload_box_dao.resources
+
+
+async def test_remove_file_upload_box_success(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that removing a box correctly handles each FileUpload state:
+    - 'init': S3 multipart upload is aborted
+    - 'inbox': S3 object is deleted
+    - 'interrogated', 'failed', 'cancelled': no S3 action
+
+    The box and all its FileUploads are hard-deleted from the DB and the activity
+    entry for the init file is removed as well.
+    """
+    box_id = await rig.create_default_box()
+    storage_alias = next(iter(rig.config.object_storages))
+
+    s3_calls: list[str] = []
+
+    async def spy_delete_inbox_file(**kwargs):
+        s3_calls.append("delete_inbox_file")
+
+    async def spy_abort_multipart_upload(**kwargs):
+        s3_calls.append("abort_multipart_upload")
+
+    monkeypatch.setattr(rig.s3_client, "delete_inbox_file", spy_delete_inbox_file)
+    monkeypatch.setattr(
+        rig.s3_client, "abort_multipart_upload", spy_abort_multipart_upload
+    )
+
+    file_uploads_by_state: dict[str, FileUpload] = {}
+    for state in ["init", "inbox", "interrogated", "failed", "cancelled"]:
+        file_upload = make_file_upload(state=state, storage_alias=storage_alias)
+        file_upload.box_id = box_id
+        await rig.file_upload_dao.insert(file_upload)
+        file_uploads_by_state[state] = file_upload
+
+    init_file = file_uploads_by_state["init"]
+    await rig.upload_activity_dao.upsert(
+        UploadActivity(file_id=init_file.id, last_activity=now_utc_ms_prec())
+    )
+
+    # Call the box deletion method
+    await rig.controller.remove_file_upload_box(box_id=box_id)
+
+    # Verify the box is gone
+    assert not rig.file_upload_box_dao.resources
+
+    # Should have one file deletion due to 'inbox' and one upload abort due to 'init'
+    assert s3_calls.count("abort_multipart_upload") == 1
+    assert s3_calls.count("delete_inbox_file") == 1
+
+    # Verify that all FileUploads were hard-deleted regardless of state
+    assert not rig.file_upload_dao.resources
+
+    # Make sure the upload activity associated with the 'init' file is deleted
+    with pytest.raises(ResourceNotFoundError):
+        await rig.upload_activity_dao.get_by_id(init_file.id)
+
+
+async def test_remove_file_upload_box_s3_abort_error(rig: JointRig):
+    """Make sure an UploadAbortError is raised and the box is NOT deleted when S3 fails
+    to abort a multipart upload for an 'init'-state file. The box is left locked
+    because deletion locks open boxes before sweeping their uploads.
+    """
+    box_id = await rig.create_default_box()
+
+    # Make an upload, we don't care about the file ID or upload ID
+    _, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Hardwire the object storage to raise an error when we try to abort the upload
+    storage = rig.object_storages.for_alias("test")[1]
+
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.MultiPartUploadAbortError("", "", "")
+
+    storage.abort_multipart_upload = do_error
+
+    # Call the box deletion method
+    with pytest.raises(UploadControllerPort.UploadAbortError):
+        await rig.controller.remove_file_upload_box(box_id=box_id)
+
+    # Verify that the box is still there and still locked
+    assert rig.file_upload_box_dao.resources
+    surviving_box = await rig.file_upload_box_dao.get_by_id(box_id)
+    assert surviving_box.state == "locked"

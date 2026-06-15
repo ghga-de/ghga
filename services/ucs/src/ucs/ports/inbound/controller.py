@@ -350,6 +350,35 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
+    async def remove_file_upload_box(
+        self, *, box_id: UUID4, version: int | None = None
+    ) -> None:
+        """Remove a FileUploadBox and delete all associated FileUploads.
+
+        If `version` is provided, it must match the box's current version.
+        The box is locked before its FileUploads are swept so no new uploads
+        can be initiated mid-deletion.
+
+        Files in 'init' state have their S3 multipart upload aborted.
+        Files in 'inbox' state have their S3 object deleted.
+        Files in other states require no S3 interaction.
+        Files in 'awaiting_archival' or 'archived' state cause a FileUploadStateError
+        (invariant violation: these states require the box to be archived).
+
+        All FileUpload documents belonging to the box are hard-deleted, emitting
+        'deleted' outbox events.
+
+        Raises:
+        - `BoxNotFoundError` if the box does not exist.
+        - `BoxVersionError` if a version is supplied and doesn't match the current one.
+        - `BoxStateError` if the box is archived.
+        - `FileUploadStateError` if any FileUpload is in 'awaiting_archival' or 'archived' state.
+        - `UnknownStorageAliasError` if the storage alias is not known.
+        - `UploadAbortError` if there's an error aborting an in-progress multipart upload.
+        """
+        ...
+
+    @abstractmethod
     async def create_file_upload_box(
         self, *, storage_alias: str, max_size: int
     ) -> UUID4:

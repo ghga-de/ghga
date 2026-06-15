@@ -777,6 +777,131 @@ class UploadController(UploadControllerPort):
         await self._update_box_stats(box_id=box_id, version=box.version)
         log.info("File %s deleted from box %s", file_id, box_id)
 
+    async def remove_file_upload_box(
+        self, *, box_id: UUID4, version: int | None = None
+    ) -> None:
+        """Remove a FileUploadBox and delete all associated FileUploads.
+
+        If `version` is provided, it must match the box's current version.
+        The box is locked before its FileUploads are swept so no new uploads
+        can be initiated mid-deletion.
+
+        Files in 'init' state have their S3 multipart upload aborted.
+        Files in 'inbox' state have their S3 object deleted.
+        Files in other states require no S3 interaction.
+        Files in 'awaiting_archival' or 'archived' state cause a FileUploadStateError
+        (invariant violation: these states require the box to be archived).
+
+        All FileUpload documents belonging to the box are hard-deleted, emitting
+        'deleted' outbox events.
+
+        Raises:
+        - `BoxNotFoundError` if the box does not exist.
+        - `BoxVersionError` if a version is supplied and doesn't match the current one.
+        - `BoxStateError` if the box is archived.
+        - `FileUploadStateError` if any FileUpload is in 'awaiting_archival' or 'archived' state.
+        - `UnknownStorageAliasError` if the storage alias is not known.
+        - `UploadAbortError` if there's an error aborting an in-progress multipart upload.
+        """
+        # Get the box
+        try:
+            box = await self._file_upload_box_dao.get_by_id(box_id)
+        except ResourceNotFoundError as err:
+            error = self.BoxNotFoundError(box_id=box_id)
+            log.error(error)
+            raise error from err
+
+        # Verify the version
+        if version is not None and box.version != version:
+            error = self.BoxVersionError(box_id=box_id)
+            log.error(error, extra={"box_id": box_id, "version": version})
+            raise error
+
+        # Raise an error if the box is archived
+        if box.state == "archived":
+            error = self.BoxStateError(box_id=box_id, box_state=box.state)
+            log.error(error)
+            raise error
+
+        # Lock the box so no new uploads can be initiated while sweeping
+        if box.state == "open":
+            box.version += 1
+            box.state = "locked"
+            await self._file_upload_box_dao.update(box)
+            log.info("Locked FileUploadBox %s before deleting files.", box_id)
+
+        # Before deleting anything, make sure there aren't any FileUploads in an
+        #  unexpected state. Raising an error here leaves the box in the locked state,
+        #  which should be fine because it doesn't prevent a subsequent deletion attempt
+        files_with_wrong_state = [
+            x
+            async for x in self._file_upload_dao.find_all(
+                mapping={
+                    "box_id": box_id,
+                    "state": {"$in": ["awaiting_archival", "archived"]},
+                }
+            )
+        ]
+
+        if files_with_wrong_state:
+            first_bad_file = files_with_wrong_state[0]
+            error = self.FileUploadStateError(
+                file_id=first_bad_file.id,
+                details=(
+                    f"FileUpload {first_bad_file.id} is in the '{first_bad_file.state}',"
+                    + " state which should only be reachable when the box is archived."
+                    + " This indicates a data inconsistency."
+                ),
+            )
+            log.error(
+                error,
+                extra={
+                    "box_id": box_id,
+                    "files_with_wrong_state": [f.id for f in files_with_wrong_state],
+                },
+            )
+            raise error
+
+        # Delete the FileUploads
+        await self._delete_box_file_uploads(box_id=box_id)
+
+        # Finally, delete the box itself
+        await self._file_upload_box_dao.delete(box_id)
+        log.info("Deleted FileUploadBox %s.", box_id)
+
+    async def _delete_box_file_uploads(self, *, box_id: UUID4) -> None:
+        """Hard-delete all FileUploads belonging to a box after S3 cleanup.
+
+        Sweeps until clean: initiation requests in flight before the box was locked
+        may still insert FileUploads after a pass completes; the lock guarantees the
+        loop terminates because no new initiations can begin.
+
+        Raises:
+        - `UnknownStorageAliasError` if a storage alias is not known.
+        - `UploadAbortError` if there's an error aborting an in-progress multipart upload.
+        """
+        while True:
+            file_uploads = [
+                upload
+                async for upload in self._file_upload_dao.find_all(
+                    mapping={"box_id": box_id}
+                )
+            ]
+            if not file_uploads:
+                log.info("Deleted all FileUploads for FileUploadBox %s.", box_id)
+                break
+
+            log.debug("Deleting all FileUploads for FileUploadBox %s.", box_id)
+            for file_upload in file_uploads:
+                if file_upload.state == "inbox":
+                    await self._remove_completed_file_upload(file_upload=file_upload)
+                elif file_upload.state == "init":
+                    await self._remove_incomplete_file_upload(file_upload=file_upload)
+
+                with contextlib.suppress(ResourceNotFoundError):
+                    await self._upload_activity_dao.delete(file_upload.id)
+                await self._file_upload_dao.delete(file_upload.id)
+
     async def _update_box_stats(self, *, box_id: UUID4, version: int) -> None:
         """Update FileUploadBox stats (file count & size) in an idempotent manner,
         counting only files that are finished uploading.

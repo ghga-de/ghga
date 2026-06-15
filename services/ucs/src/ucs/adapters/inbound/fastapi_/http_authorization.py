@@ -17,7 +17,7 @@
 
 from typing import Annotated
 
-from fastapi import Depends, Security
+from fastapi import Depends, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
@@ -31,6 +31,7 @@ __all__ = [
     "require_change_file_box_work_order",
     "require_create_file_box_work_order",
     "require_create_file_work_order",
+    "require_delete_file_box_work_order",
     "require_upload_file_work_order",
     "require_view_file_box_work_order",
 ]
@@ -40,6 +41,7 @@ ChangeFileBoxProvider = JWTAuthContextProvider[models.ChangeFileBoxWorkOrder]
 ViewFileBoxProvider = JWTAuthContextProvider[models.ViewFileBoxWorkOrder]
 CreateFileProvider = JWTAuthContextProvider[models.CreateFileWorkOrder]
 UploadFileProvider = JWTAuthContextProvider[models.UploadFileWorkOrder]
+DeleteFileBoxProvider = JWTAuthContextProvider[models.DeleteFileBoxWorkOrder]
 
 
 class JWTAuthContextProviderBundle:
@@ -78,9 +80,20 @@ class JWTAuthContextProviderBundle:
             config=self.wps_auth_config,
             context_class=models.CloseFileWorkOrder,
         )
-        self.delete_file_provider = JWTAuthContextProvider(
+        # File deletion is requested by the WPS (user-driven cancellation via the
+        #  connector) and by the RS (manual deletion by a Data Steward or user),
+        #  each signing with its own key, so both providers are needed.
+        self.delete_file_wps_provider = JWTAuthContextProvider(
             config=self.wps_auth_config,
             context_class=models.DeleteFileWorkOrder,
+        )
+        self.delete_file_rs_provider = JWTAuthContextProvider(
+            config=self.rs_auth_config,
+            context_class=models.DeleteFileWorkOrder,
+        )
+        self.delete_file_box_provider = JWTAuthContextProvider(
+            config=self.rs_auth_config,
+            context_class=models.DeleteFileBoxWorkOrder,
         )
 
 
@@ -170,8 +183,34 @@ async def _require_delete_file_work_order(
     ],
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
 ) -> models.DeleteFileWorkOrder:
-    """Require a "delete file" work order context using FastAPI."""
-    provider = auth_provider_bundle.delete_file_provider
+    """Require a "delete file" work order context using FastAPI.
+
+    Tokens signed by either the WPS or the RS are accepted (see provider bundle).
+    """
+    try:
+        return await require_auth_context_using_credentials(
+            credentials=credentials,
+            auth_provider=auth_provider_bundle.delete_file_wps_provider,
+        )
+    except HTTPException as wps_error:
+        if wps_error.status_code != 401 or not (
+            credentials and credentials.credentials
+        ):
+            raise
+        return await require_auth_context_using_credentials(
+            credentials=credentials,
+            auth_provider=auth_provider_bundle.delete_file_rs_provider,
+        )
+
+
+async def _require_delete_file_box_work_order(
+    auth_provider_bundle: Annotated[
+        JWTAuthContextProviderBundle, Depends(dummies.auth_provider_bundle)
+    ],
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+) -> models.DeleteFileBoxWorkOrder:
+    """Require a "delete file box" work order context using FastAPI."""
+    provider = auth_provider_bundle.delete_file_box_provider
     return await require_auth_context_using_credentials(
         credentials=credentials, auth_provider=provider
     )
@@ -184,3 +223,4 @@ require_create_file_work_order = Security(_require_create_file_work_order)
 require_upload_file_work_order = Security(_require_upload_file_work_order)
 require_close_file_work_order = Security(_require_close_file_work_order)
 require_delete_file_work_order = Security(_require_delete_file_work_order)
+require_delete_file_box_work_order = Security(_require_delete_file_box_work_order)

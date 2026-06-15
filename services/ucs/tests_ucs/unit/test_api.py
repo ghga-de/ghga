@@ -381,6 +381,33 @@ async def test_delete_file_endpoint_auth(
     assert response.status_code == 204
 
 
+async def test_delete_file_endpoint_accepts_rs_signed_token(
+    config: ConfigFixture, app_fixture: AppFixture
+):
+    """Test that the delete file endpoint also accepts a DeleteFileWorkOrder signed
+    with the RS key (used for manual deletion by the RS), in addition to the
+    WPS-signed tokens covered by test_delete_file_endpoint_auth. Mismatched claims
+    must still be rejected.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    url = f"/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}"
+
+    # Specifying the wrong box should get a 403 even if token signature is valid
+    wrong_box_token_header = utils.delete_file_token_header(
+        file_id=TEST_FILE_ID, jwk=rs_jwk
+    )
+    response = await rest_client.delete(url, headers=wrong_box_token_header)
+    assert response.status_code == 403
+
+    # Should be able to successfully call the endpoint
+    good_token_header = utils.delete_file_token_header(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=rs_jwk
+    )
+    response = await rest_client.delete(url, headers=good_token_header)
+    assert response.status_code == 204
+
+
 @pytest.mark.parametrize(
     "core_error, http_error",
     [
@@ -830,4 +857,125 @@ async def test_delete_file_endpoint_error_handling(
         f"/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}",
         headers=token_header,
     )
+    assert response.json()["description"] == str(http_error)
+
+
+async def test_delete_box_endpoint_auth(config: ConfigFixture, app_fixture: AppFixture):
+    """Test that the delete box endpoint returns 401 with no/invalid auth, 403 with a
+    mismatched box_id in the token, and 204 on success with a valid token.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.remove_file_upload_box.return_value = None
+
+    # No auth token = 401
+    response = await rest_client.delete(f"/boxes/{TEST_BOX_ID}")
+    assert response.status_code == 401
+
+    # Invalid auth token = 401
+    response = await rest_client.delete(f"/boxes/{TEST_BOX_ID}", headers=INVALID_HEADER)
+    assert response.status_code == 401
+
+    # Wrong work type (use a ChangeFileBoxWorkOrder token) = 401 too
+    bad_token_header = utils.change_file_box_token_header(
+        jwk=rs_jwk, box_id=TEST_BOX_ID, work_type="lock"
+    )
+    response = await rest_client.delete(
+        f"/boxes/{TEST_BOX_ID}", headers=bad_token_header
+    )
+    assert response.status_code == 401
+
+    # Correct work type but wrong box_id in token
+    wrong_box_token_header = utils.delete_file_box_token_header(jwk=rs_jwk)
+    response = await rest_client.delete(
+        f"/boxes/{TEST_BOX_ID}", headers=wrong_box_token_header
+    )
+    assert response.status_code == 403
+
+    # Correct token
+    good_token_header = utils.delete_file_box_token_header(
+        jwk=rs_jwk, box_id=TEST_BOX_ID
+    )
+    response = await rest_client.delete(
+        f"/boxes/{TEST_BOX_ID}", headers=good_token_header
+    )
+    assert response.status_code == 204
+
+
+async def test_delete_box_endpoint_version_param(
+    config: ConfigFixture, app_fixture: AppFixture
+):
+    """Test that the optional 'version' query parameter is forwarded to the core,
+    and that omitting it forwards None.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.remove_file_upload_box.return_value = None
+    token_header = utils.delete_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
+
+    # Delete the box
+    response = await rest_client.delete(
+        f"/boxes/{TEST_BOX_ID}", params={"version": 4}, headers=token_header
+    )
+    assert response.status_code == 204
+    core_mock.remove_file_upload_box.assert_awaited_with(box_id=TEST_BOX_ID, version=4)
+
+    # Delete the box but omit the version query param
+    response = await rest_client.delete(f"/boxes/{TEST_BOX_ID}", headers=token_header)
+    assert response.status_code == 204
+    core_mock.remove_file_upload_box.assert_awaited_with(
+        box_id=TEST_BOX_ID, version=None
+    )
+
+
+@pytest.mark.parametrize(
+    "core_error, http_error",
+    [
+        (
+            UploadControllerPort.BoxNotFoundError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpBoxNotFoundError(box_id=TEST_BOX_ID),
+        ),
+        (
+            UploadControllerPort.BoxVersionError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpBoxVersionError(box_id=TEST_BOX_ID),
+        ),
+        (
+            UploadControllerPort.BoxStateError(
+                box_id=TEST_BOX_ID, box_state="archived"
+            ),
+            http_exceptions.HttpBoxStateError(box_id=TEST_BOX_ID, box_state="archived"),
+        ),
+        (
+            UploadControllerPort.UploadAbortError(
+                file_id=TEST_FILE_ID,
+                s3_upload_id="test-upload",
+                bucket_id="test-bucket",
+            ),
+            http_exceptions.HttpUploadAbortError(),
+        ),
+        (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
+    ],
+    ids=[
+        "BoxNotFound",
+        "BoxVersionOutdated",
+        "BoxStateError",
+        "UploadAbortError",
+        "InternalError",
+    ],
+)
+async def test_delete_box_endpoint_error_handling(
+    config: ConfigFixture,
+    core_error: Exception,
+    http_error: Exception,
+    app_fixture: AppFixture,
+):
+    """Test that the endpoint correctly translates errors from the core."""
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.remove_file_upload_box.side_effect = core_error
+    token_header = utils.delete_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
+    response = await rest_client.delete(f"/boxes/{TEST_BOX_ID}", headers=token_header)
     assert response.json()["description"] == str(http_error)

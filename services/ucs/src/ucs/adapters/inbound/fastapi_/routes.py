@@ -18,7 +18,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, status
+from fastapi import APIRouter, BackgroundTasks, Query, status
 from pydantic import UUID4
 
 from ucs.adapters.inbound.fastapi_ import (
@@ -614,6 +614,65 @@ async def remove_file_upload(
         raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error
     except UploadControllerPort.UnknownStorageAliasError as error:
         raise http_exceptions.HttpUnknownStorageAliasError() from error
+    except UploadControllerPort.UploadAbortError as error:
+        raise http_exceptions.HttpUploadAbortError() from error
+    except Exception as error:
+        log.error(error, exc_info=True)
+        raise http_exceptions.HttpInternalError() from error
+
+
+@router.delete(
+    "/boxes/{box_id}",
+    summary="Remove a FileUploadBox and all its associated uploads",
+    operation_id="removeFileUploadBox",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_description="FileUploadBox and all associated uploads removed successfully",
+    responses={
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"]
+        | ERROR_RESPONSES["boxVersionOutdated"],
+        status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["uploadAbortError"],
+    },
+)
+@TRACER.start_as_current_span("routes.remove_file_upload_box")
+async def remove_file_upload_box(
+    box_id: UUID4,
+    work_order: Annotated[
+        rest_models.DeleteFileBoxWorkOrder,
+        http_authorization.require_delete_file_box_work_order,
+    ],
+    upload_controller: dummies.UploadControllerDummy,
+    version: Annotated[
+        int | None,
+        Query(
+            description="The expected current version of the box (optional optimistic"
+            + " locking). If provided and outdated, the deletion is rejected."
+        ),
+    ] = None,
+) -> None:
+    """Remove a FileUploadBox and all its associated FileUploads.
+
+    Cancels any in-progress S3 uploads, removes inbox objects from S3, then deletes
+    the box and all its FileUploads from the database. Deletion is blocked if the box
+    is archived, or if a `version` query parameter is supplied and doesn't match the
+    current box version. Requires a DeleteFileBoxWorkOrder token from the RS.
+    """
+    if work_order.box_id != box_id:
+        raise http_exceptions.HttpNotAuthorizedError()
+
+    try:
+        await upload_controller.remove_file_upload_box(box_id=box_id, version=version)
+    except UploadControllerPort.BoxNotFoundError as error:
+        raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
+    except UploadControllerPort.BoxVersionError as error:
+        raise http_exceptions.HttpBoxVersionError(box_id=box_id) from error
+    except UploadControllerPort.BoxStateError as error:
+        raise http_exceptions.HttpBoxStateError(
+            box_id=box_id, box_state=error.box_state
+        ) from error
+    except UploadControllerPort.FileUploadStateError as error:
+        log.error(error, exc_info=True)
+        raise http_exceptions.HttpInternalError() from error
     except UploadControllerPort.UploadAbortError as error:
         raise http_exceptions.HttpUploadAbortError() from error
     except Exception as error:

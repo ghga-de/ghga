@@ -136,7 +136,16 @@ class FileUploadCompletionRequest(BaseModel):
 
 
 WorkType = Literal[
-    "create", "lock", "unlock", "archive", "resize", "view", "upload", "close", "delete"
+    "create",
+    "lock",
+    "unlock",
+    "archive",
+    "resize",
+    "view",
+    "upload",
+    "close",
+    "delete",
+    "delete_box",
 ]
 
 T = TypeVar("T", bound=WorkType)
@@ -193,3 +202,14 @@ class CloseFileWorkOrder(BaseWorkOrderToken[Literal["close"]], _FileUploadToken)
 
 class DeleteFileWorkOrder(BaseWorkOrderToken[Literal["delete"]], _FileUploadToken):
     """WOT schema authorizing a user to delete a file upload"""
+
+
+class DeleteFileBoxWorkOrder(BaseWorkOrderToken[Literal["delete_box"]]):
+    """WOT schema authorizing the RS to delete a FileUploadBox and all its files.
+
+    The work type is 'delete_box' rather than 'delete' so that a DeleteFileWorkOrder
+    (which shares the 'delete' work type and may be signed with the same RS key)
+    can never validate as a box-level deletion token.
+    """
+
+    box_id: UUID4
