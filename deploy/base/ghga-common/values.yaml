@@ -275,7 +275,7 @@ exports:
               matchLabels:
                 ghga-ingress: allow
 
-
+    strimziApiVersion: kafka.strimzi.io/v1
     vaultAgent:
       enabled: false
       annotations:
