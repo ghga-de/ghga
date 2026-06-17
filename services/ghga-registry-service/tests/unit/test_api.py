@@ -1140,6 +1140,97 @@ async def test_delete_file_upload(
         assert response.status_code == 204
 
 
+async def test_delete_research_data_upload_box(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test the DELETE /upload-boxes/{box_id} endpoint: auth guarding, the happy path,
+    and that the version query param is forwarded to the manager.
+    """
+    rdub_manager = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}"
+        params = {"version": 3}
+
+        # unauthenticated requests should get a 401
+        response = await rest_client.delete(url, params=params)
+        assert response.status_code == 401
+
+        # Verify that invalid credentials net a 401 too
+        response = await rest_client.delete(
+            url, params=params, headers=bad_auth_headers
+        )
+        assert response.status_code == 401
+
+        # Verify that attempts by regular users are rejected with a 403
+        response = await rest_client.delete(
+            url, params=params, headers=user_auth_headers
+        )
+        assert response.status_code == 403
+
+        # Make sure box version is required
+        response = await rest_client.delete(url, headers=ds_auth_headers)
+        assert response.status_code == 422
+
+        # happy path with data steward role
+        rdub_manager.rdub_manager.delete_research_data_upload_box.return_value = None
+        response = await rest_client.delete(url, params=params, headers=ds_auth_headers)
+        assert response.status_code == 204
+        call_kwargs = (
+            rdub_manager.rdub_manager.delete_research_data_upload_box.call_args.kwargs
+        )
+        assert call_kwargs["box_id"] == TEST_BOX_ID
+        assert call_kwargs["version"] == 3
+
+
+@pytest.mark.parametrize(
+    "core_error, status_code, exception_id",
+    [
+        (RDUBManagerPort.BoxNotFoundError(box_id=TEST_BOX_ID), 404, None),
+        (RDUBManagerPort.BoxVersionError(), 409, "boxVersionOutdated"),
+        (
+            RDUBManagerPort.BoxStateError(operation="delete the box", state="archived"),
+            409,
+            "boxStateError",
+        ),
+        (TypeError(), 500, None),
+    ],
+    ids=["BoxNotFoundError", "BoxVersionError", "BoxStateError", "RandomError"],
+)
+async def test_delete_research_data_upload_box_error_translation(
+    config: Config,
+    ds_auth_headers,
+    core_error: Exception,
+    status_code: int,
+    exception_id: str | None,
+):
+    """Test that the DELETE /upload-boxes/{box_id} endpoint translates core errors to
+    the correct status codes and exception_ids.
+    """
+    rdub_manager = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, ghga_registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}"
+        params = {"version": 0}
+        rdub_manager.rdub_manager.delete_research_data_upload_box.side_effect = (
+            core_error
+        )
+
+        response = await rest_client.delete(url, params=params, headers=ds_auth_headers)
+
+        assert response.status_code == status_code
+        if exception_id is not None:
+            assert response.json()["exception_id"] == exception_id
+
+        # Make sure that 'state' is included in BoxStateError translation
+        if isinstance(core_error, RDUBManagerPort.BoxStateError):
+            assert response.json()["data"]["state"] == core_error.state
+
+
 async def test_delete_file_upload_error_translation(config: Config, user_auth_headers):
     """Test that the DELETE /upload-boxes/{box_id}/uploads/{file_id} endpoint translates
     errors as expected.
@@ -1167,10 +1258,10 @@ async def test_delete_file_upload_error_translation(config: Config, user_auth_he
         response = await rest_client.delete(url, headers=user_auth_headers)
         assert response.status_code == 404
 
-        # handle box locked error from core
+        # handle box state error from core
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.delete_file_upload.side_effect = (
-            RDUBManagerPort.BoxLockedError()
+            RDUBManagerPort.BoxStateError(operation="delete box", state="locked")
         )
         response = await rest_client.delete(url, headers=user_auth_headers)
         assert response.status_code == 409

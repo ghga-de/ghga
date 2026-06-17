@@ -615,6 +615,51 @@ paths:
       tags:
       - ResearchDataUploadBoxes
   /upload-boxes/{box_id}:
+    delete:
+      description: Delete a research data upload box and its files. Requires the Data
+        Steward role. The corresponding FileUploadBox and all file uploads are deleted
+        in the file box service; in-progress uploads are aborted and uploaded objects
+        are removed. Upload-access grants and accession mappings for the box are also
+        removed. Archived boxes cannot be deleted.
+      operationId: delete_research_data_upload_box_upload_boxes__box_id__delete
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid
+          title: Box Id
+          type: string
+      - description: The expected current version of the upload box.
+        in: query
+        name: version
+        required: true
+        schema:
+          description: The expected current version of the upload box.
+          title: Version
+          type: integer
+      responses:
+        '204':
+          description: Upload box deleted successfully.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Upload box not found.
+        '409':
+          description: 'Deletion failed: outdated version or incompatible state.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Delete upload box
+      tags:
+      - ResearchDataUploadBoxes
     get:
       description: Returns the details of an existing research data upload box.
       operationId: get_research_data_upload_box_upload_boxes__box_id__get

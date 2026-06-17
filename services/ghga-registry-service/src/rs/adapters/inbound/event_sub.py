@@ -48,7 +48,9 @@ class OutboxSubTranslator(DaoSubscriberProtocol):
         )
 
     async def deleted(self, resource_id: str) -> None:
-        """Consume a deleted FileUploadBox event -- these don't exist and are ignored"""
-        log.warning(
-            "Encountered 'deleted' event for FileUploadBox %s. Ignoring.", resource_id
-        )
+        """Consume a FileUploadBox deletion event.
+
+        Normally the RS itself initiates FUB deletion and removes the matching RDUB in
+        the same flow. To avoid race conditions, this method merely logs.
+        """
+        log.info("Received 'deletion' event for FileUploadBox %s.", resource_id)

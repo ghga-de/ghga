@@ -54,6 +54,13 @@ class AuditRepositoryPort(ABC):
         ...
 
     @abstractmethod
+    async def log_box_deleted(
+        self, *, box: ResearchDataUploadBox, user_id: UUID4
+    ) -> None:
+        """Log the deletion of a ResearchDataUploadBox."""
+        ...
+
+    @abstractmethod
     async def log_access_granted(
         self, *, box_id: UUID4, grantor_id: UUID4, grantee_id: UUID4
     ):

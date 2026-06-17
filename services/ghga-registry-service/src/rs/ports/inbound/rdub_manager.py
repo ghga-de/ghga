@@ -103,11 +103,14 @@ class RDUBManagerPort(ABC):
     class BoxMaxSizeTooLowError(RuntimeError):
         """Raised when the requested max_size is smaller than the bytes already uploaded."""
 
-    class BoxLockedError(RuntimeError):
-        """Raised when an operation cannot be performed because the box is locked."""
+    class BoxStateError(RuntimeError):
+        """Raised when an operation is incompatible with the box's current state
+        (e.g. an archived box cannot be deleted).
+        """
 
-        def __init__(self) -> None:
-            super().__init__("Cannot perform this operation while the box is locked.")
+        def __init__(self, *, operation: str, state: UploadBoxState):
+            self.state = state
+            super().__init__(f"Cannot {operation} because the box state is '{state}'.")
 
     class StateChangeError(RuntimeError):
         """Raised when there is an attempt to make an invalid state change for
@@ -302,7 +305,34 @@ class RDUBManagerPort(ABC):
         Raises:
             BoxNotFoundError: If the box doesn't exist.
             BoxAccessError: If the user doesn't have access to the box.
-            BoxLockedError: If the box is locked.
+            BoxStateError: If the box is locked.
+            OperationError: If there's a problem communicating with the file box service.
+        """
+        ...
+
+    @abstractmethod
+    async def delete_research_data_upload_box(
+        self,
+        *,
+        box_id: UUID4,
+        version: int,
+        user_id: UUID4,
+    ) -> None:
+        """Delete a ResearchDataUploadBox and its corresponding FileUploadBox.
+
+        The RDUB (and FUB) must be not be in the 'archived' state.
+        The version must match what is in the database.
+
+        First, the file list is retrieved from UCS. Then any corresponding file
+        accession mappings are deleted from UCS. Then the FileUploadBox and associated
+        FileUploads are deleted, followed by any valid upload grants, and finally the
+        ResearchDataUploadBox.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxVersionError: If the requested ResearchDataUploadBox version is outdated,
+                or the associated FileUploadBox version is outdated.
+            BoxStateError: If the box is archived and cannot be deleted.
             OperationError: If there's a problem communicating with the file box service.
         """
         ...

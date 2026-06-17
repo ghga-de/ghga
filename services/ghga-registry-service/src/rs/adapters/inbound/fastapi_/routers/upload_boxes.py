@@ -29,6 +29,7 @@ from rs.adapters.inbound.fastapi_.http_exceptions import (
     HttpArchivalPrereqsError,
     HttpBoxMaxSizeTooLowError,
     HttpBoxNotFoundError,
+    HttpBoxStateError,
     HttpBoxTitleExistsError,
     HttpBoxVersionError,
     HttpIncompleteUploadsError,
@@ -86,11 +87,59 @@ async def delete_file_upload(
         raise HttpNotAuthorizedError() from err
     except RDUBManagerPort.BoxNotFoundError as err:
         raise HttpBoxNotFoundError(box_id=box_id) from err
-    except RDUBManagerPort.BoxLockedError as err:
+    except RDUBManagerPort.BoxStateError as err:
         raise HTTPException(status_code=409, detail=str(err)) from err
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to delete file upload") from err
+
+
+@box_router.delete(
+    "/{box_id}",
+    summary="Delete upload box",
+    description="Delete a research data upload box and its files. Requires the Data"
+    + " Steward role. The corresponding FileUploadBox and all file uploads are deleted"
+    + " in the file box service; in-progress uploads are aborted and uploaded objects"
+    + " are removed. Upload-access grants and accession mappings for the box are also"
+    + " removed. Archived boxes cannot be deleted.",
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        204: {"description": "Upload box deleted successfully."},
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized."},
+        404: {"description": "Upload box not found."},
+        409: {
+            "description": "Deletion failed: outdated version or incompatible state."
+        },
+    },
+)
+@TRACER.start_as_current_span("routes.delete_research_data_upload_box")
+async def delete_research_data_upload_box(
+    box_id: UUID,
+    ghga_registry: dummies.GHGARegistryDummy,
+    auth_context: StewardAuthContext,
+    version: Annotated[
+        int,
+        Query(description="The expected current version of the upload box."),
+    ],
+) -> None:
+    """Delete a research data upload box and its files. Requires Data Steward role."""
+    try:
+        await ghga_registry.rdub_manager.delete_research_data_upload_box(
+            box_id=box_id,
+            version=version,
+            user_id=UUID(auth_context.id),
+        )
+    except RDUBManagerPort.BoxNotFoundError as err:
+        raise HttpBoxNotFoundError(box_id=box_id) from err
+    except RDUBManagerPort.BoxVersionError as err:
+        raise HttpBoxVersionError() from err
+    except RDUBManagerPort.BoxStateError as err:
+        raise HttpBoxStateError(state=err.state) from err
+    except Exception as err:
+        log.error(err, exc_info=True)
+        raise HttpInternalError(message="Failed to delete upload box") from err
 
 
 @box_router.patch(

@@ -25,6 +25,7 @@ import pytest
 import pytest_asyncio
 from ghga_event_schemas.pydantic_ import FileAccessionMapping
 from ghga_service_commons.auth.context import AuthContext
+from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.utils import now_utc_ms_prec
 
@@ -56,6 +57,27 @@ InMemBoxDao = new_mock_dao_class(dto_model=models.ResearchDataUploadBox, id_fiel
 InMemFileAccessionMappingDao = new_mock_dao_class(
     dto_model=FileAccessionMapping, id_field="accession"
 )
+
+
+def _make_file_upload(file_id: UUID, i: int = 0) -> models.FileUploadWithAccession:
+    """Build a minimal FileUploadWithAccession for testing.
+
+    The `i` parameter can be used to produce predictable FileUpload sequences.
+    """
+    return models.FileUploadWithAccession(
+        id=file_id,
+        box_id=TEST_FILE_UPLOAD_BOX_ID,
+        storage_alias="HD01",
+        bucket_id="inbox",
+        object_id=uuid4(),
+        alias=f"test{i}",
+        decrypted_sha256=f"checksum{i}",
+        decrypted_size=1000,
+        encrypted_size=1124,
+        part_size=100,
+        state="inbox",
+        state_updated=now_utc_ms_prec(),
+    )
 
 
 @dataclass
@@ -379,7 +401,7 @@ async def test_get_upload_box_files_access_error(
 
 
 async def test_get_upload_box_files_box_not_found(rig: JointRig):
-    """Test the case where getting box files fails because the box doesn't exist."""
+    """Test the case where getting box files fails because the RDUB doesn't exist."""
     # Try to get files from a non-existent box ID
     non_existent_box_id = uuid4()
 
@@ -1340,7 +1362,7 @@ async def test_archive_box_file_upload_box_version_error(
     # Mock the file box client
     rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
     rig.file_upload_box_client.archive_file_upload_box = AsyncMock(  # type: ignore
-        side_effect=FileBoxClientPort.FUBVersionError("Version mismatch")
+        side_effect=FileBoxClientPort.FUBVersionError(box_id=box_id)
     )
 
     # Insert predetermined file accession map
@@ -1429,7 +1451,7 @@ async def test_resize_box_fub_version_error(rig: JointRig, populated_boxes: list
     original_version = box.version
 
     rig.file_upload_box_client.resize_file_upload_box = AsyncMock(  # type: ignore
-        side_effect=FileBoxClientPort.FUBVersionError("Version mismatch")
+        side_effect=FileBoxClientPort.FUBVersionError(box_id=box_id)
     )
 
     with pytest.raises(rig.rdub_manager.BoxVersionError):
@@ -1493,11 +1515,11 @@ async def test_delete_file_error_handling(rig: JointRig, populated_boxes: list[U
     box_id = populated_boxes[0]
     test_file_id = uuid4()
 
-    # FUBLockedError should be translated to BoxLockedError
+    # FUBStateError should be translated to BoxStateError
     rig.file_upload_box_client.delete_file_upload = AsyncMock(  # type: ignore
-        side_effect=FileBoxClientPort.FUBLockedError("Box is locked")
+        side_effect=FileBoxClientPort.FUBStateError("Box is locked")
     )
-    with pytest.raises(rig.rdub_manager.BoxLockedError):
+    with pytest.raises(rig.rdub_manager.BoxStateError):
         await rig.rdub_manager.delete_file_upload(
             box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
         )
@@ -1529,7 +1551,7 @@ async def test_delete_file_rejects_wrong_user(
 
 
 async def test_delete_file_box_locked_error(rig: JointRig, populated_boxes: list[UUID]):
-    """Test that a BoxLockedError is raised if access is granted but the RDUB is locked.
+    """Test that a BoxStateError is raised if access is granted but the RDUB is locked.
 
     Also verifies that no call is made to the FileBoxClient.
     """
@@ -1548,9 +1570,241 @@ async def test_delete_file_box_locked_error(rig: JointRig, populated_boxes: list
     )
     rig.file_upload_box_client.delete_file_upload.reset_mock()  # type: ignore
 
-    with pytest.raises(rig.rdub_manager.BoxLockedError):
+    with pytest.raises(rig.rdub_manager.BoxStateError):
         await rig.rdub_manager.delete_file_upload(
             box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
         )
 
     rig.file_upload_box_client.delete_file_upload.assert_not_called()  # type: ignore
+
+
+async def test_delete_research_data_upload_box_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the happy path for RDUB/FUB deletion. Once executed, the following should
+    be true:
+    - upload grants are revoked
+    - accession mappings are deleted
+    - the FUB is deleted (or at least the call is made to UCS)
+    - the RDUB is removed
+    - an audit record is published
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    # Create two files, one of which has an associated accession mapping. The core class
+    #  uses the file list to know which mappings to delete
+    file_ids = [uuid4(), uuid4()]
+    files = [_make_file_upload(file_id, i) for i, file_id in enumerate(file_ids)]
+    rig.file_upload_box_client.get_file_upload_list.return_value = files  # type: ignore
+    await rig.file_accession_mapping_dao.insert(
+        FileAccessionMapping(accession="GHGAF001", file_id=file_ids[0])
+    )
+
+    # We'll mock the claims repo to return two valid grants
+    grant_ids = [uuid4(), uuid4()]
+    rig.access_client.get_upload_access_grants.return_value = [  # type: ignore
+        Mock(id=grant_ids[0]),
+        Mock(id=grant_ids[1]),
+    ]
+
+    # Delete the box
+    await rig.rdub_manager.delete_research_data_upload_box(
+        box_id=box_id, version=box.version, user_id=TEST_DS_ID
+    )
+
+    # Verify that valid grants were fetched for the box and each revoked
+    rig.access_client.get_upload_access_grants.assert_awaited_once_with(  # type: ignore
+        box_id=box_id, valid=True
+    )
+    revoked = {
+        call.kwargs["grant_id"]
+        for call in rig.access_client.revoke_upload_access.call_args_list  # type: ignore
+    }
+    assert revoked == set(grant_ids)
+
+    # Make sure the accession mapping was deleted
+    assert [x async for x in rig.file_accession_mapping_dao.find_all(mapping={})] == []
+
+    # Make sure the FUB was deleted with the correct ID and version
+    rig.file_upload_box_client.delete_file_upload_box.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, version=box.file_upload_box_version
+    )
+
+    # Verify that the RDUB is gone
+    with pytest.raises(ResourceNotFoundError):
+        await rig.box_dao.get_by_id(box_id)
+
+    # Make sure the right method was called on the audit repository
+    rig.rdub_manager._audit_repository.log_box_deleted.assert_awaited_once()  # type: ignore
+    audit_kwargs = (
+        rig.rdub_manager._audit_repository.log_box_deleted.call_args.kwargs  # type: ignore
+    )
+    assert audit_kwargs["box"].id == box_id
+    assert audit_kwargs["user_id"] == TEST_DS_ID
+
+
+async def test_delete_box_locked_is_allowed(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that a locked box can be deleted."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    # Set up the mocks to return empty file & grant lists
+    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+    rig.access_client.get_upload_access_grants.return_value = []  # type: ignore
+
+    # Delete the box
+    await rig.rdub_manager.delete_research_data_upload_box(
+        box_id=box_id, version=box.version, user_id=TEST_DS_ID
+    )
+
+    # Make sure the right FileBoxClient method was used
+    rig.file_upload_box_client.delete_file_upload_box.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, version=box.file_upload_box_version
+    )
+
+    # Check that the RDUB is gone from the database
+    with pytest.raises(ResourceNotFoundError):
+        await rig.box_dao.get_by_id(box_id)
+
+
+async def test_delete_box_not_found(rig: JointRig):
+    """Test that deleting a non-existent box raises BoxNotFoundError."""
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=uuid4(), version=0, user_id=TEST_DS_ID
+        )
+    rig.file_upload_box_client.delete_file_upload_box.assert_not_called()  # type: ignore
+
+
+async def test_delete_box_version_mismatch(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that an outdated version raises BoxVersionError."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    with pytest.raises(rig.rdub_manager.BoxVersionError):
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=box_id,
+            version=box.version + 1,
+            user_id=TEST_DS_ID,
+        )
+
+    await rig.box_dao.get_by_id(box_id)  # still present
+    rig.file_upload_box_client.delete_file_upload_box.assert_not_called()  # type: ignore
+
+
+async def test_delete_box_archived_rejected(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that an archived box cannot be deleted (BoxStateError) and is left intact."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.box_dao.update(box)
+
+    # Try to delete the box, expecting a BoxStateError
+    with pytest.raises(rig.rdub_manager.BoxStateError) as exc_info:
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=box_id, version=box.version, user_id=TEST_DS_ID
+        )
+
+    # Verify that `state` is conveyed as an attribute on the error
+    assert exc_info.value.state == "archived"
+
+    # Make sure the box is still there
+    await rig.box_dao.get_by_id(box_id)
+    rig.file_upload_box_client.delete_file_upload_box.assert_not_called()  # type: ignore
+
+
+async def test_delete_box_grant_revocation_tolerates_missing(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a GrantNotFoundError during revocation is tolerated and the deletion
+    still completes.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    # Set up the mocks so they returns no file list, but do return a couple of grant IDs
+    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+    rig.access_client.get_upload_access_grants.return_value = [  # type: ignore
+        Mock(id=uuid4()),
+        Mock(id=uuid4()),
+    ]
+
+    # Set the AccessClient mock to raise a GrantNotFoundError when trying to delete a grant
+    rig.access_client.revoke_upload_access.side_effect = (  # type: ignore
+        AccessClientPort.GrantNotFoundError()
+    )
+
+    # Call the box deletion method (aforementioned error should be suppressed)
+    await rig.rdub_manager.delete_research_data_upload_box(
+        box_id=box_id, version=box.version, user_id=TEST_DS_ID
+    )
+
+    # Make sure the core used the AccessClient's revocation method twice
+    assert rig.access_client.revoke_upload_access.call_count == 2  # type: ignore
+
+    # And make sure that the box was in fact deleted
+    with pytest.raises(ResourceNotFoundError):
+        await rig.box_dao.get_by_id(box_id)
+
+
+@pytest.mark.parametrize(
+    "client_error, raised_error",
+    [
+        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
+        (
+            FileBoxClientPort.FUBVersionError(box_id=TEST_FILE_UPLOAD_BOX_ID),
+            RDUBManager.BoxVersionError,
+        ),
+    ],
+)
+async def test_delete_box_fub_operation_error_leaves_rdub(
+    rig: JointRig,
+    populated_boxes: list[UUID],
+    client_error: Exception,
+    raised_error: type[Exception],
+):
+    """This test checks for the same behavior from different errors raised by the
+    deletion method of the FileBoxClient, which should result in the deletion not being
+    carried out, and sometimes should cause the RDUBManager to re-raise the
+    FileBoxClient error as a different error defined on the RDUBManagerPort class.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    rig.file_upload_box_client.delete_file_upload_box.side_effect = (  # type: ignore
+        client_error
+    )
+
+    # Delete the box and make sure we get the expected error
+    with pytest.raises(raised_error):
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=box_id, version=box.version, user_id=TEST_DS_ID
+        )
+
+    # Make sure the box is still there and no audit log was created
+    await rig.box_dao.get_by_id(box_id)
+    rig.rdub_manager._audit_repository.log_box_deleted.assert_not_called()  # type: ignore
+
+
+async def test_get_boxes_skips_dangling_grant(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Regression (§8.1): a grant referencing a deleted box must not 500 the whole
+    listing; the missing box is skipped with a warning.
+    """
+    existing_box_id = populated_boxes[0]
+    missing_box_id = uuid4()
+    rig.access_client.get_accessible_upload_boxes.return_value = [  # type: ignore
+        existing_box_id,
+        missing_box_id,
+    ]
+
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=USER1_AUTH_CONTEXT
+    )
+
+    assert results.count == 1
+    assert [b.id for b in results.boxes] == [existing_box_id]

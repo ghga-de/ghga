@@ -47,6 +47,7 @@ __all__ = [
     "CreateFileBoxWorkOrder",
     "CreateUploadBoxRequest",
     "CreateUploadBoxResponse",
+    "DeleteFileBoxWorkOrder",
     "DeleteFileUploadWorkOrder",
     "FileAccession",
     "FileUpload",
@@ -126,6 +127,17 @@ class DeleteFileUploadWorkOrder(BaseWorkOrderToken):
     work_type: Literal["delete"] = "delete"
     box_id: UUID4 = Field(..., description="ID of the box containing the file")
     file_id: UUID4 = Field(..., description="ID of the file upload to delete")
+
+
+class DeleteFileBoxWorkOrder(BaseWorkOrderToken):
+    """Work order token for deleting a FileUploadBox and all its files.
+
+    The work type is `"delete_box"` rather than `"delete"` so that a
+    `DeleteFileUploadWorkOrder` can't validate as a box-level deletion token.
+    """
+
+    work_type: Literal["delete_box"] = "delete_box"
+    box_id: UUID4 = Field(..., description="ID of the box to delete")
 
 
 # API Request/Response models

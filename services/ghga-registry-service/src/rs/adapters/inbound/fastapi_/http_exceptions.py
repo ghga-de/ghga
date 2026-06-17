@@ -23,6 +23,7 @@ __all__ = [
     "HttpArchivalPrereqsError",
     "HttpBoxMaxSizeTooLowError",
     "HttpBoxNotFoundError",
+    "HttpBoxStateError",
     "HttpBoxTitleExistsError",
     "HttpBoxVersionError",
     "HttpGrantNotFoundError",
@@ -142,6 +143,25 @@ class HttpBoxVersionError(HttpCustomExceptionBase):
             status_code=status_code,
             description="The resource version is out of date.",
             data={},
+        )
+
+
+class HttpBoxStateError(HttpCustomExceptionBase):
+    """Thrown when an operation is incompatible with the box's current state."""
+
+    exception_id = "boxStateError"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        state: str
+
+    def __init__(self, *, state: str, status_code: int = 409):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=f"A box in the '{state}' state cannot be deleted.",
+            data={"state": state},
         )
 
 

@@ -16,7 +16,7 @@
 """Outbound HTTP calls"""
 
 import logging
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 import httpx
@@ -30,6 +30,7 @@ from rs.core.models import (
     BaseWorkOrderToken,
     ChangeFileBoxWorkOrder,
     CreateFileBoxWorkOrder,
+    DeleteFileBoxWorkOrder,
     DeleteFileUploadWorkOrder,
     FileUploadWithAccession,
     GrantId,
@@ -44,6 +45,19 @@ from rs.ports.outbound.http import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def _extract_exception_id(response: httpx.Response) -> str | None:
+    """Safely pull the ``exception_id`` out of a (possibly malformed) error response.
+
+    Returns ``None`` when the body isn't valid JSON, isn't a JSON object, or has no
+    ``exception_id`` field, so callers can branch on the value without first checking
+    the shape of the response body.
+    """
+    try:
+        return response.json()["exception_id"]
+    except (KeyError, ValueError, TypeError):
+        return None
 
 
 class WOTSigningConfig(BaseSettings):
@@ -293,6 +307,74 @@ class FileBoxClient(FileBoxClientPort):
         signed_wot = sign_work_order_token(wot, self._signing_key)
         return {"Authorization": f"Bearer {signed_wot}"}
 
+    def _raise_for_409(
+        self,
+        *,
+        response: httpx.Response,
+        body: dict[str, Any],
+        operation: Literal[
+            "lock", "unlock", "archive", "resize", "delete file from", "delete"
+        ],
+        box_id: UUID4,
+    ):
+        """Log and raise an error for a 409 response."""
+        exception_id = _extract_exception_id(response)
+        extra = {"box_id": box_id, "response_text": response.text}
+        for field in ["version", "max_size"]:
+            if field in body:
+                extra[field] = body[field]
+
+        if exception_id == "incompleteUploads":
+            # exception_id parsed, so the body is a JSON object we can re-read
+            raw = response.json().get("data", {}).get("incomplete_uploads", [])
+            incomplete_file_ids = [UUID(item[0]) for item in raw]
+            extra["incomplete_uploads"] = incomplete_file_ids
+            log.error(
+                "Failed to %s FileUploadBox %s: %d file(s) have incomplete uploads.",
+                operation,
+                box_id,
+                len(incomplete_file_ids),
+                extra=extra,
+            )
+            raise self.FUBIncompleteUploadsError(
+                incomplete_file_ids=incomplete_file_ids
+            )
+        elif exception_id == "boxVersionOutdated":
+            log.error(
+                "Failed to %s FileUploadBox %s because the version specified"
+                + " in the request is out of date.",
+                operation,
+                box_id,
+                extra=extra,
+            )
+            raise self.FUBVersionError(box_id=box_id)
+        elif exception_id == "boxMaxSizeTooLow":
+            max_size = body["max_size"]
+            log.error(
+                "Failed to resize FileUploadBox %s because the new max_size %i is"
+                + " smaller than the bytes already uploaded.",
+                box_id,
+                max_size,
+                extra=extra,
+            )
+            raise self.FUBMaxSizeTooLowError(
+                f"New max_size {max_size} is smaller than the bytes already uploaded."
+            )
+        elif exception_id == "boxStateError":
+            msg = (
+                f"Cannot {operation} FileUploadBox {box_id} because the box's state"
+                + " prevents it. The RS and UCS box states might be out of sync."
+            )
+            log.error(msg, extra=extra)
+            raise self.FUBStateError(msg)
+        msg = (
+            f"Failed to {operation} FileUploadBox {box_id} because the response status"
+            + f" code was 409 but the exception ID ({exception_id}) was missing or"
+            + " unrecognized."
+        )
+        log.error(msg, extra=body)
+        raise self.OperationError(msg)
+
     async def create_file_upload_box(
         self, *, storage_alias: str, max_size: PositiveInt
     ) -> UUID4:
@@ -349,36 +431,8 @@ class FileBoxClient(FileBoxClientPort):
             timeout=HTTPX_TIMEOUT,
         )
         if response.status_code == 409:
-            response_json = response.json()
-            exception_id = (
-                response_json.get("exception_id", "")
-                if isinstance(response_json, dict)
-                else ""
-            )
-            if exception_id == "incompleteUploads":
-                raw = response_json.get("data", {}).get("incomplete_uploads", [])
-                incomplete_file_ids = [UUID(item[0]) for item in raw]
-                log.error(
-                    "Failed to lock FileUploadBox %s: %d file(s) have incomplete uploads.",
-                    box_id,
-                    len(incomplete_file_ids),
-                    extra={"box_id": box_id, "incomplete_uploads": incomplete_file_ids},
-                )
-                raise self.FUBIncompleteUploadsError(
-                    incomplete_file_ids=incomplete_file_ids
-                )
-            log.error(
-                "Failed to lock FileUploadBox %s because the version specified"
-                + " in the request is out of date.",
-                box_id,
-                extra={
-                    "box_id": box_id,
-                    "version": version,
-                    "response_text": response.text,
-                },
-            )
-            raise self.FUBVersionError(
-                "Requested FileUploadBox version is out of date."
+            self._raise_for_409(
+                response=response, body=body, operation="lock", box_id=box_id
             )
         elif response.status_code != 204:
             log.error(
@@ -409,18 +463,11 @@ class FileBoxClient(FileBoxClientPort):
             timeout=HTTPX_TIMEOUT,
         )
         if response.status_code == 409:
-            log.error(
-                "Failed to archive FileUploadBox %s because the version specified"
-                + " in the request is out of date.",
-                box_id,
-                extra={
-                    "box_id": box_id,
-                    "version": version,
-                    "response_text": response.text,
-                },
-            )
-            raise self.FUBVersionError(
-                "Requested FileUploadBox version is out of date."
+            self._raise_for_409(
+                response=response,
+                body=body,
+                operation="unlock",
+                box_id=box_id,
             )
         elif response.status_code != 204:
             log.error(
@@ -434,9 +481,12 @@ class FileBoxClient(FileBoxClientPort):
             raise self.OperationError("Failed to unlock FileUploadBox.")
 
     async def get_file_upload_list(
-        self, *, box_id: UUID4
+        self, *, box_id: UUID4, missing_box_ok: bool = False
     ) -> list[FileUploadWithAccession]:
         """Get list of file uploads in a FileUploadBox.
+
+        If the FileUploadBox does not exist and missing_box_ok is set to True, this
+        method will return an empty list. Otherwise it will raise an OperationError.
 
         Raises:
             OperationError if there's a problem with the operation.
@@ -449,6 +499,14 @@ class FileBoxClient(FileBoxClientPort):
             timeout=HTTPX_TIMEOUT,
         )
         if response.status_code != 200:
+            if response.status_code == 404 and missing_box_ok:
+                log.warning(
+                    "Received a 404 when getting files list for FileUploadBox %s."
+                    + " It is likely that conflicting state exists between RS and UCS."
+                    + " Returning an empty list to continue processing.",
+                    box_id,
+                )
+                return []
             log.error(
                 "Error getting file list for FileUploadBox %s.",
                 box_id,
@@ -485,18 +543,11 @@ class FileBoxClient(FileBoxClientPort):
             timeout=HTTPX_TIMEOUT,
         )
         if response.status_code == 409:
-            log.error(
-                "Failed to archive FileUploadBox %s because the version specified"
-                + " in the request is out of date.",
-                box_id,
-                extra={
-                    "box_id": box_id,
-                    "version": version,
-                    "response_text": response.text,
-                },
-            )
-            raise self.FUBVersionError(
-                "Requested FileUploadBox version is out of date."
+            self._raise_for_409(
+                response=response,
+                body=body,
+                operation="archive",
+                box_id=box_id,
             )
         elif response.status_code != 204:
             log.error(
@@ -532,37 +583,12 @@ class FileBoxClient(FileBoxClientPort):
             return
 
         if response.status_code == 409:
-            detail = response.json()
-            exception_id = detail["exception_id"]
-            if exception_id == "boxMaxSizeTooLow":
-                log.error(
-                    "Failed to resize FileUploadBox %s because the new max_size %i is"
-                    + " smaller than the bytes already uploaded.",
-                    box_id,
-                    max_size,
-                    extra={
-                        "box_id": box_id,
-                        "max_size": max_size,
-                        "response_text": response.text,
-                    },
-                )
-                raise self.FUBMaxSizeTooLowError(
-                    f"New max_size {max_size} is smaller than the bytes already uploaded."
-                )
-            elif exception_id == "boxVersionOutdated":
-                log.error(
-                    "Failed to resize FileUploadBox %s because the version specified"
-                    + " in the request is out of date.",
-                    box_id,
-                    extra={
-                        "box_id": box_id,
-                        "version": version,
-                        "response_text": response.text,
-                    },
-                )
-                raise self.FUBVersionError(
-                    "Requested FileUploadBox version is out of date."
-                )
+            self._raise_for_409(
+                response=response,
+                body=body,
+                operation="resize",
+                box_id=box_id,
+            )
         log.error(
             "Error resizing FileUploadBox ID %s in external service.",
             box_id,
@@ -609,18 +635,12 @@ class FileBoxClient(FileBoxClientPort):
             )
 
         if response.status_code == 409:
-            exception_id = response.json().get("exception_id")
-            if exception_id == "boxStateError":
-                log.error(
-                    "Cannot delete FileUpload %s from FileUploadBox %s because the box"
-                    + " is locked. The RS and UCS box states may be out of sync.",
-                    file_id,
-                    box_id,
-                    extra=extra,
-                )
-                raise self.FUBLockedError(
-                    f"FileUploadBox {box_id} is locked and cannot be modified."
-                )
+            self._raise_for_409(
+                response=response,
+                body={},
+                operation="delete file from",
+                box_id=box_id,
+            )
 
         log.error(
             "Error deleting FileUpload %s from FileUploadBox %s.",
@@ -629,3 +649,55 @@ class FileBoxClient(FileBoxClientPort):
             extra=extra,
         )
         raise self.OperationError(f"Failed to delete file upload {file_id}.")
+
+    async def delete_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
+        """Delete a FileUploadBox and all its FileUploads in the owning service.
+
+        A 404 (box not found) is treated as success so that retries after a partial
+        deletion are idempotent.
+
+        Raises:
+            FUBVersionError if the remote box version differs from `version`.
+            OperationError if there's any other problem with the operation.
+        """
+        wot = DeleteFileBoxWorkOrder(box_id=box_id)
+        headers = self._auth_header(wot)
+        response = await self._client.delete(
+            f"{self._ucs_url}/boxes/{box_id}",
+            headers=headers,
+            params={"version": version},
+            timeout=HTTPX_TIMEOUT,
+        )
+        if response.status_code == 204:
+            return
+
+        extra: dict[str, Any] = {
+            "box_id": box_id,
+            "version": version,
+            "status_code": response.status_code,
+            "response_text": response.text,
+        }
+
+        if response.status_code == 404:
+            log.warning(
+                "FileUploadBox %s was already absent from the external service when"
+                + " attempting to delete it. Treating it as a success.",
+                box_id,
+                extra=extra,
+            )
+            return
+
+        if response.status_code == 409:
+            self._raise_for_409(
+                response=response,
+                body={},
+                operation="delete",
+                box_id=box_id,
+            )
+
+        log.error(
+            "Error deleting FileUploadBox %s in external service.",
+            box_id,
+            extra=extra,
+        )
+        raise self.OperationError(f"Failed to delete FileUploadBox {box_id}.")

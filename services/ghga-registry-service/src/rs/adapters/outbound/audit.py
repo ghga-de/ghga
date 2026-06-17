@@ -85,6 +85,23 @@ class AuditRepository(AuditRepositoryPort):
             entity_id=str(box.id),
         )
 
+    async def log_box_deleted(
+        self, *, box: ResearchDataUploadBox, user_id: UUID4
+    ) -> None:
+        """Log the deletion of a ResearchDataUploadBox."""
+        await self.create_audit_record(
+            label="ResearchDataUploadBox deleted",
+            description=(
+                f"ResearchDataUploadBox '{box.title}' (ID: {box.id}) was deleted along"
+                f" with FileUploadBox {box.file_upload_box_id} containing"
+                f" {box.file_count} file(s) totaling {box.size} byte(s)."
+            ),
+            user_id=user_id,
+            action="D",
+            entity=ResearchDataUploadBox.__name__,
+            entity_id=str(box.id),
+        )
+
     async def log_access_granted(
         self, *, box_id: UUID4, grantor_id: UUID4, grantee_id: UUID4
     ):

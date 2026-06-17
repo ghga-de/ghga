@@ -53,3 +53,10 @@ class FileControllerPort(ABC):
         """Query FileAccessionMapping records for the given file IDs.
         Returns a dict mapping file_id (UUID4) to accession (str).
         """
+
+    @abstractmethod
+    async def delete_mappings_for_file_ids(self, *, file_ids: set[UUID4]) -> None:
+        """Delete FileAccessionMapping records for the given file IDs.
+
+        Used when a ResearchDataUploadBox is deleted.
+        """

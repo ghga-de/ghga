@@ -83,3 +83,21 @@ class FileController(FileControllerPort):
         ):
             result[record.file_id] = record.accession
         return result
+
+    async def delete_mappings_for_file_ids(self, *, file_ids: set[UUID4]) -> None:
+        """Delete FileAccessionMapping records for the given file IDs.
+
+        Used when a ResearchDataUploadBox is deleted.
+        """
+        if not file_ids:
+            return
+
+        # Fetch the accessions, then delete each item.
+        accessions_by_file_id = await self.get_accessions_by_file_ids(file_ids=file_ids)
+        for file_id, accession in accessions_by_file_id.items():
+            await self._file_accession_mapping_dao.delete(id_=accession)
+            log.info(
+                "Deleted file accession mapping for file ID %s (accession %s).",
+                file_id,
+                accession,
+            )

@@ -667,7 +667,9 @@ class RDUBManager(RDUBManagerPort):
         try:
             return await self._box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
-            raise self.BoxNotFoundError(box_id=box_id) from err
+            error = self.BoxNotFoundError(box_id=box_id)
+            log.error(error)
+            raise error from err
 
     async def get_research_data_upload_boxes(
         self,
@@ -716,10 +718,21 @@ class RDUBManager(RDUBManagerPort):
                 user_id=user_id
             )
 
-            # Generally very few boxes per user, so make distinct call for each
-            boxes = [
-                await self._box_dao.get_by_id(box_id) for box_id in accessible_box_ids
-            ]
+            # Generally very few boxes per user, so make distinct call for each. A grant
+            # may reference a box that has since been deleted (e.g. a race with deletion
+            # or a not-yet-revoked grant). Suppress the error and opt for a warning log.
+            boxes = []
+            for box_id in accessible_box_ids:
+                try:
+                    boxes.append(await self._box_dao.get_by_id(box_id))
+                except ResourceNotFoundError:
+                    log.warning(
+                        "User %s has access to box %s, but it doesn't exist in RS."
+                        + " Skipping it.",
+                        user_id,
+                        box_id,
+                        extra={"user_id": user_id, "box_id": box_id},
+                    )
             if state is not None:
                 boxes = [x for x in boxes if x.state == state]
 
@@ -754,7 +767,7 @@ class RDUBManager(RDUBManagerPort):
         Raises:
             BoxNotFoundError: If the box doesn't exist.
             BoxAccessError: If the user doesn't have access to the box.
-            BoxLockedError: If the box is locked.
+            BoxStateError: If the box is locked.
             OperationError: If there's a problem communicating with the file box service.
         """
         box = await self.get_research_data_upload_box(
@@ -763,7 +776,9 @@ class RDUBManager(RDUBManagerPort):
         extra: dict[str, Any] = {"box_id": box_id, "file_id": file_id}
 
         if box.state == "locked":
-            error = self.BoxLockedError()
+            error = self.BoxStateError(
+                operation="initiate FileUpload deletion", state="locked"
+            )
             log.error(error, extra=extra)
             raise error
 
@@ -771,10 +786,131 @@ class RDUBManager(RDUBManagerPort):
             await self._file_upload_box_client.delete_file_upload(
                 box_id=box.file_upload_box_id, file_id=file_id
             )
-        except FileBoxClientPort.FUBLockedError as err:
-            error = self.BoxLockedError()
+        except FileBoxClientPort.FUBStateError as err:
+            # error text is more specific here to differentiate the two errors
+            error = self.BoxStateError(
+                operation=f"delete FileUpload {file_id}", state="locked"
+            )
             log.error(error, extra=extra)
             raise error from err
+
+    async def _revoke_all_grants_for_box(self, *, box_id: UUID4) -> None:
+        """Revoke every currently-valid upload-access grant for a box.
+
+        Tolerates grants that are already gone (GrantNotFoundError) so the enclosing
+        deletion stays idempotent across retries.
+        """
+        grants = await self._access_client.get_upload_access_grants(
+            box_id=box_id, valid=True
+        )
+        for grant in grants:
+            try:
+                await self._access_client.revoke_upload_access(grant_id=grant.id)
+                log.info("Revoked upload-access grant %s for box %s.", grant.id, box_id)
+            except AccessClientPort.GrantNotFoundError:
+                log.info(
+                    "Upload-access grant %s for box %s not found - considering it"
+                    + " already deleted.",
+                    grant.id,
+                    box_id,
+                )
+
+    async def delete_research_data_upload_box(
+        self,
+        *,
+        box_id: UUID4,
+        version: int,
+        user_id: UUID4,
+    ) -> None:
+        """Delete a ResearchDataUploadBox and its corresponding FileUploadBox.
+
+        The RDUB (and FUB) must be not be in the 'archived' state.
+        The version must match what is in the database.
+
+        First, the file list is retrieved from UCS. Then any corresponding file
+        accession mappings are deleted. Then the FileUploadBox and associated
+        FileUploads are deleted, followed by any valid upload grants, and finally the
+        ResearchDataUploadBox.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxVersionError: If the requested ResearchDataUploadBox version is outdated,
+                or the associated FileUploadBox version is outdated.
+            BoxStateError: If the box is archived and cannot be deleted.
+            OperationError: If there's a problem communicating with the file box service.
+        """
+        # Verify the RDUB exists
+        try:
+            box = await self._box_dao.get_by_id(box_id)
+        except ResourceNotFoundError as err:
+            error = self.BoxNotFoundError(box_id=box_id)
+            log.error(error)
+            raise error from err
+
+        # Verify the RDUB version. The FUB version is checked separately by the owning
+        #  service when the FUB is deleted.
+        if box.version != version:
+            log.error(
+                "Can't delete RDUB %s because the request is outdated.",
+                box_id,
+                extra={
+                    "box_id": box_id,
+                    "current_version": box.version,
+                    "requested_version": version,
+                },
+            )
+            raise self.BoxVersionError(f"Research Data Upload Box {box_id} has changed")
+
+        # Make sure the RDUB isn't already 'archived'
+        if box.state == "archived":
+            log.error("Can't delete RDUB %s because it is archived.", box_id)
+            raise self.BoxStateError(operation="delete the box", state="archived")
+
+        # Get a list of the FileUploads tied to this box
+        fub_id = box.file_upload_box_id
+        files = await self._file_upload_box_client.get_file_upload_list(
+            box_id=fub_id, missing_box_ok=True
+        )
+
+        # Delete accession mappings for the box's files. Must happen before the FUB
+        # is deleted, since afterwards the file list is gone.
+        await self._file_controller.delete_mappings_for_file_ids(
+            file_ids={f.id for f in files}
+        )
+
+        # Delete the FileUploadBox
+        try:
+            await self._file_upload_box_client.delete_file_upload_box(
+                box_id=fub_id, version=box.file_upload_box_version
+            )
+        except FileBoxClientPort.FUBVersionError as version_err:
+            log.error(
+                "Can't delete RDUB %s because the associated FileUploadBox version has"
+                + " changed.",
+                box_id,
+                extra={
+                    "box_id": box_id,
+                    "file_upload_box_id": fub_id,
+                    "request_file_upload_box_version": box.file_upload_box_version,
+                },
+            )
+            raise self.BoxVersionError(
+                f"File Upload Box {fub_id} version is out of date."
+            ) from version_err
+
+        # Revoke all upload-access grants
+        await self._revoke_all_grants_for_box(box_id=box_id)
+
+        # Delete the local RDUB and publish the audit record.
+        try:
+            await self._box_dao.delete(box_id)
+        except ResourceNotFoundError as err:
+            error = self.BoxNotFoundError(box_id=box_id)
+            log.error(error)
+            raise error from err
+        else:
+            await self._audit_repository.log_box_deleted(box=box, user_id=user_id)
+            log.info("Deleted RDUB %s and its FileUploadBox %s.", box_id, fub_id)
 
     async def store_accession_map(
         self,
@@ -817,7 +953,9 @@ class RDUBManager(RDUBManagerPort):
         try:
             box = await self._box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
-            raise self.BoxNotFoundError(box_id=box_id) from err
+            error = self.BoxNotFoundError(box_id=box_id)
+            log.error(error)
+            raise error from err
 
         # Make sure requested box version is current
         if box_version != box.version:

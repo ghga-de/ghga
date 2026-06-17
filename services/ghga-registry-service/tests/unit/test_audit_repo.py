@@ -149,3 +149,39 @@ async def test_log_box_updated():
         entity="ResearchDataUploadBox",
         entity_id=str(box.id),
     )
+
+
+async def test_log_box_deleted():
+    """Test log_box_deleted()"""
+    auditor = AuditRepository(service="rs", event_publisher=AsyncMock())
+    box = ResearchDataUploadBox(
+        version=0,
+        state="locked",
+        title="Test Box Title",
+        description="Test box description",
+        last_changed=now_utc_ms_prec(),
+        changed_by=uuid4(),
+        file_upload_box_id=uuid4(),
+        file_upload_box_version=0,
+        file_upload_box_state="locked",
+        file_count=3,
+        size=10000,
+        storage_alias="HD01",
+        max_size=TEST_MAX_SIZE,
+    )
+
+    user_id = uuid4()
+    auditor.create_audit_record = AsyncMock()  # type: ignore[method-assign]
+    await auditor.log_box_deleted(box=box, user_id=user_id)
+    auditor.create_audit_record.assert_called_once_with(
+        label="ResearchDataUploadBox deleted",
+        description=(
+            f"ResearchDataUploadBox '{box.title}' (ID: {box.id}) was deleted along"
+            f" with FileUploadBox {box.file_upload_box_id} containing"
+            f" {box.file_count} file(s) totaling {box.size} byte(s)."
+        ),
+        user_id=user_id,
+        action="D",
+        entity="ResearchDataUploadBox",
+        entity_id=str(box.id),
+    )

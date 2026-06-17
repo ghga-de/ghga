@@ -26,6 +26,7 @@ from pytest_httpx import HTTPXMock
 
 from rs.core.models import GrantId
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
+from rs.ports.outbound.http import FileBoxClientPort
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import TEST_MAX_SIZE
 
@@ -103,6 +104,18 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert box_event_recorder.recorded_events
     assert len(box_event_recorder.recorded_events) == 1
     assert box_event_recorder.recorded_events[0].payload["id"] == str(box_id)
+
+    # Brief detour: Ensure getting files list raises an error if the FUB doesn't exist
+    httpx_mock.add_response(
+        method="GET",
+        url=f"{file_box_service_url}/boxes/{file_upload_box_id}/uploads",
+        status_code=404,
+        json={"exception_id": "boxNotFound"},
+    )
+    with pytest.raises(FileBoxClientPort.OperationError):
+        await rdub_manager.get_upload_box_files(
+            box_id=box_id, auth_context=ds_auth_context
+        )
 
     # Grant a user access to said box
     test_grant_id = uuid4()

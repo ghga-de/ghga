@@ -111,6 +111,10 @@ class FileBoxClientPort(ABC):
     class FUBVersionError(RuntimeError):
         """Raised when the requested version of a FileUploadBox is out of date."""
 
+        def __init__(self, *, box_id: UUID4):
+            msg = f"Requested version of FileUploadBox {box_id} is out of date."
+            super().__init__(msg)
+
     class FUBMaxSizeTooLowError(RuntimeError):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
@@ -121,7 +125,7 @@ class FileBoxClientPort(ABC):
             self.incomplete_file_ids = incomplete_file_ids
             super().__init__(f"{len(incomplete_file_ids)} file(s) are incomplete.")
 
-    class FUBLockedError(RuntimeError):
+    class FUBStateError(RuntimeError):
         """Raised when the FileUploadBox is locked and the operation cannot proceed."""
 
     @abstractmethod
@@ -160,9 +164,12 @@ class FileBoxClientPort(ABC):
 
     @abstractmethod
     async def get_file_upload_list(
-        self, *, box_id: UUID4
+        self, *, box_id: UUID4, missing_box_ok: bool = False
     ) -> list[FileUploadWithAccession]:
         """Get list of file uploads in a FileUploadBox.
+
+        If the FileUploadBox does not exist and missing_box_ok is set to True, this
+        method will return an empty list. Otherwise it will raise an OperationError.
 
         Raises:
             OperationError if there's a problem with the operation.
@@ -197,7 +204,20 @@ class FileBoxClientPort(ABC):
         """Delete a FileUpload from a FileUploadBox in the owning service.
 
         Raises:
-            FUBLockedError if the FileUploadBox is locked.
+            FUBStateError if the FileUploadBox is locked.
+            OperationError if there's any other problem with the operation.
+        """
+        ...
+
+    @abstractmethod
+    async def delete_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
+        """Delete a FileUploadBox and all its FileUploads in the owning service.
+
+        A 404 (box not found) is treated as success so that retries after a partial
+        deletion are idempotent.
+
+        Raises:
+            FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
         """
         ...
