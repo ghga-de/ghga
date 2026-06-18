@@ -63,6 +63,41 @@ def test_vault_agent(rendered_chart, release_name, expected):
     assert args == expected("vault_enabled", "args")
     
 
+def test_vault_boilerplate_extra_annotations(rendered_chart, release_name, expected):
+    manifests = rendered_chart("common.yaml", "vault_boilerplate.yaml")
+    exp = expected("vault_boilerplate", "podAnnotations")
+    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+
+    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
+    print(diff)
+    assert not diff, diff
+
+    assert (
+        expected("vault_boilerplate", "podAnnotations").items()
+        <= manifests["Deployment"]["spec"]["template"]["metadata"][
+            "annotations"
+        ].items()
+    )
+
+    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["command"]
+    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
+    assert command == expected("vault_boilerplate", "command")
+    assert args == expected("vault_boilerplate", "args")
+
+
+def test_vault_boilerplate_omits_unset_annotations(rendered_chart):
+    manifests = rendered_chart("common.yaml", "vault_enabled.yaml")
+    annotations = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+
+    for key in (
+        "vault.hashicorp.com/ca-cert",
+        "vault.hashicorp.com/tls-secret",
+        "vault.hashicorp.com/service",
+        "vault.hashicorp.com/tls-server-name",
+    ):
+        assert key not in annotations
+
+
 def test_vault_single_template(rendered_chart, release_name, expected):
     manifests = rendered_chart("common.yaml", "vault_single_template.yaml")
     exp = expected("vault_single_template", "podAnnotations")

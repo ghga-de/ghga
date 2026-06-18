@@ -1,0 +1,20 @@
+podAnnotations:
+  vault.hashicorp.com/agent-cache-enable: "true"
+  vault.hashicorp.com/agent-init-first: "true"
+  vault.hashicorp.com/agent-inject: "true"
+  vault.hashicorp.com/agent-pre-populate-only: "false"
+  vault.hashicorp.com/agent-run-as-same-user: "true"
+  vault.hashicorp.com/tls-skip-verify: "false"
+  vault.hashicorp.com/role: "test-my-app"
+  vault.hashicorp.com/ca-cert: "/vault/tls/ca.crt"
+  vault.hashicorp.com/tls-secret: "vault-tls"
+  vault.hashicorp.com/service: "https://vault.example.com:8200"
+  vault.hashicorp.com/tls-server-name: "vault.example.com"
+
+command:
+- sh
+- -c
+
+args:
+- if [ -d "/vault/secrets" ]; then for f in /vault/secrets/*; do if [ -f "$f" ]; then
+  . "$f"; fi; done; fi; /usr/local/bin/sleep 100000000;
