@@ -362,6 +362,115 @@ async def test_retrieve_work_package_without_box_id(
     )  # Should be None for old documents
 
 
+async def test_delete_work_package(
+    repository: WorkPackageRepository,
+    auth_context: AuthContext,
+    mongodb: MongoDbFixture,
+):
+    """Test deletion of an existing work package."""
+    # A dataset must exist before a download work package can be created
+    await repository.register_dataset(DATASET)
+    creation_data = WorkPackageCreationData(
+        dataset_id="some-dataset-id",
+        type=WorkPackageType.DOWNLOAD,
+        file_ids=None,
+        user_public_crypt4gh_key=user_public_crypt4gh_key,
+    )
+    creation_response = await repository.create(
+        creation_data=creation_data, auth_context=auth_context
+    )
+    work_package_id = UUID(creation_response.id)
+
+    # Confirm the work package exists before attempting deletion
+    work_package = await repository.get(work_package_id, check_valid=False)
+    assert work_package.id == work_package_id
+
+    # Delete the work package
+    await repository._delete_work_package(work_package_id)
+
+    # A deleted work package should no longer be retrievable
+    with pytest.raises(repository.WorkPackageAccessError):
+        await repository.get(work_package_id, check_valid=False)
+
+
+async def test_delete_work_package_not_found(
+    repository: WorkPackageRepository, mongodb: MongoDbFixture, caplog
+):
+    """Test that deleting a non-existent work package logs a warning."""
+    wp_id = uuid4()
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        await repository._delete_work_package(wp_id)
+    expected_warning = (
+        f"Did not find a work package with the ID {wp_id}, presumed already deleted."
+    )
+    assert expected_warning in caplog.messages
+
+
+async def test_delete_upload_box_also_deletes_work_packages(
+    repository: WorkPackageRepository,
+    auth_context: AuthContext,
+    mongodb: MongoDbFixture,
+):
+    """Test that deleting an upload box also deletes all linked work packages."""
+    # Register an upload box so that upload work packages can be created against it
+    box_id = BOXES_WITH_UPLOAD_ACCESS[0]
+    upload_box = ResearchDataUploadBoxBasics(
+        id=box_id,
+        file_upload_box_id=uuid4(),
+        title="Test Upload Box",
+        description="A test box",
+    )
+    await repository.register_upload_box(upload_box)
+
+    # "Upload" work packages require a user with upload access. The default
+    # testing auth_context's user only has download access, so override the ID here
+    first_upload_auth_context = auth_context.model_copy(
+        update={"id": str(USERS_WITH_UPLOAD_ACCESS[0])}
+    )
+    second_upload_auth_context = auth_context.model_copy(
+        update={"id": str(USERS_WITH_UPLOAD_ACCESS[1])}
+    )
+    creation_data = WorkPackageCreationData(
+        research_data_upload_box_id=box_id,
+        type=WorkPackageType.UPLOAD,
+        file_ids=None,
+        user_public_crypt4gh_key=user_public_crypt4gh_key,
+    )
+
+    # Create a work package tied to the box for both users
+    first_creation_response = await repository.create(
+        creation_data=creation_data, auth_context=first_upload_auth_context
+    )
+    second_creation_response = await repository.create(
+        creation_data=creation_data, auth_context=second_upload_auth_context
+    )
+    first_work_package_id = UUID(first_creation_response.id)
+    second_work_package_id = UUID(second_creation_response.id)
+
+    # Confirm both work packages exist before deleting the box
+    first_work_package = await repository.get(first_work_package_id, check_valid=False)
+    assert first_work_package.id == first_work_package_id
+    second_work_package = await repository.get(
+        second_work_package_id, check_valid=False
+    )
+    assert second_work_package.id == second_work_package_id
+
+    # Delete the box
+    await repository.delete_upload_box(box_id=box_id)
+
+    # Verify that the upload box is gone
+    with pytest.raises(repository.UploadBoxNotFoundError):
+        await repository.get_upload_box(box_id=box_id)
+
+    # Both linked work packages should have been deleted, regardless of which user
+    # created them — the cascade must reach all work packages for the box
+    with pytest.raises(repository.WorkPackageAccessError):
+        await repository.get(first_work_package_id, check_valid=False)
+    with pytest.raises(repository.WorkPackageAccessError):
+        await repository.get(second_work_package_id, check_valid=False)
+
+
 async def test_box_crud(
     repository: WorkPackageRepository, mongodb: MongoDbFixture, config: Config
 ):

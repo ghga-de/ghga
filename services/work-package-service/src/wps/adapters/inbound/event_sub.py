@@ -186,8 +186,7 @@ class RDUBOutboxTranslator(DaoSubscriberProtocol):
         """Consume an event indicating the deletion of the research data upload box
         with the given ID.
         """
-        with suppress(self._repository.UploadBoxNotFoundError):  # if already deleted
-            await self._repository.delete_upload_box(UUID(resource_id))
+        await self._repository.delete_upload_box(UUID(resource_id))
 
 
 class AccessionMapOutboxTranslator(

@@ -26,7 +26,10 @@ from pydantic import UUID4
 from wps.ports.outbound.access import AccessCheckPort
 
 USERS_WITH_DOWNLOAD_ACCESS = [UUID("a86f8281-e18a-429e-88a9-a5c8ea0cf754")]
-USERS_WITH_UPLOAD_ACCESS = [UUID("4624fb56-2d5f-4a8a-9a6c-cc0226a4f55a")]
+USERS_WITH_UPLOAD_ACCESS = [
+    UUID("4624fb56-2d5f-4a8a-9a6c-cc0226a4f55a"),
+    UUID("b8d2e1f0-3c4a-4b5d-8e9f-1a2b3c4d5e6f"),
+]
 DATASETS_WITH_DOWNLOAD_ACCESS = ["some-dataset-id"]
 BOXES_WITH_UPLOAD_ACCESS = [
     UUID("e47f4b8a-3f2c-4e8b-9a1c-7d4e5f6a7b8c"),

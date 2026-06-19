@@ -545,6 +545,22 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         signed_wot = sign_work_order_token(work_order, self._signing_key)
         return encrypt(signed_wot, user_public_crypt4gh_key)
 
+    async def _delete_work_package(self, work_package_id: UUID4) -> None:
+        """Delete the work package with the given ID.
+
+        If no such work package exists, a warning is logged but no error is raised.
+        """
+        try:
+            await self._dao.delete(work_package_id)
+        except ResourceNotFoundError:
+            log.warning(
+                "Did not find a work package with the ID %s, presumed already deleted.",
+                work_package_id,
+                extra={"work_package_id": work_package_id},
+            )
+        else:
+            log.info("Deleted work package with ID %s.", work_package_id)
+
     async def register_dataset(self, dataset: Dataset) -> None:
         """Register a dataset with all of its files."""
         await self._dataset_dao.upsert(dataset)
@@ -618,9 +634,10 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         log.info("Upserted UploadBox with ID %s", upload_box.id)
 
     async def delete_upload_box(self, box_id: UUID4) -> None:
-        """Delete a research data upload box with the given ID.
+        """Delete a research data upload box with the given ID, plus all linked Work
+        Packages.
 
-        If no such box exists, an UploadBoxNotFoundError will be raised.
+        If no such box exists, it is treated as if it was already successfully deleted.
         """
         try:
             await self._upload_box_dao.delete(box_id)
@@ -629,6 +646,16 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
             log.info(
                 "UploadBox with ID %s not found, presumed already deleted.", box_id
             )
+
+        # Get a list of affected work package IDs and then delete them
+        work_package_ids = [
+            work_package.id
+            async for work_package in self._dao.find_all(
+                mapping={"research_data_upload_box_id": box_id}
+            )
+        ]
+        for work_package_id in work_package_ids:
+            await self._delete_work_package(work_package_id)
 
     async def get_upload_box(self, box_id: UUID4) -> ResearchDataUploadBoxBasics:
         """Get a registered research data upload box using the given ID.

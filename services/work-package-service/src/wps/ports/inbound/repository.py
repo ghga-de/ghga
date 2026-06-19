@@ -152,9 +152,10 @@ class WorkPackageRepositoryPort(ABC):
 
     @abstractmethod
     async def delete_upload_box(self, box_id: UUID4) -> None:
-        """Delete a research data upload box with the given ID.
+        """Delete a research data upload box with the given ID, plus all linked Work
+        Packages.
 
-        If no such box exists, an UploadBoxNotFoundError will be raised.
+        If no such box exists, it is treated as if it was already successfully deleted.
         """
 
     @abstractmethod
