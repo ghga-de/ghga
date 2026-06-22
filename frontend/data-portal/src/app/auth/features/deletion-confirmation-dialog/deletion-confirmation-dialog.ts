@@ -4,14 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  model,
-  signal,
-} from '@angular/core';
+import { Component, computed, inject, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -44,7 +37,6 @@ import { NotificationService } from '@app/shared/services/notification';
   ],
   providers: [UserService],
   templateUrl: './deletion-confirmation-dialog.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeletionConfirmationDialogComponent {
   #dialogRef = inject(MatDialogRef<DeletionConfirmationDialogComponent, boolean>);

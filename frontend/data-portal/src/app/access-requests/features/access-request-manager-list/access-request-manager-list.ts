@@ -7,7 +7,6 @@
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   AfterViewInit,
-  ChangeDetectionStrategy,
   Component,
   QueryList,
   ViewChild,
@@ -55,7 +54,6 @@ import {
   ],
   providers: [CommonDatePipe, providePaginatorIntl('Access requests per page')],
   templateUrl: './access-request-manager-list.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessRequestManagerListComponent implements AfterViewInit {
   #config = inject(ConfigService);

@@ -4,16 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import {
   MatAutocompleteModule,
@@ -55,12 +46,10 @@ import { highlightMatchingText } from '@app/shared/utils/highlight-matching-text
     MatInputModule,
     MatIconModule,
     StencilComponent,
-    ReactiveFormsModule,
     MatAccordion,
     FormField,
   ],
   templateUrl: './metadata-browser-filter.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MetadataBrowserFilterComponent implements OnInit {
   #className = 'EmbeddedDataset';
@@ -116,7 +105,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
   });
 
   #paginatedEffect = effect(() => {
-    this.paginated() ? this.#performSearch() : null;
+    if (this.paginated()) this.#performSearch();
   });
 
   #deferredFacetUpdateEffect = effect(() => {
@@ -196,7 +185,7 @@ export class MetadataBrowserFilterComponent implements OnInit {
     if (Object.keys(facetData).length === 0) {
       return '';
     }
-    let facetStrings = [];
+    const facetStrings = [];
     for (const key in facetData) {
       for (const index in facetData[key]) {
         facetStrings.push(key + ':' + facetData[key][index]);

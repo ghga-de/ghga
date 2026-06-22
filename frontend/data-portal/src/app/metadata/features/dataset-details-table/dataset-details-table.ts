@@ -6,7 +6,6 @@
 
 import {
   AfterViewInit,
-  ChangeDetectionStrategy,
   Component,
   QueryList,
   ViewChild,
@@ -25,6 +24,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { Experiment, File, Sample } from '@app/metadata/models/dataset-details';
 import {
   datasetDetailsTableColumns,
   dataSortingDataAccessor,
@@ -33,6 +33,12 @@ import { DetailsDataRendererPipe } from '@app/metadata/pipes/details-data-render
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
 import { WithCopyButton } from '@app/shared/features/with-copy-button/with-copy-button';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
+
+/**
+ * A single row of a dataset details table, which can describe an experiment,
+ * a sample or a file depending on the active table.
+ */
+type DatasetDetailsRow = Experiment | Sample | File;
 
 /**
  * Component for the dataset details table
@@ -53,16 +59,15 @@ import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
   ],
   templateUrl: './dataset-details-table.html',
   styleUrl: './dataset-details-table.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DatasetDetailsTableComponent implements AfterViewInit {
   tableName = input.required<'experiments' | 'samples' | 'files'>();
-  data = input.required<any[]>();
+  data = input.required<DatasetDetailsRow[]>();
 
   protected header = computed(() => {
     let header = `List of ${this.tableName()} (${this.numItems()} total`;
     if (this.tableName() === 'files') {
-      const totalBytes = this.data().reduce(
+      const totalBytes = (this.data() as File[]).reduce(
         (acc, file) => acc + (file.file_information?.size ?? 0),
         0,
       );
@@ -104,7 +109,7 @@ export class DatasetDetailsTableComponent implements AfterViewInit {
   );
 
   protected caption = computed(() => `Dataset ${this.header().split(' ')[0]}`);
-  protected dataSource = new MatTableDataSource<any>([]);
+  protected dataSource = new MatTableDataSource<DatasetDetailsRow>([]);
 
   protected displayCols = computed(() =>
     this.columns()

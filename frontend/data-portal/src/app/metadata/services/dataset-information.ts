@@ -5,7 +5,7 @@
  */
 
 import { httpResource } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 import {
   DatasetInformation,
@@ -17,7 +17,7 @@ import {
  *
  * This service provides the functionality to fetch aggregated information on datasets.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class DatasetInformationService {
   #config = inject(ConfigService);
   #dinsUrl = this.#config.dinsUrl;

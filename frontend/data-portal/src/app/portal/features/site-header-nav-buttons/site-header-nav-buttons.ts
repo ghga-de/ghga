@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -28,7 +28,6 @@ import { AdminMenuComponent } from '../admin-menu/admin-menu';
     ExternalLinkDirective,
   ],
   templateUrl: './site-header-nav-buttons.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SiteHeaderNavButtonsComponent {
   #baseRoute = inject(BaseRouteService);

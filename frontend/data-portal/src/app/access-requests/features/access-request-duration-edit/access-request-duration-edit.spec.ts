@@ -60,7 +60,13 @@ describe('AccessRequestDurationEditComponent', () => {
       emitted = value as Map<string, string>;
     });
 
-    (component as any).formModel.set({ fromDate, untilDate });
+    (
+      component as unknown as {
+        formModel: {
+          set: (value: { fromDate: Date | null; untilDate: Date | null }) => void;
+        };
+      }
+    ).formModel.set({ fromDate, untilDate });
     component.changed();
     component.save();
 

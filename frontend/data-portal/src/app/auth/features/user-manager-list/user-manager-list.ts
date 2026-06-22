@@ -7,7 +7,6 @@
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   AfterViewInit,
-  ChangeDetectionStrategy,
   Component,
   QueryList,
   ViewChild,
@@ -27,8 +26,6 @@ import { DisplayUser, UserService } from '@app/auth/services/user';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { UserExtIdPipe } from '@app/shared/pipes/user-ext-id-pipe';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
-
-const DEFAULT_EXT_ID_SUFFIX = '@lifescience-ri.eu';
 
 /**
  * User Manager List component.
@@ -51,7 +48,6 @@ const DEFAULT_EXT_ID_SUFFIX = '@lifescience-ri.eu';
   ],
   providers: [CommonDatePipe, providePaginatorIntl('Users per page')],
   templateUrl: './user-manager-list.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserManagerListComponent implements AfterViewInit {
   #router = inject(Router);

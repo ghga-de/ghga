@@ -5,14 +5,7 @@
  */
 
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -39,9 +32,9 @@ import { VerificationDialogComponent } from '../verification-dialog/verification
   ],
   providers: [IvaTypePipe],
   templateUrl: './user-iva-list.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserIvaListComponent implements OnInit {
+  protected readonly IvaState = IvaState;
   #dialog = inject(MatDialog);
   #confirm = inject(ConfirmationService);
   #notify = inject(NotificationService);

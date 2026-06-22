@@ -4,14 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  signal,
-} from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { email, form, FormField, required, validate } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -48,7 +41,6 @@ import {
     MatButtonModule,
   ],
   templateUrl: './access-request-dialog.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessRequestDialogComponent {
   readonly dialogRef = inject(MatDialogRef<AccessRequestDialogComponent>);
@@ -117,7 +109,7 @@ export class AccessRequestDialogComponent {
     this.todayMidnight.setHours(0, 0, 0, 0);
     const defaultFromDate = new Date(this.todayMidnight);
 
-    let d = new Date(this.todayMidnight);
+    const d = new Date(this.todayMidnight);
     d.setHours(23, 59, 59, 999);
     d.setDate(d.getDate() + this.#config.defaultAccessDurationDays - 1);
     const defaultUntilDate = d;

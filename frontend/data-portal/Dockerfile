@@ -1,13 +1,13 @@
 # Multi-stage Dockerfile for building a production image for the data portal
 
 # BASE: a base image with updated packages
-FROM node:lts-alpine AS base
+FROM node:24-alpine AS base
 RUN apk upgrade --no-cache --available
 
 # BUILDER: a container to build the service dist directory
 FROM base AS builder
 # install pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@11.5.2 --activate
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 # install static web server
 RUN apk add --no-cache curl jq sudo which
 RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sh

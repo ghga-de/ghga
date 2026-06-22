@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
 interface Config {
   base_url: string;
@@ -69,7 +69,7 @@ function withEndSlash(url: string): string {
 /**
  * The config service provides access to the configuration of the application.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ConfigService {
   #config: Config;
 

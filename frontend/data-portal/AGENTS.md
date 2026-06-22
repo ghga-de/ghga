@@ -20,7 +20,7 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 
 ## Tech stack
 
-- Angular and Angular Material: version 21
+- Angular and Angular Material: version 22
 - TypeScript: strict
 - Build: Angular CLI
 - Styling: Tailwind CSS version 4
@@ -107,6 +107,14 @@ For layout/visual tasks on authenticated pages, always ask the user to open the 
 - Consult `context7` when external API behavior or recommended usage is uncertain, especially for version-sensitive questions.
 - If external guidance conflicts with repository conventions, prioritize `AGENTS.md`, `README.md`, relevant files in `docs/`, and existing code patterns in this repository.
 
+## AI agent integration
+
+- `AGENTS.md` is the shared instruction source for all coding agents in this repository.
+- GitHub Copilot in VS Code consumes repository guidance from `.github/copilot-instructions.md`, agent instruction files such as `AGENTS.md`, and MCP servers configured in `.vscode/mcp.json`.
+- Claude Code consumes project guidance from `CLAUDE.md`; keep `CLAUDE.md` importing `AGENTS.md` so Claude reads the same shared rules.
+- For reusable project workflows that should work across both Copilot agent mode and Claude Code, prefer project skills in `.claude/skills/`.
+- Keep always-on rules in `AGENTS.md`; move longer task procedures into skills so they only load when relevant.
+
 ## Execution policy
 
 - For code changes, run the smallest relevant validation first (targeted tests/lint/typecheck where possible), then run `pnpm test` as the default unit-test check.
@@ -156,7 +164,8 @@ Further project-specific development guidance:
 ## Angular Best Practices
 
 - Always use standalone components over NgModules.
-- Must NOT set `standalone: true` inside Angular decorators. It's the default.
+- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
+- Do NOT set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly. `OnPush` is the default in Angular v22+.
 - Use signals for state management.
 - Implement lazy loading for feature routes.
 - Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead.
@@ -169,9 +178,8 @@ Further project-specific development guidance:
 - Keep components small and focused on a single responsibility
 - Use `input()` and `output()` functions instead of decorators
 - Use `computed()` for derived state
-- Set `changeDetection: ChangeDetectionStrategy.OnPush` in `@Component` decorator
 - Prefer inline templates for small components
-- Prefer signal forms over reactive and template-driven ones
+- Prefer Signal Forms (`@angular/forms/signals`) for new forms; when not using them, prefer reactive forms over template-driven forms
 - Do NOT use `ngClass`, use `class` bindings instead
 - Do NOT use `ngStyle`, use `style` bindings instead
 
@@ -187,9 +195,11 @@ Further project-specific development guidance:
 - Keep templates simple and avoid complex logic
 - Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
 - Use the async pipe to handle observables
+- Do not assume globals like (`new Date()`) are available
 
 ## Services
 
 - Design services around a single responsibility
-- Use the `providedIn: 'root'` option for singleton services
+- Prefer the `@Service` decorator for new singleton services in Angular v22+
+- When not using `@Service`, use the `providedIn: 'root'` option for singleton services
 - Use the `inject()` function instead of constructor injection

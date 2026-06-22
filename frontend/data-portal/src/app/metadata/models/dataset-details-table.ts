@@ -151,11 +151,14 @@ export const datasetDetailsTableColumns: Record<string, DatasetDetailsTableColum
   ],
 };
 
+type DatasetDetailsRow = Experiment | Sample | File;
+
 export const dataSortingDataAccessor: Record<
   string,
-  (arg0: any, key: string) => string | number
+  (arg0: DatasetDetailsRow, key: string) => string | number
 > = {
-  experiments: (experiment: Experiment, key: string) => {
+  experiments: (row: DatasetDetailsRow, key: string) => {
+    const experiment = row as Experiment;
     switch (key) {
       case 'method':
         return experiment.experiment_method.name;
@@ -169,7 +172,8 @@ export const dataSortingDataAccessor: Record<
         return '';
     }
   },
-  samples: (sample: Sample, key: string) => {
+  samples: (row: DatasetDetailsRow, key: string) => {
+    const sample = row as Sample;
     switch (key) {
       case 'status':
         return sample.case_control_status;
@@ -187,7 +191,8 @@ export const dataSortingDataAccessor: Record<
         return '';
     }
   },
-  files: (file: File, key: string) => {
+  files: (row: DatasetDetailsRow, key: string) => {
+    const file = row as File;
     switch (key) {
       case 'type':
         return file.format;

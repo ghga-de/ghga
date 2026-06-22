@@ -5,7 +5,7 @@
  */
 
 import { HttpClient, httpResource } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Service, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import { HttpCacheManager } from '@ngneat/cashew';
@@ -15,7 +15,7 @@ import { Iva, IvaFilter, IvaState, IvaType, UserWithIva } from '../models/iva';
 /**
  * IVA service
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class IvaService {
   #http = inject(HttpClient);
   #httpCache = inject(HttpCacheManager);

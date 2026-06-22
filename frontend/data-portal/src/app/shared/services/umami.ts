@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { ConfigService } from './config';
@@ -22,7 +22,7 @@ declare global {
  * Umami is a user analytics tool that generates user behavior data that we can monitor in real time in a dashboard.
  * This service creates an instance of the tracker and is injected in the root component of the app.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class UmamiService {
   #config = inject(ConfigService);
   #router = inject(Router);
@@ -83,7 +83,7 @@ export class UmamiService {
       const eventName = target.getAttribute('data-umami-event');
       if (!eventName) return true;
       const eventData: { [key: string]: string } = {};
-      for (let attr of target.attributes) {
+      for (const attr of target.attributes) {
         if (attr.name.startsWith('data-umami-event-')) {
           const key = attr.name.slice('data-umami-event-'.length);
           eventData[key] = attr.value;

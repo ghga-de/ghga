@@ -4,13 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  effect,
-  inject,
-  viewChild,
-} from '@angular/core';
+import { Component, effect, inject, viewChild } from '@angular/core';
 
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -51,7 +45,6 @@ import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creati
   providers: [IvaTypePipe, providePaginatorIntl('IVAs per page')],
   templateUrl: './iva-manager-list.html',
   styleUrl: './iva-manager-list.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IvaManagerListComponent {
   #dialog = inject(MatDialog);

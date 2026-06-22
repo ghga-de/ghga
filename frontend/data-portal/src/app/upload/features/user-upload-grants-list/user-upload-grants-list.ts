@@ -5,13 +5,7 @@
  */
 
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -32,7 +26,6 @@ import { UploadWorkPackageDialogComponent } from '@app/work-packages/features/up
   selector: 'app-user-upload-grants-list',
   imports: [StencilComponent, MatIconModule, MatButtonModule],
   templateUrl: './user-upload-grants-list.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserUploadGrantsListComponent {
   #uploadBoxService = inject(UploadBoxService);

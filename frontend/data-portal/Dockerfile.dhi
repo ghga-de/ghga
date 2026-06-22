@@ -1,12 +1,12 @@
 # Multi-stage Dockerfile for building a hardened image for the data portal
 
 # Define the non-dev base-image
-ARG BASE=dhi.io/node:26-alpine3.23
+ARG BASE=dhi.io/node:24-alpine3.23
 
 # BUILDER: a container to build the service dist directory
 FROM ${BASE}-sfw-ent-dev AS builder
 # install pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@11.5.2 --activate
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 # install static web server
 RUN apk add --no-cache curl jq sudo which && mkdir -p /usr/local/bin
 RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sed 's/_clibtype="gnu"/_clibtype="musl"/' | sh

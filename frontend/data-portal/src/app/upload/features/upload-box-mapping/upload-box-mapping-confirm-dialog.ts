@@ -4,13 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import {
@@ -48,7 +42,6 @@ export interface MappingConfirmDialogData {
     MatIconModule,
   ],
   templateUrl: './upload-box-mapping-confirm-dialog.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadBoxMappingConfirmDialogComponent {
   #dialogRef = inject(MatDialogRef<UploadBoxMappingConfirmDialogComponent, boolean>);

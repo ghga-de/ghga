@@ -7,7 +7,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import {
-  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -74,7 +73,6 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
   ],
   providers: [IvaTypePipe, DatePipe],
   templateUrl: './access-request-manager-detail.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEdits {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;

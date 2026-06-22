@@ -5,7 +5,7 @@
  */
 
 import { HttpClient, httpResource } from '@angular/common/http';
-import { computed, inject, Injectable } from '@angular/core';
+import { computed, inject, Service } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import { Observable, throwError } from 'rxjs';
@@ -15,7 +15,7 @@ import { WorkPackageRequest, WorkPackageResponse } from '../models/work-package'
 /**
  * Work package service
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class WorkPackageService {
   #http = inject(HttpClient);
 

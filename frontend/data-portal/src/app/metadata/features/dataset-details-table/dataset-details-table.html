@@ -45,7 +45,7 @@
             @if (col.columnDef === 'hash') {
               <td mat-cell *matCellDef="let item">
                 <app-with-copy-button
-                  [value]="item.file_information?.sha256_hash"
+                  [value]="item.file_information?.sha256_hash ?? ''"
                   notifyMessage="The full hash has been copied to the clipboard"
                 ></app-with-copy-button>
               </td>

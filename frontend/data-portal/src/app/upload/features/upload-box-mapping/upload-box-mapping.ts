@@ -5,7 +5,6 @@
  */
 
 import {
-  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -148,7 +147,6 @@ function computeAutoMappings(
   ],
   providers: [MetadataService],
   templateUrl: './upload-box-mapping.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadBoxMappingComponent implements OnInit {
   #uploadBoxService = inject(UploadBoxService);

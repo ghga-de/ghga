@@ -5,14 +5,7 @@
  */
 
 import { DecimalPipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  Signal,
-  computed,
-  effect,
-  inject,
-} from '@angular/core';
+import { Component, Signal, computed, effect, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -38,7 +31,6 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
   templateUrl: './global-summary.html',
   styleUrl: './global-summary.scss',
   providers: [MetadataStatsService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GlobalSummaryComponent {
   #notify = inject(NotificationService);

@@ -95,7 +95,7 @@ describe('AccessRequestManagerDetailComponent', () => {
   });
 
   it('should load the LD ID and show it in a code', () => {
-    let code = screen.getByText('ls-id-of-joe​@ls-aai.dev', { selector: 'code' });
+    const code = screen.getByText('ls-id-of-joe​@ls-aai.dev', { selector: 'code' });
     expect(code).toBeVisible();
   });
 

@@ -757,10 +757,10 @@ endDate.setFullYear(endDate.getFullYear() + 1);
 const access_starts = startDate.toISOString();
 const access_ends = endDate.toISOString();
 
-let dateYesterday = new Date();
+const dateYesterday = new Date();
 dateYesterday.setDate(dateYesterday.getDate() - 1);
 
-let dateOneYearAgo = new Date();
+const dateOneYearAgo = new Date();
 dateOneYearAgo.setDate(dateOneYearAgo.getDate() - 365);
 
 export const accessRequests = [

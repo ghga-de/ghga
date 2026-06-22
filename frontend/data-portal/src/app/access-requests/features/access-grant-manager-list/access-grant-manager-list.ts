@@ -5,13 +5,7 @@
  */
 
 import { DatePipe as CommonDatePipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  effect,
-  inject,
-  viewChild,
-} from '@angular/core';
+import { Component, effect, inject, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
@@ -51,7 +45,6 @@ import {
   ],
   providers: [CommonDatePipe, providePaginatorIntl('Access grants per page')],
   templateUrl: './access-grant-manager-list.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccessGrantManagerListComponent {
   #ars = inject(AccessRequestService);

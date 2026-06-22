@@ -1,12 +1,15 @@
 # Claude Code Instructions
 
-Read the [Agent Instructions](AGENTS.md) first as the AI-specific entrypoint, and keep shared AI-specific rules there. Project guidance in [README](README.md) and relevant files in [docs](docs/) is also authoritative for both human developers and agents. This file is intentionally small.
+@AGENTS.md
+
+Project guidance in [README](README.md) and relevant files in [docs](docs/) is also authoritative for both human developers and agents. This file is intentionally small.
 
 When making changes:
 
 - Prefer minimal diffs
 - Explain non-obvious refactors
 - Run tests before suggesting changes
+- Prefer shared project skills in `.claude/skills/`; that directory is also compatible with Copilot agent mode
 
 ## MCP configuration
 

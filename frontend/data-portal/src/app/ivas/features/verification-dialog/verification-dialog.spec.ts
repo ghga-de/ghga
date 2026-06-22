@@ -10,7 +10,17 @@ import { By } from '@angular/platform-browser';
 import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
 import { of, throwError } from 'rxjs';
+import { WritableSignal } from '@angular/core';
 import { VerificationDialogComponent } from './verification-dialog';
+
+/**
+ * Shape of the private members of VerificationDialogComponent that the tests
+ * need to access. Used to type the `as unknown as ...` casts below.
+ */
+interface VerificationDialogInternals {
+  verificationError: WritableSignal<boolean>;
+  codeForm: { code: () => { value: WritableSignal<string> } };
+}
 
 const mockDialogRef = {
   close: vitest.fn(),
@@ -81,17 +91,21 @@ describe('VerificationDialogComponent', () => {
   it('should clear verification error when user types', () => {
     const inputElement = document.createElement('input');
     inputElement.value = 'abc12';
-    (component as any).verificationError.set(true);
+    (component as unknown as VerificationDialogInternals).verificationError.set(true);
 
     component.onInput({ target: inputElement } as unknown as Event);
 
-    expect((component as any).verificationError()).toBe(false);
+    expect(
+      (component as unknown as VerificationDialogInternals).verificationError(),
+    ).toBe(false);
   });
 
   it('should block resubmission of the same code after a failed attempt', async () => {
     vitest.useFakeTimers();
     ivaService.validateCodeForIva.mockReturnValue(throwError(() => ({ status: 403 })));
-    (component as any).codeForm.code().value.set('ABC123');
+    (component as unknown as VerificationDialogInternals).codeForm
+      .code()
+      .value.set('ABC123');
 
     const firstSubmit = component.onSubmit();
     await vitest.advanceTimersByTimeAsync(2500);
@@ -107,7 +121,9 @@ describe('VerificationDialogComponent', () => {
 
   it('should not auto-submit after a previous submission exists', async () => {
     ivaService.validateCodeForIva.mockReturnValue(of(null));
-    (component as any).codeForm.code().value.set('ABC123');
+    (component as unknown as VerificationDialogInternals).codeForm
+      .code()
+      .value.set('ABC123');
     await component.onSubmit();
     expect(ivaService.validateCodeForIva).toHaveBeenCalledTimes(1);
 
@@ -131,7 +147,7 @@ describe('VerificationDialogComponent', () => {
   });
 
   it('should show inline error after a failed submission', () => {
-    (component as any).verificationError.set(true);
+    (component as unknown as VerificationDialogInternals).verificationError.set(true);
     fixture.detectChanges();
 
     expect(fixture.debugElement.query(By.css('mat-error'))).not.toBeNull();

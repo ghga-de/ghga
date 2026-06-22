@@ -27,17 +27,18 @@ export class DetailsDataRendererPipe implements PipeTransform {
    */
   transform(
     columnDef: string,
-    item: any,
+    item: unknown,
     accessor: string,
     storageLabels?: wellKnownValues,
   ): string {
-    let value = item;
-    value = accessor
+    const value = accessor
       .split('.')
-      .reduce(
+      .reduce<unknown>(
         (acc, key) =>
-          typeof acc === 'object' ? (acc as Record<string, any>)[key] : undefined,
-        value,
+          acc !== null && typeof acc === 'object'
+            ? (acc as Record<string, unknown>)[key]
+            : undefined,
+        item,
       );
     if (value === null || value === undefined) {
       return 'N/A';
@@ -47,13 +48,15 @@ export class DetailsDataRendererPipe implements PipeTransform {
         if (Array.isArray(value)) {
           return `${value.join(', ')}`;
         }
-        return value;
+        return `${value}`;
       case 'size':
-        return `${ParseBytes.prototype.transform(value)}`;
+        return `${ParseBytes.prototype.transform(value as number)}`;
       case 'origin':
-        return `${Capitalise.prototype.transform(UnderscoreToSpace.prototype.transform(value))}`;
-      case 'location':
-        return `${storageLabels && storageLabels[value] ? storageLabels[value] : value}`;
+        return `${Capitalise.prototype.transform(UnderscoreToSpace.prototype.transform(value as string))}`;
+      case 'location': {
+        const key = value as string;
+        return `${storageLabels && storageLabels[key] ? storageLabels[key] : value}`;
+      }
       case 'sex':
         return `${Capitalise.prototype.transform((value as string).toLowerCase())}`;
       default:

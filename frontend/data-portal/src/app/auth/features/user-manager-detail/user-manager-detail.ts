@@ -7,7 +7,6 @@
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
-  ChangeDetectionStrategy,
   Component,
   OnInit,
   computed,
@@ -65,7 +64,6 @@ import { DeletionConfirmationDialogComponent } from '../deletion-confirmation-di
   ],
   providers: [CommonDatePipe],
   templateUrl: './user-manager-detail.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserManagerDetailComponent implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
@@ -235,7 +233,7 @@ export class UserManagerDetailComponent implements OnInit {
    * Activate and deactivate the user after confirmation.
    * @param isDeactivated Whether the user is currently deactivated (thus we want to reactivate the account)
    */
-  safeStatusChange(isDeactivated: Boolean = false): void {
+  safeStatusChange(isDeactivated: boolean = false): void {
     this.#confirmationService.confirm({
       title: 'Confirm user account deactivation',
       message: `<p>Please confirm that the user account of ${this.user()!.displayName} shall be <strong>${!isDeactivated ? 'de' : ''}activated</strong>.`,

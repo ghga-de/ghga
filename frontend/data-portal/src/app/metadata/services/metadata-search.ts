@@ -5,7 +5,7 @@
  */
 
 import { HttpClient, httpResource } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Service, computed, inject, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 import {
   Observable,
@@ -39,7 +39,7 @@ interface StudyMapAccumulator {
  *
  * This service provides the functionality to fetch search results from the server via MASS.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class MetadataSearchService {
   #config = inject(ConfigService);
   #massUrl = this.#config.massUrl;

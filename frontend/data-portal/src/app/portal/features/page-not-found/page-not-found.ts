@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
 
@@ -15,6 +15,5 @@ import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-lin
   selector: 'app-page-not-found',
   imports: [MatIcon, ExternalLinkDirective],
   templateUrl: './page-not-found.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PageNotFoundComponent {}

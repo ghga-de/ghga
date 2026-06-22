@@ -5,7 +5,6 @@
  */
 
 import {
-  ChangeDetectionStrategy,
   Component,
   EnvironmentInjector,
   OnInit,
@@ -31,7 +30,6 @@ import { UmamiService } from './shared/services/umami';
     VersionRibbonComponent,
   ],
   templateUrl: './app.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
   #matIconReg = inject(MatIconRegistry);
@@ -60,7 +58,7 @@ export class AppComponent implements OnInit {
    */
   #initUmami(): void {
     const scheduleIdle = (cb: () => void) =>
-      (((window as any).requestIdleCallback as any) || setTimeout)(cb);
+      (window.requestIdleCallback ?? setTimeout)(cb);
     scheduleIdle(() => {
       runInInjectionContext(this.#envInjector, () => inject(UmamiService));
     });

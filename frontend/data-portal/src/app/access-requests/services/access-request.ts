@@ -5,7 +5,7 @@
  */
 
 import { HttpClient, httpResource } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Service, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import { NotificationService } from '@app/shared/services/notification';
@@ -23,7 +23,7 @@ import {
 /**
  *  This service handles state and management of access requests (to datasets)
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class AccessRequestService {
   #http = inject(HttpClient);
   #auth = inject(AuthService);
@@ -251,8 +251,11 @@ export class AccessRequestService {
    * @param id - the ID of the updated access request
    * @param changes - the changes to the access request which may be partial
    */
-  #updateAccessRequestLocally(id: string, changes: any): void {
-    const withStatusChange = (request: AccessRequest, changes: any) =>
+  #updateAccessRequestLocally(id: string, changes: Partial<AccessRequest>): void {
+    const withStatusChange = (
+      request: AccessRequest,
+      changes: Partial<AccessRequest>,
+    ) =>
       'status' in changes && request.status !== changes.status
         ? {
             ...changes,

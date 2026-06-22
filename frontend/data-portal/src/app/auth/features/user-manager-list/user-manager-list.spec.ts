@@ -14,7 +14,7 @@ import {
 } from '@angular/material/paginator';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { UserService } from '@app/auth/services/user';
+import { DisplayUser, UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
 import { UserManagerListComponent } from './user-manager-list';
 /**
@@ -29,7 +29,7 @@ class MockConfigService {
  */
 class MockUserService {
   users = {
-    value: vitest.fn(() => []),
+    value: vitest.fn((): DisplayUser[] => []),
     isLoading: vitest.fn(() => false),
     error: vitest.fn(() => null),
   };
@@ -104,7 +104,7 @@ describe('UserManagerListComponent', () => {
   });
 
   it('should have correct default pagination settings', () => {
-    const usersWithVariousTitles = [] as any;
+    const usersWithVariousTitles: Partial<DisplayUser>[] = [];
     for (let i = 0; i < 15; i++) {
       usersWithVariousTitles.push({
         name: 'John Doe',
@@ -115,7 +115,9 @@ describe('UserManagerListComponent', () => {
         sortName: 'Doe, John, Dr.',
       });
     }
-    mockUserService.users.value.mockReturnValue(usersWithVariousTitles);
+    mockUserService.users.value.mockReturnValue(
+      usersWithVariousTitles as unknown as DisplayUser[],
+    );
     fixture.detectChanges();
     const paginatorDebugEl = fixture.debugElement.query(By.directive(MatPaginator));
     const paginator = paginatorDebugEl.componentInstance as MatPaginator;
@@ -126,7 +128,7 @@ describe('UserManagerListComponent', () => {
   });
 
   it('should format display name with title when available', () => {
-    const usersWithVariousTitles = [
+    const usersWithVariousTitles: Partial<DisplayUser>[] = [
       {
         name: 'John Doe',
         title: 'Dr.' as const,
@@ -158,9 +160,11 @@ describe('UserManagerListComponent', () => {
         roleNames: [],
         sortName: 'Morgan, Thomas H. Sr., Prof.',
       },
-    ] as any;
+    ];
 
-    mockUserService.users.value.mockReturnValue(usersWithVariousTitles);
+    mockUserService.users.value.mockReturnValue(
+      usersWithVariousTitles as unknown as DisplayUser[],
+    );
 
     const users = component.users();
 
@@ -182,7 +186,7 @@ describe('UserManagerListComponent', () => {
   });
 
   it('should navigate to user details when viewDetails is called', () => {
-    const mockUser = { id: '123', name: 'Test User' } as any;
+    const mockUser = { id: '123', name: 'Test User' } as unknown as DisplayUser;
     component.viewDetails(mockUser);
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/user-manager', '123']);
   });

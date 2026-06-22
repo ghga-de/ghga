@@ -4,14 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  model,
-} from '@angular/core';
+import { Component, computed, effect, inject, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -47,7 +40,6 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
   ],
   providers: [Capitalise],
   templateUrl: './user-manager-filter.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserManagerFilterComponent {
   #userService = inject(UserService);

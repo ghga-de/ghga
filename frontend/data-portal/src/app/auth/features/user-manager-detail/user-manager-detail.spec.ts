@@ -103,7 +103,7 @@ describe('UserManagerDetailComponent', () => {
   let component: UserManagerDetailComponent;
   let fixture: ComponentFixture<UserManagerDetailComponent>;
   let navigation: NavigationTrackingService;
-  let mockUserService = new MockUserService();
+  const mockUserService = new MockUserService();
 
   beforeEach(async () => {
     const testBed = TestBed.configureTestingModule({
@@ -177,9 +177,9 @@ describe('UserManagerDetailComponent', () => {
       },
       loadUser: () => undefined,
       createUserFetcher: () => undefined,
-      filter: () => {
-        idStrings: [];
-      },
+      filter: () => ({
+        idStrings: [],
+      }),
     };
 
     // Create a new component with the updated mock

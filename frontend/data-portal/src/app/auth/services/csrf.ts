@@ -5,14 +5,14 @@
  */
 
 import { HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 
 /**
  * A tiny service that just holds the CSRF token
  *
  * This is used by both the auth service and the CSRF interceptor.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class CsrfService {
   token: string | null = null;
 }

@@ -5,13 +5,7 @@
  */
 
 import { DatePipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  effect,
-  inject,
-  viewChild,
-} from '@angular/core';
+import { Component, effect, inject, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -55,7 +49,6 @@ const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
   ],
   providers: [providePaginatorIntl('Upload boxes per page')],
   templateUrl: './upload-box-manager-list.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadBoxManagerListComponent {
   #uploadBoxService = inject(UploadBoxService);

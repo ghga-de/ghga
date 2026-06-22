@@ -32,15 +32,17 @@ function createHandlersForResponses(responses: {
    * Collect responses with different query parameters for the same endpoint
    */
   Object.keys(responses).forEach((endpoint) => {
-    let method, url, params;
+    let method, url;
     [method, url] = endpoint.split(' ');
     method = method.toLowerCase();
     if (!/^(get|post|patch|put|delete)$/.test(method)) {
       console.error('Invalid endpoint in fake data:', endpoint);
       return;
     }
-    [url, params] = url.split('?');
-    let bareEndpoint = `${method} ${url}`;
+    const urlParts = url.split('?');
+    url = urlParts[0];
+    const params = urlParts[1];
+    const bareEndpoint = `${method} ${url}`;
     let responseMap = groupedResponses[bareEndpoint];
     if (!responseMap) {
       groupedResponses[bareEndpoint] = responseMap = {};
@@ -98,8 +100,7 @@ function createHandlersForResponses(responses: {
    * Create request handlers for the different endpoints
    */
   Object.keys(groupedResponses).forEach((endpoint) => {
-    let method, url;
-    [method, url] = endpoint.split(' ');
+    const [method, url] = endpoint.split(' ');
     const responseMap = groupedResponses[endpoint];
     /**
      * Resolver for the given endpoint
@@ -132,7 +133,7 @@ function createHandlersForResponses(responses: {
       }
       return HttpResponse.json(response || undefined, { status });
     };
-    const handler = (http as any)[method];
+    const handler = http[method as keyof typeof http];
     if (!handler) {
       console.error('Unsupported method:', method);
     }

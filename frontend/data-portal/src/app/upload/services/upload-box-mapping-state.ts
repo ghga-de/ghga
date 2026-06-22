@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Injectable, signal } from '@angular/core';
+import { Service, signal } from '@angular/core';
 import { MappedField } from '../models/mapping';
 
 /** Persisted state for a single upload box mapping session */
@@ -22,7 +22,7 @@ export interface MappingSnapshot {
  * Keyed by box ID so multiple boxes can have independent snapshots.
  * Instantiated lazily — only created when a data steward opens the mapping tool.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class UploadBoxMappingStateService {
   readonly #snapshots = signal<Map<string, MappingSnapshot>>(new Map());
 

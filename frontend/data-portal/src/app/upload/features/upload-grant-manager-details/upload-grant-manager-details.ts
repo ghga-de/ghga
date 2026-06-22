@@ -6,7 +6,6 @@
 
 import { DatePipe } from '@angular/common';
 import {
-  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -53,7 +52,6 @@ import { UploadGrantRevocationDialogComponent } from '../upload-grant-revocation
     ExternalLinkDirective,
   ],
   templateUrl: './upload-grant-manager-details.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadGrantManagerDetailsComponent implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;

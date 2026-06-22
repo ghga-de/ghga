@@ -4,13 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-} from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,9 +30,9 @@ import { AccessRequestDialogComponent } from '../access-request-dialog/access-re
   selector: 'app-dynamic-access-request-button',
   imports: [MatIconModule, MatButtonModule],
   templateUrl: './dynamic-access-request-button.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DynamicAccessRequestButtonComponent {
+  protected readonly AccessRequestStatus = AccessRequestStatus;
   datasetID = input.required<string>();
   #accessRequestService = inject(AccessRequestService);
   #auth = inject(AuthService);

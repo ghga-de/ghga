@@ -19,9 +19,10 @@
         @case ('failed') {
           <mat-icon class="text-red-600" fontIcon="error"></mat-icon>
         }
-        @default {
+        @case ('idle') {
           <mat-icon class="text-gray-400" fontIcon="circle"></mat-icon>
         }
+        @default never;
       }
     </div>
   }

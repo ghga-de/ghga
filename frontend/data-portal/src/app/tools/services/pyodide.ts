@@ -5,25 +5,60 @@
  */
 
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable, signal, WritableSignal } from '@angular/core';
+import { inject, Service, signal, WritableSignal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { LogEntry, PyodideOutput } from '../models/pyodide';
 
 const PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.27.7/full/';
 
 /**
+ * Minimal typings for the parts of the untyped Pyodide WASM runtime that this
+ * service actually uses. Pyodide ships no TypeScript types, so we model only
+ * the members we call. Methods that return arbitrary Python proxies are typed
+ * loosely on purpose.
+ */
+interface PyodideFs {
+  analyzePath(path: string): { exists: boolean; object?: { contents?: unknown } };
+  mkdir(path: string): void;
+  mkdirTree(path: string): void;
+  writeFile(
+    path: string,
+    data: string | Uint8Array,
+    options?: { encoding: string },
+  ): void;
+  unlink(path: string): void;
+}
+
+interface PyodidePyProxy {
+  toJs(): Iterable<[unknown, unknown]>;
+  destroy(): void;
+}
+
+interface MicropipModule {
+  install(packageName: string, options?: { keep_going?: boolean }): Promise<void>;
+}
+
+interface PyodideRuntime {
+  FS: PyodideFs;
+  globals: { set(name: string, value: unknown): void };
+  loadPackage(packages: string[]): Promise<void>;
+  pyimport(name: string): MicropipModule;
+  runPythonAsync(code: string): Promise<PyodidePyProxy>;
+}
+
+type LoadPyodide = (options: { indexURL: string }) => Promise<PyodideRuntime>;
+
+/**
  * This service handles the initialization of Pyodide,
  * loading necessary packages, and serves as a basis for running our Python scripts in their own services (like TranspilerService and ValidatorService).
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class PyodideService {
-  #pyodide: any = null;
+  #pyodide: PyodideRuntime | null = null;
   #pyodideLoading: WritableSignal<boolean> = signal(false);
   #pyodideInitialized: WritableSignal<boolean> = signal(false);
   #processLog: WritableSignal<LogEntry[]> = signal([]);
-  #micropip: any = null;
+  #micropip: MicropipModule | null = null;
   #http = inject(HttpClient);
 
   readonly isPyodideInitialized = this.#pyodideInitialized.asReadonly();
@@ -70,8 +105,9 @@ export class PyodideService {
       .then(() => {
         this.log(`Package ${packageName} installed successfully.`, 'success');
       })
-      .catch((error: any) => {
-        this.log(`Failed to install package ${packageName}: ${error.message}`, 'error');
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        this.log(`Failed to install package ${packageName}: ${message}`, 'error');
       });
   }
 
@@ -104,8 +140,10 @@ export class PyodideService {
         pyodideScript.onerror = reject;
       });
 
-      // Access loadPyodide from global scope
-      const loadPyodide = (window as any).loadPyodide;
+      // Access loadPyodide from global scope (injected by the CDN script,
+      // which ships no TypeScript types).
+      const loadPyodide = (window as unknown as { loadPyodide?: LoadPyodide })
+        .loadPyodide;
       if (!loadPyodide) {
         throw new Error('loadPyodide not found in global scope');
       }
@@ -123,8 +161,9 @@ export class PyodideService {
       this.log('Micropip loaded.', 'info');
 
       this.#pyodideInitialized.set(true);
-    } catch (error: any) {
-      const errorMsg = error.message || 'Unknown initialization error.';
+    } catch (error: unknown) {
+      const errorMsg =
+        (error instanceof Error && error.message) || 'Unknown initialization error.';
       this.log(`Initialization Error: ${errorMsg}`, 'error');
       console.error(
         'FATAL: Pyodide initialization or critical package loading error:',
@@ -181,12 +220,13 @@ export class PyodideService {
         'success',
       );
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       console.error(
         `[Service] Error writing string to Pyodide FS at ${pyodideFsPath}:`,
         error,
       );
-      this.log(`Error writing string to ${pyodideFsPath}: ${error.message}`, 'error');
+      this.log(`Error writing string to ${pyodideFsPath}: ${message}`, 'error');
       return false;
     }
   }
@@ -293,7 +333,7 @@ export class PyodideService {
    * @param args - an array of arguments to pass to the script
    * @returns A promise that resolves to the result of the script execution.
    */
-  async runScript(script_path: string, args: string[] = []): Promise<any> {
+  async runScript(script_path: string, args: string[] = []): Promise<PyodideOutput> {
     if (!this.#pyodideInitialized() || !this.#pyodide) {
       this.log('Pyodide not initialized.', 'error');
       return Promise.reject(new Error('Pyodide not initialized.'));
@@ -334,9 +374,10 @@ export class PyodideService {
     try {
       this.#pyodide.FS.unlink(path);
       this.log(`File ${path} deleted successfully from Pyodide FS.`, 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       console.error(`[Service] Error deleting file from Pyodide FS at ${path}:`, error);
-      this.log(`Error deleting file from ${path}: ${error.message}`, 'error');
+      this.log(`Error deleting file from ${path}: ${message}`, 'error');
     }
   }
 

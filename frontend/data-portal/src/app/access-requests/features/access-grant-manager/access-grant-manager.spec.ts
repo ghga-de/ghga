@@ -16,7 +16,6 @@ import { MockAccessRequestService } from '@app/access-requests/services/access-r
 describe('AccessGrantManagerComponent', () => {
   let component: AccessGrantManagerComponent;
   let fixture: ComponentFixture<AccessGrantManagerComponent>;
-  let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -28,7 +27,6 @@ describe('AccessGrantManagerComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccessGrantManagerComponent);
-    accessRequestService = TestBed.inject(AccessRequestService);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

@@ -4,10 +4,19 @@
  * @license Apache-2.0
  */
 
+import { WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AuthService } from '@app/auth/services/auth';
 import { NotificationService } from '@app/shared/services/notification';
 import { ConfirmTotpComponent } from './confirm-totp';
+
+/**
+ * Minimal view of the component's protected/private members accessed by these tests.
+ */
+interface ConfirmTotpComponentInternals {
+  verificationError: WritableSignal<boolean>;
+  totpForm: { code: () => { value: WritableSignal<string> } };
+}
 
 const mockAuthService = {
   verifyTotpCode: vitest.fn(),
@@ -76,17 +85,21 @@ describe('ConfirmTotpComponent', () => {
   it('should clear verification error on input', () => {
     const inputElement = document.createElement('input');
     inputElement.value = '12ab34';
-    (component as any).verificationError.set(true);
+    (component as unknown as ConfirmTotpComponentInternals).verificationError.set(true);
 
     component.onInput({ target: inputElement } as unknown as Event);
 
     expect(inputElement.value).toBe('1234');
-    expect((component as any).verificationError()).toBe(false);
+    expect(
+      (component as unknown as ConfirmTotpComponentInternals).verificationError(),
+    ).toBe(false);
   });
 
   it('should not auto-submit after a previous submission exists', async () => {
     mockAuthService.verifyTotpCode.mockResolvedValue(true);
-    (component as any).totpForm.code().value.set('123456');
+    (component as unknown as ConfirmTotpComponentInternals).totpForm
+      .code()
+      .value.set('123456');
     await component.onSubmit();
     expect(mockAuthService.verifyTotpCode).toHaveBeenCalledTimes(1);
 
@@ -104,7 +117,9 @@ describe('ConfirmTotpComponent', () => {
   it('should block re-submitting the same code after a failed attempt', async () => {
     vitest.useFakeTimers();
     mockAuthService.verifyTotpCode.mockResolvedValue(false);
-    (component as any).totpForm.code().value.set('123456');
+    (component as unknown as ConfirmTotpComponentInternals).totpForm
+      .code()
+      .value.set('123456');
 
     const firstSubmit = component.onSubmit();
     await vitest.advanceTimersByTimeAsync(2500);

@@ -4,13 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import {
   form,
   FormField,
@@ -60,7 +54,6 @@ const BYTES_PER_TIB = 1_099_511_627_776;
     MatButtonModule,
   ],
   templateUrl: './upload-box-creation-dialog.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadBoxCreationDialogComponent {
   #dialogRef = inject(MatDialogRef<UploadBoxCreationDialogComponent, string>);

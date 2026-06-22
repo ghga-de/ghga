@@ -5,7 +5,7 @@
  */
 
 import { httpResource } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 import {
   BaseStorageLabels,
@@ -18,7 +18,7 @@ import {
  *
  * This service provides the functionality to fetch well-known values.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class WellKnownValueService {
   #config = inject(ConfigService);
   #wkvsUrl = this.#config.wkvsUrl;

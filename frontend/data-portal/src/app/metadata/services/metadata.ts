@@ -5,7 +5,7 @@
  */
 
 import { HttpClient, httpResource } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 import { concatMap, from, map, Observable, reduce } from 'rxjs';
 import {
@@ -29,7 +29,7 @@ import { emptyStudy, Study } from '../models/study';
  * Note that this service must be injected at the component level
  * since multiple different summaries can be visible at the same time.
  */
-@Injectable()
+@Service({ autoProvided: false })
 export class MetadataService {
   #config = inject(ConfigService);
   #http = inject(HttpClient);

@@ -6,7 +6,6 @@
 
 import { A11yModule } from '@angular/cdk/a11y';
 import {
-  ChangeDetectionStrategy,
   Component,
   ElementRef,
   computed,
@@ -56,7 +55,6 @@ import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
   ],
   providers: [IvaTypePipe],
   templateUrl: './new-iva-dialog.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewIvaDialogComponent {
   #dialogRef = inject(

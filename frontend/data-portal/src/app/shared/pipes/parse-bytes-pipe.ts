@@ -27,8 +27,8 @@ export class ParseBytes implements PipeTransform {
    */
   transform(bytes: number | null | undefined): string {
     if (bytes === null || bytes === undefined) return '';
-    let parsedBytes = PREFIXES.flatMap((prefix, index) => {
-      let calculatedVal = bytes / Math.pow(MULTIPLIER, index);
+    const parsedBytes = PREFIXES.flatMap((prefix, index) => {
+      const calculatedVal = bytes / Math.pow(MULTIPLIER, index);
       if (calculatedVal < 1000 && calculatedVal >= 0.1) {
         return (
           String(Math.round(calculatedVal * 100) / 100) +

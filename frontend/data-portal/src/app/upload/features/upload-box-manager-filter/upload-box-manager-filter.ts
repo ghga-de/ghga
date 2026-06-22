@@ -4,15 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  model,
-  signal,
-} from '@angular/core';
+import { Component, computed, effect, inject, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -40,7 +32,6 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
     MatIconModule,
   ],
   templateUrl: './upload-box-manager-filter.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadBoxManagerFilterComponent {
   #uploadBoxService = inject(UploadBoxService);

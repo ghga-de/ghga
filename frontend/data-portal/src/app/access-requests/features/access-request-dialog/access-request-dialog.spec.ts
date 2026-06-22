@@ -29,33 +29,12 @@ const mockDialogData = {
   userId: 'user-1',
 };
 
+// ConfigService mock (camelCase getters); the component only reads these.
 const mockConfig = {
-  base_url: 'https://portal.test',
-  ars_url: 'test/ars',
-  auth_url: '/test/auth',
-  dins_url: '/test/dins',
-  mass_url: '/test/mass',
-  metldata_url: '/test/metldata',
-  rs_url: '/test/rs',
-  rts_url: '/test/rts',
-  wps_url: '/test/wps',
-  wkvs_url: null,
-  ribbon_text: 'Test ribbon text',
-  max_facet_options: 7,
-  access_upfront_max_days: 180,
-  access_grant_min_days: 7,
-  access_grant_max_days: 730,
-  access_grant_max_extend: 5,
-  default_access_duration_days: 365,
-  oidc_client_id: 'test-oidc-client-id',
-  oidc_redirect_url: 'test/redirect',
-  oidc_scope: 'some scope',
-  oidc_authority_url: 'https://login.test',
-  oidc_authorization_url: 'test/authorize',
-  oidc_token_url: 'test/token',
-  oidc_userinfo_url: 'test/userinfo',
-  oidc_use_discovery: true,
-  oidc_account_url: 'https://account.test',
+  accessUpfrontMaxDays: 180,
+  accessGrantMinDays: 7,
+  accessGrantMaxDays: 730,
+  defaultAccessDurationDays: 365,
 };
 
 describe('AccessRequestDialogComponent', () => {
@@ -87,11 +66,25 @@ describe('AccessRequestDialogComponent', () => {
   it('should submit with ISO UTC dates based on service-contract day boundaries', () => {
     const fromDate = new Date(component.todayMidnight);
     const untilDate = new Date(component.todayMidnight);
-    untilDate.setDate(untilDate.getDate() + mockConfig.access_grant_min_days);
+    untilDate.setDate(untilDate.getDate() + mockConfig.accessGrantMinDays);
+    // The component treats end dates as the end of the day (23:59:59.999), so the
+    // earliest valid until date is the end of fromDate + accessGrantMinDays.
+    untilDate.setHours(23, 59, 59, 999);
 
     component.updateUntilRangeForFromValue(fromDate);
     component.updateFromRangeForUntilValue(untilDate);
-    (component as any).model.set({
+    (
+      component as unknown as {
+        model: {
+          set: (value: {
+            description: string;
+            fromDate: Date | null;
+            untilDate: Date | null;
+            email: string;
+          }) => void;
+        };
+      }
+    ).model.set({
       description: 'Need access for analysis',
       fromDate,
       untilDate,

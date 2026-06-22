@@ -4,14 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  WritableSignal,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, WritableSignal, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { LogEntry, PyodideOutput } from '@app/tools/models/pyodide';
@@ -37,7 +30,6 @@ import { StepperComponent } from '../stepper/stepper';
     StepperComponent,
     FormatSchemapackErrorPipe,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MetadataValidatorComponent {
   #validationService = inject(MetadataValidationService);
@@ -256,9 +248,6 @@ export class MetadataValidatorComponent {
         this.#setStepStatus(1, 'succeeded');
         this.#setStepStatus(2, 'ongoing');
       } else {
-        const errorMsg =
-          transpilerResult.error_message ||
-          'Unknown transpilation error or no JSON output.';
         this.jsonOutput.set(`Transpilation Failed. See process log.`);
         this.#updateStatus(
           'Transpilation failed. Check process log and console.',
@@ -342,9 +331,10 @@ export class MetadataValidatorComponent {
           false,
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMsg =
-        error.message || 'An unexpected error occurred during transpilation.';
+        (error instanceof Error && error.message) ||
+        'An unexpected error occurred during transpilation.';
       this.jsonOutput.set(`Transpilation Error: ${errorMsg}`);
       this.#updateStatus(`Transpilation Error. ${errorMsg}`, true, false);
       this.#setStepStatus(1, 'failed');

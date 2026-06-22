@@ -4,13 +4,13 @@
  * @license Apache-2.0
  */
 
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Service, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 
 /**
  * A simple service that provides the current base route
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class BaseRouteService {
   #router = inject(Router);
 

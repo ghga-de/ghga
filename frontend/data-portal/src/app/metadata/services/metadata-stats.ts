@@ -5,7 +5,7 @@
  */
 
 import { httpResource } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 import { emptyGlobalSummary, GlobalSummary } from '../models/global-summary';
 
@@ -14,6 +14,7 @@ import { emptyGlobalSummary, GlobalSummary } from '../models/global-summary';
  *
  * This service provides the functionality to fetch the global metadata summary stats from the server.
  */
+@Service({ autoProvided: false })
 export class MetadataStatsService {
   #config = inject(ConfigService);
   #metldataUrl = this.#config.metldataUrl;

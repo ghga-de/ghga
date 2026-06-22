@@ -230,25 +230,25 @@ describe('UploadWorkPackageDialogComponent', () => {
   });
 
   it('should clear token state from view on reset', () => {
-    (component as any)['token'].set('test-token');
-    (component as any)['tokenError'].set('test-error');
-    (component as any)['tokenIsLoading'].set(true);
+    component['token'].set('test-token');
+    component['tokenError'].set('test-error');
+    component['tokenIsLoading'].set(true);
     fixture.detectChanges();
 
     component.resetToken();
     fixture.detectChanges();
 
     // Verify token is no longer displayed
-    let tokenElement = fixture.debugElement.query(By.css('span.text-green-900'));
+    const tokenElement = fixture.debugElement.query(By.css('span.text-green-900'));
     expect(tokenElement).toBeFalsy();
 
     // Verify error is no longer displayed
-    let errorElement = fixture.debugElement.query(By.css('div.text-red-600'));
+    const errorElement = fixture.debugElement.query(By.css('div.text-red-600'));
     expect(errorElement).toBeFalsy();
   });
 
   it('should not copy if token is empty', () => {
-    (component as any)['token'].set('');
+    component['token'].set('');
     fixture.detectChanges();
 
     component.copyToken();
@@ -257,7 +257,7 @@ describe('UploadWorkPackageDialogComponent', () => {
     expect(notificationService.showSuccess).not.toHaveBeenCalled();
   });
   it('should copy token to clipboard and show notification', () => {
-    (component as any)['token'].set('test-token-123');
+    component['token'].set('test-token-123');
 
     component.copyToken();
 

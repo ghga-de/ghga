@@ -6,14 +6,7 @@
 
 import { Clipboard } from '@angular/cdk/clipboard';
 import { DatePipe } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { apply, form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -59,7 +52,6 @@ import { PubkeyFieldComponent } from '@app/work-packages/ui/pubkey-input/pubkey-
     FormField,
   ],
   templateUrl: './upload-work-package-dialog.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadWorkPackageDialogComponent {
   #clipboard = inject(Clipboard);

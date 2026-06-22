@@ -7,7 +7,6 @@
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
-  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -70,7 +69,6 @@ import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapp
   ],
   providers: [CommonDatePipe],
   templateUrl: './upload-box-manager-detail.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadBoxManagerDetailComponent implements OnInit {
   #uploadBoxService = inject(UploadBoxService);

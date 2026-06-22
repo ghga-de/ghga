@@ -5,7 +5,7 @@
  */
 
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,7 +36,6 @@ const PLAYGROUND_DEMO_JSON_VALUE =
     FormatSchemapackErrorPipe,
     StatusTextBoxComponent,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SchemapackPlaygroundComponent {
   #validationService = inject(MetadataValidationService);
@@ -72,7 +71,7 @@ export class SchemapackPlaygroundComponent {
    */
   async validate(): Promise<void> {
     try {
-      const ret = JSON.parse(this.jsonData());
+      JSON.parse(this.jsonData());
     } catch (error) {
       this.statusText.set('Invalid JSON data. Please check your input.');
       this.isStatusError.set(true);

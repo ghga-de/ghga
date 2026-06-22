@@ -5,7 +5,7 @@
  */
 
 import { HttpClient, HttpParams, httpResource } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Service, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import { map, Observable, tap } from 'rxjs';
@@ -29,7 +29,7 @@ import {
 /**
  * Service for managing upload boxes.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class UploadBoxService {
   #auth = inject(AuthService);
   #config = inject(ConfigService);

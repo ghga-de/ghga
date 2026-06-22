@@ -5,16 +5,14 @@
  */
 
 import { Location } from '@angular/common';
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Event, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 /**
  * This service has one key function: Calling the platform's back functionality has the downside that it doesn't work if the page was loaded directly (via the URL for example). This service tracks past navigation events. If the page was loaded directly, it will navigate to a fallback route instead of calling the platform's back functionality.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class NavigationTrackingService {
   #navigationCount = 0;
   #location: Location = inject(Location);
@@ -40,7 +38,7 @@ export class NavigationTrackingService {
    * @param fallbackRoute An array representing the Angular route to navigate
    * to if no browser history is available
    */
-  public back(fallbackRoute?: any[]): void {
+  public back(fallbackRoute?: unknown[]): void {
     if (this.#navigationCount > 1 || !fallbackRoute) {
       this.#location.back();
     } else {

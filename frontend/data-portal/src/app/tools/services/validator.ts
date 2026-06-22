@@ -5,7 +5,7 @@
  */
 
 import { HttpClient } from '@angular/common/http';
-import { effect, inject, Injectable, signal } from '@angular/core';
+import { effect, inject, Service, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { PyodideOutput } from '../models/pyodide';
 import { PyodideService } from './pyodide';
@@ -21,9 +21,7 @@ const validatorScriptPath = '/assets/schemas/validate.py';
  * It uses the `schemapack` package to perform the validation.
  * It provides methods to prepare schema and JSON files and run the validator script,.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Service()
 export class MetadataValidationService {
   #pyodideService = inject(PyodideService);
   #http = inject(HttpClient);
@@ -31,7 +29,7 @@ export class MetadataValidationService {
   readonly log = this.#pyodideService.getProcessLog();
 
   constructor() {
-    const eff = effect(() => {
+    effect(() => {
       if (this.#pyodideService.isPyodideInitialized()) {
         this.#loadDependencies();
       }
@@ -49,9 +47,8 @@ export class MetadataValidationService {
    *  This function prepares a YAML schema file in the Pyodide filesystem.
    *  It fetches the YAML schema from the assets, writes it to the Pyodide filesystem,
    *  and logs the success or failure of the operation.
-   * @param path - The path where the YAML schema file should be created in the Pyodide filesystem.
    */
-  async prepareSchemaFileFromAssets(path: string = YAML_SCHEMA_ASSET_PATH) {
+  async prepareSchemaFileFromAssets() {
     const yamlString = await firstValueFrom(
       this.#http.get(YAML_SCHEMA_ASSET_PATH, { responseType: 'text' }),
     );

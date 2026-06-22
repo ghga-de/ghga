@@ -1,5 +1,6 @@
-@switch (status()) {
-  @case ('pending') {
+@let accessStatus = status();
+@switch (accessStatus) {
+  @case (AccessRequestStatus.pending) {
     <button
       mat-raised-button
       class="button-quaternary larger-button-text w-full"
@@ -8,7 +9,7 @@
       <mat-icon fontIcon="key"></mat-icon> Pending Request …
     </button>
   }
-  @case ('allowed') {
+  @case (AccessRequestStatus.allowed) {
     <button
       mat-raised-button
       class="button-quaternary larger-button-text w-full"
@@ -18,7 +19,7 @@
       <mat-icon fontIcon="download"></mat-icon>Download the Data
     </button>
   }
-  @default {
+  @case (AccessRequestStatus.denied) {
     <button
       mat-raised-button
       class="button-quaternary larger-button-text w-full"
@@ -28,4 +29,5 @@
       <mat-icon fontIcon="key"></mat-icon>Request Access
     </button>
   }
+  @default never;
 }

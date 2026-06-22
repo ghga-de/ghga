@@ -44,6 +44,10 @@ documentation
 !.vscode/tasks.json
 .history/*
 
+# Claude Code local-only files
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+
 # Miscellaneous
 /.angular/cache
 .sass-cache/

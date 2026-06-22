@@ -5,7 +5,6 @@
  */
 
 import {
-  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -66,7 +65,6 @@ const MAX_USER_RESULTS = 10;
     UserExtIdPipe,
   ],
   templateUrl: './upload-grant-creation.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadGrantCreationComponent implements OnInit {
   #uploadBoxService = inject(UploadBoxService);

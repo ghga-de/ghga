@@ -22,7 +22,9 @@
       <div class="me-4">
         <p>
           <strong>Status:</strong>&nbsp;<span
-            class="{{ ag?.status | AccessGrantStatusClassPipe }} capitalize w-24"
+            class="{{
+              ag.status | AccessGrantStatusClassPipe
+            }} capitalize w-24"
             >{{ ag.status }}</span
           >
         </p>

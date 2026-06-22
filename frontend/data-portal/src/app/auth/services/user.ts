@@ -5,7 +5,7 @@
  */
 
 import { HttpClient, httpResource } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Service, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
 import { Observable, tap } from 'rxjs';
 import {
@@ -28,7 +28,7 @@ export interface DisplayUser extends RegisteredUser {
  * Service for managing users in the GHGA Data Portal.
  * This service handles fetching and managing user data for data stewards.
  */
-@Injectable()
+@Service({ autoProvided: false })
 export class UserService {
   #config = inject(ConfigService);
   #http = inject(HttpClient);
@@ -201,9 +201,11 @@ export class UserService {
     if (this.users.error()) return [];
     let users = this.users.value();
     const filter = this.#usersFilter();
-    filter
-      ? sessionStorage.setItem('usersFilter', JSON.stringify(filter))
-      : sessionStorage.removeItem('usersFilter');
+    if (filter) {
+      sessionStorage.setItem('usersFilter', JSON.stringify(filter));
+    } else {
+      sessionStorage.removeItem('usersFilter');
+    }
     if (users.length > 0 && filter !== undefined) {
       const idStrings = filter.idStrings.trim().toLowerCase();
       if (idStrings) {
@@ -256,7 +258,7 @@ export class UserService {
    * @param id - the ID of the updated user
    * @param changes - the changes to the user which may be partial
    */
-  #updateUserLocally(id: string, changes: any): void {
+  #updateUserLocally(id: string, changes: Partial<DisplayUser>): void {
     if (!this.user.error()) {
       const oldUser = this.user.value();
       if (oldUser && oldUser.id === id) {

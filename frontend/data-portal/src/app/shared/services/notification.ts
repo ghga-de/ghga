@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 // eslint-disable-next-line boundaries/dependencies
 import { CustomSnackBarComponent } from '../ui/custom-snack-bar/custom-snack-bar';
@@ -12,7 +12,7 @@ import { CustomSnackBarComponent } from '../ui/custom-snack-bar/custom-snack-bar
 /**
  * A service that can show various kinds of notifications to the user
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class NotificationService {
   #snackBar = inject(MatSnackBar);
 

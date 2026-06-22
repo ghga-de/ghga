@@ -4,13 +4,7 @@
  * @license Apache-2.0
  */
 
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  input,
-  model,
-} from '@angular/core';
+import { Component, computed, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   FormValueControl,
@@ -99,7 +93,6 @@ function validatePubKey(key: string): number {
   selector: 'app-pubkey-input',
   imports: [MatFormFieldModule, MatInputModule, FormsModule],
   templateUrl: './pubkey-input.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PubkeyFieldComponent implements FormValueControl<string> {
   /**

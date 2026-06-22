@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 // eslint-disable-next-line boundaries/dependencies
 import { ConfirmDialogComponent } from '../ui/confirm-dialog/confirm-dialog';
@@ -12,7 +12,7 @@ import { ConfirmDialogComponent } from '../ui/confirm-dialog/confirm-dialog';
 /**
  * Service providing confirmation dialogs
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ConfirmationService {
   #dialog = inject(MatDialog);
 

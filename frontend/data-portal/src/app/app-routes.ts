@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, Routes, TitleStrategy } from '@angular/router';
 import { canDeactivate as canDeactivateAuth } from './auth/features/can-deactivate';
@@ -244,7 +244,7 @@ export const routes: Routes = [
  * The routes (above) still set a title but it uses a template syntax
  * to extend the title by the GHGA Data Portal string.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class TemplatePageTitleStrategy extends TitleStrategy {
   TITLE_TEMPLATE = '#title | GHGA Data Portal';
 

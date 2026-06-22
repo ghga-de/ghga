@@ -37,30 +37,32 @@
           >
             <div class="min-w-64 text-center lg:text-start">
               @switch (iva.state) {
-                @case ('Verified') {
+                @case (IvaState.Verified) {
                   <div class="text-success text-base font-bold">
                     Address has been verified
                     <mat-icon class="align-bottom" fontIcon="verified_user"></mat-icon>
                   </div>
                 }
-                @case ('Unverified') {
+                @case (IvaState.Unverified) {
                   <div class="text-error text-base font-bold">
                     Needs verification
                     <mat-icon class="align-bottom" fontIcon="gpp_bad"></mat-icon>
                   </div>
                 }
-                @case ('CodeTransmitted') {
+                @case (IvaState.CodeTransmitted) {
                   <div class="text-warning text-base font-bold">
                     Code has been sent
                     <mat-icon class="align-bottom" fontIcon="pin"></mat-icon>
                   </div>
                 }
-                @default {
+                @case (IvaState.CodeRequested)
+                @case (IvaState.CodeCreated) {
                   <div class="text-info text-base font-bold">
                     Waiting for verification
                     <mat-icon class="align-bottom" fontIcon="pending"></mat-icon>
                   </div>
                 }
+                @default never;
               }
             </div>
           </div>

@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,7 +28,6 @@ import { UploadBoxManagerListComponent } from '../upload-box-manager-list/upload
     MatIconModule,
   ],
   templateUrl: './upload-box-manager.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UploadBoxManagerComponent implements OnInit {
   #uploadBoxService = inject(UploadBoxService);

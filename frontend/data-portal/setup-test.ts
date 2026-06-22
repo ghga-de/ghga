@@ -13,6 +13,7 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
   class IntersectionObserverMock implements IntersectionObserver {
     readonly root: Element | Document | null = null;
     readonly rootMargin = '';
+    readonly scrollMargin = '';
     readonly thresholds: ReadonlyArray<number> = [];
 
     /** Disconnect: No-op in tests. */
