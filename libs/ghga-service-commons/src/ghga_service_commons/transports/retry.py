@@ -167,9 +167,10 @@ def _configure_retry_handler(
         retry=(
             retry_if_exception_type(
                 (
-                    httpx.ConnectError,
-                    httpx.ConnectTimeout,
                     httpx.TimeoutException,
+                    httpx.NetworkError,
+                    httpx.RemoteProtocolError,
+                    httpx.ProxyError,
                 )
             )
             | retry_if_result(
