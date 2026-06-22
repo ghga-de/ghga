@@ -1427,15 +1427,26 @@ class UploadController(UploadControllerPort):
         storage_alias: str,
         cutoff: UTCDatetime,
     ) -> None:
-        """Run stale upload cleanup for a single storage alias."""
-        # Fetch all in-progress uploads for this storage alias
-        ongoing_uploads = [
+        """Run stale upload cleanup for a single storage alias.
+
+        This aborts ongoing uploads that are too old or not tied to any FileUpload.
+        Orphaned objects are also deleted.
+        """
+        # Fetch all FileUploads for this storage alias that are still 'init' or 'inbox'
+        #  to avoid doing a second query later when performing object cleanup
+        init_and_inbox_uploads = [
             upload
             async for upload in self._file_upload_dao.find_all(
-                mapping={"storage_alias": storage_alias, "state": "init"}
+                mapping={
+                    "storage_alias": storage_alias,
+                    "state": {"$in": ["init", "inbox"]},
+                }
             )
         ]
-        known_object_ids = {str(upload.object_id) for upload in ongoing_uploads}
+
+        # Get just the 'init', i.e. ongoing, uploads from that list
+        ongoing_uploads = [x for x in init_and_inbox_uploads if x.state == "init"]
+        known_init_object_ids = {str(upload.object_id) for upload in ongoing_uploads}
 
         # Determine which of the ongoing uploads have been dormant since the cutoff time
         stale_uploads = await self._find_stale_uploads(
@@ -1464,7 +1475,7 @@ class UploadController(UploadControllerPort):
         orphaned_s3_uploads = {
             s3_upload_id: object_id
             for s3_upload_id, object_id in active_s3_uploads.items()
-            if object_id not in known_object_ids
+            if object_id not in known_init_object_ids
         }
 
         # Cancel each of the stale uploads that have FileUpload entries in the DB
@@ -1475,4 +1486,11 @@ class UploadController(UploadControllerPort):
 
         await self._abort_orphaned_s3_uploads(
             storage_alias=storage_alias, orphaned_s3_uploads=orphaned_s3_uploads
+        )
+
+        # Get a set of all object_ids from init_and_inbox_uploads. Cast to str because
+        #  S3Client does a set diff on the string object IDs returned by S3
+        known_object_ids = {str(x.object_id) for x in init_and_inbox_uploads}
+        await self._s3_client.cleanup_orphaned_objects(
+            storage_alias=storage_alias, known_object_ids=known_object_ids
         )

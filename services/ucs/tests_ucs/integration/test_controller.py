@@ -27,6 +27,7 @@ import httpx
 import pytest
 from ghga_event_schemas.pydantic_ import FileDeletionRequested, InterrogationSuccess
 from hexkit.correlation import set_correlation_id
+from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
 
 from tests_ucs.fixtures import utils
@@ -862,6 +863,161 @@ async def test_cleanup_cancels_despite_s3_abort_failure(
 
     uploads = await s3_storage.get_all_multipart_uploads(bucket_id=bucket_id)
     assert s3_upload_id not in uploads
+
+
+@pytest.mark.parametrize("simulate_errors", [True, False])
+async def test_cleanup_of_orphaned_files(
+    joint_fixture: JointFixture, simulate_errors: bool, caplog
+):
+    """Test that orphaned files are deleted from the inbox by the cleanup job."""
+    controller = joint_fixture.upload_controller
+    s3_storage = joint_fixture.s3.storage
+    bucket_id = joint_fixture.bucket_id
+
+    # Create a box and initiate a file upload
+    async with set_correlation_id(uuid4()):
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
+        file_init_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file1",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+        file_inbox_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file2",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+        file_cancelled_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file3",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+    for file_id in [file_init_id, file_inbox_id, file_cancelled_id]:
+        url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
+        httpx.put(url, content=b"some-data")
+
+    # Complete the uploads
+    collection = joint_fixture.mongodb.client[joint_fixture.config.db_name][
+        FILE_UPLOADS_COLLECTION
+    ]
+    file_init_doc = collection.find_one({"_id": file_init_id})
+    file_inbox_doc = collection.find_one({"_id": file_inbox_id})
+    file_cancelled_doc = collection.find_one({"_id": file_cancelled_id})
+    assert file_init_doc is not None
+    assert file_inbox_doc is not None
+    assert file_cancelled_doc is not None
+    file_init_object_id = str(file_init_doc["object_id"])
+    file_inbox_object_id = str(file_inbox_doc["object_id"])
+    file_cancelled_object_id = str(file_cancelled_doc["object_id"])
+    await s3_storage.complete_multipart_upload(
+        upload_id=file_init_doc["s3_upload_id"],
+        bucket_id=bucket_id,
+        object_id=file_init_object_id,
+    )
+    await s3_storage.complete_multipart_upload(
+        upload_id=file_inbox_doc["s3_upload_id"],
+        bucket_id=bucket_id,
+        object_id=file_inbox_object_id,
+    )
+    await s3_storage.complete_multipart_upload(
+        upload_id=file_cancelled_doc["s3_upload_id"],
+        bucket_id=bucket_id,
+        object_id=file_cancelled_object_id,
+    )
+
+    # Set the inbox and cancelled docs to the desired states but leave init as is to
+    #  simulate race condition
+    file_inbox_doc["inbox"] = "inbox"
+    file_cancelled_doc["state"] = "cancelled"
+    collection.replace_one(filter={"_id": file_inbox_id}, replacement=file_inbox_doc)
+    collection.replace_one(
+        filter={"_id": file_cancelled_id}, replacement=file_cancelled_doc
+    )
+
+    # Upload two different orphaned objects
+    orphaned_object_id1 = str(uuid4())
+    orphaned_object_id2 = "not-a-uuid"
+    for object_id in [orphaned_object_id1, orphaned_object_id2]:
+        upload_id = await s3_storage.init_multipart_upload(
+            bucket_id=bucket_id, object_id=object_id
+        )
+        url = await s3_storage.get_part_upload_url(
+            upload_id=upload_id, bucket_id=bucket_id, object_id=object_id, part_number=1
+        )
+        httpx.put(url, content=b"some-data")
+        await s3_storage.complete_multipart_upload(
+            upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
+        )
+
+    # Check the list of current IDs before running the job
+    all_object_ids = await s3_storage.list_all_object_ids(bucket_id=bucket_id)
+    assert set(all_object_ids) == {
+        file_init_object_id,
+        file_inbox_object_id,
+        file_cancelled_object_id,
+        orphaned_object_id1,
+        orphaned_object_id2,
+    }
+
+    # Simulate errors in the S3 delete method if simulate_errors is True
+    _real_deletion_method = s3_storage.delete_object
+
+    class _S3PermissionError(ObjectStorageProtocol.ObjectStorageProtocolError):
+        def __init__(self, *, bucket_id: str, object_id: str):
+            super().__init__("You don't have permission to do that.")
+
+    async def _delete_with_error(bucket_id: str, object_id: str) -> None:
+        """Raises an ObjectNotFoundError, then _S3PermissionError, then reverts."""
+        if object_id == orphaned_object_id1:
+            await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
+            raise s3_storage.ObjectNotFoundError(
+                bucket_id=bucket_id, object_id=object_id
+            )
+        elif object_id == file_cancelled_object_id:
+            raise _S3PermissionError(bucket_id=bucket_id, object_id=object_id)
+        else:
+            return await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
+
+    if simulate_errors:
+        s3_storage.delete_object = _delete_with_error
+        controller._s3_client._get_bucket_and_storage = lambda x: (
+            bucket_id,
+            s3_storage,
+        )
+
+    # Run the cleanup job
+    caplog.clear()
+    with caplog.at_level("INFO"):
+        await controller.cleanup_stale_uploads()
+
+    deleted_count = 1 if simulate_errors else 3
+    log_msg = (
+        f"Cleaned up {deleted_count} orphaned object(s) from bucket {bucket_id}"
+        + " in storage alias test."
+    )
+
+    if simulate_errors:
+        log_msg += (
+            " An additional 1 object(s) could not be deleted and 1 object(s) were no"
+            + " longer present by the time deletion was attempted."
+        )
+    assert log_msg in caplog.messages
+
+    # Verify that the orphaned and cancelled files are gone, but init and inbox remain
+    all_object_ids = await s3_storage.list_all_object_ids(bucket_id=bucket_id)
+
+    expected_objects = {file_init_object_id, file_inbox_object_id}
+    if simulate_errors:
+        expected_objects.add(file_cancelled_object_id)  # didn't get deleted due to exc
+    assert set(all_object_ids) == expected_objects
 
 
 async def test_upload_activity_deleted_after_completion_failure(

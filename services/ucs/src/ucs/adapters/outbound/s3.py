@@ -474,3 +474,76 @@ class S3Client(S3ClientPort):
             op_name="get_all_multipart_uploads", bucket_id=bucket_id, extra=extra
         ):
             return await object_storage.get_all_multipart_uploads(bucket_id=bucket_id)
+
+    async def cleanup_orphaned_objects(
+        self, *, storage_alias: str, known_object_ids: set[str]
+    ):
+        """Clean out all orphaned object IDs in the inbox bucket.
+
+        When finished, log basic stats for deleted objects.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+        """
+        bucket_id, object_storage = self._get_bucket_and_storage(storage_alias)
+        extra: dict[str, Any] = {"storage_alias": storage_alias, "bucket_id": bucket_id}
+        try:
+            object_ids = await object_storage.list_all_object_ids(bucket_id=bucket_id)
+        except ObjectStorageProtocol.BucketNotFoundError as err:
+            error = S3ClientPort.BucketNotFoundError(bucket_id=bucket_id)
+            log.error(error, extra=extra)
+            raise error from err
+
+        orphaned_object_ids = set(object_ids) - known_object_ids
+
+        # Return early if no orphaned objects
+        if not orphaned_object_ids:
+            log.info("Did not detect any orphaned objects in the bucket %s.", bucket_id)
+
+        deleted_ids = []
+        missing_ids = []
+        problem_ids = []
+        for object_id in orphaned_object_ids:
+            try:
+                await object_storage.delete_object(
+                    bucket_id=bucket_id, object_id=object_id
+                )
+            except ObjectStorageProtocol.ObjectNotFoundError:
+                missing_ids.append(object_id)
+            except ObjectStorageProtocol.ObjectStorageProtocolError as err:
+                log.error(
+                    "Unable to clean up object %s from bucket %s in storage alias %s"
+                    + " because of the following error: %s",
+                    object_id,
+                    bucket_id,
+                    storage_alias,
+                    str(err),
+                    extra={**extra, "object_id": object_id},
+                )
+                problem_ids.append(object_id)
+            else:
+                deleted_ids.append(object_id)
+
+        problem_msg = ""
+        if problem_ids or missing_ids:
+            problem_msg = (
+                f" An additional {len(problem_ids)} object(s) could not be deleted and"
+                + f" {len(missing_ids)} object(s) were no longer present by the time"
+                + " deletion was attempted."
+            )
+            extra["could_not_delete_count"] = len(problem_ids)
+            extra["could_not_delete_object_ids"] = problem_ids
+            extra["no_longer_present_count"] = len(missing_ids)
+            extra["no_longer_present_object_ids"] = missing_ids
+
+        extra["deleted_count"] = len(deleted_ids)
+        extra["deleted_object_ids"] = deleted_ids
+        log.info(
+            "Cleaned up %i orphaned object(s) from bucket %s in storage alias %s.%s",
+            len(deleted_ids),
+            bucket_id,
+            storage_alias,
+            problem_msg,
+            extra=extra,
+        )
