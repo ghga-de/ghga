@@ -123,9 +123,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
             metadata = await self._metadata_dao.find(filename=study_accession)
             return metadata
         except ResourceNotFoundError as err:
-            error = self.MetadataNotFoundError(study_accession=study_accession)
-            log.error(error)
-            raise error from err
+            raise self.MetadataNotFoundError(study_accession=study_accession) from err
 
     async def delete_metadata(self, *, study_accession: str) -> None:
         """Delete study metadata from the database by its accession.
@@ -156,9 +154,7 @@ class ReverseTranspiler(ReverseTranspilerPort):
             log.debug("Workbook found for study accession: %s", study_accession)
             return workbook_data
         except ResourceNotFoundError as err:
-            error = self.MetadataNotFoundError(study_accession=study_accession)
-            log.error(error)
-            raise error from err
+            raise self.MetadataNotFoundError(study_accession=study_accession) from err
 
     def _translate_sheet_name(self, sheet_name: str) -> str:
         """Rename sheets in the workbook to with configured values.
