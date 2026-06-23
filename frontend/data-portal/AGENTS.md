@@ -46,6 +46,8 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
 - Dev server: `pnpm start`
 - Build: `pnpm build` (or `pnpm watch`)
 - Lint: `pnpm lint` (or `pnpm lf` to auto-fix)
+- Format: `pnpm format` (write) or `pnpm format:check` (verify)
+  - Prettier runs standalone, not via ESLint; `eslint-config-prettier` only disables conflicting ESLint rules.
 - Typecheck (TS project refs): `pnpm typecheck` (or `pnpm typecheck:watch`)
 - Typecheck incl. Angular templates: `pnpm typecheck:ng`
 - Unit tests (Angular builder): `pnpm test` / `pnpm test:watch` / `pnpm test:ui`

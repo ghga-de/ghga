@@ -1,3 +1,10 @@
+allowedDeprecatedVersions:
+  # ngx-mat-input-tel declares the deprecated @angular/platform-browser-dynamic as a
+  # peer dep but never imports it; silence the install-time deprecation warning.
+  '@angular/platform-browser-dynamic': '*'
+  # Deep dev-only transitive dep (@compodoc/compodoc > cheerio > encoding-sniffer);
+  # deprecated in favour of @exodus/bytes but not something we depend on directly.
+  whatwg-encoding: '*'
 allowBuilds:
   '@compodoc/compodoc': true
   '@parcel/watcher': true

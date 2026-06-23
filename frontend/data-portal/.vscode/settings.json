@@ -47,5 +47,6 @@
   "vitest.nodeExecutable": "",
   "vitest.cliArguments": "",
   "vitest.applyDiagnostic": false,
-  "workbench.browser.enableChatTools": true
+  "workbench.browser.enableChatTools": true,
+  "yaml.maxItemsComputed": 15000
 }

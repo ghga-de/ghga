@@ -5,7 +5,7 @@
  * This has been inspired by https://github.com/willmendesneto/ngx-skeleton-loader.
  */
 
-// eslint-disable-next-line header/header
+// eslint-disable-next-line local/require-file-header
 import { Component, computed, input } from '@angular/core';
 
 const DEFAULT_COUNT = 1;

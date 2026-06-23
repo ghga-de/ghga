@@ -74,7 +74,6 @@
           <div class="flex items-center gap-4">
             <span class="font-medium">Mapped field in Experimental Metadata:</span>
             <mat-radio-group
-              // MatRadioGroup expects null for an unselected value.
               [value]="pendingMappedField() ?? null"
               (change)="pendingMappedField.set($event.value)"
               class="larger-mat-radio-label flex gap-4"
@@ -201,7 +200,6 @@
                       >
                         <input
                           #inlineInput
-                          // Let the user type or pick a file name from the box.
                           matInput
                           [ngModel]="inlineInputValue()"
                           (ngModelChange)="inlineInputValue.set($event)"

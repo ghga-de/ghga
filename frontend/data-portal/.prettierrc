@@ -13,6 +13,13 @@
         "parser": "angular",
         "htmlWhitespaceSensitivity": "strict"
       }
+    },
+    {
+      "files": "*.stencil.html",
+      "options": {
+        "parser": "angular",
+        "htmlWhitespaceSensitivity": "css"
+      }
     }
   ]
 }

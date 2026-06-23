@@ -1,14 +1,12 @@
 // @ts-check
 import markdown from '@eslint/markdown';
 import angularEslint from 'angular-eslint';
+import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import boundaries from 'eslint-plugin-boundaries';
-import header from 'eslint-plugin-header';
 import jsdoc from 'eslint-plugin-jsdoc';
-import prettier from 'eslint-plugin-prettier';
 import tseslint from 'typescript-eslint';
+import requireFileHeader from './eslint-local-rules/require-file-header.js';
 import umamiEventMaxLength from './eslint-local-rules/umami-event-max-length.js';
-
-header.rules.header.meta.schema = false;
 
 // Define the configuration
 export default tseslint.config(
@@ -43,13 +41,15 @@ export default tseslint.config(
     processor: angularEslint.processInlineTemplates,
     plugins: {
       jsdoc,
-      prettier,
       boundaries,
-      header,
+      local: {
+        rules: {
+          'require-file-header': requireFileHeader,
+        },
+      },
     },
     rules: {
       ...jsdoc.configs['recommended-typescript'].rules,
-      'prettier/prettier': 'warn',
       // Allow deliberately unused symbols when prefixed with an underscore
       // (e.g. interface-mandated parameters that the implementation ignores)
       '@typescript-eslint/no-unused-vars': [
@@ -69,19 +69,7 @@ export default tseslint.config(
         { type: 'element', prefix: 'app', style: 'kebab-case' },
       ],
       '@angular-eslint/prefer-on-push-component-change-detection': 'error',
-      'header/header': [
-        2,
-        'block',
-        [
-          '*',
-          { pattern: ' * .+', template: ' * Short module description' },
-          ' * @copyright The GHGA Authors',
-          ' * @license Apache-2.0',
-          ' ',
-        ],
-        2,
-        { lineEndings: 'linux' },
-      ],
+      'local/require-file-header': 'error',
       'jsdoc/require-jsdoc': [
         'warn',
         {
@@ -434,4 +422,7 @@ export default tseslint.config(
       'markdown/no-missing-label-refs': 'error',
     },
   },
+  // Disable ESLint rules that conflict with Prettier (must come last).
+  // Prettier itself runs as a standalone tool via `pnpm format`.
+  eslintConfigPrettier,
 );
