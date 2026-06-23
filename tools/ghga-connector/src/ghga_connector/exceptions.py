@@ -24,6 +24,22 @@ from pydantic import UUID4
 from ghga_connector.constants import MAX_PART_NUMBER
 
 
+def extract_reason(exception: BaseException) -> str:
+    """Build a human-readable reason string from an exception.
+
+    Fall back to a default message pointing to the qualified error type if there's no
+    message from which the reason can be extracted.
+    """
+    message = str(exception).strip()
+    if message:
+        return message
+    exc_type = type(exception)
+    return (
+        f"An exception of type '{exc_type.__module__}.{exc_type.__qualname__}'"
+        " was raised without a message."
+    )
+
+
 class AbortBatchProcessError(RuntimeError):
     """Thrown when user selected to not proceed with batch processing"""
 
@@ -72,10 +88,18 @@ class _FileUploadError(RuntimeError):
     """Base error class for top-level errors in file upload"""
 
     def __init__(
-        self, *, action: str, file_alias: str, reason: str, file_id: UUID4 | None = None
+        self,
+        *,
+        action: str,
+        file_alias: str,
+        exception: BaseException,
+        file_id: UUID4 | None = None,
     ):
+        # Build a human-readable reason string from the exception
+        reason = extract_reason(exception)
+
         # Make sure we only use one period at the end of the error message
-        reason = reason.removesuffix(".")
+        reason = reason.rstrip(". \n")
 
         # Make first character of 'reason' lowercase
         reason = reason[0].lower() + reason[1:]
@@ -92,8 +116,8 @@ class _FileUploadError(RuntimeError):
 class CompleteFileUploadError(_FileUploadError):
     """Raised when there's a problem trying to complete an upload."""
 
-    def __init__(self, *, file_alias: str, reason: str):
-        super().__init__(action="complete", file_alias=file_alias, reason=reason)
+    def __init__(self, *, file_alias: str, exception: BaseException):
+        super().__init__(action="complete", file_alias=file_alias, exception=exception)
 
 
 class ConnectionFailedError(RuntimeError):
@@ -107,8 +131,8 @@ class ConnectionFailedError(RuntimeError):
 class CreateFileUploadError(_FileUploadError):
     """Raised when there's a problem trying to create a new FileUpload."""
 
-    def __init__(self, *, file_alias: str, reason: str):
-        super().__init__(action="initiate", file_alias=file_alias, reason=reason)
+    def __init__(self, *, file_alias: str, exception: BaseException):
+        super().__init__(action="initiate", file_alias=file_alias, exception=exception)
 
 
 class DirectoryDoesNotExistError(RuntimeError):
@@ -122,7 +146,8 @@ class DirectoryDoesNotExistError(RuntimeError):
 class DownloadError(RuntimeError):
     """Raised when an error is encountered during file download"""
 
-    def __init__(self, *, reason: str):
+    def __init__(self, *, exception: BaseException):
+        reason = extract_reason(exception)
         message = f"Download tasks did not complete successfully. Reason: {reason}"
         super().__init__(message)
 
@@ -171,12 +196,12 @@ class FileAlreadyExistsError(RuntimeError):
 class DeleteFileUploadError(_FileUploadError):
     """Raised when there's a problem deleting a FileUpload in the Upload API"""
 
-    def __init__(self, *, file_alias: str, file_id: UUID4, reason: str):
+    def __init__(self, *, file_alias: str, file_id: UUID4, exception: BaseException):
         super().__init__(
             action="delete",
             file_alias=file_alias,
             file_id=file_id,
-            reason=reason,
+            exception=exception,
         )
 
 
@@ -529,8 +554,8 @@ class UploadBoxSizeExceededError(RuntimeError):
 class UploadFileError(_FileUploadError):
     """Raised when there's a problem trying to upload a file part."""
 
-    def __init__(self, *, file_alias: str, reason: str):
-        super().__init__(action="perform", file_alias=file_alias, reason=reason)
+    def __init__(self, *, file_alias: str, exception: BaseException):
+        super().__init__(action="perform", file_alias=file_alias, exception=exception)
 
 
 class UploadIdUnsetError(RuntimeError):

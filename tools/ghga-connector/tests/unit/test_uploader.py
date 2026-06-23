@@ -16,10 +16,12 @@
 """Unit tests for the Uploader class"""
 
 import asyncio
+import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
+import httpx
 import pytest
 
 from ghga_connector import exceptions
@@ -30,6 +32,7 @@ from ghga_connector.constants import (
 )
 from ghga_connector.core.crypt.checksums import Checksums
 from ghga_connector.core.crypt.encryption import FileProcessor
+from ghga_connector.core.tasks import TaskHandler
 from ghga_connector.core.uploading.uploader import Uploader
 from tests.fixtures.utils import (
     TEST_FILE_ID,
@@ -147,6 +150,31 @@ async def test_upload_file_part_wraps_generic_exception():
         file_processor = make_dummy_file_processor(part_count=1)
         with pytest.raises(exceptions.UploadFileError):
             await uploader._upload_file_part(file_processor)
+
+
+async def test_upload_file_part_wraps_exception_with_blank_message(caplog):
+    """Make sure _upload_file_part handles exceptions with empty messages correctly."""
+    upload_client = AsyncMock()
+    upload_client.upload_file_part.side_effect = httpx.ReadError("")
+    file_processor = make_dummy_file_processor(part_count=1)
+
+    with NamedTemporaryFile() as f:
+        uploader = make_uploader(Path(f.name), upload_client=upload_client)
+        uploader._file_id = FILE_ID
+        uploader._progress_bar = MagicMock()
+        uploader._in_sequence_part_number = 1
+
+        task_handler = TaskHandler()
+        task_handler.schedule(uploader._upload_file_part(file_processor))
+        with caplog.at_level(logging.ERROR, logger="asyncio"):
+            with pytest.raises(exceptions.UploadFileError):
+                await task_handler.gather()
+            await asyncio.sleep(0)  # let the finalize done-callback run and log
+
+        assert (
+            "an exception of type 'httpx.ReadError' was raised without a message"
+            in caplog.text
+        )
 
 
 async def test_upload_file_part_reraises_cancelled_error():

@@ -74,7 +74,7 @@ async def test_upload_files_from_list_success_does_not_call_delete():
     "error",
     [
         exceptions.CreateFileUploadError(
-            file_alias="test-file", reason="something went wrong"
+            file_alias="test-file", exception=RuntimeError("something went wrong")
         ),
         KeyboardInterrupt(),
     ],
@@ -122,10 +122,10 @@ async def test_upload_process_stops_on_failure():
                 raise exceptions.UploadBoxSizeExceededError(
                     file_alias="file-one", file_upload_box_id=uuid4()
                 )
-            except Exception as err:
+            except Exception as exc:
                 raise exceptions.CreateFileUploadError(
-                    file_alias="file-one", reason=str(err)
-                ) from err
+                    file_alias="file-one", exception=exc
+                ) from exc
 
         failing_uploader = AsyncMock()
         failing_uploader.initiate_file_upload.side_effect = _error

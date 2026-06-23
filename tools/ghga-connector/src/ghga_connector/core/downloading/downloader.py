@@ -23,9 +23,17 @@ from contextlib import contextmanager
 from io import BufferedWriter
 from pathlib import Path
 
-from ghga_connector import exceptions
 from ghga_connector.core import CLIMessageDisplay, PartRange, calc_part_ranges
 from ghga_connector.core.tasks import TaskHandler
+from ghga_connector.exceptions import (
+    BadResponseCodeError,
+    DownloadError,
+    FileNotRegisteredError,
+    GetEnvelopeError,
+    RequestFailedError,
+    UnauthorizedAPICallError,
+    UnexpectedRetryResponseError,
+)
 
 from ..progress_bar import DownloadProgressBar
 from .api_calls import DownloadClient, extract_download_url
@@ -43,12 +51,12 @@ def handle_download_errors(file_info: FileInfo):
     file_id = file_info.file_id
     try:
         yield
-    except exceptions.GetEnvelopeError as error:
+    except GetEnvelopeError as error:
         CLIMessageDisplay.failure(
             f"The request to get an envelope for file '{file_id}' failed."
         )
         raise error
-    except exceptions.DownloadError as error:
+    except DownloadError as error:
         CLIMessageDisplay.failure(f"Failed downloading with id '{file_id}'.")
         raise error
 
@@ -98,10 +106,10 @@ class Downloader:
                 file_id=self._file_id
             )
         except (
-            exceptions.FileNotRegisteredError,
-            exceptions.BadResponseCodeError,
+            FileNotRegisteredError,
+            BadResponseCodeError,
         ) as error:
-            raise exceptions.GetEnvelopeError() from error
+            raise GetEnvelopeError() from error
 
         # start async part download to intermediate queue
         logger.debug("Scheduling download for file %s", self._file_id)
@@ -158,12 +166,12 @@ class Downloader:
             self._download_client.get_drs_object.cache_invalidate(self._file_id)
         try:
             drs_object = await self._download_client.get_drs_object(self._file_id)
-        except exceptions.BadResponseCodeError as err:
+        except BadResponseCodeError as err:
             CLIMessageDisplay.failure(
                 f"The request for file {self._file_id} returned an unexpected HTTP status code: {err.response_code}."
             )
             raise
-        except exceptions.RequestFailedError:
+        except RequestFailedError:
             CLIMessageDisplay.failure(
                 f"The download request for file {self._file_id} failed."
             )
@@ -173,7 +181,7 @@ class Downloader:
         #  yet been staged or made available for download from the proper S3 bucket.
         if isinstance(drs_object, RetryResponse):
             # At this point, the file should definitely be staged -- raise an error
-            raise exceptions.UnexpectedRetryResponseError()
+            raise UnexpectedRetryResponseError()
 
         # Extract the actual download URL from the DRS object received from the Download API
         download_url = extract_download_url(drs_object)
@@ -194,7 +202,7 @@ class Downloader:
                         url=download_url, start=part_range.start, end=part_range.stop
                     )
                     await self._queue.put((offset, bytes))
-                except exceptions.UnauthorizedAPICallError:
+                except UnauthorizedAPICallError:
                     # For clarity, this means the S3 URL was expired
                     download_url = await self.fetch_download_url(bust_cache=True)
                     logger.debug(
@@ -204,8 +212,8 @@ class Downloader:
                         url=download_url, start=part_range.start, end=part_range.stop
                     )
                     await self._queue.put((offset, bytes))
-            except Exception as exception:
-                raise exceptions.DownloadError(reason=str(exception)) from exception
+            except Exception as exc:
+                raise DownloadError(exception=exc) from exc
 
     async def _drain_queue_to_file(
         self,

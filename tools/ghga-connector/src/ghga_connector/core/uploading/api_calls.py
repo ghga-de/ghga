@@ -199,12 +199,10 @@ class UploadClient:
                 response_payload["alias"],
                 file_alias,
             )
-            raise exceptions.CreateFileUploadError(
-                file_alias=file_alias,
-                reason=(
-                    "When initiating the file upload, the received response indicated"
-                    + " that it was for a different file alias."
-                ),
+            # This is converted to CreateFileUploadError at the call site
+            raise RuntimeError(
+                "When initiating the file upload, the received response indicated"
+                + " that it was for a different file alias."
             )
         file_id = UUID(response_payload["file_id"])
         storage_alias = response_payload["storage_alias"]
