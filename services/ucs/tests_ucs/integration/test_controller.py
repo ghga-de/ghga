@@ -602,7 +602,7 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
         encrypted_size=ENCRYPTED_SIZE,
     )
 
-    # Put an object into the interrogation bucket to simulated DHFS's work
+    # Put an object into the interrogation bucket to simulate DHFS's work
     await s3_storage.create_bucket(interrogation_bucket_id)
     upload_id = await s3_storage.init_multipart_upload(
         bucket_id=interrogation_bucket_id,
@@ -627,7 +627,40 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     )
     assert interrogation_file_exists, "Dummy object not present in interrogation bucket"
 
-    # Dummy object is in place, now we can publish the InterrogationSuccess event
+    # REGRESSION TEST: Verify that an S3 error doesn't result in an orphaned inbox object
+    _real_get_storage_fn = controller._s3_client._get_bucket_and_storage
+    _real_delete_fn = s3_storage.delete_object
+
+    async def _erroring_delete_fn(*, bucket_id: str, object_id: str) -> None:
+        raise s3_storage.ObjectStorageProtocolError("problem")
+
+    s3_storage.delete_object = _erroring_delete_fn
+    controller._s3_client._get_bucket_and_storage = lambda x: (
+        inbox_bucket_id,
+        s3_storage,
+    )
+
+    # Publish/consume the InterrogationSuccess event to trigger S3 error
+    await joint_fixture.kafka.publish_event(
+        payload=interrogation_success.model_dump(mode="json"),
+        type_=config.interrogation_success_type,
+        topic=config.file_interrogations_topic,
+    )
+    with pytest.raises(UploadControllerPort.S3OperationError):
+        await joint_fixture.event_subscriber.run(forever=False)
+
+    # Verify that the the FileUpload is unchanged and the object is still in the inbox
+    await s3_storage.does_object_exist(bucket_id=inbox_bucket_id, object_id=object_id)
+    file_upload_check = file_upload_collection.find_one({"_id": file_id})
+    assert file_upload_check is not None
+    assert file_upload_check["state"] == "inbox"
+    assert file_upload_check["object_id"] == UUID(object_id)
+
+    # Undo the S3 patches. This is the end of the regression test
+    s3_storage.delete_object = _real_delete_fn
+    controller._s3_client._get_bucket_and_storage = _real_get_storage_fn
+
+    # Now we can publish the InterrogationSuccess event for real
     await joint_fixture.kafka.publish_event(
         payload=interrogation_success.model_dump(mode="json"),
         type_=config.interrogation_success_type,
