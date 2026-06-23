@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=80.10"]
+requires = ["setuptools>=82"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pcs"
-version = "6.2.0"
+version = "6.2.1"
 description = "Purge Controller Service - a service to commission file deletions"
 readme = "README.md"
 authors = [
