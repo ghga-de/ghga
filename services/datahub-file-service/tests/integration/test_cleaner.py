@@ -199,6 +199,60 @@ async def test_no_files_in_interrogation_bucket(
     assert "No files to clean up, exiting." in caplog.text
 
 
+async def test_central_api_error_during_cleanup(
+    joint_fixture: JointFixture,
+    httpx_mock: HTTPXMock,
+    caplog,
+):
+    """Test that a non-200 response from get_removable_files is logged explicitly."""
+    interrogation = joint_fixture.config.interrogation_bucket_id
+    file_id = "18d50867-fbef-4a32-8f70-e81766383980"
+    with temp_file_object(bucket_id=interrogation, object_id=file_id) as file:
+        await joint_fixture.s3.populate_file_objects([file])
+
+    url = (
+        f"{joint_fixture.config.central_api_url}/storages/{joint_fixture.config.storage_alias}"
+        + "/uploads/can_remove"
+    )
+    httpx_mock.add_response(status_code=500, url=url, method="POST")
+
+    with caplog.at_level("ERROR"):
+        await joint_fixture.s3_cleaner.scan_and_clean()
+
+    assert "The GHGA Central API returned an error response" in caplog.text
+    remaining = await joint_fixture.s3.storage.list_all_object_ids(interrogation)
+    assert file_id in remaining
+
+
+async def test_central_api_bad_format_during_cleanup(
+    joint_fixture: JointFixture,
+    httpx_mock: HTTPXMock,
+    caplog,
+):
+    """Test that an unparseable response from get_removable_files is logged explicitly."""
+    interrogation = joint_fixture.config.interrogation_bucket_id
+    file_id = "18d50867-fbef-4a32-8f70-e81766383980"
+    with temp_file_object(bucket_id=interrogation, object_id=file_id) as file:
+        await joint_fixture.s3.populate_file_objects([file])
+
+    url = (
+        f"{joint_fixture.config.central_api_url}/storages/{joint_fixture.config.storage_alias}"
+        + "/uploads/can_remove"
+    )
+    httpx_mock.add_response(
+        status_code=200, json={"not": "a list"}, url=url, method="POST"
+    )
+
+    with caplog.at_level("ERROR"):
+        await joint_fixture.s3_cleaner.scan_and_clean()
+
+    assert (
+        "The GHGA Central API returned an unrecognized response format" in caplog.text
+    )
+    remaining = await joint_fixture.s3.storage.list_all_object_ids(interrogation)
+    assert file_id in remaining
+
+
 async def test_central_api_unreachable(joint_fixture: JointFixture, caplog):
     """Make sure the S3Cleaner handles Central API connection failures."""
     # Pre-populate some objects in the interrogation bucket
@@ -213,7 +267,7 @@ async def test_central_api_unreachable(joint_fixture: JointFixture, caplog):
 
     with caplog.at_level("ERROR"):
         await joint_fixture.s3_cleaner.scan_and_clean()
-    assert "Failed to determine which objects can be removed" in caplog.text
+    assert "Unable to reach the GHGA Central API" in caplog.text
 
     # Verify that no files were deleted (operation failed before deletion)
     remaining_files = await joint_fixture.s3.storage.list_all_object_ids(interrogation)

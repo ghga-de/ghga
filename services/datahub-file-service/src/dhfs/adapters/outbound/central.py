@@ -133,6 +133,7 @@ class CentralClient(CentralClientPort):
         Raises:
         - CentralAPIError if the request to the central API fails.
         - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        - ResponseFormatError if response body parsing fails.
         """
         url = f"{self._base_url}/storages/{self._storage_alias}/uploads"
         log.debug("Fetching new uploads from %s.", url)

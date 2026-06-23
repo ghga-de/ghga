@@ -20,6 +20,7 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+from pydantic import SecretBytes
 from pytest_httpx import HTTPXMock
 
 from dhfs.adapters.outbound.s3 import S3Client
@@ -486,4 +487,116 @@ async def test_etag_doesnt_match_local_md5(
     interrogation_files = await s3_client.list_files_in_interrogation_bucket()
     assert interrogation_files == [], (
         "Interrogation bucket should be empty after ETag mismatch cleanup"
+    )
+
+
+@pytest.mark.parametrize("status_code", [400, 404, 409, 500])
+async def test_central_api_error_on_fetch_new_files(
+    joint_fixture: JointFixture,
+    httpx_mock: HTTPXMock,
+    status_code: int,
+    caplog,
+):
+    """Test that a non-200 response from fetch_new_uploads is logged explicitly."""
+    config = joint_fixture.config
+    url = f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
+    httpx_mock.add_response(url=url, status_code=status_code)
+
+    with caplog.at_level("ERROR"):
+        await joint_fixture.interrogator.interrogate_new_files()
+
+    assert "The GHGA Central API returned an error response" in caplog.text
+
+
+async def test_central_api_bad_format_on_fetch_new_files(
+    joint_fixture: JointFixture,
+    httpx_mock: HTTPXMock,
+    caplog,
+):
+    """Test that an unparseable response from fetch_new_uploads is logged explicitly."""
+    config = joint_fixture.config
+    url = f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
+    httpx_mock.add_response(
+        url=url, status_code=200, json={"not": "a list of file uploads"}
+    )
+
+    with caplog.at_level("ERROR"):
+        await joint_fixture.interrogator.interrogate_new_files()
+
+    assert (
+        "The GHGA Central API returned an unrecognized response format" in caplog.text
+    )
+
+
+@pytest.mark.parametrize("status_code", [400, 404, 409, 500])
+async def test_central_api_error_on_report_success(
+    joint_fixture: JointFixture,
+    httpx_mock: HTTPXMock,
+    status_code: int,
+    caplog,
+):
+    """Test that a non-201 response from submit_interrogation_report in
+    report_success() is logged explicitly without raising.
+    """
+    config = joint_fixture.config
+    url = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
+    httpx_mock.add_response(url=url, status_code=status_code)
+
+    with caplog.at_level("ERROR"):
+        await joint_fixture.interrogator.report_success(
+            file_id=uuid4(),
+            bucket_id=config.interrogation_bucket_id,
+            object_id=uuid4(),
+            secret=SecretBytes(b"\x00" * 32),
+            encrypted_parts_md5=[],
+            encrypted_parts_sha256=[],
+            encrypted_size=0,
+        )
+
+    assert (
+        "The GHGA Central API returned an error response while submitting the file processing report"
+        in caplog.text
+    )
+
+
+@pytest.mark.parametrize("status_code", [400, 404, 409, 500])
+async def test_central_api_error_on_report_failure(
+    joint_fixture: JointFixture,
+    httpx_mock: HTTPXMock,
+    status_code: int,
+    caplog,
+):
+    """Test that a non-201 response from submit_interrogation_report in
+    report_failure is logged explicitly without raising.
+    """
+    config = joint_fixture.config
+    url = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
+    httpx_mock.add_response(url=url, status_code=status_code)
+
+    with caplog.at_level("ERROR"):
+        await joint_fixture.interrogator.report_failure(
+            file_id=uuid4(), reason="test failure"
+        )
+
+    assert (
+        "The GHGA Central API returned an error response while submitting the file processing report"
+        in caplog.text
+    )
+
+
+async def test_connection_failed_on_report_failure(
+    joint_fixture: JointFixture,
+    caplog,
+):
+    """Test that a connection failure during report_failure is logged explicitly
+    without raising. Does not use httpx_mock so the request fails to connect.
+    """
+    with caplog.at_level("ERROR"):
+        await joint_fixture.interrogator.report_failure(
+            file_id=uuid4(), reason="test failure"
+        )
+
+    assert (
+        "Unable to reach the GHGA Central API while submitting the file processing report"
+        in caplog.text
     )

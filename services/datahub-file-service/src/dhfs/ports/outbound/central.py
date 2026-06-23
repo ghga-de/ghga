@@ -59,6 +59,8 @@ class CentralClientPort(ABC):
 
         Raises:
         - CentralAPIError if the request to the central API fails.
+        - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
+        - ResponseFormatError if response body parsing fails.
         """
         ...
 

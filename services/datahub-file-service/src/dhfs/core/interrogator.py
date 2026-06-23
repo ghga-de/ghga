@@ -32,6 +32,7 @@ from nacl.bindings import (
 )
 from pydantic import UUID4, SecretBytes
 
+from dhfs.adapters.outbound.http import ConnectionFailedError
 from dhfs.config import Config
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH
 from dhfs.core.checksums import Checksums
@@ -78,6 +79,17 @@ class Interrogator(InterrogatorPort):
             new_files = await self._central_client.fetch_new_uploads()
         except CentralClientPort.UpgradeRequiredError as err:
             raise self.CriticalError(err) from err
+        except ConnectionFailedError as err:
+            log.error("Unable to reach the GHGA Central API (%s).", str(err))
+            return
+        except CentralClientPort.CentralAPIError as err:
+            log.error("The GHGA Central API returned an error response: %s", err)
+            return
+        except CentralClientPort.ResponseFormatError as err:
+            log.error(
+                "The GHGA Central API returned an unrecognized response format: %s", err
+            )
+            return
 
         log.info("Received a batch of %i file(s) to process.", len(new_files))
         for file in new_files:
@@ -598,17 +610,32 @@ class Interrogator(InterrogatorPort):
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)
+        except ConnectionFailedError as err:
+            raise InterrogatorPort.InconclusiveError(
+                "Unable to reach the GHGA Central API.",
+            ) from err
         except CentralClientPort.UpgradeRequiredError as err:
             raise InterrogatorPort.CriticalError(err) from err
-        except Exception:
-            # The file is not deleted on the off-chance that FIS did actually receive it
-            #  Also, this is not re-raised as an InconclusiveError because it WAS
-            #  successfully processed - there was just a problem with sending the report
-            # This log is the last log in the loop - the
+        # Unlike ConnectionFailedError (report definitely not delivered), these
+        # errors require a completed HTTP round-trip, so Central may have processed
+        # the report despite returning an error. Raising an InconclusiveError
+        # would re-interrogate the file with a different secret (bad), so we log and let
+        # the natural retry cycle handle it.
+        except CentralClientPort.CentralAPIError as err:
+            log.error(
+                "File %s: The GHGA Central API returned an error response while"
+                + " submitting the file processing report."
+                + " DHFS will try re-processing this file later.",
+                file_id,
+                extra={"err_msg": str(err)},
+            )
+        except Exception as err:
+            # Same reasoning as CentralAPIError above.
             log.error(
                 "File %s: Failed to submit file processing report to GHGA Central."
                 + " DHFS will try re-processing this file later.",
                 file_id,
+                extra={"err_msg": str(err)},
             )
 
     async def report_failure(self, *, file_id: UUID4, reason: str) -> None:
@@ -628,11 +655,27 @@ class Interrogator(InterrogatorPort):
             await self._central_client.submit_interrogation_report(report=report)
         except CentralClientPort.UpgradeRequiredError as err:
             raise InterrogatorPort.CriticalError(err) from err
-        except Exception:
+        except ConnectionFailedError as err:
+            log.error(
+                "File %s: Unable to reach the GHGA Central API while submitting the"
+                + " file processing report. DHFS will try re-processing this file later.",
+                file_id,
+                extra={"err_msg": str(err)},
+            )
+        except CentralClientPort.CentralAPIError as err:
+            log.error(
+                "File %s: The GHGA Central API returned an error response while"
+                + " submitting the file processing report."
+                + " DHFS will try re-processing this file later.",
+                file_id,
+                extra={"err_msg": str(err)},
+            )
+        except Exception as err:
             # This is logged without re-raising, because the solution is simply
             #  to move on to the next file.
             log.error(
                 "File %s: Failed to submit file processing report to GHGA Central."
                 + " DHFS will try re-processing this file later.",
                 file_id,
+                extra={"err_msg": str(err)},
             )
