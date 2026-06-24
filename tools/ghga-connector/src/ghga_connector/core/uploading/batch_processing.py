@@ -17,6 +17,7 @@
 
 import logging
 import signal
+from pathlib import Path
 
 from pydantic import SecretBytes
 
@@ -48,7 +49,10 @@ def parse_file_info_for_upload(file_info: list[str]) -> list[CoreFileInfo]:
             validated_path = utils.parse_file_upload_path(path)
         else:
             validated_path = utils.parse_file_upload_path(arg)
-            alias = validated_path.name
+            # Derive the alias from the path as supplied by the user, not from the
+            # resolved path, so that a symlink's own name is used rather than the
+            # name of its target.
+            alias = Path(arg).name
         items.append(
             CoreFileInfo(
                 alias=alias,

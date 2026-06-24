@@ -39,6 +39,20 @@ def test_parse_file_info_path_only_uses_filename_as_alias():
     assert result[0].path == Path(f.name).resolve()
 
 
+def test_parse_file_info_symlink_uses_symlink_name_as_alias(tmp_path):
+    """Make sure a symlink's own name is used as the alias, not its target's name."""
+    target = tmp_path / "original.fastq"
+    target.write_bytes(b"data")
+    link = tmp_path / "link.fastq"
+    link.symlink_to(target)
+
+    result = parse_file_info_for_upload([str(link)])
+
+    assert len(result) == 1
+    assert result[0].alias == "link.fastq"
+    assert result[0].path == target.resolve()
+
+
 def test_parse_file_info_alias_comma_path_format():
     """Make sure the 'alias,path' format correctly sets a custom alias."""
     with NamedTemporaryFile() as f:
