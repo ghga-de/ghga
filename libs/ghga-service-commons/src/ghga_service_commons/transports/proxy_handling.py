@@ -20,12 +20,19 @@ is provided.
 For now this logic is simplified, i.e. this is not in sync with `trust_env` on the
 client and will parse env proxies unconditionally.
 If you don't want to trust the env, don't use the functions from this module.
+
+NO_PROXY is now respected: hosts excluded from proxying via NO_PROXY are kept as
+`None` mounts, which tells httpx to connect directly for them. Note that wildcard and
+CIDR NO_PROXY entries behave according to httpx's mount pattern matching rather than
+httpx's own NO_PROXY logic (which is bypassed entirely once `mounts` are supplied).
+This is a pre-existing limitation of routing through `mounts` and is not introduced
+by this handling.
 """
 
-from httpx import AsyncHTTPTransport, Limits, _utils
+from httpx import AsyncBaseTransport, AsyncHTTPTransport, Limits, _utils
 
 from .config import CompositeCacheConfig, CompositeConfig
-from .factory import CompositeTransportFactory
+from .factory import CompositeTransportFactory, get_ssl_verify
 
 
 def cached_ratelimiting_retry_proxies(
@@ -36,8 +43,12 @@ def cached_ratelimiting_retry_proxies(
 
     The returned dictionary needs to be provided as `mounts` to the client.
     """
-    mounts = dict()
+    mounts: dict[str, AsyncBaseTransport | None] = dict()
     for key, transport in _get_base_proxies_from_env().items():
+        if transport is None:
+            # NO_PROXY host: keep None so httpx connects directly for this host.
+            mounts[key] = None
+            continue
         mounts[key] = (
             CompositeTransportFactory.create_cached_ratelimiting_retry_transport(
                 config=config, base_transport=transport, limits=limits
@@ -54,8 +65,12 @@ def ratelimiting_retry_proxies(
 
     The returned dictionary needs to be provided as `mounts` to the client.
     """
-    mounts = dict()
+    mounts: dict[str, AsyncBaseTransport | None] = dict()
     for key, transport in _get_base_proxies_from_env().items():
+        if transport is None:
+            # NO_PROXY host: keep None so httpx connects directly for this host.
+            mounts[key] = None
+            continue
         mounts[key] = CompositeTransportFactory.create_ratelimiting_retry_transport(
             config=config, base_transport=transport, limits=limits
         )
@@ -67,9 +82,13 @@ def _get_base_proxies_from_env() -> dict[str, AsyncHTTPTransport | None]:
 
     This will populate http, https and all proxy settings and create transports
     based on those proxy strings.
+
+    NO_PROXY hosts are returned by httpx with a ``None`` url; these are preserved as
+    ``None`` so that NO_PROXY is respected (httpx connects directly for them) instead
+    of being silently routed through a proxy.
     """
+    verify = get_ssl_verify()
     return {
-        key: AsyncHTTPTransport(proxy=url)
+        key: None if url is None else (AsyncHTTPTransport(proxy=url, verify=verify))
         for key, url in _utils.get_environment_proxies().items()
-        if url is not None
     }

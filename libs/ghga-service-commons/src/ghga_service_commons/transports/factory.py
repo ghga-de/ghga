@@ -15,6 +15,9 @@
 
 """Provides factories for different flavors of httpx.AsyncHTTPTransport."""
 
+import os
+import ssl
+
 from hishel import AsyncSqliteStorage, FilterPolicy
 from hishel.httpx import AsyncCacheTransport
 from httpx import AsyncBaseTransport, AsyncHTTPTransport, Limits
@@ -22,6 +25,24 @@ from httpx import AsyncBaseTransport, AsyncHTTPTransport, Limits
 from .config import CompositeCacheConfig, CompositeConfig
 from .ratelimiting import AsyncRateLimitingTransport
 from .retry import AsyncRetryTransport
+
+
+def get_ssl_verify() -> ssl.SSLContext | bool:
+    """Determine the SSL verification setting for outgoing transports.
+
+    Honors the standard ``REQUESTS_CA_BUNDLE`` and ``SSL_CERT_FILE`` environment
+    variables (the same ones respected by ``requests``, ``urllib3`` and boto3) so
+    that deployments behind SSL-inspecting proxies or with self-signed/custom CA
+    chains verify correctly. ``REQUESTS_CA_BUNDLE`` takes precedence.
+
+    If either variable is set, an ``ssl.SSLContext`` loaded from the referenced CA
+    bundle is returned. If neither is set, ``True`` is returned so that httpx keeps
+    its default behavior (certifi's bundled root certificates).
+    """
+    ca_bundle = os.environ.get("REQUESTS_CA_BUNDLE") or os.environ.get("SSL_CERT_FILE")
+    if ca_bundle:
+        return ssl.create_default_context(cafile=ca_bundle)
+    return True
 
 
 class CompositeTransportFactory:
@@ -40,8 +61,11 @@ class CompositeTransportFactory:
         If provided, a custom base_transport class is used and any limits are ignored.
         Those have to be provided directly to the custom base_transport passed into this method.
         """
+        verify = get_ssl_verify()
         base_transport = base_transport or (
-            AsyncHTTPTransport(limits=limits) if limits else AsyncHTTPTransport()
+            AsyncHTTPTransport(limits=limits, verify=verify)
+            if limits
+            else AsyncHTTPTransport(verify=verify)
         )
         ratelimiting_transport = AsyncRateLimitingTransport(
             config=config, transport=base_transport

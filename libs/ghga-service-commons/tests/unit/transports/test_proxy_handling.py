@@ -157,11 +157,17 @@ def test_with_no_proxies(
         (CompositeCacheConfig, cached_ratelimiting_retry_proxies),
     ],
 )
-def test_filters_none_proxy_values(
+def test_preserves_no_proxy_values(
     config_class: type[CompositeConfig | CompositeCacheConfig],
     proxy_fn: Callable,
 ):
-    """Test that None proxy values are filtered out."""
+    """NO_PROXY hosts (None values) are preserved as ``None`` mounts.
+
+    httpx's built-in NO_PROXY handling is bypassed when ``mounts`` are supplied, so
+    the ``None`` entries are what tell httpx to connect directly for those hosts.
+    They must be kept as keys with ``None`` values, not dropped and not wrapped in
+    a transport.
+    """
     config = config_class()
 
     with patch(
@@ -174,11 +180,12 @@ def test_filters_none_proxy_values(
     ):
         mounts = proxy_fn(config)
 
-        # The function should filter out None values
-        assert len(mounts) == 2
-        assert HTTP_PROTOCOL in mounts
-        assert ALL_PROTOCOL in mounts
-        assert HTTPS_PROTOCOL not in mounts
+        # None (NO_PROXY) entries are kept as None, proxied entries are transports
+        assert len(mounts) == 3
+        assert HTTPS_PROTOCOL in mounts
+        assert mounts[HTTPS_PROTOCOL] is None
+        assert mounts[HTTP_PROTOCOL] is not None
+        assert mounts[ALL_PROTOCOL] is not None
 
 
 @pytest.mark.parametrize(
