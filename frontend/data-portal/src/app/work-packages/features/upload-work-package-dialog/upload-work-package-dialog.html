@@ -21,7 +21,22 @@
       {{ grant.valid_until | date: friendlyDateFormat }}.
     </p>
 
-    @if (!iva()) {
+    @if (ivaError()) {
+      <p class="flex items-center">
+        <span class="text-error"
+          ><mat-icon fontIcon="error" class="me-2 mt-1 shrink-0"></mat-icon></span
+        ><span class="text-error">Could not load IVA</span>
+      </p>
+      <p>
+        The independent verification address (IVA) for this grant could not be loaded.
+        Please try again later or contact the helpdesk if the problem persists.
+      </p>
+    } @else if (ivaLoading()) {
+      <div class="flex items-center gap-3 py-4">
+        <mat-spinner [diameter]="24"></mat-spinner>
+        <p class="text-base">Checking your IVA...</p>
+      </div>
+    } @else if (!iva()) {
       <p class="flex items-center">
         <span class="text-error"
           ><mat-icon fontIcon="error" class="me-2 mt-1 shrink-0"></mat-icon></span

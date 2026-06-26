@@ -10,14 +10,12 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import {
   AccessGrant,
-  AccessGrantWithIva,
   AccessRequest,
   AccessRequestDetailData,
   AccessRequestStatus,
 } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AuthService } from '@app/auth/services/auth';
-import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
 // eslint-disable-next-line boundaries/dependencies
 import { DownloadWorkPackageDialogComponent } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
@@ -38,7 +36,6 @@ export class DynamicAccessRequestButtonComponent {
   #auth = inject(AuthService);
   #notification = inject(NotificationService);
   #dialog = inject(MatDialog);
-  #iva = inject(IvaService);
   #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #pendingAccessRequests = computed(() =>
     this.#accessRequestService
@@ -59,14 +56,6 @@ export class DynamicAccessRequestButtonComponent {
             (b.daysRemaining ?? 0) - (a.daysRemaining ?? 0) || a.id.localeCompare(b.id),
         )[0],
   );
-  #grantWithIva = computed<AccessGrantWithIva | undefined>(() => {
-    const grant = this.#activeGrant();
-    if (!grant) return undefined;
-    const ivas =
-      !grant.iva_id || this.#iva.userIvas.error() ? [] : this.#iva.userIvas.value();
-    const iva = ivas.find((i) => i.id === grant.iva_id);
-    return { ...grant, iva };
-  });
   status = computed<AccessRequestStatus>(() => {
     if (this.#activeGrant()) return AccessRequestStatus.allowed;
     if (this.#pendingAccessRequests()) return AccessRequestStatus.pending;
@@ -74,8 +63,7 @@ export class DynamicAccessRequestButtonComponent {
   });
 
   showDownloadTokenDialog = () => {
-    this.#iva.loadUserIvas(this.#userId());
-    const grant = this.#grantWithIva();
+    const grant = this.#activeGrant();
     if (!grant) return;
     this.#dialog.open(DownloadWorkPackageDialogComponent, {
       data: grant,

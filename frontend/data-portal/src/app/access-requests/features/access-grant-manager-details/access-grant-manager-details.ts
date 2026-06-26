@@ -139,6 +139,8 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
     const userIvas = this.#ivaService.userIvas.value();
     return userIvas.find((iva) => iva.id === ivaId);
   });
+  ivaLoading = this.#ivaService.userIvas.isLoading;
+  ivaError = this.#ivaService.userIvas.error;
 
   sortedLog = computed(() =>
     [

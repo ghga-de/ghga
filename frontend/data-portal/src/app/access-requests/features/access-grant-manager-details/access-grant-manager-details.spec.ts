@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
@@ -19,10 +20,11 @@ import { AccessGrantManagerDetailsComponent } from './access-grant-manager-detai
  */
 class MockIvaService {
   loadUserIvas = () => undefined;
+  ivaError = signal<Error | undefined>(undefined);
   userIvas = {
     value: () => allIvasOfDoe,
     isLoading: () => false,
-    error: () => undefined,
+    error: this.ivaError,
   };
 }
 
@@ -49,5 +51,13 @@ describe('AccessGrantManagerDetailsComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should show an error message when the IVA could not be loaded', () => {
+    const ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
+    ivaService.ivaError.set(new Error('Internal server error'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('The IVA could not be loaded');
   });
 });

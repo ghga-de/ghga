@@ -50,9 +50,12 @@ class MockIvaService {
   ]);
   errorSignal = signal<Error | undefined>(undefined);
 
+  loadingSignal = signal(false);
+
   userIvas = {
     value: this.ivasSignal,
     error: this.errorSignal,
+    isLoading: this.loadingSignal,
   };
 
   loadUserIvas = vitest.fn();
@@ -113,6 +116,13 @@ describe('UploadWorkPackageDialogComponent', () => {
 
   it('should initialize with the selected grant', () => {
     expect(component['grant']).toBe(TEST_GRANT);
+  });
+
+  it('should show an error message when the IVA could not be loaded', () => {
+    ivaService.errorSignal.set(new Error('Internal server error'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Could not load IVA');
   });
 
   it('should close dialog', () => {

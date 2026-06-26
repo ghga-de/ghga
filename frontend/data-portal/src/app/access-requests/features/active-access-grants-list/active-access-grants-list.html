@@ -12,7 +12,7 @@
       <div
         class="border-outline-dark mb-4 grid grid-cols-1 border-t [&_button>mat-icon]:-translate-y-0.75"
       >
-        @for (grant of grantWithIvas(); track grant.id) {
+        @for (grant of activeGrants(); track grant.id) {
           <div
             class="border-outline-dark grid grid-cols-12 items-center gap-2 border-b py-2 text-black"
           >

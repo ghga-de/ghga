@@ -136,6 +136,12 @@ export class UploadGrantManagerDetailsComponent implements OnInit {
     return userIvas.find((iva) => iva.id === grant.iva_id);
   });
 
+  /** Whether the user's IVAs are still being loaded. */
+  ivaLoading = this.#ivaService.userIvas.isLoading;
+
+  /** Whether loading the user's IVAs failed. */
+  ivaError = this.#ivaService.userIvas.error;
+
   /** Audit log entries sorted ascending by date. */
   sortedLog = computed(() => {
     const grant = this.grant();

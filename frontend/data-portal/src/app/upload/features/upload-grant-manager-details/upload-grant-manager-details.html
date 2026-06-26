@@ -111,7 +111,14 @@
           <mat-card-content
             class="min-w-2xl *:mb-2 *:flex md:min-w-xl [&_div>strong]:inline-block [&_div>strong]:min-w-44"
           >
-            @if (iva(); as iva) {
+            @if (ivaError()) {
+              <span class="text-error flex items-center pb-2"
+                ><mat-icon fontIcon="error" class="me-4 shrink-0"></mat-icon> The IVA
+                could not be loaded. Please try again later.</span
+              >
+            } @else if (ivaLoading()) {
+              <span>Loading IVA…</span>
+            } @else if (iva(); as iva) {
               <div>
                 <strong>Type:</strong>
                 <span class="flex"

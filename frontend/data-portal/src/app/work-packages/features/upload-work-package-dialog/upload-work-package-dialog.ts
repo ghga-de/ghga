@@ -65,6 +65,8 @@ export class UploadWorkPackageDialogComponent {
     if (!this.grant.iva_id || this.#iva.userIvas.error()) return undefined;
     return this.#iva.userIvas.value().find((i) => i.id === this.grant.iva_id);
   });
+  protected ivaLoading = this.#iva.userIvas.isLoading;
+  protected ivaError = this.#iva.userIvas.error;
   protected readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
 
   constructor() {

@@ -6,6 +6,7 @@
 
 import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { allIvasOfDoe } from '@app/../mocks/data';
@@ -22,10 +23,11 @@ import { UserManagerDetailComponent } from './user-manager-detail';
  */
 class MockIvaService {
   loadUserIvas = () => undefined;
+  ivaError = signal<Error | undefined>(undefined);
   userIvas = {
     value: () => allIvasOfDoe,
     isLoading: () => false,
-    error: () => undefined,
+    error: this.ivaError,
   };
 }
 
@@ -160,6 +162,14 @@ describe('UserManagerDetailComponent', () => {
     expect(compiled.textContent).toContain('john@example.com');
     expect(compiled.textContent).toContain('ext123');
     expect(compiled.textContent).toContain('Data Steward');
+  });
+
+  it('should show an error message when the IVAs could not be loaded', () => {
+    const ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
+    ivaService.ivaError.set(new Error('Internal server error'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('The IVAs could not be loaded');
   });
 
   it('should show not found message when user is not found', () => {

@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -48,10 +49,11 @@ const mockDialog = {
  */
 class MockIvaService {
   loadUserIvas = () => undefined;
+  ivaError = signal<Error | undefined>(undefined);
   userIvas = {
     value: () => [],
     isLoading: () => false,
-    error: () => undefined,
+    error: this.ivaError,
   };
 }
 
@@ -98,6 +100,14 @@ describe('UploadGrantManagerDetailsComponent', () => {
   it('should include a Grant created entry in the audit log', () => {
     const log = component.sortedLog();
     expect(log.some((entry) => entry.status === 'Grant created')).toBe(true);
+  });
+
+  it('should show an error message when the IVA could not be loaded', () => {
+    const ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
+    ivaService.ivaError.set(new Error('Internal server error'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('The IVA could not be loaded');
   });
 
   describe('revokeGrant()', () => {

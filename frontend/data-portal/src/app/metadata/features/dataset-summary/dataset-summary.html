@@ -1,11 +1,12 @@
 <div class="overflow-x-auto">
   <div class="pt-4 text-sm">
-    <div class="mb-4 flex flex-col gap-y-2 sm:float-right sm:w-52 md:ms-6 md:mb-4">
+    <div
+      class="smaller-button-text mb-4 flex flex-col gap-y-2 sm:float-right sm:w-52 md:ms-6 md:mb-4"
+    >
       @if (hasEgaAccession()) {
         <a
           appExtLink
           mat-stroked-button
-          class="larger-button-text"
           [href]="'https://ega-archive.org/datasets/' + hitContent().ega_accession"
           data-umami-event="Dataset Summary EGA Dataset Clicked"
           >EGA Dataset</a
@@ -14,7 +15,7 @@
       <app-dynamic-access-request-button datasetID="{{ hit().id_ }}" />
       <a
         mat-raised-button
-        class="button-quaternary larger-button-text"
+        class="button-quaternary"
         routerLink="/dataset/{{ hit().id_ }}"
         data-umami-event="Dataset Summary Dataset Details Clicked"
         ><mat-icon fontIcon="database_search"></mat-icon>Dataset Details</a

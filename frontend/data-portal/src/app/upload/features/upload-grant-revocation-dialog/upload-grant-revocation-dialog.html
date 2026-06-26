@@ -16,10 +16,10 @@
     }
   </mat-dialog-content>
   <mat-dialog-actions class="gap-y-2">
-    <button mat-button (click)="onCancel()" class="larger-button-text">Cancel</button>
+    <button mat-button (click)="onCancel()">Cancel</button>
     <button
       mat-flat-button
-      class="button-error larger-button-text"
+      class="button-error"
       (click)="onConfirm()"
       [disabled]="disabled()"
     >

@@ -44,6 +44,8 @@
   );
   @include mat.button-overrides(
     (
+      // Material's default button label size (label-large, 14px) reads a touch
+      // small for this app, so bump all button labels up to 16px globally.
       text-label-text-size: medium,
       filled-container-color: var(--mat-sys-tertiary),
       filled-label-text-size: medium,
@@ -52,7 +54,7 @@
       outlined-label-text-color: var(--mat-sys-quaternary),
       protected-label-text-size: medium,
       protected-container-color: var(--mat-sys-tertiary),
-      protected-label-text-color: var(--mat-sys-on-tertiary),
+      protected-label-text-color: var(--mat-sys-on-tertiary)
     )
   );
   @media (prefers-contrast: more) {
@@ -289,6 +291,21 @@ mat-dialog-container mat-card-header mat-card-title h2 {
   );
 }
 
+// Shrinks button labels back to Material's default (label-large, 14px) for all
+// buttons within, overriding the global 16px. Set on a container so it also
+// cascades (via inherited CSS custom properties) into reusable button
+// components like app-dynamic-access-request-button without modifying them.
+.smaller-button-text {
+  @include mat.button-overrides(
+    (
+      text-label-text-size: var(--mat-sys-label-large-size),
+      filled-label-text-size: var(--mat-sys-label-large-size),
+      outlined-label-text-size: var(--mat-sys-label-large-size),
+      protected-label-text-size: var(--mat-sys-label-large-size),
+    )
+  );
+}
+
 table.table-row-hover-highlight {
   tr.cdk-row:hover,
   tr.cdk-row:active {
@@ -390,16 +407,6 @@ $colour-suffixes: (
       )
     );
   }
-}
-
-button.larger-button-text,
-a.larger-button-text {
-  @include mat.button-overrides(
-    (
-      outlined-label-text-size: var(--mat-sys-label-large-size),
-      protected-label-text-size: var(--mat-sys-label-large-size),
-    )
-  );
 }
 
 button.active-page,

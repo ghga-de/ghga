@@ -5,6 +5,7 @@
  */
 
 import { Clipboard } from '@angular/cdk/clipboard';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
@@ -12,7 +13,8 @@ import {
   AccessGrantStatus,
   AccessGrantWithIva,
 } from '@app/access-requests/models/access-requests';
-import { IvaState, IvaType } from '@app/ivas/models/iva';
+import { Iva, IvaState, IvaType } from '@app/ivas/models/iva';
+import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
@@ -57,6 +59,18 @@ const TEST_GRANT: AccessGrantWithIva = {
   },
 };
 
+/**
+ * Minimal mock for the IVA service that exposes the current user's IVAs.
+ */
+class MockIvaService {
+  userIvas = {
+    value: signal<Iva[]>([TEST_GRANT.iva!]),
+    error: signal<Error | undefined>(undefined),
+    isLoading: signal(false),
+  };
+  loadUserIvas = vitest.fn();
+}
+
 describe('DownloadWorkPackageDialogComponent', () => {
   let component: DownloadWorkPackageDialogComponent;
   let fixture: ComponentFixture<DownloadWorkPackageDialogComponent>;
@@ -95,6 +109,7 @@ describe('DownloadWorkPackageDialogComponent', () => {
         { provide: WorkPackageService, useValue: wpServiceMock },
         { provide: NotificationService, useValue: notifyMock },
         { provide: Clipboard, useValue: clipboardMock },
+        { provide: IvaService, useClass: MockIvaService },
       ],
     }).compileComponents();
 
@@ -115,7 +130,15 @@ describe('DownloadWorkPackageDialogComponent', () => {
   describe('initialization', () => {
     it('should load grant data', () => {
       expect(component['grant']).toBe(TEST_GRANT);
-      expect(component['iva']).toBe(TEST_GRANT.iva);
+      expect(component['iva']()).toBe(TEST_GRANT.iva);
+    });
+
+    it('should show an error message when the IVA could not be loaded', () => {
+      const ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
+      ivaService.userIvas.error.set(new Error('Internal server error'));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('Could not load IVA');
     });
 
     it('should load dataset from service', () => {

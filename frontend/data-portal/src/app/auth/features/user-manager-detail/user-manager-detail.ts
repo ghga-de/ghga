@@ -103,6 +103,8 @@ export class UserManagerDetailComponent implements OnInit {
   userIvas = computed(() =>
     this.#ivaService.userIvas.error() ? [] : this.#ivaService.userIvas.value(),
   );
+  ivaLoading = this.#ivaService.userIvas.isLoading;
+  ivaError = this.#ivaService.userIvas.error;
 
   #accessRequestService = inject(AccessRequestService);
 

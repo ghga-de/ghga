@@ -24,6 +24,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AccessGrantWithIva } from '@app/access-requests/models/access-requests';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
+import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
 import { ParagraphsComponent } from '@app/shared/ui/paragraphs/paragraphs';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
@@ -64,10 +65,22 @@ export class DownloadWorkPackageDialogComponent {
   #notify = inject(NotificationService);
   #wpService = inject(WorkPackageService);
   #datasets = this.#wpService.datasets;
+  #iva = inject(IvaService);
 
   protected grant = inject<AccessGrantWithIva>(MAT_DIALOG_DATA);
-  protected iva = this.grant.iva;
+  // Resolve the IVA reactively from the loaded user IVAs so the warning reflects
+  // the current load state instead of a stale snapshot taken when the dialog opened.
+  protected iva = computed(() => {
+    if (!this.grant.iva_id || this.#iva.userIvas.error()) return undefined;
+    return this.#iva.userIvas.value().find((i) => i.id === this.grant.iva_id);
+  });
+  protected ivaLoading = this.#iva.userIvas.isLoading;
+  protected ivaError = this.#iva.userIvas.error;
   protected readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+
+  constructor() {
+    this.#iva.loadUserIvas();
+  }
 
   protected datasetLoading = this.#datasets.isLoading;
   protected dataset = computed<DatasetWithExpiration | undefined>(() =>

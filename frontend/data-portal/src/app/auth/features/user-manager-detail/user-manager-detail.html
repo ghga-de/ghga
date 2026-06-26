@@ -154,7 +154,14 @@
       <mat-card-content
         class="divide-outline min-w-2xl space-y-3 divide-y-1 divide-solid"
       >
-        @if (userIvas().length) {
+        @if (ivaError()) {
+          <p class="text-error flex items-center">
+            <mat-icon fontIcon="error" class="me-2 shrink-0"></mat-icon> The IVAs could
+            not be loaded. Please try again later.
+          </p>
+        } @else if (ivaLoading()) {
+          <p>Loading IVAs…</p>
+        } @else if (userIvas().length) {
           @for (iva of userIvas(); track iva.id) {
             <div class="flex items-center gap-x-4 gap-y-4 pb-3">
               <span class="min-w-42"
