@@ -33,6 +33,18 @@ from ghga_connector.core.utils import modify_for_debug
 
 cli = typer.Typer(no_args_is_help=True)
 
+# Standard shell exit code for a process terminated by SIGINT (Ctrl+C).
+_SIGINT_EXIT_CODE = 130
+
+
+def _catch_cancellations(coroutine) -> None:
+    """Run an async command, exiting cleanly if the user aborts with Ctrl+C."""
+    try:
+        asyncio.run(coroutine)
+    except KeyboardInterrupt:
+        CLIMessageDisplay.failure("The operation was aborted by the user.")
+        raise typer.Exit(code=_SIGINT_EXIT_CODE) from None
+
 
 @cli.command(name="batch-upload", no_args_is_help=True)
 def batch_upload(  # noqa: PLR0913
@@ -87,7 +99,7 @@ def batch_upload(  # noqa: PLR0913
     to resume an interrupted batch. Files that fail to upload are retried automatically.
     """
     modify_for_debug(debug)
-    asyncio.run(
+    _catch_cancellations(
         async_batch_upload(
             tsv=tsv,
             my_public_key_path=my_public_key_path,
@@ -123,7 +135,7 @@ def ubox(
 ):
     """Open an interactive shell to manage an upload box (upload, ls, rm)."""
     modify_for_debug(debug)
-    asyncio.run(
+    _catch_cancellations(
         async_ubox(
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
@@ -165,7 +177,7 @@ def download(  # noqa: PLR0913
 ):
     """Wrapper for the async download function"""
     modify_for_debug(debug)
-    asyncio.run(
+    _catch_cancellations(
         async_download(
             output_dir=output_dir,
             my_public_key_path=my_public_key_path,

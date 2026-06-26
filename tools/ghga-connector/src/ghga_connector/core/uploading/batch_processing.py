@@ -33,6 +33,8 @@ from ghga_connector.core.uploading.uploader import Uploader
 
 log = logging.getLogger(__name__)
 
+USER_ABORT_EXCEPTIONS = (KeyboardInterrupt, asyncio.CancelledError)
+
 # The file state, as reported by the Upload API, that marks a cancelled (deleted)
 #  upload. A file in any other state is considered already present in the box.
 _CANCELLED_STATE = "cancelled"
@@ -191,9 +193,14 @@ def _signal_handler(signum, frame):
 async def perform_cleanup(*, uploader: Uploader, alias: str) -> None:
     """Perform file cleanup after an error or user cancellation.
 
-    Prevents subsequent keyboard cancellations from disrupting cleanup process.
+    Prevents a keyboard cancellation from disrupting the cleanup itself by swallowing
+    SIGINT for the duration of the cleanup, then restoring the previous handler so that
+    subsequent files in the batch can still be aborted with Ctrl+C.
+
+    Note: ``signal.signal()`` only works on the main thread, which is where the CLI runs
+    (via ``asyncio.run``), so this is safe here.
     """
-    signal.signal(signal.SIGINT, _signal_handler)
+    previous_handler = signal.signal(signal.SIGINT, _signal_handler)
 
     try:
         await uploader.delete_file()
@@ -208,6 +215,8 @@ async def perform_cleanup(*, uploader: Uploader, alias: str) -> None:
             "Upload process stopped. If applicable, any previously completed"
             + " file uploads remain uploaded."
         )
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
 
 
 @dataclass
@@ -259,6 +268,21 @@ async def upload_files_from_list(
 
         try:
             file_id, storage_alias = await uploader.initiate_file_upload()
+        except KeyboardInterrupt:
+            # Ctrl+C during initiation (before any bytes flow) halts the batch cleanly,
+            # mirroring the abort handling around upload_file() below. Note: initiation
+            # may already have created a server-side FileUpload before the interrupt;
+            # because no file_id was returned, we can't delete it here, so an orphan may
+            # be left in the "init" state. It can be removed manually with `ubox rm`.
+            # TODO: Automatically check for and delete stuck files so user doesn't have to
+            CLIMessageDisplay.failure(
+                f"Cancelled upload for {display_alias}. It is possible that the server-"
+                + "side upload was created anyway. If you are unable to create a new"
+                + f" upload for {display_alias} because of this, remove the server-side"
+                + f" upload by running `ghga-connector ubox`, then `rm {display_alias}`."
+            )
+            failed.extend(file_info_list[index:])
+            return BatchPassResult(failed=failed, halted=True)
         except Exception as err:
             CLIMessageDisplay.failure(str(err))
 
@@ -292,10 +316,10 @@ async def upload_files_from_list(
         )
         try:
             await uploader.upload_file(encryptor=encryptor)
-        except KeyboardInterrupt:
-            # User cancellation is handled here
+        except USER_ABORT_EXCEPTIONS:
+            # User cancellation is handled here.
             CLIMessageDisplay.failure(
-                f"User aborted upload for {display_alias}, (file ID {file_id}), deleting."
+                f"Upload aborted for {display_alias}, (file ID {file_id}), deleting."
             )
             await perform_cleanup(uploader=uploader, alias=display_alias)
             # An explicit user abort stops the whole batch rather than retrying.

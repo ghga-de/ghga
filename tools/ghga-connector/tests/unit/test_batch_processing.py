@@ -15,6 +15,7 @@
 
 """Unit tests for upload_files_from_list in batch_processing"""
 
+import signal
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest.mock import AsyncMock, patch
@@ -28,8 +29,10 @@ from ghga_connector.constants import BATCH_RETRY_BACKOFF_SEC
 from ghga_connector.core.uploading.batch_processing import (
     _MAX_NAME_WIDTH,
     _MIN_ELISION_SAVINGS,
+    USER_ABORT_EXCEPTIONS,
     BatchPassResult,
     _elide_middle,
+    perform_cleanup,
     run_batch_upload,
     upload_files_from_list,
 )
@@ -111,6 +114,100 @@ async def test_upload_files_from_list_deletes_on_errors(error: BaseException):
             )
 
         mock_uploader.delete_file.assert_called_once()
+
+
+@pytest.mark.parametrize("delete_raises", [None, RuntimeError("delete failed")])
+async def test_perform_cleanup_restores_sigint_handler(delete_raises):
+    """perform_cleanup must restore the previous SIGINT handler afterward, both on a
+    successful delete and when delete_file() raises, so Ctrl+C keeps working for the
+    rest of the batch.
+    """
+    sentinel_handler = signal.getsignal(signal.SIGINT)
+    uploader = AsyncMock()
+    if delete_raises is not None:
+        uploader.delete_file.side_effect = delete_raises
+
+    await perform_cleanup(uploader=uploader, alias="some-file")
+
+    assert signal.getsignal(signal.SIGINT) is sentinel_handler
+
+
+async def test_upload_files_from_list_halts_on_abort_during_init():
+    """Test that keyboard cancel during initiate_file_upload() stops batch processing
+    and performs cleanup. The current and remaining files should be listed as failed.
+    """
+    # Create a couple of test files to upload
+    with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2:
+        file_infos = [
+            make_file_info_for_upload(path=Path(f1.name), alias="first"),
+            make_file_info_for_upload(path=Path(f2.name), alias="second"),
+        ]
+
+        # Rig a mock uploader to error during initiation
+        aborting_uploader = AsyncMock()
+        aborting_uploader.initiate_file_upload.side_effect = KeyboardInterrupt
+        second_uploader = make_mock_uploader()
+
+        # Patch in the exploding mock uploader
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.Uploader",
+                side_effect=[aborting_uploader, second_uploader],
+            ),
+        ):
+            result = await upload_files_from_list(
+                upload_client=AsyncMock(),
+                file_info_list=file_infos,
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+            )
+
+        # Inspect the captured result and verify that `halted` is set to True
+        assert result.halted
+
+        # Make sure both files are reported as failed but no cleanup was done for the
+        #  second file because it was of course not started
+        assert [fi.alias for fi in result.failed] == ["first", "second"]
+        second_uploader.initiate_file_upload.assert_not_called()
+        aborting_uploader.delete_file.assert_not_called()
+
+
+@pytest.mark.parametrize("abort", USER_ABORT_EXCEPTIONS)
+async def test_upload_files_from_list_halts_on_abort_during_upload(
+    abort: BaseException,
+):
+    """Test that keyboard cancel during upload_file() stops batch processing and
+    performs cleanup. The current and remaining files should be listed as failed.
+    """
+    # Set up two test files and the rigged-to-blow Mock Uploader
+    with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2:
+        file_infos = [
+            make_file_info_for_upload(path=Path(f1.name), alias="first"),
+            make_file_info_for_upload(path=Path(f2.name), alias="second"),
+        ]
+        aborting_uploader = make_mock_uploader(upload_raises=abort)
+        second_uploader = make_mock_uploader()
+
+        # Patch in the mock uploader, but also mock the encryptor since it gets called
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.Uploader",
+                side_effect=[aborting_uploader, second_uploader],
+            ),
+            patch("ghga_connector.core.uploading.batch_processing.Crypt4GHEncryptor"),
+        ):
+            result = await upload_files_from_list(
+                upload_client=AsyncMock(),
+                file_info_list=file_infos,
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+            )
+
+        # Inspect the results - make sure halted=True, and only first file cleaned up
+        assert result.halted
+        assert [fi.alias for fi in result.failed] == ["first", "second"]
+        aborting_uploader.delete_file.assert_called_once()
+        second_uploader.initiate_file_upload.assert_not_called()
 
 
 async def test_upload_process_stops_on_failure():
