@@ -150,3 +150,15 @@ def detect_duplicates(values: list[Any], field_name: str = ""):
     """Raise an error if there are duplicate values in the list"""
     if len(set(values)) < len(values):
         raise ValueError(f"Duplicate {field_name} values detected.")
+
+
+def human_readable_size(num_bytes: int | None) -> str:
+    """Render a byte count in a compact, human-readable form."""
+    if num_bytes is None:
+        return "-"
+    size = float(num_bytes)
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB", "PiB"):
+        if abs(size) < 1024 or unit == "PiB":
+            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} PiB"

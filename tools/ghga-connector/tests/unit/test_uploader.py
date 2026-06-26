@@ -81,6 +81,30 @@ def make_uploader(
     )
 
 
+async def test_new_progress_bar_uses_display_name():
+    """The progress bar label uses display_name when given, else the file alias."""
+    with NamedTemporaryFile() as f:
+        file_info = make_file_info_for_upload(
+            path=Path(f.name), alias=FILE_ALIAS, decrypted_size=1000
+        )
+
+        # Default: the bar falls back to the file alias.
+        default = Uploader(
+            upload_client=AsyncMock(), file_info=file_info, max_concurrent_uploads=1
+        )
+        assert default.new_progress_bar()._file_name == FILE_ALIAS
+
+        # An explicit display_name is used for the bar; the API alias is untouched.
+        custom = Uploader(
+            upload_client=AsyncMock(),
+            file_info=file_info,
+            max_concurrent_uploads=1,
+            display_name="short … name",
+        )
+        assert custom.new_progress_bar()._file_name == "short … name"
+        assert custom._file_alias == FILE_ALIAS
+
+
 async def test_initiate_file_upload_returns_file_id():
     """Make sure initiate_file_upload returns the file ID provided by the upload client."""
     with NamedTemporaryFile() as f:

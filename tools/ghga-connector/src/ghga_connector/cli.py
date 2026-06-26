@@ -16,35 +16,33 @@
 """CLI-specific wrappers around core functions."""
 
 import asyncio
-import os
 from pathlib import Path
 
 import typer
 
 from ghga_connector import exceptions
-from ghga_connector.constants import C4GH
+from ghga_connector.constants import C4GH, DEFAULT_BATCH_MAX_RETRIES
 from ghga_connector.core import CLIMessageDisplay
 from ghga_connector.core.main import (
+    async_batch_upload,
     async_download,
     async_ubox,
-    async_upload,
     decrypt_file,
 )
-from ghga_connector.core.utils import modify_for_debug, strtobool
+from ghga_connector.core.utils import modify_for_debug
 
 cli = typer.Typer(no_args_is_help=True)
 
 
-@cli.command(no_args_is_help=True)
-def upload(
-    file_info: list[str] = typer.Argument(
+@cli.command(name="batch-upload", no_args_is_help=True)
+def batch_upload(  # noqa: PLR0913
+    tsv: Path = typer.Option(
         ...,
         help=(
-            "The comma-separated file alias and path. If only a file path is supplied"
-            + " then the file name will be used instead. Example:"
-            + " 'my_file,./files/abc.bam' or './files/abc.bam' (in the latter, the file"
-            + " alias would be 'abc.bam'). Specify as many files as needed, e.g.:"
-            + " 'ghga-connector upload alias1,file1.bam file2.bam alias3,file3.bam ...'"
+            "Path to a TSV file describing the files to upload. The first column must"
+            + " contain the file path and the second column the file alias. Relative"
+            + " file paths can only be used if this command is run from same directory."
+            + " Prefer to use absolute paths."
         ),
     ),
     my_public_key_path: Path = typer.Option(
@@ -62,24 +60,44 @@ def upload(
         help="Passphrase for the encrypted private key. "
         + "Only needs to be provided if the key is actually encrypted.",
     ),
+    max_retries: int = typer.Option(
+        DEFAULT_BATCH_MAX_RETRIES,
+        help="Maximum number of automatic retries for files that fail to upload.",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        help="List the files that would be uploaded (after skipping any already in the"
+        + " upload box) without uploading anything.",
+    ),
+    shorten_names: bool = typer.Option(
+        False,
+        "--shorten-names",
+        help="Shorten very long file aliases in the output, keeping the start and end"
+        + " (e.g. 'sample-001 … -run5.bam'). Full aliases are shown by default."
+        + " This is only for improving readability and does not affect how"
+        + " data is sent to GHGA.",
+    ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
     ),
 ):
-    """Upload one or more files asynchronously"""
+    """Upload a batch of files described by a TSV file.
+
+    Files already present in the upload box are skipped, so the command can be re-run
+    to resume an interrupted batch. Files that fail to upload are retried automatically.
+    """
     modify_for_debug(debug)
     asyncio.run(
-        async_upload(
-            unparsed_file_info=file_info,
+        async_batch_upload(
+            tsv=tsv,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
             passphrase=passphrase,
+            max_retries=max_retries,
+            dry_run=dry_run,
+            shorten=shorten_names,
         )
     )
-
-
-if strtobool(os.getenv("UPLOAD_ENABLED") or "false"):
-    cli.command(no_args_is_help=True)(upload)
 
 
 @cli.command()

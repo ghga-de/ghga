@@ -21,6 +21,7 @@ from pathlib import Path
 import httpx
 
 from ghga_connector.config import get_config, set_runtime_config
+from ghga_connector.constants import DEFAULT_BATCH_MAX_RETRIES
 from ghga_connector.core.client import async_client
 from ghga_connector.core.downloading.api_calls import DownloadClient
 from ghga_connector.core.downloading.batch_processing import FileStager
@@ -30,8 +31,8 @@ from ghga_connector.core.downloading.downloader import (
 )
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.batch_processing import (
-    parse_file_info_for_upload,
-    upload_files_from_list,
+    load_file_info_from_tsv,
+    run_batch_upload,
 )
 from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
 from ghga_connector.core.uploading.ubox_shell import UboxShell
@@ -43,34 +44,59 @@ from .crypt import Crypt4GHDecryptor
 from .message_display import CLIMessageDisplay
 
 
-async def async_upload(
+async def async_batch_upload(  # noqa: PLR0913
     *,
-    unparsed_file_info: list[str],
+    tsv: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
     passphrase: str | None = None,
+    max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
+    dry_run: bool = False,
+    shorten: bool = False,
 ):
-    """Upload one or more files asynchronously"""
-    parsed_file_info = parse_file_info_for_upload(unparsed_file_info)
+    """Upload a batch of files described by a TSV file asynchronously.
+
+    The TSV is expected to have the file path in the first column and the file alias
+    in the second column. Files already present in the upload box are skipped and any
+    files that fail to upload are retried up to `max_retries` times. If `dry_run` is
+    True, the files that would be uploaded are listed but no uploads are performed. If
+    `shorten` is set, long aliases are middle-elided in the output.
+
+    A note on file paths: Relative file paths interpreted in the context of the current
+    working directory when the batch upload command is executed.
+    """
+    core_file_info_list = load_file_info_from_tsv(tsv)
     async with async_client() as client, set_runtime_config(client=client):
         await upload_files(
             client=client,
-            core_file_info_list=parsed_file_info,
+            core_file_info_list=core_file_info_list,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
             passphrase=passphrase,
+            max_retries=max_retries,
+            dry_run=dry_run,
+            shorten=shorten,
         )
 
 
-async def upload_files(
+async def upload_files(  # noqa: PLR0913
     *,
     client: httpx.AsyncClient,
     core_file_info_list: list[CoreFileInfo],
     my_public_key_path: Path,
     my_private_key_path: Path,
     passphrase: str | None = None,
+    max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
+    dry_run: bool = False,
+    shorten: bool = False,
 ) -> None:
-    """Core command to upload one or more files. Can be called by CLI, GUI, etc."""
+    """Core command to upload a batch of files. Can be called by CLI, GUI, etc.
+
+    Files already present in the upload box are skipped and failures are retried up to
+    `max_retries` times. If `dry_run` is True, the files that would be uploaded are
+    listed but no uploads are performed. If `shorten` is set, long aliases are
+    middle-elided in the output.
+    """
     my_public_key = utils.get_public_key(my_public_key_path)
     my_private_key = utils.get_private_key(my_private_key_path, passphrase)
     work_package_client = WorkPackageClient(
@@ -85,12 +111,14 @@ async def upload_files(
         for cfi in core_file_info_list
     ]
 
-    CLIMessageDisplay.display(f"Preparing to upload {len(core_file_info_list)} files")
-    await upload_files_from_list(
+    await run_batch_upload(
         upload_client=upload_client,
         file_info_list=full_file_info,
         my_private_key=my_private_key,
         max_concurrent_uploads=config.max_concurrent_uploads,
+        max_retries=max_retries,
+        dry_run=dry_run,
+        shorten=shorten,
     )
 
 

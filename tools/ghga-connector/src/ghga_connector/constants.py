@@ -24,10 +24,15 @@ DEFAULT_PART_SIZE = 64 * (1024**2)  # 64 MiB
 TIMEOUT = 60.0
 TIMEOUT_LONG = 5 * TIMEOUT + 10
 MAX_PART_NUMBER = 10000
-MAX_RETRIES = 5
+MAX_RETRIES = 5  # retries for a single file part at the HTTP layer (see uploader.py)
 MAX_WAIT_TIME = 60 * 60
 MAX_UPLOAD_BACKOFF_SEC = 360
 UPLOAD_RETRY_BACKOFF_SEC = 5
+# Batch upload: how many times a failed file is retried, and how long to wait between
+#  retry passes. Kept separate from the part-level retry constants above so the two can
+#  be tuned independently.
+DEFAULT_BATCH_MAX_RETRIES = 3
+BATCH_RETRY_BACKOFF_SEC = 5
 C4GH = ".c4gh"
 CACHE_MIN_FRESH = 3
 DOWNLOAD_URL_LIFESPAN = 60  # 1 minute

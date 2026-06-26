@@ -49,10 +49,16 @@ class Uploader:
         upload_client: UploadClient,
         file_info: FileInfoForUpload,
         max_concurrent_uploads: int,
+        display_name: str | None = None,
     ):
-        """Instantiate the Uploader"""
+        """Instantiate the Uploader.
+
+        ``display_name`` is used only for the progress bar label; if omitted, the file
+        alias is used. The alias sent to the Upload API is always the full alias.
+        """
         self._upload_client = upload_client
         self._file_alias = file_info.alias
+        self._display_name = display_name or file_info.alias
         self._file_path = file_info.path
         self._file_info = file_info
         self._semaphore = asyncio.Semaphore(max_concurrent_uploads)
@@ -60,7 +66,7 @@ class Uploader:
     def new_progress_bar(self) -> UploadProgressBar:
         """Create a new progress bar"""
         return UploadProgressBar(
-            file_name=self._file_alias, file_size=self._file_info.decrypted_size
+            file_name=self._display_name, file_size=self._file_info.decrypted_size
         )
 
     async def initiate_file_upload(

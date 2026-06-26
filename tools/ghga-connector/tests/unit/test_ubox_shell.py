@@ -33,8 +33,8 @@ from ghga_connector.core.uploading.ubox_shell import (
     _expand_globs,
     _extract_alias,
     _format_listing,
-    _human_readable_size,
 )
+from ghga_connector.core.utils import human_readable_size
 from ghga_connector.exceptions import FileNotInBoxError
 
 
@@ -101,10 +101,10 @@ def test_expand_globs(tmp_path: Path):
 
 def test_human_readable_size():
     """Byte counts are rendered compactly."""
-    assert _human_readable_size(None) == "-"
-    assert _human_readable_size(512) == "512 B"
-    assert _human_readable_size(1024) == "1.0 KiB"
-    assert _human_readable_size(1024**2) == "1.0 MiB"
+    assert human_readable_size(None) == "-"
+    assert human_readable_size(512) == "512 B"
+    assert human_readable_size(1024) == "1.0 KiB"
+    assert human_readable_size(1024**2) == "1.0 MiB"
 
 
 def test_format_listing_contains_fields():

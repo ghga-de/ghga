@@ -23,7 +23,8 @@ import httpx
 import pytest
 
 from ghga_connector import exceptions
-from ghga_connector.core.main import parse_file_info_for_upload, upload_files
+from ghga_connector.core.main import upload_files
+from ghga_connector.core.uploading.batch_processing import parse_file_info_for_upload
 from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.config import get_test_config
@@ -114,16 +115,23 @@ async def test_upload_files_applies_config_part_size(
     test_part_size = 12 * 1024 * 1024  # 12 MiB — a value distinct from the default
     captured: list[FileInfoForUpload] = []
 
-    async def mock_upload_files_from_list(
-        *, upload_client, file_info_list, my_private_key, max_concurrent_uploads
+    async def mock_run_batch_upload(
+        *,
+        upload_client,
+        file_info_list,
+        my_private_key,
+        max_concurrent_uploads,
+        max_retries,
+        dry_run,
+        shorten,
     ):
         captured.extend(file_info_list)
 
     with (
         NamedTemporaryFile() as f,
         patch(
-            "ghga_connector.core.main.upload_files_from_list",
-            mock_upload_files_from_list,
+            "ghga_connector.core.main.run_batch_upload",
+            mock_run_batch_upload,
         ),
         patch(
             "ghga_connector.core.uploading.api_calls.is_service_healthy",
