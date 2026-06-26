@@ -44,8 +44,12 @@ function setVersion(settings) {
 
 /**
  * Parse a .env file and return its key-value pairs.
- * Lines starting with # and empty lines are ignored.
- * Values may be optionally quoted with single or double quotes.
+ *
+ * Follows common dotenv conventions: blank lines and # comments are ignored,
+ * keys may carry an optional `export ` prefix, and values may be single- or
+ * double-quoted (inner whitespace preserved). Double-quoted values expand the
+ * \n, \r, \t, \" and \\ escapes; single-quoted ones are literal. Inline
+ * comments and variable interpolation are not supported.
  *
  * @param {string} filePath - Path to the .env file.
  * @returns {Object} Parsed key-value pairs.
@@ -64,13 +68,23 @@ function parseEnvFile(filePath) {
     if (!trimmed || trimmed.startsWith('#')) continue;
     const eq = trimmed.indexOf('=');
     if (eq === -1) continue;
-    const key = trimmed.slice(0, eq).trim();
+    const key = trimmed
+      .slice(0, eq)
+      .trim()
+      .replace(/^export\s+/, '');
     let value = trimmed.slice(eq + 1).trim();
+    const quote = value[0];
     if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
+      (quote === '"' || quote === "'") &&
+      value.length >= 2 &&
+      value.endsWith(quote)
     ) {
       value = value.slice(1, -1);
+      if (quote === '"') {
+        value = value.replace(/\\([nrt"\\])/g, (_, c) =>
+          c === 'n' ? '\n' : c === 'r' ? '\r' : c === 't' ? '\t' : c,
+        );
+      }
     }
     result[key] = value;
   }
