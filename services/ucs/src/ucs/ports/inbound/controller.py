@@ -179,7 +179,8 @@ class UploadControllerPort(ABC):
         def __init__(self, *, box_id: UUID4, max_concurrent: int):
             self.max_concurrent = max_concurrent
             msg = (
-                f"Box {box_id} already has {max_concurrent} in-progress upload(s)."
+                f"Rejected upload initiation against box {box_id} because"
+                f" {max_concurrent} concurrent uploads are already in progress."
                 " Cancel or complete an existing upload before starting another."
             )
             super().__init__(msg)
@@ -201,7 +202,7 @@ class UploadControllerPort(ABC):
 
         def __init__(self, *, alias: str):
             msg = (
-                f"Failed to create a FileUpload for file alias {alias} because"
+                f"Rejected upload initiation for file alias {alias} because"
                 + " one already exists."
             )
             super().__init__(msg)

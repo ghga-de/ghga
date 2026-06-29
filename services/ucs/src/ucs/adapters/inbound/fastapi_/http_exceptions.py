@@ -29,7 +29,7 @@ class HttpUnknownStorageAliasError(HttpCustomExceptionBase):
         """Construct message and initialize exception"""
         super().__init__(
             status_code=status_code,
-            description=("There was a problem identifying the storage alias."),
+            description="",
             data={},
         )
 
@@ -48,7 +48,7 @@ class HttpBoxNotFoundError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(f"FileUploadBox with ID {box_id} not found."),
+            description="",
             data={"box_id": str(box_id)},
         )
 
@@ -70,10 +70,7 @@ class HttpBoxStateError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"Can't perform this action because the box with ID {box_id} is"
-                + f" {box_state}."
-            ),
+            description="",
             data={"box_id": str(box_id), "box_state": box_state},
         )
 
@@ -92,9 +89,7 @@ class HttpBoxVersionError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"Requested version of FileUploadBox with ID {box_id} is outdated."
-            ),
+            description="",
             data={"box_id": str(box_id)},
         )
 
@@ -113,10 +108,7 @@ class HttpFileUploadAlreadyExistsError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"Failed to create a FileUpload for the alias {alias} because"
-                + " another one with the same alias already exists."
-            ),
+            description="",
             data={"alias": alias},
         )
 
@@ -135,11 +127,7 @@ class HttpOrphanedMultipartUploadError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"A multipart upload is already in progress for file {file_alias}, but"
-                + " cannot be aborted due to a system error. Please request file"
-                + " deletion and then attempt the upload again."
-            ),
+            description="",
             data={"file_alias": file_alias},
         )
 
@@ -153,7 +141,7 @@ class HttpS3UploadNotFoundError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description="S3 multipart upload not found.",
+            description="",
             data={},
         )
 
@@ -172,7 +160,7 @@ class HttpFileUploadNotFoundError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(f"FileUpload with ID {file_id} not found."),
+            description="",
             data={"file_id": str(file_id)},
         )
 
@@ -192,8 +180,7 @@ class HttpUploadCompletionError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description="An error occurred while completing the file upload. Delete the"
-            + " file from the file upload box and retry.",
+            description="",
             data={"box_id": str(box_id), "file_id": str(file_id)},
         )
 
@@ -207,7 +194,7 @@ class HttpUploadAbortError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description="An error occurred while canceling the file upload.",
+            description="",
             data={},
         )
 
@@ -226,10 +213,7 @@ class HttpChecksumMismatchError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"The checksum supplied for file {file_id} doesn't match the value"
-                + " calculated by S3."
-            ),
+            description="",
             data={"file_id": str(file_id)},
         )
 
@@ -248,10 +232,7 @@ class HttpUploadSizeMismatchError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"The actual size of the uploaded object for file {file_id}"
-                + " doesn't match the declared encrypted_size."
-            ),
+            description="",
             data={"file_id": str(file_id)},
         )
 
@@ -279,10 +260,7 @@ class HttpMaxSizeTooLowError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"Cannot set max_size to {max_size} for box {box_id} because"
-                f" {current_size} bytes are already committed."
-            ),
+            description="",
             data={
                 "box_id": str(box_id),
                 "max_size": max_size,
@@ -316,10 +294,7 @@ class HttpBoxMaxSizeExceededError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"Cannot add the file {file_alias} because it would exceed the maximum"
-                + " total size limit allowed for the box."
-            ),
+            description="",
             data={
                 "box_id": str(box_id),
                 "max_size": max_size,
@@ -350,10 +325,7 @@ class HttpTooManyOpenUploadsError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"Box {box_id} already has {max_concurrent} in-progress upload(s)."
-                + " Cancel or complete an existing upload before starting another."
-            ),
+            description="",
             data={"box_id": str(box_id), "max_concurrent": max_concurrent},
         )
 
@@ -373,11 +345,7 @@ class HttpPartSizeError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"The part size {part_size} for file '{file_alias}' is invalid."
-                + " It must be between 5 MiB and 5 GiB and no less than 1/10000th of"
-                + " the total file size."
-            ),
+            description="",
             data={"file_alias": file_alias, "part_size": part_size},
         )
 
@@ -403,10 +371,7 @@ class HttpIncompleteUploadsError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"Cannot lock or archive box {box_id} because"
-                f" {len(file_ids)} incomplete upload(s) exist."
-            ),
+            description="",
             data={
                 "box_id": str(box_id),
                 "file_ids": [[str(fid), alias] for fid, alias in file_ids],
@@ -428,10 +393,7 @@ class HttpFileUploadStateError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=(
-                f"The requested action cannot be performed on FileUpload {file_id}"
-                " in its current state."
-            ),
+            description="",
             data={"file_id": str(file_id)},
         )
 

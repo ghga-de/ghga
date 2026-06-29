@@ -88,12 +88,12 @@ class UploadController(UploadControllerPort):
             box = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
-            log.error(error)
+            log.info(error)
             raise error from err
 
         if box.version != version:
             error = self.BoxVersionError(box_id=box_id)
-            log.error(error, extra={"box_id": box_id, "version": version})
+            log.info(error, extra={"box_id": box_id, "version": version})
             raise error
 
         return box
@@ -165,7 +165,7 @@ class UploadController(UploadControllerPort):
             #  cancellation/removal before a new upload can be started for this alias.
             if not replaced:
                 error = self.FileUploadAlreadyExists(alias=alias)
-                log.error(error, extra=logging_extras)
+                log.info(error, extra=logging_extras)  # intentionally set to INFO
                 raise error from None  # don't need Unique* error in the trace
         except Exception as err:
             # This branch handles all other errors that *don't* signify an existing file
@@ -267,13 +267,13 @@ class UploadController(UploadControllerPort):
             box = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
-            log.error(error)
+            log.info(error)
             raise error from err
 
         # Verify that the box is not locked or archived
         if box.state != "open":
             error = self.BoxStateError(box_id=box_id, box_state=box.state)
-            log.error(error)
+            log.info(error)
             raise error
 
         return box
@@ -392,7 +392,7 @@ class UploadController(UploadControllerPort):
             error = self.TooManyOpenUploadsError(
                 box_id=box.id, max_concurrent=max_concurrent
             )
-            log.error(error, extra=extra)
+            log.info(error, extra=extra)  # intentionally set to INFO
             raise error
 
         # Ensure file size doesn't exceed box limit
@@ -400,7 +400,7 @@ class UploadController(UploadControllerPort):
             error = self.BoxMaxSizeExceededError(
                 box_id=box.id, max_size=box.max_size, current_size=current_size
             )
-            log.error(error, extra=extra)
+            log.info(error, extra=extra)
             raise error
 
         # Ensure part size is okay - verify size & implied part count. Min and Max part
@@ -497,7 +497,7 @@ class UploadController(UploadControllerPort):
             file_upload = await self._file_upload_dao.get_by_id(file_id)
         except ResourceNotFoundError as err:
             error = self.FileUploadNotFound(file_id=file_id)
-            log.error(
+            log.info(
                 error,
                 extra={"file_id": file_id, "part_no": part_no},
             )
@@ -592,7 +592,7 @@ class UploadController(UploadControllerPort):
                 "expected_checksum": expected_checksum,
                 "actual_checksum": actual_checksum,
             }
-            log.error(error, extra=extra)
+            log.info(error, extra=extra)
             raise error
 
     async def _verify_object_size(self, *, file_upload: FileUpload) -> None:
@@ -626,7 +626,7 @@ class UploadController(UploadControllerPort):
             file_upload.failure_reason = "Actual object size didn't match expected size"
             await self._file_upload_dao.update(file_upload)
             error = self.UploadSizeMismatchError(file_id=file_id)
-            log.error(
+            log.info(
                 error,
                 extra={
                     "bucket_id": file_upload.bucket_id,
@@ -672,7 +672,7 @@ class UploadController(UploadControllerPort):
             file_upload = await self._file_upload_dao.get_by_id(file_id)
         except ResourceNotFoundError as err:
             error = self.FileUploadNotFound(file_id=file_id)
-            log.error(error, extra=extra)
+            log.info(error, extra=extra)
             raise error from err
 
         if file_upload.state in ("cancelled", "failed"):
@@ -680,7 +680,7 @@ class UploadController(UploadControllerPort):
                 file_id=file_id,
                 details=f"Cannot complete a FileUpload in the '{file_upload.state}' state.",
             )
-            log.error(error, extra=extra)
+            log.info(error, extra=extra)
             raise error
 
         # Exit early if the FileUpload is complete (already in the inbox or archived)
@@ -753,7 +753,7 @@ class UploadController(UploadControllerPort):
             file_upload = await self._file_upload_dao.get_by_id(file_id)
         except ResourceNotFoundError as err:
             error = self.FileUploadNotFound(file_id=file_id)
-            log.error(error)
+            log.info(error)
             raise error from err
 
         # Remove the file from S3 only if it's still in the inbox state. After that
@@ -808,19 +808,19 @@ class UploadController(UploadControllerPort):
             box = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
-            log.error(error)
+            log.info(error)
             raise error from err
 
         # Verify the version
         if version is not None and box.version != version:
             error = self.BoxVersionError(box_id=box_id)
-            log.error(error, extra={"box_id": box_id, "version": version})
+            log.info(error, extra={"box_id": box_id, "version": version})
             raise error
 
         # Raise an error if the box is archived
         if box.state == "archived":
             error = self.BoxStateError(box_id=box_id, box_state=box.state)
-            log.error(error)
+            log.info(error)
             raise error
 
         # Lock the box so no new uploads can be initiated while sweeping
@@ -981,7 +981,7 @@ class UploadController(UploadControllerPort):
             error = self.BoxMaxSizeTooLowError(
                 box_id=box_id, max_size=max_size, current_size=box.size
             )
-            log.error(error, extra={"box_id": box_id, "max_size": max_size})
+            log.info(error, extra={"box_id": box_id, "max_size": max_size})
             raise error
 
         box.version += 1
@@ -1035,7 +1035,7 @@ class UploadController(UploadControllerPort):
             )
             if file_ids:
                 error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
-                log.error(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
+                log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
                 raise error
 
         box.version += 1
@@ -1059,7 +1059,7 @@ class UploadController(UploadControllerPort):
             await self._file_upload_box_dao.update(box)
             log.info("Unlocked box with ID %s", box_id)
         elif box.state == "archived":
-            log.error("Can't unlock box %s because it's already archived.", box_id)
+            log.info("Can't unlock box %s because it's already archived.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
         else:
             log.info("Box with ID %s is already unlocked", box_id)
@@ -1081,7 +1081,7 @@ class UploadController(UploadControllerPort):
             log.info("Box with ID %s is already archived", box_id)
             return
         elif box.state == "open":
-            log.error("Can't unlock box %s because it's still open.", box_id)
+            log.info("Can't unlock box %s because it's still open.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
 
         # Scan for incomplete files
@@ -1094,7 +1094,7 @@ class UploadController(UploadControllerPort):
         )
         if file_ids:
             error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
-            log.error(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
+            log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
             raise error
 
         # Verify that all files are in state 'interrogated' or 'awaiting_archival'.
@@ -1142,7 +1142,7 @@ class UploadController(UploadControllerPort):
             _ = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
-            log.error(error)
+            log.info(error)
             raise error from err
 
         try:
