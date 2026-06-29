@@ -204,8 +204,8 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // All access grants
   'GET /api/ars/access-grants': accessGrants,
 
-  // Specific dataset and user access requests
-  'GET /api/ars/access-grants?*': getAccessGrants('doe@test.dev'),
+  // Access grants of a specific user
+  'GET /api/ars/access-grants?user_id=doe@test.dev': getAccessGrants('doe@test.dev'),
 
   // User Grants
   'GET /api/ars/access-grants/doe@test.dev': accessGrants,

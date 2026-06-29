@@ -6,6 +6,15 @@
 
 import { Iva } from '@app/ivas/models/iva';
 
+/**
+ * The status of an access request.
+ *
+ * This is a terminal resolution of the request by a data steward: once a
+ * request is allowed or denied it is never updated again. It is therefore
+ * shown to users under the label "Resolution" (rather than "Status", which
+ * would suggest a live state), to distinguish it from the access grant status,
+ * which does reflect the current state. The internal values are kept as-is.
+ */
 export enum AccessRequestStatus {
   allowed = 'allowed',
   denied = 'denied',
@@ -28,6 +37,19 @@ export const AccessGrantStatusClass: Record<AccessGrantStatus, string> = {
   active: 'text-success',
   waiting: 'text-warning',
   expired: 'text-error',
+};
+
+/**
+ * User-facing labels for the current (aggregated) access grant state, as shown
+ * in the access request manager's "Access" column and on the request details
+ * page. The grant's "waiting" state (access granted but not yet started) reads
+ * better as "upcoming" in this context. The access grant manager itself keeps
+ * its own raw wording.
+ */
+export const AccessGrantStateLabel: Record<AccessGrantStatus, string> = {
+  [AccessGrantStatus.active]: 'active',
+  [AccessGrantStatus.waiting]: 'upcoming',
+  [AccessGrantStatus.expired]: 'expired',
 };
 
 export interface AccessRequest {

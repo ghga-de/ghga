@@ -1,8 +1,7 @@
 @if (accessRequestsAreLoading()) {
   <p class="text-base">Loading access requests...</p>
 } @else {
-  @let columns =
-    ['ticket', 'dataset', 'requester', 'period', 'requested', 'status', 'details'];
+  @let columns = this.columns();
   <div class="overflow-auto">
     <table
       mat-table
@@ -43,7 +42,11 @@
       </ng-container>
       <ng-container matColumnDef="period">
         <th mat-header-cell *matHeaderCellDef mat-sort-header class="min-w-64">
-          Validity Period
+          @if (pendingOnly()) {
+            Validity Period
+          } @else {
+            Requested Validity
+          }
         </th>
         <td mat-cell *matCellDef="let ar">
           {{ ar.access_starts | date: periodFormat : periodTimeZone }} to
@@ -51,19 +54,24 @@
         </td>
       </ng-container>
       <ng-container matColumnDef="requested">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Creation date</th>
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Created</th>
         <td mat-cell *matCellDef="let ar">
           {{ ar.request_created | date }}
         </td>
       </ng-container>
       <ng-container matColumnDef="status">
+        <!--
+          The access request status (pending/allowed/denied) is a terminal
+          resolution that is never updated once decided, so it is labelled
+          "Resolution" for users to distinguish it from the live grant status.
+        -->
         <th
           mat-header-cell
           *matHeaderCellDef
           class="min-w-40 capitalize"
           mat-sort-header
         >
-          Status
+          Resolution
         </th>
         <td
           mat-cell
@@ -71,6 +79,32 @@
           *matCellDef="let ar"
         >
           {{ ar.status }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="grant">
+        <!--
+          The aggregated current access grant state for the request's user and
+          dataset. Shown as "Access" since (unlike the request resolution) it
+          reflects the live state. The grant's "waiting" state is relabelled
+          "upcoming" here to read better under this header.
+        -->
+        <th
+          mat-header-cell
+          *matHeaderCellDef
+          class="min-w-40 capitalize"
+          mat-sort-header
+        >
+          Access
+        </th>
+        <td mat-cell class="capitalize" *matCellDef="let ar">
+          @let grant = grantState().get(ar.id);
+          @if (grant) {
+            <span class="{{ grant | AccessGrantStatusClassPipe }}">{{
+              accessLabels[grant]
+            }}</span>
+          } @else {
+            <span class="text-gray-500">None</span>
+          }
         </td>
       </ng-container>
       <ng-container matColumnDef="details">
@@ -96,7 +130,7 @@
       ></tr>
 
       <tr class="mat-row" *matNoDataRow>
-        <td class="mat-cell p-4 text-base" colspan="6">
+        <td class="mat-cell p-4 text-base" [attr.colspan]="columns.length">
           No access requests found. Try removing some filter conditions.
         </td>
       </tr>

@@ -96,13 +96,13 @@
               <mat-form-field class="grow">
                 <mat-label>
                   @if (status()) {
-                    Request status
+                    Resolution
                   } @else {
-                    All request statuses
+                    All resolutions
                   }
                 </mat-label>
                 <mat-select [(ngModel)]="status">
-                  <mat-option [value]="undefined">All request statuses</mat-option>
+                  <mat-option [value]="undefined">All resolutions</mat-option>
                   @for (opt of statusOptions; track opt) {
                     <mat-option [value]="opt.value">{{
                       opt.text | CapitalisePipe
@@ -112,7 +112,7 @@
               </mat-form-field>
               <button
                 mat-icon-button
-                aria-label="Remove filter for request status"
+                aria-label="Remove filter for resolution"
                 [class.invisible]="!this.status()"
                 (click)="this.status.set(undefined)"
                 data-umami-event="Access Request Filters Status Clear Clicked"
@@ -164,7 +164,7 @@
               </mat-form-field>
               <button
                 mat-icon-button
-                aria-label="Remove filter for dates ranging from"
+                aria-label="Remove filter for dates ranging to"
                 [class.invisible]="!this.toDate()"
                 (click)="this.toDate.set(undefined)"
                 data-umami-event="AR Filters Request Created Until Clear Clicked"

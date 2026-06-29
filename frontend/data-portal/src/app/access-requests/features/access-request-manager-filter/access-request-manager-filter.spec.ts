@@ -107,7 +107,7 @@ describe('AccessRequestManagerFilterComponent', () => {
   });
 
   it('should set the filter after selecting a status', async () => {
-    const combobox = screen.getByRole('combobox', { name: 'All request statuses' });
+    const combobox = screen.getByRole('combobox', { name: 'All resolutions' });
 
     await userEvent.click(combobox);
     await fixture.whenStable();

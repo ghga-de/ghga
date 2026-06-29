@@ -22,7 +22,13 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Router, RouterLink } from '@angular/router';
-import { AccessRequest } from '@app/access-requests/models/access-requests';
+import {
+  AccessGrantStateLabel,
+  AccessGrantStatus,
+  AccessRequest,
+  AccessRequestStatus,
+} from '@app/access-requests/models/access-requests';
+import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class-pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
@@ -49,6 +55,7 @@ import {
     MatRippleModule,
     DatePipe,
     AccessRequestStatusClassPipe,
+    AccessGrantStatusClassPipe,
     MatIconModule,
     RouterLink,
   ],
@@ -66,6 +73,61 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
   accessRequests = this.#ars.allAccessRequestsFiltered;
   accessRequestsAreLoading = this.#accessRequests.isLoading;
   accessRequestsError = this.#accessRequests.error;
+
+  #filter = this.#ars.allAccessRequestsFilter;
+
+  /**
+   * Whether the list is filtered to pending requests only. In that case the
+   * grant state is irrelevant (a pending request has no grant yet), so the
+   * grant-related columns are hidden and grants are not loaded.
+   */
+  pendingOnly = computed(() => this.#filter().status === AccessRequestStatus.pending);
+
+  /**
+   * The table columns to display, depending on the current filter.
+   */
+  columns = computed<string[]>(() =>
+    this.pendingOnly()
+      ? ['ticket', 'dataset', 'requester', 'requested', 'period', 'status', 'details']
+      : [
+          'ticket',
+          'dataset',
+          'requester',
+          'requested',
+          'period',
+          'status',
+          'grant',
+          'details',
+        ],
+  );
+
+  /**
+   * Lazily load all access grants once the list shows more than pending
+   * requests, so that the grant state can be derived for the grant column.
+   */
+  #loadGrantsEffect = effect(() => {
+    if (!this.pendingOnly()) this.#ars.loadAllAccessGrants();
+  });
+
+  /**
+   * Map from access request ID to the aggregated current grant state of the
+   * corresponding user and dataset (undefined if there is no matching grant).
+   */
+  grantState = computed<Map<string, AccessGrantStatus | undefined>>(
+    () =>
+      new Map(
+        this.accessRequests().map((ar) => [
+          ar.id,
+          this.#ars.grantStateFor(ar.user_id, ar.dataset_id),
+        ]),
+      ),
+  );
+
+  /**
+   * User-facing labels for the aggregated grant state shown in the "Access"
+   * column, shared with the access request details page.
+   */
+  accessLabels = AccessGrantStateLabel;
 
   source = new MatTableDataSource<AccessRequest>([]);
 
@@ -97,6 +159,12 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
       case 'status':
         const rank = { allowed: 0, pending: 1, denied: 2 }[ar.status as string] ?? 3;
         return `${rank}:${ar.access_starts}-${ar.access_ends})`;
+      case 'grant':
+        const grantRank =
+          { active: 0, waiting: 1, expired: 2 }[
+            this.#ars.grantStateFor(ar.user_id, ar.dataset_id) as string
+          ] ?? 3;
+        return `${grantRank}:${ar.access_ends})`;
       case 'period':
         return `${ar.access_starts}-${ar.access_ends})`;
       case 'requested':

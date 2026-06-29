@@ -47,7 +47,7 @@
               <span>{{ ar.dataset_title }}</span>
             </p>
             <p>
-              <strong class="inline-block w-50">Status:</strong>
+              <strong class="inline-block w-50">Resolution:</strong>
               <span
                 ><strong
                   class="{{ ar.status | AccessRequestStatusClassPipe }} capitalize"
@@ -179,8 +179,9 @@
                     >{{ (iva.state | IvaStatePipe).name }}</span
                   >).
                 </p>
+              } @else {
+                <p>No verification address is associated with this request.</p>
               }
-              <p>The status or address of this request cannot be changed any more.</p>
             } @else if (ivas().length === 1) {
               @let iva = ivas()[0];
               <p>
@@ -238,6 +239,56 @@
                   }
                 </div>
               </mat-radio-group>
+            }
+          </mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Access Grants</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-xl">
+            @if (grantsAreLoading()) {
+              <p>Loading access grants...</p>
+            } @else if (grantsError()) {
+              <p>The corresponding access grants could not be loaded.</p>
+            } @else if (!grants().length) {
+              <p>There are no access grants corresponding to this request.</p>
+            } @else {
+              <!--
+                The aggregated current access state (active/upcoming/expired) is
+                the same live state shown in the access request manager's
+                "Access" column, and unlike the request resolution above it
+                reflects the current access state. Each grant's validity period
+                links to its access grant details.
+              -->
+              @let state = grantState();
+              @let count = grants().length;
+              <p>
+                Current access state is
+                @if (state) {
+                  <strong class="{{ state | AccessGrantStatusClassPipe }} capitalize">{{
+                    accessLabels[state]
+                  }}</strong
+                  >.
+                }
+              </p>
+              <p class="mt-2 mb-0">
+                @if (count === 1) {
+                  There is one corresponding access grant:
+                } @else {
+                  There are {{ count }} corresponding access grants:
+                }
+              </p>
+              <ul class="mt-1 list-inside list-disc">
+                @for (grant of grants(); track grant.id) {
+                  <li>
+                    <a [routerLink]="['/access-grant-manager', grant.id]">
+                      {{ grant.valid_from | date: periodFormat : periodTimeZone }} until
+                      {{ grant.valid_until | date: periodFormat : periodTimeZone }}
+                    </a>
+                  </li>
+                }
+              </ul>
             }
           </mat-card-content>
         </mat-card>

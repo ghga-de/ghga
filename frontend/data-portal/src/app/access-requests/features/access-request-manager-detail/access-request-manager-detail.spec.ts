@@ -133,4 +133,30 @@ describe('AccessRequestManagerDetailComponent', () => {
     const button = screen.getByRole('button', { name: 'Back' });
     expect(button).toBeEnabled();
   });
+
+  it('should show an Access Grants card', () => {
+    const heading = screen.getByRole('heading', { name: 'Access Grants' });
+    expect(heading).toBeVisible();
+  });
+
+  it('should show the current aggregated access state', () => {
+    const state = screen.getByText(/Current access state is/);
+    expect(state).toHaveTextContent('Current access state is active');
+  });
+
+  it('should announce the number of corresponding access grants', () => {
+    // The viewed request (doe@test.dev / GHGAD12345678901235) is modelled as a
+    // renewal in the mock data, so it has two corresponding grants.
+    const sentence = screen.getByText('There are 2 corresponding access grants:');
+    expect(sentence).toBeVisible();
+  });
+
+  it('should list each grant validity period as a link to its details', () => {
+    const links = screen.getAllByRole('link', {
+      name: /\d{4}-\d{2}-\d{2} until \d{4}-\d{2}-\d{2}/,
+    });
+    expect(links).toHaveLength(2);
+    const hrefs = links.map((link) => link.getAttribute('href'));
+    expect(hrefs).toContain('/access-grant-manager/grant-ghga-8c4b9d5a1f0b');
+  });
 });

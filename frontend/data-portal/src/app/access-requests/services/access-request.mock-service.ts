@@ -7,7 +7,7 @@
 import { signal } from '@angular/core';
 // eslint-disable-next-line boundaries/dependencies
 import { accessGrants, accessRequests } from '@app/../mocks/data';
-import { AccessRequestStatus } from '../models/access-requests';
+import { AccessGrantStatus, AccessRequestStatus } from '../models/access-requests';
 
 /**
  * Mock for the Access Request Service
@@ -68,6 +68,12 @@ export class MockAccessRequestService {
   };
   setAllAccessRequestsFilter = () => undefined;
   allAccessGrants = () => accessGrants;
+  grantsFor = (userId: string, datasetId: string) =>
+    accessGrants.filter((g) => g.user_id === userId && g.dataset_id === datasetId);
+  grantStateFor = (userId: string, datasetId: string) =>
+    accessGrants.some((g) => g.user_id === userId && g.dataset_id === datasetId)
+      ? AccessGrantStatus.active
+      : undefined;
   setAllAccessGrantsFilter = () => undefined;
   allAccessGrantsFiltered = () => accessGrants;
   revokeAccessGrant = async () => undefined;

@@ -763,6 +763,19 @@ dateYesterday.setDate(dateYesterday.getDate() - 1);
 const dateOneYearAgo = new Date();
 dateOneYearAgo.setDate(dateOneYearAgo.getDate() - 365);
 
+/**
+ * Build an ISO timestamp relative to the current date, shifted by the given
+ * number of months. Used so that the demo access grants keep illustrating the
+ * active, upcoming and expired states regardless of when the mocks are run.
+ * @param months - number of months to shift (negative for the past)
+ * @returns the shifted date as an ISO timestamp
+ */
+const monthsFromNow = (months: number): string => {
+  const date = new Date();
+  date.setMonth(date.getMonth() + months);
+  return date.toISOString();
+};
+
 export const accessRequests = [
   {
     id: '62bcc452-a70b-47c1-9870-55da40d8e45f',
@@ -890,16 +903,67 @@ export const accessRequests = [
     note_to_requester: 'Please wait for the approval. Additional steps were required.',
     ticket_id: '1138',
   },
+  {
+    id: 'b1f0c2d3-4e5a-6789-abcd-ef0123456789',
+    user_id: 'doe@test.dev',
+    dataset_id: 'GHGAD12345678901237',
+    dac_alias: 'Data Access Committee of Heidelberg Center for Personalized Oncology',
+    dac_email: 'info@dac.com',
+    dataset_title: 'Test dataset 4 for download',
+    full_user_name: 'Dr. John Doe',
+    email: 'doe@home.org',
+    request_text:
+      'This is a test request for dataset GHGAD12345678901237. Its access grant has expired.',
+    access_starts: monthsFromNow(-18),
+    access_ends: monthsFromNow(-6),
+    request_created: '2024-12-20T12:04:03.000Z',
+    status: 'allowed',
+    status_changed: '2024-12-28T12:04:02.000Z',
+    changed_by: 'doe@test.dev',
+    iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
+    internal_note: null,
+    note_to_requester: null,
+    ticket_id: 'GSI-1601',
+  },
+  {
+    id: 'c2a1b0d9-8e7f-6a5b-4c3d-2e1f0a9b8c7d',
+    user_id: 'roe@test.dev',
+    dataset_id: 'GHGAD12345678901234',
+    dac_alias: 'Data Access Committee of Heidelberg Center for Personalized Oncology',
+    dac_email: 'info@dac.com',
+    dataset_title: 'Test dataset 1 for download',
+    full_user_name: 'Prof. Jane Doe',
+    email: 'roe@home.org',
+    request_text:
+      'This is a test request for dataset GHGAD12345678901234. Its access grant has not started yet.',
+    access_starts: monthsFromNow(1),
+    access_ends: monthsFromNow(13),
+    request_created: '2026-05-18T12:04:03.000Z',
+    status: 'allowed',
+    status_changed: '2026-05-26T12:04:02.000Z',
+    changed_by: 'roe@test.dev',
+    iva_id: '0063effb-2c43-4948-ba6f-f15425cb72d7',
+    internal_note: null,
+    note_to_requester: null,
+    ticket_id: 'GSI-1602',
+  },
 ];
 
+// The validity periods are derived from the current date (via monthsFromNow)
+// so that each grant keeps illustrating its intended state (active, upcoming or
+// expired) regardless of when the mocks are run. The grant for dataset
+// GHGAD12345678901235 is modelled as a renewal: an earlier, now expired grant
+// plus an active one, so the aggregated "active" state and the multi-grant list
+// on the access request details page stay represented.
 export const accessGrants: AccessGrant[] = [
+  // active (single grant)
   {
     id: 'grant-ghga-8c4b9d5a1f0a',
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901234',
-    created: '2025-07-20T10:00:00Z',
-    valid_from: '2025-08-01T00:00:00Z',
-    valid_until: '2026-08-01T00:00:00Z',
+    created: monthsFromNow(-7),
+    valid_from: monthsFromNow(-6),
+    valid_until: monthsFromNow(6),
     user_name: 'John Doe',
     user_title: 'Dr.',
     user_email: 'doe@home.org',
@@ -908,13 +972,14 @@ export const accessGrants: AccessGrant[] = [
     dac_email: 'dac-main@some.org',
     iva_id: '783d9682-d5e5-4ce7-9157-9eeb53a1e9ba',
   },
+  // renewal: original grant (now expired)
   {
-    id: 'grant-ghga-8c4b9d5a1f0b',
+    id: 'grant-ghga-8c4b9d5a1f0f',
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901235',
-    created: '2025-07-20T10:00:00Z',
-    valid_from: '2025-08-01T00:00:00Z',
-    valid_until: '2026-08-01T00:00:00Z',
+    created: monthsFromNow(-19),
+    valid_from: monthsFromNow(-18),
+    valid_until: monthsFromNow(-6),
     user_name: 'John Doe',
     user_title: 'Dr.',
     user_email: 'doe@home.org',
@@ -923,13 +988,30 @@ export const accessGrants: AccessGrant[] = [
     dac_email: 'dac-main@some.org',
     iva_id: 'fc3c0ad8-01a4-4eb1-b8f3-40b04bb4bcb2',
   },
+  // renewal: current grant (active)
+  {
+    id: 'grant-ghga-8c4b9d5a1f0b',
+    user_id: 'doe@test.dev',
+    dataset_id: 'GHGAD12345678901235',
+    created: monthsFromNow(-7),
+    valid_from: monthsFromNow(-6),
+    valid_until: monthsFromNow(6),
+    user_name: 'John Doe',
+    user_title: 'Dr.',
+    user_email: 'doe@home.org',
+    dataset_title: 'Test dataset 2 with an unverified IVA',
+    dac_alias: 'SOME-DAC',
+    dac_email: 'dac-main@some.org',
+    iva_id: 'fc3c0ad8-01a4-4eb1-b8f3-40b04bb4bcb2',
+  },
+  // active (single grant)
   {
     id: 'grant-ghga-8c4b9d5a1f0c',
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901236',
-    created: '2025-07-20T10:00:00Z',
-    valid_from: '2025-08-01T00:00:00Z',
-    valid_until: '2026-08-01T00:00:00Z',
+    created: monthsFromNow(-7),
+    valid_from: monthsFromNow(-6),
+    valid_until: monthsFromNow(6),
     user_name: 'John Doe',
     user_title: 'Dr.',
     user_email: 'doe@home.org',
@@ -939,13 +1021,14 @@ export const accessGrants: AccessGrant[] = [
     dac_email: 'dac-main@some.org',
     iva_id: '347368b5-718e-49ba-80ad-bc128e83b609',
   },
+  // expired
   {
     id: 'grant-ghga-8c4b9d5a1f0d',
     user_id: 'doe@test.dev',
     dataset_id: 'GHGAD12345678901237',
-    created: '2023-05-19T12:00:00Z',
-    valid_from: '2025-01-05T00:00:00Z',
-    valid_until: '2025-01-10T00:00:00Z',
+    created: monthsFromNow(-19),
+    valid_from: monthsFromNow(-18),
+    valid_until: monthsFromNow(-6),
     user_name: 'John Doe',
     user_title: 'Dr.',
     user_email: 'doe@home.org',
@@ -954,13 +1037,14 @@ export const accessGrants: AccessGrant[] = [
     dac_email: 'dac-main@some.org',
     iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
   },
+  // upcoming (not started yet)
   {
     id: 'grant-ghga-8c4b9d5a1f0e',
     user_id: 'roe@test.dev',
     dataset_id: 'GHGAD12345678901234',
-    created: '2025-07-20T10:00:00Z',
-    valid_from: '2027-08-01T00:00:00Z',
-    valid_until: '2028-08-01T00:00:00Z',
+    created: monthsFromNow(-1),
+    valid_from: monthsFromNow(1),
+    valid_until: monthsFromNow(13),
     user_name: 'Jane Doe',
     user_title: 'Prof.',
     user_email: 'roe@home.org',

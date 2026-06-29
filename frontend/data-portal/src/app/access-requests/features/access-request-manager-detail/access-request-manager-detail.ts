@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe } from '@angular/common';
+import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import {
   Component,
@@ -26,9 +26,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatRadioModule } from '@angular/material/radio';
 import { RouterLink } from '@angular/router';
 import {
+  AccessGrant,
+  AccessGrantStateLabel,
+  AccessGrantStatus,
   AccessRequest,
   AccessRequestStatus,
 } from '@app/access-requests/models/access-requests';
+import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class-pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { UserSession } from '@app/auth/models/user';
@@ -37,13 +41,18 @@ import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { HasPendingEdits } from '@app/shared/features/pending-edits';
+import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { SplitLinesPipe } from '@app/shared/pipes/split-lines-pipe';
 import { ConfigService } from '@app/shared/services/config';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
-import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
+import {
+  DEFAULT_DATE_OUTPUT_FORMAT,
+  DEFAULT_TIME_ZONE,
+  FRIENDLY_DATE_FORMAT,
+} from '@app/shared/utils/date-formats';
 import { AccessRequestDurationEditComponent } from '../access-request-duration-edit/access-request-duration-edit';
 import { AccessRequestFieldEditComponent } from '../access-request-field-edit/access-request-field-edit';
 
@@ -61,6 +70,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
     MatIcon,
     DatePipe,
     AccessRequestStatusClassPipe,
+    AccessGrantStatusClassPipe,
     IvaTypePipe,
     IvaStatePipe,
     AccessRequestFieldEditComponent,
@@ -71,11 +81,14 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
     RouterLink,
     AccessRequestDurationEditComponent,
   ],
-  providers: [IvaTypePipe, DatePipe],
+  providers: [IvaTypePipe, CommonDatePipe],
   templateUrl: './access-request-manager-detail.html',
 })
 export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEdits {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
+  readonly periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
+  readonly periodTimeZone = DEFAULT_TIME_ZONE;
+  readonly accessLabels = AccessGrantStateLabel;
   showTransition = signal(false);
   allowedState = AccessRequestStatus.allowed;
   #config = inject(ConfigService);
@@ -120,8 +133,41 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   ivasAreLoading = this.#ivas.isLoading;
   ivasError = this.#ivas.error;
 
+  #grantsResource = this.#accessRequestService.allAccessGrantsResource;
+  grantsAreLoading = this.#grantsResource.isLoading;
+  grantsError = this.#grantsResource.error;
+
+  /**
+   * Load all access grants once a request is available, so the corresponding
+   * grants (same user and dataset) and their current states can be shown.
+   */
+  #loadGrantsEffect = effect(() => {
+    if (this.request()) this.#accessRequestService.loadAllAccessGrants();
+  });
+
+  /**
+   * The access grants corresponding to this request (same user and dataset),
+   * ordered by creation date. Empty if there are no matching grants.
+   */
+  grants = computed<AccessGrant[]>(() => {
+    const ar = this.request();
+    return ar ? this.#accessRequestService.grantsFor(ar.user_id, ar.dataset_id) : [];
+  });
+
+  /**
+   * The aggregated current access state across all corresponding grants
+   * (undefined if there are no matching grants). This is the same live state
+   * shown in the access request manager's "Access" column.
+   */
+  grantState = computed<AccessGrantStatus | undefined>(() => {
+    const ar = this.request();
+    return ar
+      ? this.#accessRequestService.grantStateFor(ar.user_id, ar.dataset_id)
+      : undefined;
+  });
+
   #ivaTypePipe = inject(IvaTypePipe);
-  #datePipe = inject(DatePipe);
+  #datePipe = inject(CommonDatePipe);
 
   selectedIvaIdRadioButton = model<string | undefined>(undefined);
 
