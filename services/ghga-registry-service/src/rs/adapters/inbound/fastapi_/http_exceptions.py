@@ -31,6 +31,7 @@ __all__ = [
     "HttpInternalError",
     "HttpNotAuthorizedError",
     "HttpStateChangeError",
+    "HttpStudyNotFoundError",
 ]
 
 
@@ -49,6 +50,7 @@ class HttpAccessionMapError(HttpCustomExceptionBase):
 
         error_type: str
         conflicting_accessions: list[str] = []
+        unknown_accessions: list[str] = []
         affected_file_ids: list[str] = []
 
     def __init__(
@@ -56,6 +58,7 @@ class HttpAccessionMapError(HttpCustomExceptionBase):
         *,
         error_type: str,
         conflicting_accessions: list[str] | None = None,
+        unknown_accessions: list[str] | None = None,
         affected_file_ids: list[str] | None = None,
         status_code: int = 409,
     ):
@@ -66,6 +69,7 @@ class HttpAccessionMapError(HttpCustomExceptionBase):
             data={
                 "error_type": error_type,
                 "conflicting_accessions": conflicting_accessions or [],
+                "unknown_accessions": unknown_accessions or [],
                 "affected_file_ids": affected_file_ids or [],
             },
         )
@@ -200,6 +204,25 @@ class HttpGrantNotFoundError(HttpCustomExceptionBase):
             status_code=status_code,
             description=(f"Upload access grant with ID {grant_id} not found."),
             data={"grant_id": str(grant_id)},
+        )
+
+
+class HttpStudyNotFoundError(HttpCustomExceptionBase):
+    """Thrown when a study with given ID could not be found."""
+
+    exception_id = "studyNotFound"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        study_id: str
+
+    def __init__(self, *, study_id: str, status_code: int = 404):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=(f"Study with ID {study_id} not found."),
+            data={"study_id": study_id},
         )
 
 

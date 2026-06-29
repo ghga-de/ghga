@@ -19,7 +19,7 @@ from abc import ABC, abstractmethod
 
 from pydantic import UUID4
 
-from rs.core.models import FileAccession
+from rs.core.models import PID
 
 
 class FileControllerPort(ABC):
@@ -35,22 +35,68 @@ class FileControllerPort(ABC):
             accessions = ", ".join(conflicting_accessions)
             super().__init__(f"Conflicting accession mappings: {accessions}")
 
+    class UnknownAccessionError(RuntimeError):
+        """Raised when a request maps accessions that have no (unmapped) entry yet.
+
+        Accessions must first be registered (as unmapped entries) from the searchable
+        resources before they can be mapped to a file ID.
+        """
+
+        def __init__(self, *, unknown_accessions: list[str]) -> None:
+            self.unknown_accessions = unknown_accessions
+            accessions = ", ".join(unknown_accessions)
+            super().__init__(f"Unknown accessions: {accessions}")
+
     @abstractmethod
-    async def post_file_ids(
-        self, *, study_id: str, file_id_map: dict[FileAccession, UUID4]
+    async def map_accessions_to_file_ids(
+        self, *, study_id: str, file_id_map: dict[PID, UUID4]
     ) -> None:
         """Store file accession to internal file ID mappings.
 
+        Each accession must already exist as an unmapped entry (registered while
+        tracking legacy searchable resources); that entry is updated with the file ID.
+        No new accession entries are created here.
+
         Raises:
             ConflictingAccessionError: If any accession in the map already exists in the
-                DB with a different file_id. All conflicts are collected before raising.
+                DB mapped to a different file ID or attributed to a different study.
+            UnknownAccessionError: If any accession in the map has no entry yet.
+            All offending accessions are collected before raising.
+        """
+
+    @abstractmethod
+    async def register_unmapped_accessions(
+        self, *, study_id: str, accessions: set[PID]
+    ) -> None:
+        """Ensure a FileAccession entry exists for each of the given accessions.
+
+        Creates a new unmapped entry (no file ID) for unknown accessions and backfills
+        the study ID onto existing entries that do not have one yet. Used to track file
+        accessions discovered in legacy searchable resources.
+        """
+
+    @abstractmethod
+    async def get_study_ids_with_unmapped_accessions(self) -> set[str]:
+        """Return the IDs of all studies that have at least one unmapped file accession.
+
+        An accession is unmapped while it has no internal UUID4 file ID yet. Accessions that
+        carry no study ID are ignored, as they cannot be attributed to a study.
+        """
+
+    @abstractmethod
+    async def get_accession_map(self, *, study_id: str) -> dict[str, UUID4 | None]:
+        """Return the accession to file ID map for a study.
+
+        Queries all FileAccession records attributed to the given study and returns a
+        dict mapping each accession (str) to its internal file ID (UUID4), or None if
+        the accession has not been mapped yet.
         """
 
     @abstractmethod
     async def get_accessions_by_file_ids(
         self, *, file_ids: set[UUID4]
     ) -> dict[UUID4, str]:
-        """Query FileAccessionMapping records for the given file IDs.
+        """Query FileAccession records for the given file IDs.
         Returns a dict mapping file_id (UUID4) to accession (str).
         """
 

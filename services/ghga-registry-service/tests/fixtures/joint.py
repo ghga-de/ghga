@@ -27,7 +27,7 @@ from jwcrypto.jwk import JWK
 
 from rs.config import Config
 from rs.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
-from rs.ports.inbound.ghga_registry import GHGARegistryPort
+from rs.ports.inbound.registry import RegistryPort
 from tests.fixtures.config import get_config
 
 
@@ -36,7 +36,7 @@ class JointFixture:
     """Returned by the `joint_fixture`."""
 
     config: Config
-    ghga_registry: GHGARegistryPort
+    registry: RegistryPort
     event_subscriber: KafkaEventSubscriber
     kafka: KafkaFixture
     mongodb: MongoDbFixture
@@ -61,16 +61,16 @@ async def joint_fixture(
     )
 
     async with (
-        prepare_core(config=config) as ghga_registry,
+        prepare_core(config=config) as registry,
         prepare_event_subscriber(
-            config=config, ghga_registry_override=ghga_registry
+            config=config, registry_override=registry
         ) as event_subscriber,
-        prepare_rest_app(config=config, ghga_registry_override=ghga_registry) as app,
+        prepare_rest_app(config=config, registry_override=registry) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
         yield JointFixture(
             config=config,
-            ghga_registry=ghga_registry,
+            registry=registry,
             event_subscriber=event_subscriber,
             kafka=kafka,
             mongodb=mongodb,

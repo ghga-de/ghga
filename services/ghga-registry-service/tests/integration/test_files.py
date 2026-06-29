@@ -18,11 +18,14 @@
 from uuid import uuid4
 
 import pytest
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock
 
+from rs.adapters.outbound.dao import get_file_accession_dao
 from rs.core.models import (
     AccessionMapRequest,
+    FileAccession,
     FileUploadWithAccession,
 )
 from tests.fixtures import utils
@@ -53,7 +56,7 @@ async def test_submission(
     )
 
     # Create an RDUB
-    rdub_manager = joint_fixture.ghga_registry.rdub_manager
+    rdub_manager = joint_fixture.registry.rdub_manager
     box_id = await rdub_manager.create_research_data_upload_box(
         title="Box A",
         description="Description of Box A",
@@ -100,6 +103,17 @@ async def test_submission(
     body = mapping_request.model_dump(mode="json")
     url = f"/upload-boxes/{box_id}/file-ids"
 
+    # The accessions must first be tracked as unmapped entries before they can be mapped
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=joint_fixture.config
+    ) as dao_publisher_factory:
+        dao = await get_file_accession_dao(
+            config=joint_fixture.config,
+            dao_publisher_factory=dao_publisher_factory,
+        )
+        for accession in (accession1, accession2):
+            await dao.upsert(FileAccession(pid=accession, study_id="test-study-1"))
+
     # Submit the map to the endpoint and capture the events (Should be 2)
     async with joint_fixture.kafka.record_events(
         in_topic=joint_fixture.config.accession_map_topic
@@ -123,3 +137,88 @@ async def test_submission(
     assert event1.payload["file_id"] == str(file_id1)
     assert event2.payload["accession"] == accession2
     assert event2.payload["file_id"] == str(file_id2)
+
+
+async def test_unmapped_accession_publishes_no_event(joint_fixture: JointFixture):
+    """An unmapped FileAccession (no file_id) is stored but publishes no outbox event.
+
+    Once the same accession is mapped to a file ID, an outbox event conforming to
+    FileAccessionMapping is published.
+    """
+    accession = "GHGAF999"
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=joint_fixture.config
+    ) as dao_publisher_factory:
+        dao = await get_file_accession_dao(
+            config=joint_fixture.config,
+            dao_publisher_factory=dao_publisher_factory,
+        )
+
+        # Storing an unmapped accession must not publish an event
+        async with joint_fixture.kafka.record_events(
+            in_topic=joint_fixture.config.accession_map_topic
+        ) as recorder:
+            await dao.upsert(FileAccession(pid=accession))
+        assert recorder.recorded_events == []
+
+        # The record is persisted as unmapped
+        stored = await dao.get_by_id(accession)
+        assert stored.file_id is None
+        assert stored.mapped is None
+
+        # Mapping the accession to a file ID publishes a single event
+        file_id = uuid4()
+        async with joint_fixture.kafka.record_events(
+            in_topic=joint_fixture.config.accession_map_topic
+        ) as recorder:
+            await dao.upsert(
+                FileAccession(pid=accession, file_id=file_id, mapped=now_utc_ms_prec())
+            )
+        assert len(recorder.recorded_events) == 1
+        event = recorder.recorded_events[0]
+        assert event.key == accession
+        assert event.payload["accession"] == accession
+        assert event.payload["file_id"] == str(file_id)
+
+
+async def test_get_accession_map(joint_fixture: JointFixture):
+    """get_accession_map returns a study's accessions mapped to file IDs or None."""
+    study_id = "test-study-1"
+    other_study_id = "test-study-2"
+    mapped_file_id = uuid4()
+
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=joint_fixture.config
+    ) as dao_publisher_factory:
+        dao = await get_file_accession_dao(
+            config=joint_fixture.config,
+            dao_publisher_factory=dao_publisher_factory,
+        )
+        # A mapped and an unmapped accession for the study under test ...
+        await dao.upsert(
+            FileAccession(
+                pid="GHGAF_mapped",
+                study_id=study_id,
+                file_id=mapped_file_id,
+                mapped=now_utc_ms_prec(),
+            )
+        )
+        await dao.upsert(FileAccession(pid="GHGAF_unmapped", study_id=study_id))
+        # ... plus an accession of another study that must not leak in.
+        await dao.upsert(FileAccession(pid="GHGAF_other", study_id=other_study_id))
+
+    accession_map = await joint_fixture.registry.file_controller.get_accession_map(
+        study_id=study_id
+    )
+    assert accession_map == {
+        "GHGAF_mapped": mapped_file_id,
+        "GHGAF_unmapped": None,
+    }
+
+    # An unknown study simply yields an empty map.
+    assert (
+        await joint_fixture.registry.file_controller.get_accession_map(
+            study_id="does-not-exist"
+        )
+        == {}
+    )

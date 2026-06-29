@@ -12,23 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""GHGARegistry implementation"""
 
-from rs.ports.inbound.ghga_registry import GHGARegistryPort
-from rs.ports.inbound.rdub_manager import RDUBManagerPort
+"""Database migrations for the rs service."""
 
+from .definitions import V2Migration
+from .entry import run_db_migrations
 
-class GHGARegistry(GHGARegistryPort):
-    """Top-level class linking all constituent registry operations"""
-
-    def __init__(
-        self,
-        *,
-        rdub_manager: RDUBManagerPort,
-    ) -> None:
-        self._rdub_manager = rdub_manager
-
-    @property
-    def rdub_manager(self) -> RDUBManagerPort:
-        """The RDUBManager component."""
-        return self._rdub_manager
+__all__ = ["V2Migration", "run_db_migrations"]

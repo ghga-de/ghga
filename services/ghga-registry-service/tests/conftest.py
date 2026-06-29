@@ -87,7 +87,7 @@ async def app_fixture(config: Config) -> AsyncGenerator[AppFixture]:
     """A fixture that yields a configured rest client and accessible core override"""
     core_mock = AsyncMock()
     async with (
-        prepare_rest_app(config=config, ghga_registry_override=core_mock) as app,
+        prepare_rest_app(config=config, registry_override=core_mock) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
         yield AppFixture(rest_client=rest_client, core_mock=core_mock)

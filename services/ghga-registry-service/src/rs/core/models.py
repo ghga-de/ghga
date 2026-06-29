@@ -15,6 +15,7 @@
 
 """Defines dataclasses for holding business-logic data."""
 
+from enum import StrEnum
 from typing import Annotated, Literal, Self
 
 from ghga_event_schemas.pydantic_ import (
@@ -24,6 +25,7 @@ from ghga_event_schemas.pydantic_ import (
     UploadBoxState,
 )
 from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.utils import now_utc_ms_prec
 from pydantic import (
     UUID4,
     AfterValidator,
@@ -58,6 +60,8 @@ __all__ = [
     "GrantWithBoxInfo",
     "ResearchDataUploadBox",
     "ResizeFileBoxWorkOrder",
+    "Study",
+    "StudyStatus",
     "SubmitAccessionMapWorkOrder",
     "UpdateUploadBoxRequest",
     "UploadBoxState",
@@ -76,7 +80,87 @@ PID = Annotated[
     str, StringConstraints(min_length=1, max_length=256), AfterValidator(_ascii_only)
 ]
 
-FileAccession = Annotated[str, StringConstraints(pattern=r"^GHGAF.+")]
+
+class FileAccession(BaseModel):
+    """A file accession, optionally mapped to an internal file ID and study.
+
+    Persisted via the outbox DAO. Records may exist before a file ID is known
+    (unmapped), in which case no outbox event is published.
+    """
+
+    pid: PID = Field(..., description="The primary file accession number (primary key)")
+    file_id: UUID4 | None = Field(
+        default=None,
+        description="The corresponding internal file ID, if the accession is mapped",
+    )
+    study_id: str | None = Field(
+        default=None, description="The corresponding study ID, if known"
+    )
+    created: UTCDatetime = Field(
+        default_factory=now_utc_ms_prec,
+        description="When the file accession was created",
+    )
+    mapped: UTCDatetime | None = Field(
+        default=None, description="When the file accession was mapped"
+    )
+
+
+# NOTE: StudyStatus and Study are defined here temporarily. They should be moved
+# to ghga_event_schemas once the schema is finalized, just like the box and file
+# accession models that are already imported from ghga_event_schemas above.
+class StudyStatus(StrEnum):
+    """All possible states of a Study."""
+
+    DRAFT = "draft"  # study is still editable and in preview mode only
+    ARCHIVED = "archived"  # study has been archived and has become immutable
+
+
+class Study(BaseModel):
+    """A study registered in GHGA.
+
+    Persisted via the outbox DAO.
+    """
+
+    id: PID = Field(..., description="The PID of the study (primary key)")
+    title: str = Field(..., description="Comprehensive title for the study")
+    description: str = Field(
+        ...,
+        description="Detailed description (abstract) describing the goals of the study",
+    )
+    types: list[str] = Field(
+        ..., description="The type(s) of this study (as list of codes)"
+    )
+    affiliations: list[str] = Field(
+        ..., description="The affiliation(s) associated with this study"
+    )
+    status: StudyStatus = Field(..., description="The current status of the study")
+    created: UTCDatetime = Field(
+        default_factory=now_utc_ms_prec,
+        description="When the entry was first created",
+    )
+    created_by: UUID4 = Field(
+        ..., description="The id of the user who uploaded the study"
+    )
+    approved: UTCDatetime | None = Field(
+        default=None, description="When the study was approved"
+    )
+    approved_by: UUID4 | None = Field(
+        default=None, description="The id of the user who approved the study"
+    )
+    superseded_by_id: PID | None = Field(
+        default=None,
+        description="If deprecated, the PID of a newer study superseding this one",
+    )
+    # Denormalized fields, persisted and updated by business logic:
+    has_em: bool = Field(
+        default=False, description="Whether the EM has been uploaded already"
+    )
+    num_datasets: int = Field(
+        default=0, description="Number of datasets for this study"
+    )
+    num_publications: int = Field(
+        default=0, description="Number of publications for this study"
+    )
 
 
 class BaseWorkOrderToken(BaseModel):
@@ -269,7 +353,7 @@ class AccessionMapRequest(BaseModel):
     box_version: int = Field(
         default=..., description="A counter indicating research data upload box version"
     )
-    mapping: dict[FileAccession, UUID4] = Field(
+    mapping: dict[PID, UUID4] = Field(
         default=..., description="Map of accessions to file IDs"
     )
     study_id: PID = Field(
@@ -281,6 +365,6 @@ class AccessionMapRequest(BaseModel):
 class FileUploadWithAccession(FileUpload):
     """A FileUpload with its accession"""
 
-    accession: FileAccession | None = Field(
+    accession: PID | None = Field(
         default=None, description="The accession number assigned to this file."
     )

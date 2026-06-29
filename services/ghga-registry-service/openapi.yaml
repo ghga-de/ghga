@@ -8,11 +8,13 @@ components:
           title: Box Version
           type: integer
         mapping:
+          additionalProperties:
+            format: uuid4
+            type: string
           description: Map of accessions to file IDs
-          patternProperties:
-            ^GHGAF.+:
-              format: uuid4
-              type: string
+          propertyNames:
+            maxLength: 256
+            minLength: 1
           title: Mapping
           type: object
         study_id:
@@ -79,7 +81,8 @@ components:
       properties:
         accession:
           anyOf:
-          - pattern: ^GHGAF.+
+          - maxLength: 256
+            minLength: 1
             type: string
           - type: 'null'
           description: The accession number assigned to this file.
@@ -426,6 +429,106 @@ components:
       - storage_alias
       title: research_data_upload_box
       type: object
+    Study:
+      description: 'A study registered in GHGA.
+
+
+        Persisted via the outbox DAO.'
+      properties:
+        affiliations:
+          description: The affiliation(s) associated with this study
+          items:
+            type: string
+          title: Affiliations
+          type: array
+        approved:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: When the study was approved
+          title: Approved
+        approved_by:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The id of the user who approved the study
+          title: Approved By
+        created:
+          description: When the entry was first created
+          format: date-time
+          title: Created
+          type: string
+        created_by:
+          description: The id of the user who uploaded the study
+          format: uuid4
+          title: Created By
+          type: string
+        description:
+          description: Detailed description (abstract) describing the goals of the
+            study
+          title: Description
+          type: string
+        has_em:
+          default: false
+          description: Whether the EM has been uploaded already
+          title: Has Em
+          type: boolean
+        id:
+          description: The PID of the study (primary key)
+          maxLength: 256
+          minLength: 1
+          title: Id
+          type: string
+        num_datasets:
+          default: 0
+          description: Number of datasets for this study
+          title: Num Datasets
+          type: integer
+        num_publications:
+          default: 0
+          description: Number of publications for this study
+          title: Num Publications
+          type: integer
+        status:
+          $ref: '#/components/schemas/StudyStatus'
+          description: The current status of the study
+        superseded_by_id:
+          anyOf:
+          - maxLength: 256
+            minLength: 1
+            type: string
+          - type: 'null'
+          description: If deprecated, the PID of a newer study superseding this one
+          title: Superseded By Id
+        title:
+          description: Comprehensive title for the study
+          title: Title
+          type: string
+        types:
+          description: The type(s) of this study (as list of codes)
+          items:
+            type: string
+          title: Types
+          type: array
+      required:
+      - id
+      - title
+      - description
+      - types
+      - affiliations
+      - status
+      - created_by
+      title: Study
+      type: object
+    StudyStatus:
+      description: All possible states of a Study.
+      enum:
+      - draft
+      - archived
+      title: StudyStatus
+      type: string
     UpdateUploadBoxRequest:
       description: Request model for updating a research data upload box.
       properties:
@@ -506,7 +609,7 @@ info:
   description: A service providing a web-accessible management and auth layer over
     upload-path file services.
   title: GHGA Registry Service
-  version: 3.0.0
+  version: 4.0.0
 openapi: 3.1.0
 paths:
   /health:
@@ -520,6 +623,123 @@ paths:
               schema: {}
           description: Successful Response
       summary: health
+  /studies:
+    get:
+      description: Returns the list of all studies, sorted by study ID. When `with_unmapped_files`
+        is set, only studies that still have associated file accessions without an
+        internal file ID (i.e. not yet mapped) are returned.
+      operationId: get_studies_studies_get
+      parameters:
+      - description: Only return studies that have associated file accessions which
+          have not been mapped to an internal file ID yet.
+        in: query
+        name: with_unmapped_files
+        required: false
+        schema:
+          default: false
+          description: Only return studies that have associated file accessions which
+            have not been mapped to an internal file ID yet.
+          title: With Unmapped Files
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Study'
+                title: Response 200 Get Studies Studies Get
+                type: array
+          description: Studies successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '422':
+          description: Validation error in query parameters.
+      security:
+      - HTTPBearer: []
+      summary: List studies
+      tags:
+      - Studies
+  /studies/{study_id}:
+    get:
+      description: Returns the details of a single study by its ID.
+      operationId: get_study_studies__study_id__get
+      parameters:
+      - in: path
+        name: study_id
+        required: true
+        schema:
+          title: Study Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Study'
+          description: Study details successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Study not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Get study details
+      tags:
+      - Studies
+  /studies/{study_id}/file-ids:
+    get:
+      description: Returns the map of file accessions to internal file IDs for the
+        given study. Accessions that have not been mapped to a file ID yet have a
+        null value, which lets the mapping tool filter out already mapped files.
+      operationId: get_accession_map_studies__study_id__file_ids_get
+      parameters:
+      - in: path
+        name: study_id
+        required: true
+        schema:
+          title: Study Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  anyOf:
+                  - format: uuid4
+                    type: string
+                  - type: 'null'
+                title: Response Get Accession Map Studies  Study Id  File Ids Get
+                type: object
+          description: Accession map successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Study not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Get the accession to file ID map for a study
+      tags:
+      - Studies
   /upload-boxes:
     get:
       description: Returns a list of research data upload boxes. Results are sorted

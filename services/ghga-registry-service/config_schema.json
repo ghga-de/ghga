@@ -2,6 +2,14 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "study_topic": {
+      "description": "Name of the event topic containing study events",
+      "examples": [
+        "studies"
+      ],
+      "title": "Study Topic",
+      "type": "string"
+    },
     "accession_map_topic": {
       "description": "The name of the topic used for file accession map events",
       "examples": [
@@ -17,6 +25,30 @@
         "research-data-upload-boxes"
       ],
       "title": "Research Data Upload Box Topic",
+      "type": "string"
+    },
+    "resource_change_topic": {
+      "description": "Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.",
+      "examples": [
+        "searchable_resources"
+      ],
+      "title": "Resource Change Topic",
+      "type": "string"
+    },
+    "resource_deletion_type": {
+      "description": "Type used for events indicating the deletion of a previously existing resource.",
+      "examples": [
+        "searchable_resource_deleted"
+      ],
+      "title": "Resource Deletion Type",
+      "type": "string"
+    },
+    "resource_upsertion_type": {
+      "description": "Type used for events indicating the upsert of a resource.",
+      "examples": [
+        "searchable_resource_upserted"
+      ],
+      "title": "Resource Upsertion Type",
       "type": "string"
     },
     "file_upload_box_topic": {
@@ -270,6 +302,43 @@
       ],
       "title": "Mongo Timeout"
     },
+    "db_version_collection": {
+      "description": "The name of the collection containing DB version information for this service",
+      "examples": [
+        "ifrsDbVersions"
+      ],
+      "title": "Db Version Collection",
+      "type": "string"
+    },
+    "migration_wait_sec": {
+      "description": "The number of seconds to wait before checking the DB version again",
+      "examples": [
+        5,
+        30,
+        180
+      ],
+      "title": "Migration Wait Sec",
+      "type": "integer"
+    },
+    "migration_max_wait_sec": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+      "examples": [
+        null,
+        300,
+        600,
+        3600
+      ],
+      "title": "Migration Max Wait Sec"
+    },
     "enable_opentelemetry": {
       "default": false,
       "description": "If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation.",
@@ -514,17 +583,15 @@
         []
       ],
       "title": "Cors Exposed Headers"
-    },
-    "file_accession_mappings_collection": {
-      "default": "fileAccessionMappings",
-      "description": "MongoDB collection name for file accession mappings",
-      "title": "File Accession Mappings Collection",
-      "type": "string"
     }
   },
   "required": [
+    "study_topic",
     "accession_map_topic",
     "research_data_upload_box_topic",
+    "resource_change_topic",
+    "resource_deletion_type",
+    "resource_upsertion_type",
     "file_upload_box_topic",
     "audit_record_topic",
     "audit_record_type",
@@ -535,6 +602,8 @@
     "kafka_servers",
     "mongo_dsn",
     "db_name",
+    "db_version_collection",
+    "migration_wait_sec",
     "auth_key"
   ],
   "title": "ModSettings",

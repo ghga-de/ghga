@@ -22,33 +22,78 @@ from ghga_event_schemas.configs import (
 from ghga_event_schemas.pydantic_ import FileAccessionMapping
 from hexkit.providers.mongodb import MongoDbIndex
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
-from rs.constants import BOX_COLLECTION
-from rs.core.models import ResearchDataUploadBox
-from rs.ports.outbound.dao import BoxDao, FileAccessionMappingDao
+from rs.constants import (
+    FILE_ACCESSION_COLLECTION,
+    RESEARCH_DATA_UPLOAD_BOX_COLLECTION,
+    STUDY_COLLECTION,
+)
+from rs.core.models import FileAccession, ResearchDataUploadBox, Study
+from rs.ports.outbound.dao import BoxDao, FileAccessionDao, StudyDao
 
-__all__ = ["OutboxPubConfig", "get_box_dao", "get_file_accession_mapping_dao"]
+__all__ = [
+    "OutboxPubConfig",
+    "get_box_dao",
+    "get_file_accession_dao",
+    "get_study_dao",
+]
+
+
+# NOTE: Defined here temporarily. Should be moved to ghga_event_schemas once the
+# Study schema is finalized, alongside the configs imported above.
+class StudyEventsConfig(BaseSettings):
+    """Config for events communicating changes in Studies.
+
+    The event types are hardcoded by `hexkit`.
+    """
+
+    study_topic: str = Field(
+        default=...,
+        description="Name of the event topic containing study events",
+        examples=["studies"],
+    )
 
 
 class OutboxPubConfig(
-    ResearchDataUploadBoxEventsConfig, FileAccessionMappingEventsConfig
+    ResearchDataUploadBoxEventsConfig,
+    FileAccessionMappingEventsConfig,
+    StudyEventsConfig,
 ):
     """Config needed to publish outbox events"""
 
 
-async def get_file_accession_mapping_dao(
+def _file_accession_to_event(dto: FileAccession):
+    """Translate a FileAccession into a FileAccessionMapping outbox event.
+
+    Only mapped accessions (those with a file ID) are published; unmapped
+    accessions return None, which suppresses the outbox event.
+    """
+    if dto.file_id is None:
+        return None
+    return FileAccessionMapping(accession=dto.pid, file_id=dto.file_id).model_dump(
+        mode="json"
+    )
+
+
+async def get_file_accession_dao(
     *,
     config,
     dao_publisher_factory: MongoKafkaDaoPublisherFactory,
-) -> FileAccessionMappingDao:
-    """Construct a FileAccessionMapping DAO from the shared factory."""
+) -> FileAccessionDao:
+    """Construct a FileAccession DAO from the shared factory."""
     return await dao_publisher_factory.get_dao(
-        name=config.file_accession_mappings_collection,
-        dto_model=FileAccessionMapping,
-        id_field="accession",
-        dto_to_event=lambda event: event.model_dump(mode="json"),
+        name=FILE_ACCESSION_COLLECTION,
+        dto_model=FileAccession,
+        id_field="pid",
+        dto_to_event=_file_accession_to_event,
         event_topic=config.accession_map_topic,
         autopublish=True,
+        indexes=[
+            MongoDbIndex(fields="study_id"),
+            MongoDbIndex(fields="file_id"),
+        ],
     )
 
 
@@ -60,7 +105,7 @@ async def get_box_dao(
         raise RuntimeError("No DAO Factory and no override provided for BoxDao")
 
     return await dao_publisher_factory.get_dao(
-        name=BOX_COLLECTION,
+        name=RESEARCH_DATA_UPLOAD_BOX_COLLECTION,
         dto_model=ResearchDataUploadBox,
         id_field="id",
         autopublish=True,
@@ -68,6 +113,24 @@ async def get_box_dao(
         event_topic=config.research_data_upload_box_topic,
         indexes=[
             MongoDbIndex(fields="file_upload_box_id"),
+            MongoDbIndex(fields="title"),
+        ],
+    )
+
+
+async def get_study_dao(
+    *, config: OutboxPubConfig, dao_publisher_factory: MongoKafkaDaoPublisherFactory
+) -> StudyDao:
+    """Construct a Study outbox DAO from the provided dao_publisher_factory"""
+    return await dao_publisher_factory.get_dao(
+        name=STUDY_COLLECTION,
+        dto_model=Study,
+        id_field="id",
+        autopublish=True,
+        dto_to_event=lambda dto: dto.model_dump(mode="json"),
+        event_topic=config.study_topic,
+        indexes=[
+            MongoDbIndex(fields="status"),
             MongoDbIndex(fields="title"),
         ],
     )

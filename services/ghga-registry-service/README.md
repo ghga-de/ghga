@@ -18,13 +18,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/ghga-registry-service):
 ```bash
-docker pull ghga/ghga-registry-service:3.0.0
+docker pull ghga/ghga-registry-service:4.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-registry-service:3.0.0 .
+docker build -t ghga/ghga-registry-service:4.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -32,7 +32,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/ghga-registry-service:3.0.0 --help
+docker run -p 8080:8080 ghga/ghga-registry-service:4.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -49,6 +49,13 @@ rs --help
 ### Parameters
 
 The service requires the following configuration parameters:
+- <a id="properties/study_topic"></a>**`study_topic`** *(string, required)*: Name of the event topic containing study events.
+
+  Examples:
+  ```json
+  "studies"
+  ```
+
 - <a id="properties/accession_map_topic"></a>**`accession_map_topic`** *(string, required)*: The name of the topic used for file accession map events.
 
   Examples:
@@ -65,6 +72,27 @@ The service requires the following configuration parameters:
   Examples:
   ```json
   "research-data-upload-boxes"
+  ```
+
+- <a id="properties/resource_change_topic"></a>**`resource_change_topic`** *(string, required)*: Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.
+
+  Examples:
+  ```json
+  "searchable_resources"
+  ```
+
+- <a id="properties/resource_deletion_type"></a>**`resource_deletion_type`** *(string, required)*: Type used for events indicating the deletion of a previously existing resource.
+
+  Examples:
+  ```json
+  "searchable_resource_deleted"
+  ```
+
+- <a id="properties/resource_upsertion_type"></a>**`resource_upsertion_type`** *(string, required)*: Type used for events indicating the upsert of a resource.
+
+  Examples:
+  ```json
+  "searchable_resource_upserted"
   ```
 
 - <a id="properties/file_upload_box_topic"></a>**`file_upload_box_topic`** *(string, required)*: Topic containing published FileUploadBox outbox events.
@@ -280,6 +308,50 @@ The service requires the following configuration parameters:
   null
   ```
 
+- <a id="properties/db_version_collection"></a>**`db_version_collection`** *(string, required)*: The name of the collection containing DB version information for this service.
+
+  Examples:
+  ```json
+  "ifrsDbVersions"
+  ```
+
+- <a id="properties/migration_wait_sec"></a>**`migration_wait_sec`** *(integer, required)*: The number of seconds to wait before checking the DB version again.
+
+  Examples:
+  ```json
+  5
+  ```
+
+  ```json
+  30
+  ```
+
+  ```json
+  180
+  ```
+
+- <a id="properties/migration_max_wait_sec"></a>**`migration_max_wait_sec`**: The maximum number of seconds to wait for migrations to complete before raising an error. Default: `null`.
+  - **Any of**
+    - <a id="properties/migration_max_wait_sec/anyOf/0"></a>*integer*
+    - <a id="properties/migration_max_wait_sec/anyOf/1"></a>*null*
+
+  Examples:
+  ```json
+  null
+  ```
+
+  ```json
+  300
+  ```
+
+  ```json
+  600
+  ```
+
+  ```json
+  3600
+  ```
+
 - <a id="properties/enable_opentelemetry"></a>**`enable_opentelemetry`** *(boolean)*: If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation. Default: `false`.
 - <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. Minimum: `0`. Maximum: `1`. Default: `1.0`.
 - <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
@@ -393,8 +465,6 @@ The service requires the following configuration parameters:
   ```json
   []
   ```
-
-- <a id="properties/file_accession_mappings_collection"></a>**`file_accession_mappings_collection`** *(string)*: MongoDB collection name for file accession mappings. Default: `"fileAccessionMappings"`.
 
 ### Usage:
 

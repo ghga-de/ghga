@@ -58,12 +58,12 @@ upload_grant_router = APIRouter()
 @TRACER.start_as_current_span("routes.grant_upload_access")
 async def grant_upload_access(
     request: GrantAccessRequest,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: StewardAuthContext,
 ) -> GrantId:
     """Grant upload access to a user. Requires Data Steward role."""
     try:
-        return await ghga_registry.rdub_manager.grant_upload_access(
+        return await registry.rdub_manager.grant_upload_access(
             user_id=request.user_id,
             iva_id=request.iva_id,
             box_id=request.box_id,
@@ -96,7 +96,7 @@ async def grant_upload_access(
 )
 @TRACER.start_as_current_span("routes.get_upload_access_grants")
 async def get_upload_access_grants(  # noqa: PLR0913
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
     user_id: Annotated[
         UUID4 | None,
@@ -143,7 +143,7 @@ async def get_upload_access_grants(  # noqa: PLR0913
         elif str(user_id) != auth_context.id:
             raise HttpNotAuthorizedError()
     try:
-        return await ghga_registry.rdub_manager.get_upload_access_grants(
+        return await registry.rdub_manager.get_upload_access_grants(
             user_id=user_id, iva_id=iva_id, box_id=box_id, valid=valid
         )
     except Exception as err:
@@ -168,12 +168,12 @@ async def get_upload_access_grants(  # noqa: PLR0913
 @TRACER.start_as_current_span("routes.revoke_upload_access_grant")
 async def revoke_upload_access_grant(
     grant_id: UUID4,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: StewardAuthContext,
 ) -> None:
     """Revoke an upload access grant."""
     try:
-        await ghga_registry.rdub_manager.revoke_upload_access_grant(grant_id)
+        await registry.rdub_manager.revoke_upload_access_grant(grant_id)
     except RDUBManagerPort.GrantNotFoundError as err:
         raise HttpGrantNotFoundError(grant_id=grant_id) from err
     except Exception as err:

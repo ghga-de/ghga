@@ -30,7 +30,6 @@ from rs.constants import VALID_STATE_TRANSITIONS
 from rs.core.models import (
     PID,
     BoxRetrievalResults,
-    FileAccession,
     FileUploadBox,
     FileUploadWithAccession,
     GrantId,
@@ -917,7 +916,7 @@ class RDUBManager(RDUBManagerPort):
         *,
         box_id: UUID4,
         box_version: int,
-        accession_map: dict[FileAccession, UUID4],
+        accession_map: dict[PID, UUID4],
         study_id: PID,
     ) -> None:
         """Update the file accession map for a given box and publish an outbox event.
@@ -1032,7 +1031,7 @@ class RDUBManager(RDUBManagerPort):
 
         # Make sure all active files in the box are included in the mapping
         if unmapped_ids := (file_ids_in_box - requested_file_ids):
-            log.error(
+            log.warning(
                 "Accession map for box %s included unmapped file IDs.",
                 box_id,
                 extra={
@@ -1050,11 +1049,36 @@ class RDUBManager(RDUBManagerPort):
 
         # Submit the accession map via the file controller
         try:
-            await self._file_controller.post_file_ids(
+            await self._file_controller.map_accessions_to_file_ids(
                 study_id=study_id, file_id_map=accession_map
             )
+        except FileControllerPort.UnknownAccessionError as err:
+            accessions = ", ".join(err.unknown_accessions)
+            log.warning(
+                "Accession map for box %s included unregistered accessions.",
+                box_id,
+                extra={
+                    "rdub_id": box_id,
+                    "fub_id": box.file_upload_box_id,
+                    "unknown_accessions": err.unknown_accessions,
+                },
+            )
+            raise self.AccessionMapError(
+                f"The following accessions are not registered yet: {accessions}",
+                error_type="unknown_accessions",
+                unknown_accessions=err.unknown_accessions,
+            ) from err
         except FileControllerPort.ConflictingAccessionError as err:
             accessions = ", ".join(err.conflicting_accessions)
+            log.warning(
+                "Accession map for box %s conflicted with existing mappings.",
+                box_id,
+                extra={
+                    "rdub_id": box_id,
+                    "fub_id": box.file_upload_box_id,
+                    "conflicting_accessions": err.conflicting_accessions,
+                },
+            )
             raise self.AccessionMapError(
                 f"The following accessions already have immutable mappings: {accessions}",
                 error_type="accession_conflict",

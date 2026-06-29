@@ -20,6 +20,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from ghga_event_schemas.pydantic_ import SearchableResource
 from ghga_service_commons.auth.ghga import AuthContext
 from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock
@@ -55,7 +56,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     research_box_topic = joint_fixture.config.research_data_upload_box_topic
 
     # Shorthand reference to the rdub_manager
-    rdub_manager = joint_fixture.ghga_registry.rdub_manager
+    rdub_manager = joint_fixture.registry.rdub_manager
 
     # Create auth contexts
     iat = now_utc_ms_prec() - timedelta(hours=1)
@@ -283,6 +284,25 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
         ],
     )
 
+    # The accessions must first be tracked as unmapped via a legacy searchable
+    # resource before they can be mapped to internal file IDs.
+    await joint_fixture.registry.legacy_resource_manager.upsert_resource(
+        resource=SearchableResource(
+            accession="GHGA-DATASET-001",
+            class_name="EmbeddedDataset",
+            content={
+                "study": {
+                    "accession": "GHGA-STUDY-001",
+                    "title": "Test study",
+                    "description": "A study used in the typical journey test.",
+                    "types": ["genomics"],
+                    "affiliations": ["GHGA"],
+                },
+                "files": ["GHGAF001", "GHGAF002", "GHGAF003"],
+            },
+        )
+    )
+
     # Update the accession map and check that the outbox event was published
     async with joint_fixture.kafka.record_events(
         in_topic=joint_fixture.config.accession_map_topic
@@ -355,7 +375,7 @@ async def test_duplicate_box_title(joint_fixture: JointFixture, httpx_mock: HTTP
     already exists.
     """
     config = joint_fixture.config
-    rdub_manager = joint_fixture.ghga_registry.rdub_manager
+    rdub_manager = joint_fixture.registry.rdub_manager
     ds_user_id = uuid4()
 
     # Create a box (requires data steward)

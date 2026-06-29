@@ -20,9 +20,15 @@ from typing import Annotated
 
 import typer
 
-from rs.main import consume_events, publish_events, run_rest_app
+from rs.main import consume_events, migrate_db, publish_events, run_rest_app
 
 cli = typer.Typer()
+
+
+@cli.command(name="migrate-db")
+def sync_migrate_db():
+    """Run database migrations."""
+    asyncio.run(migrate_db())
 
 
 @cli.command(name="run-rest")

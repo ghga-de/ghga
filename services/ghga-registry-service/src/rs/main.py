@@ -27,15 +27,27 @@ from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
-from rs.adapters.outbound.dao import get_box_dao, get_file_accession_mapping_dao
+from rs.adapters.outbound.dao import get_box_dao, get_file_accession_dao
 from rs.config import Config
 from rs.inject import (
     get_persistent_publisher,
     prepare_event_subscriber,
     prepare_rest_app,
 )
+from rs.migrations import run_db_migrations
 
 log = logging.getLogger(__name__)
+
+DB_VERSION = 2
+
+
+async def migrate_db():
+    """Run database migrations as a one-off command."""
+    config = Config()  # type: ignore[call-arg]
+    configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
+
+    await run_db_migrations(config=config, target_version=DB_VERSION)
 
 
 async def run_rest_app():
@@ -76,7 +88,7 @@ async def publish_events(*, all: bool = False):
     async with MongoKafkaDaoPublisherFactory.construct(
         config=config
     ) as dao_publisher_factory:
-        file_accession_publisher = await get_file_accession_mapping_dao(
+        file_accession_publisher = await get_file_accession_dao(
             config=config, dao_publisher_factory=dao_publisher_factory
         )
         box_dao = await get_box_dao(

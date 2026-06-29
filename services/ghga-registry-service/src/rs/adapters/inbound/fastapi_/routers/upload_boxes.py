@@ -73,12 +73,12 @@ box_router = APIRouter()
 async def delete_file_upload(
     box_id: UUID,
     file_id: UUID,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
 ) -> None:
     """Delete a file upload from an upload box."""
     try:
-        await ghga_registry.rdub_manager.delete_file_upload(
+        await registry.rdub_manager.delete_file_upload(
             box_id=box_id,
             file_id=file_id,
             auth_context=auth_context,
@@ -117,7 +117,7 @@ async def delete_file_upload(
 @TRACER.start_as_current_span("routes.delete_research_data_upload_box")
 async def delete_research_data_upload_box(
     box_id: UUID,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: StewardAuthContext,
     version: Annotated[
         int,
@@ -126,7 +126,7 @@ async def delete_research_data_upload_box(
 ) -> None:
     """Delete a research data upload box and its files. Requires Data Steward role."""
     try:
-        await ghga_registry.rdub_manager.delete_research_data_upload_box(
+        await registry.rdub_manager.delete_research_data_upload_box(
             box_id=box_id,
             version=version,
             user_id=UUID(auth_context.id),
@@ -169,12 +169,12 @@ async def delete_research_data_upload_box(
 async def update_research_data_upload_box(
     box_id: UUID,
     request: UpdateUploadBoxRequest,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
 ) -> None:
     """Update a ResearchDataUploadBox."""
     try:
-        await ghga_registry.rdub_manager.update_research_data_upload_box(
+        await registry.rdub_manager.update_research_data_upload_box(
             box_id=box_id,
             version=request.version,
             title=request.title,
@@ -223,14 +223,14 @@ async def update_research_data_upload_box(
 @TRACER.start_as_current_span("routes.get_research_data_upload_box")
 async def get_research_data_upload_box(
     box_id: UUID,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
 ) -> ResearchDataUploadBox:
     """Get details of a specific upload box. If the user doesn't have access to an
     existing box, this endpoint will return a 404.
     """
     try:
-        box = await ghga_registry.rdub_manager.get_research_data_upload_box(
+        box = await registry.rdub_manager.get_research_data_upload_box(
             box_id=box_id, auth_context=auth_context
         )
         return box
@@ -262,12 +262,12 @@ async def get_research_data_upload_box(
 @TRACER.start_as_current_span("routes.list_upload_box_files")
 async def list_upload_box_files(
     box_id: UUID,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
 ) -> list[FileUploadWithAccession]:
     """List file uploads in an upload box."""
     try:
-        file_uploads = await ghga_registry.rdub_manager.get_upload_box_files(
+        file_uploads = await registry.rdub_manager.get_upload_box_files(
             box_id=box_id,
             auth_context=auth_context,
         )
@@ -308,12 +308,12 @@ async def list_upload_box_files(
 async def submit_accession_map(
     box_id: UUID,
     request: AccessionMapRequest,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: StewardAuthContext,
 ) -> None:
     """Submit a file ID to accession number mapping for an upload box."""
     try:
-        await ghga_registry.rdub_manager.store_accession_map(
+        await registry.rdub_manager.store_accession_map(
             box_id=box_id,
             box_version=request.box_version,
             accession_map=request.mapping,
@@ -323,6 +323,7 @@ async def submit_accession_map(
         raise HttpAccessionMapError(
             error_type=err.error_type,
             conflicting_accessions=err.conflicting_accessions,
+            unknown_accessions=err.unknown_accessions,
             affected_file_ids=err.affected_file_ids,
             status_code=409
             if err.error_type in {"accession_conflict", "archived"}
@@ -359,7 +360,7 @@ async def submit_accession_map(
 )
 @TRACER.start_as_current_span("routes.get_research_data_upload_boxes")
 async def get_research_data_upload_boxes(
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
     skip: Annotated[
         NonNegativeInt | None,
@@ -386,7 +387,7 @@ async def get_research_data_upload_boxes(
     they have access to according to the access API.
     """
     try:
-        results = await ghga_registry.rdub_manager.get_research_data_upload_boxes(
+        results = await registry.rdub_manager.get_research_data_upload_boxes(
             auth_context=auth_context,
             skip=skip,
             limit=limit,
@@ -416,12 +417,12 @@ async def get_research_data_upload_boxes(
 @TRACER.start_as_current_span("routes.create_research_data_upload_box")
 async def create_research_data_upload_box(
     request: CreateUploadBoxRequest,
-    ghga_registry: dummies.GHGARegistryDummy,
+    registry: dummies.RegistryDummy,
     auth_context: StewardAuthContext,
 ) -> UUID4:
     """Create a new upload box. Requires Data Steward role."""
     try:
-        box_id = await ghga_registry.rdub_manager.create_research_data_upload_box(
+        box_id = await registry.rdub_manager.create_research_data_upload_box(
             title=request.title,
             description=request.description,
             storage_alias=request.storage_alias,

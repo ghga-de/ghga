@@ -15,10 +15,12 @@
 
 """Unit tests for core data models"""
 
+from uuid import uuid4
+
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from rs.core.models import PID
+from rs.core.models import PID, Study, StudyStatus
 
 
 class _PIDModel(BaseModel):
@@ -39,6 +41,52 @@ def test_pid_too_long():
     """A string exceeding 256 characters is rejected."""
     with pytest.raises(ValidationError):
         _PIDModel(value="x" * 257)
+
+
+def _minimal_study(**kwargs) -> Study:
+    """Create a Study with only the required fields set."""
+    defaults = dict(
+        id="GHGA-STUDY-001",
+        title="A study",
+        description="A detailed abstract",
+        types=["whole_genome_sequencing"],
+        affiliations=["UKT"],
+        status=StudyStatus.DRAFT,
+        created_by=uuid4(),
+    )
+    defaults.update(kwargs)
+    return Study(**defaults)  # type: ignore
+
+
+def test_study_status_values():
+    """The StudyStatus enum has the expected string values."""
+    assert StudyStatus.DRAFT == "draft"
+    assert StudyStatus.ARCHIVED == "archived"
+
+
+def test_study_defaults():
+    """Optional and computed fields default as expected for a fresh draft."""
+    study = _minimal_study()
+    assert study.status is StudyStatus.DRAFT
+    assert study.approved is None
+    assert study.approved_by is None
+    assert study.superseded_by_id is None
+    assert study.has_em is False
+    assert study.num_datasets == 0
+    assert study.num_publications == 0
+    assert study.created is not None
+
+
+def test_study_invalid_id_rejected():
+    """A non-ASCII study id is rejected via the PID constraint."""
+    with pytest.raises(ValidationError):
+        _minimal_study(id="GHGA-STUDY-ü01")
+
+
+def test_study_invalid_status_rejected():
+    """An unknown status value is rejected."""
+    with pytest.raises(ValidationError):
+        _minimal_study(status="published")
 
 
 def test_pid_non_ascii():

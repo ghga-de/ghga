@@ -26,17 +26,17 @@ from ghga_service_commons.api.di import DependencyDummy
 from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.ghga import AuthContext
 
-from rs.ports.inbound.ghga_registry import GHGARegistryPort
+from rs.ports.inbound.registry import RegistryPort
 
 __all__ = [
     "AuthProviderDummy",
-    "GHGARegistryDummy",
+    "RegistryDummy",
     "auth_provider",
-    "ghga_registry_port",
+    "registry_port",
 ]
 
 auth_provider = DependencyDummy("auth_provider")
-ghga_registry_port = DependencyDummy("ghga_registry_port")
+registry_port = DependencyDummy("registry_port")
 
 AuthProviderDummy = Annotated[AuthContextProtocol[AuthContext], Depends(auth_provider)]
-GHGARegistryDummy = Annotated[GHGARegistryPort, Depends(ghga_registry_port)]
+RegistryDummy = Annotated[RegistryPort, Depends(registry_port)]
