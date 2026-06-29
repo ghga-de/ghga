@@ -1129,26 +1129,35 @@ class UploadController(UploadControllerPort):
         await self._file_upload_box_dao.update(box)
         log.info("Archived box with ID %s", box_id)
 
-    async def get_box_file_info(self, *, box_id: UUID4) -> list[FileUpload]:
-        """Return the list of FileUploads for a FileUploadBox, sorted by alias.
+    async def get_box_file_info(
+        self, *, box_id: UUID4, skip: int = 0, limit: int | None = None
+    ) -> tuple[list[FileUpload], int]:
+        """Return a page of FileUploads for a FileUploadBox, sorted by alias.
 
         Raises:
+        - `PaginationError` if skip and/or limit are invalid.
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         """
         try:
-            # assert the box exists
             _ = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
             log.error(error)
             raise error from err
 
-        # Box exists, now get all file uploads
-        file_uploads = [
-            x async for x in self._file_upload_dao.find_all(mapping={"box_id": box_id})
-        ]
-        file_uploads.sort(key=lambda x: x.alias)
-        return file_uploads
+        try:
+            find_result = self._file_upload_dao.find_all(
+                mapping={"box_id": box_id},
+                skip=skip,
+                limit=limit,
+                sort=["alias"],
+            )
+        except ValueError as err:
+            raise self.PaginationError() from err
+
+        file_uploads = [x async for x in find_result]
+        total_count = await find_result.total_count()
+        return file_uploads, total_count
 
     async def process_interrogation_success(
         self, *, report: InterrogationSuccess

@@ -450,6 +450,20 @@ class HttpNotAuthorizedError(HttpCustomExceptionBase):
         )
 
 
+class HttpPaginationError(HttpCustomExceptionBase):
+    """Thrown when the skip or limit pagination parameters are invalid."""
+
+    exception_id = "paginationError"
+
+    def __init__(self, *, status_code: int = 422):
+        """Construct message and initialize exception."""
+        super().__init__(
+            status_code=status_code,
+            description="",
+            data={},
+        )
+
+
 class HttpInternalError(HttpCustomExceptionBase):
     """Thrown for otherwise unhandled exceptions"""
 

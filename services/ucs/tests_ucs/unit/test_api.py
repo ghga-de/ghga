@@ -158,6 +158,8 @@ async def test_view_box_endpoint_auth(config: ConfigFixture, app_fixture: AppFix
     """
     rs_jwk = config.rs_jwk
     rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.get_box_file_info.return_value = ([], 0)
 
     url = f"/boxes/{TEST_BOX_ID}/uploads"
     response = await rest_client.get(url)
@@ -178,6 +180,87 @@ async def test_view_box_endpoint_auth(config: ConfigFixture, app_fixture: AppFix
     good_token_header = utils.view_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
     response = await rest_client.get(url, headers=good_token_header)
     assert response.status_code == 200
+    body = response.json()
+    assert body["items"] == []
+    assert body["total_count"] == 0
+
+
+async def test_get_box_uploads_response_format(
+    config: ConfigFixture, app_fixture: AppFixture
+):
+    """Test that the endpoint returns the correct paginated response shape and
+    forwards skip/limit query parameters to the controller correctly.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    token_header = utils.view_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
+    url = f"/boxes/{TEST_BOX_ID}/uploads"
+
+    # Build two mock file uploads with different aliases
+    file_upload_a = utils.make_file_upload(file_id=TEST_FILE_ID)
+    file_upload_a.alias = "test0.bam"
+    file_upload_a.box_id = TEST_BOX_ID
+    file_upload_b = utils.make_file_upload()
+    file_upload_b.alias = "test1.vcf"
+    file_upload_b.box_id = TEST_BOX_ID
+
+    # Test with default parameters (no skip/limit in query string)
+    core_mock.get_box_file_info.return_value = ([file_upload_a, file_upload_b], 5)
+    response = await rest_client.get(url, headers=token_header)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_count"] == 5
+    assert len(body["items"]) == 2
+    assert body["items"][0]["alias"] == "test0.bam"
+    assert body["items"][1]["alias"] == "test1.vcf"
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID, skip=0, limit=50
+    )
+
+    # Test with skip and limit parameters explicitly set
+    core_mock.get_box_file_info.return_value = ([file_upload_b], 5)
+    response = await rest_client.get(
+        url, params={"skip": 3, "limit": 1}, headers=token_header
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_count"] == 5
+    assert len(body["items"]) == 1
+    assert body["items"][0]["alias"] == "test1.vcf"
+    core_mock.get_box_file_info.assert_awaited_with(box_id=TEST_BOX_ID, skip=3, limit=1)
+
+    # skip beyond all results  controller returns empty page but preserves total_count
+    core_mock.get_box_file_info.return_value = ([], 5)
+    response = await rest_client.get(url, params={"skip": 100}, headers=token_header)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_count"] == 5
+    assert body["items"] == []
+
+
+async def test_get_box_uploads_invalid_params(
+    config: ConfigFixture, app_fixture: AppFixture
+):
+    """Test that invalid skip/limit query parameters are rejected with 422."""
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.get_box_file_info.return_value = ([], 0)
+    token_header = utils.view_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
+    url = f"/boxes/{TEST_BOX_ID}/uploads"
+
+    # skip must be >= 0
+    response = await rest_client.get(url, params={"skip": -1}, headers=token_header)
+    assert response.status_code == 422
+
+    # limit must be <= 100
+    response = await rest_client.get(url, params={"limit": 101}, headers=token_header)
+    assert response.status_code == 422
+
+    # limit must also be >=0
+    response = await rest_client.get(url, params={"limit": -1}, headers=token_header)
+    assert response.status_code == 422
 
 
 async def test_create_file_upload_endpoint_auth(
@@ -512,9 +595,13 @@ async def test_update_box_max_size_below_current_error_handling(
             UploadControllerPort.BoxNotFoundError(box_id=TEST_BOX_ID),
             http_exceptions.HttpBoxNotFoundError(box_id=TEST_BOX_ID),
         ),
+        (
+            UploadControllerPort.PaginationError(),
+            http_exceptions.HttpPaginationError(),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
-    ids=["BoxNotFound", "InternalError"],
+    ids=["BoxNotFound", "PaginationError", "InternalError"],
 )
 async def test_view_box_endpoint_error_handling(
     config: ConfigFixture,

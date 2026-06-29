@@ -21,6 +21,7 @@ from ghga_event_schemas.pydantic_ import UploadBoxState
 from pydantic import UUID4, BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
 from ucs.constants import MAX_PART_SIZE, MIN_PART_SIZE
+from ucs.core.models import FileUpload
 
 
 class BoxCreationRequest(BaseModel):
@@ -213,3 +214,10 @@ class DeleteFileBoxWorkOrder(BaseWorkOrderToken[Literal["delete_box"]]):
     """
 
     box_id: UUID4
+
+
+class BoxUploadsPage(BaseModel):
+    """Paginated response for a box's file uploads."""
+
+    items: list[FileUpload]
+    total_count: int

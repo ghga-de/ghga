@@ -28,7 +28,6 @@ from ucs.adapters.inbound.fastapi_ import (
     rest_models,
 )
 from ucs.constants import TRACER
-from ucs.core.models import FileUpload
 from ucs.ports.inbound.controller import UploadControllerPort
 
 router = APIRouter(tags=["UploadControllerService"])
@@ -313,11 +312,11 @@ async def update_box(  # noqa: C901, PLR0912
 
 @router.get(
     "/boxes/{box_id}/uploads",
-    summary="Retrieve list of file IDs for box",
+    summary="Retrieve a paginated list of file uploads for the given box",
     operation_id="getBoxUploads",
     status_code=status.HTTP_200_OK,
-    response_model=list[FileUpload],
-    response_description="List of file IDs for completed uploads in the box",
+    response_model=rest_models.BoxUploadsPage,
+    response_description="Paginated list of file uploads for the box",
     responses={
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
     },
@@ -330,24 +329,29 @@ async def get_box_uploads(
         http_authorization.require_view_file_box_work_order,
     ],
     upload_controller: dummies.UploadControllerDummy,
-) -> list[FileUpload]:
-    """Retrieve list of FileUploads for a FileUploadBox.
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=0, le=100)] = 50,
+) -> rest_models.BoxUploadsPage:
+    """Retrieve a paginated list of FileUploads for a FileUploadBox.
 
-    Returns the list of FileUploads for completed uploads in the specified box.
     Requires ViewFileBoxWorkOrder token from the RS.
     """
     if work_order.box_id != box_id:
         raise http_exceptions.HttpNotAuthorizedError()
 
     try:
-        file_uploads = await upload_controller.get_box_file_info(box_id=box_id)
+        file_uploads, total_count = await upload_controller.get_box_file_info(
+            box_id=box_id, skip=skip, limit=limit
+        )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
+    except UploadControllerPort.PaginationError as error:
+        raise http_exceptions.HttpPaginationError() from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
 
-    return file_uploads
+    return rest_models.BoxUploadsPage(items=file_uploads, total_count=total_count)
 
 
 @router.post(
