@@ -12,24 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""DAO and Aggregator implementation"""
+"""DAO implementation"""
 
 import logging
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 
 from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb.provider import (
-    ConfiguredMongoClient,
-    MongoDbIndex,
-    document_to_dto,
-)
-from pymongo.asynchronous.collection import AsyncCollection
-from pymongo.errors import OperationFailure
+from hexkit.providers.mongodb.provider import MongoDbIndex
 
-from dlqs.config import Config
 from dlqs.models import StoredDLQEvent
-from dlqs.ports.outbound.dao import AggregatorPort, EventDaoPort
+from dlqs.ports.outbound.dao import EventDaoPort
 
 log = logging.getLogger(__name__)
 
@@ -44,61 +35,3 @@ async def get_event_dao(*, dao_factory: DaoFactoryProtocol) -> EventDaoPort:
         id_field="dlq_id",
         indexes=[MongoDbIndex(fields={"dlq_info.service": 1, "topic": 1})],
     )
-
-
-class Aggregator(AggregatorPort):
-    """Aggregator for DLQ events"""
-
-    def __init__(self, *, collection: AsyncCollection) -> None:
-        """Initialize with a MongoDB collection"""
-        self._collection = collection
-
-    async def aggregate(
-        self, *, service: str, topic: str, skip: int = 0, limit: int | None = None
-    ) -> list[StoredDLQEvent]:
-        """Aggregate events from the DLQ by service and topic.
-
-        Args:
-        - `service`: The service name to match against.
-        - `topic`: The topic name to match against.
-        - `skip`: The number of events to skip for pagination.
-        - `limit`: The maximum number of events to return for pagination.
-
-        Raises:
-        - `ValueError` if `skip` or `limit` is invalid.
-        - `AggregationError` if the event retrieval fails.
-        """
-        if skip < 0:
-            raise ValueError(f"Skip must be 0 or greater, got {skip}")
-
-        if limit is not None and limit < 1:
-            raise ValueError(f"Limit must be greater than 0 if supplied, got {limit}")
-
-        try:
-            results_cursor = self._collection.find(
-                filter={"dlq_info.service": service, "topic": topic}
-            ).sort("timestamp", 1)
-            if skip:
-                results_cursor = results_cursor.skip(skip)
-            if limit:
-                results_cursor = results_cursor.limit(limit)
-
-            results = await results_cursor.to_list()
-            return [
-                document_to_dto(item, id_field="dlq_id", dto_model=StoredDLQEvent)
-                for item in results
-            ]
-        except OperationFailure as err:
-            params_as_string = f"{{{service=}, {topic=}, {skip=}, {limit=}}}"
-            agg_error = self.AggregationError(parameters=params_as_string)
-            log.error(agg_error)
-            raise agg_error from err
-
-
-@asynccontextmanager
-async def get_aggregator(*, config: Config) -> AsyncGenerator[Aggregator]:
-    """Return an Aggregator with a collection set up"""
-    async with ConfiguredMongoClient(config=config) as client:
-        db = client[config.db_name]
-        collection = db[DLQ_EVENTS_COLLECTION]
-        yield Aggregator(collection=collection)

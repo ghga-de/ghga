@@ -24,6 +24,7 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from dlqs.models import StoredDLQEvent
 from tests.fixtures import utils
 from tests.fixtures.joint import JointFixture
+from tests.fixtures.prepop import ReferenceEventsDict
 
 pytestmark = pytest.mark.asyncio
 
@@ -129,3 +130,41 @@ async def test_preview(joint_fixture: JointFixture, prepopped_events):
         service=utils.UFS, topic=utils.NOTIFICATIONS, skip=8, limit=5
     )
     assert notifications_preview2 == notifications_preview
+
+
+async def test_preview_with_various_skip_and_limit_args(
+    joint_fixture: JointFixture, prepopped_events: ReferenceEventsDict
+):
+    """Another test to ensure preview_events returns the correct results
+
+    This test mimics the scenario where two services subscribe to the same topic
+    and both services encounter errors with a series of events from that topic.
+    For both services we insert a number of events in the DB, which have the same
+    timestamp and other information (except for the event ID).
+    """
+    # Test preview with different skip and limit values (all valid)
+    pagination_params = [
+        (0, None),
+        (0, 5),
+        (0, 25),
+        (5, None),
+        (5, 5),
+        (5, 10),
+        (5, 25),
+    ]
+
+    # Quick sanity check
+    svc = utils.FSS
+    topic = utils.USER_EVENTS
+    assert svc in prepopped_events and topic in prepopped_events[svc]
+    assert len(prepopped_events[utils.FSS][topic]) > 0
+
+    # Preview the events using different valid parameters and compare to the reference
+    for skip, limit in pagination_params:
+        agg_op = joint_fixture.dlq_manager.preview_events(
+            service=svc, topic=utils.USER_EVENTS, skip=skip, limit=limit
+        )
+        results = await agg_op
+        end = skip + limit if limit else None
+        expected = prepopped_events[svc][topic][skip:end]
+        assert results == expected

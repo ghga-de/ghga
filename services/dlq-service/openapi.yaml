@@ -322,7 +322,7 @@ components:
 info:
   description: A service to manage the dead letter queue for Kafka events
   title: DLQ Service
-  version: 4.0.0
+  version: 4.1.0
 openapi: 3.1.0
 paths:
   /health:
@@ -336,6 +336,31 @@ paths:
               schema: {}
           description: Successful Response
       summary: health
+  /summary:
+    get:
+      description: Return a summary of the current DLQ state by service and topic.
+      operationId: get_summary_summary_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  additionalProperties:
+                    type: integer
+                  type: object
+                title: Response Get Summary Summary Get
+                type: object
+          description: Successful Response
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpInternalServerError'
+          description: Internal Server Error
+      security:
+      - HTTPBearer: []
+      summary: Return a summary of the current DLQ state by service and topic
   /{dlq_id}:
     delete:
       description: Discard the event with the given DLQ ID, if it exists.

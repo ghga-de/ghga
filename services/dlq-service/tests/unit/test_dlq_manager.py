@@ -16,21 +16,26 @@
 """Unit tests for the DLQ Manager"""
 
 from contextlib import nullcontext
-from unittest.mock import AsyncMock
+from typing import cast
+from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
 import pytest
+from hexkit.protocols.dao import Dao
 from hexkit.providers.akafka.provider.eventsub import HeaderNames
+from hexkit.providers.testing.dao import new_mock_dao_class
 
 from dlqs.core.dlq_manager import stored_event_from_raw_event
 from dlqs.inject import prepare_core
 from dlqs.models import EventCore, PublishableEventData, StoredDLQEvent
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
-from dlqs.ports.outbound.dao import AggregatorPort, ResourceNotFoundError
+from dlqs.ports.outbound.dao import ResourceNotFoundError
 from tests.fixtures import utils
 from tests.fixtures.config import DEFAULT_CONFIG
 
 TEST_UUID = UUID("25a2abf9-dc4a-4dcc-9b4c-0cafa9ae4001")
+
+InMemDLQEventDao = new_mock_dao_class(dto_model=StoredDLQEvent, id_field="dlq_id")
 
 
 def test_dlq_error_text():
@@ -122,19 +127,18 @@ async def test_process_override_different_dlq_id():
     #  so we need to pass some other DLQ ID to the process_event method to trigger the error
     incorrect_dlq_id = UUID("25a2abf9-dc4a-4dcc-9b4c-0cafa9ae4417")
 
-    mock_agg = AsyncMock()
-    mock_agg.aggregate.return_value = [stored_dlq_event]
+    dao = InMemDLQEventDao()
+    await dao.insert(stored_dlq_event)
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=AsyncMock(),
-        aggregator_override=mock_agg,
+        dao_override=dao,  # type: ignore[arg-type]
         publisher_override=AsyncMock(),
     ) as dlq_manager:
         with pytest.raises(dlq_manager.DLQSequenceError):
             await dlq_manager.process_event(
                 service="fss",
-                topic=dlq_event.topic,
+                topic=stored_dlq_event.topic,
                 dlq_id=incorrect_dlq_id,
                 override=override_event,
                 dry_run=False,
@@ -156,19 +160,18 @@ async def test_process_override_forbidden_topic(topic: str):
     # The override event's topic is not allowed
     override_event.topic = topic
 
-    mock_agg = AsyncMock()
-    mock_agg.aggregate.return_value = [stored_dlq_event]
+    dao = InMemDLQEventDao()
+    await dao.insert(stored_dlq_event)
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=AsyncMock(),
-        aggregator_override=mock_agg,
+        dao_override=dao,  # type: ignore[arg-type]
         publisher_override=AsyncMock(),
     ) as dlq_manager:
         with pytest.raises(dlq_manager.DLQValidationError):
             await dlq_manager.process_event(
                 service="fss",
-                topic=dlq_event.topic,
+                topic=stored_dlq_event.topic,
                 dlq_id=stored_dlq_event.dlq_id,
                 override=override_event,
                 dry_run=False,
@@ -182,27 +185,25 @@ async def test_process_dry_run():
     stored_dlq_event = stored_event_from_raw_event(dlq_event)
     dlq_id = stored_dlq_event.dlq_id
 
-    mock_dao = AsyncMock()
-    mock_agg = AsyncMock()
-    mock_agg.aggregate.return_value = [stored_dlq_event]
+    dao = InMemDLQEventDao()
+    await dao.insert(stored_dlq_event)
     mock_publisher = AsyncMock()
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=mock_dao,
-        aggregator_override=mock_agg,
+        dao_override=dao,  # type: ignore[arg-type]
         publisher_override=mock_publisher,
     ) as dlq_manager:
         await dlq_manager.process_event(
             service="fss",
-            topic=dlq_event.topic,
+            topic=stored_dlq_event.topic,
             dlq_id=dlq_id,
             override=None,
             dry_run=True,
         )
         # Verify that the event was neither published nor deleted from the DLQ
-        mock_dao.delete.assert_not_called()
-        mock_publisher.publish_event.assert_not_called()
+        assert dao.latest == stored_dlq_event
+        mock_publisher.publish.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -231,20 +232,18 @@ async def test_process_override_success():
         headers={HeaderNames.ORIGINAL_TOPIC: override_event.topic},
     )
 
-    mock_dao = AsyncMock()
-    mock_agg = AsyncMock()
-    mock_agg.aggregate.return_value = [stored_dlq_event]
+    dao = InMemDLQEventDao()
+    await dao.insert(stored_dlq_event)
     mock_publisher = AsyncMock()
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=mock_dao,
-        aggregator_override=mock_agg,
+        dao_override=dao,  # type: ignore[arg-type]
         publisher_override=mock_publisher,
     ) as dlq_manager:
         result = await dlq_manager.process_event(
             service="fss",
-            topic=dlq_event.topic,
+            topic=stored_dlq_event.topic,
             dlq_id=dlq_id,
             override=override_event,
             dry_run=False,
@@ -252,7 +251,8 @@ async def test_process_override_success():
         assert result is not None and isinstance(result, PublishableEventData)
 
         # Verify that the event was published and deleted from the DLQ
-        mock_dao.delete.assert_called_once_with(stored_dlq_event.dlq_id)
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(stored_dlq_event.dlq_id)
         mock_publisher.publish.assert_called_once_with(**published.model_dump())
 
         # Verify the content returned from .process_event()
@@ -272,16 +272,18 @@ async def test_process_with_empty_dlq(override: EventCore | None):
     """Make sure no errors are raised and that `None` is returned when calling
     `process_event` with an empty DLQ. Behavior should be equal regardless of `override`.
     """
-    mock_dao = AsyncMock()
-    mock_agg = AsyncMock()
-    mock_agg.aggregate.return_value = []
+    mock_dao = InMemDLQEventDao()
+
+    async def ensure_delete_not_hit(id_) -> None:
+        raise RuntimeError("Delete was called on the DAO but shouldn't have been.")
+
+    mock_dao.delete = ensure_delete_not_hit  # type: ignore
     mock_publisher = AsyncMock()
     dlq_id = TEST_UUID
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=mock_dao,
-        aggregator_override=mock_agg,
+        dao_override=mock_dao,  # type: ignore[arg-type]
         publisher_override=mock_publisher,
     ) as dlq_manager:
         with pytest.raises(dlq_manager.DLQEmptyError):
@@ -292,8 +294,7 @@ async def test_process_with_empty_dlq(override: EventCore | None):
                 override=override,
                 dry_run=False,
             )
-        mock_dao.delete.assert_not_called()
-        mock_publisher.send_to_retry_topic.assert_not_called()
+        mock_publisher.publish.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -308,47 +309,57 @@ async def test_process_with_empty_dlq(override: EventCore | None):
 )
 @pytest.mark.asyncio
 async def test_preview_pagination_valid_params(skip: int, limit: int):
-    """Test that `preview_events` calls the aggregator with correct params."""
-    mock_agg = AsyncMock()
+    """Test that `preview_events` calls the DAO with correct params."""
+    mock_dao = Mock()
+
+    class MockResults:
+        async def __aiter__(self):
+            return
+            yield
+
+    mock_dao.find_all.return_value = MockResults()
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=AsyncMock(),
-        aggregator_override=mock_agg,
+        dao_override=mock_dao,
         publisher_override=AsyncMock(),
     ) as dlq_manager:
         _ = await dlq_manager.preview_events(
             service="test", topic="test2", limit=limit, skip=skip
         )
-        mock_agg.aggregate.assert_called_once_with(
-            service="test", topic="test2", skip=skip, limit=limit
+        mock_dao.find_all.assert_called_once_with(
+            mapping={"dlq_info.service": "test", "topic": "test2"},
+            sort=["timestamp"],
+            skip=skip,
+            limit=limit,
         )
 
 
+@pytest.mark.parametrize("skip, limit", [(-1, 10), (0, -1), (-1, -1)])
 @pytest.mark.asyncio
-async def test_value_error_propagation():
+async def test_value_error_propagation(skip: int, limit: int):
     """Verify that `preview_events` lets ValueErrors bubble up."""
-    error_mock = AsyncMock()
-    error_mock.aggregate.side_effect = ValueError("Invalid params")
+    dao = InMemDLQEventDao()
+
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=AsyncMock(),
-        aggregator_override=error_mock,
+        dao_override=dao,  # type: ignore[arg-type]
         publisher_override=AsyncMock(),
     ) as dlq_manager:
-        with pytest.raises(ValueError, match="Invalid params"):
-            _ = await dlq_manager.preview_events(service="NA", topic="NA2")
+        with pytest.raises(DLQManagerPort.DLQPaginationError):
+            _ = await dlq_manager.preview_events(
+                service="NA", topic="NA2", skip=skip, limit=limit
+            )
 
 
 @pytest.mark.asyncio
 async def test_preview_db_error():
-    """Test that AggregatorPort.AggregationError is translated to DLQPreviewError"""
-    error_mock = AsyncMock()
-    error_mock.aggregate.side_effect = AggregatorPort.AggregationError(parameters="")
+    """Test that non-pagination errors are translated as DLQPreviewError"""
+    error_mock = Mock()
+    error_mock.find_all.side_effect = TypeError()
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=AsyncMock(),
-        aggregator_override=error_mock,
+        dao_override=error_mock,
         publisher_override=AsyncMock(),
     ) as dlq_manager:
         with pytest.raises(DLQManagerPort.DLQPreviewError):
@@ -375,23 +386,18 @@ async def test_discard_event(event_exists: bool, error: bool):
 
     mock_dao = AsyncMock()
 
-    # To simulate an existing event, we return it from the mock (otherwise raise an error)
-    if event_exists:
-        mock_dao.get_by_id.return_value = stored_dlq_event
-    else:
-        mock_dao.get_by_id.side_effect = ResourceNotFoundError(id_=dlq_id)
-
     # If we want to simulate a deletion error, we raise an exception on the mock
     if error:
         mock_dao.delete.side_effect = DLQManagerPort.DLQDeletionError(
             dlq_id=stored_dlq_event.dlq_id
         )
+    elif not event_exists:
+        mock_dao.delete.side_effect = ResourceNotFoundError(id_=dlq_id)
     mock_publisher = AsyncMock()
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
         dao_override=mock_dao,
-        aggregator_override=AsyncMock(),
         publisher_override=mock_publisher,
     ) as dlq_manager:
         with pytest.raises(dlq_manager.DLQDeletionError) if error else nullcontext():
@@ -402,3 +408,35 @@ async def test_discard_event(event_exists: bool, error: bool):
 
         # Verify that we called the DAO's "delete" method
         mock_dao.delete.assert_called_once_with(dlq_id)
+
+
+@pytest.mark.asyncio
+async def test_get_service_topic_summary():
+    """Test to make sure `get_service_topic_summary()` returns the right data."""
+    dao = cast(Dao[StoredDLQEvent], InMemDLQEventDao())
+
+    for i in range(5):
+        dlq_event = utils.user_event(service="fss", user_no=i)
+        await dao.insert(stored_event_from_raw_event(dlq_event))
+
+    for i in range(4):
+        dlq_event = utils.user_event(service="ufs", user_no=i)
+        await dao.insert(stored_event_from_raw_event(dlq_event))
+
+    for i in range(19):
+        dlq_event = utils.graph_event(user_no=i)  # service=fss
+        await dao.insert(stored_event_from_raw_event(dlq_event))
+
+    async with prepare_core(
+        config=DEFAULT_CONFIG,
+        dao_override=dao,
+        publisher_override=AsyncMock(),
+    ) as dlq_manager:
+        results = await dlq_manager.get_service_topic_summary()
+    assert results == {
+        utils.FSS: {
+            utils.USER_EVENTS: 5,
+            utils.GRAPH_UPDATES: 19,
+        },
+        utils.UFS: {utils.USER_EVENTS: 4},
+    }

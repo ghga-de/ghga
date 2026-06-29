@@ -16,6 +16,7 @@
 """Domain logic for the DLQ Service"""
 
 import logging
+from collections import Counter, defaultdict
 from contextlib import suppress
 from uuid import UUID
 
@@ -33,7 +34,7 @@ from dlqs.models import (
     StoredDLQEvent,
 )
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
-from dlqs.ports.outbound.dao import AggregatorPort, EventDaoPort, ResourceNotFoundError
+from dlqs.ports.outbound.dao import EventDaoPort, ResourceNotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -90,12 +91,10 @@ class DLQManager(DLQManagerPort):
         config: Config,
         publisher: EventPublisherProtocol,
         dao: EventDaoPort,
-        aggregator: AggregatorPort,
     ):
         self._config = config
         self._publisher = publisher
         self._dao = dao
-        self._aggregator = aggregator
 
     async def _get_next_event(
         self, *, service: str, topic: str
@@ -107,9 +106,14 @@ class DLQManager(DLQManagerPort):
         Raises a `DLQFetchNextError` if the operation fails.
         """
         try:
-            events = await self._aggregator.aggregate(
-                service=service, topic=topic, limit=1
-            )
+            events = [
+                x
+                async for x in self._dao.find_all(
+                    mapping={"dlq_info.service": service, "topic": topic},
+                    sort=["timestamp"],
+                    limit=1,
+                )
+            ]
             if events:
                 return events[0]
         except Exception as err:
@@ -152,6 +156,28 @@ class DLQManager(DLQManagerPort):
             log.error(error, exc_info=not already_exists)  # log TB if misc
             raise error from err
 
+    async def get_service_topic_summary(self) -> dict[str, Counter[str]]:
+        """Returns a dictionary containing an overview of the contents of the DLQS
+        for operational convenience. The dict's keys are the available services, and the
+        values are another dict containing the number of DLQ events for each topic.
+
+        Example:
+        ```python
+        {
+            "service-A": {"topic-A": 5, "topic-B": 1},
+            "service-B": {"topic-B": 4}
+        }
+        ```
+        """
+        service_topics: dict[str, Counter[str]] = defaultdict(Counter)
+
+        # TODO: Here we pull back everything just to get a couple fields - this is a
+        # limitation of hexkit and is costly/inefficient. Should optimize in the future.
+        results_iter = self._dao.find_all(mapping={})
+        async for event in results_iter:
+            service_topics[event.dlq_info.service][event.topic] += 1
+        return service_topics
+
     async def preview_events(
         self,
         *,
@@ -169,19 +195,25 @@ class DLQManager(DLQManagerPort):
         - `limit`: The maximum number of events to return. Default is None (no limit).
 
         Raises:
-        - `ValueError` if there is a problem with the params supplied to the aggregator.
-        - `DLQPreviewError` if the preview fails during the aggregation
+        - `DLQPaginationError` if there is a problem with the skip or limit parameters.
+        - `DLQPreviewError` if the preview fails for any other reason.
         """
         try:
-            events = await self._aggregator.aggregate(
-                service=service, topic=topic, skip=skip, limit=limit
-            )
-        except AggregatorPort.AggregationError as err:
+            return [
+                x
+                async for x in self._dao.find_all(
+                    mapping={"dlq_info.service": service, "topic": topic},
+                    sort=["timestamp"],
+                    skip=skip,
+                    limit=limit,
+                )
+            ]
+        except ValueError as err:
+            raise self.DLQPaginationError() from err
+        except Exception as err:
             error = self.DLQPreviewError(service=service, topic=topic)
             log.error(error)
             raise error from err
-
-        return [StoredDLQEvent(**event.model_dump()) for event in events]
 
     async def process_event(
         self,

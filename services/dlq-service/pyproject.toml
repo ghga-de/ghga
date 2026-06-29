@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dlqs"
-version = "4.0.0"
+version = "4.1.0"
 description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
 dependencies = [
     "typer >= 0.19",

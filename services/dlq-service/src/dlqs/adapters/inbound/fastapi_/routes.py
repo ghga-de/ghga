@@ -15,6 +15,7 @@
 """FastAPI endpoint function definitions"""
 
 import logging
+from collections import Counter
 from typing import Annotated
 
 from fastapi import APIRouter, Body, status
@@ -59,6 +60,28 @@ async def health():
 
 
 @router.get(
+    "/summary",
+    summary="Return a summary of the current DLQ state by service and topic",
+    status_code=status.HTTP_200_OK,
+    response_model=dict[str, dict[str, int]],
+    responses={status.HTTP_500_INTERNAL_SERVER_ERROR: RESPONSES["internalServerError"]},
+)
+async def get_summary(
+    dlq_manager: DLQManagerDummy,
+    _token: Annotated[TokenAuthContext, require_token],
+) -> dict[str, Counter[str]]:
+    """Return a summary of the current DLQ state by service and topic."""
+    try:
+        return await dlq_manager.get_service_topic_summary()
+    except Exception as exc:
+        log.error(
+            "Got an error while fetching DLQ summary. See traceback for details.",
+            exc_info=True,
+        )
+        raise HttpInternalServerError() from exc
+
+
+@router.get(
     "/{service}/{topic}",
     summary="Return the next events in the topic",
     status_code=status.HTTP_200_OK,
@@ -84,7 +107,7 @@ async def get_events(
         return await dlq_manager.preview_events(
             service=service, topic=topic, limit=limit, skip=skip
         )
-    except ValueError as err:
+    except DLQManagerPort.DLQPaginationError as err:
         raise HttpPreviewParamsError(skip=skip, limit=limit) from err
     except Exception as exc:
         # DLQPreviewError and all others get caught here

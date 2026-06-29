@@ -25,11 +25,10 @@ from hexkit.providers.mongodb import MongoDbDaoFactory
 from dlqs.adapters.inbound.event_sub import DLQSubTranslator
 from dlqs.adapters.inbound.fastapi_ import dummies
 from dlqs.adapters.inbound.fastapi_.configure import get_configured_app
-from dlqs.adapters.outbound.dao import EventDaoPort, get_aggregator, get_event_dao
+from dlqs.adapters.outbound.dao import EventDaoPort, get_event_dao
 from dlqs.config import Config
 from dlqs.core.dlq_manager import DLQManager
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
-from dlqs.ports.outbound.dao import AggregatorPort
 
 
 @asynccontextmanager
@@ -54,7 +53,6 @@ async def prepare_core(
     *,
     config: Config,
     dao_override: EventDaoPort | None = None,
-    aggregator_override: AggregatorPort | None = None,
     publisher_override: EventPublisherProtocol | None = None,
 ) -> AsyncGenerator[DLQManagerPort]:
     """Constructs and initializes all core components and their outbound dependencies.
@@ -66,13 +64,8 @@ async def prepare_core(
         if publisher_override
         else get_event_publisher(config=config) as publisher,
         nullcontext(dao_override) if dao_override else get_dao(config=config) as dao,
-        nullcontext(aggregator_override)
-        if aggregator_override
-        else get_aggregator(config=config) as aggregator,
     ):
-        yield DLQManager(
-            config=config, publisher=publisher, dao=dao, aggregator=aggregator
-        )
+        yield DLQManager(config=config, publisher=publisher, dao=dao)
 
 
 def prepare_core_with_override(

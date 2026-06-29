@@ -18,10 +18,8 @@ import inspect
 
 import pytest
 
-from dlqs.adapters.outbound.dao import Aggregator
 from dlqs.core.dlq_manager import DLQManager
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
-from dlqs.ports.outbound.dao import AggregatorPort
 
 
 @pytest.mark.parametrize(
@@ -30,12 +28,13 @@ from dlqs.ports.outbound.dao import AggregatorPort
         (
             DLQManagerPort,
             DLQManager,
-            ["store_event", "preview_events", "process_event", "discard_event"],
-        ),
-        (
-            AggregatorPort,
-            Aggregator,
-            ["aggregate"],
+            [
+                "store_event",
+                "get_service_topic_summary",
+                "preview_events",
+                "process_event",
+                "discard_event",
+            ],
         ),
     ],
 )

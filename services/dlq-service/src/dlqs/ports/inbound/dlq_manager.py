@@ -15,6 +15,7 @@
 """DLQ Manager Port definition"""
 
 from abc import ABC, abstractmethod
+from collections import Counter
 from uuid import UUID
 
 from dlqs.models import EventCore, PublishableEventData, RawDLQEvent, StoredDLQEvent
@@ -92,13 +93,33 @@ class DLQManagerPort(ABC):
             msg = f"No DLQ events exist for service '{service}' and topic '{topic}'"
             super().__init__(msg)
 
+    class DLQPaginationError(DLQOperationError):
+        """Raised when pagination parameters are invalid"""
+
+        def __init__(self):
+            super().__init__("The value for skip and/or limit is invalid")
+
     @abstractmethod
     async def store_event(self, *, event: RawDLQEvent) -> None:
         """Store an event in the database with its service name and event ID.
 
         Raises a `DLQInsertionError` if the insertion fails.
         """
-        ...
+
+    @abstractmethod
+    async def get_service_topic_summary(self) -> dict[str, Counter[str]]:
+        """Returns a dictionary containing an overview of the contents of the DLQS
+        for operational convenience. The dict's keys are the available services, and the
+        values are another dict containing the number of DLQ events for each topic.
+
+        Example:
+        ```python
+        {
+            "service-A": {"topic-A": 5, "topic-B": 1},
+            "service-B": {"topic-B": 4}
+        }
+        ```
+        """
 
     @abstractmethod
     async def preview_events(
@@ -118,10 +139,9 @@ class DLQManagerPort(ABC):
         - `limit`: The maximum number of events to return. Default is None (no limit).
 
         Raises:
-        - `ValueError` if there is a problem with the params supplied to the aggregator.
-        - `DLQPreviewError` if the preview fails during the aggregation
+        - `DLQPaginationError` if there is a problem with the skip or limit parameters.
+        - `DLQPreviewError` if the preview fails for any other reason.
         """
-        ...
 
     @abstractmethod
     async def process_event(
@@ -151,7 +171,6 @@ class DLQManagerPort(ABC):
         - `DLQValidationError` if the event fails validation (e.g. invalid topic).
         - `DLQDeletionError` if the event could not be deleted from the DB after processing.
         """
-        ...
 
     @abstractmethod
     async def discard_event(self, *, dlq_id: UUID) -> None:
@@ -163,4 +182,3 @@ class DLQManagerPort(ABC):
         Raises:
         - `DLQDeletionError` if the event exists, but could not be deleted.
         """
-        ...
