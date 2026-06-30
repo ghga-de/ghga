@@ -1,0 +1,44 @@
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+"""
+This sub-package contains providers for testing purposes.
+These providers should be very lightweight and preferably only need dependencies from
+the standard library.
+
+ATTENTION: Do not use these providers in production.
+"""
+
+from .dao import MockDAOEmptyError, new_mock_dao_class
+from .eventpub import InMemEventPublisher, InMemEventStore, TopicExhaustedError
+from .kvstore import (
+    InMemBytesKeyValueStore,
+    InMemDtoKeyValueStore,
+    InMemJsonKeyValueStore,
+    InMemStrKeyValueStore,
+)
+
+__all__ = [
+    "InMemBytesKeyValueStore",
+    "InMemDtoKeyValueStore",
+    "InMemEventPublisher",
+    "InMemEventStore",
+    "InMemJsonKeyValueStore",
+    "InMemStrKeyValueStore",
+    "MockDAOEmptyError",
+    "TopicExhaustedError",
+    "new_mock_dao_class",
+]
