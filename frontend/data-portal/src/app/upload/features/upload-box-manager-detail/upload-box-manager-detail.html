@@ -72,31 +72,41 @@
                 {{ box.max_size | parseBytes }}</span
               >
             </p>
-            @if (box.state === 'open') {
+            <div class="mt-4 flex flex-wrap gap-2">
               <button
                 mat-raised-button
                 color="primary"
-                class="mt-4"
-                (click)="lockBox()"
+                (click)="editDetails()"
                 [disabled]="isChangingState()"
-                data-umami-event="Upload Box Manager Detail Lock Box Clicked"
+                data-umami-event="Upload Box Manager Detail Edit Details Clicked"
               >
-                <mat-icon fontIcon="lock"></mat-icon>
-                Lock the box
+                <mat-icon fontIcon="edit"></mat-icon>
+                Edit details
               </button>
-            } @else if (box.state === 'locked') {
-              <button
-                mat-raised-button
-                color="primary"
-                class="mt-4"
-                (click)="openBox()"
-                [disabled]="isChangingState()"
-                data-umami-event="Upload Box Manager Detail Open Box Clicked"
-              >
-                <mat-icon fontIcon="lock_open"></mat-icon>
-                Open the box again
-              </button>
-            }
+              @if (box.state === 'open') {
+                <button
+                  mat-raised-button
+                  color="primary"
+                  (click)="lockBox()"
+                  [disabled]="isChangingState()"
+                  data-umami-event="Upload Box Manager Detail Lock Box Clicked"
+                >
+                  <mat-icon fontIcon="lock"></mat-icon>
+                  Lock the box
+                </button>
+              } @else if (box.state === 'locked') {
+                <button
+                  mat-raised-button
+                  color="primary"
+                  (click)="openBox()"
+                  [disabled]="isChangingState()"
+                  data-umami-event="Upload Box Manager Detail Open Box Clicked"
+                >
+                  <mat-icon fontIcon="lock_open"></mat-icon>
+                  Open the box again
+                </button>
+              }
+            </div>
           </mat-card-content>
         </mat-card>
 

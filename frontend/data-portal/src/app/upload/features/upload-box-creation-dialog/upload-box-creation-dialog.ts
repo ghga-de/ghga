@@ -26,17 +26,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { NotificationService } from '@app/shared/services/notification';
-import { ResearchDataUploadBoxBase } from '@app/upload/models/box';
+import {
+  BYTES_PER_TIB,
+  MAX_UPLOAD_BOX_SIZE_TIB,
+  MIN_UPLOAD_BOX_SIZE_TIB,
+  ResearchDataUploadBoxBase,
+} from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
-
-/** Minimum upload box limit in TiB (1 GiB in binary units). */
-const MIN_UPLOAD_BOX_SIZE_TIB = 1 / 1024;
-
-/** Maximum upload box limit in TiB (1 million TiB in binary units). */
-const MAX_UPLOAD_BOX_SIZE_TIB = 1_000_000;
-
-/** Number of bytes in one binary TiB (1024^4). */
-const BYTES_PER_TIB = 1_099_511_627_776;
 
 /**
  * Dialog for creating a new upload box.

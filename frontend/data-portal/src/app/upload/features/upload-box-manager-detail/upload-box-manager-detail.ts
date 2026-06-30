@@ -18,6 +18,7 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -46,6 +47,7 @@ import {
 import { UploadGrant } from '@app/upload/models/grant';
 import { FileUploadStatePipe } from '@app/upload/pipes/file-upload-state-pipe';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
 import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
 
 /**
@@ -76,6 +78,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   #location = inject(NavigationTrackingService);
   #notificationService = inject(NotificationService);
   #confirmationService = inject(ConfirmationService);
+  #dialog = inject(MatDialog);
   #router = inject(Router);
   #isBackNavigation = this.#router.getCurrentNavigation()?.trigger === 'popstate';
 
@@ -332,6 +335,25 @@ export class UploadBoxManagerDetailComponent implements OnInit {
           },
         });
       },
+    });
+  }
+
+  /**
+   * Open a dialog to edit the box details (title, description, size limit).
+   */
+  editDetails(): void {
+    const box = this.uploadBox();
+    if (!box) return;
+    const ref = this.#dialog.open(UploadBoxEditDetailsDialogComponent, {
+      data: box,
+      width: 'clamp(40em, 85vw, 64em)',
+      maxWidth: 'calc(100vw - 2rem)',
+    });
+    ref.afterClosed().subscribe((updatedBoxId: string | undefined) => {
+      if (!updatedBoxId) return;
+      this.#notificationService.showSuccess(
+        'The upload box details have been updated.',
+      );
     });
   }
 
