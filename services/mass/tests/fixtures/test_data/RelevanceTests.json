@@ -1,0 +1,29 @@
+{
+  "items": [
+    {
+      "data": "test test test test test test",
+      "field": "alternative",
+      "id_": "i2"
+    },
+    {
+      "data": "test test test test test",
+      "field": "same as i1",
+      "id_": "i4"
+    },
+    {
+      "data": "test test test test",
+      "field": "same as i4",
+      "id_": "i1"
+    },
+    {
+      "data": "test test test ",
+      "field": "some data",
+      "id_": "i3"
+    },
+    {
+      "data": "test test test test test",
+      "field": "alternative alternative",
+      "id_": "i5"
+    }
+  ]
+}

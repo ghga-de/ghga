@@ -1,0 +1,53 @@
+mongo_dsn: mongodb://localhost:27017
+db_name: metadata-store
+searchable_classes:
+  NestedData:
+    description: Dataset with embedded references.
+    facetable_fields:
+      - key: category
+      - key: city
+      - key: object.type
+    selected_fields:
+      - key: id_
+        name: ID
+      - key: type
+        name: Location ype
+      - key: object.type
+  EmptyCollection:
+    description: An empty collection to test the index creation.
+    facetable_fields:
+      - key: fun_fact
+    selected_fields: []
+  SortingTests:
+    description: Data for testing sorting functionality.
+    facetable_fields:
+      - key: field
+    selected_fields: []
+  RelevanceTests:
+    description: Data for testing sorting by relevance.
+    facetable_fields:
+      - key: field
+      - key: data
+    selected_fields: []
+  FilteringTests:
+    description: Data for testing filtering on using single and multi-valued fields.
+    facetable_fields:
+      - key: species
+      - key: eats
+        name: Food
+      - key: friends.name
+        name: Friend
+      - key: items.type
+        name: Item
+      - key: items.color
+        name: Item color
+      - key: special.features.fur.color
+        name: Fur color
+    selected_fields:
+      - key: name
+resource_change_topic: searchable_resources
+resource_deletion_type: searchable_resource_deleted
+resource_upsertion_type: searchable_resource_upserted
+service_instance_id: "001"
+kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: True

@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "field": "alpha",
+      "id_": "i2"
+    },
+    {
+      "field": "bravo",
+      "id_": "i1"
+    },
+    {
+      "field": "charlie",
+      "id_": "i3"
+    },
+    {
+      "field": "delta",
+      "id_": "i5"
+    },
+    {
+      "field": "echo",
+      "id_": "i6"
+    },
+    {
+      "field": "foxtrot",
+      "id_": "i4"
+    }
+  ]
+}

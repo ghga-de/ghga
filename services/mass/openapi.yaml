@@ -1,0 +1,345 @@
+components:
+  schemas:
+    Facet:
+      description: Represents a facet's key, name, and the discovered options for
+        the facet
+      properties:
+        key:
+          description: The raw field name, such as study.type
+          title: Key
+          type: string
+        name:
+          default: ''
+          description: A user-friendly name for the field (leave empty to use the
+            key)
+          title: Name
+          type: string
+        options:
+          description: The list of options for the facet
+          items:
+            $ref: '#/components/schemas/FacetOption'
+          title: Options
+          type: array
+      required:
+      - key
+      - options
+      title: Facet
+      type: object
+    FacetOption:
+      description: Represents the format for an option for a facet
+      properties:
+        count:
+          description: The number of results matching the facet
+          title: Count
+          type: integer
+        value:
+          description: The text value of the facet option
+          title: Value
+          type: string
+      required:
+      - value
+      - count
+      title: FacetOption
+      type: object
+    FieldLabel:
+      description: Contains the field name and corresponding user-friendly name
+      properties:
+        key:
+          description: The raw field name, such as study.type
+          title: Key
+          type: string
+        name:
+          default: ''
+          description: A user-friendly name for the field (leave empty to use the
+            key)
+          title: Name
+          type: string
+      required:
+      - key
+      title: FieldLabel
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    QueryResults:
+      description: Contains the facets, hit count, and hits
+      properties:
+        count:
+          default: 0
+          description: The number of results found
+          title: Count
+          type: integer
+        facets:
+          default: []
+          description: Contains the faceted fields
+          items:
+            $ref: '#/components/schemas/Facet'
+          title: Facets
+          type: array
+        hits:
+          default: []
+          description: The search results
+          items:
+            $ref: '#/components/schemas/Resource'
+          title: Hits
+          type: array
+      title: QueryResults
+      type: object
+    Resource:
+      description: Represents an artifact or resource class such as a Dataset, Sample,
+        Study, etc.
+      properties:
+        content:
+          additionalProperties:
+            anyOf:
+            - type: integer
+            - type: number
+            - type: string
+            - type: boolean
+            - format: date
+              type: string
+            - format: date-time
+              type: string
+            - format: uuid
+              type: string
+            - items: {}
+              type: array
+            - additionalProperties: true
+              type: object
+            - type: 'null'
+          description: The actual content of the resource
+          title: Content
+          type: object
+        id_:
+          description: The identifier for this resource
+          title: Id
+          type: string
+      required:
+      - id_
+      - content
+      title: Resource
+      type: object
+    SearchableClass:
+      description: Represents a searchable artifact or resource type
+      properties:
+        description:
+          description: A brief description of the resource type
+          title: Description
+          type: string
+        facetable_fields:
+          default: []
+          description: A list of the facetable fields for the resource type (leave
+            empty to not use faceting, use dotted notation for nested fields)
+          items:
+            $ref: '#/components/schemas/FieldLabel'
+          title: Facetable Fields
+          type: array
+        selected_fields:
+          default: []
+          description: A list of the returned fields for the resource type (leave
+            empty to return all, use dotted notation for nested fields)
+          items:
+            $ref: '#/components/schemas/FieldLabel'
+          title: Selected Fields
+          type: array
+      required:
+      - description
+      title: SearchableClass
+      type: object
+    SortOrder:
+      description: Represents the possible sorting orders
+      enum:
+      - ascending
+      - descending
+      - relevance
+      title: SortOrder
+      type: string
+    ValidationError:
+      properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  contact:
+    email: contact@ghga.de
+    name: German Human Genome Phenome Archive (GHGA)
+  license:
+    name: Apache 2.0
+  summary: A service for searching metadata artifacts and filtering results.
+  title: Metadata Artifact Search Service
+  version: 7.0.0
+openapi: 3.1.0
+paths:
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+  /search:
+    get:
+      description: Perform search query
+      operationId: search_search_get
+      parameters:
+      - description: The class name to search
+        in: query
+        name: class_name
+        required: true
+        schema:
+          description: The class name to search
+          title: Class Name
+          type: string
+      - description: The keyword search for the query
+        in: query
+        name: query
+        required: false
+        schema:
+          default: ''
+          description: The keyword search for the query
+          title: Query
+          type: string
+      - description: Field(s) that shall be used for filtering results
+        in: query
+        name: filter_by
+        required: false
+        schema:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Field(s) that shall be used for filtering results
+          title: Filter By
+      - description: Values(s) that shall be used for filtering results
+        in: query
+        name: value
+        required: false
+        schema:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Values(s) that shall be used for filtering results
+          title: Value
+      - description: The number of results to skip for pagination
+        in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          description: The number of results to skip for pagination
+          title: Skip
+          type: integer
+      - description: Limit the results to this number
+        in: query
+        name: limit
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Limit the results to this number
+          title: Limit
+      - description: Field(s) that shall be used for sorting results
+        in: query
+        name: order_by
+        required: false
+        schema:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Field(s) that shall be used for sorting results
+          title: Order By
+      - description: Sort order(s) that shall be used when sorting results
+        in: query
+        name: sort
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/SortOrder'
+            type: array
+          - type: 'null'
+          description: Sort order(s) that shall be used when sorting results
+          title: Sort
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResults'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Perform a search using query string and filter parameters
+  /search-options:
+    get:
+      description: 'Return the configured searchable classes.
+
+
+        The returned object describes which resource classes are accounted for in
+        the system,
+
+        as well as their facetable and selected fields.
+
+        The facetable fields represent specific data fields that will be aggregated
+        alongside
+
+        the search hits for further search refinement.
+
+        The selected fields are those that will appear in the search results.
+
+        They contain a key, which is used by the system, and a name, which is more
+        user-friendly.'
+      operationId: search_options_search_options_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  $ref: '#/components/schemas/SearchableClass'
+                title: Response Search Options Search Options Get
+                type: object
+          description: Successful Response
+      summary: Retrieve all configured resource classes with their facetable and selected
+        fields
