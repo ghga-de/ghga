@@ -1,0 +1,79 @@
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ValidationError:
+      properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  description: A service running a REST API that serves accessioned metadata files
+    by study ID
+  title: Reverse Transpiler Service
+  version: 3.0.1
+openapi: 3.1.0
+paths:
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+  /studies/{accession}:
+    get:
+      description: Get a transpiled metadata file for a specific artifact, class,
+        and resource.
+      operationId: get_transpiled_metadata_studies__accession__get
+      parameters:
+      - in: path
+        name: accession
+        required: true
+        schema:
+          title: Accession
+          type: string
+      responses:
+        '200':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get accessioned metadata in .xlsx format
+servers:
+- url: ''

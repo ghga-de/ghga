@@ -1,0 +1,56 @@
+api_root_path: ''
+artifact_topic: artifacts
+auto_reload: false
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+cors_exposed_headers: null
+db_name: rts
+db_version_collection: rtsDbVersions
+docs_url: /docs
+generate_correlation_id: true
+host: 127.0.0.1
+kafka_compression_type: null
+kafka_dlq_topic: dlq
+kafka_enable_dlq: false
+kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
+mongo_dsn: '**********'
+mongo_timeout: 300
+openapi_url: /openapi.json
+port: 8080
+service_instance_id: '1'
+service_name: rts
+sheet_names:
+  analyses: Analysis
+  analysis_method_supporting_files: AnalysisMethodSupportingFile
+  analysis_methods: AnalysisMethod
+  data_access_committees: DataAccessCommittee
+  data_access_policies: DataAccessPolicy
+  datasets: Dataset
+  experiment_method_supporting_files: ExperimentMethodSupportingFile
+  experiment_methods: ExperimentMethod
+  experiments: Experiment
+  individual_supporting_files: IndividualSupportingFile
+  individuals: Individual
+  process_data_files: ProcessDataFile
+  publications: Publication
+  research_data_files: ResearchDataFile
+  samples: Sample
+  studies: Study
+timeout_keep_alive: 90
+workers: 1
