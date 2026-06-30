@@ -1,0 +1,32 @@
+# Docker Hardened Image (DHI) variant of docker/Dockerfile.
+#
+# Identical build to the standard Dockerfile but on GHGA's hardened base images. Requires access
+# to the private DHI registry (dhi.io). Built in parallel with the standard image by the release
+# pipeline (flavour matrix), mirroring the legacy services' Dockerfile.dhi.
+#
+# NOTE (scaffold): finalise the exact DHI base tags + the uv layer once the workspace exists.
+
+ARG PYTHON_VERSION=3.13
+ARG DHI_BASE=dhi.io/python:${PYTHON_VERSION}
+
+# ---- builder ----------------------------------------------------------------------------
+FROM ghcr.io/astral-sh/uv:python${PYTHON_VERSION}-bookworm-slim AS builder
+ARG PACKAGE
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+COPY libs ./libs
+COPY services ./services
+COPY tools ./tools
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable --package "${PACKAGE}"
+
+# ---- runner (hardened base) -------------------------------------------------------------
+FROM ${DHI_BASE} AS runner
+ARG EXECUTABLE
+COPY --from=builder --chown=1000:1000 /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:${PATH}" \
+    PYTHONUNBUFFERED=1 \
+    GHGA_EXECUTABLE="${EXECUTABLE}"
+USER 1000
+ENTRYPOINT ["sh", "-c", "exec \"${GHGA_EXECUTABLE}\" \"$@\"", "--"]

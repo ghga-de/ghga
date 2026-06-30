@@ -1,0 +1,43 @@
+# Release — a pushed tag `name/x.y.z` releases ONLY that component (ADR-0004).
+# Sandbox targets: images -> DockerHub `lkuchenb`, charts -> GHCR `lkuchenb`, PyPI OFF (ADR-0010).
+# SCAFFOLD: wire the build/publish steps once members + charts exist.
+name: release
+
+on:
+  push:
+    tags:
+      - "*/*.*.*"   # e.g. hexkit/8.4.0, dcs/10.2.0, ghga/2.1.0
+
+permissions:
+  contents: read
+  packages: write   # GHCR (charts)
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      name: ${{ steps.tag.outputs.name }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: |
+          ref="${GITHUB_REF_NAME}"            # name/x.y.z
+          echo "name=${ref%/*}" >> "$GITHUB_OUTPUT"
+          echo "version=${ref##*/}" >> "$GITHUB_OUTPUT"
+      # TODO: assert the tag version == the component's version at HEAD (pyproject/Chart.yaml/package.json).
+
+  publish:
+    needs: resolve
+    runs-on: ubuntu-latest
+    env:
+      NAME: ${{ needs.resolve.outputs.name }}
+      VERSION: ${{ needs.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      # Branch by the component's [tool.ghga] capabilities:
+      #  - image=true  -> docker build -f docker/Dockerfile --build-arg PACKAGE=$NAME ...
+      #                   push docker.io/lkuchenb/$NAME:$VERSION (+ DHI flavour); package the chart
+      #                   and push to ghcr.io/lkuchenb/charts/$NAME:$VERSION
+      #  - pypi=true   -> uv build --package $NAME ; publish  (DISABLED in sandbox — ADR-0010)
+      - run: echo "TODO: publish ${NAME} ${VERSION} to the lkuchenb sandbox (images/charts; PyPI off)"

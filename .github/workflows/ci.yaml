@@ -1,0 +1,55 @@
+# CI — lint / type-check / test the workspace targets affected by a change.
+# SCAFFOLD: structure is final; exercisable once members + uv.lock exist (post-import).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.affected.outputs.targets }}
+      all: ${{ steps.affected.outputs.all }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need history for the affected-target diff
+      - id: affected
+        run: |
+          base="origin/${{ github.base_ref || 'main' }}"
+          json=$(python scripts/affected_targets.py --base "$base")
+          echo "all=$(echo "$json" | python -c 'import sys,json;print(json.load(sys.stdin)["all"])')" >> "$GITHUB_OUTPUT"
+          echo "targets=$(echo "$json" | python -c 'import sys,json;print(json.dumps(json.load(sys.stdin)["targets"]))')" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: discover
+    if: ${{ needs.discover.outputs.targets != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.discover.outputs.targets) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      # Python targets (libs/services/tools). The front-end target is handled separately.
+      - if: ${{ !startsWith(matrix.target, 'frontend/') }}
+        run: |
+          uv sync --package "$(basename '${{ matrix.target }}')"
+          uv run ruff check "${{ matrix.target }}"
+          uv run ruff format --check "${{ matrix.target }}"
+          uv run mypy "${{ matrix.target }}"
+          uv run pytest "${{ matrix.target }}"
+      # TODO(frontend): pnpm install + lint + vitest for frontend/* targets.
+
+  # Per-library standalone matrix across supported Python versions (ADR-0002).
+  # TODO: enumerate libs/* and their supported pythons from [tool.ghga]; run `uv run --python ...`.

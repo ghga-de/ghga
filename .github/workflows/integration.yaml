@@ -1,0 +1,27 @@
+# Integration gate — install the self-reliant ghga-demo umbrella on kind and run the test bed.
+# This is what keeps HEAD always integrated (ADR-0009). SCAFFOLD: enable once the charts land.
+name: integration
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  testbed:
+    runs-on: ubuntu-latest
+    # if: false   # TODO: drop once deploy/charts/ghga-demo exists
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - uses: helm/kind-action@v1            # spin up kind (fast, image-loadable)
+      # 1) Build only AFFECTED images; pull last-released tags for the rest, then `kind load`.
+      #    TODO: drive from scripts/affected_targets.py + [tool.ghga].image members.
+      # 2) Install the SAME self-reliant umbrella users get (test-bed profile adds SMS):
+      #      helm install ghga ./deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-testbed.yaml
+      #    Envoy Gateway brings Gateway API CRDs; gateway Service is NodePort on kind (ADR-0012).
+      # 3) Run the BDD + Playwright suite against the cluster:
+      #      uv run pytest testbed/
+      - run: echo "TODO: implement once deploy/charts/ghga-demo + testbed/ are in place"

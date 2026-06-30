@@ -1,0 +1,56 @@
+# GHGA monorepo import manifest
+# Source of truth for the history-preserving import + one-way sync.
+# Columns (TAB-separated): kind  source_repo  subpath  dest_path
+#   kind        one of: lib | service | tool | frontend | testbed
+#   source_repo repo name under github.com/ghga-de (and dir name in .legacy_repos/)
+#   subpath     "." for whole repo, or a subdir for repos imported partially (file-services-backend)
+#   dest_path   destination path within the monorepo
+#
+# Excluded on purpose:
+#   datahub-test-bed                  -> different audience (data hubs verifying their own S3); stays its own repo
+#   microservice-repository-template  -> RETIRED; its conventions become root scaffolding, not imported
+#
+# Libraries (source-coupled, consumed via [tool.uv.sources] workspace = true)
+lib	hexkit	.	libs/hexkit
+lib	ghga-service-commons	.	libs/ghga-service-commons
+lib	ghga-event-schemas	.	libs/ghga-event-schemas
+lib	schemapack	.	libs/schemapack
+lib	metldata	.	libs/metldata
+#
+# Deployable services from file-services-backend (existing monorepo -> flatten to top-level)
+service	file-services-backend	services/dcs	services/dcs
+service	file-services-backend	services/ekss	services/ekss
+service	file-services-backend	services/fis	services/fis
+service	file-services-backend	services/ifrs	services/ifrs
+service	file-services-backend	services/pcs	services/pcs
+service	file-services-backend	services/ucs	services/ucs
+#
+# Standalone services
+service	auth-service	.	services/auth-service
+service	access-request-service	.	services/access-request-service
+service	dataset-information-service	.	services/dataset-information-service
+service	notification-service	.	services/notification-service
+service	notification-orchestration-service	.	services/notification-orchestration-service
+service	mass	.	services/mass
+service	well-known-value-service	.	services/well-known-value-service
+service	work-package-service	.	services/work-package-service
+service	dlq-service	.	services/dlq-service
+service	state-management-service	.	services/state-management-service
+service	ghga-registry-service	.	services/ghga-registry-service
+service	reverse-transpiler-service	.	services/reverse-transpiler-service
+service	em-transformation-service	.	services/em-transformation-service
+service	upload-orchestration-service	.	services/upload-orchestration-service
+service	datahub-file-service	.	services/datahub-file-service
+#
+# CLIs and jobs
+tool	ghga-connector	.	tools/ghga-connector
+tool	ghga-datasteward-kit	.	tools/ghga-datasteward-kit
+tool	ghga-transpiler	.	tools/ghga-transpiler
+tool	ghga-validator	.	tools/ghga-validator
+tool	auth-km-jobs	.	tools/auth-km-jobs
+#
+# Front end (JS toolchain, separate pnpm lockfile)
+frontend	data-portal	.	frontend/data-portal
+#
+# Integration test bed (BDD + Playwright) -> runs against kind + helm
+testbed	archive-test-bed	.	testbed

@@ -1,0 +1,32 @@
+# Migration scratch / sources (never tracked — nested git repos + scratch)
+.legacy_repos/
+.migration-work/
+
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node / pnpm (front end)
+node_modules/
+frontend/**/dist/
+.pnpm-store/
+
+# Editors / OS
+.idea/
+*.swp
+.DS_Store
+
+# Local env / secrets
+.env
+*.local.yaml

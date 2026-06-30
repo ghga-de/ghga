@@ -1,0 +1,68 @@
+# GHGA monorepo — virtual `uv` workspace root.
+#
+# This root is intentionally NOT a package ([project] is omitted). It only defines the
+# workspace membership, the shared dev/test toolchain, and repo-wide tool configuration.
+# Members (libs/*, services/*, tools/*) each have their own pyproject.toml + version, and
+# consume internal libraries from source via `[tool.uv.sources] <lib> = { workspace = true }`.
+#
+# See docs/architecture/overview.md and docs/adr/0002-uv-workspace-source-coupled-libs.md.
+
+[tool.uv.workspace]
+members = ["libs/*", "services/*", "tools/*"]
+
+# Shared dev/test toolchain, installed into the workspace venv via `uv sync`.
+# Pins mirror the GHGA service template conventions.
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+    "pytest-asyncio>=1.4",
+    "pytest-cov>=7.1",
+    "pytest-httpx>=0.36",
+    "pre-commit>=4.6",
+    "mypy>=2.1",
+    "ruff>=0.15.13",
+    "httpx>=0.28.1",
+    "tomli_w>=1.2",
+]
+
+# ----------------------------------------------------------------------------------------
+# Repo-wide tool configuration (single source of truth — replaces N per-repo copies).
+# ----------------------------------------------------------------------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+src = ["libs", "services", "tools", "scripts"]
+exclude = [
+    ".git", ".devcontainer", "__pycache__", "build", "dist",
+    ".legacy_repos", ".migration-work",
+]
+
+[tool.ruff.lint]
+select = ["C90", "F", "I", "S", "B", "N", "UP", "PL", "RUF", "SIM", "D"]
+ignore = ["E111", "RUF001", "N818", "B008", "D205", "D400", "D401", "D107", "D206", "D300", "PLC0206"]
+fixable = ["UP", "I", "D", "RUF022"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["PL", "S", "SIM", "D"]
+"**/tests/*" = ["S", "SIM", "PLR", "B011"]
+"**/tests_*/*" = ["S", "SIM", "PLR", "B011"]
+"**/__init__.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.mypy]
+disable_error_code = "import"
+show_error_codes = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+exclude = ["^\\.legacy_repos/", "^\\.migration-work/", "build/"]
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
