@@ -9,8 +9,8 @@ import { MappedField } from '../models/mapping';
 
 /** Persisted state for a single upload box mapping session */
 export interface MappingSnapshot {
-  /** The selected study accession */
-  studyAccession: string | undefined;
+  /** The selected study ID (equal to the GHGA study accession) */
+  studyId: string | undefined;
   /** The committed mapped field */
   mappedField: MappedField | undefined;
   /** Manual mappings serialised as Map entries (JSON-serialisable) */

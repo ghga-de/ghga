@@ -10,13 +10,13 @@ import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
 import { uploadBoxes } from '@app/../mocks/data';
 import { EmFile } from '@app/metadata/models/dataset-information';
-import { Study } from '@app/metadata/models/study';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import { UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
+import { FileIdMap, Study } from '@app/upload/models/study';
+import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import {
   MappingSnapshot,
@@ -35,15 +35,26 @@ const TEST_BOX = {
 };
 
 const TEST_STUDY: Study = {
-  accession: 'STUDY-001',
-  alias: 'study-alias',
+  id: 'STUDY-001',
   title: 'Study Title',
   description: 'Study Description',
   types: [],
-  ega_accession: 'EGAS000001',
   affiliations: [],
-  datasets: ['DS1'],
-  publications: [],
+  status: 'draft',
+  num_datasets: 1,
+  num_publications: 0,
+  has_em: true,
+  created: '2026-01-01T00:00:00Z',
+  created_by: 'doe@test.dev',
+  approved: null,
+  approved_by: null,
+  superseded_by_id: null,
+};
+
+const TEST_FILE_IDS: FileIdMap = {
+  'meta-1': null,
+  'meta-2': null,
+  'meta-3': null,
 };
 
 const TEST_METADATA_FILES: EmFile[] = [
@@ -137,12 +148,19 @@ class MockUploadBoxService {
 }
 
 /**
- * Minimal mock of MetadataSearchService for mapping component tests.
+ * Minimal mock of StudyService for mapping component tests.
  */
-class MockMetadataSearchService {
-  studiesMap = new Map<string, Study>([[TEST_STUDY.accession, TEST_STUDY]]);
+class MockStudyService {
+  #studies = signal<Study[]>([TEST_STUDY]);
 
-  loadStudiesMap = vitest.fn(() => of(this.studiesMap));
+  studies = {
+    value: this.#studies.asReadonly(),
+    isLoading: () => false,
+    error: () => undefined,
+  };
+
+  loadStudies = vitest.fn();
+  loadFileIds = vitest.fn((_studyId: string) => of(TEST_FILE_IDS));
 }
 
 /**
@@ -151,7 +169,7 @@ class MockMetadataSearchService {
 class MockMetadataService {
   files = TEST_METADATA_FILES;
 
-  filesOfStudy = vitest.fn(() => of(this.files));
+  filesOfStudyId = vitest.fn(() => of(this.files));
 }
 
 const mockNotificationService = {
@@ -203,7 +221,7 @@ describe('UploadBoxMappingComponent', () => {
       providers: [
         provideRouter([]),
         { provide: UploadBoxService, useClass: MockUploadBoxService },
-        { provide: MetadataSearchService, useClass: MockMetadataSearchService },
+        { provide: StudyService, useClass: MockStudyService },
         { provide: MatDialog, useValue: mockDialog },
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: NavigationTrackingService, useValue: mockNavigationService },
@@ -230,12 +248,12 @@ describe('UploadBoxMappingComponent', () => {
 
   it('should restore a saved snapshot on init', async () => {
     await createComponent({
-      studyAccession: TEST_STUDY.accession,
+      studyId: TEST_STUDY.id,
       mappedField: 'name',
       manualMappings: [['meta-3', 'file-3']],
     });
 
-    expect(component.selectedStudyAccession()).toBe(TEST_STUDY.accession);
+    expect(component.selectedStudyId()).toBe(TEST_STUDY.id);
     expect(component.committedMappedField()).toBe('name');
     expect(component.pendingMappedField()).toBe('name');
     expect(component.manualMappings()).toEqual(new Map([['meta-3', 'file-3']]));
@@ -243,7 +261,7 @@ describe('UploadBoxMappingComponent', () => {
 
   it('should compute exact and unique case-insensitive auto mappings without reusing a box file', async () => {
     await createComponent({
-      studyAccession: TEST_STUDY.accession,
+      studyId: TEST_STUDY.id,
       mappedField: 'alias',
       manualMappings: [],
     });
@@ -283,7 +301,7 @@ describe('UploadBoxMappingComponent', () => {
 
   it('should confirm field changes before discarding manual mappings', async () => {
     await createComponent({
-      studyAccession: TEST_STUDY.accession,
+      studyId: TEST_STUDY.id,
       mappedField: 'alias',
       manualMappings: [['meta-3', 'file-3']],
     });
@@ -309,7 +327,7 @@ describe('UploadBoxMappingComponent', () => {
 
   it('should allow a manual remap to an unused box file and reject a reused one', async () => {
     await createComponent({
-      studyAccession: TEST_STUDY.accession,
+      studyId: TEST_STUDY.id,
       mappedField: 'alias',
       manualMappings: [],
     });
@@ -335,7 +353,7 @@ describe('UploadBoxMappingComponent', () => {
 
   it('should submit the mapping, archive the box, clear saved state, and emit archived on success', async () => {
     await createComponent({
-      studyAccession: TEST_STUDY.accession,
+      studyId: TEST_STUDY.id,
       mappedField: 'alias',
       manualMappings: [
         ['meta-1', 'file-1'],
@@ -363,7 +381,7 @@ describe('UploadBoxMappingComponent', () => {
     );
     expect(uploadBoxService.submitFileMapping).toHaveBeenCalledWith('box-1', {
       box_version: 4,
-      study_id: TEST_STUDY.accession,
+      study_id: TEST_STUDY.id,
       mapping: {
         'meta-1': 'file-1',
         'meta-2': 'file-2',
@@ -380,7 +398,7 @@ describe('UploadBoxMappingComponent', () => {
 
   it('should show an error and skip archival when submitting the mapping fails', async () => {
     await createComponent({
-      studyAccession: TEST_STUDY.accession,
+      studyId: TEST_STUDY.id,
       mappedField: 'alias',
       manualMappings: [['meta-1', 'file-1']],
     });
@@ -400,7 +418,7 @@ describe('UploadBoxMappingComponent', () => {
 
   it('should show a specific error when archival fails after a successful mapping submission', async () => {
     await createComponent({
-      studyAccession: TEST_STUDY.accession,
+      studyId: TEST_STUDY.id,
       mappedField: 'alias',
       manualMappings: [['meta-1', 'file-1']],
     });

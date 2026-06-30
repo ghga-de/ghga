@@ -31,12 +31,19 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
-import { catchError, concatMap, of, startWith, switchMap, throwError } from 'rxjs';
+import {
+  catchError,
+  concatMap,
+  forkJoin,
+  map,
+  of,
+  startWith,
+  switchMap,
+  throwError,
+} from 'rxjs';
 
 import { EmFile } from '@app/metadata/models/dataset-information';
-import { Study } from '@app/metadata/models/study';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import {
@@ -46,6 +53,8 @@ import {
 import { ResearchDataUploadBox } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { MappedField } from '@app/upload/models/mapping';
+import { Study } from '@app/upload/models/study';
+import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxMappingStateService } from '@app/upload/services/upload-box-mapping-state';
 import {
@@ -150,7 +159,7 @@ function computeAutoMappings(
 })
 export class UploadBoxMappingComponent implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
-  #metadataSearchService = inject(MetadataSearchService);
+  #studyService = inject(StudyService);
   #metadataService = inject(MetadataService);
   #dialog = inject(MatDialog);
   #notificationService = inject(NotificationService);
@@ -163,8 +172,8 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Emitted after a successful mapping submission */
   archived = output<void>();
 
-  /** Currently selected study accession */
-  selectedStudyAccession = signal<string | undefined>(undefined);
+  /** Currently selected study ID (equal to the GHGA study accession) */
+  selectedStudyId = signal<string | undefined>(undefined);
 
   /** The metadata field currently committed for auto-matching */
   committedMappedField = signal<MappedField | undefined>(undefined);
@@ -196,29 +205,52 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Guard to prevent opening a second field-change confirmation dialog */
   #fieldChangeDialogOpen = signal<boolean>(false);
 
-  /** All available studies, keyed by accession. `null` while loading. */
-  studiesMap = toSignal(
-    this.#metadataSearchService.loadStudiesMap().pipe(startWith(null)),
-  );
+  /** All studies that still have unmapped files, as served by rs */
+  #studiesResource = this.#studyService.studies;
+
+  /** Whether the studies list is still loading */
+  studiesLoading = computed<boolean>(() => this.#studiesResource.isLoading());
 
   /** Studies as a sorted array for the dropdown */
-  studiesArray = computed(() =>
-    Array.from((this.studiesMap() ?? new Map()).values()).sort((a, b) =>
-      a.accession.localeCompare(b.accession),
-    ),
+  studiesArray = computed<Study[]>(() =>
+    [...this.#studiesResource.value()].sort((a, b) => a.id.localeCompare(b.id)),
   );
 
   /** The currently selected Study object */
   selectedStudy = computed<Study | undefined>(() =>
-    (this.studiesMap() ?? new Map()).get(this.selectedStudyAccession() ?? ''),
+    this.#studiesResource.value().find((study) => study.id === this.selectedStudyId()),
   );
 
-  /** Files from the selected study in metadata. `null` while loading. */
+  /**
+   * Unmapped metadata files of the selected study. `null` while loading.
+   *
+   * File display metadata (accession, name, alias, format) comes from metldata
+   * via `filesOfStudyId`, while the unmapped status comes from rs via
+   * `loadFileIds`. Only files whose file-ids value is explicitly `null`
+   * (unmapped) are kept; files that are already mapped or absent from the
+   * file-ids map are treated as not mappable and excluded.
+   *
+   * Already-mapped files are filtered out on purpose: the backend only ever
+   * adds new file mappings for a study, it never changes an existing one. So a
+   * file that already has an internal file ID cannot be re-mapped here, and
+   * showing it would only offer an action the backend would reject.
+   */
   #metadataFilesOrNull = toSignal(
     toObservable(this.selectedStudy).pipe(
       switchMap((study) =>
         study
-          ? this.#metadataService.filesOfStudy(study).pipe(startWith(null))
+          ? forkJoin({
+              files: this.#metadataService.filesOfStudyId(study.id),
+              fileIds: this.#studyService.loadFileIds(study.id),
+            }).pipe(
+              // Keep only still-unmapped files (value `null`); already-mapped
+              // files cannot be re-mapped (backend only supports adding
+              // mappings), and unknown accessions are not mappable.
+              map(({ files, fileIds }) =>
+                files.filter((file) => fileIds[file.accession] === null),
+              ),
+              startWith(null),
+            )
           : of([] as EmFile[]),
       ),
     ),
@@ -468,7 +500,7 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Persist mapping state whenever the three persistent signals change */
   #saveStateEffect = effect(() => {
     this.#mappingStateService.saveSnapshot(this.box().id, {
-      studyAccession: this.selectedStudyAccession(),
+      studyId: this.selectedStudyId(),
       mappedField: this.committedMappedField(),
       manualMappings: Array.from(this.manualMappings()),
     });
@@ -521,9 +553,10 @@ export class UploadBoxMappingComponent implements OnInit {
 
   /** @inheritdoc */
   ngOnInit(): void {
+    this.#studyService.loadStudies();
     const snapshot = this.#mappingStateService.snapshotFor(this.box().id);
     if (snapshot) {
-      this.selectedStudyAccession.set(snapshot.studyAccession);
+      this.selectedStudyId.set(snapshot.studyId);
       this.committedMappedField.set(snapshot.mappedField);
       this.pendingMappedField.set(snapshot.mappedField);
       this.manualMappings.set(new Map(snapshot.manualMappings));
@@ -611,7 +644,7 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Reset all form state back to initial values and clear the saved snapshot */
   #resetForm(): void {
     this.#mappingStateService.clearSnapshot(this.box().id);
-    this.selectedStudyAccession.set(undefined);
+    this.selectedStudyId.set(undefined);
     this.committedMappedField.set(undefined);
     this.pendingMappedField.set(undefined);
     this.filterText.set('');
@@ -682,7 +715,7 @@ export class UploadBoxMappingComponent implements OnInit {
    * @param effective - the final mapping to submit
    */
   #submitMapping(effective: Map<string, string>): void {
-    const studyId = this.selectedStudyAccession();
+    const studyId = this.selectedStudyId();
     if (!studyId) return;
 
     const mapping: Record<string, string> = {};
@@ -740,9 +773,7 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Whether the "Confirm and archive" button should be enabled */
   canConfirmAndArchive = computed<boolean>(
     () =>
-      !!this.selectedStudyAccession() &&
-      !!this.committedMappedField() &&
-      !this.isSubmitting(),
+      !!this.selectedStudyId() && !!this.committedMappedField() && !this.isSubmitting(),
   );
 
   /** Whether the Reset button should be enabled */

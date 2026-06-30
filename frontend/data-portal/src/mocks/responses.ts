@@ -25,8 +25,16 @@ import {
   uploadBox2FileUploads,
   uploadBox3FileUploads,
   uploadBoxes,
+  pediatricLeukemiaDatasetDetails,
+  pediatricLeukemiaFileIds,
+  pediatricLeukemiaStudyData,
+  rareNeuroDatasetDetails,
+  rareNeuroFileIds,
+  rareNeuroStudyData,
+  studiesWithUnmappedFiles,
   uploadBoxTestDatasetDetails,
   uploadBoxTestDatasetSummary,
+  uploadBoxTestFileIds,
   uploadBoxTestStudyData,
   uploadGrants,
   users,
@@ -145,10 +153,20 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Upload box mapping test dataset details (files match box 2 aliases for testing)
   'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD99999999999001':
     uploadBoxTestDatasetDetails,
+  // Dataset details for additional studies shown in the mapping-tool selector
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD00000000000002':
+    pediatricLeukemiaDatasetDetails,
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD00000000000003':
+    rareNeuroDatasetDetails,
 
   // Get study details (embedded) — specific entries before the wildcard catch-all
   'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/GHGAS99999999999001':
     uploadBoxTestStudyData,
+  // Study resources for additional studies shown in the mapping-tool selector
+  'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/GHGAS00000000000002':
+    pediatricLeukemiaStudyData,
+  'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/GHGAS00000000000003':
+    rareNeuroStudyData,
   // Get study details (embedded)
   'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/*': studyData,
 
@@ -224,6 +242,18 @@ export const responses: { [endpoint: string]: ResponseValue } = {
    */
   // Download metadata for a study
   'GET /api/rts/studies/GHGAS12345678901234': 404,
+
+  /**
+   * RS Studies API
+   */
+
+  // Fetch studies that still have unmapped files (for the mapping tool)
+  'GET /api/rs/studies?with_unmapped_files=true': studiesWithUnmappedFiles,
+
+  // Fetch the file mapping status (accession -> file ID or null) for a study
+  'GET /api/rs/studies/GHGAS99999999999001/file-ids': uploadBoxTestFileIds,
+  'GET /api/rs/studies/GHGAS00000000000002/file-ids': pediatricLeukemiaFileIds,
+  'GET /api/rs/studies/GHGAS00000000000003/file-ids': rareNeuroFileIds,
 
   /**
    * RS Upload Boxes API

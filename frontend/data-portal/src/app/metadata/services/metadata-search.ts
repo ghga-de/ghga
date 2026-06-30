@@ -4,21 +4,9 @@
  * @license Apache-2.0
  */
 
-import { HttpClient, httpResource } from '@angular/common/http';
+import { httpResource } from '@angular/common/http';
 import { Service, computed, inject, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
-import {
-  Observable,
-  concatMap,
-  from,
-  last,
-  map,
-  mergeMap,
-  mergeScan,
-  of,
-  reduce,
-} from 'rxjs';
-import { DatasetSummary } from '../models/dataset-summary';
 import { FacetFilterSetting } from '../models/facet-filter';
 import {
   DEFAULT_PAGE_SIZE,
@@ -26,13 +14,6 @@ import {
   SearchResults,
   emptySearchResults,
 } from '../models/search-results';
-import { Study } from '../models/study';
-
-interface StudyMapAccumulator {
-  studyMap: Map<string, Study>;
-  skippedDatasetIds: Set<string>;
-  fetchedStudyAccessions: Set<string>;
-}
 
 /**
  * Metadata search service
@@ -44,11 +25,6 @@ export class MetadataSearchService {
   #config = inject(ConfigService);
   #massUrl = this.#config.massUrl;
   #searchUrl = `${this.#massUrl}/search`;
-  #metldataUrl = this.#config.metldataUrl;
-  #artifactsUrl = `${this.#metldataUrl}/artifacts`;
-  #datasetSummaryUrl = `${this.#artifactsUrl}/stats_public/classes/DatasetStats/resources`;
-  #studyUrl = `${this.#artifactsUrl}/embedded_public/classes/Study/resources`;
-  #http = inject(HttpClient);
   #className = signal<string | undefined>(undefined);
   #limit = signal<number>(DEFAULT_PAGE_SIZE);
   #skip = signal<number>(DEFAULT_SKIP_VALUE);
@@ -174,75 +150,5 @@ export class MetadataSearchService {
       massQueryUrl += `&skip=${skip}`;
     }
     return massQueryUrl;
-  }
-
-  /**
-   * Load a map of all studies keyed by study accession.
-   *
-   * Because there is no dedicated backend endpoint for listing studies, this
-   * method first fetches all dataset IDs via a MASS search, then walks each
-   * dataset summary to discover study accessions and fetches each study
-   * individually. Dataset IDs that are already accounted for by a fetched
-   * study's datasets list are skipped so each study is fetched at most once.
-   *
-   * Unfortunately, this method is not efficient, but it is only used temporarily
-   * until we switch to a study-based backend.
-   * @returns An observable that emits a Map from study accession to Study
-   */
-  loadStudiesMap(): Observable<Map<string, Study>> {
-    return this.#http
-      .get<SearchResults>(`${this.#searchUrl}?class_name=EmbeddedDataset`)
-      .pipe(
-        map((searchResults) => searchResults.hits.map((hit) => hit.id_)),
-        mergeMap((datasetIds) => from(datasetIds)),
-        mergeScan(
-          (acc: StudyMapAccumulator, datasetId: string) => {
-            if (acc.skippedDatasetIds.has(datasetId)) {
-              return of(acc);
-            }
-
-            return this.#http
-              .get<DatasetSummary>(`${this.#datasetSummaryUrl}/${datasetId}`)
-              .pipe(
-                mergeMap((summary) => from(summary.studies_summary.stats.accession)),
-                concatMap((studyAccession) => {
-                  if (acc.fetchedStudyAccessions.has(studyAccession)) {
-                    return of(undefined);
-                  }
-
-                  return this.#http.get<Study>(`${this.#studyUrl}/${studyAccession}`);
-                }),
-                reduce((datasetAcc: StudyMapAccumulator, study: Study | undefined) => {
-                  if (!study) {
-                    return datasetAcc;
-                  }
-
-                  const studyMap = new Map(datasetAcc.studyMap);
-                  studyMap.set(study.accession, study);
-
-                  const skippedDatasetIds = new Set(datasetAcc.skippedDatasetIds);
-                  for (const linkedDatasetId of study.datasets) {
-                    skippedDatasetIds.add(linkedDatasetId);
-                  }
-
-                  const fetchedStudyAccessions = new Set(
-                    datasetAcc.fetchedStudyAccessions,
-                  );
-                  fetchedStudyAccessions.add(study.accession);
-
-                  return { studyMap, skippedDatasetIds, fetchedStudyAccessions };
-                }, acc),
-              );
-          },
-          {
-            studyMap: new Map<string, Study>(),
-            skippedDatasetIds: new Set<string>(),
-            fetchedStudyAccessions: new Set<string>(),
-          },
-          1,
-        ),
-        last(),
-        map((acc) => acc.studyMap),
-      );
   }
 }

@@ -17,6 +17,7 @@ import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { BoxRetrievalResults, UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
+import { FileIdMap, Study as RsStudy } from '@app/upload/models/study';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
 
@@ -1837,3 +1838,228 @@ export const uploadBoxTestDatasetDetails: DatasetDetailsRaw = {
     },
   ],
 };
+
+/**
+ * The dedicated upload-box file-mapping test study as served by rs.
+ *
+ * Its `id` equals the GHGA study accession of `uploadBoxTestStudyData`, so the
+ * metldata Study/EmbeddedDataset chain resolves and the file names/aliases can
+ * be shown in the mapping tool. This is the study the mapping e2e test drives.
+ */
+export const uploadBoxTestRsStudy: RsStudy = {
+  id: 'GHGAS99999999999001',
+  title: 'Upload Box File Mapping Test Study',
+  description: 'Dedicated study for testing the file mapping UI with upload box 2.',
+  types: ['test_genomics'],
+  affiliations: ['Test affiliation'],
+  status: 'draft',
+  num_datasets: 1,
+  num_publications: 0,
+  has_em: true,
+  created: '2026-01-10T08:00:00Z',
+  created_by: 'doe@test.dev',
+  approved: null,
+  approved_by: null,
+  superseded_by_id: null,
+};
+
+/**
+ * RS file mapping status for the upload-box test study.
+ *
+ * Served at `GET /studies/GHGAS99999999999001/file-ids`. Maps each metadata
+ * research-data-file accession to its internal file ID, or `null` when the file
+ * is still unmapped. All files are unmapped except `GHGAF99999999999016`
+ * (some_unessential_data.csv), which is already mapped (has an internal file ID)
+ * and is therefore filtered out of the mapping tool — demonstrating that the
+ * tool only lists files that still need mapping.
+ */
+export const uploadBoxTestFileIds: FileIdMap = {
+  GHGAF99999999999001: null,
+  GHGAF99999999999002: null,
+  GHGAF99999999999003: null,
+  GHGAF99999999999004: null,
+  GHGAF99999999999005: null,
+  GHGAF99999999999006: null,
+  GHGAF99999999999007: null,
+  GHGAF99999999999008: null,
+  GHGAF99999999999009: null,
+  GHGAF99999999999010: null,
+  GHGAF99999999999011: null,
+  GHGAF99999999999012: null,
+  GHGAF99999999999013: null,
+  GHGAF99999999999014: null,
+  GHGAF99999999999015: null,
+  GHGAF99999999999016: '2b9f4d6e-1c3a-4e7b-9f0d-7a5c8e2b1d40',
+};
+
+/*
+ * Additional studies for the mapping-tool study selector.
+ *
+ * These are realistic studies (not the dedicated file-mapping test study, so
+ * they deliberately do not carry "File Mapping Test" in their name) that exist
+ * mainly to populate the dropdown with more than one entry. Each one still
+ * resolves through its own small metldata Study/EmbeddedDataset chain and has a
+ * file-ids endpoint, so selecting it shows a coherent set of unmapped files.
+ */
+
+/** metldata Study resource for the pediatric leukemia study */
+export const pediatricLeukemiaStudyData: Study = {
+  accession: 'GHGAS00000000000002',
+  ega_accession: 'EGAS00000000002',
+  alias: 'PEDIATRIC_LEUKEMIA',
+  types: ['cancer_genomics'],
+  title: 'Genomic Landscape of Pediatric Acute Leukemia',
+  affiliations: ['University Children’s Hospital'],
+  datasets: ['GHGAD00000000000002'],
+  description:
+    'Whole-genome sequencing of matched tumor and normal samples from a pediatric acute leukemia cohort.',
+  publications: ['GHGA000000002'],
+};
+
+/** metldata EmbeddedDataset resource for the pediatric leukemia study */
+export const pediatricLeukemiaDatasetDetails: DatasetDetailsRaw = {
+  ...datasetDetails,
+  accession: 'GHGAD00000000000002',
+  ega_accession: 'EGAD00000000002',
+  title: 'Pediatric Acute Leukemia WGS',
+  description: 'Matched tumor/normal whole-genome sequencing data.',
+  process_data_files: [],
+  experiment_method_supporting_files: [],
+  analysis_method_supporting_files: [],
+  individual_supporting_files: [],
+  experiments: [],
+  samples: [],
+  research_data_files: [
+    {
+      accession: 'GHGAF00000000000201',
+      ega_accession: 'EGAF00000201',
+      alias: 'tumor_wgs_R1.fastq.gz',
+      name: 'Tumor WGS Read 1',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF00000000000202',
+      ega_accession: 'EGAF00000202',
+      alias: 'tumor_wgs_R2.fastq.gz',
+      name: 'Tumor WGS Read 2',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF00000000000203',
+      ega_accession: 'EGAF00000203',
+      alias: 'normal_wgs.bam',
+      name: 'Normal WGS Alignment',
+      format: 'BAM',
+    },
+  ],
+};
+
+/** RS file mapping status for the pediatric leukemia study */
+export const pediatricLeukemiaFileIds: FileIdMap = {
+  GHGAF00000000000201: null,
+  GHGAF00000000000202: null,
+  // already mapped, hence filtered out of the mapping tool
+  GHGAF00000000000203: 'b71e0c92-5a4d-4f18-8c2a-1e6d3f905b22',
+};
+
+/** RS study entry for the pediatric leukemia study */
+export const pediatricLeukemiaRsStudy: RsStudy = {
+  id: 'GHGAS00000000000002',
+  title: 'Genomic Landscape of Pediatric Acute Leukemia',
+  description:
+    'Whole-genome sequencing of matched tumor and normal samples from a pediatric acute leukemia cohort.',
+  types: ['cancer_genomics'],
+  affiliations: ['University Children’s Hospital'],
+  status: 'draft',
+  num_datasets: 1,
+  num_publications: 1,
+  has_em: true,
+  created: '2026-02-03T09:30:00Z',
+  created_by: 'doe@test.dev',
+  approved: null,
+  approved_by: null,
+  superseded_by_id: null,
+};
+
+/** metldata Study resource for the rare neurological disorders study */
+export const rareNeuroStudyData: Study = {
+  accession: 'GHGAS00000000000003',
+  ega_accession: 'EGAS00000000003',
+  alias: 'RARE_NEURO',
+  types: ['rare_disease_genomics'],
+  title: 'Whole-Genome Sequencing of Rare Neurological Disorders',
+  affiliations: ['Institute of Human Genetics'],
+  datasets: ['GHGAD00000000000003'],
+  description:
+    'Whole-genome sequencing of families affected by undiagnosed rare neurological disorders.',
+  publications: [],
+};
+
+/** metldata EmbeddedDataset resource for the rare neurological disorders study */
+export const rareNeuroDatasetDetails: DatasetDetailsRaw = {
+  ...datasetDetails,
+  accession: 'GHGAD00000000000003',
+  ega_accession: 'EGAD00000000003',
+  title: 'Rare Neurological Disorders WGS',
+  description: 'Family-based whole-genome sequencing data.',
+  process_data_files: [],
+  experiment_method_supporting_files: [],
+  analysis_method_supporting_files: [],
+  individual_supporting_files: [],
+  experiments: [],
+  samples: [],
+  research_data_files: [
+    {
+      accession: 'GHGAF00000000000301',
+      ega_accession: 'EGAF00000301',
+      alias: 'proband_wgs.cram',
+      name: 'Proband WGS Alignment',
+      format: 'CRAM',
+    },
+    {
+      accession: 'GHGAF00000000000302',
+      ega_accession: 'EGAF00000302',
+      alias: 'trio_variants.vcf',
+      name: 'Trio Joint Variant Calls',
+      format: 'VCF',
+    },
+  ],
+};
+
+/** RS file mapping status for the rare neurological disorders study */
+export const rareNeuroFileIds: FileIdMap = {
+  GHGAF00000000000301: null,
+  GHGAF00000000000302: null,
+};
+
+/** RS study entry for the rare neurological disorders study */
+export const rareNeuroRsStudy: RsStudy = {
+  id: 'GHGAS00000000000003',
+  title: 'Whole-Genome Sequencing of Rare Neurological Disorders',
+  description:
+    'Whole-genome sequencing of families affected by undiagnosed rare neurological disorders.',
+  types: ['rare_disease_genomics'],
+  affiliations: ['Institute of Human Genetics'],
+  status: 'draft',
+  num_datasets: 1,
+  num_publications: 0,
+  has_em: true,
+  created: '2026-03-18T14:05:00Z',
+  created_by: 'roe@test.dev',
+  approved: null,
+  approved_by: null,
+  superseded_by_id: null,
+};
+
+/**
+ * RS studies that still have unmapped files.
+ *
+ * Served at `GET /studies?with_unmapped_files=true`. Each entry's `id` equals a
+ * GHGA study accession whose metldata Study/EmbeddedDataset chain and file-ids
+ * endpoint are mocked, so any of them can be selected in the mapping tool.
+ */
+export const studiesWithUnmappedFiles: RsStudy[] = [
+  pediatricLeukemiaRsStudy,
+  rareNeuroRsStudy,
+  uploadBoxTestRsStudy,
+];

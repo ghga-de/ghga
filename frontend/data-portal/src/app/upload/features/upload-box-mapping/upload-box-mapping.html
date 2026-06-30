@@ -6,16 +6,14 @@
     </mat-card-header>
 
     <mat-card-content>
-      @if (!studiesMap()) {
+      @if (studiesLoading()) {
         <!-- Studies still loading -->
         <mat-progress-bar mode="indeterminate" class="my-[1em]" />
       } @else if (selectedStudy(); as study) {
         <!-- Study details with change button -->
         <p class="flex items-center">
           <strong class="inline-block w-40">Accession:</strong>
-          <a [routerLink]="['/study', study.accession]" class="text-primary">{{
-            study.accession
-          }}</a>
+          <a [routerLink]="['/study', study.id]" class="text-primary">{{ study.id }}</a>
           <button
             mat-icon-button
             class="ml-2"
@@ -36,7 +34,7 @@
         </p>
         <p>
           <strong class="inline-block w-40">Datasets:</strong>
-          <span>{{ study.datasets.length }}</span>
+          <span>{{ study.num_datasets }}</span>
         </p>
       } @else {
         <!-- Intro text + study selector -->
@@ -46,13 +44,13 @@
         >
         <mat-form-field appearance="outline" class="w-full">
           <mat-select
-            [value]="selectedStudyAccession()"
-            (valueChange)="selectedStudyAccession.set($event)"
+            [value]="selectedStudyId()"
+            (valueChange)="selectedStudyId.set($event)"
             placeholder="Please select the study corresponding to this upload box"
           >
-            @for (study of studiesArray(); track study.accession) {
-              <mat-option [value]="study.accession">
-                {{ study.accession }}: {{ study.title }}
+            @for (study of studiesArray(); track study.id) {
+              <mat-option [value]="study.id">
+                {{ study.id }}: {{ study.title }}
               </mat-option>
             }
           </mat-select>
@@ -62,7 +60,7 @@
   </mat-card>
 
   <!-- File Mapping card (only shown when a study is selected) -->
-  @if (selectedStudyAccession()) {
+  @if (selectedStudyId()) {
     <mat-card>
       <mat-card-header>
         <mat-card-title><h2>File Mapping</h2></mat-card-title>

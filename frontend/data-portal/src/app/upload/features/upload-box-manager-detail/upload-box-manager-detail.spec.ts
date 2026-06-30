@@ -12,12 +12,12 @@ import { uploadBox1FileUploads, uploadBoxes, uploadGrants } from '@app/../mocks/
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { UserService } from '@app/auth/services/user';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
+import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
@@ -126,17 +126,24 @@ class MockUploadBoxService {
 }
 
 /**
- * Minimal mock of MetadataSearchService for the embedded mapping component.
+ * Minimal mock of StudyService for the embedded mapping component.
  */
-class MockMetadataSearchService {
-  loadStudiesMap = vitest.fn(() => of(new Map()));
+class MockStudyService {
+  studies = {
+    value: () => [],
+    isLoading: () => false,
+    error: () => undefined,
+  };
+
+  loadStudies = vitest.fn();
+  loadFileIds = vitest.fn(() => of({}));
 }
 
 /**
  * Minimal mock of MetadataService for the embedded mapping component.
  */
 class MockMetadataService {
-  filesOfStudy = vitest.fn(() => of([]));
+  filesOfStudyId = vitest.fn(() => of([]));
 }
 
 const mockDialog = { open: vitest.fn() };
@@ -179,7 +186,7 @@ describe('UploadBoxManagerDetailComponent', () => {
         { provide: NavigationTrackingService, useValue: mockNavigationService },
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
-        { provide: MetadataSearchService, useClass: MockMetadataSearchService },
+        { provide: StudyService, useClass: MockStudyService },
         { provide: MatDialog, useValue: mockDialog },
       ],
     })
