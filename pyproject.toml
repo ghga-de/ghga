@@ -23,6 +23,11 @@ dev = [
     "ruff>=0.15.13",
     "httpx>=0.28.1",
     "tomli_w>=1.2",
+    # per-member test deps recovered from the dropped lock/requirements-dev.in files
+    # (testcontainers comes via hexkit; these are the non-Docker extras some suites need)
+    "aiosmtpd>=1.4.6",
+    "openapi-core>=0.19.5",
+    "cryptography>=46",
 ]
 
 # ----------------------------------------------------------------------------------------

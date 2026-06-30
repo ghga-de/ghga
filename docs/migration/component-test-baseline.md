@@ -5,6 +5,26 @@
 > Purpose: catalogue what the HEAD unification actually broke, by root cause. Will go stale as
 > fixes land — it is a worklist, not living docs.
 
+## Update — mechanical fixes applied (2026-06-30)
+
+Two low-risk fixes landed (commit follows this doc):
+- **linkml ecosystem bumped** `1.6.x` → `1.11.1` (relaxed the hard pins in `metldata` +
+  `ghga-validator`). Clears the `typing.re` py3.13 breakage.
+- **Recovered test deps** added to the root dev group: `aiosmtpd`, `openapi-core`, `cryptography`.
+
+Result (re-ran the 4 affected suites): **clean win, no new code regressions.**
+- `ghga-validator`: 9 errors → **9 pass, green**.
+- `notification-service`: missing-dep errors gone (7 pass; rest are Kafka/Docker).
+- `metldata`: 28 collection-errors → **155 pass** (remaining 13 "failures" are all Docker —
+  its session fixture starts a Mongo container).
+- `ghga-datasteward-kit`: 3 collection-errors → **57 pass** (remaining 11 are Docker, plus a few
+  `FileNotFoundError: tests/fixtures/...` that are a **cwd artifact** of running `pytest` from the
+  repo root rather than the member dir — not a regression).
+
+**Still open = the 2 real code regressions below** (crypt4gh, transpiler→schemapack-4) plus the
+Docker-bound suites (need DinD/testbed). Two test-invocation notes for whoever runs these next:
+run member suites with `cwd` = the member dir, and set `<SVC>_CONFIG_YAML` for the services.
+
 ## Headline
 
 - **~1450 tests pass** against the single integrated HEAD; **0 real failures in the services**.
