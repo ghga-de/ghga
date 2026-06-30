@@ -1,0 +1,671 @@
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Contains pydantic BaseModel-based versions of the schemas.
+
+Please note, these pydantic-based schemas are the source of truth for all other
+schema representations such as json-schema.
+"""
+
+from enum import StrEnum
+from typing import Any, Literal
+from uuid import uuid4
+
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field
+
+
+class MetadataDatasetStage(StrEnum):
+    """The current stage that a metadata dataset is in."""
+
+    DOWNLOAD = "download"
+    UPLOAD = "upload"
+
+
+class MetadataDatasetFile(BaseModel):
+    """
+    A file as that is part of a Dataset.
+    Only fields relevant to the WPS are included for now. May be extended.
+    """
+
+    accession: str = Field(..., description="The file accession.")
+    description: str | None = Field(..., description="The description of the file.")
+    file_extension: str = Field(
+        ..., description="The file extension with a leading dot."
+    )
+    model_config = ConfigDict(title="metadata_dataset_file", extra="allow")
+
+
+class MetadataDatasetID(BaseModel):
+    """Simplified model to pass dataset ID to claims repository for deletion"""
+
+    accession: str = Field(..., description="The dataset accession.")
+
+
+class SearchableResourceInfo(BaseModel):
+    """Model containing only identifying information about an artifact's resource"""
+
+    accession: str = Field(..., description="The resource accession.")
+    class_name: str = Field(
+        ...,
+        description="The name of the class this artifact resource corresponds to.",
+    )
+
+
+class SearchableResource(SearchableResourceInfo):
+    """Model containing resource content in addition to the accession and class name"""
+
+    content: dict[str, Any] = Field(
+        ..., description="The metadata content of this artifact resource."
+    )
+
+
+class ArtifactTag(BaseModel):
+    """A model representing a tag for an artifact (artifact name and study accession)."""
+
+    study_accession: str = Field(
+        ..., description="The ID of the study this artifact pertains to."
+    )
+    artifact_name: str = Field(
+        ..., description="The name of the artifact, e.g. 'added_accessions'."
+    )
+
+
+class Artifact(ArtifactTag):
+    """A model representing an artifact."""
+
+    content: dict[str, Any] = Field(
+        ..., description="The metadata content of the artifact."
+    )
+
+
+class MetadataDatasetOverview(MetadataDatasetID):
+    """
+    Overview of files contained in a dataset.
+    Only fields relevant to the WPS are included for now. May be extended.
+    """
+
+    title: str = Field(..., description="The title of the dataset")
+    stage: MetadataDatasetStage = Field(
+        ..., description="The current stage of this dataset"
+    )
+    description: str | None = Field(..., description="The description of the dataset")
+    dac_alias: str = Field(..., description="The alias of the Data Access Committee")
+    dac_email: EmailStr = Field(
+        ..., description="The email address of the Data Access Committee"
+    )
+    files: list[MetadataDatasetFile] = Field(
+        ..., description="Files contained in the dataset"
+    )
+    model_config = ConfigDict(title="metadata_dataset_overview", extra="allow")
+
+
+class UploadDateModel(BaseModel):
+    """
+    Custom base model for common datetime validation.
+    Models containing upload_date datetimes should be derived from this.
+    """
+
+    upload_date: UTCDatetime = Field(
+        ...,
+        description="The date and time when this file was uploaded.",
+    )
+
+
+class FileAccessionModel(BaseModel):
+    """Base model for events that contain a file accession."""
+
+    accession: str = Field(
+        ..., description="The public ID of the file as present in the metadata catalog."
+    )
+
+
+class MetadataSubmissionFiles(FileAccessionModel):
+    """
+    Models files that are associated with or affected by a new or updated metadata
+    submission.
+    """
+
+    file_name: str = Field(
+        ...,
+        description="The name of the file as it was submitted.",
+        examples=["treatment_R1.fastq.gz"],
+    )
+    decrypted_size: int = Field(
+        ...,
+        description="The size of the entire decrypted file content in bytes.",
+    )
+    decrypted_sha256: str = Field(
+        ..., description="The SHA-2 checksum of the entire decrypted file content."
+    )
+
+
+class MetadataSubmissionUpserted(BaseModel):
+    """
+    This event when a new metadata submission is created or an existing one is
+    updated.
+    """
+
+    associated_files: list[MetadataSubmissionFiles]
+    model_config = ConfigDict(title="metadata_submission_upserted")
+
+
+class InterrogationSuccess(BaseModel):
+    """Event model informing services that file interrogation succeeded."""
+
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
+    )
+    secret_id: str | None = Field(
+        default=None,
+        description="The internal ID of the Data Hub-generated decryption secret",
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    bucket_id: str = Field(
+        default=...,
+        description="The name of the interrogation bucket the file is stored in",
+    )
+    object_id: UUID4 = Field(
+        default=..., description="The ID of the file specific to its S3 bucket."
+    )
+    interrogated_at: UTCDatetime = Field(
+        default=..., description="Time that the report was generated"
+    )
+    encrypted_parts_md5: list[str] = Field(
+        default=..., description="The MD5 checksum for each file part, in sequence"
+    )
+    encrypted_parts_sha256: list[str] = Field(
+        default=..., description="The SHA256 checksum for each file part, in sequence"
+    )
+    encrypted_size: int = Field(
+        default=...,
+        description=("The size of the encrypted file content without envelope."),
+    )
+
+
+class InterrogationFailure(BaseModel):
+    """Event model informing services that file interrogation failed."""
+
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    interrogated_at: UTCDatetime = Field(
+        default=..., description="Time that the report was generated"
+    )
+    reason: str = Field(
+        default=...,
+        description="The text of the error that caused interrogation to fail",
+    )
+
+
+class FileInternallyRegistered(BaseModel):
+    """An event schema communicating that a file has been copied into permanent storage."""
+
+    file_id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    archive_date: UTCDatetime = Field(
+        ...,
+        description="The date and time when this file was archived.",
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    bucket_id: str = Field(
+        ..., description="The ID/name of the S3 bucket used to store the file."
+    )
+    secret_id: str = Field(
+        default=..., description="The ID of the file decryption secret."
+    )
+    decrypted_size: int = Field(..., description="The size of the unencrypted file")
+    encrypted_size: int = Field(
+        default=..., description="The encrypted size of the file before re-encryption"
+    )
+    decrypted_sha256: str = Field(
+        default=...,
+        description="SHA-256 checksum of the entire unencrypted file content",
+    )
+    encrypted_parts_md5: list[str] = Field(
+        default=..., description="The MD5 checksum of each encrypted file part"
+    )
+    encrypted_parts_sha256: list[str] = Field(
+        default=..., description="The SHA-256 checksum of each encrypted file part"
+    )
+    part_size: int = Field(
+        default=...,
+        description="The number of bytes in each file part (last part is likely smaller)",
+    )
+
+
+class FileRegisteredForDownload(BaseModel):
+    """
+    This event is triggered when a newly uploaded file becomes available for
+    download via a GA4GH DRS-compatible API.
+    """
+
+    file_id: UUID4 = Field(..., description="Unique identifier for the file")
+    decrypted_sha256: str = Field(
+        ...,
+        description="The SHA-256 checksum of the entire decrypted file content.",
+    )
+    archive_date: UTCDatetime = Field(
+        ...,
+        description="The date and time when this file was archived.",
+    )
+    model_config = ConfigDict(title="file_registered_for_download")
+
+
+class NonStagedFileRequested(BaseModel):
+    """
+    This event type is triggered when a user requests to download a file that is not
+    yet present in the download bucket and needs to be staged.
+    """
+
+    file_id: UUID4 = Field(..., description="Unique identifier for the file upload")
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    target_bucket_id: str = Field(
+        ...,
+        description="The ID of the S3 bucket to which the object should be copied.",
+    )
+    target_object_id: UUID4 = Field(
+        ..., description="The ID to use for the file in the download bucket."
+    )
+    decrypted_sha256: str = Field(
+        ...,
+        description="The SHA-256 checksum of the entire decrypted file content.",
+    )
+    model_config = ConfigDict(title="non_staged_file_requested")
+
+
+class FileStagedForDownload(NonStagedFileRequested):
+    """This event type is triggered when a file is staged to the outbox storage."""
+
+    model_config = ConfigDict(title="file_staged_for_download")
+
+
+class FileDownloadServed(NonStagedFileRequested):
+    """
+    This event type is triggered when a the content of a file was served
+    for download. This event might be useful for auditing.
+    """
+
+    context: str = Field(
+        ...,
+        description=(
+            "The context in which the download was served (e.g. the ID of the data"
+            + " access request)."
+        ),
+    )
+    model_config = ConfigDict(title="file_download_served")
+
+
+class EmailNotification(BaseModel):
+    """
+    This event is emitted by services that desire to send an email notification.
+    It is picked up by the notification service.
+    """
+
+    recipient_email: EmailStr = Field(
+        ..., description="The primary recipient of the email"
+    )
+    email_cc: list[EmailStr] = Field(
+        default=[], description="The list of recipients cc'd on the email"
+    )
+    email_bcc: list[EmailStr] = Field(
+        default=[], description="The list of recipients bcc'd on the email"
+    )
+    subject: str = Field(..., description="The subject line for the notification")
+    recipient_name: str = Field(
+        ...,
+        description="The full name of the recipient to be used in the greeting section",
+    )
+    plaintext_body: str = Field(
+        ..., description="The basic text for the notification body"
+    )
+    model_config = ConfigDict(title="email_notification")
+
+
+class SmsNotification(BaseModel):
+    """
+    This event is emitted by services that desire to send an SMS notification.
+    It is picked up by the notification service.
+    """
+
+    phone: str = Field(..., description="The primary recipient of the sms")
+    text: str = Field(..., description="The text for the notification body")
+    model_config = ConfigDict(title="sms_notification")
+
+
+class FileDeletionRequested(BaseModel):
+    """
+    This event is emitted when a request to delete a certain file from the file
+    backend has been made.
+    """
+
+    file_id: UUID4 = Field(..., description="Unique identifier for the file")
+    model_config = ConfigDict(title="file_deletion_requested")
+
+
+class FileDeletionSuccess(FileDeletionRequested):
+    """This event is emitted when a service has deleted a file from its database as well
+    as the S3 buckets it controls.
+    """
+
+    model_config = ConfigDict(title="file_deletion_success")
+
+
+class UserID(BaseModel):
+    """Generic event payload to relay a user ID."""
+
+    user_id: UUID4 = Field(..., description="The user ID")
+
+
+class AcademicTitle(StrEnum):
+    """Academic title"""
+
+    DR = "Dr."
+    PROF = "Prof."
+
+
+class User(UserID):
+    """Event used to publish user data changes via outbox pattern."""
+
+    name: str = Field(
+        default=...,
+        description="Full name of the user",
+        examples=["Rosalind Franklin"],
+    )
+    title: AcademicTitle | None = Field(
+        default=None, title="Academic title", description="Academic title of the user"
+    )
+    email: EmailStr = Field(
+        default=...,
+        description="Preferred e-mail address of the user",
+        examples=["user@home.org"],
+    )
+
+
+class AccessRequestStatus(StrEnum):
+    """The status of an access request."""
+
+    ALLOWED = "allowed"
+    DENIED = "denied"
+    PENDING = "pending"
+
+
+class AccessRequestDetails(UserID):
+    """Event used to convey the details an access request."""
+
+    id: UUID4 = Field(..., description="The access request ID")
+    dataset_id: str = Field(..., description="The dataset ID")
+    dataset_title: str = Field(..., description="The dataset title")
+    dataset_description: str | None = Field(
+        default=None, description="A description of the dataset"
+    )
+    status: AccessRequestStatus = Field(
+        default=...,
+        description="The status of the access request",
+    )
+    request_text: str = Field(
+        default=..., description="Text note submitted with the request"
+    )
+    dac_alias: str = Field(
+        ...,
+        description="The alias of the Data Access Committee responsible for the dataset",
+    )
+    dac_email: EmailStr = Field(
+        ..., description="The email address of the Data Access Committee"
+    )
+    ticket_id: str | None = Field(
+        default=None,
+        description="The ID of the ticket associated with the access request",
+    )
+    internal_note: str | None = Field(
+        default=None,
+        description="A note about the access request only visible to Data Stewards",
+    )
+    note_to_requester: str | None = Field(
+        default=None,
+        description="A note about the access request that is visible to the requester",
+    )
+    access_starts: UTCDatetime = Field(
+        ...,
+        description="The beginning of the access request's validity period as a UTC datetime",
+    )
+    access_ends: UTCDatetime = Field(
+        ...,
+        description="The end of the access request's validity period as a UTC datetime",
+    )
+
+
+class IvaType(StrEnum):
+    """The type of IVA"""
+
+    PHONE = "Phone"
+    FAX = "Fax"
+    POSTAL_ADDRESS = "PostalAddress"
+    IN_PERSON = "InPerson"
+
+
+class IvaState(StrEnum):
+    """The state of an IVA"""
+
+    UNVERIFIED = "Unverified"
+    CODE_REQUESTED = "CodeRequested"
+    CODE_CREATED = "CodeCreated"
+    CODE_TRANSMITTED = "CodeTransmitted"
+    VERIFIED = "Verified"
+
+
+class UserIvaState(UserID):
+    """Notification event for state changes of a user's IVA(s)."""
+
+    value: str | None = Field(
+        default=..., description="The value of the IVA (None = all IVAs of the user)"
+    )
+    type: IvaType | None = Field(
+        default=..., description="The type of the IVA (None = all IVAs of the user"
+    )
+    state: IvaState = Field(..., description="The new state of the IVA")
+
+    model_config = ConfigDict(title="iva_state_change")
+
+
+class UserIvaCode(UserID):
+    """Notification requesting transmission of a verification code for a user's IVA."""
+
+    value: str = Field(default=..., description="The value of the IVA")
+    type: IvaType = Field(default=..., description="The type of the IVA")
+    code: str = Field(..., description="The verification code for the IVA")
+
+    model_config = ConfigDict(title="iva_send_code")
+
+
+UploadBoxState = Literal["open", "locked", "archived"]
+
+
+class ResearchDataUploadBox(BaseModel):
+    """A class representing a ResearchDataUploadBox."""
+
+    id: UUID4 = Field(
+        default_factory=uuid4,
+        description="Unique identifier for the research data upload box",
+    )
+    version: int = Field(..., description="A counter indicating resource version")
+    state: UploadBoxState = Field(
+        ..., description="Current state of the research data upload box"
+    )
+    title: str = Field(..., description="Short meaningful name for the box")
+    description: str = Field(..., description="Describes the upload box in more detail")
+    last_changed: UTCDatetime = Field(..., description="Timestamp of the latest change")
+    changed_by: UUID4 = Field(
+        ..., description="ID of the user who performed the latest change"
+    )
+    file_upload_box_id: UUID4 = Field(..., description="The ID of the file upload box.")
+    file_upload_box_version: int = Field(
+        ..., description="A counter indicating resource version"
+    )
+    file_upload_box_state: UploadBoxState = Field(
+        ..., description="Current state of the file upload box"
+    )
+    file_count: int = Field(default=0, description="The number of files in the box")
+    size: int = Field(
+        default=0, description="The total size of all files in the box, in bytes."
+    )
+    max_size: int = Field(
+        ...,
+        description="The maximum number of bytes allowed to be uploaded to the box across all files.",
+    )
+    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
+    model_config = ConfigDict(title="research_data_upload_box")
+
+
+FileUploadState = Literal[
+    "init",
+    "inbox",
+    "failed",
+    "cancelled",
+    "interrogated",
+    "awaiting_archival",
+    "archived",
+]
+
+
+class FileUpload(BaseModel):
+    """A FileUpload.
+
+    Contains all information required for a file's journey from upload initiation to
+    permanent archival.
+    """
+
+    id: UUID4 = Field(default=..., description="Unique identifier for the file upload")
+    box_id: UUID4 = Field(
+        default=...,
+        description="The ID of the FileUploadBox this file is associated with",
+    )
+    alias: str = Field(
+        default=...,
+        description="The submitted alias from the metadata (unique within the box)",
+    )
+    state: FileUploadState = Field(
+        default="init", description="The state of the FileUpload"
+    )
+    state_updated: UTCDatetime = Field(
+        default=..., description="Timestamp of when state was updated"
+    )
+    storage_alias: str = Field(
+        default=..., description="The storage alias of the Data Hub housing the file"
+    )
+    bucket_id: str = Field(
+        default=...,
+        description="The name of the bucket where the file is currently stored",
+    )
+    object_id: UUID4 = Field(
+        default=..., description="The ID of the file specific to its S3 bucket"
+    )
+    secret_id: str | None = Field(
+        default=None,
+        description="The internal ID of the Data Hub-generated decryption secret",
+    )
+    decrypted_size: int = Field(
+        default=..., description="The size of the unencrypted file"
+    )
+    encrypted_size: int = Field(
+        default=...,
+        description=(
+            "The size of the encrypted file content. When the file is in the inbox, this"
+            + " includes the Crypt4GH envelope. After re-encryption, the file no longer"
+            + " contains an envelope, so the value is slightly smaller."
+        ),
+    )
+    decrypted_sha256: str | None = Field(
+        default=None,
+        description="SHA-256 checksum of the entire unencrypted file content",
+    )
+    encrypted_parts_md5: list[str] | None = Field(
+        default=None, description="The MD5 checksum for each file part, in sequence"
+    )
+    encrypted_parts_sha256: list[str] | None = Field(
+        default=None, description="The SHA256 checksum for each file part, in sequence"
+    )
+    part_size: int = Field(
+        default=...,
+        description="The number of bytes in each file part (last part is likely smaller)",
+    )
+    failure_reason: str | None = Field(
+        default=None,
+        description="The reason for upload or interrogation failure, if applicable.",
+    )
+    model_config = ConfigDict(title="file_upload")
+
+
+class FileUploadBox(BaseModel):
+    """A class representing a box that bundles files belonging to the same upload."""
+
+    id: UUID4 = Field(..., description="The ID of the box.")
+    version: int = Field(..., description="A counter indicating resource version")
+    state: UploadBoxState = Field(..., description="Current state of the box")
+    file_count: int = Field(..., description="The number of files in the box")
+    size: int = Field(
+        ..., description="The total size of all files in the box, in bytes"
+    )
+    max_size: int = Field(
+        ...,
+        description="The maximum number of bytes allowed to be uploaded to the box across all files.",
+    )
+    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
+    model_config = ConfigDict(title="file_upload_box")
+
+
+class AuditRecord(BaseModel):
+    """A generic record for audit purposes."""
+
+    id: UUID4 = Field(
+        default_factory=uuid4, description="A unique identifier for the record"
+    )
+    created: UTCDatetime = Field(
+        ..., description="Timestamp when the record was created"
+    )
+    service: str = Field(
+        ..., description="Name of the service that generated the record"
+    )
+    label: str = Field(..., description="Short label describing the action")
+    description: str = Field(..., description="Detailed description of the action")
+    user_id: UUID4 | None = Field(
+        default=None, description="ID of the user who performed the action"
+    )
+    correlation_id: UUID4 = Field(
+        ..., description="Correlation ID for tracing requests"
+    )
+    action: Literal["C", "R", "U", "D"] | None = Field(
+        default=None, description="CRUD operation type"
+    )
+    entity: str | None = Field(default=None, description="Type of entity affected")
+    entity_id: str | None = Field(default=None, description="ID of the entity affected")
+    model_config = ConfigDict(title="audit_record")
+
+
+class FileAccessionMapping(FileAccessionModel):
+    """A class used to associate a file ID with an accession number"""
+
+    file_id: UUID4 = Field(
+        default=..., description="Unique identifier for the file upload"
+    )
+    model_config = ConfigDict(title="file_accession_mapping")
