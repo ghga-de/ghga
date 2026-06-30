@@ -21,8 +21,16 @@ from pathlib import Path
 
 import certifi
 import pytest
+from hishel.httpx import AsyncCacheTransport
+from httpx import AsyncHTTPTransport
 
-from ghga_service_commons.transports.factory import get_ssl_verify
+from ghga_service_commons.transports.config import CompositeCacheConfig, CompositeConfig
+from ghga_service_commons.transports.factory import (
+    CompositeTransportFactory,
+    get_ssl_verify,
+)
+from ghga_service_commons.transports.ratelimiting import AsyncRateLimitingTransport
+from ghga_service_commons.transports.retry import AsyncRetryTransport
 
 
 @pytest.fixture
@@ -88,3 +96,40 @@ def test_get_ssl_verify_requests_ca_bundle_precedence(
     expected = ssl.create_default_context(cafile=str(ca_bundle))
     assert len(verify.get_ca_certs()) == len(expected.get_ca_certs())
     assert len(verify.get_ca_certs()) > 1
+
+
+def test_create_ratelimiting_retry_transport_layers_transports():
+    """Ensure the retry transport wraps a rate limiting transport over an HTTP transport."""
+    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+        CompositeConfig()
+    )
+
+    assert isinstance(transport, AsyncRetryTransport)
+    ratelimiting = transport._transport
+    assert isinstance(ratelimiting, AsyncRateLimitingTransport)
+    assert isinstance(ratelimiting._transport, AsyncHTTPTransport)
+
+
+def test_create_ratelimiting_retry_transport_uses_custom_base():
+    """Ensure a provided base transport is used at the bottom of the stack."""
+    base = AsyncHTTPTransport()
+
+    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+        CompositeConfig(), base_transport=base
+    )
+
+    ratelimiting = transport._transport
+    assert isinstance(ratelimiting, AsyncRateLimitingTransport)
+    assert ratelimiting._transport is base
+
+
+def test_create_cached_ratelimiting_retry_transport_layers_transports():
+    """The cache transport wraps the retry and rate limiting transports."""
+    transport = CompositeTransportFactory.create_cached_ratelimiting_retry_transport(
+        CompositeCacheConfig()
+    )
+
+    assert isinstance(transport, AsyncCacheTransport)
+    retry = transport.next_transport
+    assert isinstance(retry, AsyncRetryTransport)
+    assert isinstance(retry._transport, AsyncRateLimitingTransport)

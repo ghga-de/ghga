@@ -17,7 +17,6 @@
 
 import time
 from collections.abc import Callable
-from contextlib import suppress
 from logging import getLogger
 from types import TracebackType
 from typing import Any
@@ -56,30 +55,51 @@ def _log_retry_stats(retry_state: RetryCallState):
     function_name = retry_state.fn.__qualname__
     attempt_number = retry_state.attempt_number
 
-    # Get internal statistics from the current retry object
-    stats = retry_state.retry_object.statistics
-    stats["function_name"] = function_name
-    stats["time_elapsed"] = round(time.monotonic() - stats["start_time"], 3)
-    stats["start_time"] = round(stats["start_time"], 3)
-    stats["idle_for"] = round(stats["idle_for"], 3)
+    # Build stats from the per-call retry_state. Don't mutate the retry_object's `statistics`
+    # dict as it's shared across all requests using this transport.
+    stats: dict[str, Any] = {
+        "function_name": function_name,
+        "attempt_number": attempt_number,
+        "start_time": round(retry_state.start_time, 3),
+        "idle_for": round(retry_state.idle_for, 3),
+        "time_elapsed": round(time.monotonic() - retry_state.start_time, 3),
+    }
 
-    # Enrich with details from current attempt for debugging
-    if outcome := retry_state.outcome:
-        try:
-            result = outcome.result()
-        except Exception as exc:
+    # Enrich with details from the current attempt for debugging.
+    if (outcome := retry_state.outcome) is not None:
+        if outcome.failed:
+            exc = outcome.exception()
             stats["exception_type"] = type(exc)
             stats["exception_message"] = str(exc)
-        else:
-            if isinstance(result, httpx.Response):
-                stats["response_status_code"] = result.status_code
-                stats["response_headers"] = result.headers
+        elif isinstance(result := outcome.result(), httpx.Response):
+            stats["response_status_code"] = result.status_code
+            stats["response_headers"] = result.headers
 
     log.info(
         "Retry attempt number %i for function %s.",
         attempt_number,
         function_name,
         extra=stats,
+    )
+
+
+def _log_before_attempt(retry_state: RetryCallState):
+    """Basic logger printing the function name and attempt number before each attempt."""
+    if not retry_state.fn:
+        log.debug("No wrapped function found in retry state.")
+        return
+
+    function_name = retry_state.fn.__qualname__
+    attempt_number = retry_state.attempt_number
+
+    log.info(
+        "Starting attempt number %i for function %s.",
+        attempt_number,
+        function_name,
+        extra={
+            "function_name": function_name,
+            "attempt_number": attempt_number,
+        },
     )
 
 
@@ -92,15 +112,17 @@ class wait_exponential_ignore_429(wait_exponential):  # noqa: N801
 
     def __call__(self, retry_state: RetryCallState) -> float:
         """Copied from base class and adjusted."""
-        if retry_state.outcome:
-            with suppress(Exception):
-                result = retry_state.outcome.result()
-                if (
-                    isinstance(result, httpx.Response)
-                    and result.status_code == 429
-                    and not result.headers.get("Should-Wait")
-                ):
-                    return 0
+        # Only read a successful outcome's result. Calling `.result()` pollutes the traceback
+        # if an exception is stored
+        outcome = retry_state.outcome
+        if outcome is not None and not outcome.failed:
+            result = outcome.result()
+            if (
+                isinstance(result, httpx.Response)
+                and result.status_code == 429
+                and not result.headers.get("Should-Wait")
+            ):
+                return 0
         try:
             exp = self.exp_base ** (retry_state.attempt_number - 1)
             result = self.multiplier * exp
@@ -115,16 +137,17 @@ class AsyncRetryTransport(httpx.AsyncBaseTransport):
     This adds tenacity based retry logic around HTTP calls.
     Custom wait and stop strategies and logging after each attempt can be injected.
     The default wait strategy uses and exponential backoff, but ignores 429 responses,
-    so their retry-after header can be dealt with corrctly, if present.
+    so their retry-after header can be dealt with correctly, if present.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         config: RetryTransportConfig,
         transport: httpx.AsyncBaseTransport,
         wait_strategy: Callable[[RetryTransportConfig], Any] = _default_wait_strategy,
         stop_strategy: Callable[[RetryTransportConfig], Any] = _default_stop_strategy,
         stats_logger: Callable[[RetryCallState], Any] = _log_retry_stats,
+        before_logger: Callable[[RetryCallState], Any] = _log_before_attempt,
     ) -> None:
         self._transport = transport
         self._retry_handler = _configure_retry_handler(
@@ -132,13 +155,41 @@ class AsyncRetryTransport(httpx.AsyncBaseTransport):
             wait_strategy=wait_strategy,
             stop_strategy=stop_strategy,
             stats_logger=stats_logger,
+            before_logger=before_logger,
         )
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         """Handles HTTP requests and adds retry logic around calls."""
-        # Strictly pass request as non kwarg arg to work around Otel httpx instrumentation
-        # trying to extract from arg[0]
-        return await self._retry_handler(self._transport.handle_async_request, request)
+        # Track the latest response and close it before issuing the next attempt, leaving
+        # only the final response open to consume by the caller.
+        latest_response: httpx.Response | None = None
+
+        async def _attempt() -> httpx.Response:
+            nonlocal latest_response
+            if latest_response is not None:
+                # Always clear the reference so a later cleanup doesn't try to close the same response again.
+                try:
+                    await latest_response.aclose()
+                finally:
+                    latest_response = None
+            # Strictly pass request as non kwarg arg to work around Otel httpx
+            # instrumentation trying to extract from arg[0]
+            latest_response = await self._transport.handle_async_request(request)
+            return latest_response
+
+        try:
+            return await self._retry_handler(_attempt)
+        except BaseException:
+            # Close the current connection on an exception. This should also deal with
+            # the RetryError once all attempts are exhausted
+            if latest_response is not None:
+                try:
+                    await latest_response.aclose()
+                except Exception:
+                    log.warning(
+                        "Failed to close response during cleanup.", exc_info=True
+                    )
+            raise
 
     async def aclose(self) -> None:  # noqa: D102
         await self._transport.aclose()
@@ -160,6 +211,7 @@ def _configure_retry_handler(
     wait_strategy: Callable[[RetryTransportConfig], Any],
     stop_strategy: Callable[[RetryTransportConfig], Any],
     stats_logger: Callable[[RetryCallState], Any],
+    before_logger: Callable[[RetryCallState], Any],
 ):
     """Configure the AsyncRetrying instance that is used for handling retryable responses/exceptions."""
     return AsyncRetrying(
@@ -181,5 +233,6 @@ def _configure_retry_handler(
         ),
         stop=stop_strategy(config),
         wait=wait_strategy(config),
+        before=before_logger,
         after=stats_logger,
     )
