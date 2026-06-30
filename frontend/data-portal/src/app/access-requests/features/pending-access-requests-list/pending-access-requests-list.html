@@ -1,0 +1,35 @@
+@if (hasError()) {
+  <p class="text-base">There was an error retrieving your pending access requests.</p>
+} @else {
+  @if (isLoading()) {
+    <app-stencil></app-stencil>
+  } @else {
+    @let req = pendingRequests();
+    @if (req.length === 0) {
+      <p class="text-base">You do not yet have pending access requests.</p>
+    } @else {
+      <p class="text-base">You have the following pending access requests:</p>
+      <ul>
+        @for (request of req; track request.id) {
+          <li>
+            For the dataset
+            <a
+              class="text-quaternary hover:text-secondary focus:text-secondary"
+              routerLink="/dataset/{{ request.dataset_id }}"
+              data-umami-event="Pending Access Requests List Dataset Clicked"
+              >{{ request.dataset_id }}</a
+            >
+            from {{ request.access_starts | date: friendlyDateFormat }} to
+            {{ request.access_ends | date: friendlyDateFormat }}.
+
+            @if (request.note_to_requester) {
+              <p>
+                <span class="font-bold">Note: </span>{{ request.note_to_requester }}
+              </p>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+}

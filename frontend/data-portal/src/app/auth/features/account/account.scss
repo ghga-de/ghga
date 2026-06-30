@@ -1,0 +1,11 @@
+@use '@angular/material' as mat;
+
+mat-chip {
+  @include mat.chips-overrides(
+    (
+      outline-color: var(--mat-sys-tertiary),
+      label-text-color: var(--mat-sys-tertiary),
+      with-trailing-icon-trailing-icon-color: var(--mat-sys-tertiary),
+    )
+  );
+}

@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: var(--mat-sys-primary);
+  --color-secondary: var(--mat-sys-secondary);
+  --color-tertiary: var(--mat-sys-tertiary);
+  --color-quaternary: var(--mat-sys-quaternary);
+  --color-quinary: var(--mat-sys-quinary);
+  --color-outline: var(--mat-sys-outline);
+  --color-error: var(--mat-sys-error);
+  --color-danger: var(--mat-sys-danger);
+  --color-warning: var(--mat-sys-warning);
+  --color-success: var(--mat-sys-success);
+  --color-info: var(--mat-sys-info);
+  --color-outline: var(--mat-sys-outline-variant);
+  --color-outline-dark: var(--mat-sys-outline);
+  --font-mono:
+    Illinois, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+}

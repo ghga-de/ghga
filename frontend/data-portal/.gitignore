@@ -1,0 +1,79 @@
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# Node
+/node_modules
+.pnpm-store
+npm-debug.log
+yarn-error.log
+
+# Runtime config
+public/config.js
+
+# Environment files
+**/*.env
+
+# Override files
+
+**/*.local.yml
+
+# Test certificates
+*.pem
+
+# Documentation
+documentation
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/mcp.json
+!.vscode/settings.json
+!.vscode/tasks.json
+.history/*
+
+# Claude Code local-only files
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+
+# Miscellaneous
+/.angular/cache
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+
+# Key stores
+*.key
+*.rnd
+.keystore
+.ssl/
+
+# Testing
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Translations
+*.mo
+*.pot
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,52 @@
+{
+  "window.title": "Data Portal - ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
+  "cSpell.words": [
+    "datapack",
+    "devcontainer",
+    "devkit",
+    "GHGA",
+    "IVA",
+    "IVAs",
+    "lifescience",
+    "metldata",
+    "micropip",
+    "Pydantic",
+    "Pyodide",
+    "qrcode",
+    "schemapack",
+    "teardown",
+    "TOTP"
+  ],
+  "cSpell.language": "en-GB",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "[html]": {
+    "editor.defaultFormatter": "Angular.ng-template"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "markdown.extension.toc.updateOnSave": false,
+  "markdown.extension.toc.levels": "2..6",
+  "eslint.options": {
+    "overrideConfigFile": "/workspace/eslint.config.js"
+  },
+  "remote.localPortHost": "allInterfaces",
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "vitest.nodeExecutable": "",
+  "vitest.cliArguments": "",
+  "vitest.applyDiagnostic": false,
+  "workbench.browser.enableChatTools": true,
+  "yaml.maxItemsComputed": 15000
+}

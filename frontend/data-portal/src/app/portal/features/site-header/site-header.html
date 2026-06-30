@@ -1,0 +1,76 @@
+<mat-toolbar>
+  <mat-toolbar-row class="flex justify-between align-middle">
+    <div class="flex h-full w-4/5 sm:w-[initial] xl:basis-1/4">
+      <a
+        matRipple
+        routerLink="/"
+        class="flex h-full flex-nowrap items-center px-4 py-3"
+        data-umami-event="Site Header Home Clicked"
+        ><img
+          src="assets/images/ghga-logo-clean.png"
+          class="max-h-12 w-2/3 sm:w-auto"
+          alt="GHGA Logo"
+        />
+        <div class="ms-2 w-1/2 border-l ps-2 pt-1 uppercase">
+          <span
+            class="border-quinary text-quinary text-[9vw] leading-3 tracking-wider min-[400px]:text-[5vw] sm:text-3xl"
+            >Data</span
+          ><br /><span
+            class="text-quinary text-[6.5vw] min-[400px]:text-[3.6vw] sm:text-[22px]"
+            >Portal</span
+          >
+        </div></a
+      >
+    </div>
+
+    @defer (on idle) {
+      <div class="hidden lg:block xl:basis-1/2">
+        <mat-nav-list class="my-8 text-center" aria-label="Header Navigation">
+          <app-site-header-nav-buttons />
+        </mat-nav-list>
+      </div>
+
+      <div class="my-4 hidden text-right lg:block xl:basis-1/4">
+        <app-account-button></app-account-button>
+      </div>
+    }
+
+    <div class="lg:hidden">
+      <mat-sidenav-container class="relative z-2 flex-[1_0_auto]">
+        <mat-sidenav
+          #sidenav
+          fixedInViewport="true"
+          mode="over"
+          disableClose="false"
+          position="end"
+          class="border-quaternary max-w-[400px] border-l-1 text-center"
+        >
+          <div class="h-21 content-center pe-4 text-end">
+            <button
+              mat-icon-button
+              aria-label="Open navigation Menu"
+              (click)="sidenav.toggle()"
+              class="button-on-primary"
+            >
+              <mat-icon class="text-white" fontIcon="menu"></mat-icon>
+            </button>
+          </div>
+          <mat-nav-list>
+            @defer (on idle) {
+              <app-site-header-nav-buttons class="mb-4 grid grid-cols-1 gap-y-2 px-4" />
+              <app-account-button />
+            }</mat-nav-list
+        ></mat-sidenav>
+      </mat-sidenav-container>
+    </div>
+
+    <div class="lg:hidden">
+      <button
+        mat-icon-button
+        aria-label="Open navigation Menu"
+        (click)="sidenav.toggle()"
+        class="button-on-primary"
+      >
+        <mat-icon fontIcon="menu"></mat-icon> </button></div
+  ></mat-toolbar-row>
+</mat-toolbar>

@@ -1,0 +1,105 @@
+<header>
+  <h1 class="text-center">
+    <span class="text-3xl">User Account</span>
+  </h1>
+</header>
+<h2>
+  <span class="flex flex-wrap gap-2 text-2xl"
+    ><span>{{ fullName() }}</span>
+    @for (roleName of roleNames(); track roleName) {
+      <mat-chip class="chip-tertiary">{{ roleName }}</mat-chip>
+    }
+  </span>
+</h2>
+
+<mat-card appearance="outlined" class="text-primary my-4 p-2">
+  <mat-card-header>
+    <mat-card-title><h2>Email</h2></mat-card-title>
+    <mat-card-subtitle
+      >Contact e-mail address taken from the LS Login account logged in
+      with.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <p class="text-base">
+      We will communicate with you via this email address:
+      <span class="font-bold">{{ email() }}</span>
+    </p>
+    <p>
+      You can change this email address in your
+      <a
+        appExtLink
+        class="text-quaternary hover:text-secondary focus:text-secondary"
+        href="https://profile.aai.lifescience-ri.eu/profile"
+        data-umami-event="Account Email Change Clicked"
+        >LS Login profile</a
+      >.
+    </p>
+  </mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined" class="text-primary my-4 p-2">
+  <mat-card-header>
+    <mat-card-title><h2>Independent Verification Addresses (IVAs)</h2></mat-card-title>
+    <mat-card-subtitle
+      >GHGA uses Independent Verification Addresses (IVAs) to verify your account's
+      identity. These IVAs are linked to data access requests and also need to be
+      exchanged with the controllers of these datasets. Further information can be found
+      in the
+      <a
+        appExtLink
+        data-umami-event="Account Page User Documentation Clicked"
+        href="https://docs.ghga.de/user_stories/accessing_data/"
+        >GHGA User Documentation</a
+      >.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <app-user-iva-list></app-user-iva-list
+  ></mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined" class="text-primary my-4 p-2">
+  <mat-card-header>
+    <mat-card-title><h2>Dataset Access</h2></mat-card-title>
+    <mat-card-subtitle
+      >If you have been granted access to any datasets, these will appear below. In
+      order to download data from these datasets, you will need to create download
+      tokens through the respective button. You can then download the files using the
+      GHGA Connector.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <app-granted-access-grants-list></app-granted-access-grants-list>
+  </mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined" class="text-primary my-4 p-2">
+  <mat-card-header>
+    <mat-card-title><h2>Pending Access Requests</h2></mat-card-title>
+    <mat-card-subtitle
+      >If you have any pending access requests to any datasets, these will appear below.
+      Any request that is granted will be moved to the section above (Dataset Access).
+      If an access request is denied, it will no longer be displayed here, and a new
+      access request can be created by going to the desired dataset.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <app-pending-access-requests-list></app-pending-access-requests-list>
+  </mat-card-content>
+</mat-card>
+
+<mat-card appearance="outlined" class="text-primary my-4 p-2">
+  <mat-card-header>
+    <mat-card-title><h2>Research Data Upload</h2></mat-card-title>
+    <mat-card-subtitle
+      >If you have been granted access to a Research Data Upload Box, this will be shown
+      below. In order to upload data to these boxes, you will need to create an upload
+      token using the respective button. You can then upload and manage the files using
+      the GHGA Connector.</mat-card-subtitle
+    >
+  </mat-card-header>
+  <mat-card-content class="my-4 text-base">
+    <app-user-upload-grants-list></app-user-upload-grants-list>
+  </mat-card-content>
+</mat-card>

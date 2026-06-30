@@ -1,0 +1,40 @@
+<div mat-dialog-title>Confirm user account deletion</div>
+<div mat-dialog-content>
+  <p>
+    Please confirm that the user account of <strong>{{ user.displayName }}</strong> with
+    email <strong>{{ user.email }}</strong> shall be <strong>deleted</strong> by enterin
+    the user's email in the box below.
+  </p>
+  <mat-form-field class="w-full">
+    <mat-label>Confirm user email</mat-label>
+    <input
+      type="text"
+      matInput
+      class="w-full"
+      [(ngModel)]="userInput"
+      (input)="onInput($event)"
+    />
+    <mat-error>{{
+      deletionError() ? 'User deletion failed. Please try again.' : ''
+    }}</mat-error>
+  </mat-form-field>
+</div>
+<div mat-dialog-actions cdkTrapFocus>
+  <button
+    mat-button
+    (click)="onCancel()"
+    data-umami-event="Confirm User Deletion Dialog Cancel Clicked"
+  >
+    Cancel
+  </button>
+  <button
+    mat-raised-button
+    cdkFocusInitial
+    [disabled]="disabled()"
+    (click)="onConfirm()"
+    class="button-error"
+    data-umami-event="Confirm User Deletion Dialog Confirm Clicked"
+  >
+    Confirm deletion
+  </button>
+</div>

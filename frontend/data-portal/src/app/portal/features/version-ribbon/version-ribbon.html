@@ -1,0 +1,13 @@
+<!-- eslint-disable @angular-eslint/template/interactive-supports-focus -->
+<!-- eslint-disable @angular-eslint/template/click-events-have-key-events -->
+@if (text) {
+  <aside
+    class="absolute top-16.25 -left-12.5 z-999 h-7.5 w-65 -rotate-45 overflow-hidden bg-red-700 whitespace-nowrap shadow-lg/50"
+    (click)="click()"
+  >
+    <span
+      class="mx-7.5 my-px inline-block w-50 cursor-pointer p-0 text-center align-middle font-bold text-white text-shadow-lg/30"
+      >{{ text }}</span
+    >
+  </aside>
+}

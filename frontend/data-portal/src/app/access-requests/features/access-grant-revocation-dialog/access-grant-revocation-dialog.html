@@ -1,0 +1,56 @@
+<div class="w-full">
+  <h2 mat-dialog-title>
+    <span class="fa-file-download"></span>Access Grant Revocation
+  </h2>
+  <mat-dialog-content>
+    <p>
+      Please confirm that the access grant of
+      <strong
+        >{{ grant.user_title ? grant.user_title + ' ' : ''
+        }}{{ grant.user_name }}</strong
+      >
+      with email <strong>{{ grant.user_email }}</strong> for the dataset with accession
+      <strong>{{ grant.dataset_id }}</strong> shall be <strong>revoked</strong> by
+      entering the email of the user and dataset accession in the box below.
+    </p>
+    <mat-form-field class="w-full">
+      <input
+        [(ngModel)]="emailInput"
+        matInput
+        class="w-full"
+        (input)="onInput($event, 'email')"
+        placeholder="Confirm email of user"
+      />
+    </mat-form-field>
+    <mat-form-field class="w-full">
+      <input
+        [(ngModel)]="datasetInput"
+        matInput
+        class="w-full"
+        (input)="onInput($event, 'dataset')"
+        placeholder="Confirm dataset accession"
+      />
+    </mat-form-field>
+    <mat-error>{{
+      revocationError() ? 'Grant revocation failed. Please try again.' : ''
+    }}</mat-error>
+  </mat-dialog-content>
+  <mat-dialog-actions class="gap-y-2">
+    <button
+      mat-button
+      (click)="onCancel()"
+      data-umami-event="Confirm Grant Revocation Dialog Cancel Clicked"
+    >
+      Cancel
+    </button>
+    <button
+      mat-flat-button
+      class="button-error"
+      (click)="onConfirm()"
+      data-umami-event="Confirm Grant Revocation Dialog Confirm Clicked"
+      [disabled]="disabled()"
+    >
+      Confirm revocation
+    </button>
+  </mat-dialog-actions>
+</div>

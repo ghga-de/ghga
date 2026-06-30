@@ -1,0 +1,29 @@
+@let accessStatus = status();
+@switch (accessStatus) {
+  @case (AccessRequestStatus.pending) {
+    <button mat-raised-button class="button-quaternary w-full" [disabled]="true">
+      <mat-icon fontIcon="key"></mat-icon> Pending Request …
+    </button>
+  }
+  @case (AccessRequestStatus.allowed) {
+    <button
+      mat-raised-button
+      class="button-quaternary w-full"
+      (click)="showDownloadTokenDialog()"
+      data-umami-event="Dynamic AR Button Download Clicked"
+    >
+      <mat-icon fontIcon="download"></mat-icon>Download the Data
+    </button>
+  }
+  @case (AccessRequestStatus.denied) {
+    <button
+      mat-raised-button
+      class="button-quaternary w-full"
+      (click)="showNewAccessRequestDialog()"
+      data-umami-event="Dynamic AR Button Request Access Clicked"
+    >
+      <mat-icon fontIcon="key"></mat-icon>Request Access
+    </button>
+  }
+  @default never;
+}

@@ -1,0 +1,134 @@
+<h1>Set up two-factor authentication</h1>
+
+@if (isLoading()) {
+  <p>Loading...</p>
+} @else if (isNewlyRegistered()) {
+  <p>Thank you for registering in the GHGA data portal.</p>
+  <p class="mb-5">
+    For additional security when accessing protected data with the GHGA data portal, we
+    are using two-factor authentication and an independent verification address (IVA).
+    An IVA is a way of contacting you separately from your primary email address.
+  </p>
+  <button
+    mat-raised-button
+    (click)="confirmRegistration()"
+    data-umami-event="Setup TOTP Newly Registered Continue Clicked"
+  >
+    Continue
+  </button>
+} @else if (hasLostToken() && !lostTokenConfirmed()) {
+  <p>
+    In the case that you lost your phone or the setup of your authenticator app, you can
+    create a new authentication code setup.
+  </p>
+  <p class="mb-5">
+    <strong>
+      However, all IVAs that had been verified before will need to be verified again.
+    </strong>
+  </p>
+  <div class="flex flex-wrap gap-2 *:basis-full *:sm:basis-auto">
+    <div>
+      <button
+        mat-stroked-button
+        class="w-full sm:w-auto"
+        (click)="cancelLostToken()"
+        data-umami-event="Setup TOTP Lost Token Cancel Clicked"
+      >
+        Cancel
+      </button>
+    </div>
+    <div>
+      <button
+        mat-raised-button
+        class="w-full sm:w-auto"
+        (click)="lostTokenConfirmed.set(true)"
+        data-umami-event="Setup TOTP Lost Token Continue Clicked"
+      >
+        Continue
+      </button>
+    </div>
+  </div>
+} @else {
+  @let uri = setupUri() | async;
+  @if (uri) {
+    <p>
+      The two-factor authentication means that we require you to enter an additional
+      6-digit authentication code after you logged in via LS Login. This code can be
+      produced by an authenticator app such as Aegis, Microsoft Authenticator or Google
+      Authenticator, which you can install on your mobile phone.
+    </p>
+    <p>
+      In order to set up the authenticator app to produce the authentication codes for
+      the GHGA data portal, please scan this QR code with your authenticator app:
+    </p>
+    <div class="mt-4 mb-6">
+      <qrcode [qrdata]="uri" [width]="256" [margin]="0"></qrcode>
+    </div>
+
+    @if (showManualSetup) {
+      <p>
+        If you have trouble scanning the QR Code, please manually input the following
+        setup key in your authenticator app:
+      </p>
+      <p class="flex w-full content-center">
+        <input
+          type="text"
+          size="16"
+          readonly
+          [value]="getSecret(uri)"
+          class="mr-2 mb-2 h-10 text-center font-mono"
+          aria-label="TOTP setup key"
+          aria-readonly="true"
+        />
+        <button
+          mat-icon-button
+          (click)="copySecret(uri)"
+          class="relative"
+          matTooltip="Copy setup key"
+          matTooltipPosition="right"
+          matTooltipHideDelay="100000"
+          data-umami-event="Setup TOTP Copy Secret Clicked"
+          aria-label="Copy TOTP setup key"
+        >
+          <mat-icon fontIcon="content_copy"></mat-icon>
+        </button>
+      </p>
+    }
+    <div class="flex flex-wrap gap-2 *:basis-full *:sm:basis-auto">
+      <div>
+        <button
+          mat-stroked-button
+          class="w-full sm:w-auto"
+          (click)="showManualSetup = !showManualSetup"
+          data-umami-event="Setup TOTP Manual Setup Toggle Clicked"
+        >
+          @if (showManualSetup) {
+            Hide
+          } @else {
+            Show
+          }
+          manual setup instructions
+        </button>
+      </div>
+      <div>
+        <button
+          mat-raised-button
+          class="w-full sm:w-auto"
+          (click)="completeSetup()"
+          data-umami-event="Setup TOTP Continue Clicked"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  } @else if (uri === undefined) {
+    <p>Generating the TOTP setup...</p>
+  } @else {
+    <p>Error setting up two-factor authentication.</p>
+    <p>
+      <a routerLink="/" data-umami-event="Setup TOTP Go Back Clicked"
+        >Go back to the home page.</a
+      >
+    </p>
+  }
+}

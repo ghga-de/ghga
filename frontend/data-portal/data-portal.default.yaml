@@ -1,0 +1,50 @@
+# default configuration
+
+host: 0.0.0.0
+port: 8080
+
+basic_auth: null
+
+ssl: false
+ssl_cert: cert.pem
+ssl_key: key.pem
+
+log_level: INFO
+
+base_url: http://127.0.0.1:8080
+
+auth_url: /api/auth
+ars_url: /api/ars
+dins_url: /api/dins
+mass_url: /api/mass
+metldata_url: /api/metldata
+rs_url: /api/rs
+rts_url: /api/rts
+wps_url: /api/wps
+wkvs_url: null
+
+ribbon_text: 'Staging v$v'
+max_facet_options: 7
+access_upfront_max_days: 180
+access_grant_min_days: 7
+access_grant_max_days: 730
+access_grant_max_extend: 5
+default_access_duration_days: 365
+
+oidc_client_id: ghga-client
+oidc_redirect_url: oauth/callback
+oidc_scope: 'openid profile email'
+oidc_authority_url: https://login.aai.lifescience-ri.eu/oidc/
+oidc_authorization_url: authorize
+oidc_token_url: token
+oidc_userinfo_url: userinfo
+oidc_use_discovery: true
+oidc_account_url: https://profile.aai.lifescience-ri.eu/profile
+
+umami_url: null
+umami_website_id: null
+
+root_files: {}
+
+helpdesk_url: https://helpdesk.ghga.de/
+helpdesk_ticket_url: '/#ticket/zoom/'

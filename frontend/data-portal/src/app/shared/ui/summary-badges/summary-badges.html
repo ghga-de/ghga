@@ -1,0 +1,39 @@
+<ul class="ps-5">
+  @for (
+    item of data();
+    track item.value;
+    let idx = $index;
+    let count = $count;
+    let last = $last
+  ) {
+    <li>
+      <mat-chip class="small-chip mb-0.5 text-xs"
+        ><span class="uppercase">{{ item.value | underscoreToSpace }} </span>
+        <strong>{{ item.count }}</strong></mat-chip
+      >
+    </li>
+    @if (count > maxItems) {
+      @if (idx === maxItems - 2) {
+        <li [class.h-0]="showMore()">
+          <input
+            type="checkbox"
+            id="show_more"
+            class="show_more w-0"
+            (click)="toggleMoreOrLess()"
+            [class.checked]="showMore()"
+          />
+          @if (!showMore()) {
+            <label for="show_more" class="text-secondary underline"
+              >Show {{ count - (maxItems - 1) }} more…</label
+            >
+          }
+        </li>
+      }
+      @if (last && showMore()) {
+        <li>
+          <label for="show_more" class="text-secondary underline">Show less…</label>
+        </li>
+      }
+    }
+  }
+</ul>

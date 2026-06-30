@@ -1,0 +1,33 @@
+<button
+  mat-button
+  [matMenuTriggerFor]="menu"
+  aria-label="Tools"
+  class="mx-1 flex-row-reverse"
+  [class.active-page]="isToolsRoute()"
+>
+  Tools <mat-icon fontIcon="arrow_drop_down"></mat-icon>
+</button>
+<mat-menu #menu="matMenu">
+  <ul>
+    <li>
+      <a
+        [class.active-sub-page]="isMetadataRoute()"
+        mat-menu-item
+        routerLink="/metadata-validator"
+        class="mx-1"
+        data-umami-event="Metadata Validator Clicked"
+        ><mat-icon fontIcon="fact_check"></mat-icon> Metadata Validator</a
+      >
+    </li>
+    <li>
+      <a
+        [class.active-sub-page]="isPlaygroundRoute()"
+        mat-menu-item
+        routerLink="/schemapack-playground"
+        class="mx-1"
+        data-umami-event="Schemapack Playground Clicked"
+        ><mat-icon fontIcon="data_object"></mat-icon> Schemapack Playground</a
+      >
+    </li>
+  </ul>
+</mat-menu>

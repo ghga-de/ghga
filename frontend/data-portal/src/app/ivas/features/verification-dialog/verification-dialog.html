@@ -1,0 +1,43 @@
+<h1 mat-dialog-title>IVA verification</h1>
+<div mat-dialog-content>
+  <p class="mb-5 max-w-md">
+    We sent a verification code to your IVA
+    <strong>{{ address() }}</strong
+    >. Please enter it here:
+  </p>
+  <form novalidate defaultButton="submit-code" (submit)="onSubmit($event)">
+    <mat-form-field class="w-full sm:w-auto">
+      <mat-label>Verification code</mat-label>
+      <input
+        type="text"
+        cdkFocusInitial
+        class="text-center sm:text-left"
+        matInput
+        [formField]="codeForm.code"
+        (input)="onInput($event)"
+      />
+    </mat-form-field>
+  </form>
+  @if (verificationError()) {
+    <mat-error class="mt-3">Verification failed. Please try again.</mat-error>
+  }
+</div>
+<div mat-dialog-actions cdkTrapFocus>
+  <button
+    mat-button
+    (click)="onCancel()"
+    data-umami-event="Verification Dialog Cancel Clicked"
+  >
+    Cancel
+  </button>
+  <button
+    id="submit-code"
+    mat-raised-button
+    type="submit"
+    [disabled]="disabled()"
+    (click)="onSubmit()"
+    data-umami-event="Verification Dialog Submit Clicked"
+  >
+    Submit
+  </button>
+</div>

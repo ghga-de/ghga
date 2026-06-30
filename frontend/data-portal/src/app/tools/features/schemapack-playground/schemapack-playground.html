@@ -1,0 +1,80 @@
+<div class="container mx-auto max-w-7xl p-4 md:p-8">
+  <header class="mb-8 text-center">
+    <h1 class="text-4xl font-bold text-slate-800">Schemapack Playground</h1>
+    <p class="mt-2 text-slate-600">
+      Use
+      <a
+        href="https://github.com/ghga-de/schemapack"
+        target="_blank"
+        class="inline-flex items-center gap-1.5 text-blue-600 hover:underline"
+        aria-label="Link to schemapack GitHub repository"
+        ><mat-icon
+          inline="true"
+          fontSet="fab"
+          fontIcon="fa-github"
+          class="ms-0.5 -me-1.5"
+        ></mat-icon
+        ><span>Schemapack</span>
+      </a>
+      to validate JSON data against a YAML schema in real-time.
+    </p>
+  </header>
+
+  <div class="mb-6 rounded-md p-4 text-center">
+    <div class="flex items-center justify-center">
+      <span
+        [class.hidden]="!showSpinner()"
+        class="border-s-quaternary mr-2 h-6 w-6 animate-spin rounded-[50%] border-4 border-black/10"
+      ></span>
+      <app-status-text-box [status]="status()" [statusText]="statusText()" />
+    </div>
+
+    <div class="mb-8 flex flex-col justify-center gap-4 sm:flex-row">
+      <button
+        mat-raised-button
+        color="primary"
+        id="validateButton"
+        (click)="validate()"
+      >
+        Validate
+      </button>
+      <button mat-raised-button id="loadDefaultButton" (click)="loadDefault()">
+        Load Default Example
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+      <div>
+        <h2 class="mb-3 text-2xl font-semibold text-slate-700">Schema (YAML)</h2>
+        <textarea
+          id="schemaInput"
+          [(ngModel)]="schemaYaml"
+          class="h-96 w-full rounded-lg border border-gray-300 p-4 font-mono text-sm shadow-inner focus:border-blue-500 focus:ring-blue-500"
+          placeholder="Paste your YAML schema here..."
+          aria-label="Paste your YAML schema here"
+        ></textarea>
+      </div>
+
+      <div>
+        <h2 class="mb-3 text-2xl font-semibold text-slate-700">Data (JSON)</h2>
+        <textarea
+          id="dataInput"
+          [(ngModel)]="jsonData"
+          class="h-96 w-full rounded-lg border border-gray-300 p-4 font-mono text-sm shadow-inner focus:border-blue-500 focus:ring-blue-500"
+          placeholder="Paste your JSON data here..."
+          aria-label="Paste your JSON data here"
+        ></textarea>
+      </div>
+    </div>
+
+    @if (validationDetails()) {
+      <div class="mt-8">
+        <h2 class="mb-3 text-2xl font-semibold text-red-700">Validation Details</h2>
+        <pre
+          class="border-warning text-error min-h-[100px] overflow-y-auto rounded-lg border-1 bg-neutral-50 bg-white p-4 text-left font-mono text-sm shadow-md"
+          >{{ validationDetails() | formatSchemapackError }}</pre
+        >
+      </div>
+    }
+  </div>
+</div>

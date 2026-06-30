@@ -1,0 +1,288 @@
+# GHGA Data Portal
+
+This repository contains the front-end application for the GHGA data portal.
+
+<!-- toc -->
+
+- [Technology stack](#technology-stack)
+- [Local development](#local-development)
+  - [API requests & the backend](#api-requests--the-backend)
+  - [Authentication](#authentication)
+- [Code scaffolding](#code-scaffolding)
+- [Building](#building)
+- [Package Manager](#package-manager)
+  - [Dependency overrides](#dependency-overrides)
+- [Linter, Commits, and Documentation](#linter-commits-and-documentation)
+  - [Ease of use](#ease-of-use)
+- [Automated tests](#automated-tests)
+  - [Unit-tests](#unit-tests)
+  - [End-to-End tests](#end-to-end-tests)
+    - [Issues relating to headed execution](#issues-relating-to-headed-execution)
+- [Analytics](#analytics)
+- [The Architecture Matrix](#the-architecture-matrix)
+- [AI assisted coding](#ai-assisted-coding)
+- [References](#references)
+- [License](#license)
+
+<!-- tocstop -->
+
+## Technology stack
+
+This project is a single Angular application designed as a modularized frontend monolith. Major building blocks:
+
+- Angular (version 21)
+- Angular Material
+- Tailwind CSS (version 4)
+- Unit testing: Vitest
+- E2E testing: Playwright
+- API mocking in development: Mock Service Worker (MSW)
+
+## Local development
+
+To start a local development server, run:
+
+```bash
+dev_launcher
+```
+
+Once the server is running, open your browser and navigate to `http://localhost:8080/`. The application will automatically reload whenever you modify any of the source files.
+
+By default, this will not use a proxy configuration; the API will be provided via the mock service worker, and the authentication will be faked as well.
+
+The MSW handlers in `src/mocks` intentionally return static responses. We avoid adding complex backend logic to mocks to prevent duplicating server behaviors in the frontend codebase, which can differ or drift over time and produce misleading local test results.
+
+### API requests & the backend
+
+If you want to test the application against the backend provided by the staging deployment, then run:
+
+```bash
+dev_launcher --with-backend
+```
+
+In this case, a proxy configuration will be used that proxies all API endpoints to the staging environment, while the application itself is still served by the development server. You can change the name of the staging backend via the environment variable `data_portal_base_url`; by default it will be `data.staging.ghga.dev`.
+
+If the staging backend requires an additional Basic authentication, you can set it in the environment variable `data_portal_basic_auth`.
+
+### Authentication
+
+If you want to test authentication using the real OIDC provider, then run:
+
+```bash
+dev_launcher --with-oidc
+```
+
+---
+
+**NOTE**
+
+The development server will serve the application via SSL in this mode, using the certificate created in `.devcontainer/cert.pem`. You should add the corresponding CA certificate `.devcontainer/ca-cert.pem` to the trusted certificates of your development computer or web browser to avoid the warnings when loading the page.
+
+---
+
+In this mode, the `data_portal_oidc_client_id` and the other OIDC settings must be set properly as required by the OIDC provider.
+
+You will also need to change the hosts file on your host computer so that localhost points to the staging backend. If you use the default staging backend, then you can browse the application at `https://data.staging.ghga.dev`.
+
+To test against the real backend and with the real OIDC provider, you can start the development server like this:
+
+```bash
+dev_launcher --with-backend --with-oidc
+```
+
+It is recommended to put the necessary settings, particularly the credentials that should be kept secret, in the `local.env` file inside the `.devcontainer` directory. It should look something like this:
+
+```env
+data_portal_base_url=https://data.staging.ghga.dev
+data_portal_basic_auth=USERNAME:PASSWORD
+data_portal_oidc_client_id=THE_OIDC_CLIENT_ID
+```
+
+## Code scaffolding
+
+The Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+
+```bash
+ng generate component component-name
+```
+
+or
+
+```bash
+ng g c component-name
+```
+
+for short.
+
+For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+
+```bash
+ng generate --help
+```
+
+## Building
+
+To build the project run:
+
+```bash
+ng build
+```
+
+This will compile the project and store the build artifacts in the `dist/` directory. By default, the production build optimizes the application for performance and speed.
+
+Site verification files that shall be deployed at the root path in production can be specified in the `root_files` setting, using file names as properties and file contents as values.
+
+## Package Manager
+
+This project uses pnpm to install dependencies, which is a replacement for the much slower npm. Run
+
+```bash
+pnpm install
+```
+
+to install the dependencies.
+
+### Dependency overrides
+
+The project uses a `.pnpmfile.cjs` file to manage dependency overrides. The following entries are currently in use. Review these from time to time and remove overrides that are no longer necessary.
+
+- `@angular-devkit/core@21.1.0>picomatch: 4.0.4`
+  - Reason: `@compodoc/compodoc@1.2.1` depends on `@angular-devkit/schematics@21.1.0`, which pulls `@angular-devkit/core@21.1.0` and `picomatch@4.0.3` (vulnerable to ReDoS).
+  - Removal criteria: remove this override once Compodoc updates its Angular devkit dependency to a version that no longer resolves to the vulnerable `picomatch` version.
+
+- `@angular-devkit/core@21.1.0>ajv: >=8.18.0`
+  - Reason: `@compodoc/compodoc@1.2.1` transitively depends on `ajv@8.17.1` (via `@angular-devkit/core`), which is vulnerable to ReDoS ([GHSA-2g4f-4pwh-qvx6](https://github.com/advisories/GHSA-2g4f-4pwh-qvx6)).
+  - Removal criteria: remove once Compodoc updates its `@angular-devkit` dependency to a version that pulls `ajv>=8.18.0`.
+
+- `uuid: >=11.1.1` (applied to http-auth, @compodoc/compodoc, vis-network, vis-data)
+  - Reason: `@compodoc/compodoc@1.2.1` and related packages transitively depend on `uuid` versions with a buffer bounds check vulnerability ([GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq)).
+  - Removal criteria: remove once Compodoc updates its dependencies to pull `uuid>=11.1.1`.
+
+After adding, changing, or removing overrides in `.pnpmfile.cjs`, run `pnpm install` to refresh `pnpm-lock.yaml`.
+
+---
+
+**NOTE**
+
+You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`. You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies. Configuration of pnpm overrides should be done in `.pnpmfile.cjs` rather than in `package.json`.
+
+---
+
+## Linter, Commits, and Documentation
+
+The repository is set up in such a way to only allow linted commits. That means commits are blocked by Husky if they cause linter errors (currently, warnings are accepted). This ensures that code quality standards are maintained without building up technical debt that has to be fixed later on.
+
+To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix`, which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running `ng lint`), resolve those issues and try again.
+
+### Ease of use
+
+For comfort, we are adding these shorthands: `pnpm lint`, `pnpm lf` (for `lint --fix`), and `pnpm docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
+
+## Automated tests
+
+### Unit-tests
+
+We are using [Vitest](https://vitest.dev/) for unit testing in this project. If possible, the queries and matchers from the [Testing Library](https://testing-library.com/) should be used. See the documentation for the [Angular Testing Library](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/). Note that jest-dom also supports Vitest, not just Jest.
+
+The unit tests are not included in the linting process and can be executed separately. The following variants of running the tests are provided:
+
+- `pnpm test` - run unit tests once
+- `pnpm test:watch` - watch mode
+- `pnpm test:ui` - interactive tests in the browser
+
+Note: the VS Code Vitest extension runs plain `vitest` directly, which does not work for Angular component tests in this repository (external `templateUrl`/`styleUrl` and Angular TestBed setup are handled by the Angular test builder). Use `pnpm test` / `pnpm test:ui` instead. See also [this issue](https://github.com/angular/angular-cli/issues/31734).
+
+Note that modernizing the unit testing tooling is on the roadmap of the Angular team for 2025. We may need to change some parts of the tooling when the official solution is provided.
+
+### End-to-End tests
+
+We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/) for details.
+
+Comprehensive end-to-end tests for real backend behavior are maintained in the separate GHGA archive test bed repository. The e2e tests in this repository focus on frontend behavior and expected API contracts.
+
+- `pnpm e2e` - run e2e-tests in headless mode on Chromium (fast local default)
+- `pnpm e2e:all` - run e2e-tests in headless mode on all configured browsers using `--workers=2`
+- `pnpm e2e:headed` - run e2e tests in headed mode
+- `pnpm e2e:debug` - run e2e tests in headed mode with Playwright inspector
+- `pnpm e2e:report` - open HTML report for e2e tests
+
+Worker configuration:
+
+- Default is `1` worker for stability.
+- For faster local runs with the same command, do `export PLAYWRIGHT_WORKERS=<number of workers>`.
+- If tests get flaky, lower the value (or return to `1`).
+
+Recommendations for writing stable e2e tests:
+
+- Assert stable end states (final URL, final title, final visible content), not transient intermediate states.
+- Use small bounded retries for known flaky UI transitions (menu/dialog open, click-triggered navigation).
+- Keep retries minimal (usually 1-2 attempts) and always retain a strict final assertion.
+
+Note: The Playwright HTML reporter is configured to **not auto-open** at the end of `pnpm e2e` runs, so test commands terminate cleanly in CI and local terminals.
+
+Reports are still generated in `playwright-report/` and can be viewed on demand:
+
+- Open the report file directly: `playwright-report/index.html`
+- Or start the Playwright report server manually: `pnpm e2e:report`
+
+Like for unit testing, you can also [use the VS Code extension for Playwright](https://playwright.dev/docs/getting-started-vscode) to run tests interactively using the test explorer in the side bar. VS Code is able to support different test providers (like Vitest and Playwright) along with each other.
+
+#### Issues relating to headed execution
+
+In order for the headed execution to work in the dev container, an X11 server must be running on the host.
+
+On macOs, you can use [XQuartz](https://www.xquartz.org/). On Windows with WSL 2, you can use the built-in WSLg as X11 server. See [here](https://github.com/microsoft/wslg/wiki/Diagnosing-%22cannot-open-display%22-type-issues-with-WSLg) if that is not working properly.
+
+The directory `/tmp/.X11-unix` should exist and should be mounted on the corresponding host directory, which is `/mnt/wslg/.X11-unix` for WSLg. If you run `ls /tmp/.X11-unix`, it should show `X0`. If that is not the case, you may need to add or modify volume mounts manually in the `docker-compose.local.yml` file, of which a suitable version is created for you on startup.
+
+You may also need to add `/tmp/.X11-unix` to the virtual file shares in Docker Desktop under Linux, and run `xhost +local:docker` on the host system.
+
+## Analytics
+
+This SPA uses Umami for event tracking. Every clickable item has a property `data-umami-event` that is globally unique and which should clearly identify both the action and the environment it is occurring in. Furthermore, there's a limit of 50 characters for these event names - otherwise they will be ignored by the backend.
+
+## The Architecture Matrix
+
+This application is built as a modularized frontend monolith (a "modulith") using vertical slices and layers as module boundaries, which are enforced using the linter.
+
+The vertical slices correspond to the different feature areas or bounded contexts within the application, such as _metadata_ or _access-requests_. Additionally, we have a vertical slice called _portal_ that contains all overarching features, such as the home page (which displays a metadata summary) and the user profile page (which shows the user's access requests). Another slice, called _shared_, provides UI components or utilities used across all feature areas. Authentication and user session handling are implemented in a separate slice called _auth_.
+
+The horizontal layers are named _features_ (for feature components, i.e., smart components), _ui_ (for presentational components, i.e., dumb components), _services_ (for accessing domain objects and corresponding application logic), _models_ (for interfaces of domain objects), and _utils_ (for feature-specific utility functions). The _services_ layer primarily contains Angular services, while the _utils_ layer includes pure pipes, guards, and custom utility functions.
+
+This results in the following architecture matrix:
+
+| portal   | metadata | access-requests | ... | auth     | shared   |
+| -------- | -------- | --------------- | --- | -------- | -------- |
+| features | features | features        | ... | features | features |
+| ui       | ui       | ui              | ... | ui       | ui       |
+| services | services | services        | ... | services | services |
+| models   | models   | models          | ... | models   | models   |
+| utils    | utils    | utils           | ... | utils    | utils    |
+
+To create a clean architecture, the following rules are checked when importing modules from the architecture matrix:
+
+- Modules within a vertical slice must only import modules from the same slice, as these slices represent bounded contexts.
+- An exception is that all vertical slices are allowed to use modules from the _shared_ vertical slice.
+- Another exception is that the _portal_ slice is allowed to use feature components from other feature areas.
+- Additionally, the three bottom layers of the _auth_ slice may be used in other slices.
+- Each module is only allowed to use modules from the layers below it.
+- An exception is that the _ui_ layer may not use modules from the _services_ layer.
+
+## AI assisted coding
+
+This project is best supported in VS Code with GitHub Copilot, but tools like Claude Code can also be used.
+
+- `AGENTS.md` is the entrypoint for AI-specific instructions; agents should also follow this `README` and relevant guidance in `docs/`.
+- If you use the Angular CLI MCP server integration (for example via Copilot Chat tools), it can help with Angular-specific guidance and code generation.
+- After updating Angular dependencies, it can be useful to run `MCP: Reset Cached Tools` once so the MCP tool metadata is refreshed for the new Angular/CLI version.
+- Keep `AGENTS.md` up to date when you change major tooling (Angular, Angular Material, Tailwind, testing/build scripts), so AI-assisted changes stay consistent with project conventions.
+
+## References
+
+- [Playwright](https://playwright.dev/) and the docs for it [docs for it](https://playwright.dev/docs/).
+- [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli)
+- [Pnpm](https://pnpm.io/) and [the docs for it](https://pnpm.io/motivation).
+- [Vitest](https://vitest.dev/) for unit tests. [Testing Library](https://testing-library.com/) for queries with an [Angular integration](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/).
+
+## License
+
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for more details.

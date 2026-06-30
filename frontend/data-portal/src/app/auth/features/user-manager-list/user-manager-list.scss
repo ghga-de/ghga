@@ -1,0 +1,29 @@
+@use '@angular/material' as mat;
+
+table {
+  @include mat.table-overrides(
+    (
+      header-headline-size: var(--mat-sys-title-medium-size),
+      row-item-label-text-size: var(--mat-sys-body-large-size),
+    )
+  );
+}
+
+mat-chip {
+  @include mat.chips-overrides(
+    (
+      outline-color: var(--mat-sys-tertiary),
+      label-text-color: var(--mat-sys-tertiary),
+      with-trailing-icon-trailing-icon-color: var(--mat-sys-tertiary),
+    )
+  );
+}
+
+tr.cdk-row:hover,
+tr.cdk-row:active {
+  background-color: color-mix(in srgb, #fff 0%, #000 8%);
+}
+
+tr.cdk-row:focus {
+  background-color: color-mix(in srgb, #fff 0%, #000 12%);
+}

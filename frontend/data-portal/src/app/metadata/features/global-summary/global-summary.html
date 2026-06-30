@@ -1,0 +1,101 @@
+<section class="bg-primary my-8 rounded-lg p-5 pb-8">
+  @if (isLoading()) {
+    <mat-spinner class="float-right" [diameter]="24"> </mat-spinner>
+  }
+  <h2 class="text-white">Statistics</h2>
+  <div
+    [class]="
+      `flex grid grid-cols-1 justify-center gap-4` +
+      ` *:min-h-56 *:p-3` +
+      ` sm:grid-cols-2` +
+      ` xl:grid-cols-4 xl:gap-x-[0.75%] xl:px-0` +
+      ` 2xl:gap-x-[2%] 2xl:px-[2%]`
+    "
+  >
+    <mat-card appearance="outlined" class="card-primary text-white"
+      ><mat-card-title class="text-center"
+        ><span class="text-3xl"
+          ><mat-icon
+            inline
+            class="rounded-full border-4 border-white px-1"
+            fontIcon="database"
+          ></mat-icon></span
+        ><br />Total datasets:</mat-card-title
+      ><mat-card-content class="mt-4 text-2xl"
+        ><div class="text-center">
+          @if (isLoading()) {
+            <app-stencil />
+          } @else {
+            {{ datasets().count | number }}
+          }
+        </div></mat-card-content
+      ></mat-card
+    >
+    <mat-card appearance="outlined" class="text-primary"
+      ><mat-card-title class="text-tertiary text-center"
+        ><span class="text-3xl"
+          ><mat-icon
+            inline
+            class="border-tertiary rounded-full border-4 px-1"
+            fontIcon="genetics"
+          ></mat-icon></span
+        ><br />Experiments:
+        @if (isLoading()) {
+          <app-stencil class="inline-flex w-10" />
+        } @else {
+          {{ methods().count | number }}
+        }</mat-card-title
+      ><mat-card-content>
+        <app-global-summary-card-content
+          [isLoading]="isLoading()"
+          [data]="methods().stats?.instrument_model"
+          caption="Experiments"
+          propertyName="Platform"
+        ></app-global-summary-card-content></mat-card-content
+    ></mat-card>
+    <mat-card appearance="outlined" class="card-primary text-white"
+      ><mat-card-title class="text-center"
+        ><span class="block text-3xl"
+          ><mat-icon
+            inline
+            class="rounded-full border-4 border-white px-1"
+            fontIcon="person"
+          ></mat-icon></span
+        >Individuals:
+        @if (isLoading()) {
+          <app-stencil class="inline-flex w-10" />
+        } @else {
+          {{ individuals().count | number }}
+        }</mat-card-title
+      ><mat-card-content
+        ><app-global-summary-card-content
+          [isLoading]="isLoading()"
+          [data]="individuals().stats?.sex"
+          caption="Individuals"
+          propertyName="Sex"
+        ></app-global-summary-card-content> </mat-card-content
+    ></mat-card>
+    <mat-card appearance="outlined" class="text-primary"
+      ><mat-card-title class="text-tertiary text-center"
+        ><span class="text-3xl"
+          ><mat-icon
+            inline
+            class="border-tertiary rounded-full border-4 px-1"
+            fontIcon="description"
+          ></mat-icon></span
+        ><br />Files:
+        @if (isLoading()) {
+          <app-stencil class="inline-flex w-10" />
+        } @else {
+          {{ files().count | number }}
+        }</mat-card-title
+      ><mat-card-content
+        ><app-global-summary-card-content
+          [isLoading]="isLoading()"
+          [data]="files().stats?.format"
+          caption="Files"
+          propertyName="File Type"
+        ></app-global-summary-card-content> </mat-card-content
+    ></mat-card>
+  </div>
+</section>

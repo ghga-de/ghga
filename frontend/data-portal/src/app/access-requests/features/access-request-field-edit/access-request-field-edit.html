@@ -1,0 +1,66 @@
+<div class="mb-2 flex" [class.items-center]="isOpen()">
+  <strong
+    class="min-w-50 pe-1 text-start"
+    [class.mb-4]="isOpen() && !validationError()"
+    [class.mb-8]="isOpen() && validationError()"
+  >
+    {{ label() ? label() + ':' : '' }}
+  </strong>
+  <div class="min-w-60 grow">
+    @if (isOpen()) {
+      <div class="flex items-center">
+        <mat-form-field class="grow">
+          @if (rows() > 1) {
+            <textarea
+              matInput
+              [formField]="fieldForm.field"
+              [rows]="rows()"
+              (input)="changed()"
+            ></textarea>
+          } @else {
+            <input
+              matInput
+              type="text"
+              [formField]="fieldForm.field"
+              (input)="changed()"
+            />
+          }
+        </mat-form-field>
+        <mat-chip
+          class="edit-field-chip smaller-chip interactive-chip cancel-edit-button mx-2 mb-4"
+          (click)="cancel()"
+          role="button"
+          ><mat-icon fontIcon="close"></mat-icon
+        ></mat-chip>
+        <mat-chip
+          class="edit-field-chip smaller-chip interactive-chip save-edit-button mb-4"
+          (click)="save()"
+          role="button"
+          [disabled]="!!validationError()"
+          ><mat-icon fontIcon="check"></mat-icon
+        ></mat-chip>
+      </div>
+      @if (validationError()) {
+        <mat-error class="-mt-5 mb-2 w-full">{{ validationError() }}</mat-error>
+      }
+    } @else {
+      <div class="flex items-center">
+        <p class="mb-0 grow">
+          @if (ticketUrl()) {
+            <a appExtLink [href]="ticketUrl()" tabindex="-1">{{ formModel().field }}</a>
+          } @else {
+            {{ formModel().field }}
+          }
+        </p>
+        @if (!locked()) {
+          <mat-chip
+            class="edit-field-chip smaller-chip interactive-chip edit-button ms-2"
+            (click)="edit()"
+            role="button"
+            ><mat-icon class="scale-[0.75]" fontIcon="edit"></mat-icon>
+          </mat-chip>
+        }
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,17 @@
+@use '@angular/material' as mat;
+
+mat-expansion-panel {
+  margin-bottom: 0.5em;
+}
+
+mat-expansion-panel .mat-expansion-panel-header {
+  background-color: var(--mat-sys-surface-dim);
+}
+
+div {
+  @include mat.sort-overrides(
+    (
+      arrow-color: var(--mat-sys-tertiary),
+    )
+  );
+}

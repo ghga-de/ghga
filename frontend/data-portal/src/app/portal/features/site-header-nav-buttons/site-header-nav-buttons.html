@@ -1,0 +1,49 @@
+<ul class="block *:block *:lg:inline">
+  <li>
+    <a
+      [class.active-page]="homeActive()"
+      mat-button
+      routerLink="/"
+      class="mx-1"
+      data-umami-event="Site Header Home Clicked"
+      >Home</a
+    >
+  </li>
+  <li>
+    <a
+      [class.active-page]="browseActive()"
+      mat-button
+      routerLink="/browse"
+      class="mx-1"
+      data-umami-event="Site Header Browse Clicked"
+      >Browse Data</a
+    >
+  </li>
+  <li>
+    <a
+      mat-button
+      appExtLink
+      href="https://docs.ghga.de/faq/"
+      target="_blank"
+      rel="noreferrer noopener"
+      class="mx-1 flex-row-reverse"
+      data-umami-event="Site Header Open FAQ Clicked"
+      >FAQ</a
+    >
+  </li>
+  <li>
+    <a
+      mat-button
+      appExtLink
+      href="https://docs.ghga.de/"
+      target="_blank"
+      rel="noreferrer noopener"
+      class="mx-1 flex-row-reverse"
+      data-umami-event="Site Header Open Documentation Clicked"
+      >Docs</a
+    >
+  </li>
+  @if (isDataSteward()) {
+    <li><app-admin-menu class="contents"></app-admin-menu></li>
+  }
+</ul>

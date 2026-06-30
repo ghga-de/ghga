@@ -1,0 +1,359 @@
+<div
+  class="mx-auto flex max-w-[1440px] flex-col gap-4 p-6"
+  [style.view-transition-name]="showTransition() ? 'detail' : null"
+>
+  <div class="justify-between md:flex">
+    <header class="grow">
+      <button
+        mat-icon-button
+        (click)="goBack()"
+        data-umami-event="Access Request Manager Back Link Clicked"
+        aria-label="Go back to previous page"
+        class="text-primary float-left mt-1 mr-4"
+      >
+        <mat-icon fontIcon="chevron_left"></mat-icon>
+      </button>
+      <h1>Access Request Details</h1>
+    </header>
+  </div>
+  @if (request(); as ar) {
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div
+        class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
+      >
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Request & Dataset</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-xl">
+            <app-access-request-field-edit
+              [request]="ar"
+              name="ticket_id"
+              label="Ticket ID"
+              (saved)="saved($event)"
+              (edited)="edited($event)"
+              class="contents"
+            ></app-access-request-field-edit>
+            <p>
+              <strong class="inline-block w-50">Dataset ID:</strong>
+              <span
+                ><a appExtLink [href]="'/dataset/' + ar.dataset_id" tabindex="-1">{{
+                  ar.dataset_id
+                }}</a></span
+              >
+            </p>
+            <p>
+              <strong class="inline-block w-50">Dataset Title:</strong>
+              <span>{{ ar.dataset_title }}</span>
+            </p>
+            <p>
+              <strong class="inline-block w-50">Resolution:</strong>
+              <span
+                ><strong
+                  class="{{ ar.status | AccessRequestStatusClassPipe }} capitalize"
+                  >{{ ar.status }}</strong
+                ></span
+              >
+            </p>
+          </mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Access Timeline & Details</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-xl">
+            <app-access-request-duration-edit
+              [request]="ar"
+              (saved)="saved($event)"
+              (edited)="edited($event)"
+              class="contents"
+            ></app-access-request-duration-edit>
+            <div class="mb-2 flex">
+              <strong class="inline-block min-w-50">Request details:</strong>
+              <div class="max-h-38 overflow-y-auto">
+                @for (
+                  line of ar.request_text | splitLines;
+                  track line;
+                  let last = $last
+                ) {
+                  <p [class.mb-0]="last">{{ line }}</p>
+                }
+              </div>
+            </div>
+            <p>
+              <strong class="inline-block w-50">Requested:</strong>
+              <span>{{ ar.request_created | date }}</span>
+            </p>
+          </mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>DAC & Requester</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-xl">
+            <p class="flex">
+              <strong class="inline-block min-w-50">DAC:</strong>
+              <span>
+                <span class="italic">{{ ar.dac_alias }}</span> -
+                <a [href]="'mailto:' + ar.dac_email" tabindex="-1">{{
+                  ar.dac_email
+                }}</a>
+              </span>
+            </p>
+            <p class="flex">
+              <strong class="inline-block min-w-50">Requester:</strong>
+              <span>
+                <span class="italic"
+                  ><a [routerLink]="`/user-manager/${ar.user_id}`">{{
+                    ar.full_user_name
+                  }}</a></span
+                >
+                -
+                <a [href]="'mailto:' + ar.email" tabindex="-1">{{ ar.email }}</a>
+              </span>
+            </p>
+            <p class="flex">
+              <strong class="inline-block min-w-50">LS ID:</strong>
+              <span>
+                @if (userExtId.isLoading()) {
+                  <em class="text-gray-400">Loading...</em>
+                } @else if (userExtId.error() || !userExtId.value()) {
+                  <em class="text-red-600">could not be retrieved</em>
+                } @else {
+                  <code class="text-base"
+                    >{{ userExtId.value()!.split('@', 2).join('\u200B@') }}
+                  </code>
+                }
+              </span>
+            </p>
+          </mat-card-content>
+        </mat-card>
+      </div>
+      <div
+        class="*:smaller-mat-card-title my-2 flex flex-col items-start gap-4 *:w-full *:overflow-x-auto"
+      >
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Notes</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-xl">
+            <app-access-request-field-edit
+              [request]="ar"
+              name="note_to_requester"
+              label="Note to Requester"
+              (saved)="saved($event)"
+              (edited)="edited($event)"
+              class="contents"
+            ></app-access-request-field-edit>
+            <app-access-request-field-edit
+              [request]="ar"
+              name="internal_note"
+              label="Internal Note"
+              (saved)="saved($event)"
+              (edited)="edited($event)"
+              class="contents"
+            ></app-access-request-field-edit>
+          </mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Verification Address</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-xl">
+            @if (ivasAreLoading()) {
+              <p>Loading verification addresses...</p>
+            } @else if (ivasError() || !ivas().length) {
+              <p>
+                No corresponding verification addresses found.
+                @if (ar.status === 'pending') {
+                  The request can only be allowed when there is a corresponding IVA.
+                }
+              </p>
+            } @else if (!changeable()) {
+              @let iva = associatedIva();
+              @if (iva) {
+                <p>
+                  The corresponding verification address is
+                  {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }} (<span
+                    [class]="(iva.state | IvaStatePipe).class"
+                    >{{ (iva.state | IvaStatePipe).name }}</span
+                  >).
+                </p>
+              } @else {
+                <p>No verification address is associated with this request.</p>
+              }
+            } @else if (ivas().length === 1) {
+              @let iva = ivas()[0];
+              <p>
+                The user has only one verification address. It will be the address used
+                to secure this access request:
+              </p>
+              <div class="mt-2 overflow-x-auto">
+                <div class="flex min-w-md items-center">
+                  <div class="grow py-1 ps-4">
+                    {{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}
+                  </div>
+                  <div
+                    [class]="(iva.state | IvaStatePipe).class"
+                    class="w-50 flex-shrink-0 py-2 ps-4 align-middle"
+                  >
+                    {{ (iva.state | IvaStatePipe).name }}
+                  </div>
+                </div>
+              </div>
+            } @else {
+              <label for="iva-selection-group">
+                @if (selectedIvaIdRadioButton()) {
+                  The user has already specified a preferred verification address to use
+                  for this access request. If you wish to change it, please select it
+                  below:
+                } @else {
+                  Please select the verification address that should be used to secure
+                  the access request:
+                }
+              </label>
+              <mat-radio-group
+                [(ngModel)]="selectedIvaIdRadioButton"
+                (ngModelChange)="saveIva()"
+                id="iva-selection-group"
+              >
+                <div
+                  class="divide-outline mt-2 flex flex-col divide-y-1 overflow-x-auto"
+                >
+                  @for (iva of ivas(); track iva.id) {
+                    <div class="flex min-w-md items-center">
+                      <div class="grow py-1">
+                        <mat-radio-button [value]="iva.id">
+                          <span class="text-base"
+                            >{{ (iva.type | IvaTypePipe).name }}: {{ iva.value }}</span
+                          >
+                        </mat-radio-button>
+                      </div>
+                      <div
+                        [class]="(iva.state | IvaStatePipe).class"
+                        class="w-50 flex-shrink-0 py-2 ps-4 align-middle"
+                      >
+                        {{ (iva.state | IvaStatePipe).name }}
+                      </div>
+                    </div>
+                  }
+                </div>
+              </mat-radio-group>
+            }
+          </mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title><h2>Access Grants</h2></mat-card-title>
+          </mat-card-header>
+          <mat-card-content class="min-w-xl">
+            @if (grantsAreLoading()) {
+              <p>Loading access grants...</p>
+            } @else if (grantsError()) {
+              <p>The corresponding access grants could not be loaded.</p>
+            } @else if (!grants().length) {
+              <p>There are no access grants corresponding to this request.</p>
+            } @else {
+              <!--
+                The aggregated current access state (active/upcoming/expired) is
+                the same live state shown in the access request manager's
+                "Access" column, and unlike the request resolution above it
+                reflects the current access state. Each grant's validity period
+                links to its access grant details.
+              -->
+              @let state = grantState();
+              @let count = grants().length;
+              <p>
+                Current access state is
+                @if (state) {
+                  <strong class="{{ state | AccessGrantStatusClassPipe }} capitalize">{{
+                    accessLabels[state]
+                  }}</strong
+                  >.
+                }
+              </p>
+              <p class="mt-2 mb-0">
+                @if (count === 1) {
+                  There is one corresponding access grant:
+                } @else {
+                  There are {{ count }} corresponding access grants:
+                }
+              </p>
+              <ul class="mt-1 list-inside list-disc">
+                @for (grant of grants(); track grant.id) {
+                  <li>
+                    <a [routerLink]="['/access-grant-manager', grant.id]">
+                      {{ grant.valid_from | date: periodFormat : periodTimeZone }} until
+                      {{ grant.valid_until | date: periodFormat : periodTimeZone }}
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+    <div class="mt-8 flex flex-col gap-8 sm:flex-row sm:gap-0">
+      @if (ivasAreLoading() || !changeable()) {
+        <button
+          mat-stroked-button
+          (click)="goBack()"
+          data-umami-event="Access Request Manager Back Button Clicked"
+        >
+          Back
+        </button>
+      } @else {
+        <div class="w-full grow sm:w-auto">
+          <button
+            autoFocus
+            mat-stroked-button
+            class="w-full sm:w-auto"
+            (click)="goBack()"
+            data-umami-event="Access Request Manager Back Button Clicked"
+          >
+            Back
+          </button>
+        </div>
+        <div class="flex w-full flex-wrap gap-4 sm:w-auto sm:flex-nowrap">
+          <div class="w-full sm:w-auto">
+            <button
+              mat-raised-button
+              class="button-error w-full sm:w-auto"
+              (click)="saveBeforeStatusChange('deny')"
+              data-umami-event="Access Request Manager Deny Clicked"
+              [disabled]="ar.status === 'denied'"
+            >
+              Deny
+            </button>
+          </div>
+          <div class="w-full sm:w-auto">
+            <button
+              mat-raised-button
+              class="button-success w-full sm:w-auto"
+              (click)="saveBeforeStatusChange('allow')"
+              data-umami-event="Access Request Manager Allow Clicked"
+              [disabled]="ar.status === 'allowed' || ivasError() || !ivas().length"
+            >
+              Allow
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (isLoading()) {
+    <p>Loading request details...</p>
+  } @else {
+    <div class="container mx-auto p-6">
+      <p class="text-center text-red-600">
+        @if (error() === 'not found') {
+          The selected access request could not be found.
+        } @else {
+          An error occurred while loading the access request details. Please try again
+          later.
+        }
+      </p>
+    </div>
+  }
+</div>

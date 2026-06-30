@@ -1,0 +1,81 @@
+/**
+ * The Data Access service a mock
+ * @copyright The GHGA Authors
+ * @license Apache-2.0
+ */
+
+import { signal } from '@angular/core';
+// eslint-disable-next-line boundaries/dependencies
+import { accessGrants, accessRequests } from '@app/../mocks/data';
+import { AccessGrantStatus, AccessRequestStatus } from '../models/access-requests';
+
+/**
+ * Mock for the Access Request Service
+ */
+export class MockAccessRequestService {
+  accessRequest = {
+    isLoading: signal(false),
+    error: signal(undefined),
+    value: signal(accessRequests[4]),
+  };
+  allAccessRequests = {
+    isLoading: signal(false),
+    error: signal(undefined),
+    value: signal(accessRequests),
+  };
+  userAccessRequests = {
+    isLoading: signal(false),
+    error: signal(undefined),
+    value: signal(accessRequests.filter((ar) => ar.user_id === 'doe@test.dev')),
+  };
+  grantedUserAccessRequests = signal(
+    accessRequests.filter((ar) => ar.status === 'approved'),
+  );
+  pendingUserAccessRequests = signal(
+    accessRequests.filter((ar) => ar.status === 'pending'),
+  );
+  userAccessGrants = {
+    isLoading: signal(false),
+    error: signal(undefined),
+    value: signal(accessGrants.filter((ar) => ar.user_id === 'doe@test.dev')),
+  };
+  activeUserAccessGrants = signal(accessGrants.filter((ag) => ag.status === 'active'));
+  loadUserAccessGrants = () => undefined;
+  loadAllAccessRequests = () => undefined;
+  loadAllAccessGrants = () => undefined;
+  allAccessRequestsFilter = () => ({
+    ticketId: '',
+    dataset: '',
+    requester: '',
+    dac: '',
+    fromDate: undefined,
+    toDate: undefined,
+    status: AccessRequestStatus.pending,
+    requestText: '',
+    noteToRequester: '',
+    internalNote: '',
+  });
+  allAccessRequestsFiltered = () => accessRequests;
+  allAccessGrantsFilter = () => ({
+    status: undefined,
+    user: undefined,
+    dataset_id: undefined,
+  });
+  allAccessGrantsResource = {
+    isLoading: () => false,
+    error: () => false,
+    value: () => accessGrants,
+  };
+  setAllAccessRequestsFilter = () => undefined;
+  allAccessGrants = () => accessGrants;
+  grantsFor = (userId: string, datasetId: string) =>
+    accessGrants.filter((g) => g.user_id === userId && g.dataset_id === datasetId);
+  grantStateFor = (userId: string, datasetId: string) =>
+    accessGrants.some((g) => g.user_id === userId && g.dataset_id === datasetId)
+      ? AccessGrantStatus.active
+      : undefined;
+  setAllAccessGrantsFilter = () => undefined;
+  allAccessGrantsFiltered = () => accessGrants;
+  revokeAccessGrant = async () => undefined;
+  loadAccessRequest = () => undefined;
+}

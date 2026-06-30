@@ -1,0 +1,162 @@
+<div class="overflow-x-auto">
+  <div class="pt-4 text-sm">
+    <div
+      class="smaller-button-text mb-4 flex flex-col gap-y-2 sm:float-right sm:w-52 md:ms-6 md:mb-4"
+    >
+      @if (hasEgaAccession()) {
+        <a
+          appExtLink
+          mat-stroked-button
+          [href]="'https://ega-archive.org/datasets/' + hitContent().ega_accession"
+          data-umami-event="Dataset Summary EGA Dataset Clicked"
+          >EGA Dataset</a
+        >
+      }
+      <app-dynamic-access-request-button datasetID="{{ hit().id_ }}" />
+      <a
+        mat-raised-button
+        class="button-quaternary"
+        routerLink="/dataset/{{ hit().id_ }}"
+        data-umami-event="Dataset Summary Dataset Details Clicked"
+        ><mat-icon fontIcon="database_search"></mat-icon>Dataset Details</a
+      >
+    </div>
+    <p class="*:mb-0.5"><strong>Dataset ID:</strong> {{ summary().accession }}</p>
+    @if (hasEgaAccession()) {
+      <p><strong>EGA ID:</strong> {{ hitContent().ega_accession }}</p>
+    }
+    <p class="*:mb-0.5"><strong>Full title:</strong> {{ summary().title }}</p>
+    <app-paragraphs
+      [text]="summary().description"
+      label="Description"
+      pClasses="text-sm mb-0.5"
+    />
+    @if (summary().types.length) {
+      <div class="flex flex-wrap items-baseline">
+        <strong>Types:&nbsp;</strong>
+        <mat-chip-set>
+          @for (type of summary().types; track type) {
+            <mat-chip class="small-chip mr-1 text-sm">{{ type }}</mat-chip>
+          }
+        </mat-chip-set>
+      </div>
+    }
+    <div
+      class="mt-8 mb-4 *:flex *:grow *:flex-col *:gap-y-8 sm:flex *:sm:mb-0 *:sm:max-w-[50%] *:sm:overflow-x-auto lg:pe-[15%]"
+    >
+      <div class="mb-8 *:flex">
+        <div>
+          <div class="me-3 pt-4 text-5xl text-neutral-700">
+            <mat-icon inline fontIcon="book_2"></mat-icon>
+          </div>
+          <div class="*:mb-0.5">
+            @if (studiesSummary().count > 0) {
+              <p>
+                <strong>Part of study: </strong>
+              </p>
+              <p>
+                <a
+                  routerLink="/study/{{ studiesSummaryStats().accession[0] }}"
+                  data-umami-event="Dataset Summary Study Title Clicked"
+                  >{{ studiesSummaryStats().title[0] }}</a
+                >
+              </p>
+              <p>
+                <strong>Accession ID: </strong>
+              </p>
+              <p>
+                <a
+                  routerLink="/study/{{ studiesSummaryStats().accession[0] }}"
+                  data-umami-event="Dataset Summary Study Accession Clicked"
+                  >{{ studiesSummaryStats().accession[0] }}</a
+                >
+              </p>
+            } @else {
+              <p>
+                <strong>Part of study: </strong>
+              </p>
+              <p>None</p>
+              <p>
+                <strong>Accession ID: </strong>
+              </p>
+              <p>N/A</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <div class="me-3 pt-4 text-5xl text-neutral-700">
+            <mat-icon inline fontIcon="genetics"></mat-icon>
+          </div>
+          <div class="*:mb-0.5">
+            <strong>Sample info:</strong>
+            <p>
+              <strong>{{ samplesSummary().count }}</strong> Sample{{
+                samplesSummary().count | addPluralS
+              }}
+              @if (samplesSex().length) {
+                (Sex:
+                @for (sex of samplesSex(); track sex.value; let last = $last) {
+                  {{ sex.count }} {{ sex.value }}{{ last ? ')' : ', ' }}
+                }
+              }
+            </p>
+            @if (samplesTissues().length > 0) {
+              <p>
+                <strong>{{ samplesTissues().length }}</strong>
+                Tissue{{ samplesTissues().length | addPluralS }}
+              </p>
+              <app-summary-badges [data]="samplesTissues()" />
+            }
+            @if (samplesPhenotypes().length > 0) {
+              <p>
+                <strong>{{ samplesPhenotypes().length }}</strong>
+                Phenotypic Feature{{ samplesPhenotypes().length | addPluralS }}
+              </p>
+              <app-summary-badges [data]="samplesPhenotypes()" />
+            }
+          </div>
+        </div>
+      </div>
+      <div class="*:flex">
+        <div>
+          <div class="me-3 pt-4 text-5xl text-neutral-700">
+            <mat-icon inline fontIcon="description"></mat-icon>
+          </div>
+          <div class="*:mb-0.5">
+            <strong>File Summary:</strong>
+            <p>
+              <strong>{{ filesSummary().count }}</strong> File{{
+                filesSummary().count | addPluralS
+              }}
+            </p>
+            @if (filesSummary().count > 0) {
+              <app-summary-badges [data]="filesFormats()" />
+            }
+          </div>
+        </div>
+
+        <div>
+          <div class="me-3 pt-4 text-5xl text-neutral-700">
+            <mat-icon inline fontIcon="experiment"></mat-icon>
+          </div>
+          <div class="*:mb-0.5">
+            <strong>Experiments Summary:</strong>
+            <p>
+              <strong>{{ experimentsSummary().count }}</strong> Experiment{{
+                experimentsSummary().count | addPluralS
+              }}
+            </p>
+            @if (experimentsPlatforms().length > 0) {
+              <p>
+                <strong>{{ experimentsPlatforms().length }} </strong>
+                Platform{{ experimentsPlatforms().length | addPluralS }}
+              </p>
+              <app-summary-badges [data]="experimentsPlatforms()" />
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,104 @@
+<header>
+  <h1 class="text-center">
+    <span class="text-3xl">The German Human Genome‑Phenome Archive</span><br />Data
+    Portal
+  </h1>
+</header>
+<section>
+  <hr class="mb-7" />
+  <p class="sm:text-justify">
+    The GHGA Data Portal is a secure national infrastructure for human omics data
+    available under controlled access. Access to the archived data can be requested from
+    the data controllers who are responsible for evaluating the data access request.
+  </p>
+  <p class="sm:text-justify">
+    The datasets within are annotated following the
+    <a
+      appExtLink
+      href="https://docs.ghga.de/metadata/overview/"
+      data-umami-event="Home Page Open Metadata Model Clicked"
+      >GHGA Metadata Model</a
+    >, which is compatible with the metadata model of the EGA.
+  </p>
+  <p class="sm:text-justify">
+    For further documentation, please visit the
+    <a
+      appExtLink
+      href="https://docs.ghga.de/"
+      data-umami-event="Home Page Open Documentation Clicked"
+      >GHGA User Documentation</a
+    >.
+  </p>
+  <div class="mb-8 w-full text-center">
+    <a
+      mat-raised-button
+      routerLink="/browse"
+      data-umami-event="Home Page Browse Clicked"
+      >Browse data</a
+    >
+  </div>
+</section>
+@defer (on idle) {
+  <app-global-stats />
+}
+<section>
+  <h2>About GHGA</h2>
+  <h3>The German Human Genome‑Phenome Archive</h3>
+  <div class="grid grid-cols-12">
+    <div
+      class="col-span-12 flex items-start md:col-span-4 lg:col-span-3 2xl:col-span-2"
+    >
+      <img
+        ngSrc="assets/images/ghga-logo-full-orange.png"
+        alt="GHGA Logo"
+        class="h-auto w-full object-contain"
+        loading="lazy"
+        decoding="async"
+        fetchpriority="low"
+        width="1000"
+        height="357"
+        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 33vw, (max-width: 1536px) 25vw, 17vw"
+      />
+    </div>
+    <div class="col-span-12 md:col-span-8 lg:col-span-9 2xl:col-span-10">
+      <p class="sm:text-justify">
+        GHGA is a national infrastructure to enable the FAIR and secure sharing of
+        genetic and other human omics data. It is embedded in European activities such
+        as the federated European Genome-Phenome Archive (<a
+          appExtLink
+          href="https://ega-archive.org/about/projects-and-funders/federated-ega/"
+          data-umami-event="Home Page Open FEGA Clicked"
+          >FEGA</a
+        >) and the European Genomic Data Infrastructure (<a
+          appExtLink
+          href="https://gdi.onemilliongenomes.eu/"
+          data-umami-event="Home Page Open GDI Clicked"
+          >GDI</a
+        >).
+      </p>
+      <p class="sm:text-justify">
+        GHGA is funded by the Deutsche Forschungsgemeinschaft (DFG, German Research
+        Foundation,
+        <a
+          appExtLink
+          href="https://gepris.dfg.de/gepris/projekt/441914366?context=projekt&task=showDetail&id=441914366&"
+          data-umami-event="Home Page Open NFDI Clicked"
+          >Grant Number 441914366</a
+        >) as part of the National Research Data Infrastructure initiative (<a
+          appExtLink
+          href="https://www.nfdi.de/?lang=en"
+          >NFDI</a
+        >) and by the contributing institutions.
+      </p>
+      <p class="sm:text-justify">
+        More at
+        <a
+          appExtLink
+          href="https://www.ghga.de/"
+          data-umami-event="Home Page Open GHGA Clicked"
+          >www.ghga.de</a
+        >.
+      </p>
+    </div>
+  </div>
+</section>

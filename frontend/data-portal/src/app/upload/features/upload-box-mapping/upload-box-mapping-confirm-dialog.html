@@ -1,0 +1,93 @@
+<h2 mat-dialog-title>Confirm Mapping and Archive</h2>
+<div mat-dialog-content class="!pb-2">
+  @if (data.unmappedBoxFileAliases.length > 0) {
+    <div class="border-error bg-error/10 text-error rounded border px-3 pt-3 pb-2">
+      <div class="flex items-center gap-2 font-semibold">
+        <mat-icon fontIcon="error" />
+        @if (data.unmappedBoxFileAliases.length === 1) {
+          <span>The following file in the upload box has not been mapped:</span>
+        } @else {
+          <span
+            >{{ data.unmappedBoxFileAliases.length }} files in the upload box have not
+            been mapped.</span
+          >
+        }
+      </div>
+      <p class="mt-1 text-sm">
+        @if (data.unmappedBoxFileAliases.length === 1) {
+          <strong>{{ data.unmappedBoxFileAliases[0] }}</strong>
+        } @else {
+          First unmapped: <strong>{{ data.unmappedBoxFileAliases[0] }}</strong>
+        }
+      </p>
+      <p class="mt-1 text-sm">
+        @if (data.unmappedBoxFileAliases.length === 1) {
+          This file must be mapped or deleted before archival.
+        } @else {
+          These files must be mapped or deleted before archival.
+        }
+      </p>
+    </div>
+  }
+
+  @if (data.unmappedMetaFileNames.length > 0) {
+    <div
+      class="border-warning bg-warning/10 text-warning rounded border px-3 pt-3 pb-2"
+      [class.mt-4]="data.unmappedBoxFileAliases.length > 0"
+    >
+      <div class="flex items-center gap-2 font-semibold">
+        <mat-icon fontIcon="warning" />
+        @if (data.unmappedMetaFileNames.length === 1) {
+          <span>The following metadata file has not been mapped:</span>
+        } @else {
+          <span
+            >{{ data.unmappedMetaFileNames.length }} metadata files have not been
+            mapped.</span
+          >
+        }
+      </div>
+      <p class="mt-1 text-sm">
+        @if (data.unmappedMetaFileNames.length === 1) {
+          <strong>{{ data.unmappedMetaFileNames[0] }}</strong>
+        } @else {
+          First unmapped: <strong>{{ data.unmappedMetaFileNames[0] }}</strong>
+        }
+      </p>
+      <p class="mt-1 text-sm">
+        @if (data.unmappedMetaFileNames.length === 1) {
+          You may proceed without mapping this file.
+        } @else {
+          You may proceed without mapping these files.
+        }
+      </p>
+    </div>
+  }
+
+  @if (data.unmappedBoxFileAliases.length === 0) {
+    <p [class.mt-4]="data.unmappedMetaFileNames.length > 0">
+      This action is <strong>irreversible</strong>. The upload box will be archived with
+      the specified mapping and cannot be modified afterwards.
+    </p>
+    <mat-checkbox
+      class="mt-2"
+      [checked]="confirmed()"
+      (change)="confirmed.set($event.checked)"
+    >
+      I understand this action cannot be undone
+    </mat-checkbox>
+  }
+</div>
+<div mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  @if (data.unmappedBoxFileAliases.length === 0) {
+    <button
+      mat-raised-button
+      color="primary"
+      [disabled]="!canConfirm()"
+      (click)="onConfirm()"
+    >
+      <mat-icon fontIcon="archive" />
+      Confirm and Archive
+    </button>
+  }
+</div>

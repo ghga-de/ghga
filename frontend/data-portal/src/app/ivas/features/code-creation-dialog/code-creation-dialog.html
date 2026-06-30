@@ -1,0 +1,73 @@
+<div class="larger-mat-dialog-text">
+  <h1 mat-dialog-title>Verification code created</h1>
+  <div mat-dialog-content class="mb-6">
+    <p>Please send the following verification code to:</p>
+    <table class="[&_th]:pe-1 [&_th]:text-right">
+      <tr class="text-base">
+        <th class="pl-10">Name:</th>
+        <td>{{ iva.user_name }}</td>
+      </tr>
+      <tr>
+        <th>E-Mail:</th>
+        <td>{{ iva.user_email }}</td>
+      </tr>
+      <tr>
+        <th>Via:</th>
+        <td>{{ (iva.type | IvaTypePipe).name }}</td>
+      </tr>
+      <tr>
+        <th>Address:</th>
+        <td>{{ iva.value }}</td>
+      </tr>
+      <tr>
+        <th class="align-text-bottom">Code:</th>
+        <td class="pt-6 align-text-bottom">
+          <div class="flex">
+            <mat-form-field class="w-40">
+              <input
+                matInput
+                type="text"
+                class="totp-input-style text-center"
+                [value]="iva.code"
+                readonly
+                aria-readonly="true"
+                aria-label="Verification code"
+              />
+            </mat-form-field>
+            <button
+              class="mt-3 ml-2"
+              mat-icon-button
+              matTooltip="Copy code to clipboard"
+              (click)="copyCode()"
+              data-umami-event="Verification Code Creation Dialog Copy Clicked"
+            >
+              <mat-icon fontIcon="content_copy"></mat-icon>
+            </button>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div mat-dialog-actions cdkTrapFocus class="flex gap-2">
+    <div class="w-full sm:w-auto">
+      <button
+        mat-button
+        class="w-full sm:w-auto"
+        (click)="onClose()"
+        data-umami-event="Verification Code Creation Dialog Close Clicked"
+      >
+        Close and send later
+      </button>
+    </div>
+    <div class="w-full sm:w-auto">
+      <button
+        mat-raised-button
+        class="w-full sm:w-auto"
+        (click)="onConfirmTransmission()"
+        data-umami-event="Verification Code Creation Dialog Confirm Clicked"
+      >
+        Confirm transmission
+      </button>
+    </div>
+  </div>
+</div>

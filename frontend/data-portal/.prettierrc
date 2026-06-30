@@ -1,0 +1,25 @@
+{
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tabWidth": 2,
+  "useTabs": false,
+  "singleQuote": true,
+  "printWidth": 88,
+  "proseWrap": "preserve",
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": "*.html",
+      "options": {
+        "parser": "angular",
+        "htmlWhitespaceSensitivity": "strict"
+      }
+    },
+    {
+      "files": "*.stencil.html",
+      "options": {
+        "parser": "angular",
+        "htmlWhitespaceSensitivity": "css"
+      }
+    }
+  ]
+}

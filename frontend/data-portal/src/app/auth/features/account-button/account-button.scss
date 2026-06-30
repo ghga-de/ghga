@@ -1,0 +1,10 @@
+.with-initials {
+  border: 2px solid var(--mat-sys-quinary);
+  background-color: var(--mat-sys-quaternary);
+  padding: 0;
+  font-size: 18px;
+}
+
+.account-page-active {
+  border-color: var(--mat-sys-tertiary);
+}

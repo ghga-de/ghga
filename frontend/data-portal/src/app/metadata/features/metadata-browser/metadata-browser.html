@@ -1,0 +1,35 @@
+<header><h1 class="mt-2 mb-0 text-center text-2xl">Browse Data</h1></header>
+@if (!errorMessage()) {
+  <div class="grid grid-cols-12 grid-rows-none gap-x-5 *:col-span-12">
+    <div class="lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
+      <div class="flex w-full justify-end pb-4">
+        <mat-chip-set>
+          <mat-chip>
+            <div class="flex content-around">
+              <span class="mr-1">Total Datasets:</span>
+              @if (isLoading()) {
+                <mat-spinner
+                  class="inline-block"
+                  class="mt-0.5"
+                  [diameter]="15"
+                ></mat-spinner>
+              } @else {
+                <span>{{ numResults() }}</span>
+              }
+            </div>
+          </mat-chip>
+        </mat-chip-set>
+      </div>
+    </div>
+    <app-metadata-browser-filter
+      class="col-span-12 lg:col-span-4 xl:col-span-3"
+    ></app-metadata-browser-filter>
+    <div class="lg:col-span-8 lg:col-start-5 xl:col-span-9 xl:col-start-4">
+      <app-search-result-list></app-search-result-list>
+    </div>
+  </div>
+} @else {
+  <div>
+    <p class="text-error text-2xl">{{ errorMessage() }}</p>
+  </div>
+}

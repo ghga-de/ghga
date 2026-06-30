@@ -1,0 +1,21 @@
+<mat-form-field class="container max-w-5xl" subscriptSizing="dynamic">
+  <mat-label>{{ label() }}</mat-label>
+  <input
+    matInput
+    type="text"
+    [(ngModel)]="value"
+    [errorStateMatcher]="errorStateMatcher"
+    maxlength="150"
+  />
+  @if (value() && invalid()) {
+    <mat-error class="-mt-2 mb-3">
+      @for (error of errors(); track $index) {
+        <div>{{ error.message }}</div>
+      }
+    </mat-error>
+  } @else {
+    <mat-hint class="-mt-2 mb-3"
+      ><div>{{ hintText() }}</div></mat-hint
+    >
+  }
+</mat-form-field>

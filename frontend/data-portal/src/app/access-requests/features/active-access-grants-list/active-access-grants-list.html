@@ -1,0 +1,59 @@
+@if (hasError()) {
+  <p class="text-base">There was an error retrieving your granted access requests.</p>
+} @else {
+  @if (isLoading()) {
+    <app-stencil></app-stencil>
+  } @else {
+    @let grants = activeGrants();
+    @if (grants.length === 0) {
+      <p class="text-base">You do not yet have access to any datasets.</p>
+    } @else {
+      <p class="text-base">You have been granted access to the following datasets:</p>
+      <div
+        class="border-outline-dark mb-4 grid grid-cols-1 border-t [&_button>mat-icon]:-translate-y-0.75"
+      >
+        @for (grant of activeGrants(); track grant.id) {
+          <div
+            class="border-outline-dark grid grid-cols-12 items-center gap-2 border-b py-2 text-black"
+          >
+            <div
+              class="col-span-11 flex min-h-12 items-center md:col-span-4 lg:col-span-3 lg:pe-4"
+            >
+              <div>
+                <a
+                  class="text-quaternary hover:text-secondary focus:text-secondary"
+                  routerLink="/dataset/{{ grant.dataset_id }}"
+                  data-umami-event="Granted Access Requests List Dataset Clicked"
+                  >{{ grant.dataset_id }}</a
+                >
+              </div>
+            </div>
+            <div
+              class="order-3 col-span-12 flex min-h-12 items-center md:order-0 md:col-span-4 lg:col-span-5"
+            >
+              <div>{{ grant.dataset_title }}</div>
+            </div>
+            <div
+              class="order-4 col-span-12 flex items-center justify-center md:order-3 md:col-span-4 lg:col-span-4"
+            >
+              <div class="w-full sm:max-w-64">
+                <button
+                  mat-stroked-button
+                  (click)="openDownloadDialog(grant)"
+                  [attr.aria-label]="
+                    'Create a download token for dataset ' + grant.dataset_id
+                  "
+                  data-umami-event="Granted AR List Download Token Clicked"
+                  class="w-full whitespace-nowrap"
+                >
+                  <mat-icon fontIcon="download"></mat-icon>
+                  Create Token
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+}

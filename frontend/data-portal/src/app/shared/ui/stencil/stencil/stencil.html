@@ -1,0 +1,11 @@
+@for (item of items(); track item) {
+  <div
+    class="stencil"
+    [attr.aria-label]="label()"
+    aria-busy="true"
+    [attr.aria-valuetext]="text()"
+    role="loader"
+    tabindex="-1"
+    [class.pulse]="pulse()"
+  ></div>
+}

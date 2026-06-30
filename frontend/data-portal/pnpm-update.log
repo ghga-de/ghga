@@ -1,0 +1,37 @@
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 18, reused 14, downloaded 2, added 0
+Progress: resolved 37, reused 27, downloaded 7, added 0
+Progress: resolved 52, reused 34, downloaded 11, added 0
+Progress: resolved 55, reused 34, downloaded 15, added 0
+Progress: resolved 55, reused 34, downloaded 18, added 0
+Progress: resolved 55, reused 34, downloaded 19, added 0
+Progress: resolved 55, reused 34, downloaded 20, added 0
+Progress: resolved 55, reused 34, downloaded 21, added 0
+ WARN  GET https://registry.npmjs.org/oidc-client-ts error (ERR_SOCKET_TIMEOUT). Will retry in 30 seconds. 2 retries left.
+ WARN  Request took 90225ms: https://registry.npmjs.org/oidc-client-ts
+Progress: resolved 56, reused 34, downloaded 21, added 0
+Progress: resolved 64, reused 34, downloaded 25, added 0
+Progress: resolved 79, reused 34, downloaded 37, added 0
+Progress: resolved 94, reused 34, downloaded 49, added 0
+Progress: resolved 102, reused 34, downloaded 53, added 0
+Progress: resolved 111, reused 34, downloaded 62, added 0
+Progress: resolved 125, reused 34, downloaded 71, added 0
+Progress: resolved 136, reused 34, downloaded 81, added 0
+Progress: resolved 147, reused 34, downloaded 87, added 0
+Progress: resolved 157, reused 34, downloaded 96, added 0
+Progress: resolved 168, reused 34, downloaded 105, added 0
+Progress: resolved 176, reused 34, downloaded 110, added 0
+Progress: resolved 200, reused 34, downloaded 127, added 0
+Progress: resolved 214, reused 34, downloaded 138, added 0
+Progress: resolved 222, reused 34, downloaded 145, added 0
+Progress: resolved 230, reused 34, downloaded 151, added 0
+Progress: resolved 248, reused 34, downloaded 165, added 0
+Progress: resolved 260, reused 34, downloaded 172, added 0
+Progress: resolved 277, reused 34, downloaded 188, added 0
+Progress: resolved 284, reused 34, downloaded 193, added 0
+Progress: resolved 293, reused 34, downloaded 197, added 0
+Progress: resolved 309, reused 34, downloaded 206, added 0
+Progress: resolved 324, reused 34, downloaded 216, added 0
+Progress: resolved 353, reused 34, downloaded 220, added 0
+Progress: resolved 358, reused 34, downloaded 221, added 0
+Progress: resolved 366, reused 34, downloaded 221, added 0

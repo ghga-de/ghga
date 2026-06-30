@@ -1,0 +1,617 @@
+// Custom Theming for Angular Material
+// For more information: https://material.angular.io/guide/theming
+@use '@angular/material' as mat;
+// Plus imports for other components in your app.
+@use './assets/scss/ghga-colors';
+@use './assets/scss/material-symbols';
+@use './assets/scss/fontawesome';
+@use './assets/scss/fontawesome-brands';
+
+// Add Tailwind CSS
+@use 'tailwind';
+
+// Add Lexend font
+@font-face {
+  font-family: 'Lexend';
+  src:
+    local('Lexend'),
+    url(./assets/fonts/Lexend.ttf) format('truetype');
+}
+// Add Monospaced font (Illinois) based on Lexend
+@font-face {
+  font-family: 'Illinois';
+  src:
+    local('Illinois'),
+    url(./assets/fonts/Illinois_Mono_Regular.ttf) format('truetype');
+}
+
+// Include theme styles for core and each component used in your app.
+// Alternatively, you can import and @include the theme mixins for each component
+// that you are using.
+:root {
+  @include mat.theme(
+    (
+      color: (
+        primary: ghga-colors.$primary-palette,
+        tertiary: ghga-colors.$tertiary-palette,
+        theme-type: light,
+      ),
+      typography: (
+        plain-family: Lexend,
+        brand-family: Lexend,
+      ),
+    )
+  );
+  @include mat.button-overrides(
+    (
+      // Material's default button label size (label-large, 14px) reads a touch
+      // small for this app, so bump all button labels up to 16px globally.
+      text-label-text-size: medium,
+      filled-container-color: var(--mat-sys-tertiary),
+      filled-label-text-size: medium,
+      outlined-label-text-size: medium,
+      outlined-outline-color: var(--mat-sys-quaternary),
+      outlined-label-text-color: var(--mat-sys-quaternary),
+      protected-label-text-size: medium,
+      protected-container-color: var(--mat-sys-tertiary),
+      protected-label-text-color: var(--mat-sys-on-tertiary)
+    )
+  );
+  @media (prefers-contrast: more) {
+    @include ghga-colors.high-contrast-overrides('light');
+  }
+  // Overrides for default contrast theme
+  @media not (prefers-contrast: more) {
+    --mat-sys-primary: #00393f;
+    --mat-sys-secondary: #005a5a;
+    --mat-sys-tertiary: #e84614;
+    --mat-sys-quaternary: #007e8c;
+    --mat-sys-quinary: #cfe7cd;
+    --mat-sys-success: #16a34a;
+    --mat-sys-info: #4f46e5;
+    --mat-sys-warning: #d97706;
+    --mat-sys-danger: #ea580c;
+
+    // These overrides come from the high contrast light theme
+    --mat-sys-on-quaternary: #ffffff;
+    --mat-sys-quaternary-container: #00515b;
+    --mat-sys-on-quaternary-container: #ffffff;
+    --mat-sys-quaternary-fixed: #00515b;
+    --mat-sys-quaternary-fixed-dim: #003940;
+    --mat-sys-on-quaternary-fixed: #ffffff;
+    --mat-sys-on-quaternary-fixed-variant: #ffffff;
+
+    --mat-sys-on-quinary: #000000;
+    --mat-sys-quinary-container: #b1c9b0;
+    --mat-sys-on-quinary-container: #000f03;
+    --mat-sys-quinary-fixed: #d1e9cf;
+    --mat-sys-quinary-fixed-dim: #b5cdb4;
+    --mat-sys-on-quinary-fixed: #000000;
+    --mat-sys-on-quinary-fixed-variant: #031506;
+
+    --mat-sys-on-info: #ffffff;
+    --mat-sys-info-container: #3627ce;
+    --mat-sys-on-info-container: #ffffff;
+
+    --mat-sys-on-success: #ffffff;
+    --mat-sys-success-container: #005522;
+    --mat-sys-on-success-container: #ffffff;
+
+    --mat-sys-on-warning: #ffffff;
+    --mat-sys-warning-container: #713b00;
+    --mat-sys-on-warning-container: #ffffff;
+
+    --mat-sys-on-danger: #ffffff;
+    --mat-sys-danger-container: #832c00;
+    --mat-sys-on-danger-container: #ffffff;
+  }
+}
+
+// Scoping default styles so that tailwind classes can override them
+@layer base {
+  html,
+  body {
+    height: 100%;
+    font-size: 16px;
+    margin: 0;
+    font-family: Lexend, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  }
+
+  p {
+    margin-bottom: 0.5em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--mat-sys-primary);
+  }
+
+  h1 {
+    font-weight: 550;
+    font-size: 175%;
+    margin-bottom: 0.8em;
+    line-height: 130%;
+  }
+
+  h2 {
+    font-weight: 550;
+    font-size: 140%;
+    margin-bottom: 0.75em;
+    line-height: 120%;
+  }
+
+  h3 {
+    font-weight: 550;
+    font-size: 130%;
+    margin-bottom: 0.7em;
+    line-height: 110%;
+  }
+
+  h4 {
+    font-weight: 550;
+    font-size: 120%;
+    margin-bottom: 0.7em;
+  }
+
+  h5 {
+    font-weight: 600;
+    font-size: 110%;
+    margin-bottom: 0.7em;
+  }
+
+  h6 {
+    font-weight: 650;
+    font-size: 105%;
+    margin-bottom: 0.7em;
+  }
+  main a,
+  mat-dialog-content a {
+    color: var(--mat-sys-tertiary);
+    text-decoration: underline;
+    &:hover {
+      color: var(--mat-sys-quaternary);
+    }
+  }
+
+  hr {
+    border-color: var(--mat-sys-outline-variant);
+  }
+
+  .border {
+    border-color: var(--mat-sys-outline-variant);
+  }
+
+  .mat-mdc-select-placeholder {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .smaller-mat-card-title,
+  :is(.\*\:smaller-mat-card-title > *) {
+    @include mat.card-overrides(
+      (
+        title-text-size: 18px,
+      )
+    );
+  }
+
+  .edit-button mat-icon {
+    @include mat.icon-overrides(
+      (
+        color: var(--mat-sys-primary),
+      )
+    );
+  }
+  .cancel-edit-button mat-icon {
+    @include mat.icon-overrides(
+      (
+        color: var(--mat-sys-danger),
+      )
+    );
+  }
+  .save-edit-button:not(.mat-mdc-chip-disabled) mat-icon {
+    @include mat.icon-overrides(
+      (
+        color: var(--mat-sys-success),
+      )
+    );
+  }
+}
+
+mat-icon.large-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}
+
+.small-chip {
+  span .mat-mdc-chip-action {
+    padding: 0 6px;
+  }
+  @include mat.chips-overrides(
+    (
+      label-text-size: var(--mat-sys-label-medium-size),
+      container-height: 75%,
+    )
+  );
+}
+
+.smaller-chip span .mat-mdc-chip-action {
+  padding: 0px;
+}
+
+.edit-field-chip {
+  @include mat.chips-overrides(
+    (
+      label-text-size: var(--mat-sys-label-small-size),
+      label-text-line-height: 0px,
+      container-height: 50%,
+    )
+  );
+}
+
+.interactive-chip span .mat-mdc-chip-action-label {
+  cursor: pointer;
+}
+
+mat-card-header mat-card-title h2 {
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+mat-dialog-container mat-card-header mat-card-title h2 {
+  font: inherit;
+  font-size: 1.25rem;
+}
+
+.mat-mdc-card.mat-mdc-card-outlined.error {
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  border-color: var(--mat-sys-error);
+}
+
+.larger-mat-dialog-text {
+  @include mat.dialog-overrides(
+    (
+      supporting-text-size: var(--mat-sys-body-large-size),
+    )
+  );
+}
+
+.larger-mat-table-text {
+  @include mat.table-overrides(
+    (
+      header-headline-size: var(--mat-sys-title-medium-size),
+      row-item-label-text-size: var(--mat-sys-body-large-size),
+    )
+  );
+}
+
+// Shrinks button labels back to Material's default (label-large, 14px) for all
+// buttons within, overriding the global 16px. Set on a container so it also
+// cascades (via inherited CSS custom properties) into reusable button
+// components like app-dynamic-access-request-button without modifying them.
+.smaller-button-text {
+  @include mat.button-overrides(
+    (
+      text-label-text-size: var(--mat-sys-label-large-size),
+      filled-label-text-size: var(--mat-sys-label-large-size),
+      outlined-label-text-size: var(--mat-sys-label-large-size),
+      protected-label-text-size: var(--mat-sys-label-large-size),
+    )
+  );
+}
+
+table.table-row-hover-highlight {
+  tr.cdk-row:hover,
+  tr.cdk-row:active {
+    background-color: color-mix(in srgb, #fff 0%, #000 8%);
+  }
+
+  tr.cdk-row:focus {
+    background-color: color-mix(in srgb, #fff 0%, #000 12%);
+  }
+}
+
+// Since Tailwind @utility is incompatible with SCSS (and Angular Material)'s @include
+// we have to create this small workaround to generate our button-{$colour} classes
+$colour-suffixes: (
+  primary,
+  secondary,
+  tertiary,
+  quaternary,
+  quinary,
+  info,
+  success,
+  warning,
+  danger,
+  error
+);
+
+@each $suffix in $colour-suffixes {
+  .snackbar-#{$suffix} {
+    @include mat.snack-bar-overrides(
+      (
+        container-color: var(--mat-sys-#{$suffix}),
+        supporting-text-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
+    .mat-icon {
+      color: var(--mat-sys-on-#{$suffix});
+      opacity: 0.75;
+    }
+  }
+
+  .menu-item-#{$suffix} {
+    @include mat.menu-overrides(
+      (
+        item-icon-color: var(--mat-sys-#{$suffix}),
+        item-label-text-color: var(--mat-sys-#{$suffix}),
+      )
+    );
+  }
+
+  .button-#{$suffix} {
+    @include mat.button-overrides(
+      (
+        filled-container-color: var(--mat-sys-#{$suffix}),
+        filled-label-text-color: var(--mat-sys-on-#{$suffix}),
+        protected-container-color: var(--mat-sys-#{$suffix}),
+        protected-label-text-color: var(--mat-sys-on-#{$suffix}),
+        outlined-outline-color: var(--mat-sys-#{$suffix}),
+        outlined-label-text-color: var(--mat-sys-#{$suffix}),
+      )
+    );
+    @include mat.icon-button-overrides(
+      (
+        icon-color: var(--mat-sys-#{$suffix}),
+        state-layer-color: var(--mat-sys-#{$suffix}),
+      )
+    );
+    @include mat.fab-overrides(
+      (
+        container-color: var(--mat-sys-#{$suffix}),
+        foreground-color: var(--mat-sys-on-#{$suffix}),
+        small-container-color: var(--mat-sys-#{$suffix}),
+        small-foreground-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
+  }
+  .button-on-#{$suffix} {
+    @include mat.button-overrides(
+      (
+        filled-container-color: var(--mat-sys-on-#{$suffix}),
+        filled-label-text-color: var(--mat-sys-#{$suffix}),
+        protected-container-color: var(--mat-sys-on-#{$suffix}),
+        protected-label-text-color: var(--mat-sys-#{$suffix}),
+        outlined-outline-color: var(--mat-sys-on-#{$suffix}),
+        outlined-label-text-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
+    @include mat.icon-button-overrides(
+      (
+        icon-color: var(--mat-sys-on-#{$suffix}),
+        state-layer-color: var(--mat-sys-on-#{$suffix}),
+      )
+    );
+    @include mat.fab-overrides(
+      (
+        container-color: var(--mat-sys-on-#{$suffix}),
+        foreground-color: var(--mat-sys-#{$suffix}),
+        small-container-color: var(--mat-sys-on-#{$suffix}),
+        small-foreground-color: var(--mat-sys-#{$suffix}),
+      )
+    );
+  }
+}
+
+button.active-page,
+a.active-page {
+  background-color: var(--mat-sys-tertiary);
+  color: var(--mat-sys-on-tertiary);
+  mat-icon {
+    color: var(--mat-sys-on-tertiary);
+  }
+}
+
+button.active-sub-page,
+a.active-sub-page {
+  background-color: var(--mat-sys-tertiary-fixed-dim);
+  color: var(--mat-sys-on-tertiary-fixed);
+  mat-icon {
+    color: var(--mat-sys-on-tertiary-fixed);
+  }
+  @include mat.menu-overrides(
+    (
+      item-icon-color: var(--mat-sys-on-tertiary-fixed),
+    )
+  );
+}
+
+nav a,
+mat-toolbar a:not(.active-page),
+mat-toolbar button:not(.active-page) {
+  &:hover,
+  &:active {
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 8%);
+  }
+  &:focus {
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 100%, #fff 12%);
+  }
+}
+
+mat-toolbar button.account-page-active {
+  &:hover,
+  &:active {
+    background-color: color-mix(in srgb, var(--mat-sys-quaternary) 100%, #fff 8%);
+  }
+  &:focus {
+    background-color: color-mix(in srgb, var(--mat-sys-quaternary) 100%, #fff 12%);
+  }
+}
+
+mat-chip.chip-tertiary,
+mat-chip-set.chip-set-tertiary mat-chip {
+  @include mat.chips-overrides(
+    (
+      outline-color: var(--mat-sys-tertiary),
+      label-text-color: var(--mat-sys-tertiary),
+      with-trailing-icon-trailing-icon-color: var(--mat-sys-tertiary),
+    )
+  );
+}
+
+mat-expansion-panel {
+  @include mat.expansion-overrides(
+    (
+      header-hover-state-layer-color: var(--mat-sys-surface-variant),
+    )
+  );
+}
+
+.larger-mat-radio-label {
+  --mat-radio-label-text-size: 1rem;
+}
+
+table[mat-table].bold-table-headers {
+  @include mat.table-overrides(
+    (
+      header-headline-weight: var(--mat-sys-label-large-weight-prominent),
+    )
+  );
+}
+
+.totp-input-style.mat-mdc-form-field-input-control.mat-mdc-form-field-input-control {
+  font-size: 1.5rem;
+  font-family: var(--font-mono);
+}
+
+// Add an icon after external links
+a[appExtLink]:not(.mdc-button)::after,
+a[appExtLink].mdc-button::before {
+  content: 'open_in_new';
+  font-family: 'material-symbols-outlined';
+  font-weight: 400;
+  font-style: normal;
+  font-size: 0.875em;
+  margin-left: 0.125em;
+  vertical-align: -1pt;
+  line-height: 1;
+  display: inline;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  user-select: none;
+  overflow: hidden;
+  overflow-wrap: normal;
+  text-decoration: none;
+}
+
+// Adjustments for icon buttons
+a[appExtLink].mat-mdc-outlined-button::before {
+  font-size: 1em;
+  margin-right: var(--mat-button-outlined-icon-spacing, 8px);
+  margin-left: var(--mat-button-outlined-icon-offset, -8px);
+}
+// Remove underline from the link itself to avoid underlining the icon
+main a[appExtLink] {
+  text-decoration: none;
+}
+// Add underline to the span wrapping only the link text
+a[appExtLink]:not(.mdc-button) span {
+  text-decoration: underline;
+}
+
+mat-sidenav-container > div.mat-drawer-backdrop.mat-drawer-shown {
+  position: fixed;
+}
+
+mat-sidenav-container.mat-sidenav-container {
+  z-index: 2;
+}
+
+mat-optgroup.mat-mdc-optgroup.larger-optgroup-label .mat-mdc-optgroup-label {
+  font-size: medium;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+mat-option.mat-mdc-option.no-option-margin .mdc-list-item__primary-text {
+  margin-right: 0px;
+  width: 100%;
+}
+
+/* View transitions for list-detail navigation */
+@supports (view-transition-name: none) {
+  /* Default root transition */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 275ms;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Detail view transitions */
+  /* When navigating to a detail page, slide in from right */
+  ::view-transition-new(detail) {
+    animation-name: slide-in-right;
+  }
+
+  /* When navigating from a detail page, slide out to right */
+  ::view-transition-old(detail) {
+    animation-name: slide-out-right;
+  }
+
+  /* Keyframe animations */
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-out-right {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Ensure detail view appears on top during transitions */
+  ::view-transition-new(detail) {
+    z-index: 2;
+  }
+
+  ::view-transition-old(detail) {
+    z-index: 1;
+  }
+
+  /* When navigating back to a parent detail page, slide in from left */
+  ::view-transition-new(detail-back) {
+    animation-name: slide-in-left;
+    z-index: 1;
+  }
+
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+}

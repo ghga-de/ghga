@@ -1,0 +1,33 @@
+@use '@angular/material' as mat;
+
+mat-toolbar {
+  @include mat.toolbar-overrides(
+    (
+      container-background-color: var(--mat-sys-primary),
+      container-text-color: var(--mat-sys-on-primary),
+    )
+  );
+}
+
+mat-sidenav {
+  @include mat.sidenav-overrides(
+    (
+      container-width: 100%,
+      container-background-color: var(--mat-sys-primary),
+    )
+  );
+}
+
+// Tailwind classes do not override the Material classes, so we have to do it here
+mat-toolbar-row {
+  padding-left: 0;
+  height: fit-content;
+}
+
+.mat-drawer-backdrop.mat-drawer-shown {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}

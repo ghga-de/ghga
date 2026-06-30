@@ -1,0 +1,238 @@
+/**
+ * Component that lists all the IVAs.
+ * @copyright The GHGA Authors
+ * @license Apache-2.0
+ */
+
+import { Component, effect, inject, viewChild } from '@angular/core';
+
+import { DatePipe } from '@angular/common';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { RouterLink } from '@angular/router';
+import { UserWithIva } from '@app/ivas/models/iva';
+import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
+import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
+import { IvaService } from '@app/ivas/services/iva';
+import { ConfirmationService } from '@app/shared/services/confirmation';
+import { NotificationService } from '@app/shared/services/notification';
+import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
+import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creation-dialog';
+
+/**
+ * IVA Manager List component.
+ *
+ * This component lists all the IVAs of all users in the IVA Manager.
+ * Filter conditions can be applied to the list.
+ */
+@Component({
+  selector: 'app-iva-manager-list',
+  imports: [
+    DatePipe,
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatSortModule,
+    MatPaginatorModule,
+    IvaTypePipe,
+    IvaStatePipe,
+    RouterLink,
+  ],
+  providers: [IvaTypePipe, providePaginatorIntl('IVAs per page')],
+  templateUrl: './iva-manager-list.html',
+  styleUrl: './iva-manager-list.scss',
+})
+export class IvaManagerListComponent {
+  #dialog = inject(MatDialog);
+  #confirm = inject(ConfirmationService);
+  #notify = inject(NotificationService);
+  #ivaService = inject(IvaService);
+  #ivaTypePipe = inject(IvaTypePipe);
+
+  #ivas = this.#ivaService.allIvas;
+  ambiguousUserIds = this.#ivaService.ambiguousUserIds;
+
+  ivas = this.#ivaService.allIvasFiltered;
+  ivasAreLoading = this.#ivas.isLoading;
+  ivasError = this.#ivas.error;
+
+  source = new MatTableDataSource<UserWithIva>([]);
+
+  #duplicateUsers = new Set<string>(); // user IDs where name and email are ambiguous
+
+  #updateSourceEffect = effect(() => (this.source.data = this.ivas()));
+
+  #ivaSortingAccessor = (iva: UserWithIva, key: string) => {
+    switch (key) {
+      case 'user':
+        const parts = iva.user_name.split(' ');
+        return parts.reverse().join(',');
+      default:
+        const value = iva[key as keyof UserWithIva];
+        if (typeof value === 'string' || typeof value === 'number') {
+          return value;
+        }
+        return '';
+    }
+  };
+
+  private readonly sort = viewChild(MatSort);
+  private readonly paginator = viewChild(MatPaginator);
+
+  /** Assign sort and configure sorting once available */
+  #assignSortEffect = effect(() => {
+    const sort = this.sort();
+    if (!sort) return;
+    this.source.sortingDataAccessor = this.#ivaSortingAccessor;
+    this.source.sort = sort;
+  });
+
+  /** Assign paginator once available */
+  #assignPaginatorEffect = effect(() => {
+    const paginator = this.paginator();
+    if (paginator) this.source.paginator = paginator;
+  });
+
+  /**
+   * Get the display name for the IVA type
+   * @param iva the IVA in question
+   * @returns the display name for the type
+   */
+  #ivaTypeName(iva: UserWithIva): string {
+    return this.#ivaTypePipe.transform(iva.type).name;
+  }
+
+  /**
+   * Invalidate the given IVA
+   * @param iva - the IVA to be invalidated
+   */
+  #invalidate(iva: UserWithIva): void {
+    this.#ivaService.unverifyIva(iva.id).subscribe({
+      next: () => this.#notify.showSuccess('IVA has been invalidated'),
+      error: (err) => {
+        console.debug(err);
+        this.#notify.showError('IVA could not be invalidated');
+      },
+    });
+  }
+
+  /**
+   * Invalidate an IVA after confirmation
+   * @param iva - the IVA to invalidate
+   */
+  invalidateWhenConfirmed(iva: UserWithIva) {
+    const ivaType = this.#ivaTypeName(iva);
+    this.#confirm.confirm({
+      title: 'Confirm invalidation of IVA',
+      message:
+        `<p>Do you really wish to <strong>invalidate</strong> the ${ivaType} IVA of` +
+        ` ${iva.user_name} with address "${iva.value}"?` +
+        '</p><p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
+      cancelText: 'Cancel',
+      confirmText: 'Confirm invalidation',
+      callback: (confirmed) => {
+        if (confirmed) this.#invalidate(iva);
+      },
+    });
+  }
+
+  /**
+   * Mark verification code as transmitted
+   * @param iva - the IVA for which the code was transmitted
+   */
+  #markAsTransmitted(iva: UserWithIva): void {
+    this.#ivaService.confirmTransmissionForIva(iva.id).subscribe({
+      next: () => {
+        this.#notify.showSuccess('Transmission of verification code confirmed');
+      },
+      error: (err) => {
+        console.debug(err);
+        this.#notify.showError(
+          'Transmission of verification code could not be confirmed',
+        );
+      },
+    });
+  }
+
+  /**
+   * Mark verification code as transmitted after confirmation
+   * @param iva - the IVA for which the code was transmitted
+   */
+  markAsTransmittedWhenConfirmed(iva: UserWithIva) {
+    const ivaType = this.#ivaTypeName(iva);
+    this.#confirm.confirm({
+      title: 'Confirm code transmission',
+      message:
+        'Please confirm the transmission of the verification code' +
+        ` the ${ivaType} IVA of ${iva.user_name} with address "${iva.value}".`,
+      cancelText: 'Cancel',
+      confirmText: 'Confirm transmission',
+      callback: (confirmed) => {
+        if (confirmed) this.#markAsTransmitted(iva);
+      },
+    });
+  }
+
+  /**
+   * (Re)create a verification code
+   * @param iva - the IVA for which the code should be created
+   */
+  createCode(iva: UserWithIva) {
+    this.#ivaService.createCodeForIva(iva.id).subscribe({
+      next: (code) => {
+        this.#notify.showSuccess('Verification code has been created');
+        const dialogRef = this.#dialog.open(CodeCreationDialogComponent, {
+          data: { ...iva, code },
+        });
+        dialogRef.afterClosed().subscribe((doConfirm) => {
+          if (doConfirm) {
+            this.#markAsTransmitted(iva);
+          }
+        });
+      },
+      error: (err) => {
+        console.debug(err);
+        this.#notify.showError('Verification code could not be created');
+      },
+    });
+  }
+
+  /**
+   * Delete the given IVA
+   * @param iva - the IVA to be deleted
+   */
+  #delete(iva: UserWithIva): void {
+    this.#ivaService.deleteIva({ ivaId: iva.id, userId: iva.user_id }).subscribe({
+      next: () => this.#notify.showSuccess('IVA has been deleted'),
+      error: (err) => {
+        console.debug(err);
+        this.#notify.showError('IVA could not be deleted');
+      },
+    });
+  }
+
+  /**
+   * Delete the given IVA after confirmation
+   * @param iva - the IVA to delete
+   */
+  deleteWhenConfirmed(iva: UserWithIva): void {
+    const ivaType = this.#ivaTypeName(iva);
+    this.#confirm.confirm({
+      title: 'Confirm deletion of the IVA',
+      message:
+        `<p>Do you really wish to completely <strong>delete</strong> the ${ivaType} IVA of` +
+        ` ${iva.user_name} with address "${iva.value}"?` +
+        '</p><p>This is not reversible.</p>' +
+        '<p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
+      cancelText: 'Cancel',
+      confirmText: 'Confirm deletion',
+      callback: (confirmed) => {
+        if (confirmed) this.#delete(iva);
+      },
+    });
+  }
+}

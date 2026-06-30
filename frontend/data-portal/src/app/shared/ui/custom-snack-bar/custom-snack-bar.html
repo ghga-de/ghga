@@ -1,0 +1,11 @@
+<span matSnackBarLabel>{{ data.message }}</span>
+<button
+  mat-icon-button
+  matSnackBarAction
+  color="primary"
+  aria-label="Close"
+  (click)="close()"
+  data-umami-event="Snack Bar Close Clicked"
+>
+  <mat-icon fontIcon="close"></mat-icon>
+</button>
