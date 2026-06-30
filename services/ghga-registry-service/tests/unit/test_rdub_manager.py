@@ -1,0 +1,1944 @@
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Unit tests for the main core class"""
+
+from asyncio import sleep
+from dataclasses import dataclass
+from datetime import timedelta
+from unittest.mock import AsyncMock, Mock
+from uuid import UUID, uuid4
+
+import pytest
+import pytest_asyncio
+from ghga_service_commons.auth.context import AuthContext
+from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
+from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
+from hexkit.utils import now_utc_ms_prec
+
+from rs.config import Config
+from rs.core import models
+from rs.core.files import FileController
+from rs.core.rdub_manager import RDUBManager
+from rs.ports.inbound.files import FileControllerPort
+from rs.ports.outbound.http import AccessClientPort, FileBoxClientPort
+from tests.fixtures.utils import TEST_MAX_SIZE
+
+pytestmark = pytest.mark.asyncio
+
+TEST_FILE_UPLOAD_BOX_ID = UUID("2735c960-5e15-45dc-b27a-59162fbb2fd7")
+TEST_STUDY_ID = "GHGA-STUDY-001"
+TEST_DS_ID = UUID("f698158d-8417-4368-bb45-349277bc45ee")
+TEST_USER_ID1 = UUID("0ef5e39b-3ff2-4685-99e8-5aaf04942c45")
+
+# Auth context constants for testing
+DATA_STEWARD_AUTH_CONTEXT = Mock(spec=AuthContext)
+DATA_STEWARD_AUTH_CONTEXT.id = str(TEST_DS_ID)
+DATA_STEWARD_AUTH_CONTEXT.roles = ["data_steward"]
+
+USER1_AUTH_CONTEXT = Mock(spec=AuthContext)
+USER1_AUTH_CONTEXT.id = str(TEST_USER_ID1)
+USER1_AUTH_CONTEXT.roles = []
+
+InMemBoxDao = new_mock_dao_class(dto_model=models.ResearchDataUploadBox, id_field="id")
+InMemFileAccessionDao = new_mock_dao_class(
+    dto_model=models.FileAccession, id_field="pid"
+)
+
+
+def _make_file_upload(file_id: UUID, i: int = 0) -> models.FileUploadWithAccession:
+    """Build a minimal FileUploadWithAccession for testing.
+
+    The `i` parameter can be used to produce predictable FileUpload sequences.
+    """
+    return models.FileUploadWithAccession(
+        id=file_id,
+        box_id=TEST_FILE_UPLOAD_BOX_ID,
+        storage_alias="HD01",
+        bucket_id="inbox",
+        object_id=uuid4(),
+        alias=f"test{i}",
+        decrypted_sha256=f"checksum{i}",
+        decrypted_size=1000,
+        encrypted_size=1124,
+        part_size=100,
+        state="inbox",
+        state_updated=now_utc_ms_prec(),
+    )
+
+
+@dataclass
+class JointRig:
+    """Test fixture containing all components needed for testing."""
+
+    config: Config
+    box_dao: BaseInMemDao[models.ResearchDataUploadBox]
+    file_upload_box_client: FileBoxClientPort
+    access_client: AccessClientPort
+    file_controller: FileControllerPort
+    file_accession_dao: BaseInMemDao[models.FileAccession]
+    rdub_manager: RDUBManager
+
+
+async def file_upload_box_id_generator(*args, **kwargs) -> UUID:
+    """Return a new FileUploadBox ID"""
+    return uuid4()
+
+
+@pytest.fixture()
+def rig(config: Config) -> JointRig:
+    """Return a joint fixture with in-memory dependency mocks"""
+    file_box_client_mock = AsyncMock()
+    file_box_client_mock.create_file_upload_box = file_upload_box_id_generator
+    access_client_mock = AsyncMock()
+    file_accession_dao = InMemFileAccessionDao()
+    file_controller = FileController(
+        file_accession_dao=file_accession_dao  # type: ignore
+    )
+
+    rdub_manager = RDUBManager(
+        box_dao=(box_dao := InMemBoxDao()),  # type: ignore
+        file_upload_box_client=file_box_client_mock,
+        access_client=access_client_mock,
+        file_controller=file_controller,
+        audit_repository=AsyncMock(),
+    )
+
+    return JointRig(
+        config=config,
+        box_dao=box_dao,
+        file_controller=file_controller,
+        file_accession_dao=file_accession_dao,
+        file_upload_box_client=file_box_client_mock,
+        access_client=access_client_mock,
+        rdub_manager=rdub_manager,
+    )
+
+
+@pytest_asyncio.fixture(name="populated_boxes")
+async def populate_boxes(rig: JointRig):
+    """Populate 5 test boxes in the JointRig's mock DAO"""
+    # Create multiple boxes for testing
+    box_ids: list[UUID] = []
+    for i in range(5):
+        box_id = await rig.rdub_manager.create_research_data_upload_box(
+            title=f"Box {chr(65 + i)}",  # "Box A", "Box B", etc.
+            description=f"Description {i}",
+            storage_alias="HD01",
+            data_steward_id=TEST_DS_ID,
+            max_size=TEST_MAX_SIZE,
+        )
+        await sleep(0.001)  # insert pause to ensure different timestamps for sorting
+        box_ids.append(box_id)
+    return box_ids
+
+
+async def test_create_research_data_upload_box(rig: JointRig):
+    """Test the normal path of creating a research data upload box."""
+    box_id = await rig.rdub_manager.create_research_data_upload_box(
+        title="Test",
+        description="Just a test",
+        storage_alias="HD01",
+        data_steward_id=TEST_DS_ID,
+        max_size=TEST_MAX_SIZE,
+    )
+
+    box = rig.box_dao.latest
+    assert box.id == box_id
+    assert box.title == "Test"
+    assert box.description == "Just a test"
+    assert box.storage_alias == "HD01"
+    assert box.changed_by == TEST_DS_ID
+    assert box.file_count == 0
+    assert box.size == 0
+    assert isinstance(box.file_upload_box_id, UUID)
+    assert box.last_changed - now_utc_ms_prec() < timedelta(seconds=5)
+    assert box.state == "open"
+    assert box.file_upload_box_state == "open"
+    assert box.max_size == TEST_MAX_SIZE
+
+
+async def test_create_research_data_upload_box_title_race_condition(rig: JointRig):
+    """Test that a UniqueConstraintViolationError on insert (race condition) raises
+    BoxTitleExistsError and cleans up the already-created FileUploadBox.
+    """
+    fub_id_holder: list[UUID] = []
+
+    async def capture_fub_id(*args, **kwargs) -> UUID:
+        fub_id = uuid4()
+        fub_id_holder.append(fub_id)
+        return fub_id
+
+    rig.file_upload_box_client.create_file_upload_box = capture_fub_id  # type: ignore
+    rig.box_dao.insert = AsyncMock(  # type: ignore
+        side_effect=UniqueConstraintViolationError(unique_fields={"title": "Race Box"})
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxTitleExistsError):
+        await rig.rdub_manager.create_research_data_upload_box(
+            title="Race Box",
+            description="Created concurrently",
+            storage_alias="HD01",
+            data_steward_id=TEST_DS_ID,
+            max_size=TEST_MAX_SIZE,
+        )
+
+    # The FUB that was created before the insert failure must be deleted
+    rig.file_upload_box_client.delete_file_upload_box.assert_called_once_with(  # type: ignore
+        box_id=fub_id_holder[0], version=0
+    )
+
+    # No audit record should have been written
+    rig.rdub_manager._audit_repository.log_box_created.assert_not_called()  # type: ignore
+
+
+async def test_update_research_data_upload_box_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the normal path of updating box attributes."""
+    # Mock the access client to return that the user has access
+    rig.access_client.check_box_access.return_value = True  # type: ignore
+
+    # Get the box to get its current version
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    # Call the update method
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title="Updated Title",
+        description="Updated Description",
+        state="locked",
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    # Verify the box was updated
+    updated_box = await rig.box_dao.get_by_id(box_id)
+    assert updated_box.title == "Updated Title"
+    assert updated_box.description == "Updated Description"
+    assert updated_box.changed_by == TEST_DS_ID
+    assert updated_box.last_changed - now_utc_ms_prec() < timedelta(seconds=5)
+
+    # Make sure the correct FUB version was sent to the UCS
+    rig.file_upload_box_client.lock_file_upload_box.assert_called_with(  # type: ignore
+        box_id=box.file_upload_box_id, version=box.version, force=False
+    )
+
+    # Verify access client was not used because user is a Data Steward
+    rig.access_client.check_box_access.assert_not_called()  # type: ignore
+
+
+async def test_lock_box_force_passed_through(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that force=True is forwarded to lock_file_upload_box."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title=None,
+        description=None,
+        state="locked",
+        force=True,
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    rig.file_upload_box_client.lock_file_upload_box.assert_called_with(  # type: ignore
+        box_id=box.file_upload_box_id, version=box.file_upload_box_version, force=True
+    )
+
+
+async def test_lock_box_incomplete_uploads_error(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that FUBIncompleteUploadsError is converted to BoxIncompleteUploadsError
+    and the box state is rolled back to open.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    assert box.state == "open"
+
+    incomplete_file_ids = [uuid4(), uuid4()]
+    rig.file_upload_box_client.lock_file_upload_box.side_effect = (  # type: ignore
+        FileBoxClientPort.FUBIncompleteUploadsError(
+            incomplete_file_ids=incomplete_file_ids
+        )
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxIncompleteUploadsError) as exc_info:
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="locked",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    assert exc_info.value.incomplete_file_ids == incomplete_file_ids
+
+    # Box should have been rolled back to open
+    rolled_back_box = await rig.box_dao.get_by_id(box_id)
+    assert rolled_back_box.state == "open"
+    assert rolled_back_box.version == box.version
+
+
+@pytest.mark.parametrize("target_state", ["open", "archived"])
+async def test_force_true_ignored_on_non_lock_transitions(
+    rig: JointRig, populated_boxes: list[UUID], caplog, target_state: str
+):
+    """Test that force=True is silently ignored (with a debug log) for unlock and archive."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    box.version = 1
+    await rig.box_dao.update(box)
+    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+
+    with caplog.at_level("DEBUG", logger="rs.core.rdub_manager"):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=1,
+            title=None,
+            description=None,
+            state=target_state,
+            force=True,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    debug_messages = [r.message for r in caplog.records if r.levelname == "DEBUG"]
+    assert any("force=True is ignored" in msg for msg in debug_messages)
+
+
+async def test_update_research_data_upload_box_unauthorized(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the scenario where a user tries updating box attributes like title or description.
+
+    Regular users are not authorized to do this, so this should be blocked.
+    """
+    # Mock the access client to return that the user has access (but box doesn't exist)
+    rig.access_client.check_box_access.return_value = True  # type: ignore
+
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    # Call the update method
+    with pytest.raises(rig.rdub_manager.BoxAccessError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title="Updated Title",
+            description="Updated Description",
+            state=None,
+            auth_context=USER1_AUTH_CONTEXT,
+        )
+
+
+async def test_update_research_data_upload_box_not_found(rig: JointRig):
+    """Test the box not found error case in the update method."""
+    # Mock the access client to return that the user has access (but box doesn't exist)
+    rig.access_client.check_box_access.return_value = True  # type: ignore
+
+    # Try to update a non-existent box ID
+    non_existent_box_id = uuid4()
+
+    # This should raise BoxNotFoundError since the box doesn't exist
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=non_existent_box_id,
+            version=0,
+            title="Updated Title",
+            description="Updated Description",
+            state=None,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_update_research_data_upload_box_title_exists(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a UniqueConstraintViolationError from the DAO is re-raised as
+    BoxTitleExistsError when updating a box title to a value already in use.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    rig.box_dao.update = AsyncMock(  # type: ignore
+        side_effect=UniqueConstraintViolationError(
+            unique_fields={"title": "Taken Title"}
+        )
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxTitleExistsError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title="Taken Title",
+            description=None,
+            state=None,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[UUID]):
+    """Test the normal path of getting a list of FileUpload objects for a box from the file box service."""
+    # Mock the file box client to return a list of FileUpload objects
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=uuid4(),
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000 + i * 100,
+            encrypted_size=1100 + i * 100,
+            part_size=100,
+            state="archived",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i in range(3)
+    ]
+    # Sort by alias as expected by the RDUBManager
+    test_file_uploads_sorted = sorted(test_file_uploads, key=lambda x: x.alias)
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Mock the access client for non-data steward case
+    box_id = populated_boxes[0]
+    rig.access_client.check_box_access.return_value = [box_id]  # type: ignore
+
+    # Call the method
+    result = await rig.rdub_manager.get_upload_box_files(
+        box_id=box_id, auth_context=USER1_AUTH_CONTEXT
+    )
+
+    # Verify the results are sorted by alias
+    assert result == test_file_uploads_sorted
+
+    # Verify the file box client was called
+    rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
+
+    # Verify access check was performed for non-data steward
+    rig.access_client.check_box_access.assert_called_once()  # type: ignore
+
+
+async def test_get_upload_box_files_access_error(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the case where getting box files fails because the user doesn't have access."""
+    # Mock the access client to return that the user does NOT have access to this box
+    rig.access_client.check_box_access.return_value = False  # type: ignore
+
+    # This should raise BoxAccessError since the user doesn't have access
+    with pytest.raises(rig.rdub_manager.BoxAccessError):
+        await rig.rdub_manager.get_upload_box_files(
+            box_id=populated_boxes[0], auth_context=USER1_AUTH_CONTEXT
+        )
+
+    # Verify that access check was performed
+    rig.access_client.check_box_access.assert_called_once()  # type: ignore
+
+    # Verify that file box client was NOT called since access was denied
+    rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
+
+
+async def test_get_upload_box_files_box_not_found(rig: JointRig):
+    """Test the case where getting box files fails because the RDUB doesn't exist."""
+    # Try to get files from a non-existent box ID
+    non_existent_box_id = uuid4()
+
+    # This should raise BoxNotFoundError since the box doesn't exist
+    # The error comes from the initial get_by_id call in get_upload_box_files
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.get_upload_box_files(
+            box_id=non_existent_box_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+        )
+
+    # Verify that access client was NOT called since the box lookup failed first
+    rig.access_client.get_accessible_upload_boxes.assert_not_called()  # type: ignore
+
+    # Verify that file box client was NOT called since the box lookup failed
+    rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
+
+
+async def test_upsert_file_upload_box_happy(rig: JointRig, populated_boxes: list[UUID]):
+    """Test the method that consumes FileUploadBox data and uses it to update RDUBoxes."""
+    # Get the created box to verify initial state
+    box_id = populated_boxes[0]
+    initial_box = await rig.box_dao.get_by_id(box_id)
+    assert initial_box.file_count == 0
+    assert initial_box.size == 0
+    assert initial_box.version == 0
+    assert initial_box.file_upload_box_version == 0
+    assert initial_box.file_upload_box_state == "open"
+    file_upload_box_id = initial_box.file_upload_box_id
+
+    # Create a FileUploadBox with updated data
+    updated_file_upload_box = models.FileUploadBox(
+        id=file_upload_box_id,  # This should match the file_upload_box_id in our research box
+        version=1,
+        state="locked",
+        file_count=5,
+        size=1024000,
+        max_size=TEST_MAX_SIZE,
+        storage_alias="HD01",
+    )
+
+    # Call upsert_file_upload_box
+    await rig.rdub_manager.upsert_file_upload_box(updated_file_upload_box)
+
+    # Verify the research data upload box was updated
+    updated_box = await rig.box_dao.get_by_id(box_id)
+    assert updated_box.version == 1
+    assert updated_box.file_count == 5
+    assert updated_box.size == 1024000
+    assert updated_box.file_upload_box_version == 1
+    assert updated_box.file_upload_box_state == "locked"
+
+    # Verify other fields remain unchanged
+    assert updated_box.title == "Box A"
+    assert updated_box.description == "Description 0"
+    assert updated_box.storage_alias == "HD01"
+
+
+async def test_upsert_file_upload_box_not_found(rig: JointRig):
+    """Test the edge case where a matching Research Data Upload Box doesn't exist."""
+    # Create a FileUploadBox with a random ID
+    orphaned_file_upload_box = models.FileUploadBox(
+        id=uuid4(),
+        version=0,
+        state="open",
+        file_count=3,
+        size=512000,
+        max_size=TEST_MAX_SIZE,
+        storage_alias="HD02",
+    )
+
+    # This should not raise an error, just log and continue
+    await rig.rdub_manager.upsert_file_upload_box(orphaned_file_upload_box)
+
+    # Verify nothing was inserted in the DB
+    assert not [x async for x in rig.box_dao.find_all(mapping={})]
+
+
+async def test_get_research_data_upload_box_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the normal path of getting a research data upload box."""
+    # Try retrieval with Data Steward credentials
+    rig.access_client.check_box_access.return_value = True  # type: ignore
+    box_id = populated_boxes[0]
+    result = await rig.rdub_manager.get_research_data_upload_box(
+        box_id=box_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+    )
+
+    # Verify we got the correct box back
+    assert result.id == box_id
+    assert result.title == "Box A"
+    assert result.description == "Description 0"
+    assert result.storage_alias == "HD01"
+    assert result.changed_by == TEST_DS_ID
+
+    # Verify access check was NOT called for Data Steward
+    rig.access_client.check_box_access.assert_not_called()  # type: ignore
+
+    # Try with regular user
+    rig.access_client.check_box_access.return_value = True  # type: ignore
+    result = await rig.rdub_manager.get_research_data_upload_box(
+        box_id=box_id, auth_context=USER1_AUTH_CONTEXT
+    )
+    rig.access_client.check_box_access.assert_called_once()  # type: ignore
+
+
+async def test_get_research_data_upload_box_access_denied(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the case where the user doesn't have access to the box."""
+    # Mock the access client to return that the user does NOT have access
+    rig.access_client.check_box_access.return_value = False  # type: ignore
+
+    # Try to get the box with a different user
+    # This should raise BoxAccessError since the user doesn't have access
+    with pytest.raises(rig.rdub_manager.BoxAccessError):
+        await rig.rdub_manager.get_research_data_upload_box(
+            box_id=populated_boxes[0], auth_context=USER1_AUTH_CONTEXT
+        )
+
+    # Verify access check was called
+    rig.access_client.check_box_access.assert_called_once()  # type: ignore
+
+
+async def test_get_research_data_upload_box_not_found(rig: JointRig):
+    """Test the case where the research data upload box doesn't exist."""
+    # Mock the access client to return that the user has access
+    rig.access_client.check_box_access.return_value = True  # type: ignore
+
+    # Try to get a non-existent box
+    non_existent_box_id = uuid4()
+
+    # This should raise BoxNotFoundError since the box doesn't exist
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.get_research_data_upload_box(
+            box_id=non_existent_box_id, auth_context=USER1_AUTH_CONTEXT
+        )
+
+    # Verify access check was called first
+    rig.access_client.check_box_access.assert_called_once()  # type: ignore
+
+
+async def test_get_upload_access_grants_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the normal path for getting upload access grants."""
+    # Create mock upload grants that would be returned by access client
+    test_iva_id = uuid4()
+    mock_grants = [
+        models.UploadGrant(
+            id=uuid4(),
+            user_id=TEST_USER_ID1,
+            iva_id=test_iva_id,
+            box_id=populated_boxes[i],  # one grant for each box
+            created=now_utc_ms_prec(),
+            valid_from=now_utc_ms_prec(),
+            valid_until=now_utc_ms_prec() + timedelta(days=i),  # push out validity
+            user_name="Test User",
+            user_email="test@example.com",
+            user_title="Dr.",
+        )
+        for i in range(len(populated_boxes))
+    ]
+
+    # Mock the access client to return these grants
+    rig.access_client.get_upload_access_grants.return_value = mock_grants  # type: ignore
+
+    # Call the method
+    results = await rig.rdub_manager.get_upload_access_grants(
+        user_id=TEST_USER_ID1,
+        iva_id=test_iva_id,
+        box_id=None,
+        valid=True,
+    )
+
+    # Verify the results
+    assert len(results) == 5
+    result_ids = [grant.box_id for grant in results]
+    assert result_ids == list(reversed(populated_boxes))
+
+    # Verify access client was called with correct parameters
+    rig.access_client.get_upload_access_grants.assert_called_once_with(  # type: ignore
+        user_id=TEST_USER_ID1,
+        iva_id=test_iva_id,
+        box_id=None,
+        valid=True,
+    )
+
+
+async def test_get_upload_access_grants_box_missing(
+    rig: JointRig, caplog, populated_boxes: list[UUID]
+):
+    """Test the case where grants returned from the access API include a grant with
+    a box ID that doesn't exist. This test also checks that we emit a WARNING
+    log (but don't raise an error).
+    """
+    # Create mock upload grants - one with a valid box ID, one with an invalid box ID
+    valid_box_id = populated_boxes[0]
+    invalid_box_id = uuid4()  # This box doesn't/won't exist
+
+    mock_grants = [
+        models.UploadGrant(
+            id=uuid4(),
+            user_id=TEST_USER_ID1,
+            iva_id=uuid4(),
+            box_id=valid_box_id,  # This box exists
+            created=now_utc_ms_prec(),
+            valid_from=now_utc_ms_prec(),
+            valid_until=now_utc_ms_prec() + timedelta(days=7),
+            user_name="Test User",
+            user_email="test@example.com",
+            user_title="Dr.",
+        ),
+        models.UploadGrant(
+            id=uuid4(),
+            user_id=TEST_USER_ID1,
+            iva_id=uuid4(),
+            box_id=invalid_box_id,  # This box doesn't exist
+            created=now_utc_ms_prec(),
+            valid_from=now_utc_ms_prec(),
+            valid_until=now_utc_ms_prec() + timedelta(days=7),
+            user_name="Test User 2",
+            user_email="test2@example.com",
+            user_title="Prof.",
+        ),
+    ]
+
+    # Mock the access client to return these grants
+    rig.access_client.get_upload_access_grants.return_value = mock_grants  # type: ignore
+
+    # Call the method
+    result = await rig.rdub_manager.get_upload_access_grants()
+
+    # Verify the results - should only contain the grant with the valid box
+    assert len(result) == 1
+    grant_with_info = result[0]
+    assert grant_with_info.box_id == valid_box_id
+    assert grant_with_info.box_title == "Box A"
+    assert grant_with_info.box_description == "Description 0"
+
+    # Verify a warning was logged for the invalid box
+    assert caplog.records
+    warning_messages = [
+        record.message for record in caplog.records if record.levelname == "WARNING"
+    ]
+    assert len(warning_messages) >= 1
+    assert any(str(invalid_box_id) in msg for msg in warning_messages)
+    assert any("doesn't exist in RS" in msg for msg in warning_messages)
+
+    # Verify access client was called
+    rig.access_client.get_upload_access_grants.assert_called_once()  # type: ignore
+
+
+async def test_get_boxes_data_steward(rig: JointRig, populated_boxes: list[UUID]):
+    """Test the get_research_data_upload_boxes method for data stewards."""
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=DATA_STEWARD_AUTH_CONTEXT
+    )
+    assert results.count == 5
+    assert len(results.boxes) == 5
+
+
+async def test_get_boxes_regular_user(rig: JointRig, populated_boxes: list[UUID]):
+    """Test the get_research_data_upload_boxes method for users."""
+    # Assert that, before being given access, the user gets an empty list
+    rig.access_client.get_accessible_upload_boxes.return_value = []  # type: ignore
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=USER1_AUTH_CONTEXT
+    )
+    assert results.count == 0
+    assert results.boxes == []
+
+    # Give User1 access boxes 1-3 and check results
+    rig.access_client.get_accessible_upload_boxes.return_value = populated_boxes[:3]  # type: ignore
+
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=USER1_AUTH_CONTEXT
+    )
+    assert results.count == 3
+    result_ids = [box.id for box in results.boxes]
+    assert len(result_ids) == 3
+    assert result_ids == list(reversed(populated_boxes[:3]))
+
+    # Try retrieving boxes when there's no access
+    rig.access_client.get_accessible_upload_boxes.return_value = []  # type: ignore
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=USER1_AUTH_CONTEXT
+    )
+    assert results.count == 0
+    assert results.boxes == []
+
+
+async def test_get_boxes_sorting(rig: JointRig, populated_boxes: list[UUID]):
+    """Test the sorting within the get_research_data_upload_boxes method.
+
+    Boxes are sorted first by unlocked, then locked boxes, and further sorted by
+    most recently changed and finally by box ID (ascending).
+    """
+    # Update two boxes to have the locked flag set
+    locked_box_ids = [populated_boxes[1], populated_boxes[3]]
+    for box_id in locked_box_ids:
+        await sleep(0.001)
+        box = await rig.box_dao.get_by_id(box_id)
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="locked",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=DATA_STEWARD_AUTH_CONTEXT
+    )
+    assert results.count == 5
+    results_ids = [box.id for box in results.boxes]
+    assert results_ids == [
+        populated_boxes[4],  # Last created, unlocked
+        populated_boxes[2],  # Unlocked
+        populated_boxes[0],  # Unlocked, created first
+        populated_boxes[3],  # Locked, updated most recently
+        populated_boxes[1],  # Locked
+    ]
+
+    # Filter by locked
+    locked_results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=DATA_STEWARD_AUTH_CONTEXT, state="locked"
+    )
+    assert locked_results.count == 2
+    locked_results_ids = [box.id for box in locked_results.boxes]
+    assert locked_results_ids == [populated_boxes[3], populated_boxes[1]]
+
+    # Filter by open
+    unlocked_results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=DATA_STEWARD_AUTH_CONTEXT, state="open"
+    )
+    assert unlocked_results.count == 3
+    unlocked_results_ids = [box.id for box in unlocked_results.boxes]
+    assert unlocked_results_ids == [
+        populated_boxes[4],
+        populated_boxes[2],
+        populated_boxes[0],
+    ]
+
+
+async def test_get_boxes_pagination(rig: JointRig, populated_boxes: list[UUID]):
+    """Test pagination of the get_research_data_upload_boxes method."""
+    # Verify pagination works
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=DATA_STEWARD_AUTH_CONTEXT, skip=2, limit=2
+    )
+    assert results.count == 5  # Total count is still 5
+    assert len(results.boxes) == 2  # But we only get 2 items
+    results_ids = [box.id for box in results.boxes]
+    assert results_ids == [populated_boxes[2], populated_boxes[1]]  # sorted results
+
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=DATA_STEWARD_AUTH_CONTEXT, skip=6, limit=None
+    )
+    assert results.count == 5
+    assert results.boxes == []
+
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=DATA_STEWARD_AUTH_CONTEXT, skip=6, limit=1
+    )
+    assert results.count == 5
+    assert results.boxes == []
+
+    # The following won't happen in the real world because all requests go through API
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=DATA_STEWARD_AUTH_CONTEXT, skip=-1, limit=-1
+    )
+    assert results.count == 5
+    assert len(results.boxes) == 5
+
+
+async def test_store_accession_map_happy(rig: JointRig, populated_boxes: list[UUID]):
+    """Test the normal path of updating an accession map.
+
+    This test also checks for the BoxNotFoundError case, since that is small enough
+    to include here.
+    """
+    box_id = populated_boxes[0]
+
+    # Create test file uploads
+    test_file_ids = [uuid4() for _ in range(3)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000 + i * 100,
+            encrypted_size=1100 + i * 100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate(test_file_ids)
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Create an accession map
+    mapping = {
+        "GHGAF001": test_file_ids[0],
+        "GHGAF002": test_file_ids[1],
+        "GHGAF003": test_file_ids[2],
+    }
+
+    # Verify that a BoxNotFoundError is raised for a non-existent box
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.store_accession_map(
+            box_id=uuid4(), box_version=0, accession_map=mapping, study_id=TEST_STUDY_ID
+        )
+
+    # Verify that the FileController's method was not called
+    assert [x async for x in rig.file_accession_dao.find_all(mapping={})] == []
+
+    # Verify file box client was not called
+    rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
+
+    # Get current box ID
+    box = await rig.box_dao.get_by_id(box_id)
+    version_pre_update = box.version
+
+    # The accessions must already be registered as unmapped entries
+    await rig.file_controller.register_unmapped_accessions(
+        study_id=TEST_STUDY_ID, accessions=set(mapping)
+    )
+
+    # Call the method with the valid map now
+    await rig.rdub_manager.store_accession_map(
+        box_id=box_id, box_version=0, accession_map=mapping, study_id=TEST_STUDY_ID
+    )
+
+    # Verify the research data upload box version was incremented
+    box = await rig.box_dao.get_by_id(box_id)
+    assert box.version - version_pre_update == 1
+
+    # Verify that the FileController stored the mapping
+    for accession, file_id in mapping.items():
+        file_accession_map = await rig.file_accession_dao.get_by_id(accession)
+        assert file_accession_map.file_id == file_id
+
+    # Verify file box client was called
+    rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
+
+
+async def test_store_accession_map_invalid_or_unmapped_file_ids(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that invalid file IDs in an accession map or leaving any box files unmapped
+    triggers an AccessionMapError.
+    """
+    box_id = populated_boxes[0]
+
+    # Create test file uploads
+    test_file_ids = [uuid4() for _ in range(2)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate(test_file_ids)
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Duplicate file IDs are caught before the FUB call
+    duplicate_id = test_file_ids[0]
+    with pytest.raises(rig.rdub_manager.AccessionMapError) as exc_info:
+        await rig.rdub_manager.store_accession_map(
+            box_id=box_id,
+            box_version=0,
+            accession_map={"GHGAF001": duplicate_id, "GHGAF002": duplicate_id},
+            study_id=TEST_STUDY_ID,
+        )
+    assert exc_info.value.error_type == "duplicate_file_ids"
+    assert exc_info.value.affected_file_ids == [str(duplicate_id)]
+    rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
+
+    # Create an accession map with a file ID that doesn't exist in the box
+    invalid_file_id = uuid4()
+    mapping = {"GHGAF001": test_file_ids[0], "GHGAF002": invalid_file_id}
+
+    with pytest.raises(
+        rig.rdub_manager.AccessionMapError, match="not in the box"
+    ) as exc_info:
+        await rig.rdub_manager.store_accession_map(
+            box_id=box_id,
+            box_version=0,
+            accession_map=mapping,
+            study_id=TEST_STUDY_ID,
+        )
+    assert exc_info.value.error_type == "unknown_file_ids"
+    assert exc_info.value.affected_file_ids == [str(invalid_file_id)]
+
+    # Verify file box client was called (only for the unknown_file_ids case)
+    rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
+
+    # Create an accession map that omits a file
+    mapping = {"GHGAF001": test_file_ids[0]}
+
+    with pytest.raises(
+        rig.rdub_manager.AccessionMapError, match="still need to be mapped"
+    ) as exc_info:
+        await rig.rdub_manager.store_accession_map(
+            box_id=box_id,
+            box_version=0,
+            accession_map=mapping,
+            study_id=TEST_STUDY_ID,
+        )
+    assert exc_info.value.error_type == "unmapped_file_ids"
+    assert exc_info.value.affected_file_ids == [str(test_file_ids[1])]
+
+
+async def test_store_accession_map_archived_box(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that submitting an accession map for an archived box raises AccessionMapError
+    with error_type 'archived'.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    await rig.box_dao.upsert(box.model_copy(update={"state": "archived"}))
+
+    with pytest.raises(rig.rdub_manager.AccessionMapError) as exc_info:
+        await rig.rdub_manager.store_accession_map(
+            box_id=box_id,
+            box_version=box.version,
+            accession_map={"GHGAF001": uuid4()},
+            study_id=TEST_STUDY_ID,
+        )
+    assert exc_info.value.error_type == "archived"
+    assert exc_info.value.affected_file_ids == []
+    assert exc_info.value.conflicting_accessions == []
+
+
+async def test_store_accession_map_filters_cancelled_and_failed(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that cancelled and failed files are filtered out when validating accession map."""
+    box_id = populated_boxes[0]
+
+    # Create test file uploads including cancelled and failed ones
+    test_file_ids = [uuid4() for _ in range(4)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=test_file_ids[0],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test0",
+            decrypted_sha256="checksum0",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        ),
+        models.FileUploadWithAccession(
+            id=test_file_ids[1],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test1",
+            decrypted_sha256="checksum1",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="cancelled",  # This should be filtered out
+            state_updated=now_utc_ms_prec(),
+        ),
+        models.FileUploadWithAccession(
+            id=test_file_ids[2],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test2",
+            decrypted_sha256="checksum2",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="failed",  # This should be filtered out
+            state_updated=now_utc_ms_prec(),
+        ),
+        models.FileUploadWithAccession(
+            id=test_file_ids[3],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test3",
+            decrypted_sha256="checksum3",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        ),
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Create an accession map for only the valid files
+    mapping = {"GHGAF001": test_file_ids[0], "GHGAF004": test_file_ids[3]}
+
+    # The accessions must already be registered as unmapped entries
+    await rig.file_controller.register_unmapped_accessions(
+        study_id=TEST_STUDY_ID, accessions=set(mapping)
+    )
+
+    # This should succeed because cancelled and failed files are ignored
+    await rig.rdub_manager.store_accession_map(
+        box_id=box_id,
+        box_version=0,
+        accession_map=mapping,
+        study_id=TEST_STUDY_ID,
+    )
+
+    # Verify the accession map was stored by checking the FileController mock
+    file_accessions = [x async for x in rig.file_accession_dao.find_all(mapping={})]
+    assert len(file_accessions) == 2
+    file_accessions.sort(key=lambda x: x.pid)
+    assert [(fa.pid, fa.file_id) for fa in file_accessions] == [
+        ("GHGAF001", test_file_ids[0]),
+        ("GHGAF004", test_file_ids[3]),
+    ]
+    # The records are mapped (file_id and study_id set, mapped timestamp present)
+    for fa in file_accessions:
+        assert fa.study_id == TEST_STUDY_ID
+        assert fa.mapped is not None
+
+
+async def test_store_accession_map_file_conflict(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that submitting an accession map raises AccessionConflictError when one or
+    more accessions already exist in the database with a different file_id.
+
+    Verifies that:
+    - The error carries structured conflict data (accession, existing ID, requested ID)
+    - All conflicts are reported together, not just the first one
+    - No new mappings are written when any conflict is detected
+    """
+    box_id = populated_boxes[0]
+
+    # Two files in the box
+    file_id_a, file_id_b = uuid4(), uuid4()
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate([file_id_a, file_id_b])
+    ]
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Pre-insert an accession already mapped to a different file ID, plus a second
+    # accession that is still unmapped (both must exist to be mappable at all).
+    pre_existing_file_id = uuid4()
+    conflicting_accession = "GHGAF0123456789"
+    second_conflicting_accession = "GHGAF9876543210"
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid=conflicting_accession, file_id=pre_existing_file_id)
+    )
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid=second_conflicting_accession)
+    )
+
+    # Build a map that re-uses conflicting_accession but this time with file_id_a
+    conflicting_map = {
+        conflicting_accession: file_id_a,
+        second_conflicting_accession: file_id_b,
+    }
+
+    box = await rig.box_dao.get_by_id(box_id)
+    with pytest.raises(rig.rdub_manager.AccessionMapError) as exc_info:
+        await rig.rdub_manager.store_accession_map(
+            box_id=box_id,
+            box_version=box.version,
+            accession_map=conflicting_map,
+            study_id=TEST_STUDY_ID,
+        )
+
+    assert exc_info.value.error_type == "accession_conflict"
+    assert exc_info.value.conflicting_accessions == [conflicting_accession]
+
+    # Nothing should have been written: the second accession is still unmapped
+    second = await rig.file_accession_dao.get_by_id(second_conflicting_accession)
+    assert second.file_id is None
+
+    # Make sure we can idempotently re-submit the same accession mappings
+    await rig.file_controller.map_accessions_to_file_ids(
+        study_id=TEST_STUDY_ID,
+        file_id_map={conflicting_accession: pre_existing_file_id},
+    )
+
+    # Multiple conflicts are all reported together in a single error. Map the second
+    # accession to a different file ID so that it, too, now conflicts.
+    second_pre_existing_file_id = uuid4()
+    await rig.file_accession_dao.upsert(
+        models.FileAccession(
+            pid=second_conflicting_accession, file_id=second_pre_existing_file_id
+        )
+    )
+    multi_conflict_map = {
+        conflicting_accession: file_id_a,
+        second_conflicting_accession: file_id_b,
+    }
+    box = await rig.box_dao.get_by_id(box_id)
+    with pytest.raises(rig.rdub_manager.AccessionMapError) as exc_info:
+        await rig.rdub_manager.store_accession_map(
+            box_id=box_id,
+            box_version=box.version,
+            accession_map=multi_conflict_map,
+            study_id=TEST_STUDY_ID,
+        )
+    assert exc_info.value.error_type == "accession_conflict"
+    assert set(exc_info.value.conflicting_accessions) == {
+        conflicting_accession,
+        second_conflicting_accession,
+    }
+
+
+async def test_map_accessions_to_file_ids_updates_unmapped_entries(rig: JointRig):
+    """An accession registered as unmapped (no file ID) is updated in place when its
+    file ID is later mapped, preserving its creation time and not duplicating records.
+    """
+    accession = "GHGAF0123456789"
+
+    # Register the accession as unmapped, as the searchable-resource consumer would.
+    await rig.file_controller.register_unmapped_accessions(
+        study_id=TEST_STUDY_ID, accessions={accession}
+    )
+    unmapped = await rig.file_accession_dao.get_by_id(accession)
+    assert unmapped.file_id is None
+    assert unmapped.mapped is None
+
+    # Now map the file ID for the same accession and study.
+    file_id = uuid4()
+    await rig.file_controller.map_accessions_to_file_ids(
+        study_id=TEST_STUDY_ID, file_id_map={accession: file_id}
+    )
+
+    all_mappings = [x async for x in rig.file_accession_dao.find_all(mapping={})]
+    assert len(all_mappings) == 1
+    updated = all_mappings[0]
+    assert updated.file_id == file_id
+    assert updated.study_id == TEST_STUDY_ID
+    assert updated.mapped is not None
+    # The creation time is preserved across the update.
+    assert updated.created == unmapped.created
+
+
+async def test_map_accessions_to_file_ids_unknown_accession(rig: JointRig):
+    """Mapping a file ID for an accession that was never registered as an unmapped
+    entry is rejected; no new entry is created.
+    """
+    accession = "GHGAF0123456789"
+
+    with pytest.raises(FileControllerPort.UnknownAccessionError) as exc_info:
+        await rig.file_controller.map_accessions_to_file_ids(
+            study_id=TEST_STUDY_ID, file_id_map={accession: uuid4()}
+        )
+    assert exc_info.value.unknown_accessions == [accession]
+
+    # Nothing was created.
+    assert [x async for x in rig.file_accession_dao.find_all(mapping={})] == []
+
+
+async def test_map_accessions_to_file_ids_study_conflict(rig: JointRig):
+    """Mapping a file ID for an accession already attributed to a different study is a
+    conflict, even if the accession is still unmapped.
+    """
+    accession = "GHGAF0123456789"
+    await rig.file_controller.register_unmapped_accessions(
+        study_id="GHGA-STUDY-OTHER", accessions={accession}
+    )
+
+    with pytest.raises(FileControllerPort.ConflictingAccessionError) as exc_info:
+        await rig.file_controller.map_accessions_to_file_ids(
+            study_id=TEST_STUDY_ID, file_id_map={accession: uuid4()}
+        )
+    assert exc_info.value.conflicting_accessions == [accession]
+
+    # The unmapped record is left untouched.
+    record = await rig.file_accession_dao.get_by_id(accession)
+    assert record.file_id is None
+    assert record.study_id == "GHGA-STUDY-OTHER"
+
+
+async def test_archive_research_data_upload_box_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the normal path of archiving a research data upload box."""
+    box_id = populated_boxes[0]
+
+    # Lock the box first
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    box.version = 1
+    await rig.box_dao.update(box)
+
+    # Create test file uploads
+    test_file_ids = [uuid4() for _ in range(2)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate(test_file_ids)
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.archive_file_upload_box = AsyncMock()  # type: ignore
+
+    # Insert predetermined file accession mappings
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=test_file_ids[0])
+    )
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF002", file_id=test_file_ids[1]),
+    )
+
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=1,
+        title=None,
+        description=None,
+        state="archived",
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    # Verify the box was updated
+    updated_box = await rig.box_dao.get_by_id(box_id)
+    assert updated_box.state == "archived"
+    assert updated_box.version == 2
+    assert updated_box.file_upload_box_state == "archived"
+    assert updated_box.file_upload_box_version == 1
+    assert updated_box.changed_by == TEST_DS_ID
+
+    # Verify file box client was called to archive
+    rig.file_upload_box_client.archive_file_upload_box.assert_called_once()
+
+
+async def test_archive_via_update_box_not_found(rig: JointRig):
+    """Test that archiving a non-existent box raises BoxNotFoundError."""
+    non_existent_box_id = uuid4()
+
+    # This should raise BoxNotFoundError
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=non_existent_box_id,
+            version=0,
+            title=None,
+            description=None,
+            state="archived",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_update_box_outdated_version(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that updating with outdated version info raises BoxVersionError."""
+    box_id = populated_boxes[0]
+
+    # Update the box version in the database
+    box = await rig.box_dao.get_by_id(box_id)
+    box.version = 5
+    await rig.box_dao.update(box)
+
+    with pytest.raises(rig.rdub_manager.BoxVersionError, match="has changed"):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=3,  # Outdated!
+            title="New Title",
+            description=None,
+            state=None,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_archive_box_not_locked(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that archiving an unlocked box raises StateChangeError."""
+    box_id = populated_boxes[0]
+
+    # Get the box (should be in 'open' state)
+    box = await rig.box_dao.get_by_id(box_id)
+    assert box.state == "open"
+
+    with pytest.raises(
+        rig.rdub_manager.StateChangeError,
+        match="cannot be changed from 'open' to 'archived'",
+    ):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="archived",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_archive_box_missing_accessions(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that archiving with missing accessions raises ArchivalPrereqsError."""
+    box_id = populated_boxes[0]
+
+    # Lock the box
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    # Create 3 test file uploads
+    test_file_ids = [uuid4() for _ in range(3)]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias=f"test{i}",
+            decrypted_sha256=f"checksum{i}",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+        for i, file_id in enumerate(test_file_ids)
+    ]
+
+    # Mock the file box client to return the file uploads
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Insert predetermined file accession mappings
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=test_file_ids[0])
+    )
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF002", file_id=test_file_ids[1]),
+    )
+
+    with pytest.raises(
+        rig.rdub_manager.ArchivalPrereqsError, match="missing an accession"
+    ):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="archived",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_archive_box_file_upload_box_version_error(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a FileUploadBox version error during archival raises BoxVersionError and rolls back."""
+    box_id = populated_boxes[0]
+
+    # Lock the box
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    original_version = box.version
+    await rig.box_dao.update(box)
+
+    # Create test file uploads
+    test_file_ids = [uuid4()]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=test_file_ids[0],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test0",
+            decrypted_sha256="checksum0",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.archive_file_upload_box = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.FUBVersionError(box_id=box_id)
+    )
+
+    # Insert predetermined file accession map
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=test_file_ids[0])
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxVersionError, match="out of date"):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="archived",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    # Verify the box state was rolled back
+    unchanged_box = await rig.box_dao.get_by_id(box_id)
+    assert unchanged_box.state == "locked"  # Still locked, not archived
+    assert unchanged_box.version == original_version  # Version rolled back
+
+
+async def test_update_box_max_size(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that updating max_size persists the new value and calls resize on UCS."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    new_max_size = TEST_MAX_SIZE * 2
+
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title=None,
+        description=None,
+        state=None,
+        max_size=new_max_size,
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    updated_box = await rig.box_dao.get_by_id(box_id)
+    assert updated_box.max_size == new_max_size
+    assert updated_box.version == box.version + 1
+    rig.file_upload_box_client.resize_file_upload_box.assert_called_once_with(  # type: ignore
+        box_id=box.file_upload_box_id,
+        version=box.file_upload_box_version,
+        max_size=new_max_size,
+    )
+
+
+async def test_resize_box_fub_max_size_too_low(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that FUBMaxSizeTooLowError from UCS is translated into BoxMaxSizeTooLowError
+    and that the local box state is rolled back.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    original_version = box.version
+
+    rig.file_upload_box_client.resize_file_upload_box = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.FUBMaxSizeTooLowError("Size too low")
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxMaxSizeTooLowError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state=None,
+            max_size=1,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    unchanged_box = await rig.box_dao.get_by_id(box_id)
+    assert unchanged_box.version == original_version
+    assert unchanged_box.max_size == TEST_MAX_SIZE
+
+
+async def test_resize_box_fub_version_error(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that FUBVersionError from UCS during resize is translated into BoxVersionError
+    and that the local box state is rolled back.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    original_version = box.version
+
+    rig.file_upload_box_client.resize_file_upload_box = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.FUBVersionError(box_id=box_id)
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxVersionError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state=None,
+            max_size=TEST_MAX_SIZE * 2,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    unchanged_box = await rig.box_dao.get_by_id(box_id)
+    assert unchanged_box.version == original_version
+
+
+async def test_update_box_state_and_max_size_exclusive(rig: JointRig):
+    """Test that passing both state and max_size to update raises ValueError."""
+    with pytest.raises(ValueError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=uuid4(),
+            version=0,
+            title=None,
+            description=None,
+            state="locked",
+            max_size=TEST_MAX_SIZE,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_delete_file_upload(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that Data Stewards and users with access may delete a FileUpload"""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    test_file_id = uuid4()
+
+    # Data steward can delete without an access check
+    await rig.rdub_manager.delete_file_upload(
+        box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+    )
+    rig.file_upload_box_client.delete_file_upload.assert_called_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, file_id=test_file_id
+    )
+    rig.access_client.check_box_access.assert_not_called()  # type: ignore
+
+    # User with access can also delete
+    rig.file_upload_box_client.delete_file_upload.reset_mock()  # type: ignore
+    rig.access_client.check_box_access.return_value = True  # type: ignore
+    await rig.rdub_manager.delete_file_upload(
+        box_id=box_id, file_id=test_file_id, auth_context=USER1_AUTH_CONTEXT
+    )
+    rig.file_upload_box_client.delete_file_upload.assert_called_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, file_id=test_file_id
+    )
+    rig.access_client.check_box_access.assert_called_once()  # type: ignore
+
+
+async def test_delete_file_error_handling(rig: JointRig, populated_boxes: list[UUID]):
+    """Test error translation from the FileBoxClient call"""
+    box_id = populated_boxes[0]
+    test_file_id = uuid4()
+
+    # FUBStateError should be translated to BoxStateError
+    rig.file_upload_box_client.delete_file_upload = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.FUBStateError("Box is locked")
+    )
+    with pytest.raises(rig.rdub_manager.BoxStateError):
+        await rig.rdub_manager.delete_file_upload(
+            box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+        )
+
+    # OperationError propagates unchanged
+    rig.file_upload_box_client.delete_file_upload = AsyncMock(  # type: ignore
+        side_effect=FileBoxClientPort.OperationError("Operation failed")
+    )
+    with pytest.raises(FileBoxClientPort.OperationError):
+        await rig.rdub_manager.delete_file_upload(
+            box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+        )
+
+
+async def test_delete_file_rejects_wrong_user(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that users are rejected if they don't have access to the given box"""
+    box_id = populated_boxes[0]
+    test_file_id = uuid4()
+
+    rig.access_client.check_box_access.return_value = False  # type: ignore
+    with pytest.raises(rig.rdub_manager.BoxAccessError):
+        await rig.rdub_manager.delete_file_upload(
+            box_id=box_id, file_id=test_file_id, auth_context=USER1_AUTH_CONTEXT
+        )
+
+    rig.file_upload_box_client.delete_file_upload.assert_not_called()  # type: ignore
+
+
+async def test_delete_file_box_locked_error(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that a BoxStateError is raised if access is granted but the RDUB is locked.
+
+    Also verifies that no call is made to the FileBoxClient.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    test_file_id = uuid4()
+
+    # Lock the box
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title=None,
+        description=None,
+        state="locked",
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+    rig.file_upload_box_client.delete_file_upload.reset_mock()  # type: ignore
+
+    with pytest.raises(rig.rdub_manager.BoxStateError):
+        await rig.rdub_manager.delete_file_upload(
+            box_id=box_id, file_id=test_file_id, auth_context=DATA_STEWARD_AUTH_CONTEXT
+        )
+
+    rig.file_upload_box_client.delete_file_upload.assert_not_called()  # type: ignore
+
+
+async def test_delete_research_data_upload_box_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the happy path for RDUB/FUB deletion. Once executed, the following should
+    be true:
+    - upload grants are revoked
+    - accession mappings are deleted
+    - the FUB is deleted (or at least the call is made to UCS)
+    - the RDUB is removed
+    - an audit record is published
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    # Create two files, one of which has an associated accession mapping. The core class
+    #  uses the file list to know which mappings to delete
+    file_ids = [uuid4(), uuid4()]
+    files = [_make_file_upload(file_id, i) for i, file_id in enumerate(file_ids)]
+    rig.file_upload_box_client.get_file_upload_list.return_value = files  # type: ignore
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=file_ids[0])
+    )
+
+    # We'll mock the claims repo to return two valid grants
+    grant_ids = [uuid4(), uuid4()]
+    rig.access_client.get_upload_access_grants.return_value = [  # type: ignore
+        Mock(id=grant_ids[0]),
+        Mock(id=grant_ids[1]),
+    ]
+
+    # Delete the box
+    await rig.rdub_manager.delete_research_data_upload_box(
+        box_id=box_id, version=box.version, user_id=TEST_DS_ID
+    )
+
+    # Verify that valid grants were fetched for the box and each revoked
+    rig.access_client.get_upload_access_grants.assert_awaited_once_with(  # type: ignore
+        box_id=box_id, valid=True
+    )
+    revoked = {
+        call.kwargs["grant_id"]
+        for call in rig.access_client.revoke_upload_access.call_args_list  # type: ignore
+    }
+    assert revoked == set(grant_ids)
+
+    # Make sure the accession mapping was deleted
+    assert [x async for x in rig.file_accession_dao.find_all(mapping={})] == []
+
+    # Make sure the FUB was deleted with the correct ID and version
+    rig.file_upload_box_client.delete_file_upload_box.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, version=box.file_upload_box_version
+    )
+
+    # Verify that the RDUB is gone
+    with pytest.raises(ResourceNotFoundError):
+        await rig.box_dao.get_by_id(box_id)
+
+    # Make sure the right method was called on the audit repository
+    rig.rdub_manager._audit_repository.log_box_deleted.assert_awaited_once()  # type: ignore
+    audit_kwargs = (
+        rig.rdub_manager._audit_repository.log_box_deleted.call_args.kwargs  # type: ignore
+    )
+    assert audit_kwargs["box"].id == box_id
+    assert audit_kwargs["user_id"] == TEST_DS_ID
+
+
+async def test_delete_box_locked_is_allowed(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that a locked box can be deleted."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    # Set up the mocks to return empty file & grant lists
+    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+    rig.access_client.get_upload_access_grants.return_value = []  # type: ignore
+
+    # Delete the box
+    await rig.rdub_manager.delete_research_data_upload_box(
+        box_id=box_id, version=box.version, user_id=TEST_DS_ID
+    )
+
+    # Make sure the right FileBoxClient method was used
+    rig.file_upload_box_client.delete_file_upload_box.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, version=box.file_upload_box_version
+    )
+
+    # Check that the RDUB is gone from the database
+    with pytest.raises(ResourceNotFoundError):
+        await rig.box_dao.get_by_id(box_id)
+
+
+async def test_delete_box_not_found(rig: JointRig):
+    """Test that deleting a non-existent box raises BoxNotFoundError."""
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=uuid4(), version=0, user_id=TEST_DS_ID
+        )
+    rig.file_upload_box_client.delete_file_upload_box.assert_not_called()  # type: ignore
+
+
+async def test_delete_box_version_mismatch(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that an outdated version raises BoxVersionError."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    with pytest.raises(rig.rdub_manager.BoxVersionError):
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=box_id,
+            version=box.version + 1,
+            user_id=TEST_DS_ID,
+        )
+
+    await rig.box_dao.get_by_id(box_id)  # still present
+    rig.file_upload_box_client.delete_file_upload_box.assert_not_called()  # type: ignore
+
+
+async def test_delete_box_archived_rejected(rig: JointRig, populated_boxes: list[UUID]):
+    """Test that an archived box cannot be deleted (BoxStateError) and is left intact."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.box_dao.update(box)
+
+    # Try to delete the box, expecting a BoxStateError
+    with pytest.raises(rig.rdub_manager.BoxStateError) as exc_info:
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=box_id, version=box.version, user_id=TEST_DS_ID
+        )
+
+    # Verify that `state` is conveyed as an attribute on the error
+    assert exc_info.value.state == "archived"
+
+    # Make sure the box is still there
+    await rig.box_dao.get_by_id(box_id)
+    rig.file_upload_box_client.delete_file_upload_box.assert_not_called()  # type: ignore
+
+
+async def test_delete_box_grant_revocation_tolerates_missing(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a GrantNotFoundError during revocation is tolerated and the deletion
+    still completes.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    # Set up the mocks so they returns no file list, but do return a couple of grant IDs
+    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+    rig.access_client.get_upload_access_grants.return_value = [  # type: ignore
+        Mock(id=uuid4()),
+        Mock(id=uuid4()),
+    ]
+
+    # Set the AccessClient mock to raise a GrantNotFoundError when trying to delete a grant
+    rig.access_client.revoke_upload_access.side_effect = (  # type: ignore
+        AccessClientPort.GrantNotFoundError()
+    )
+
+    # Call the box deletion method (aforementioned error should be suppressed)
+    await rig.rdub_manager.delete_research_data_upload_box(
+        box_id=box_id, version=box.version, user_id=TEST_DS_ID
+    )
+
+    # Make sure the core used the AccessClient's revocation method twice
+    assert rig.access_client.revoke_upload_access.call_count == 2  # type: ignore
+
+    # And make sure that the box was in fact deleted
+    with pytest.raises(ResourceNotFoundError):
+        await rig.box_dao.get_by_id(box_id)
+
+
+@pytest.mark.parametrize(
+    "client_error, raised_error",
+    [
+        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
+        (
+            FileBoxClientPort.FUBVersionError(box_id=TEST_FILE_UPLOAD_BOX_ID),
+            RDUBManager.BoxVersionError,
+        ),
+    ],
+)
+async def test_delete_box_fub_operation_error_leaves_rdub(
+    rig: JointRig,
+    populated_boxes: list[UUID],
+    client_error: Exception,
+    raised_error: type[Exception],
+):
+    """This test checks for the same behavior from different errors raised by the
+    deletion method of the FileBoxClient, which should result in the deletion not being
+    carried out, and sometimes should cause the RDUBManager to re-raise the
+    FileBoxClient error as a different error defined on the RDUBManagerPort class.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    rig.file_upload_box_client.delete_file_upload_box.side_effect = (  # type: ignore
+        client_error
+    )
+
+    # Delete the box and make sure we get the expected error
+    with pytest.raises(raised_error):
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=box_id, version=box.version, user_id=TEST_DS_ID
+        )
+
+    # Make sure the box is still there and no audit log was created
+    await rig.box_dao.get_by_id(box_id)
+    rig.rdub_manager._audit_repository.log_box_deleted.assert_not_called()  # type: ignore
+
+
+async def test_get_boxes_skips_dangling_grant(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Regression (§8.1): a grant referencing a deleted box must not 500 the whole
+    listing; the missing box is skipped with a warning.
+    """
+    existing_box_id = populated_boxes[0]
+    missing_box_id = uuid4()
+    rig.access_client.get_accessible_upload_boxes.return_value = [  # type: ignore
+        existing_box_id,
+        missing_box_id,
+    ]
+
+    results = await rig.rdub_manager.get_research_data_upload_boxes(
+        auth_context=USER1_AUTH_CONTEXT
+    )
+
+    assert results.count == 1
+    assert [b.id for b in results.boxes] == [existing_box_id]
