@@ -389,6 +389,36 @@ export class UploadBoxService {
   }
 
   /**
+   * Delete an upload box and all of its files. The backend rejects deletion of
+   * archived boxes, so callers should not offer this for archived boxes.
+   * @param boxId - the ID of the upload box to delete
+   * @param currentVersion - the current box version
+   * @returns An observable that completes when the box is deleted
+   */
+  deleteUploadBox(boxId: string, currentVersion: number): Observable<void> {
+    const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}`;
+    const params = new HttpParams().set('version', String(currentVersion));
+    return this.#http
+      .delete<void>(url, { params })
+      .pipe(tap(() => this.#removeUploadBoxLocally(boxId)));
+  }
+
+  /**
+   * Remove a deleted upload box from local state so the list stays consistent
+   * without a re-fetch.
+   * @param boxId - the ID of the deleted upload box
+   */
+  #removeUploadBoxLocally(boxId: string): void {
+    if (this.boxRetrievalResults.error()) return;
+    const current = this.boxRetrievalResults.value();
+    if (!current.boxes.some((b) => b.id === boxId)) return;
+    this.boxRetrievalResults.value.set({
+      count: Math.max(0, current.count - 1),
+      boxes: current.boxes.filter((b) => b.id !== boxId),
+    });
+  }
+
+  /**
    * Set the active filter for the upload box list.
    * @param filter - the filter to apply
    */

@@ -16,6 +16,29 @@
       </button>
       <h1>Upload Box Details</h1>
     </header>
+    @if (uploadBox(); as box) {
+      <!-- The tooltip lives on the wrapper so it still shows when the button is
+        disabled (a disabled Material button has pointer-events: none). -->
+      <div
+        class="mt-1 inline-block text-end"
+        [matTooltip]="
+          canDeleteBox()
+            ? 'Delete Upload Box'
+            : 'Archived upload boxes cannot be deleted'
+        "
+      >
+        <button
+          matIconButton
+          class="button-error"
+          [disabled]="!canDeleteBox() || isChangingState()"
+          (click)="deleteBox()"
+          aria-label="Delete upload box"
+          data-umami-event="Upload Box Manager Detail Delete Box Clicked"
+        >
+          <mat-icon fontIcon="delete"></mat-icon>
+        </button>
+      </div>
+    }
   </div>
 
   @if (isLoading()) {

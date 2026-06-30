@@ -22,6 +22,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 
 import { DisplayUser, UserService } from '@app/auth/services/user';
@@ -63,13 +64,14 @@ import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapp
     MatIcon,
     MatPaginatorModule,
     MatTableModule,
+    MatTooltipModule,
     RouterLink,
     Capitalise,
     ParseBytes,
     FileUploadStatePipe,
     UploadBoxMappingComponent,
   ],
-  providers: [CommonDatePipe],
+  providers: [CommonDatePipe, ParseBytes],
   templateUrl: './upload-box-manager-detail.html',
 })
 export class UploadBoxManagerDetailComponent implements OnInit {
@@ -78,6 +80,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   #location = inject(NavigationTrackingService);
   #notificationService = inject(NotificationService);
   #confirmationService = inject(ConfirmationService);
+  #parseBytes = inject(ParseBytes);
   #dialog = inject(MatDialog);
   #router = inject(Router);
   #isBackNavigation = this.#router.getCurrentNavigation()?.trigger === 'popstate';
@@ -334,6 +337,66 @@ export class UploadBoxManagerDetailComponent implements OnInit {
             );
           },
         });
+      },
+    });
+  }
+
+  /**
+   * Whether the upload box can be deleted. Archived boxes cannot be deleted by
+   * the backend, so the delete button is disabled for them.
+   */
+  canDeleteBox = computed<boolean>(
+    () => this.uploadBox()?.state !== UploadBoxState.archived,
+  );
+
+  /**
+   * Ask for confirmation and, on approval, delete the upload box and all its
+   * files. For a non-empty box, the confirmation states how many files (and
+   * their total size) will be removed; for an empty box it only warns that the
+   * action cannot be undone.
+   */
+  deleteBox(): void {
+    const box = this.uploadBox();
+    if (!box || box.state === UploadBoxState.archived) return;
+    const message =
+      box.file_count > 0
+        ? `<p>This box currently contains <strong>${box.file_count} ` +
+          `file${box.file_count === 1 ? '' : 's'}</strong> with a total size of ` +
+          `<strong>${this.#parseBytes.transform(box.size)}</strong>.</p>` +
+          '<p>Deleting the box will <strong>permanently remove all files</strong> ' +
+          'it contains. This action <strong>cannot be undone</strong>.</p>'
+        : '<p>This box is currently empty. Deleting it ' +
+          '<strong>cannot be undone</strong>.</p>';
+    this.#confirmationService.confirm({
+      title: 'Delete upload box?',
+      message,
+      cancelText: 'Cancel',
+      confirmText: 'Delete the box',
+      confirmClass: 'error',
+      callback: (confirmed) => {
+        if (confirmed) this.#deleteBox(box);
+      },
+    });
+  }
+
+  /**
+   * Perform the actual box deletion request, report the outcome and, on success,
+   * navigate back to the upload box list.
+   * @param box - the upload box to delete
+   */
+  #deleteBox(box: ResearchDataUploadBox): void {
+    this.isChangingState.set(true);
+    this.#uploadBoxService.deleteUploadBox(box.id, box.version).subscribe({
+      next: () => {
+        this.isChangingState.set(false);
+        this.#notificationService.showSuccess('The upload box has been deleted.');
+        this.goBack();
+      },
+      error: () => {
+        this.isChangingState.set(false);
+        this.#notificationService.showError(
+          'Failed to delete the upload box. Please try again.',
+        );
       },
     });
   }
