@@ -450,18 +450,24 @@ async def test_run_batch_upload_skips_already_uploaded():
         assert captured == [["fresh"]]
 
 
-async def test_run_batch_upload_does_not_skip_cancelled():
-    """A cancelled (deleted) alias in the box is re-uploaded, not skipped."""
-    with NamedTemporaryFile() as f:
-        file_infos = [make_file_info_for_upload(path=Path(f.name), alias="redo")]
+async def test_run_batch_upload_does_not_skip_cancelled_or_failed():
+    """Cancelled and failed aliases in the box are re-uploaded, not skipped."""
+    with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2:
+        file_infos = [
+            make_file_info_for_upload(path=Path(f1.name), alias="cancelled-file"),
+            make_file_info_for_upload(path=Path(f2.name), alias="failed-file"),
+        ]
         upload_client = _make_upload_client(
-            [UploadedFileInfo(id=uuid4(), alias="redo", state="cancelled")]
+            [
+                UploadedFileInfo(id=uuid4(), alias="cancelled-file", state="cancelled"),
+                UploadedFileInfo(id=uuid4(), alias="failed-file", state="failed"),
+            ]
         )
 
         captured: list[list[str]] = []
 
         async def fake_batch_cycle(*, file_info_list, **_kwargs):
-            captured.append([fi.alias for fi in file_info_list])
+            captured.extend([fi.alias for fi in file_info_list])
             return BatchPassResult(failed=[], halted=False)
 
         with patch(
@@ -476,7 +482,7 @@ async def test_run_batch_upload_does_not_skip_cancelled():
                 max_retries=0,
             )
 
-        assert captured == [["redo"]]
+        assert captured == ["cancelled-file", "failed-file"]
 
 
 async def test_run_batch_upload_all_skipped_does_not_upload():

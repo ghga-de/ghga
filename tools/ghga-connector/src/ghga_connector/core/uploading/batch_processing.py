@@ -38,6 +38,7 @@ USER_ABORT_EXCEPTIONS = (KeyboardInterrupt, asyncio.CancelledError)
 # The file state, as reported by the Upload API, that marks a cancelled (deleted)
 #  upload. A file in any other state is considered already present in the box.
 _CANCELLED_STATE = "cancelled"
+_FAILED_STATE = "failed"
 
 # When listing skipped or failed aliases in a message, show at most this many before
 #  eliding the rest, so a large resume doesn't print a wall of text.
@@ -351,7 +352,7 @@ async def _already_uploaded_aliases(upload_client: UploadClient) -> set[str]:
     return {
         upload.alias
         for upload in uploads
-        if (upload.state or "").lower() != _CANCELLED_STATE
+        if (upload.state or "").lower() not in {_CANCELLED_STATE, _FAILED_STATE}
     }
 
 
