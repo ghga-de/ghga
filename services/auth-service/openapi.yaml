@@ -1,0 +1,2315 @@
+components:
+  schemas:
+    AcademicTitle:
+      description: Academic title
+      enum:
+      - Dr.
+      - Prof.
+      title: AcademicTitle
+      type: string
+    AuthorityLevel:
+      description: Type of asserting authority
+      enum:
+      - self
+      - peer
+      - system
+      - so
+      - dac
+      title: AuthorityLevel
+      type: string
+    Claim:
+      additionalProperties: false
+      description: A claim about a user with a user ID and all data
+      properties:
+        asserted_by:
+          anyOf:
+          - $ref: '#/components/schemas/AuthorityLevel'
+          - type: 'null'
+          description: Authority level
+          examples:
+          - so
+          - dac
+          - system
+        assertion_date:
+          description: Date when the assertion was made
+          examples:
+          - '2022-11-30T12:00:00Z'
+          format: date-time
+          title: Assertion Date
+          type: string
+        conditions:
+          anyOf:
+          - items:
+              items:
+                $ref: '#/components/schemas/Condition'
+              type: array
+            type: array
+          - type: 'null'
+          description: Set of conditions
+          title: Conditions
+        creation_date:
+          description: Date of creation of this claim
+          format: date-time
+          title: Creation Date
+          type: string
+        id:
+          description: Internal claim ID
+          format: uuid4
+          title: Id
+          type: string
+        iva_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of an IVA associated with this claim
+          title: Iva Id
+        revocation_date:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: If revoked, date of revocation
+          title: Revocation Date
+        source:
+          description: Asserting organization
+          examples:
+          - https://home.org
+          format: uri
+          maxLength: 2083
+          minLength: 1
+          title: Source
+          type: string
+        sub_source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Asserting sub-organization
+          examples:
+          - https://dac.home.org
+          title: Sub Source
+        user_id:
+          description: Internal user ID
+          format: uuid4
+          title: User Id
+          type: string
+        valid_from:
+          description: Start date of validity
+          examples:
+          - '2023-01-01T00:00:00Z'
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          examples:
+          - '2023-12-31T23:59:59Z'
+          format: date-time
+          title: Valid Until
+          type: string
+        visa_type:
+          $ref: '#/components/schemas/VisaType'
+          examples:
+          - AffiliationAndRole
+        visa_value:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Scope of the claim depending of the visa type
+          examples:
+          - faculty@home.org
+          title: Visa Value
+      required:
+      - valid_from
+      - valid_until
+      - visa_type
+      - visa_value
+      - assertion_date
+      - source
+      - user_id
+      - creation_date
+      title: Claim
+      type: object
+    ClaimCreation:
+      additionalProperties: false
+      description: A claim made about a user with a user ID
+      properties:
+        asserted_by:
+          anyOf:
+          - $ref: '#/components/schemas/AuthorityLevel'
+          - type: 'null'
+          description: Authority level
+          examples:
+          - so
+          - dac
+          - system
+        assertion_date:
+          description: Date when the assertion was made
+          examples:
+          - '2022-11-30T12:00:00Z'
+          format: date-time
+          title: Assertion Date
+          type: string
+        conditions:
+          anyOf:
+          - items:
+              items:
+                $ref: '#/components/schemas/Condition'
+              type: array
+            type: array
+          - type: 'null'
+          description: Set of conditions
+          title: Conditions
+        iva_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of an IVA associated with this claim
+          title: Iva Id
+        source:
+          description: Asserting organization
+          examples:
+          - https://home.org
+          format: uri
+          maxLength: 2083
+          minLength: 1
+          title: Source
+          type: string
+        sub_source:
+          anyOf:
+          - format: uri
+            maxLength: 2083
+            minLength: 1
+            type: string
+          - type: 'null'
+          description: Asserting sub-organization
+          examples:
+          - https://dac.home.org
+          title: Sub Source
+        valid_from:
+          description: Start date of validity
+          examples:
+          - '2023-01-01T00:00:00Z'
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          examples:
+          - '2023-12-31T23:59:59Z'
+          format: date-time
+          title: Valid Until
+          type: string
+        visa_type:
+          $ref: '#/components/schemas/VisaType'
+          examples:
+          - AffiliationAndRole
+        visa_value:
+          anyOf:
+          - format: email
+            type: string
+          - format: uri
+            maxLength: 2083
+            minLength: 1
+            type: string
+          - items:
+              $ref: '#/components/schemas/Identity'
+            type: array
+          description: Scope of the claim depending of the visa type
+          examples:
+          - faculty@home.org
+          title: Visa Value
+      required:
+      - valid_from
+      - valid_until
+      - visa_type
+      - visa_value
+      - assertion_date
+      - source
+      title: ClaimCreation
+      type: object
+    ClaimMatch:
+      additionalProperties: false
+      description: A pair of a claim name and a match value with type
+      properties:
+        claim:
+          $ref: '#/components/schemas/MatchClaim'
+        match_type:
+          $ref: '#/components/schemas/MatchType'
+        match_value:
+          title: Match Value
+          type: string
+      required:
+      - claim
+      - match_type
+      - match_value
+      title: ClaimMatch
+      type: object
+    ClaimUpdate:
+      additionalProperties: false
+      description: A set of attributes that shall be updated in a claim.
+      properties:
+        revocation_date:
+          description: Date of revocation
+          format: date-time
+          title: Revocation Date
+          type: string
+      required:
+      - revocation_date
+      title: ClaimUpdate
+      type: object
+    ClaimValidity:
+      additionalProperties: false
+      description: Start and end dates for validating claims.
+      properties:
+        valid_from:
+          description: Start date of validity
+          examples:
+          - '2023-01-01T00:00:00Z'
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          examples:
+          - '2023-12-31T23:59:59Z'
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - valid_from
+      - valid_until
+      title: ClaimValidity
+      type: object
+    Condition:
+      additionalProperties: false
+      description: A single condition to check a type and a set of claims
+      properties:
+        matches:
+          items:
+            $ref: '#/components/schemas/ClaimMatch'
+          title: Matches
+          type: array
+        type:
+          $ref: '#/components/schemas/VisaType'
+      required:
+      - type
+      - matches
+      title: Condition
+      type: object
+    DownloadGrant:
+      additionalProperties: false
+      description: A download access grant for a dataset based on a corresponding
+        claim.
+      properties:
+        created:
+          description: Date of creation of this grant
+          format: date-time
+          title: Created
+          type: string
+        dataset_id:
+          description: ID of the dataset this grant is for
+          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
+          title: Dataset Id
+          type: string
+        id:
+          description: Internal grant ID (same as claim ID)
+          format: uuid4
+          title: Id
+          type: string
+        iva_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of an IVA associated with this grant
+          title: Iva Id
+        user_email:
+          description: The email address of the user
+          format: email
+          title: User Email
+          type: string
+        user_id:
+          description: Internal user ID
+          format: uuid4
+          title: User Id
+          type: string
+        user_name:
+          description: Full name of the user
+          title: User Name
+          type: string
+        user_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Academic title of the user
+          title: User Title
+        valid_from:
+          description: Start date of validity
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - id
+      - user_id
+      - created
+      - valid_from
+      - valid_until
+      - user_name
+      - user_email
+      - dataset_id
+      title: DownloadGrant
+      type: object
+    GrantId:
+      additionalProperties: false
+      description: The ID of an upload or download grant
+      properties:
+        id:
+          description: Internal grant ID (same as claim ID)
+          format: uuid4
+          title: Id
+          type: string
+      required:
+      - id
+      title: GrantId
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    Identity:
+      additionalProperties: false
+      description: A user identity based on an iss/sub pair
+      properties:
+        iss:
+          description: OpenID Issuer
+          format: uri
+          maxLength: 2083
+          minLength: 1
+          title: Issuer
+          type: string
+        sub:
+          description: OpenID Subject
+          title: Subject
+          type: string
+      required:
+      - iss
+      - sub
+      title: Identity
+      type: object
+    IvaAndUserData:
+      additionalProperties: false
+      description: Independent Verification Address (IVA)
+      properties:
+        changed:
+          description: The date and time when the IVA was last changed
+          format: date-time
+          title: Changed
+          type: string
+        created:
+          description: The date and time when the IVA was created
+          format: date-time
+          title: Created
+          type: string
+        id:
+          description: Internal IVA ID
+          format: uuid4
+          title: Id
+          type: string
+        state:
+          $ref: '#/components/schemas/IvaState'
+          default: Unverified
+          description: The state of the IVA
+        type:
+          $ref: '#/components/schemas/IvaType'
+          description: The type of the IVA
+        user_email:
+          description: The email address of the user
+          title: User Email
+          type: string
+        user_id:
+          description: The internal ID of the associated user
+          format: uuid4
+          title: User Id
+          type: string
+        user_name:
+          description: The full name of the user
+          title: User Name
+          type: string
+        user_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The academic title of the user
+          title: User Title
+        value:
+          description: The actual validation address
+          title: Value
+          type: string
+      required:
+      - created
+      - changed
+      - type
+      - value
+      - user_id
+      - user_name
+      - user_email
+      title: IVA
+      type: object
+    IvaBasicData:
+      additionalProperties: false
+      description: Basic IVA data
+      properties:
+        type:
+          $ref: '#/components/schemas/IvaType'
+          description: The type of the IVA
+        value:
+          description: The actual validation address
+          title: Value
+          type: string
+      required:
+      - type
+      - value
+      title: IvaBasicData
+      type: object
+    IvaData:
+      additionalProperties: false
+      description: Independent Verification Address (IVA)
+      properties:
+        changed:
+          description: The date and time when the IVA was last changed
+          format: date-time
+          title: Changed
+          type: string
+        created:
+          description: The date and time when the IVA was created
+          format: date-time
+          title: Created
+          type: string
+        id:
+          description: Internal IVA ID
+          format: uuid4
+          title: Id
+          type: string
+        state:
+          $ref: '#/components/schemas/IvaState'
+          default: Unverified
+          description: The state of the IVA
+        type:
+          $ref: '#/components/schemas/IvaType'
+          description: The type of the IVA
+        value:
+          description: The actual validation address
+          title: Value
+          type: string
+      required:
+      - created
+      - changed
+      - type
+      - value
+      title: IVA
+      type: object
+    IvaId:
+      additionalProperties: false
+      description: The ID of an IVA
+      properties:
+        id:
+          description: Internal IVA ID
+          format: uuid4
+          title: Id
+          type: string
+      title: IvaId
+      type: object
+    IvaState:
+      description: The state of an IVA
+      enum:
+      - Unverified
+      - CodeRequested
+      - CodeCreated
+      - CodeTransmitted
+      - Verified
+      title: IvaState
+      type: string
+    IvaType:
+      description: The type of IVA
+      enum:
+      - Phone
+      - Fax
+      - PostalAddress
+      - InPerson
+      title: IvaType
+      type: string
+    IvaVerificationCode:
+      additionalProperties: false
+      description: Request and response model containing the verification code for
+        an IVA.
+      properties:
+        verification_code:
+          description: The verification code for the IVA
+          title: Verification Code
+          type: string
+      required:
+      - verification_code
+      title: IvaVerificationCode
+      type: object
+    MatchClaim:
+      description: Possible visa claim names for conditions
+      enum:
+      - by
+      - source
+      - value
+      title: MatchClaim
+      type: string
+    MatchType:
+      description: Type of matching a claim value
+      enum:
+      - const
+      - pattern
+      - split_pattern
+      title: MatchType
+      type: string
+    PeriodCounter:
+      additionalProperties: false
+      description: Counter for user-related actions across time periods.
+      properties:
+        count:
+          description: Count value for the period
+          title: Count
+          type: integer
+        date:
+          description: Timestamp for which the counter is valid
+          format: date-time
+          title: Date
+          type: string
+      required:
+      - date
+      - count
+      title: PeriodCounter
+      type: object
+    StatusChange:
+      additionalProperties: false
+      description: Details of a status change
+      properties:
+        by:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of the user who changed the status
+          title: Changed by
+        change_date:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Date of last change
+          title: Change Date
+        context:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Status change context
+          title: Context
+        previous:
+          anyOf:
+          - $ref: '#/components/schemas/UserStatus'
+          - type: 'null'
+          description: Previous user status
+      title: StatusChange
+      type: object
+    TOTPTokenResponse:
+      additionalProperties: false
+      description: Response model for a created TOTP token.
+      properties:
+        uri:
+          format: password
+          title: Provisioning URI
+          type: string
+          writeOnly: true
+      required:
+      - uri
+      title: TOTPTokenResponse
+      type: object
+    UploadGrant:
+      additionalProperties: false
+      description: An upload access grant for research data based on a corresponding
+        claim.
+      properties:
+        box_id:
+          description: ID of the research data upload box this grant is for
+          format: uuid4
+          title: Box Id
+          type: string
+        created:
+          description: Date of creation of this grant
+          format: date-time
+          title: Created
+          type: string
+        id:
+          description: Internal grant ID (same as claim ID)
+          format: uuid4
+          title: Id
+          type: string
+        iva_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of an IVA associated with this grant
+          title: Iva Id
+        user_email:
+          description: The email address of the user
+          format: email
+          title: User Email
+          type: string
+        user_id:
+          description: Internal user ID
+          format: uuid4
+          title: User Id
+          type: string
+        user_name:
+          description: Full name of the user
+          title: User Name
+          type: string
+        user_title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Academic title of the user
+          title: User Title
+        valid_from:
+          description: Start date of validity
+          format: date-time
+          title: Valid From
+          type: string
+        valid_until:
+          description: End date of validity
+          format: date-time
+          title: Valid Until
+          type: string
+      required:
+      - id
+      - user_id
+      - created
+      - valid_from
+      - valid_until
+      - user_name
+      - user_email
+      - box_id
+      title: UploadGrant
+      type: object
+    User:
+      additionalProperties: false
+      description: Complete user model with ID
+      properties:
+        active_access_requests:
+          default: []
+          description: List of IDs of all active data access requests created by the
+            user
+          items:
+            type: string
+          title: Active Access Requests
+          type: array
+        active_submissions:
+          default: []
+          description: List of IDs of all active submissions created by the user
+          items:
+            type: string
+          title: Active Submissions
+          type: array
+        email:
+          description: Preferred e-mail address of the user
+          examples:
+          - user@home.org
+          format: email
+          title: Email
+          type: string
+        ext_id:
+          description: External (Life Science) ID
+          examples:
+          - user@lifescience-ri.eu
+          format: email
+          title: External ID
+          type: string
+        id:
+          description: Internal user ID
+          format: uuid4
+          title: Id
+          type: string
+        ivas_created_today:
+          anyOf:
+          - $ref: '#/components/schemas/PeriodCounter'
+          - type: 'null'
+          description: Number of IVAs that have been created today
+        name:
+          description: Full name of the user
+          examples:
+          - Rosalind Franklin
+          title: Name
+          type: string
+        registration_date:
+          description: Date when the user was registered
+          format: date-time
+          title: Registration Date
+          type: string
+        status:
+          $ref: '#/components/schemas/UserStatus'
+          description: Registration status of the user
+        status_change:
+          anyOf:
+          - $ref: '#/components/schemas/StatusChange'
+          - type: 'null'
+          description: Last status change
+        title:
+          anyOf:
+          - $ref: '#/components/schemas/AcademicTitle'
+          - type: 'null'
+          description: Academic title of the user
+          title: Academic title
+      required:
+      - registration_date
+      - name
+      - email
+      - ext_id
+      - status
+      title: User
+      type: object
+    UserBasicData:
+      additionalProperties: false
+      description: Basic data of a user
+      properties:
+        email:
+          description: Preferred e-mail address of the user
+          examples:
+          - user@home.org
+          format: email
+          title: Email
+          type: string
+        name:
+          description: Full name of the user
+          examples:
+          - Rosalind Franklin
+          title: Name
+          type: string
+        title:
+          anyOf:
+          - $ref: '#/components/schemas/AcademicTitle'
+          - type: 'null'
+          description: Academic title of the user
+          title: Academic title
+      required:
+      - name
+      - email
+      title: UserBasicData
+      type: object
+    UserModifiableData:
+      additionalProperties: false
+      description: User data that can be modified
+      properties:
+        status:
+          anyOf:
+          - $ref: '#/components/schemas/UserStatus'
+          - type: 'null'
+          description: Registration status of the user
+        title:
+          anyOf:
+          - $ref: '#/components/schemas/AcademicTitle'
+          - type: 'null'
+          description: Academic title of the user
+          title: Academic title
+      title: UserModifiableData
+      type: object
+    UserRegisteredData:
+      additionalProperties: false
+      description: Basic data of a registered user
+      properties:
+        email:
+          description: Preferred e-mail address of the user
+          examples:
+          - user@home.org
+          format: email
+          title: Email
+          type: string
+        ext_id:
+          description: External (Life Science) ID
+          examples:
+          - user@lifescience-ri.eu
+          format: email
+          title: External ID
+          type: string
+        name:
+          description: Full name of the user
+          examples:
+          - Rosalind Franklin
+          title: Name
+          type: string
+        title:
+          anyOf:
+          - $ref: '#/components/schemas/AcademicTitle'
+          - type: 'null'
+          description: Academic title of the user
+          title: Academic title
+      required:
+      - name
+      - email
+      - ext_id
+      title: UserRegisteredData
+      type: object
+    UserStatus:
+      description: User status enum
+      enum:
+      - active
+      - inactive
+      title: UserStatus
+      type: string
+    UserWithRoles:
+      additionalProperties: false
+      description: Complete User model plus roles
+      properties:
+        active_access_requests:
+          default: []
+          description: List of IDs of all active data access requests created by the
+            user
+          items:
+            type: string
+          title: Active Access Requests
+          type: array
+        active_submissions:
+          default: []
+          description: List of IDs of all active submissions created by the user
+          items:
+            type: string
+          title: Active Submissions
+          type: array
+        email:
+          description: Preferred e-mail address of the user
+          examples:
+          - user@home.org
+          format: email
+          title: Email
+          type: string
+        ext_id:
+          description: External (Life Science) ID
+          examples:
+          - user@lifescience-ri.eu
+          format: email
+          title: External ID
+          type: string
+        id:
+          description: Internal user ID
+          format: uuid4
+          title: Id
+          type: string
+        ivas_created_today:
+          anyOf:
+          - $ref: '#/components/schemas/PeriodCounter'
+          - type: 'null'
+          description: Number of IVAs that have been created today
+        name:
+          description: Full name of the user
+          examples:
+          - Rosalind Franklin
+          title: Name
+          type: string
+        registration_date:
+          description: Date when the user was registered
+          format: date-time
+          title: Registration Date
+          type: string
+        roles:
+          default: []
+          description: List of roles assigned to the user
+          examples:
+          - data_steward
+          - data_provider
+          items:
+            type: string
+          title: Roles
+          type: array
+        status:
+          $ref: '#/components/schemas/UserStatus'
+          description: Registration status of the user
+        status_change:
+          anyOf:
+          - $ref: '#/components/schemas/StatusChange'
+          - type: 'null'
+          description: Last status change
+        title:
+          anyOf:
+          - $ref: '#/components/schemas/AcademicTitle'
+          - type: 'null'
+          description: Academic title of the user
+          title: Academic title
+      required:
+      - registration_date
+      - name
+      - email
+      - ext_id
+      - status
+      title: UserWithRoles
+      type: object
+    ValidationError:
+      properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+    VisaType:
+      description: Type of a visa
+      enum:
+      - AffiliationAndRole
+      - AcceptedTermsAndPolicies
+      - ResearcherStatus
+      - ControlledAccessGrants
+      - LinkedIdentities
+      - https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0
+      - https://www.ghga.de/GA4GH/VisaTypes/Upload/v1.0
+      title: VisaType
+      type: string
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
+info:
+  contact:
+    email: helpdesk@ghga.de
+    name: GHGA
+  description: REST API for managing the GHGA users and user claims
+  license:
+    name: Apache 2.0
+  title: Auth Service API
+  version: 10.0.0
+openapi: 3.1.0
+paths:
+  /download-access/grants:
+    get:
+      description: Endpoint to get the list of all download access grants. Can be
+        filtered by user ID, IVA ID, and dataset ID.
+      operationId: get_download_access_grants
+      parameters:
+      - description: The internal ID of the user
+        in: query
+        name: user_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The internal ID of the user
+          title: User Id
+      - description: The ID of the IVA
+        in: query
+        name: iva_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The ID of the IVA
+          title: Iva Id
+      - description: The ID of the dataset
+        in: query
+        name: dataset_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The ID of the dataset
+          title: Dataset Id
+      - description: Whether the grant is currently valid
+        in: query
+        name: valid
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Whether the grant is currently valid
+          title: Valid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/DownloadGrant'
+                title: Response 200 Get Download Access Grants
+                type: array
+          description: Access grants have been fetched.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get download access grants
+      tags:
+      - access
+  /download-access/grants/{grant_id}:
+    delete:
+      description: Endpoint to revoke an existing download access grant.
+      operationId: revoke_download_access_grant
+      parameters:
+      - description: The ID of the grant to revoke
+        in: path
+        name: grant_id
+        required: true
+        schema:
+          description: The ID of the grant to revoke
+          format: uuid4
+          title: Grant Id
+          type: string
+      responses:
+        '204':
+          description: Access grant has been revoked.
+        '404':
+          description: The access grant was not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Revoke a download access grant
+      tags:
+      - access
+  /download-access/users/{user_id}/datasets:
+    get:
+      description: Endpoint to get the IDs of all datasets that can be downloaded
+        by the given user mapped to until when the dataset can be requested. For internal
+        use only.
+      operationId: get_download_access_list
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  format: date-time
+                  type: string
+                title: Response Get Download Access List
+                type: object
+          description: Dataset IDs with download access have been retrieved.
+        '404':
+          description: The user was not found or is inactive.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Get list of all dataset IDs with download access permission
+      tags:
+      - access
+  /download-access/users/{user_id}/datasets/{dataset_id}:
+    get:
+      description: Endpoint to check whether the given dataset can be downloaded by
+        the given user. For internal use only.
+      operationId: check_download_access
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      - description: Internal ID of the dataset
+        in: path
+        name: dataset_id
+        required: true
+        schema:
+          description: Internal ID of the dataset
+          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
+          title: Dataset Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - format: date-time
+                  type: string
+                - type: 'null'
+                title: Response Check Download Access
+          description: Download access has been checked.
+        '404':
+          description: The user was not found or is inactive.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Check download access permission for a dataset
+      tags:
+      - access
+  /download-access/users/{user_id}/ivas/{iva_id}/datasets/{dataset_id}:
+    post:
+      description: Endpoint to add a controlled access grant for a given dataset so
+        that it can be downloaded by the given user with the given IVA. For internal
+        use only.
+      operationId: grant_download_access
+      parameters:
+      - description: The internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: The internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      - description: The ID of the IVA
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: The ID of the IVA
+          format: uuid4
+          title: Iva Id
+          type: string
+      - description: The ID of the dataset
+        in: path
+        name: dataset_id
+        required: true
+        schema:
+          description: The ID of the dataset
+          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
+          title: Dataset Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimValidity'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantId'
+          description: Download access has been granted.
+        '404':
+          description: The user or the IVA was not found.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Grant download access permission for a dataset
+      tags:
+      - access
+  /health:
+    get:
+      description: Used to check that this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - health
+  /ivas:
+    get:
+      description: Endpoint used to get all IVAs and their corresponding users. Can
+        only be performed by a data steward.
+      operationId: get_all_ivas
+      parameters:
+      - description: Filter for the internal user ID
+        in: query
+        name: user_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: Filter for the internal user ID
+          title: User Id
+      - description: Filter for the state of the IVA
+        in: query
+        name: state
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/IvaState'
+          - type: 'null'
+          description: Filter for the state of the IVA
+          title: State
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/IvaData'
+                title: Response 200 Get All Ivas
+                type: array
+          description: IVAs have been retrieved.
+        '403':
+          description: Not authorized to request IVAs.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Get all IVAs
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/code-transmitted:
+    post:
+      description: Endpoint used to confirm that the verification code for an IVA
+        has been transmitted.
+      operationId: code_transmitted_for_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          format: uuid4
+          title: Iva Id
+          type: string
+      responses:
+        '204':
+          description: The verification code for the IVA has been confirmed as transmitted.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to confirm the transmission of verification
+            codes for IVAs.
+        '404':
+          description: The IVA was not found.
+        '409':
+          description: The IVA does not have the proper state.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Confirm verification code transmission for an IVA
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/create-code:
+    post:
+      description: Endpoint used to create a verification code for a given IVA.
+      operationId: create_code_for_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          format: uuid4
+          title: Iva Id
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IvaVerificationCode'
+          description: A verification code for the IVA has been created.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to create verification codes for IVAs.
+        '404':
+          description: The IVA was not found.
+        '409':
+          description: The IVA does not have the proper state.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Create verification code for an IVA
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/request-code:
+    post:
+      description: Endpoint used to request a verification code for a given IVA.
+      operationId: request_code_for_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          format: uuid4
+          title: Iva Id
+          type: string
+      responses:
+        '204':
+          description: A verification code for the IVA has been requested.
+        '401':
+          description: Not authorized to request verification codes for IVAs.
+        '404':
+          description: The IVA was not found.
+        '409':
+          description: The IVA does not have the proper state.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '429':
+          description: Too many verification code requests for this IVA today.
+      security:
+      - HTTPBearer: []
+      summary: Request verification code for an IVA
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/unverify:
+    post:
+      description: Endpoint used to reset an IVA to the unverified state.
+      operationId: unverify_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          format: uuid4
+          title: Iva Id
+          type: string
+      responses:
+        '204':
+          description: The state of the IVA has been reset to unverified.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to unverify IVAs.
+        '404':
+          description: The IVA was not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Unverify an IVA
+      tags:
+      - users
+  /rpc/ivas/{iva_id}/validate-code:
+    post:
+      description: Endpoint used to validate the verification code for an IVA.
+      operationId: validate_code_for_iva
+      parameters:
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          format: uuid4
+          title: Iva Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IvaVerificationCode'
+        required: true
+      responses:
+        '204':
+          description: The IVA has been successfully verified.
+        '401':
+          description: Not authorized to validate verification codes for IVAs.
+        '403':
+          description: The submitted verification code was invalid.
+        '404':
+          description: The IVA was not found.
+        '409':
+          description: The IVA does not have the proper state.
+        '410':
+          description: The verification request for this IVA has expired.
+        '422':
+          description: Validation error in submitted verification data.
+        '429':
+          description: Too many attempts, IVA was reset to unverified state.
+      security:
+      - HTTPBearer: []
+      summary: Validate the verification code for an IVA
+      tags:
+      - users
+  /rpc/login:
+    post:
+      description: Endpoint used when a user wants to log in
+      operationId: login
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - in: header
+        name: x-authorization
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Authorization
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create or get user session
+      tags:
+      - session
+  /rpc/logout:
+    post:
+      description: Endpoint used when a user wants to log out
+      operationId: logout
+      responses:
+        '204':
+          description: Successful Response
+      summary: End user session
+      tags:
+      - session
+  /rpc/verify-totp:
+    post:
+      description: Endpoint used to verify a TOTP code
+      operationId: verify_totp
+      parameters:
+      - in: header
+        name: x-authorization
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: the TOTP code to verify
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Verify a TOTP code
+      tags:
+      - totp
+  /totp-token:
+    post:
+      description: Endpoint used to create or replace a TOTP token
+      operationId: create_new_totp_token
+      parameters:
+      - in: query
+        name: force
+        required: false
+        schema:
+          default: false
+          title: Overwrite existing token
+          type: boolean
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TOTPTokenResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create a new TOTP token
+      tags:
+      - totp
+  /upload-access/grants:
+    get:
+      description: Endpoint to get the list of all upload access grants. Can be filtered
+        by user ID, IVA ID, and box ID.
+      operationId: get_upload_access_grants
+      parameters:
+      - description: The internal ID of the user
+        in: query
+        name: user_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The internal ID of the user
+          title: User Id
+      - description: The ID of the IVA
+        in: query
+        name: iva_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The ID of the IVA
+          title: Iva Id
+      - description: The ID of the research data upload box
+        in: query
+        name: box_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The ID of the research data upload box
+          title: Box Id
+      - description: Whether the grant is currently valid
+        in: query
+        name: valid
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Whether the grant is currently valid
+          title: Valid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/UploadGrant'
+                title: Response 200 Get Upload Access Grants
+                type: array
+          description: Upload access grants have been fetched.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get upload access grants
+      tags:
+      - access
+  /upload-access/grants/{grant_id}:
+    delete:
+      description: Endpoint to revoke an existing upload access grant.
+      operationId: revoke_upload_access_grant
+      parameters:
+      - description: The ID of the grant to revoke
+        in: path
+        name: grant_id
+        required: true
+        schema:
+          description: The ID of the grant to revoke
+          format: uuid4
+          title: Grant Id
+          type: string
+      responses:
+        '204':
+          description: Upload access grant has been revoked.
+        '404':
+          description: The upload access grant was not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Revoke an upload access grant
+      tags:
+      - access
+  /upload-access/users/{user_id}/boxes:
+    get:
+      description: Endpoint to get the IDs of all upload boxes that can be used for
+        upload by the given user mapped to until when the box can be accessed. For
+        internal use only.
+      operationId: get_upload_access_list
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  format: date-time
+                  type: string
+                propertyNames:
+                  format: uuid4
+                title: Response Get Upload Access List
+                type: object
+          description: Upload box IDs with upload access have been retrieved.
+        '404':
+          description: The user was not found or is inactive.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Get list of all upload box IDs with upload access permission
+      tags:
+      - access
+  /upload-access/users/{user_id}/boxes/{box_id}:
+    get:
+      description: Endpoint to check whether the given upload box can be used for
+        upload by the given user. For internal use only.
+      operationId: check_upload_access
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      - description: Internal ID of the research data upload box
+        in: path
+        name: box_id
+        required: true
+        schema:
+          description: Internal ID of the research data upload box
+          format: uuid4
+          title: Box Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - format: date-time
+                  type: string
+                - type: 'null'
+                title: Response Check Upload Access
+          description: Upload access has been checked.
+        '404':
+          description: The user was not found or is inactive.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Check upload access permission for a box
+      tags:
+      - access
+  /upload-access/users/{user_id}/ivas/{iva_id}/boxes/{box_id}:
+    post:
+      description: Endpoint to add an upload access grant for a given box so that
+        it can be used for upload by the given user with the given IVA. For internal
+        use only.
+      operationId: grant_upload_access
+      parameters:
+      - description: The internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: The internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      - description: The ID of the IVA
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: The ID of the IVA
+          format: uuid4
+          title: Iva Id
+          type: string
+      - description: The ID of the research data upload box
+        in: path
+        name: box_id
+        required: true
+        schema:
+          description: The ID of the research data upload box
+          format: uuid4
+          title: Box Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimValidity'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantId'
+          description: Upload access has been granted.
+        '404':
+          description: The user or the IVA was not found.
+        '422':
+          description: Validation error in submitted user IDs.
+      summary: Grant upload access permission for a box
+      tags:
+      - access
+  /users:
+    get:
+      description: Endpoint used to retrieve user data for all users including all
+        their roles. Can only be performed by a data steward.
+      operationId: get_users
+      parameters:
+      - description: Filter for the status of the user
+        in: query
+        name: status
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/UserStatus'
+          - type: 'null'
+          description: Filter for the status of the user
+          title: Status
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/User'
+                title: Response 200 Get Users
+                type: array
+          description: User data was successfully retrieved.
+        '401':
+          description: Not authorized to request user data.
+        '409':
+          description: User was already registered.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Get user data of all users
+      tags:
+      - users
+    post:
+      description: Endpoint used to register a new user. May only be performed by
+        the users themselves. Data delivered by the OIDC provider may not be altered.
+      operationId: post_user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisteredData'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithRoles'
+          description: User was successfully registered.
+        '401':
+          description: Not authorized to register users.
+        '403':
+          description: Not authorized to register this user.
+        '409':
+          description: User was already registered.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Register a user
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Endpoint used to delete a user. Can only be performed by a data
+        steward.
+      operationId: delete_user
+      parameters:
+      - description: Internal ID
+        in: path
+        name: id
+        required: true
+        schema:
+          description: Internal ID
+          format: uuid4
+          title: Id
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '204':
+          description: User data was successfully deleted.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to delete this user.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user identification.
+      security:
+      - HTTPBearer: []
+      summary: Delete user
+      tags:
+      - users
+    get:
+      description: Endpoint used to get the user data for a specified user including
+        all roles. Can only be performed by a data steward or the same user.
+      operationId: get_user
+      parameters:
+      - description: Internal User ID
+        in: path
+        name: id
+        required: true
+        schema:
+          description: Internal User ID
+          format: uuid4
+          title: Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Requested user has been found.
+        '401':
+          description: Not authorized to request user data.
+        '403':
+          description: Not authorized to request data of this user.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user identification.
+      security:
+      - HTTPBearer: []
+      summary: Get user data
+      tags:
+      - users
+    patch:
+      description: Endpoint used to modify the user data for a specified user. Can
+        only be performed by a data steward or the same user.
+      operationId: patch_user
+      parameters:
+      - description: Internal ID
+        in: path
+        name: id
+        required: true
+        schema:
+          description: Internal ID
+          format: uuid4
+          title: Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserModifiableData'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '204':
+          description: User data was successfully saved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to make this modification.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Modify user data
+      tags:
+      - users
+    put:
+      description: Endpoint used to update a registered user when their name or email
+        used by LS Login have changed. May only be performed by the users themselves.
+        Data delivered by the OIDC provider may not be altered.
+      operationId: put_user
+      parameters:
+      - description: Internal ID
+        in: path
+        name: id
+        required: true
+        schema:
+          description: Internal ID
+          format: uuid4
+          title: Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBasicData'
+        required: true
+      responses:
+        '204':
+          description: User was successfully updated.
+        '401':
+          description: Not authorized to update users.
+        '403':
+          description: Not authorized to update this user.
+        '404':
+          description: User does not exist.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Update a user
+      tags:
+      - users
+  /users/{user_id}/claims:
+    get:
+      description: Endpoint used to get all claims for a specified user.
+      operationId: get_claims
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Claim'
+                title: Response 200 Get Claims
+                type: array
+          description: User claims have been retrieved.
+        '401':
+          description: Not authorized to get user claims.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user ID.
+      summary: Get all claims for a given user
+      tags:
+      - claims
+    post:
+      description: Endpoint used to store a new claim about a user.
+      operationId: post_claim
+      parameters:
+      - description: Internal ID of the user
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal ID of the user
+          format: uuid4
+          title: User Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimCreation'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: Claim was successfully stored.
+        '400':
+          description: Claim cannot be stored.
+        '404':
+          description: The user was not found.
+        '409':
+          description: Claim was already stored.
+        '422':
+          description: Validation error in submitted ID or claims data.
+      summary: Store a user claim
+      tags:
+      - claims
+  /users/{user_id}/claims/{claim_id}:
+    delete:
+      description: Endpoint used to delete an existing user claim.
+      operationId: delete_claim
+      parameters:
+      - description: Internal user ID
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal user ID
+          format: uuid4
+          title: User Id
+          type: string
+      - description: Internal claim ID
+        in: path
+        name: claim_id
+        required: true
+        schema:
+          description: Internal claim ID
+          format: uuid4
+          title: Claim Id
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '204':
+          description: User claim was successfully deleted.
+        '404':
+          description: The user claim was not found.
+        '422':
+          description: Validation error in submitted user or claim ID.
+      summary: Delete an existing user claim
+      tags:
+      - claims
+    patch:
+      description: Endpoint used to revoke a claim for a specified user.
+      operationId: patch_claim
+      parameters:
+      - description: Internal user ID
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal user ID
+          format: uuid4
+          title: User Id
+          type: string
+      - description: Internal claim ID
+        in: path
+        name: claim_id
+        required: true
+        schema:
+          description: Internal claim ID
+          format: uuid4
+          title: Claim Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimUpdate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '204':
+          description: User claim was successfully saved.
+        '404':
+          description: The user claim was not found.
+        '422':
+          description: Validation error in submitted user data.
+      summary: Revoke an existing user claim
+      tags:
+      - claims
+  /users/{user_id}/ivas:
+    get:
+      description: Endpoint used to get all IVAs for a specified user. Can only be
+        performed by a data steward or the same user.
+      operationId: get_user_ivas
+      parameters:
+      - description: Internal User ID
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal User ID
+          format: uuid4
+          title: User Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/IvaData'
+                title: Response 200 Get User Ivas
+                type: array
+          description: User IVAs have been retrieved.
+        '401':
+          description: Not authorized to request IVAs.
+        '403':
+          description: Not authorized to request these IVAs.
+        '422':
+          description: Validation error in submitted user identification.
+      security:
+      - HTTPBearer: []
+      summary: Get all IVAs of a user
+      tags:
+      - users
+    post:
+      description: Endpoint used to create a new IVA for a specified user.
+      operationId: post_user_iva
+      parameters:
+      - description: Internal User ID
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal User ID
+          format: uuid4
+          title: User Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IvaBasicData'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IvaId'
+          description: User IVA has been successfully created.
+        '401':
+          description: Not authorized to create IVAs.
+        '403':
+          description: Not authorized to create this IVA.
+        '404':
+          description: The user was not found.
+        '422':
+          description: Validation error in submitted user identification.
+        '429':
+          description: Too many IVAs have been created.
+      security:
+      - HTTPBearer: []
+      summary: Create a new IVA
+      tags:
+      - users
+  /users/{user_id}/ivas/{iva_id}:
+    delete:
+      description: Endpoint used to delete an IVA for a specified user.
+      operationId: delete_user_iva
+      parameters:
+      - description: Internal User ID
+        in: path
+        name: user_id
+        required: true
+        schema:
+          description: Internal User ID
+          format: uuid4
+          title: User Id
+          type: string
+      - description: IVA ID
+        in: path
+        name: iva_id
+        required: true
+        schema:
+          description: IVA ID
+          format: uuid4
+          title: Iva Id
+          type: string
+      responses:
+        '204':
+          description: User IVA was successfully deleted.
+        '401':
+          description: Not authorized to delete IVAs.
+        '403':
+          description: Not authorized to delete this IVA.
+        '404':
+          description: The IVA was not found.
+        '422':
+          description: Validation error in submitted user identification.
+      security:
+      - HTTPBearer: []
+      summary: Delete an IVA
+      tags:
+      - users
+tags:
+- description: Application health
+  name: health
+- description: User sessions
+  name: session
+- description: User data
+  name: users
+- description: TOTP tokens
+  name: totp
+- description: User claims
+  name: claims
+- description: Access permissions
+  name: access
