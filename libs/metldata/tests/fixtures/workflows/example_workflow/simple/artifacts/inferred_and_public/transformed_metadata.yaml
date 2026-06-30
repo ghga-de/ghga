@@ -1,0 +1,40 @@
+files:
+  - alias: test_sample_01_R1
+    format: fastq
+    size: 299943
+  - alias: test_sample_01_R2
+    format: fastq
+    size: 234243
+  - alias: test_sample_02_R1
+    format: fastq
+    size: 92345234
+  - alias: test_sample_02_R2
+    format: fastq
+    size: 234243
+datasets:
+  - alias: test_dataset_01
+    files:
+      - test_sample_01_R1
+      - test_sample_01_R2
+      - test_sample_02_R1
+      - test_sample_02_R2
+samples:
+  - alias: test_sample_01
+    files:
+      - test_sample_01_R1
+      - test_sample_01_R2
+  - alias: test_sample_02
+    files:
+      - test_sample_02_R1
+      - test_sample_02_R2
+experiments:
+  - alias: test_experiment_01
+    description: A test experiment.
+    samples:
+      - test_sample_01
+      - test_sample_02
+    files:
+      - test_sample_01_R1
+      - test_sample_01_R2
+      - test_sample_02_R1
+      - test_sample_02_R2

@@ -1,0 +1,5 @@
+inferred_ref_map:
+  Dataset:
+    samples:
+      path: "Dataset(files)>File<(files)Sample"
+      multivalued: true

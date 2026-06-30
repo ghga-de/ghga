@@ -1,0 +1,128 @@
+datasets:
+  - accession: TESTD0000000001
+    experiment_files:
+      - TESTF0000000003
+      - TESTF0000000004
+    experiments:
+      - TESTE0000000001
+    files:
+      - TESTF0000000001
+      - TESTF0000000002
+      - TESTF0000000003
+      - TESTF0000000004
+    sample_files:
+      - TESTF0000000001
+      - TESTF0000000002
+    samples:
+      - TESTS0000000001
+embedded_dataset:
+  - accession: TESTD0000000001
+    experiment_files:
+      - accession: TESTF0000000003
+        experiment:
+          accession: TESTE0000000001
+          description: A test experiment.
+          files:
+            - TESTF0000000003
+            - TESTF0000000004
+          samples:
+            - TESTS0000000001
+            - TESTS0000000002
+        format: fastq
+        size: 92345234
+      - accession: TESTF0000000004
+        experiment:
+          accession: TESTE0000000001
+          description: A test experiment.
+          files:
+            - TESTF0000000003
+            - TESTF0000000004
+          samples:
+            - TESTS0000000001
+            - TESTS0000000002
+        format: fastq
+        size: 234243
+    experiments:
+      - TESTE0000000001
+    files:
+      - TESTF0000000001
+      - TESTF0000000002
+      - TESTF0000000003
+      - TESTF0000000004
+    sample_files:
+      - accession: TESTF0000000001
+        format: fastq
+        sample:
+          accession: TESTS0000000001
+          description: A tests sample.
+          experiment:
+            accession: TESTE0000000001
+            description: A test experiment.
+            files:
+              - TESTF0000000003
+              - TESTF0000000004
+            samples:
+              - TESTS0000000001
+              - TESTS0000000002
+          files:
+            - TESTF0000000001
+            - TESTF0000000002
+        size: 299943
+      - accession: TESTF0000000002
+        format: fastq
+        sample:
+          accession: TESTS0000000001
+          description: A tests sample.
+          experiment:
+            accession: TESTE0000000001
+            description: A test experiment.
+            files:
+              - TESTF0000000003
+              - TESTF0000000004
+            samples:
+              - TESTS0000000001
+              - TESTS0000000002
+          files:
+            - TESTF0000000001
+            - TESTF0000000002
+        size: 234243
+    samples:
+      - TESTS0000000001
+experiment_files:
+  - accession: TESTF0000000003
+    experiment: TESTE0000000001
+    format: fastq
+    size: 92345234
+  - accession: TESTF0000000004
+    experiment: TESTE0000000001
+    format: fastq
+    size: 234243
+experiments:
+  - accession: TESTE0000000001
+    description: A test experiment.
+    files:
+      - TESTF0000000003
+      - TESTF0000000004
+    samples:
+      - TESTS0000000001
+      - TESTS0000000002
+sample_files:
+  - accession: TESTF0000000001
+    format: fastq
+    sample: TESTS0000000001
+    size: 299943
+  - accession: TESTF0000000002
+    format: fastq
+    sample: TESTS0000000001
+    size: 234243
+samples:
+  - accession: TESTS0000000001
+    description: A tests sample.
+    experiment: TESTE0000000001
+    files:
+      - TESTF0000000001
+      - TESTF0000000002
+  - accession: TESTS0000000002
+    description: A tests sample.
+    experiment: TESTE0000000001
+    files: []
