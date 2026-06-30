@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=82"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ucs"
+version = "15.0.0"
+description = "Upload Controller Service - manages uploads to an S3 inbox bucket."
+readme = "README.md"
+authors = [
+    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+]
+requires-python = ">=3.13"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+
+[project.urls]
+Repository = "https://github.com/ghga-de/file-services-backend/tree/main/services/ucs"
+
+[project.scripts]
+ucs = "ucs.__main__:cli"
+
+[project.license]
+text = "Apache 2.0"
+
+[tool.setuptools.packages.find]
+where = [
+    "src",
+]

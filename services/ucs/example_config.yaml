@@ -1,0 +1,73 @@
+api_root_path: ''
+auto_reload: false
+cleanup_interval_minutes: 60
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+cors_exposed_headers: null
+db_name: dev
+db_version_collection: ucsDbVersions
+docs_url: /docs
+enable_opentelemetry: false
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
+file_internally_registered_topic: internal-file-registry
+file_internally_registered_type: file_registered
+file_interrogations_topic: file-interrogations
+file_upload_box_topic: file-upload-boxes
+file_upload_topic: file-uploads
+generate_correlation_id: true
+host: 127.0.0.1
+interrogation_failure_type: interrogation_failed
+interrogation_success_type: interrogation_success
+kafka_compression_type: null
+kafka_dlq_topic: dlq
+kafka_enable_dlq: true
+kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+log_traceback: true
+max_concurrent_uploads_per_box: 5
+migration_max_wait_sec: null
+migration_wait_sec: 10
+mongo_dsn: '**********'
+mongo_timeout: null
+multipart_upload_ttl_hours: 72
+object_storages:
+  test:
+    bucket: inbox
+    credentials:
+      aws_config_ini: null
+      s3_access_key_id: test
+      s3_endpoint_url: http://ucs:4566
+      s3_secret_access_key: '**********'
+      s3_session_token: null
+openapi_url: /openapi.json
+otel_trace_sampling_rate: 1.0
+port: 8080
+rs_auth_config:
+  auth_algs:
+  - ES256
+  auth_check_claims: {}
+  auth_key: '{}'
+  auth_map_claims: {}
+service_instance_id: '001'
+service_name: ucs
+timeout_keep_alive: 90
+workers: 1
+wps_auth_config:
+  auth_algs:
+  - ES256
+  auth_check_claims: {}
+  auth_key: '{}'
+  auth_map_claims: {}

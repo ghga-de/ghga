@@ -1,0 +1,243 @@
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Interfaces for object storage adapters and the exception they may throw."""
+
+from abc import ABC, abstractmethod
+
+from hexkit.protocols.objstorage import (  # noqa: F401
+    ObjectStorageProtocol as ObjectStoragePort,
+)
+from pydantic import UUID4
+
+from ucs.core.models import FileUpload, FileUploadBasics
+
+
+class S3ClientPort(ABC):
+    """A class that isolates S3 logic and error handling from the core"""
+
+    class OrphanedMultipartUploadError(RuntimeError):
+        """Raised when a pre-existing multipart upload is unexpectedly found"""
+
+        def __init__(self, *, file_id: UUID4, bucket_id: str):
+            msg = (
+                f"An S3 multipart upload already exists for file ID {file_id} and"
+                + f" bucket ID {bucket_id}."
+            )
+            super().__init__(msg)
+
+    class S3UploadNotFoundError(RuntimeError):
+        """Raised when the local DB has a record of an S3 multipart upload but S3 itself doesn't."""
+
+        def __init__(self, *, bucket_id: str, s3_upload_id: str):
+            msg = (
+                "S3 object storage does not contain a multipart upload with ID"
+                + f" {s3_upload_id} in bucket ID {bucket_id}."
+            )
+            super().__init__(msg)
+
+    class UnknownStorageAliasError(RuntimeError):
+        """Thrown when the requested storage location is not configured.
+        The given parameter given should be a configured alias, but is not.
+        """
+
+        def __init__(self, *, storage_alias: str):
+            message = f"No storage node exists for alias {storage_alias}."
+            super().__init__(message)
+
+    class S3UploadCompletionError(RuntimeError):
+        """Raised when completing an S3 multipart upload results in an error."""
+
+        def __init__(self, *, file_id: UUID4, s3_upload_id: str, bucket_id: str):
+            msg = (
+                f"Failed to complete S3 multipart upload with ID {s3_upload_id} for"
+                + f" file ID {file_id} in bucket ID {bucket_id}."
+            )
+            super().__init__(msg)
+
+    class S3UploadAbortError(RuntimeError):
+        """Raised when aborting an S3 multipart upload results in an error."""
+
+        def __init__(
+            self,
+            *,
+            s3_upload_id: str,
+            object_id: str,
+            bucket_id: str,
+            file_id: UUID4 | None = None,
+        ):
+            subject = f"file ID {file_id}" if file_id else f"object {object_id}"
+            msg = (
+                f"Failed to abort S3 multipart upload with ID {s3_upload_id} for"
+                + f" {subject} in bucket ID {bucket_id}."
+            )
+            super().__init__(msg)
+
+    class BucketNotFoundError(RuntimeError):
+        """Raised when the bucket configured for the storage alias is missing in S3.
+
+        Distinct from `UnknownStorageAliasError`, which means the alias itself
+        isn't configured. This means the alias is configured but the underlying
+        bucket does not exist on the S3 backend.
+        """
+
+        def __init__(self, *, bucket_id: str):
+            msg = f"S3 bucket with ID {bucket_id} does not exist."
+            super().__init__(msg)
+
+    class S3ObjectNotFoundError(RuntimeError):
+        """Raised when an object expected to exist in S3 cannot be found."""
+
+        def __init__(self, *, bucket_id: str, object_id: str):
+            msg = f"Object with ID {object_id} was not found in bucket ID {bucket_id}."
+            super().__init__(msg)
+
+    class S3OperationError(RuntimeError):
+        """Raised when an S3 operation fails with an error not covered by the
+        more specific exception types.
+        """
+
+        def __init__(self, *, operation: str, details: str):
+            msg = f"S3 operation '{operation}' failed: {details}"
+            super().__init__(msg)
+
+    @abstractmethod
+    def get_bucket_id_for_alias(self, *, storage_alias: str) -> str:
+        """Retrieve the bucket ID for a given storage alias.
+
+        Raises `UnknownStorageAliasError` if the storage alias is not known.
+        """
+
+    @abstractmethod
+    async def init_multipart_upload(
+        self, *, file_upload_basics: FileUploadBasics
+    ) -> str:
+        """Initiate a new multipart upload for a FileUpload.
+
+        Returns a str containing the multipart upload ID.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `OrphanedMultipartUploadError` if an S3 upload is already in progress.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
+        """
+
+    @abstractmethod
+    async def get_part_upload_url(
+        self, *, file_upload: FileUpload, part_no: int
+    ) -> str:
+        """Get a pre-signed URL to upload a specific part of a multipart upload.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `S3UploadNotFoundError` if the multipart upload can't be found in S3.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
+        """
+
+    @abstractmethod
+    async def complete_multipart_upload(self, *, file_upload: FileUpload) -> None:
+        """Instruct S3 to assemble all uploaded parts into the final object.
+
+        Recovers idempotently if the upload was already completed (object exists).
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `S3UploadCompletionError` if the upload cannot be completed or found.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
+        """
+
+    @abstractmethod
+    async def get_object_etag(
+        self, *, file_upload: FileUpload, object_id: UUID4
+    ) -> str:
+        """Return the ETag of an object in the inbox bucket (quotes stripped).
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3ObjectNotFoundError` if the object is not found in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
+        """
+
+    @abstractmethod
+    async def delete_inbox_file(self, *, file_upload: FileUpload) -> None:
+        """Delete a fully uploaded file from the inbox, or abort any stale multipart.
+
+        If the object exists it is deleted. If only an in-progress multipart upload
+        exists, that is aborted instead. A missing multipart upload is tolerated.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `S3UploadAbortError` if an abort is required but fails.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
+        """
+
+    @abstractmethod
+    async def get_object_size(
+        self, *, file_upload: FileUpload, object_id: UUID4
+    ) -> int:
+        """Return the size in bytes of an object in the inbox bucket.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3ObjectNotFoundError` if the object is not found in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
+        """
+
+    @abstractmethod
+    async def abort_multipart_upload(
+        self,
+        *,
+        storage_alias: str,
+        object_id: str,
+        s3_upload_id: str,
+        file_id: UUID4 | None = None,
+    ) -> None:
+        """Abort an in-progress multipart upload. Tolerates a missing upload.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `S3UploadAbortError` if the abort fails.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
+        """
+
+    @abstractmethod
+    async def list_all_multipart_uploads(self, *, storage_alias: str) -> dict[str, str]:
+        """Returns all active multipart uploads for the bucket associated with the alias.
+
+        Returns a dict of s3_upload_id -> object_id.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+        """
+
+    @abstractmethod
+    async def cleanup_orphaned_objects(
+        self, *, storage_alias: str, known_object_ids: set[str]
+    ):
+        """Clean out all orphaned object IDs in the inbox bucket.
+
+        When finished, log basic stats for deleted objects.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+            `BucketNotFoundError` if the configured bucket does not exist in S3.
+        """

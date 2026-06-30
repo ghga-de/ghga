@@ -1,0 +1,1394 @@
+components:
+  schemas:
+    BoxCreationRequest:
+      description: Request body for creating a new FileUploadBox.
+      properties:
+        max_size:
+          description: Maximum total bytes allowed across all file uploads in this
+            box.
+          exclusiveMinimum: 0.0
+          title: Max Size
+          type: integer
+        storage_alias:
+          description: The storage alias to use for this upload box
+          title: Storage Alias
+          type: string
+      required:
+      - storage_alias
+      - max_size
+      title: Box Creation Request
+      type: object
+    BoxUpdateRequest:
+      description: Request body for updating a FileUploadBox.
+      properties:
+        force:
+          default: false
+          description: Only applies when locking the box. If True, any uploads still
+            in the 'init' state will be aborted before locking proceeds.
+          title: Force
+          type: boolean
+        max_size:
+          anyOf:
+          - exclusiveMinimum: 0.0
+            type: integer
+          - type: 'null'
+          description: Updated maximum total bytes allowed across all file uploads
+            in this box.
+          title: Max Size
+        state:
+          anyOf:
+          - enum:
+            - open
+            - locked
+            - archived
+            type: string
+          - type: 'null'
+          description: Updated state
+          title: State
+        version:
+          description: The expected current version of the box (for optimistic locking)
+          title: Version
+          type: integer
+      required:
+      - version
+      title: Box Update Request
+      type: object
+    BoxUploadsPage:
+      description: Paginated response for a box's file uploads.
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/FileUpload'
+          title: Items
+          type: array
+        total_count:
+          title: Total Count
+          type: integer
+      required:
+      - items
+      - total_count
+      title: BoxUploadsPage
+      type: object
+    FileUpload:
+      description: 'A FileUpload.
+
+
+        Contains all information required for a file''s journey from upload initiation
+        to
+
+        permanent archival.'
+      properties:
+        alias:
+          description: The submitted alias from the metadata (unique within the box)
+          title: Alias
+          type: string
+        box_id:
+          description: The ID of the FileUploadBox this file is associated with
+          format: uuid4
+          title: Box Id
+          type: string
+        bucket_id:
+          description: The name of the bucket where the file is currently stored
+          title: Bucket Id
+          type: string
+        completed:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: When the S3 multipart upload was completed
+          title: Completed
+        decrypted_sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: SHA-256 checksum of the entire unencrypted file content
+          title: Decrypted Sha256
+        decrypted_size:
+          description: The size of the unencrypted file
+          title: Decrypted Size
+          type: integer
+        encrypted_parts_md5:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: The MD5 checksum for each file part, in sequence
+          title: Encrypted Parts Md5
+        encrypted_parts_sha256:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: The SHA256 checksum for each file part, in sequence
+          title: Encrypted Parts Sha256
+        encrypted_size:
+          description: The size of the encrypted file content. When the file is in
+            the inbox, this includes the Crypt4GH envelope. After re-encryption, the
+            file no longer contains an envelope, so the value is slightly smaller.
+          title: Encrypted Size
+          type: integer
+        failure_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The reason for upload or interrogation failure, if applicable.
+          title: Failure Reason
+        id:
+          description: Unique identifier for the file upload
+          format: uuid4
+          title: Id
+          type: string
+        initiated:
+          description: When the S3 multipart upload was initiated
+          format: date-time
+          title: Initiated
+          type: string
+        object_id:
+          description: The ID of the file specific to its S3 bucket
+          format: uuid4
+          title: Object Id
+          type: string
+        part_size:
+          description: The number of bytes in each file part (last part is likely
+            smaller)
+          title: Part Size
+          type: integer
+        s3_upload_id:
+          description: The ID of the S3 multipart upload
+          title: S3 Upload Id
+          type: string
+        secret_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The internal ID of the Data Hub-generated decryption secret
+          title: Secret Id
+        state:
+          default: init
+          description: The state of the FileUpload
+          enum:
+          - init
+          - inbox
+          - failed
+          - cancelled
+          - interrogated
+          - awaiting_archival
+          - archived
+          title: State
+          type: string
+        state_updated:
+          description: Timestamp of when state was updated
+          format: date-time
+          title: State Updated
+          type: string
+        storage_alias:
+          description: The storage alias of the Data Hub housing the file
+          title: Storage Alias
+          type: string
+      required:
+      - id
+      - box_id
+      - alias
+      - state_updated
+      - storage_alias
+      - bucket_id
+      - object_id
+      - decrypted_size
+      - encrypted_size
+      - part_size
+      - s3_upload_id
+      - initiated
+      title: file_upload
+      type: object
+    FileUploadCompletionRequest:
+      description: Request body for completing a FileUpload.
+      properties:
+        decrypted_sha256:
+          description: The checksum of the unencrypted file
+          title: Decrypted Sha256
+          type: string
+        encrypted_md5:
+          description: The checksum of the encrypted file content, calculated from
+            the list of MD5s for each part.
+          title: Encrypted Md5
+          type: string
+        encrypted_parts_md5:
+          description: The MD5 checksum for each encrypted file part, in sequence
+          items:
+            type: string
+          title: Encrypted Parts Md5
+          type: array
+        encrypted_parts_sha256:
+          description: The SHA-256 checksum for each encrypted file part, in sequence
+          items:
+            type: string
+          title: Encrypted Parts Sha256
+          type: array
+      required:
+      - decrypted_sha256
+      - encrypted_md5
+      - encrypted_parts_md5
+      - encrypted_parts_sha256
+      title: File Upload Completion Request
+      type: object
+    FileUploadCreationRequest:
+      description: Request body for creating a new FileUpload.
+      properties:
+        alias:
+          description: The alias for the file within the box (must be unique within
+            the box)
+          title: Alias
+          type: string
+        decrypted_size:
+          description: The size of the unencrypted file in bytes
+          minimum: 1.0
+          title: Decrypted Size
+          type: integer
+        encrypted_size:
+          description: The size of the encrypted file in bytes
+          minimum: 1.0
+          title: Encrypted Size
+          type: integer
+        part_size:
+          description: The number of bytes in each file part (last part may be smaller)
+          exclusiveMinimum: 0.0
+          maximum: 5368709120.0
+          minimum: 5242880.0
+          title: Part Size
+          type: integer
+      required:
+      - alias
+      - decrypted_size
+      - encrypted_size
+      - part_size
+      title: File Upload Creation Request
+      type: object
+    FileUploadCreationResponse:
+      description: Response body for newly created FileUploads
+      properties:
+        alias:
+          description: The alias for the file within the box (must be unique within
+            the box)
+          title: Alias
+          type: string
+        file_id:
+          description: The UUID4 identifier assigned to the FileUpload
+          format: uuid4
+          title: File Id
+          type: string
+        storage_alias:
+          description: The storage alias to use for this upload
+          title: Storage Alias
+          type: string
+      required:
+      - file_id
+      - alias
+      - storage_alias
+      title: FileUploadCreationResponse
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    HttpBoxMaxSizeExceededError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpBoxMaxSizeExceededErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: boxMaxSizeExceeded
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpBoxMaxSizeExceededError
+      type: object
+    HttpBoxMaxSizeExceededErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+        current_size:
+          title: Current Size
+          type: integer
+        file_alias:
+          title: File Alias
+          type: string
+        max_size:
+          title: Max Size
+          type: integer
+      required:
+      - box_id
+      - max_size
+      - current_size
+      - file_alias
+      title: HttpBoxMaxSizeExceededErrorData
+      type: object
+    HttpBoxNotFoundError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpBoxNotFoundErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: boxNotFound
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpBoxNotFoundError
+      type: object
+    HttpBoxNotFoundErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+      required:
+      - box_id
+      title: HttpBoxNotFoundErrorData
+      type: object
+    HttpBoxStateError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpBoxStateErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: boxStateError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpBoxStateError
+      type: object
+    HttpBoxStateErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+        box_state:
+          enum:
+          - open
+          - locked
+          - archived
+          title: Box State
+          type: string
+      required:
+      - box_id
+      - box_state
+      title: HttpBoxStateErrorData
+      type: object
+    HttpBoxVersionError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpBoxVersionErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: boxVersionOutdated
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpBoxVersionError
+      type: object
+    HttpBoxVersionErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+      required:
+      - box_id
+      title: HttpBoxVersionErrorData
+      type: object
+    HttpFileUploadNotFoundError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpFileUploadNotFoundErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: fileUploadNotFound
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpFileUploadNotFoundError
+      type: object
+    HttpFileUploadNotFoundErrorData:
+      properties:
+        file_id:
+          format: uuid4
+          title: File Id
+          type: string
+      required:
+      - file_id
+      title: HttpFileUploadNotFoundErrorData
+      type: object
+    HttpFileUploadStateError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpFileUploadStateErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: fileUploadStateError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpFileUploadStateError
+      type: object
+    HttpFileUploadStateErrorData:
+      properties:
+        file_id:
+          format: uuid4
+          title: File Id
+          type: string
+      required:
+      - file_id
+      title: HttpFileUploadStateErrorData
+      type: object
+    HttpIncompleteUploadsError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpIncompleteUploadsErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: incompleteUploads
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpIncompleteUploadsError
+      type: object
+    HttpIncompleteUploadsErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+        file_ids:
+          items:
+            maxItems: 2
+            minItems: 2
+            prefixItems:
+            - format: uuid4
+              type: string
+            - type: string
+            type: array
+          title: File Ids
+          type: array
+      required:
+      - box_id
+      - file_ids
+      title: HttpIncompleteUploadsErrorData
+      type: object
+    HttpOrphanedMultipartUploadError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpOrphanedMultipartUploadErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: orphanedMultipartUpload
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpOrphanedMultipartUploadError
+      type: object
+    HttpOrphanedMultipartUploadErrorData:
+      properties:
+        file_alias:
+          title: File Alias
+          type: string
+      required:
+      - file_alias
+      title: HttpOrphanedMultipartUploadErrorData
+      type: object
+    HttpPartSizeError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpPartSizeErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: invalidPartSize
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpPartSizeError
+      type: object
+    HttpPartSizeErrorData:
+      properties:
+        file_alias:
+          title: File Alias
+          type: string
+        part_size:
+          title: Part Size
+          type: integer
+      required:
+      - file_alias
+      - part_size
+      title: HttpPartSizeErrorData
+      type: object
+    HttpS3UploadNotFoundError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpS3UploadNotFoundErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: s3UploadNotFound
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpS3UploadNotFoundError
+      type: object
+    HttpS3UploadNotFoundErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpS3UploadNotFoundErrorData
+      type: object
+    HttpTooManyOpenUploadsError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpTooManyOpenUploadsErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: tooManyOpenUploads
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpTooManyOpenUploadsError
+      type: object
+    HttpTooManyOpenUploadsErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+        max_concurrent:
+          title: Max Concurrent
+          type: integer
+      required:
+      - box_id
+      - max_concurrent
+      title: HttpTooManyOpenUploadsErrorData
+      type: object
+    HttpUnknownStorageAliasError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpUnknownStorageAliasErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: noSuchStorage
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpUnknownStorageAliasError
+      type: object
+    HttpUnknownStorageAliasErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpUnknownStorageAliasErrorData
+      type: object
+    HttpUploadAbortError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpUploadAbortErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: uploadAbortError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpUploadAbortError
+      type: object
+    HttpUploadAbortErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpUploadAbortErrorData
+      type: object
+    HttpUploadCompletionError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpUploadCompletionErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: uploadCompletionError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpUploadCompletionError
+      type: object
+    HttpUploadCompletionErrorData:
+      properties:
+        box_id:
+          format: uuid4
+          title: Box Id
+          type: string
+        file_id:
+          format: uuid4
+          title: File Id
+          type: string
+      required:
+      - box_id
+      - file_id
+      title: HttpUploadCompletionErrorData
+      type: object
+    HttpUploadSizeMismatchError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpUploadSizeMismatchErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: uploadSizeMismatch
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpUploadSizeMismatchError
+      type: object
+    HttpUploadSizeMismatchErrorData:
+      properties:
+        file_id:
+          format: uuid4
+          title: File Id
+          type: string
+      required:
+      - file_id
+      title: HttpUploadSizeMismatchErrorData
+      type: object
+    ValidationError:
+      properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
+info:
+  description: A service managing uploads of file objects to an S3-compatible Object
+    Storage.
+  title: Upload Controller Service
+  version: 15.0.0
+openapi: 3.1.0
+paths:
+  /boxes:
+    post:
+      description: 'Create a new FileUploadBox.
+
+
+        Requires CreateFileBoxWorkOrder token and only allowed for Data Stewards via
+        the RS.
+
+        Request body should contain the storage alias to use for uploads within the
+        box.
+
+        Returns the box_id of the newly created FileUploadBox.'
+      operationId: createBox
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoxCreationRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                format: uuid4
+                title: Response Createbox
+                type: string
+          description: The box_id of the newly created FileUploadBox
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUnknownStorageAliasError'
+          description: 'Exceptions by ID:
+
+            - noSuchStorage: The storage node for the given alias does not exist.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Create a new FileUploadBox
+      tags:
+      - UploadControllerService
+  /boxes/{box_id}:
+    delete:
+      description: 'Remove a FileUploadBox and all its associated FileUploads.
+
+
+        Cancels any in-progress S3 uploads, removes inbox objects from S3, then deletes
+
+        the box and all its FileUploads from the database. Deletion is blocked if
+        the box
+
+        is archived, or if a `version` query parameter is supplied and doesn''t match
+        the
+
+        current box version. Requires a DeleteFileBoxWorkOrder token from the RS.'
+      operationId: removeFileUploadBox
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      - description: The expected current version of the box (optional optimistic
+          locking). If provided and outdated, the deletion is rejected.
+        in: query
+        name: version
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: The expected current version of the box (optional optimistic
+            locking). If provided and outdated, the deletion is rejected.
+          title: Version
+      responses:
+        '204':
+          description: FileUploadBox and all associated uploads removed successfully
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxNotFoundError'
+          description: 'Exceptions by ID:
+
+            - boxNotFound: The FileUploadBox with the given ID does not exist.'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxVersionError'
+          description: 'Exceptions by ID:
+
+            - boxVersionOutdated: The requested FileUploadBox version is outdated.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUploadAbortError'
+          description: 'Exceptions by ID:
+
+            - uploadAbortError: There was an error aborting the s3 multipart upload.'
+      security:
+      - HTTPBearer: []
+      summary: Remove a FileUploadBox and all its associated uploads
+      tags:
+      - UploadControllerService
+    patch:
+      description: 'Update a FileUploadBox state or max_size.
+
+
+        Request body must contain a `version` field (for optimistic locking) plus
+        either
+
+        a `state` field indicating the target state or a `max_size` field with the
+
+        new size limit. Requires ChangeFileBoxWorkOrder token from the RS. When updating
+
+        state, the work type must match the target state. When updating max_size,
+        the
+
+        work type must be ''resize''. Users are only allowed to lock the box; a Data
+        Steward
+
+        role is required to do everything else.'
+      operationId: updateBox
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoxUpdateRequest'
+        required: true
+      responses:
+        '204':
+          description: FileUploadBox successfully updated
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxNotFoundError'
+          description: 'Exceptions by ID:
+
+            - boxNotFound: The FileUploadBox with the given ID does not exist.'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpIncompleteUploadsError'
+          description: 'Exceptions by ID:
+
+            - incompleteUploads: The box has in-progress uploads that must be completed
+            or cancelled before it can be locked or archived.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUploadAbortError'
+          description: 'Exceptions by ID:
+
+            - uploadAbortError: There was an error aborting the s3 multipart upload.'
+      security:
+      - HTTPBearer: []
+      summary: Update a FileUploadBox (lock/unlock/archive/resize)
+      tags:
+      - UploadControllerService
+  /boxes/{box_id}/uploads:
+    get:
+      description: 'Retrieve a paginated list of FileUploads for a FileUploadBox.
+
+
+        Requires ViewFileBoxWorkOrder token from the RS.'
+      operationId: getBoxUploads
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 0
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoxUploadsPage'
+          description: Paginated list of file uploads for the box
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxNotFoundError'
+          description: 'Exceptions by ID:
+
+            - boxNotFound: The FileUploadBox with the given ID does not exist.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Retrieve a paginated list of file uploads for the given box
+      tags:
+      - UploadControllerService
+    post:
+      description: 'Add a new FileUpload to an existing FileUploadBox.
+
+
+        Creates a new file upload within the specified box with the provided alias,
+        checksum, and size.
+
+        Initiates a multipart upload and returns the file ID, file alias, and storage
+        alias
+
+        for the newly created upload. The file alias may be used by clients to ensure
+        the
+
+        response pertains to the correct file.
+
+
+        Requires a CreateFileWorkOrder token from the WPS.'
+      operationId: createFileUpload
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileUploadCreationRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadCreationResponse'
+          description: The file_id of the newly created FileUpload
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpPartSizeError'
+          description: 'Exceptions by ID:
+
+            - invalidPartSize: The specified part size is invalid (too small, too
+            large, or would result in too many parts).'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxNotFoundError'
+          description: 'Exceptions by ID:
+
+            - boxNotFound: The FileUploadBox with the given ID does not exist.'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpOrphanedMultipartUploadError'
+          description: 'Exceptions by ID:
+
+            - orphanedMultipartUpload: A multipart upload is already in progress for
+            this file but cannot be aborted. Request file deletion and then attempt
+            the upload again.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpTooManyOpenUploadsError'
+          description: 'Exceptions by ID:
+
+            - tooManyOpenUploads: The box already has the maximum number of concurrent
+            in-progress uploads.'
+        '507':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxMaxSizeExceededError'
+          description: 'Exceptions by ID:
+
+            - boxMaxSizeExceeded: Adding this file would exceed the box''s size limit.'
+      security:
+      - HTTPBearer: []
+      summary: Add a new FileUpload to an existing FileUploadBox
+      tags:
+      - UploadControllerService
+  /boxes/{box_id}/uploads/{file_id}:
+    delete:
+      description: 'Remove a FileUpload from the FileUploadBox.
+
+
+        Deletes the FileUpload and tells S3 to cancel the multipart upload if applicable.
+
+        Returns 404 if the FileUpload or box does not exist.
+
+        Requires a DeleteFileWorkOrder token from the WPS.'
+      operationId: removeFileUpload
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      - in: path
+        name: file_id
+        required: true
+        schema:
+          format: uuid4
+          title: File Id
+          type: string
+      responses:
+        '204':
+          description: FileUpload removed successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUnknownStorageAliasError'
+          description: 'Exceptions by ID:
+
+            - noSuchStorage: The storage node for the given alias does not exist.'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpFileUploadNotFoundError'
+          description: 'Exceptions by ID:
+
+            - fileUploadNotFound: The FileUpload could not be found.'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxStateError'
+          description: 'Exceptions by ID:
+
+            - boxStateError: The FileUploadBox''s state precludes the requested action.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUploadAbortError'
+          description: 'Exceptions by ID:
+
+            - uploadAbortError: There was an error aborting the s3 multipart upload.'
+      security:
+      - HTTPBearer: []
+      summary: Remove a FileUpload from the FileUploadBox
+      tags:
+      - UploadControllerService
+    patch:
+      description: 'Complete file upload by instructing S3 to finalize the multipart
+        upload.
+
+
+        Concludes the file upload process in UCS by instructing S3 to complete the
+
+        multipart upload for the specified file.
+
+        Requires a CloseFileWorkOrder token from the WPS.'
+      operationId: completeFileUpload
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      - in: path
+        name: file_id
+        required: true
+        schema:
+          format: uuid4
+          title: File Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileUploadCompletionRequest'
+        required: true
+      responses:
+        '204':
+          description: File upload completed successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUploadSizeMismatchError'
+          description: 'Exceptions by ID:
+
+            - uploadSizeMismatch: The actual object size doesn''t match the declared
+            encrypted_size.'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpFileUploadNotFoundError'
+          description: 'Exceptions by ID:
+
+            - fileUploadNotFound: The FileUpload could not be found.'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpFileUploadStateError'
+          description: 'Exceptions by ID:
+
+            - fileUploadStateError: The action is incompatible with the FileUpload''s
+            current state.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUploadCompletionError'
+          description: 'Exceptions by ID:
+
+            - s3UploadCompletionFailure: There was an error completing the s3 multipart
+            upload. Delete the file from the file upload box and retry.'
+      security:
+      - HTTPBearer: []
+      summary: Complete file upload
+      tags:
+      - UploadControllerService
+  /boxes/{box_id}/uploads/{file_id}/parts/{part_no}:
+    get:
+      description: 'Get pre-signed S3 upload URL for a specific file part.
+
+
+        Returns a pre-signed URL that can be used to upload the bytes for the specified
+
+        part number of the specified file upload.
+
+        Requires an UploadFileWorkOrder token from the WPS.'
+      operationId: getPartUploadUrl
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      - in: path
+        name: file_id
+        required: true
+        schema:
+          format: uuid4
+          title: File Id
+          type: string
+      - in: path
+        name: part_no
+        required: true
+        schema:
+          title: Part No
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                title: Response Getpartuploadurl
+                type: string
+          description: The pre-signed URL for uploading the file part
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpUnknownStorageAliasError'
+          description: 'Exceptions by ID:
+
+            - noSuchStorage: The storage node for the given alias does not exist.'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpS3UploadNotFoundError'
+          description: 'Exceptions by ID:
+
+            - s3UploadNotFound: The S3 multipart upload could not be found.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Get pre-signed S3 upload URL for file part
+      tags:
+      - UploadControllerService
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - UploadControllerService
+tags:
+- name: UploadControllerService

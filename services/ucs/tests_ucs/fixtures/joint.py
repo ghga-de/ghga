@@ -1,0 +1,200 @@
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Join the functionality of all fixtures for API-level integration testing."""
+
+__all__ = ["JointFixture", "joint_fixture"]
+
+from collections.abc import AsyncGenerator
+from dataclasses import dataclass
+
+import httpx
+import pytest
+import pytest_asyncio
+from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.auth.ghga import AuthConfig
+from ghga_service_commons.utils.jwt_helpers import generate_jwk
+from ghga_service_commons.utils.multinode_storage import (
+    ObjectStorages,
+    S3ObjectStorageNodeConfig,
+    S3ObjectStoragesConfig,
+)
+from hexkit.providers.akafka import KafkaEventSubscriber
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.s3.testutils import S3Fixture
+from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
+from hexkit.providers.testing.objstorage import InMemObjectStorage
+from jwcrypto.jwk import JWK
+from pydantic import UUID4
+
+from tests_ucs.fixtures import ConfigFixture
+from tests_ucs.fixtures.config import get_config
+from tests_ucs.fixtures.in_mem_obj_storage import InMemS3ObjectStorages
+from tests_ucs.fixtures.utils import TEST_MAX_BOX_SIZE
+from ucs.adapters.outbound.s3 import S3Client
+from ucs.config import Config
+from ucs.core import models
+from ucs.core.controller import UploadController
+from ucs.core.models import FileUpload, FileUploadBox, UploadActivity
+from ucs.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
+from ucs.ports.inbound.controller import UploadControllerPort
+from ucs.ports.outbound.storage import S3ClientPort
+
+
+@dataclass
+class JointFixture:
+    """Returned by the `joint_fixture`."""
+
+    config: Config
+    upload_controller: UploadControllerPort
+    rest_client: httpx.AsyncClient
+    mongodb: MongoDbFixture
+    event_subscriber: KafkaEventSubscriber
+    kafka: KafkaFixture
+    s3: S3Fixture
+    bucket_id: str
+    wps_jwk: JWK
+    rs_jwk: JWK
+
+
+@pytest_asyncio.fixture(scope="function")
+async def joint_fixture(
+    mongodb: MongoDbFixture,
+    kafka: KafkaFixture,
+    s3: S3Fixture,
+) -> AsyncGenerator[JointFixture]:
+    """A fixture that embeds all other fixtures for API-level integration testing."""
+    wps_jwk = generate_jwk()
+    wps_auth_key = wps_jwk.export(private_key=False)
+    rs_jwk = generate_jwk()
+    rs_auth_key = rs_jwk.export(private_key=False)
+    wps_cfg = AuthConfig(auth_key=wps_auth_key, auth_check_claims={})
+    rs_cfg = AuthConfig(auth_key=rs_auth_key, auth_check_claims={})
+
+    bucket_id = "test-inbox"
+    node_config = S3ObjectStorageNodeConfig(bucket=bucket_id, credentials=s3.config)
+    object_storages_config = S3ObjectStoragesConfig(
+        object_storages={"test": node_config}
+    )
+
+    # merge configs from different sources with the default one:
+    config = get_config(
+        sources=[mongodb.config, kafka.config, object_storages_config],
+        wps_auth_config=wps_cfg,
+        rs_auth_config=rs_cfg,
+    )
+
+    await s3.populate_buckets([bucket_id])
+
+    # Assemble joint fixture with config injection
+    async with (
+        prepare_core(config=config) as upload_controller,
+        prepare_rest_app(config=config, core_override=upload_controller) as app,
+        prepare_event_subscriber(
+            config=config, core_override=upload_controller
+        ) as event_subscriber,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        yield JointFixture(
+            config=config,
+            upload_controller=upload_controller,
+            rest_client=rest_client,
+            mongodb=mongodb,
+            kafka=kafka,
+            event_subscriber=event_subscriber,
+            s3=s3,
+            bucket_id=bucket_id,
+            wps_jwk=wps_jwk,
+            rs_jwk=rs_jwk,
+        )
+
+
+@dataclass
+class JointRig:
+    """Test fixture containing all components needed for controller testing."""
+
+    config: Config
+    file_upload_box_dao: BaseInMemDao[models.FileUploadBox]
+    file_upload_dao: BaseInMemDao[models.FileUpload]
+    upload_activity_dao: BaseInMemDao[UploadActivity]
+    object_storages: ObjectStorages
+    controller: UploadController
+    s3_client: S3ClientPort
+
+    async def create_default_box(self) -> UUID4:
+        """Create a box for the "test" storage alias with `max_size=TEST_MAX_BOX_SIZE`"""
+        return await self.controller.create_file_upload_box(
+            storage_alias="test", max_size=TEST_MAX_BOX_SIZE
+        )
+
+
+InMemFileUploadBoxDao = new_mock_dao_class(dto_model=FileUploadBox, id_field="id")
+InMemFileUploadDao = new_mock_dao_class(dto_model=FileUpload, id_field="id")
+InMemUploadActivityDao = new_mock_dao_class(
+    dto_model=UploadActivity, id_field="file_id"
+)
+
+
+@pytest.fixture()
+def patch_s3_calls(monkeypatch):
+    """Mocks the object storage provider with an InMemObjectStorage object"""
+    pass
+    monkeypatch.setattr(
+        f"{InMemS3ObjectStorages.__module__}.S3ObjectStorage", InMemObjectStorage
+    )
+
+
+@pytest.fixture()
+def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
+    """Return a joint fixture with in-memory dependency mocks"""
+    _config = config.config
+    file_upload_box_dao = InMemFileUploadBoxDao()
+    file_upload_dao = InMemFileUploadDao()
+    object_storages = InMemS3ObjectStorages(config=_config)
+    upload_activity_dao = InMemUploadActivityDao()
+    s3_client = S3Client(config=_config, object_storages=object_storages)
+
+    # Patch get_object_size to return the encrypted_size stored in the FileUpload
+    # record for the given object_id. This lets controller tests pass the size check
+    # without needing to know what value InMemObjectStorage would otherwise return.
+    _, storage = object_storages.for_alias("test")
+
+    async def mock_get_object_size(*, bucket_id: str, object_id: str) -> int:
+        for doc in file_upload_dao.resources.values():
+            resource = file_upload_dao._deserialize(doc)
+            if str(resource.object_id) == object_id:
+                return resource.encrypted_size
+        return 1024  # The value that the InMem fixture otherwise returns
+
+    storage.get_object_size = mock_get_object_size
+
+    controller = UploadController(
+        config=(_config),
+        file_upload_box_dao=(file_upload_box_dao),
+        file_upload_dao=(file_upload_dao),
+        upload_activity_dao=upload_activity_dao,
+        s3_client=s3_client,
+    )
+
+    return JointRig(
+        config=_config,
+        file_upload_box_dao=file_upload_box_dao,
+        file_upload_dao=file_upload_dao,
+        upload_activity_dao=upload_activity_dao,
+        object_storages=object_storages,
+        controller=controller,
+        s3_client=s3_client,
+    )
