@@ -1,0 +1,18 @@
+service_instance_id: "1"
+storage_alias: TESTHUB
+s3_endpoint_url: http://localstack:4566
+s3_access_key_id: test
+s3_secret_access_key: test
+interrogation_bucket_id: hub1-interrogation
+central_api_url: http://127.0.0.1:8000/central
+central_api_crypt4gh_public_key: aGDOl3gNlqhIsI0Hd3febLjoOpvq+X/2YyTW1xknWHw=
+data_hub_crypt4gh_private_key_path: "./keys/key.sec"
+data_hub_signing_key: '{"crv":"P-256","d":"GfATHwVOAr_9pIjn5dP_EDEukbbnNv-qU4BlzOvUsus","kty":"EC","x":"RI6FFzAHXcKbMRmQ88SnsOJ0MlDFm-1tweBOwcUGrg8","y":"uGTYsfpA_hngyPbe7k4rXzY7A8XJljsjqC5W1NDfyww"}'
+http_request_timeout_seconds: 2.0
+client_reraise_from_retry_error: False
+client_retry_status_codes:  # Don't retry 500
+- 408
+- 429
+- 502
+- 503
+- 504
