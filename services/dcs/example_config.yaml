@@ -1,0 +1,92 @@
+api_root_path: ''
+api_route: /ga4gh/drs/v1
+auth_algs:
+- ES256
+auth_check_claims:
+  exp: null
+  file_id: null
+  iat: null
+  user_public_crypt4gh_key: null
+  work_type: null
+auth_key: '{}'
+auth_map_claims: {}
+auto_reload: true
+client_exponential_backoff_max: 60
+client_num_retries: 3
+client_reraise_from_retry_error: true
+client_retry_status_codes:
+- 408
+- 429
+- 500
+- 502
+- 503
+- 504
+cors_allow_credentials: false
+cors_allowed_headers: []
+cors_allowed_methods: []
+cors_allowed_origins: []
+cors_exposed_headers: null
+db_name: dev
+db_version_collection: dcsDbVersions
+docs_url: /docs
+download_bucket_cache_timeout: 7
+download_served_topic: file-downloads
+download_served_type: download_served
+drs_server_uri: drs://localhost:8080/
+ekss_base_url: http://localhost:8000/ekss
+enable_opentelemetry: false
+file_deleted_topic: file-downloads
+file_deleted_type: file_deleted
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
+file_internally_registered_topic: internal-file-registry
+file_internally_registered_type: file_registered
+file_registered_for_download_topic: file-downloads
+file_registered_for_download_type: file_registered
+files_to_stage_topic: staging-requests
+files_to_stage_type: file_staging_requested
+generate_correlation_id: true
+host: 127.0.0.1
+http_request_timeout_seconds: 60.0
+kafka_compression_type: null
+kafka_dlq_topic: dlq
+kafka_enable_dlq: true
+kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
+mongo_dsn: '**********'
+mongo_timeout: null
+object_storages:
+  test:
+    bucket: outbox
+    credentials:
+      aws_config_ini: null
+      s3_access_key_id: test
+      s3_endpoint_url: http://dcs:4566
+      s3_secret_access_key: '**********'
+      s3_session_token: null
+openapi_url: /openapi.json
+otel_trace_sampling_rate: 1.0
+per_request_jitter: 0.0
+port: 8080
+presigned_url_expires_after: 30
+retry_after_applicable_for_num_requests: 1
+retry_after_max: 300
+retry_after_min: 5
+service_instance_id: '001'
+service_name: dcs
+staging_speed: 100
+timeout_keep_alive: 90
+workers: 1
