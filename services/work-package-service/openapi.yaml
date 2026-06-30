@@ -1,0 +1,521 @@
+components:
+  schemas:
+    BoxWithExpiration:
+      description: A model describing a research data upload box with an expiration
+        date.
+      properties:
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The description of the upload box.
+          title: Description
+        expires:
+          description: The expiration date of access to the research data upload box.
+          format: date-time
+          title: Expires
+          type: string
+        file_upload_box_id:
+          description: The ID of the file upload box. This is the ID referenced by
+            the Connector.
+          format: uuid4
+          title: File Upload Box Id
+          type: string
+        id:
+          description: The ID of the full research data upload box. This is the ID
+            tied to upload claims.
+          format: uuid4
+          title: Id
+          type: string
+        title:
+          description: The title of the upload box.
+          title: Title
+          type: string
+      required:
+      - id
+      - file_upload_box_id
+      - title
+      - expires
+      title: BoxWithExpiration
+      type: object
+    Dataset:
+      additionalProperties: false
+      description: A model describing a dataset.
+      properties:
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The description of the dataset.
+          title: Description
+        files:
+          description: Files contained in the dataset.
+          items:
+            $ref: '#/components/schemas/DatasetFile'
+          title: Files
+          type: array
+        id:
+          description: ID of the dataset
+          title: Id
+          type: string
+        stage:
+          $ref: '#/components/schemas/WorkPackageType'
+          description: Current stage of this dataset.
+        title:
+          description: The title of the dataset.
+          title: Title
+          type: string
+      required:
+      - id
+      - stage
+      - title
+      - description
+      - files
+      title: Dataset
+      type: object
+    DatasetFile:
+      additionalProperties: false
+      description: A file as that is part of a dataset.
+      properties:
+        accession:
+          description: The file accession.
+          pattern: ^GHGAF.+
+          title: Accession
+          type: string
+        extension:
+          description: The file extension with a leading dot.
+          title: Extension
+          type: string
+      required:
+      - accession
+      - extension
+      title: DatasetFile
+      type: object
+    DatasetWithExpiration:
+      additionalProperties: false
+      description: A model describing a dataset with an expiration date.
+      properties:
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The description of the dataset.
+          title: Description
+        expires:
+          description: The expiration date of access to the dataset.
+          format: date-time
+          title: Expires
+          type: string
+        files:
+          description: Files contained in the dataset.
+          items:
+            $ref: '#/components/schemas/DatasetFile'
+          title: Files
+          type: array
+        id:
+          description: ID of the dataset
+          title: Id
+          type: string
+        stage:
+          $ref: '#/components/schemas/WorkPackageType'
+          description: Current stage of this dataset.
+        title:
+          description: The title of the dataset.
+          title: Title
+          type: string
+      required:
+      - id
+      - stage
+      - title
+      - description
+      - files
+      - expires
+      title: DatasetWithExpiration
+      type: object
+    UploadWorkOrderTokenRequest:
+      description: Request model for creating upload-path work order tokens.
+      properties:
+        alias:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: File alias (required for CREATE work type)
+          title: Alias
+        file_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: File ID (required for UPLOAD, CLOSE, DELETE work types)
+          title: File Id
+        work_type:
+          anyOf:
+          - const: create
+            type: string
+          - const: upload
+            type: string
+          - const: close
+            type: string
+          - const: delete
+            type: string
+          - const: view
+            type: string
+          description: The type of work order token to create
+          title: Work Type
+      required:
+      - work_type
+      title: UploadWorkOrderTokenRequest
+      type: object
+    WorkPackageCreationData:
+      additionalProperties: false
+      description: All data necessary to create a work package.
+      properties:
+        dataset_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: ID of the dataset (for download work packages)
+          title: Dataset Id
+        file_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: IDs of all included files. If None, all files of the dataset
+            are assumed as target.
+          title: File Ids
+        research_data_upload_box_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of the research data upload box (for upload work packages)
+          title: Research Data Upload Box Id
+        type:
+          $ref: '#/components/schemas/WorkPackageType'
+          description: The work package type
+        user_public_crypt4gh_key:
+          description: The user's public Crypt4GH key in base64 encoding
+          title: User Public Crypt4Gh Key
+          type: string
+      required:
+      - type
+      - user_public_crypt4gh_key
+      title: WorkPackageCreationData
+      type: object
+    WorkPackageCreationResponse:
+      description: Response when a work package has been created.
+      properties:
+        expires:
+          description: The expiration date of the work package access token
+          format: date-time
+          title: Expires
+          type: string
+        id:
+          description: ID of the work package
+          title: Id
+          type: string
+        token:
+          description: The work package access token, encrypted with the user's public
+            Crypt4GH key
+          title: Token
+          type: string
+      required:
+      - id
+      - token
+      - expires
+      title: WorkPackageCreationResponse
+      type: object
+    WorkPackageDetails:
+      description: Details about the work package that can be requested.
+      properties:
+        created:
+          description: Creation date of the work package
+          format: date-time
+          title: Created
+          type: string
+        expires:
+          format: date-time
+          title: Expiration date of the work package
+          type: string
+        file_upload_box_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of the file upload box (for upload work packages)
+          title: File Upload Box Id
+        files:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          description: IDs of all included files mapped to their file extensions (None
+            for upload work packages)
+          examples:
+          - GHGAF01: .json
+            GHGAF02: .csv
+          title: Files
+        research_data_upload_box_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of the research data upload box (for upload work packages)
+          title: Research Data Upload Box Id
+        type:
+          $ref: '#/components/schemas/WorkPackageType'
+          description: The work package type
+      required:
+      - type
+      - created
+      - expires
+      title: WorkPackageDetails
+      type: object
+    WorkPackageType:
+      description: The type of work that a work package describes.
+      enum:
+      - download
+      - upload
+      title: WorkPackageType
+      type: string
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
+info:
+  description: A service managing work packages for the GHGA CLI
+  title: Work Package Service
+  version: 11.1.0
+openapi: 3.1.0
+paths:
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - WorkPackages
+  /users/{user_id}/boxes:
+    get:
+      description: Endpoint used to get details for all upload boxes that are accessible
+        to the given user, along with the access expiration date.
+      operationId: get_upload_boxes
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          format: uuid4
+          title: User Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/BoxWithExpiration'
+                title: Response 200 Get Upload Boxes
+                type: array
+          description: Upload boxes have been fetched.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to get upload boxes.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Get all accessible upload boxes and access expiry for the given user
+      tags:
+      - UploadBoxes
+      - upload
+  /users/{user_id}/datasets:
+    get:
+      description: Endpoint used to get details for all datasets that are accessible
+        to the given user including their expiration dates.
+      operationId: get_datasets
+      parameters:
+      - in: path
+        name: user_id
+        required: true
+        schema:
+          format: uuid4
+          title: User Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Dataset'
+                title: Response 200 Get Datasets
+                type: array
+          description: Datasets have been fetched.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to get datasets.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Get all datasets of the given user
+      tags:
+      - Datasets
+      - download
+  /work-packages:
+    post:
+      description: Endpoint used to create a new work package
+      operationId: create_work_package
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkPackageCreationData'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkPackageCreationResponse'
+          description: Work package was successfully created.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to create a work package.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Create a work package
+      tags:
+      - WorkPackages
+  /work-packages/{work_package_id}:
+    get:
+      description: Endpoint used to get work package details
+      operationId: get_work_package
+      parameters:
+      - in: path
+        name: work_package_id
+        required: true
+        schema:
+          format: uuid4
+          title: Work Package Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkPackageDetails'
+          description: Work package details have been found.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to get the work package.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Get a work package
+      tags:
+      - WorkPackages
+  /work-packages/{work_package_id}/boxes/{box_id}/work-order-tokens:
+    post:
+      description: Endpoint used to create a work order token for uploading a single
+        file
+      operationId: create_upload_work_order_token
+      parameters:
+      - in: path
+        name: work_package_id
+        required: true
+        schema:
+          format: uuid4
+          title: Work Package Id
+          type: string
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadWorkOrderTokenRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Work order token has been created.
+        '403':
+          description: Not authorized to create the work order token.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Create a work order token for file upload operations
+      tags:
+      - WorkPackages
+      - upload
+  /work-packages/{work_package_id}/files/{accession}/work-order-tokens:
+    post:
+      description: Endpoint used to create a work order token for downloading a single
+        file
+      operationId: create_download_work_order_token
+      parameters:
+      - in: path
+        name: work_package_id
+        required: true
+        schema:
+          format: uuid4
+          title: Work Package Id
+          type: string
+      - in: path
+        name: accession
+        required: true
+        schema:
+          title: Accession
+          type: string
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Work order token has been created.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to create the work order token.
+        '422':
+          description: Validation error in submitted user data.
+      security:
+      - HTTPBearer: []
+      summary: Create a work order token for file download operations
+      tags:
+      - WorkPackages
+      - download
+servers:
+- url: ''
+tags:
+- name: WorkPackages
+- name: Datasets
+- name: UploadBoxes
+- name: download
+- name: upload
