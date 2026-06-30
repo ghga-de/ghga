@@ -19,10 +19,11 @@ from collections.abc import AsyncGenerator
 
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient as BareClient
+from hexkit.correlation import set_new_correlation_id
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 from hexkit.utils import now_utc_ms_prec
 
 from auth_service.claims_repository.models.config import (
@@ -32,6 +33,7 @@ from auth_service.claims_repository.models.config import (
 from auth_service.config import Config
 from auth_service.prepare import prepare_rest_app
 from auth_service.user_registry.models.users import User, UserStatus
+from auth_service.user_registry.translators.dao import UserDaoPublisherFactory
 from tests.fixtures.constants import ID_OF_ROD_STEWARD
 
 data_steward = User(
@@ -56,10 +58,13 @@ add_as_data_stewards = [
 
 async def seed_database(config: Config) -> None:
     """Seed the database with a dummy user that will become a data steward."""
-    async with MongoDbDaoFactory.construct(config=config) as dao_factory:
-        user_dao = await dao_factory.get_dao(
-            name=config.users_collection, dto_model=User, id_field="id"
-        )
+    async with (
+        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_factory,
+        set_new_correlation_id(),
+    ):
+        user_dao = await UserDaoPublisherFactory(
+            config=config, dao_publisher_factory=dao_factory
+        ).get_user_dao()
         try:
             await user_dao.get_by_id(data_steward.id)
         except ResourceNotFoundError:

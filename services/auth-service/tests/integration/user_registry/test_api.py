@@ -963,6 +963,9 @@ async def test_delete_users_with_associated_data(
                 "value": PHONE,
                 "created": now,
                 "changed": now,
+                # the IVAs collection is served by a publishing DAO, which only
+                # finds documents that carry (non-deleted) outbox metadata
+                "__metadata__": {"deleted": False, "published": True},
             }
         )
         # create something that can pass as an associated claim

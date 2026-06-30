@@ -196,7 +196,9 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
             issuer=self.issuer,
             name=name,
         )
-        return totp.provisioning_uri(image=str(self.image) if self.image else None)
+        if self.image:
+            return totp.provisioning_uri(image=str(self.image))
+        return totp.provisioning_uri()
 
     def generate_token(self) -> TOTPToken:
         """Generate a TOTP token."""
