@@ -18,6 +18,7 @@
 import io
 import logging
 import os
+import time
 from uuid import UUID, uuid4
 
 import crypt4gh.header
@@ -36,7 +37,7 @@ from dhfs.adapters.outbound.http import ConnectionFailedError
 from dhfs.config import Config
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH
 from dhfs.core.checksums import Checksums
-from dhfs.core.models import FileUpload, InterrogationReport, PartRange
+from dhfs.core.models import FileUpload, InterrogationReport
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from dhfs.ports.outbound.s3 import S3ClientPort
@@ -159,35 +160,6 @@ class Interrogator(InterrogatorPort):
         # crypt4gh v1.8.6 returns session key as bytearray instead of bytes
         return SecretBytes(bytes(session_keys[0]))
 
-    async def _fetch_and_decrypt_part(
-        self,
-        *,
-        bucket_id: str,
-        object_id: str,
-        part_range: PartRange,
-        secret: SecretBytes,
-    ) -> bytes:
-        """Download and decrypt a single file part.
-
-        Raises:
-        - BucketNotFoundError if the inbox bucket doesn't exist.
-        - ObjectNotFoundError if the file doesn't exist in the inbox.
-        - DownloadError if the download request fails.
-        - DecryptionError if the part cannot be decrypted.
-        """
-        try:
-            part = await self._s3_client.fetch_file_content_range(
-                bucket_id=bucket_id,
-                object_id=object_id,
-                start=part_range.start,
-                stop=part_range.stop,
-            )
-        except S3ClientPort.S3OperationError as err:
-            raise self.InconclusiveError(err) from err
-        except S3ClientPort.CriticalS3Error as err:
-            raise self.CriticalError(err) from err
-        return self._decrypt_part(encrypted_part=part, secret=secret)
-
     def _decrypt_part(self, *, encrypted_part: bytes, secret: SecretBytes) -> bytes:
         """Decrypt an encrypted file part with the given key.
 
@@ -235,7 +207,7 @@ class Interrogator(InterrogatorPort):
 
         return bytes(buffer)
 
-    async def _process_file_parts(  # noqa: C901, PLR0915
+    async def _process_file_parts(  # noqa: C901, PLR0912, PLR0915
         self,
         *,
         file_upload: FileUpload,
@@ -272,6 +244,12 @@ class Interrogator(InterrogatorPort):
             "reencrypted_object_id": new_object_id,
         }
 
+        time_download = 0.0
+        time_decrypt = 0.0
+        time_reencrypt = 0.0
+        time_verify = 0.0
+        time_upload = 0.0
+
         # Download, re-encrypt, and upload object part-by-part
         for part_no, part_range in enumerate(
             file_upload.calc_encrypted_part_ranges(), start=1
@@ -280,36 +258,58 @@ class Interrogator(InterrogatorPort):
             log_extra["file_part_number"] = part_no
             log_extra["content_range"] = f"{part_range.start}-{part_range.stop}"
 
-            # Initial decryption
+            # Download
             try:
-                decrypted_part = await self._fetch_and_decrypt_part(
+                _time = time.monotonic()
+                encrypted_part = await self._s3_client.fetch_file_content_range(
                     bucket_id=file_upload.bucket_id,
                     object_id=inbox_object_id,
-                    part_range=part_range,
-                    secret=old_secret,
+                    start=part_range.start,
+                    stop=part_range.stop,
                 )
-            except Exception as err:
-                # Catch-all is intentional, see comments below
+                time_download += time.monotonic() - _time
+            except S3ClientPort.S3OperationError as err:
                 log.warning(
-                    "File %s: Failed to get and decrypt part number %i.",
+                    "File %s: Failed to download part number %i.",
                     file_id,
                     part_no,
                     extra=log_extra,
                 )
-                # If we've already translate the underlying error, just re-raise as is
+                raise self.InconclusiveError(err) from err
+            except S3ClientPort.CriticalS3Error as err:
+                log.warning(
+                    "File %s: Failed to download part number %i.",
+                    file_id,
+                    part_no,
+                    extra=log_extra,
+                )
+                raise self.CriticalError(err) from err
+
+            # Initial decryption
+            try:
+                _time = time.monotonic()
+                decrypted_part = self._decrypt_part(
+                    encrypted_part=encrypted_part, secret=old_secret
+                )
+                time_decrypt += time.monotonic() - _time
+            except Exception as err:
+                log.warning(
+                    "File %s: Failed to decrypt part number %i.",
+                    file_id,
+                    part_no,
+                    extra=log_extra,
+                )
                 if isinstance(err, (self.InconclusiveError, self.ConclusiveError)):
                     raise
-                if isinstance(err, S3ClientPort.CriticalS3Error):
-                    raise self.CriticalError(err) from err
-                # Otherwise, translate to inconclusive error - we don't know what went
-                #  wrong and didn't expect it, so we can't conclude that the file is bad
                 raise self.InconclusiveError(err) from err
 
             # Re-encrypt
             try:
+                _time = time.monotonic()
                 reencrypted_part = self._reencrypt_part(
                     decrypted_part=decrypted_part, new_secret=new_secret
                 )
+                time_reencrypt += time.monotonic() - _time
             except Exception as err:
                 log.warning(
                     "File %s: Failed to re-encrypt a file part.",
@@ -320,9 +320,11 @@ class Interrogator(InterrogatorPort):
 
             # Decrypt again to verify encryption process was correct
             try:
+                _time = time.monotonic()
                 decrypted_part = self._decrypt_part(
                     encrypted_part=reencrypted_part, secret=new_secret
                 )
+                time_verify += time.monotonic() - _time
             except Exception as err:
                 log.warning(
                     "File %s: A file part seems incorrectly re-encrypted.",
@@ -342,6 +344,7 @@ class Interrogator(InterrogatorPort):
 
                 # Upload the re-encrypted part
                 try:
+                    _time = time.monotonic()
                     await self._s3_client.upload_file_part(
                         upload_id=upload_id,
                         object_id=new_object_id,
@@ -349,6 +352,7 @@ class Interrogator(InterrogatorPort):
                         part_md5=checksums.encrypted_md5[-1],
                         part=part_to_upload,
                     )
+                    time_upload += time.monotonic() - _time
                     log.debug(
                         "File %s: Uploaded S3 part %i.",
                         file_id,
@@ -369,6 +373,7 @@ class Interrogator(InterrogatorPort):
             remaining_bytes = bytes(upload_buffer)
             checksums.update_encrypted(remaining_bytes)
             try:
+                _time = time.monotonic()
                 await self._s3_client.upload_file_part(
                     upload_id=upload_id,
                     object_id=new_object_id,
@@ -376,6 +381,7 @@ class Interrogator(InterrogatorPort):
                     part_md5=checksums.encrypted_md5[-1],
                     part=remaining_bytes,
                 )
+                time_upload += time.monotonic() - _time
                 log.debug(
                     "File %s: Uploaded S3 part %i.",
                     file_id,
@@ -387,11 +393,31 @@ class Interrogator(InterrogatorPort):
             except S3ClientPort.CriticalS3Error as err:
                 raise self.CriticalError(err) from err
 
-        log.debug(
-            "File %s: All %i file part(s) uploaded to S3.",
+        _size_mib = file_upload.decrypted_size / (1024**2)
+
+        def _throughput(elapsed: float) -> int:
+            return round(_size_mib / elapsed) if elapsed > 0 else 0
+
+        _total = (
+            time_download + time_decrypt + time_reencrypt + time_verify + time_upload
+        )
+        log.info(
+            "File %s: Re-encryption process complete. See log details for metrics.",
             file_id,
-            len(checksums.encrypted_md5),
-            extra=log_extra,
+            extra={
+                "download_s": round(time_download, 3),
+                "download_mib_per_s": _throughput(time_download),
+                "decrypt_s": round(time_decrypt, 3),
+                "decrypt_mib_per_s": _throughput(time_decrypt),
+                "reencrypt_s": round(time_reencrypt, 3),
+                "reencrypt_mib_per_s": _throughput(time_reencrypt),
+                "verify_s": round(time_verify, 3),
+                "verify_mib_per_s": _throughput(time_verify),
+                "upload_s": round(time_upload, 3),
+                "upload_mib_per_s": _throughput(time_upload),
+                "total_s": round(_total, 3),
+                "total_mib_per_s": _throughput(_total),
+            },
         )
         return checksums
 

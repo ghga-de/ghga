@@ -48,7 +48,7 @@ pytestmark = [
 
 
 async def test_interrogate_new_files(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock
+    joint_fixture: JointFixture, httpx_mock: HTTPXMock, caplog
 ):
     """Test the interrogation process for a single file"""
     # Create the inbox bucket
@@ -110,7 +110,8 @@ async def test_interrogate_new_files(
     httpx_mock.add_callback(capture_report, url=url_for_reports)
 
     # Process all files
-    await joint_fixture.interrogator.interrogate_new_files()
+    with caplog.at_level("INFO"):
+        await joint_fixture.interrogator.interrogate_new_files()
 
     # Check the interrogation bucket
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
@@ -137,6 +138,40 @@ async def test_interrogate_new_files(
         assert len(report["encrypted_parts_md5"]) > 0
         assert isinstance(report["encrypted_parts_sha256"], list)
         assert len(report["encrypted_parts_sha256"]) > 0
+
+    # Verify the per-file phase-timing log was emitted for each file
+    phase_timing_logs = [
+        record
+        for record in caplog.records
+        if "Re-encryption process complete" in record.message
+    ]
+    assert len(phase_timing_logs) == len(file_uploads), (
+        "Expected one phase-timing log per file"
+    )
+    expected_float_fields = (
+        "download_s",
+        "decrypt_s",
+        "reencrypt_s",
+        "verify_s",
+        "upload_s",
+        "total_s",
+    )
+    for log_record in phase_timing_logs:
+        for field in expected_float_fields:
+            assert hasattr(log_record, field), f"Missing structured field: {field}"
+            assert isinstance(getattr(log_record, field), float)
+    expected_int_fields = (
+        "download_mib_per_s",
+        "decrypt_mib_per_s",
+        "reencrypt_mib_per_s",
+        "verify_mib_per_s",
+        "upload_mib_per_s",
+        "total_mib_per_s",
+    )
+    for log_record in phase_timing_logs:
+        for field in expected_int_fields:
+            assert hasattr(log_record, field), f"Missing structured field: {field}"
+            assert isinstance(getattr(log_record, field), int)
 
 
 async def test_report_failure(joint_fixture: JointFixture, httpx_mock: HTTPXMock):
