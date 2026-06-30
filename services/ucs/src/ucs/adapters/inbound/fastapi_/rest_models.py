@@ -87,6 +87,16 @@ class FileUploadCreationRequest(BaseModel):
         ge=MIN_PART_SIZE,
         le=MAX_PART_SIZE,
     )
+    overwrite: bool = Field(
+        default=False,
+        description=(
+            "If True and a FileUpload for this alias already exists in an active state"
+            " (init or inbox), cancel and replace it atomically. Has no effect on"
+            " already-failed or already-cancelled uploads."
+            " Uploads in interrogated, awaiting_archival, or archived state cannot be"
+            " overwritten."
+        ),
+    )
 
     @model_validator(mode="after")
     def encrypted_size_exceeds_decrypted_size(self) -> "FileUploadCreationRequest":

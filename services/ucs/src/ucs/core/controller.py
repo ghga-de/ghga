@@ -340,7 +340,7 @@ class UploadController(UploadControllerPort):
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
 
-    async def initiate_file_upload(
+    async def initiate_file_upload(  # noqa: C901, PLR0913, PLR0915
         self,
         *,
         box_id: UUID4,
@@ -348,21 +348,30 @@ class UploadController(UploadControllerPort):
         decrypted_size: int,
         encrypted_size: int,
         part_size: int,
+        overwrite: bool = False,
     ) -> tuple[UUID4, str]:
         """Initialize a new multipart upload.
 
         Returns the file ID and storage alias as a 2-tuple.
+
+        If `overwrite` is True and an active FileUpload (in 'init' or 'inbox' state)
+        already exists for this alias, it will be cancelled/aborted before the new
+        upload is created. Uploads in 'interrogated', 'awaiting_archival', or 'archived'
+        state cannot be overwritten and will still raise `FileUploadAlreadyExists`.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
         - `BoxMaxSizeExceededError` if adding the file would exceed the box's size limit.
         - `TooManyOpenUploadsError` if the box is already at the concurrent upload limit.
-        - `FileUploadAlreadyExists` if there's already a FileUpload for this alias.
+        - `FileUploadAlreadyExists` if there's already a FileUpload for this alias that
+            cannot be overwritten.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAlreadyInProgressError` if an upload is already in progress.
         - `PartSizeError` if the specified part size would results in more
             parts than S3 allows, or is smaller or larger than what S3 allows.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         extra: dict[str, Any] = {"box_id": box_id, "alias": alias}
         # Get the box and resolve S3 storage details
@@ -376,6 +385,22 @@ class UploadController(UploadControllerPort):
             raise self.UnknownStorageAliasError(storage_alias=storage_alias) from err
         extra["storage_alias"] = storage_alias
         extra["bucket_id"] = bucket_id
+
+        # If overwrite is requested, cancel any active upload for this alias before
+        # re-deriving size/count. 'failed'/'cancelled' states are handled later by
+        # _insert_file_upload; only 'init'/'inbox' need explicit cancellation here.
+        if overwrite:
+            try:
+                existing_upload = await self._file_upload_dao.find_one(
+                    mapping={"box_id": box_id, "alias": alias}
+                )
+            except NoHitsFoundError:
+                existing_upload = None
+
+            if existing_upload and existing_upload.state in ("init", "inbox"):
+                await self.remove_file_upload(box_id=box_id, file_id=existing_upload.id)
+                # Re-fetch box to get the updated size/file count
+                box = await self._get_unlocked_box(box_id=box_id)
 
         # Get both box size + in progress size and the number of in progress files
         current_size = box.size

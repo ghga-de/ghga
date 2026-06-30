@@ -1303,6 +1303,169 @@ async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
     assert (await file_upload_dao.get_by_id(file_id_1)).state == "inbox"
 
 
+@pytest.mark.parametrize("state", ["init", "inbox"])
+async def test_overwrite_cancels_active_upload(
+    rig: JointRig,
+    state: FileUploadState,
+):
+    """Test that when overwrite=True, an active FileUpload in 'init' or 'inbox' state is
+    cancelled and replaced by a new one for the same alias without raising an error.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+
+    box_id = await rig.create_default_box()
+    file_id_1, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    object_id_1 = str(rig.file_upload_dao.latest.object_id)
+
+    if state == "inbox":
+        await controller.complete_file_upload(
+            box_id=box_id,
+            file_id=file_id_1,
+            unencrypted_checksum="unencrypted_checksum",
+            encrypted_checksum=f"etag_for_{object_id_1}",
+            encrypted_parts_md5=["abc123"],
+            encrypted_parts_sha256=["def456"],
+        )
+        assert (await file_upload_dao.get_by_id(file_id_1)).state == "inbox"
+
+    file_id_2, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+        overwrite=True,
+    )
+
+    assert file_id_2 != file_id_1
+
+    # Old upload should be cancelled now
+    old_upload = await file_upload_dao.get_by_id(file_id_1)
+    assert old_upload.state == "cancelled"
+
+    # New upload should be in 'init' state
+    new_upload = await file_upload_dao.get_by_id(file_id_2)
+    assert new_upload.state == "init"
+    assert new_upload.alias == "test_file"
+
+    # S3 resources for the old upload should have been cleaned up
+    if state == "init":
+        assert not await object_storage.list_multipart_uploads_for_object(
+            bucket_id=bucket_id, object_id=object_id_1
+        )
+    else:
+        assert not await object_storage.does_object_exist(
+            bucket_id=bucket_id, object_id=object_id_1
+        )
+
+
+@pytest.mark.parametrize(
+    "state",
+    ["interrogated", "awaiting_archival", "archived"],
+)
+async def test_overwrite_blocked_for_immutable_states(
+    rig: JointRig,
+    state: FileUploadState,
+):
+    """Test that when overwrite=True, uploads in 'interrogated', 'awaiting_archival', or
+    'archived' state cannot be replaced and FileUploadAlreadyExists is raised.
+
+    The InMemDao doesn't enforce compound unique indexes, so we simulate the
+    MongoDB UniqueConstraintViolationError the same way existing idempotence tests do.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+
+    box_id = await rig.create_default_box()
+
+    # Insert a FileUpload directly in the non-overwritable state
+    file_upload = make_file_upload(state=state)
+    file_upload.box_id = box_id
+    file_upload.alias = "test_file"
+    await file_upload_dao.insert(file_upload)
+
+    # Simulate the compound unique index violation MongoDB would raise on insert
+    async def patched_insert(dto):
+        raise UniqueConstraintViolationError(
+            unique_fields={"box_id": str(box_id), "alias": "test_file"}
+        )
+
+    file_upload_dao.insert = patched_insert
+
+    with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
+        await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test_file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+            overwrite=True,
+        )
+
+    # Original FileUpload must be untouched
+    assert len(file_upload_dao.resources) == 1
+    assert (await file_upload_dao.get_by_id(file_upload.id)).state == state
+
+
+@pytest.mark.parametrize("state", ["init", "inbox"])
+async def test_overwrite_false_still_blocks_active_upload(
+    rig: JointRig, state: FileUploadState
+):
+    """With overwrite=False (default), an active 'init' or 'inbox' upload still raises
+    FileUploadAlreadyExists, confirming overwrite is opt-in.
+
+    The InMemDao doesn't enforce compound unique indexes, so we simulate the
+    MongoDB UniqueConstraintViolationError the same way existing idempotence tests do.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+
+    box_id = await rig.create_default_box()
+    file_id_1, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    if state == "inbox":
+        file_upload = file_upload_dao.latest
+        file_upload.state = "inbox"
+        await file_upload_dao.update(file_upload)
+        assert file_upload_dao.latest.state == "inbox"
+
+    # Simulate the compound unique index violation MongoDB would raise on insert
+    async def patched_insert(dto):
+        raise UniqueConstraintViolationError(
+            unique_fields={"box_id": str(box_id), "alias": "test_file"}
+        )
+
+    file_upload_dao.insert = patched_insert
+
+    with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
+        await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test_file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+            overwrite=False,
+        )
+
+    # First upload must be untouched and still in 'init'
+    upload = await file_upload_dao.get_by_id(file_id_1)
+    assert upload.state == state
+
+
 @pytest.mark.parametrize(
     "max_size, pre_existing_sizes, expect_error",
     [

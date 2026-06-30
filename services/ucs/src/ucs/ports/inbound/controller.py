@@ -255,7 +255,7 @@ class UploadControllerPort(ABC):
         """Raised when pagination parameters, such as skip and limit, are invalid"""
 
     @abstractmethod
-    async def initiate_file_upload(
+    async def initiate_file_upload(  # noqa: PLR0913
         self,
         *,
         box_id: UUID4,
@@ -263,17 +263,24 @@ class UploadControllerPort(ABC):
         decrypted_size: int,
         encrypted_size: int,
         part_size: int,
+        overwrite: bool = False,
     ) -> tuple[UUID4, str]:
         """Initialize a new multipart upload.
 
         Returns the file ID and storage alias as a 2-tuple.
+
+        If `overwrite` is True and an active FileUpload (in 'init' or 'inbox' state)
+        already exists for this alias, it will be cancelled/aborted before the new
+        upload is created. Uploads in 'interrogated', 'awaiting_archival', or 'archived'
+        state cannot be overwritten and will still raise `FileUploadAlreadyExists`.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
         - `BoxMaxSizeExceededError` if adding the file would exceed the box's size limit.
         - `TooManyOpenUploadsError` if the box is already at the concurrent upload limit.
-        - `FileUploadAlreadyExists` if there's already a FileUpload for this alias.
+        - `FileUploadAlreadyExists` if there's already a FileUpload for this alias that
+            cannot be overwritten.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAlreadyInProgressError` if an upload is already in progress.
         - `PartSizeError` if the specified part size would results in more

@@ -402,6 +402,7 @@ async def create_file_upload(  # noqa: C901
             decrypted_size=file_upload_creation.decrypted_size,
             encrypted_size=file_upload_creation.encrypted_size,
             part_size=file_upload_creation.part_size,
+            overwrite=file_upload_creation.overwrite,
         )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error

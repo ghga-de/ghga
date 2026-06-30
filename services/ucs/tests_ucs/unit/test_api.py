@@ -322,6 +322,40 @@ async def test_create_file_upload_endpoint_auth(
     }
 
 
+@pytest.mark.parametrize("overwrite", [True, False])
+async def test_create_file_upload_passes_overwrite_to_core(
+    config: ConfigFixture, app_fixture: AppFixture, overwrite: bool
+):
+    """Test that the overwrite field from the request body is forwarded to the core."""
+    wps_jwk = config.wps_jwk
+    core_mock = app_fixture.core_mock
+    core_mock.initiate_file_upload.return_value = (TEST_FILE_ID, "HD01")
+
+    body = {
+        "alias": "test_file",
+        "decrypted_size": utils.DECRYPTED_SIZE,
+        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "part_size": utils.PART_SIZE,
+        "overwrite": overwrite,
+    }
+    good_token_header = utils.create_file_token_header(
+        box_id=TEST_BOX_ID, alias="test_file", jwk=wps_jwk
+    )
+    response = await app_fixture.rest_client.post(
+        f"/boxes/{TEST_BOX_ID}/uploads", json=body, headers=good_token_header
+    )
+    assert response.status_code == 201
+
+    core_mock.initiate_file_upload.assert_called_once_with(
+        box_id=TEST_BOX_ID,
+        alias="test_file",
+        decrypted_size=utils.DECRYPTED_SIZE,
+        encrypted_size=utils.ENCRYPTED_SIZE,
+        part_size=utils.PART_SIZE,
+        overwrite=overwrite,
+    )
+
+
 async def test_get_file_part_upload_url_endpoint_auth(
     config: ConfigFixture, app_fixture: AppFixture
 ):
