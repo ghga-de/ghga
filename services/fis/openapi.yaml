@@ -1,0 +1,316 @@
+components:
+  schemas:
+    BaseFileInformation:
+      description: Basic file information - all that is needed for interrogation.
+      properties:
+        bucket_id:
+          description: The name of the bucket where the file is currently stored
+          title: Bucket Id
+          type: string
+        decrypted_sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: SHA-256 checksum of the entire unencrypted file content. This
+            will be None when the FileUpload is still in the init state.
+          title: Decrypted Sha256
+        decrypted_size:
+          description: The size of the unencrypted file
+          title: Decrypted Size
+          type: integer
+        encrypted_size:
+          description: The encrypted size of the file before re-encryption
+          title: Encrypted Size
+          type: integer
+        id:
+          description: Unique identifier for the file upload
+          format: uuid4
+          title: Id
+          type: string
+        object_id:
+          description: The ID of the file specific to its S3 bucket.
+          format: uuid4
+          title: Object Id
+          type: string
+        part_size:
+          description: The number of bytes in each file part (last part is likely
+            smaller)
+          title: Part Size
+          type: integer
+        storage_alias:
+          description: The storage alias of the Data Hub housing the file
+          title: Storage Alias
+          type: string
+      required:
+      - id
+      - storage_alias
+      - bucket_id
+      - object_id
+      - decrypted_size
+      - encrypted_size
+      - part_size
+      title: BaseFileInformation
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    InterrogationReportWithSecret:
+      description: 'An InterrogationReport which might contain the file encryption
+        secret.
+
+
+        This is the model expected by the HTTP API.'
+      properties:
+        bucket_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The name of the interrogation bucket the file is stored in,
+            if the interrogation was successful
+          title: Bucket Id
+        encrypted_parts_md5:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Conditional upon success
+          title: Encrypted Parts Md5
+        encrypted_parts_sha256:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Conditional upon success
+          title: Encrypted Parts Sha256
+        encrypted_size:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: The size of the encrypted file content without envelope, if
+            interrogation is successful.
+          title: Encrypted Size
+        file_id:
+          description: Unique identifier for the file upload
+          format: uuid4
+          title: File Id
+          type: string
+        interrogated_at:
+          description: Timestamp showing when interrogation finished
+          format: date-time
+          title: Interrogated At
+          type: string
+        object_id:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: The ID of the file specific to its S3 bucket, if the interrogation
+            was successful.
+          title: Object Id
+        passed:
+          description: Whether the interrogation was a success
+          title: Passed
+          type: boolean
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Conditional upon failure, contains reason for failure
+          title: Reason
+        secret:
+          anyOf:
+          - contentMediaType: application/octet-stream
+            format: password
+            type: string
+            writeOnly: true
+          - type: 'null'
+          description: Encrypted file encryption secret
+          title: Secret
+        storage_alias:
+          description: The storage alias of the Data Hub housing the file
+          title: Storage Alias
+          type: string
+      required:
+      - file_id
+      - storage_alias
+      - interrogated_at
+      - passed
+      title: InterrogationReportWithSecret
+      type: object
+    ValidationError:
+      properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
+info:
+  description: A service to liaise between Central File Services and Data Hubs for
+    file inspection.
+  title: File Ingest Service
+  version: 11.3.1
+openapi: 3.1.0
+paths:
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - FileIngestService
+  /storages/{storage_alias}/interrogation-reports:
+    post:
+      description: Post an InterrogationReport
+      operationId: postInterrogationReport
+      parameters:
+      - in: path
+        name: storage_alias
+        required: true
+        schema:
+          title: Storage Alias
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterrogationReportWithSecret'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '404':
+          description: No such file exists
+        '409':
+          description: Report conflicts with database
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Accepts an InterrogationReport for a file
+      tags:
+      - FileIngestService
+  /storages/{storage_alias}/uploads:
+    get:
+      description: Return a list of not-yet-interrogated files for a Data Hub (storage_alias)
+      operationId: listUploads
+      parameters:
+      - in: path
+        name: storage_alias
+        required: true
+        schema:
+          title: Storage Alias
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/BaseFileInformation'
+                title: Response Listuploads
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Serve a list of new file uploads (yet to be interrogated)
+      tags:
+      - FileIngestService
+  /storages/{storage_alias}/uploads/can_remove:
+    post:
+      description: 'Returns a subset of the provided object ID list containing the
+        IDs of all S3
+
+        objects which may be now removed from the interrogation bucket.'
+      operationId: getRemovableFiles
+      parameters:
+      - in: path
+        name: storage_alias
+        required: true
+        schema:
+          title: Storage Alias
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              items:
+                format: uuid4
+                type: string
+              title: Object Ids
+              type: array
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  format: uuid4
+                  type: string
+                title: Response Getremovablefiles
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Returns a list of IDs indicating which objects can be removed from
+        the interrogation bucket
+      tags:
+      - FileIngestService
+tags:
+- name: FileIngestService
