@@ -1,0 +1,55 @@
+db_name: dev_db
+db_version_collection: nsDbVersions
+email_notification_type: email_notification
+from_address: test@test.com
+generate_correlation_id: true
+html_email_template: '<!DOCTYPE html><html><head></head><body style="color: #00393f;padding:
+  12px;"><h2>Dear $recipient_name,</h2><p>$plaintext_body</p><p>Warm regards,</p><h3>The
+  GHGA Team</h3></body></html>'
+kafka_compression_type: null
+kafka_dlq_topic: dlq
+kafka_enable_dlq: true
+kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+log_traceback: true
+lox24_auth_token_header: X-LOX24-AUTH-TOKEN
+lox24_base_url: https://api.lox24.eu/
+lox24_send_sms_path: sms
+lox24_sender_id: GHGA
+lox24_timeout: 10.0
+lox24_token: ''
+migration_max_wait_sec: null
+migration_wait_sec: 10
+mongo_dsn: '**********'
+mongo_timeout: null
+notification_topic: notifications
+plaintext_email_template: 'Dear $recipient_name,
+
+
+  $plaintext_body
+
+
+  Warm regards,
+
+
+  The GHGA Team'
+service_instance_id: '001'
+service_name: ns
+sms_notification_type: sms_notification
+smtp_auth:
+  password: '**********'
+  username: test@test.com
+smtp_host: 127.0.0.1
+smtp_port: 587
+smtp_timeout: 60.0
+use_starttls: false
