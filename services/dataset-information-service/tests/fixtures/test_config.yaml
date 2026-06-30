@@ -1,0 +1,17 @@
+service_name: dins
+
+service_instance_id: '1'
+kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: True
+
+mongo_dsn: "mongodb://mongodb:27017"
+db_name: "dev"
+
+dataset_change_topic: metadata-datasets
+dataset_deletion_type: dataset_deleted
+dataset_upsertion_type: dataset_created
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
+file_internally_registered_topic: internal_file_registry
+file_internally_registered_type: file_registered
+accession_map_topic: file-accession-mappings
