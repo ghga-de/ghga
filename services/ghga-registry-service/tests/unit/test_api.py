@@ -248,6 +248,19 @@ async def test_update_research_data_upload_box(
         )
         assert response.status_code == 404
 
+        # handle title collision / 409
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (
+            RDUBManagerPort.BoxTitleExistsError()
+        )
+        response = await rest_client.patch(
+            url, json=request_data, headers=user_auth_headers
+        )
+        assert response.status_code == 409
+        assert response.json()["description"] == (
+            "A ResearchDataUploadBox with the title 'Updated Title' already exists."
+        )
+
         # handle version error from core
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (

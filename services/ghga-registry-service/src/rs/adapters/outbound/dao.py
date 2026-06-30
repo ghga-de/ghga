@@ -113,7 +113,7 @@ async def get_box_dao(
         event_topic=config.research_data_upload_box_topic,
         indexes=[
             MongoDbIndex(fields="file_upload_box_id"),
-            MongoDbIndex(fields="title"),
+            MongoDbIndex(fields="title", properties={"unique": True}),
         ],
     )
 

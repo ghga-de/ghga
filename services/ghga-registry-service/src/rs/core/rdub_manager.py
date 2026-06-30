@@ -22,7 +22,11 @@ from uuid import UUID
 
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
+from hexkit.protocols.dao import (
+    NoHitsFoundError,
+    ResourceNotFoundError,
+    UniqueConstraintViolationError,
+)
 from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4, PositiveInt
 
@@ -95,7 +99,8 @@ class RDUBManager(RDUBManagerPort):
             OperationError: If there's a problem creating a corresponding FileUploadBox.
         """
         # Title uniqueness check is done this way instead of via unique index to avoid
-        #  chicken-egg problem with dependent FUB-RDUB creation
+        # Title uniqueness is checked upfront instead of relying on the unique index to avoid
+        # chicken-egg problem with dependent FUB-RDUB creation
         if [x async for x in self._box_dao.find_all(mapping={"title": title})]:
             log.error(
                 "ResearchDataUploadBox creation failed because a box with the title %s"
@@ -125,7 +130,24 @@ class RDUBManager(RDUBManagerPort):
         )
 
         # Store in repository & create audit record
-        await self._box_dao.insert(box)
+        try:
+            await self._box_dao.insert(box)
+        except UniqueConstraintViolationError as err:
+            log.error(
+                "ResearchDataUploadBox creation failed because a box with the title %s"
+                + " already exists. FileUploadBox was already created - will attempt cleanup.",
+                title,
+                extra={"title": title, "fub_id": file_upload_box_id},
+            )
+
+            await self._file_upload_box_client.delete_file_upload_box(
+                box_id=file_upload_box_id, version=0
+            )
+            log.info(
+                "Cleanup complete - FileUploadBox %s was deleted.", file_upload_box_id
+            )
+            raise self.BoxTitleExistsError() from err
+
         await self._audit_repository.log_box_created(box=box, user_id=data_steward_id)
         return box.id
 
@@ -339,7 +361,10 @@ class RDUBManager(RDUBManagerPort):
         user_id: UUID,
     ) -> None:
         """Persist a title/description-only change and write the audit record."""
-        await self._box_dao.update(updated_box)
+        try:
+            await self._box_dao.update(updated_box)
+        except UniqueConstraintViolationError as err:
+            raise self.BoxTitleExistsError() from err
         await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
 
     async def _apply_max_size_update(

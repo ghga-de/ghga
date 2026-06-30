@@ -948,7 +948,8 @@ paths:
         '404':
           description: Upload box not found.
         '409':
-          description: Update failed due to an outdated request or unmet prerequisites.
+          description: Update failed due to a title conflict, an outdated request,
+            or unmet prerequisites.
         '422':
           description: Validation error in request body.
       security:

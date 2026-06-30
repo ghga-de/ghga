@@ -24,7 +24,7 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 from ghga_service_commons.auth.context import AuthContext
-from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.utils import now_utc_ms_prec
 
@@ -168,6 +168,40 @@ async def test_create_research_data_upload_box(rig: JointRig):
     assert box.state == "open"
     assert box.file_upload_box_state == "open"
     assert box.max_size == TEST_MAX_SIZE
+
+
+async def test_create_research_data_upload_box_title_race_condition(rig: JointRig):
+    """Test that a UniqueConstraintViolationError on insert (race condition) raises
+    BoxTitleExistsError and cleans up the already-created FileUploadBox.
+    """
+    fub_id_holder: list[UUID] = []
+
+    async def capture_fub_id(*args, **kwargs) -> UUID:
+        fub_id = uuid4()
+        fub_id_holder.append(fub_id)
+        return fub_id
+
+    rig.file_upload_box_client.create_file_upload_box = capture_fub_id  # type: ignore
+    rig.box_dao.insert = AsyncMock(  # type: ignore
+        side_effect=UniqueConstraintViolationError(unique_fields={"title": "Race Box"})
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxTitleExistsError):
+        await rig.rdub_manager.create_research_data_upload_box(
+            title="Race Box",
+            description="Created concurrently",
+            storage_alias="HD01",
+            data_steward_id=TEST_DS_ID,
+            max_size=TEST_MAX_SIZE,
+        )
+
+    # The FUB that was created before the insert failure must be deleted
+    rig.file_upload_box_client.delete_file_upload_box.assert_called_once_with(  # type: ignore
+        box_id=fub_id_holder[0], version=0
+    )
+
+    # No audit record should have been written
+    rig.rdub_manager._audit_repository.log_box_created.assert_not_called()  # type: ignore
 
 
 async def test_update_research_data_upload_box_happy(
@@ -331,6 +365,32 @@ async def test_update_research_data_upload_box_not_found(rig: JointRig):
             version=0,
             title="Updated Title",
             description="Updated Description",
+            state=None,
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
+async def test_update_research_data_upload_box_title_exists(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a UniqueConstraintViolationError from the DAO is re-raised as
+    BoxTitleExistsError when updating a box title to a value already in use.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    rig.box_dao.update = AsyncMock(  # type: ignore
+        side_effect=UniqueConstraintViolationError(
+            unique_fields={"title": "Taken Title"}
+        )
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxTitleExistsError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title="Taken Title",
+            description=None,
             state=None,
             auth_context=DATA_STEWARD_AUTH_CONTEXT,
         )

@@ -160,7 +160,7 @@ async def delete_research_data_upload_box(
         403: {"description": "Not authorized."},
         404: {"description": "Upload box not found."},
         409: {
-            "description": "Update failed due to an outdated request or unmet prerequisites."
+            "description": "Update failed due to a title conflict, an outdated request, or unmet prerequisites."
         },
         422: {"description": "Validation error in request body."},
     },
@@ -188,6 +188,8 @@ async def update_research_data_upload_box(
         raise HttpNotAuthorizedError() from err
     except RDUBManagerPort.BoxNotFoundError as err:
         raise HttpBoxNotFoundError(box_id=box_id) from err
+    except RDUBManagerPort.BoxTitleExistsError as err:
+        raise HttpBoxTitleExistsError(title=request.title or "") from err
     except RDUBManagerPort.BoxVersionError as err:
         raise HttpBoxVersionError() from err
     except RDUBManagerPort.BoxIncompleteUploadsError as err:
