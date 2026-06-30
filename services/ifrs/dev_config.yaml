@@ -1,0 +1,37 @@
+mongo_dsn: "mongodb://mongodb:27017"
+db_name: "dev"
+object_storages:
+  HD01:
+    bucket: permanent
+    credentials:
+      s3_endpoint_url: http://ifrs:4566
+      s3_access_key_id: test
+      s3_secret_access_key: test
+  TUE01:
+    bucket: permanent
+    credentials:
+      s3_endpoint_url: http://ifrs:4566
+      s3_access_key_id: test
+      s3_secret_access_key: test
+  KL01:
+    bucket: permanent
+    credentials:
+      s3_endpoint_url: http://ifrs:4566
+      s3_access_key_id: test
+      s3_secret_access_key: test
+service_instance_id: "001"
+kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: True
+files_to_stage_topic: file-downloads
+files_to_stage_type: file_staging_requested
+file_deletion_request_topic: file-deletion-requests
+file_deletion_request_type: file_deletion_requested
+file_internally_registered_topic: internal-file-registry
+file_internally_registered_type: file_registered
+file_staged_topic: file-stagings
+file_staged_type: file_staged_for_download
+file_deleted_topic: file-deletions
+file_deleted_type: file_deleted
+file_upload_topic: file-uploads
+migration_wait_sec: 10
+db_version_collection: ifrsDbVersions
