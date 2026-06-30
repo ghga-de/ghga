@@ -1,0 +1,21 @@
+[project]
+name = "archive_test_bed"
+version = "22.0.0+2026-04-02"
+description = "GHGA Archive Test Bed"
+readme = "README.md"
+authors = [
+    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+]
+requires-python = ">=3.12"
+license = { text = "Apache 2.0" }
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Software Development :: Testing",
+    "Intended Audience :: Developers",
+]
+
+[project.urls]
+Repository = "https://github.com/ghga-de/archive-test-bed"

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Git Changes</title>
+
+    <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.0/css/dataTables.dataTables.css" />
+
+    <script src="https://cdn.datatables.net/2.0.0/js/dataTables.js"></script>
+
+    <style>
+        @font-face {
+            font-family: 'Roboto Mono';
+            src: url('RobotoMono.ttf') format('ttf')
+        }
+        #changesTable {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 8pt;
+        }
+        .modified {
+            background-color: orange;
+        }
+    </style>
+</head>
+<body>
+    <label>
+        <input type="checkbox" id="ghgaServicesCheckbox"> Show GHGA Services Only
+    </label>
+
+    <table id="changesTable" class="display">
+        <thead>
+            <tr>
+                <th class="static">Date and Time</th>
+                <th class="static">Commit Hash</th>
+                <th class="static">Tags</th>
+                <!-- Service name columns will be added dynamically -->
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Table rows will be added dynamically -->
+        </tbody>
+    </table>
+
+    <script>
+        const url = './data.json';
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const table = document.getElementById('changesTable');
+                const tbody = table.tBodies[0];
+
+                // Get all unique service names
+                const serviceNames = [...new Set(data.flatMap(d => d.services.map(s => s.name)))];
+
+                // Add a column for each service name
+                const tr = table.tHead.rows[0];
+                serviceNames.forEach(name => {
+                    const th = document.createElement('th');
+                    th.textContent = name;
+                    tr.appendChild(th);
+                });
+
+                // Add a row for each commit
+                data.forEach(commit => {
+                    const tr = document.createElement('tr');
+
+                    // Add cells for the date and time, commit hash, and tags
+                    let [date, time] = commit.commit_date.split(' ');
+                    let formattedDate = `${date}<br>${time}`;
+                    let shortHash = commit.commit_hash.substring(0, 7);
+                    let githubLink = `https://github.com/ghga-de/archive-test-bed/commit/${commit.commit_hash}`;
+                    let linkedHash = `<a href="${githubLink}" target="_blank">${shortHash}</a>`;
+                    [formattedDate, linkedHash].forEach(text => {
+                        const td = document.createElement('td');
+                        td.innerHTML = text; // Use innerHTML instead of textContent to parse the <br> tag and the <a> tag
+                        tr.appendChild(td);
+                    });
+
+                    // Create a cell for the tags
+                    const td = document.createElement('td');
+                    td.innerHTML = commit.tags.map(tag => {
+                        let githubLink = `https://github.com/ghga-de/archive-test-bed/releases/tag/${tag}`;
+                        return `<a href="${githubLink}" target="_blank">${tag}</a>`;
+                    }).join(', ');
+                    tr.appendChild(td);
+
+                    // Add a cell for each service
+                    serviceNames.forEach(name => {
+                        const td = document.createElement('td');
+                        const service = commit.services.find(s => s.name === name);
+                        if (service) {
+                            let dockerHubLink = `https://hub.docker.com/r/${service.image}/tags?page=1&ordering=last_updated&name=${service.tag}`;
+                            td.innerHTML = `<a href="${dockerHubLink}" target="_blank">${service.image}<br>${service.tag}</a>`;
+                            if (service.image.includes('ghga')) {
+                                const th = table.tHead.rows[0].cells[serviceNames.indexOf(name) + 3]; // Get the corresponding header cell
+                                th.classList.add('ghga-service'); // Add the 'ghga-service' class to the header cell
+                            }
+                            if (service.modified) {
+                                td.classList.add('modified'); // Add the 'modified' class if the service was modified
+                            }
+                        }
+                        tr.appendChild(td);
+                    });
+
+                    tbody.appendChild(tr);
+                });
+
+                // Initialize DataTables with the initial sorting order
+                const dataTable = $('#changesTable').DataTable({
+                    paging: false, // Disable pagination
+                    order: [[0, 'desc']] // Sort by the first column (date and time) in descending order
+                });
+
+                // Add event listener to the checkbox
+                const ghgaServicesCheckbox = document.getElementById('ghgaServicesCheckbox');
+                ghgaServicesCheckbox.addEventListener('change', () => {
+                    if (ghgaServicesCheckbox.checked) {
+                        dataTable.columns().visible(false); // Hide all columns
+                        dataTable.columns('.ghga-service').visible(true); // Show GHGA service columns
+                        dataTable.columns('.static').visible(true); // Show GHGA service columns
+                    } else {
+                        dataTable.columns().visible(true); // Show all columns
+                    }
+                });
+
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Utilities used in step functions"""
+
+import json
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from fixtures import Config, JointFixture, MongoFixture, Response
+from fixtures.config import S3StorageConfig
+from fixtures.state import StateStorage
+from fixtures.utils import write_data_to_yaml
+from ghga_datasteward_kit.file_ingest import IngestConfig
+from ghga_datasteward_kit.loading import LoadConfig
+from hexkit.providers.s3.testutils import FileObject
+from pydantic import BaseModel, EmailStr
+from pytest_bdd import parsers
+
+parse: type[parsers.StepParser] = parsers.parse  # pylint: disable=invalid-name
+
+DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
+DATASET_SEARCH_RESULT_KEYS = {"accession", "title", "ega_accession", "alias"}
+FILE_OVERVIEW_KEYS = {
+    "accession",
+    "checksum",
+    "checksum_type",
+    "format",
+    "name",
+    "size",
+}
+EXPECTED_NOTIFICATIONS = {
+    "access_request_created": "New Data Access Request by John Doe",
+    "access_request_allowed": "Access Request for John Doe has been approved",
+    "access_request_registered": "Your data download access request has been registered",
+    "access_request_accepted": "Your data download access request has been accepted",
+    "access_request_denied": "Your data download access request has been rejected",
+    "account_details_changed": "Account Details Changed",
+    "second_factor_recreated": "2FA Setup Recreated",
+    "iva_code_requested": "IVA Request Received",
+    "iva_verification_requested": "Contact Address Verification Request Received",
+    "iva_code_transmitted": "Contact Address Verification Code Transmitted",
+}
+
+IVA_TYPE_NAMES = {
+    "Phone": "SMS",
+    "InPerson": "In Person",
+    "PostalAddress": "PostalAddress",
+}
+
+ADMIN_PAGES = {
+    "Access Request Manager": ["access-request-manager", "Access Request Management"],
+    "Access Grant Manager": ["access-grant-manager", ""],
+    "IVA Manager": ["iva-manager", ""],
+    "User Manager": ["user-manager", ""],
+}
+
+
+class Notification(BaseModel):
+    """A container for email notification data."""
+
+    id: str
+    sender: EmailStr
+    receiver: EmailStr
+    created_time: datetime
+    subject: str
+    body_text: str
+
+    def is_recent(self, seconds: int = 30) -> bool:
+        """Check if the notification is recent"""
+        return abs((datetime.now(UTC) - self.created_time).seconds) <= seconds
+
+
+def ingest_config_as_file(config: IngestConfig):
+    """Create upload config file for data steward kit files ingest-upload-metadata"""
+    ingest_config = {
+        "file_ingest_baseurl": config.file_ingest_baseurl,
+        "file_ingest_pubkey": config.file_ingest_pubkey,
+        "submission_store_dir": str(config.submission_store_dir),
+        "input_dir": str(config.input_dir),
+        "map_files_fields": config.map_files_fields,
+        "selected_storage_alias": config.selected_storage_alias,
+        "fallback_bucket_id": config.fallback_bucket_id,
+        "wkvs_api_url": config.wkvs_api_url,
+    }
+
+    return write_data_to_yaml(data=ingest_config)
+
+
+def load_config_as_file(config: LoadConfig):
+    """Create upload config file for data steward kit files load"""
+    load_config = {
+        "event_store_path": str(config.event_store_path),
+        "artifact_topic_prefix": config.artifact_topic_prefix,
+        "artifact_types": config.artifact_types,
+        "loader_api_root": config.loader_api_root,
+        "publishable_artifacts": config.publishable_artifacts,
+    }
+
+    return write_data_to_yaml(data=load_config)
+
+
+def upload_config_as_file(
+    config: Config, file_metadata_dir: Path, storage_config: S3StorageConfig
+):
+    """Create upload config file for data steward kit files upload"""
+    s3_access_key_id = storage_config.credentials.s3_access_key_id
+    s3_secret_access_key = (
+        storage_config.credentials.s3_secret_access_key.get_secret_value()
+    )
+    storage_alias = storage_config.storage_alias
+    upload_config = {
+        "part_size": str(config.upload_part_size),
+        "object_storages": {
+            storage_alias: {
+                "bucket_id": storage_config.buckets.staging,
+                "credentials": {
+                    "s3_access_key_id": s3_access_key_id,
+                    "s3_secret_access_key": s3_secret_access_key,
+                },
+            }
+        },
+        "selected_storage_alias": storage_alias,
+        "output_dir": str(file_metadata_dir),
+        "secret_ingest_baseurl": config.fis_url,
+        "secret_ingest_pubkey": config.fis_pubkey,
+    }
+    if config.wkvs_url:
+        upload_config["wkvs_api_url"] = config.wkvs_url
+
+    return write_data_to_yaml(data=upload_config)
+
+
+def get_ext_char(file_path: Path):
+    """Get file path and return first character of the extension"""
+    first_char = " "
+    if file_path.suffixes:
+        first_char = file_path.suffixes[0].strip(".")[0]
+    return first_char
+
+
+def verify_named_file(
+    target_dir: Path,
+    name: str,
+    extension: str,
+    encrypted=False,
+    alias: str | None = None,
+) -> None:
+    """Verify a file with given parameters"""
+    file_path = target_dir
+    name += extension
+    if encrypted:
+        name += ".c4gh"
+
+    matching = [path for path in file_path.iterdir() if path.name == name]
+    assert len(matching) == 1, f"File {name} was not found"
+
+    if not encrypted:
+        file_path = matching[0]
+
+        if alias:
+            # Note: We do not store or verify checksums for original files.
+            # However, we still need to test that the correct files are downloaded.
+            with open(file_path) as file:
+                first_line = next(file).rstrip()
+            # The first line containing file alias might be truncated by test file size.
+            # Therefore, we check if it is a prefix of the alias.
+            assert alias.startswith(first_line)
+
+
+def search_dataset(  # noqa: C901
+    fixtures: JointFixture,
+    query: str | None = None,
+    filters: Mapping[str, str | int | list[str | int]] | None = None,
+    sorts: Mapping[str, str] | None = None,
+    limit: int | None = None,
+    skip: int | None = None,
+    class_name: str = "EmbeddedDataset",
+) -> Response:
+    """Send a search request to the metadata artifact search service."""
+    params: dict[str, str | int | list[str | int]] = {"class_name": class_name}
+    if query:
+        params["query"] = query
+    if limit:
+        params["limit"] = limit
+    if skip is not None:
+        params["skip"] = skip
+    if filters:
+        filter_by: Any = []
+        value: Any = []
+        for filter_key, filter_values in filters.items():
+            if not isinstance(filter_values, list):
+                filter_values = [filter_values]
+            for filter_value in filter_values:
+                filter_by.append(filter_key)
+                value.append(filter_value)
+        if len(value) == 1:
+            filter_by = filter_by[0]
+            value = value[0]
+        params["filter_by"] = filter_by
+        params["value"] = value
+    if sorts:
+        order_by: Any = list(sorts)
+        sort: Any = list(sorts.values())
+        if len(order_by) == 1:
+            order_by = order_by[0]
+            sort = sort[0]
+        params["order_by"] = order_by
+        params["sort"] = sort
+    url = f"{fixtures.config.mass_url}/search"
+    return fixtures.http.get(url, params=params)
+
+
+def get_dataset_overview(content: dict) -> dict:
+    """Condense a dataset content dict to a dataset overview dict."""
+    simplified = {}
+    files = {}
+    for key, value in content.items():
+        if key in DATASET_OVERVIEW_KEYS:
+            simplified[key] = value
+        elif key.endswith("_files"):
+            for file_ in value:
+                alias = file_.pop("alias")
+                files[alias] = {
+                    key: value
+                    for key, value in file_.items()
+                    if key in FILE_OVERVIEW_KEYS
+                }
+    simplified["files"] = files
+    return simplified
+
+
+def get_dataset_search_summary(content: dict) -> dict:
+    """Condense a dataset content dict to a dataset search summary dict."""
+    return {
+        key: value
+        for key, value in content.items()
+        if key in DATASET_SEARCH_RESULT_KEYS
+    }
+
+
+def get_secret_ids(file_metadata_dir: Path, file_objects: list[FileObject]) -> set[str]:
+    """Returns secret ids of the ingested files using their file metadata"""
+    secret_ids = set()
+    for file_object in file_objects:
+        metadata_file_path = file_metadata_dir / f"{file_object.object_id}.json"
+        secret_id = json.loads(metadata_file_path.read_text())[
+            "Symmetric file encryption secret ID"
+        ]
+        secret_ids.add(secret_id)
+    return secret_ids
+
+
+def parse_notifications(raw_data: dict) -> list[Notification]:
+    """Parse Email data from Mailhog into a sorted list of Notification instances."""
+    return [
+        Notification(
+            id=item["ID"],
+            sender=item["Raw"]["From"],
+            receiver=item["Raw"]["To"][0],
+            created_time=datetime.fromisoformat(item["Created"]),
+            subject=item["Content"]["Headers"]["Subject"][0],
+            body_text=item["Content"]["Body"].split("--", 1)[0].strip(),
+        )
+        for item in sorted(raw_data["items"], key=lambda x: x["Created"], reverse=True)
+    ]
+
+
+def reset_user_token_counter(sub: str, fixtures: JointFixture) -> None:
+    """Forget the previous TOTP logins for the user with the given sub.
+
+    This allows logging in again with the same TOTP counter.
+    """
+    config, mongo = fixtures.config, fixtures.mongo
+
+    user = mongo.find_document(
+        config.ums_db_name,
+        config.ums_users_collection,
+        query={"ext_id": sub},
+    )
+    if not user:
+        return  # user did not registered so far
+
+    user_id = user["_id"]
+    assert user_id
+
+    user_token_document = mongo.find_document(
+        config.ums_db_name,
+        config.ums_user_tokens_collection,
+        query={"_id": user_id},
+    )
+    if not user_token_document:
+        return  # user did not create a TOTP token so far
+
+    totp_token = user_token_document["totp_token"]
+    assert {"last_counter", "counter_attempts", "total_attempts"}.issubset(totp_token)
+    totp_token.update({"last_counter": -1, "counter_attempts": -1, "total_attempts": 0})
+
+    # Update the TOTP token counter directly in the database
+    mongo.upsert_document(
+        config.ums_db_name, config.ums_user_tokens_collection, user_token_document
+    )
+
+    # Wait until the update really has been written to the database
+    document = mongo.wait_for_document(
+        config.ums_db_name,
+        config.ums_user_tokens_collection,
+        query={"_id": user_id, "totp_token": totp_token},
+        timeout=1,
+    )
+    assert document
+
+
+def get_alias_from_ega_accession(state: StateStorage, ega_accession):
+    dataset_accessions = state.get_state("dataset_accessions")
+    ega_acc_to_alias = {
+        d["ega_accession"]: alias for alias, d in dataset_accessions.items()
+    }
+    return ega_acc_to_alias[ega_accession]

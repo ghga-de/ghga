@@ -1,0 +1,132 @@
+# Copyright 2021 - 2024 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Step definitions for examining metadata artifacts in the frontend"""
+
+from .conftest import Config, HttpClient, Response, parse, scenarios, then, when
+
+scenarios("../features/310_artifact_info.feature")
+
+
+@when("I request info on all available artifacts", target_fixture="response")
+def request_info_on_artifacts(config: Config, http: HttpClient):
+    url = f"{config.metldata_url}/artifacts"
+    return http.options(url)
+
+
+@then("I get the expected info on all the artifacts")
+def check_artifacts(response: Response):
+    artifact_infos = response.json()
+    assert isinstance(artifact_infos, list)
+    assert len(artifact_infos) == 6
+    artifacts = {artifact["name"]: artifact for artifact in artifact_infos}
+    assert sorted(artifacts) == [
+        "added_accessions",
+        "embedded_public",
+        "embedded_restricted",
+        "resolved_public",
+        "resolved_restricted",
+        "stats_public",
+    ]
+    resolved_public_classes = artifacts["resolved_public"]["resource_classes"]
+    assert "Dataset" in resolved_public_classes
+    assert "EmbeddedDataset" not in resolved_public_classes
+    assert len(resolved_public_classes) == 16
+    embedded_public_classes = artifacts["embedded_public"]["resource_classes"]
+    assert set(resolved_public_classes).issubset(embedded_public_classes)
+    assert "EmbeddedDataset" in embedded_public_classes
+    stats_public_classes = artifacts["stats_public"]["resource_classes"]
+    assert "DatasetStats" in stats_public_classes
+    added_accessions = artifacts["added_accessions"]["resource_classes"]
+    assert sorted(added_accessions.keys()) == [
+        "Analysis",
+        "AnalysisMethod",
+        "AnalysisMethodSupportingFile",
+        "DataAccessCommittee",
+        "DataAccessPolicy",
+        "Dataset",
+        "Experiment",
+        "ExperimentMethod",
+        "ExperimentMethodSupportingFile",
+        "Individual",
+        "IndividualSupportingFile",
+        "ProcessDataFile",
+        "Publication",
+        "ResearchDataFile",
+        "Sample",
+        "Study",
+    ]
+
+
+@when(
+    parse('I request info on the "{artifact_name}" artifact'), target_fixture="response"
+)
+def request_info_on_artifact(artifact_name: str, config: Config, http: HttpClient):
+    url = f"{config.metldata_url}/artifacts/{artifact_name}"
+    return http.options(url)
+
+
+@then(parse('I get the expected info on the "{artifact_name}" artifact'))
+def check_artifact(artifact_name: str, response: Response):
+    artifact_info = response.json()
+    assert isinstance(artifact_info, dict)
+    assert artifact_info["name"] == artifact_name
+    classes = artifact_info["resource_classes"]
+    num_additional_classes = 1 if artifact_name.startswith("embedded") else 0
+    assert len(classes) == 16 + num_additional_classes
+
+
+@when("I request info on the searchable classes", target_fixture="response")
+def request_info_on_searchable_classes(config: Config, http: HttpClient):
+    url = f"{config.mass_url}/search-options"
+    return http.get(url)
+
+
+@then("I get the expected info on the searchable classes")
+def check_searchable_classes(response: Response):
+    searchable_classes = response.json()
+    assert isinstance(searchable_classes, dict)
+    assert searchable_classes == {
+        "EmbeddedDataset": {
+            "description": "Dataset grouping files under controlled access",
+            "facetable_fields": [
+                {"key": "study.types", "name": "Study type"},
+                {
+                    "key": "experiment_methods.instrument_model",
+                    "name": "Platform",
+                },
+                {"key": "experiment_methods.type", "name": "Experiment"},
+                {
+                    "key": "experiment_methods.library_type",
+                    "name": "Analysis level",
+                },
+                {
+                    "key": "experiment_methods.sequencing_layout",
+                    "name": "Sequencing mode",
+                },
+                {"key": "individuals.diagnosis_terms", "name": "Diagnosis"},
+                {"key": "data_access_policy.alias", "name": "Access policy"},
+                {
+                    "key": "data_access_policy.data_access_committee.institute",
+                    "name": "Controller Institution",
+                },
+            ],
+            "selected_fields": [
+                {"key": "ega_accession", "name": "EGA accession"},
+                {"key": "title", "name": "Dataset title"},
+                {"key": "alias", "name": "Dataset alias"},
+            ],
+        }
+    }
