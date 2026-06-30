@@ -89,18 +89,21 @@ rewrite_for_row() {
   rm -rf "$rw"; mkdir -p "$RW_DIR"
   git clone -q "${SRC_CACHE}/${source}" "$rw"
 
+  # NB: git-filter-repo prints a "NOTICE: Removing 'origin' remote" line to STDOUT; this
+  # function returns $rw via stdout, so all filter-repo output must go to stderr (>&2),
+  # otherwise the NOTICE pollutes the captured return value.
   if [[ "$subpath" == "." ]]; then
     # Pass 1: drop centralised boilerplate (if any for this kind).
     local -a drops=(); mapfile -t drops < <(drop_paths_for_kind "$kind")
     if (( ${#drops[@]} )); then
       local -a args=(); local p; for p in "${drops[@]}"; do args+=(--path "$p"); done
-      git -C "$rw" filter-repo --invert-paths "${args[@]}" --force
+      git -C "$rw" filter-repo --invert-paths "${args[@]}" --force 1>&2
     fi
     # Pass 2: move everything into the destination subdir.
-    git -C "$rw" filter-repo --to-subdirectory-filter "$dest" --force
+    git -C "$rw" filter-repo --to-subdirectory-filter "$dest" --force 1>&2
   else
     # Partial import (file-services-backend): keep only the subtree, place at dest.
-    git -C "$rw" filter-repo --path "${subpath}/" --path-rename "${subpath}/:${dest}/" --force
+    git -C "$rw" filter-repo --path "${subpath}/" --path-rename "${subpath}/:${dest}/" --force 1>&2
   fi
   printf '%s\n' "$rw"
 }
