@@ -1,0 +1,7 @@
+host: 127.0.0.1
+port: 8080
+greeting: World
+cors_allowed_origins: ["*"]
+cors_allow_credentials: true
+cors_allowed_methods: ["*"]
+cors_allowed_headers: ["*"]
