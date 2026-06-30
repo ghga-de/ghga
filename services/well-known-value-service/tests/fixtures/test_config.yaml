@@ -1,0 +1,12 @@
+crypt4gh_public_keys:
+  HD01: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
+wps_api_url: http://127.0.0.1
+dcs_api_url: http://127.0.0.1/download
+ucs_api_url: http://127.0.0.1/upload
+storage_aliases:
+  storage1: http://127.0.0.1/object_storage_1
+  storage2: http://127.0.0.1/object_storage_2
+storage_labels:
+  storage1: Heidelberg
+  storage2: Tübingen
+service_instance_id: "001"

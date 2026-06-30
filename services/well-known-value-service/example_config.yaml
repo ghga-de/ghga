@@ -1,0 +1,30 @@
+api_root_path: ''
+auto_reload: false
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+cors_exposed_headers: null
+crypt4gh_public_keys:
+  HD01: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
+dcs_api_url: http://127.0.0.1/download
+docs_url: /docs
+generate_correlation_id: true
+host: 127.0.0.1
+log_format: null
+log_level: INFO
+log_traceback: true
+openapi_url: /openapi.json
+port: 8080
+service_instance_id: '001'
+service_name: wkvs
+storage_aliases:
+  storage1: http://127.0.0.1/object_storage_1
+  storage2: http://127.0.0.1/object_storage_2
+storage_labels:
+  storage1: Heidelberg
+  storage2: "T\xFCbingen"
+timeout_keep_alive: 90
+ucs_api_url: http://127.0.0.1/upload
+workers: 1
+wps_api_url: http://127.0.0.1
