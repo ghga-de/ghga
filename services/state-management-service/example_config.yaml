@@ -1,0 +1,66 @@
+allow_empty_prefix: false
+api_root_path: ''
+auto_reload: false
+cors_allow_credentials: null
+cors_allowed_headers: null
+cors_allowed_methods: null
+cors_allowed_origins: null
+cors_exposed_headers: null
+db_permissions:
+- '*.*:rw'
+db_prefix: test_
+docs_url: /docs
+generate_correlation_id: true
+host: 127.0.0.1
+kafka_compression_type: null
+kafka_dlq_topic: dlq
+kafka_enable_dlq: false
+kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+log_traceback: true
+mongo_dsn: '**********'
+mongo_timeout: null
+object_storages:
+  primary:
+    bucket: permanent
+    credentials:
+      aws_config_ini: null
+      s3_access_key_id: test
+      s3_endpoint_url: http://localstack:4566
+      s3_secret_access_key: '**********'
+      s3_session_token: null
+  secondary:
+    bucket: staging
+    credentials:
+      aws_config_ini: null
+      s3_access_key_id: test
+      s3_endpoint_url: http://localstack:4566
+      s3_secret_access_key: '**********'
+      s3_session_token: null
+openapi_url: /openapi.json
+port: 8080
+service_account_token_path: /var/run/secrets/kubernetes.io/serviceaccount/token
+service_instance_id: '1'
+service_name: sms
+timeout_keep_alive: 90
+token_hashes:
+- 7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e
+vault_auth_mount_point: null
+vault_kube_role: dummy-role
+vault_path: sms
+vault_role_id: '**********'
+vault_secret_id: '**********'
+vault_secrets_mount_point: secret
+vault_url: http://vault:8200
+vault_verify: true
+workers: 1
