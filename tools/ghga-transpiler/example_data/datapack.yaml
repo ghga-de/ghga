@@ -1,0 +1,1029 @@
+{
+  "datapack": "0.3.0",
+  "resources": {
+    "Analysis": {
+      "ANALYSIS_1": {
+        "content": {
+          "description": "Description of analysis 1",
+          "reference_chromosome": "chr6",
+          "reference_genome": "GRCh37",
+          "title": "Analysis 1 ",
+          "type": "Sequence Variation"
+        }
+      }
+    },
+    "AnalysisProcess": {
+      "ANALYSIS_PROCESS_1": {
+        "content": {
+          "name": "Process 1"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_1"
+          }
+        }
+      },
+      "ANALYSIS_PROCESS_2": {
+        "content": {
+          "name": "Process 2"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_2"
+          }
+        }
+      },
+      "ANALYSIS_PROCESS_3": {
+        "content": {
+          "name": "Process 3"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_3"
+          }
+        }
+      },
+      "ANALYSIS_PROCESS_4": {
+        "content": {
+          "name": "Process 4"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_4"
+          }
+        }
+      },
+      "ANALYSIS_PROCESS_5": {
+        "content": {
+          "name": "Process 5"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_5"
+          }
+        }
+      },
+      "ANALYSIS_PROCESS_6": {
+        "content": {
+          "name": "Process 6"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_6"
+          }
+        }
+      },
+      "ANALYSIS_PROCESS_7": {
+        "content": {
+          "name": "Process 7"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_7"
+          }
+        }
+      },
+      "ANALYSIS_PROCESS_8": {
+        "content": {
+          "name": "Process 8"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_8"
+          }
+        }
+      },
+      "ANALYSIS_PROCESS_9": {
+        "content": {
+          "name": "Process 9"
+        },
+        "relations": {
+          "analysis": {
+            "targetClass": "Analysis",
+            "targetResources": "ANALYSIS_1"
+          },
+          "sequencing_process_input_files": {
+            "targetClass": "SequencingProcessFile",
+            "targetResources": "SEQ_FILE_9"
+          }
+        }
+      }
+    },
+    "AnalysisProcessOutputFile": {
+      "OUTPUT_1": {
+        "content": {
+          "checksum": "730b8eb7322fd8b763cf3fcefbfea4488ad4c6af05c55f4945e8f2f43d16dc51",
+          "checksum_type": "SHA256",
+          "dataset": "DS_A",
+          "format": "VCF",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_1.vcf.gz",
+          "size": 15
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_1"
+          }
+        }
+      },
+      "OUTPUT_2": {
+        "content": {
+          "checksum": "f3e8f36baa79d33cca9c4dfa2bec12e57b7c8c4bb3d9c62600cb8773dad91393",
+          "checksum_type": "SHA256",
+          "dataset": "DS_A",
+          "format": "VCF",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_2.vcf.gz",
+          "size": 70
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_2"
+          }
+        }
+      },
+      "OUTPUT_3": {
+        "content": {
+          "checksum": "ac252bccd424089f2740ba6e23e22c72196b8b139029f908bb6b04e2343019b8",
+          "checksum_type": "SHA256",
+          "dataset": "DS_A",
+          "format": "VCF",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_3.vcf.gz",
+          "size": 501
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_3"
+          }
+        }
+      },
+      "OUTPUT_4": {
+        "content": {
+          "checksum": "29559d05b2dd3742b9900976b6b4e3e13c58fac738ae17226936d51cb547dbff",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_4.vcf.gz",
+          "size": 512
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_4"
+          }
+        }
+      },
+      "OUTPUT_5": {
+        "content": {
+          "checksum": "b0af5165569616345c348dbac24c93d2aed47410e3ab1628ab79d0d256d0d56e",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_5.vcf.gz",
+          "size": 970
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_5"
+          }
+        }
+      },
+      "OUTPUT_6": {
+        "content": {
+          "checksum": "a5a1244101c6c1a2abc2faa7a2dd940c509ec7cd2f6bf46ece7773868e9cd6bd",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_6.vcf.gz",
+          "size": 2048
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_6"
+          }
+        }
+      },
+      "OUTPUT_7": {
+        "content": {
+          "checksum": "097364ef8cd360f86098e860bf4250346307730537b48f6ccfed340042733b12",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_7.vcf.gz",
+          "size": 61441
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_7"
+          }
+        }
+      },
+      "OUTPUT_8": {
+        "content": {
+          "checksum": "c6e81f5832df721a07f76ecfcb18123368e8b1182b78043007fb202466b32d90",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_8.vcf.gz",
+          "size": 92161
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_8"
+          }
+        }
+      },
+      "OUTPUT_9": {
+        "content": {
+          "checksum": "e714adc1b1620e3391de0288d81e72e2878a51baf51d12c1e8d2d355ea7464c0",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_9.vcf.gz",
+          "size": 43009
+        },
+        "relations": {
+          "analysis_process": {
+            "targetClass": "AnalysisProcess",
+            "targetResources": "ANALYSIS_PROCESS_9"
+          }
+        }
+      }
+    },
+    "Biospecimen": {
+      "BIOSPECIMEN_1": {
+        "content": {
+          "age_at_sampling": "66_TO_70",
+          "description": "Blood biospecimen",
+          "isolation": "Arterial blood specimen",
+          "name": "Biospecmen material",
+          "storage": "REFRIGITATION_AT_4_DEGREE",
+          "tissue": "blood",
+          "type": "Blood"
+        },
+        "relations": {
+          "individual": {
+            "targetClass": "Individual",
+            "targetResources": "INDV_1"
+          }
+        }
+      },
+      "BIOSPECIMEN_2": {
+        "content": {
+          "age_at_sampling": "66_TO_70",
+          "description": "Subcutaneous fat biospecimen",
+          "isolation": "Biopsy of soft tissue\u00a0",
+          "name": "Another biospecimen material",
+          "storage": "REFRIGITATION_AT_4_DEGREE",
+          "tissue": "subcutaneous adipose tissue",
+          "type": "Subcutaneous fat"
+        },
+        "relations": {
+          "individual": {
+            "targetClass": "Individual",
+            "targetResources": "INDV_1"
+          }
+        }
+      }
+    },
+    "Condition": {
+      "COND_1": {
+        "content": {
+          "case_control_status": "TRUE_CASE_STATUS",
+          "description": "Condition A is a condition",
+          "disease_or_healthy": "DISEASE",
+          "mutant_or_wildtype": "MUTANT",
+          "name": "Condition A"
+        },
+        "relations": {
+          "study": {
+            "targetClass": "Study",
+            "targetResources": "STUDY_A"
+          }
+        }
+      },
+      "COND_2": {
+        "content": {
+          "case_control_status": "TRUE_CONTROL_STATUS",
+          "description": "Condition B is another condition",
+          "disease_or_healthy": "HEALTHY",
+          "mutant_or_wildtype": "WILDTYPE",
+          "name": "Condition B"
+        },
+        "relations": {
+          "study": {
+            "targetClass": "Study",
+            "targetResources": "STUDY_B"
+          }
+        }
+      }
+    },
+    "DataAccessCommittee": {
+      "DAC_1": {
+        "content": {
+          "email": "dac_institute_a@dac.dac",
+          "institute": "institute_a"
+        }
+      }
+    },
+    "DataAccessPolicy": {
+      "DAP_1": {
+        "content": {
+          "data_use_modifiers": [
+            "clinical care use"
+          ],
+          "data_use_permission": "DISEASE_SPECIFIC_RESEARCH",
+          "description": "A Data Access Policy 1",
+          "name": "DAP 1",
+          "policy_text": "This is a very permissible DAP",
+          "policy_url": "http://some/policy"
+        },
+        "relations": {
+          "data_access_committee": {
+            "targetClass": "DataAccessCommittee",
+            "targetResources": "DAC_1"
+          }
+        }
+      },
+      "DAP_2": {
+        "content": {
+          "data_use_modifiers": [
+            "user specific restriction"
+          ],
+          "data_use_permission": "NO_RESTRICTION",
+          "description": "A Data Access Policy 2",
+          "name": "DAP 2",
+          "policy_text": "This is a very strict DAP",
+          "policy_url": "http://some/other/policy"
+        },
+        "relations": {
+          "data_access_committee": {
+            "targetClass": "DataAccessCommittee",
+            "targetResources": "DAC_1"
+          }
+        }
+      }
+    },
+    "Dataset": {
+      "DS_A": {
+        "content": {
+          "description": "An interesting dataset A of complete example set",
+          "title": "The complete-A dataset",
+          "types": [
+            "A Type",
+            "Another Type"
+          ]
+        },
+        "relations": {
+          "data_access_policy": {
+            "targetClass": "DataAccessPolicy",
+            "targetResources": "DAP_1"
+          }
+        }
+      },
+      "DS_B": {
+        "content": {
+          "description": "An interesting dataset B of complete example set",
+          "title": "The complete-B dataset",
+          "types": [
+            "And another Type"
+          ]
+        },
+        "relations": {
+          "data_access_policy": {
+            "targetClass": "DataAccessPolicy",
+            "targetResources": "DAP_2"
+          }
+        }
+      }
+    },
+    "Individual": {
+      "INDV_1": {
+        "content": {
+          "ancestries": [
+            "European"
+          ],
+          "geographical_region": "Italy",
+          "karyotype": "OTHER",
+          "phenotypic_features": [
+            "Leukemia"
+          ],
+          "sex": "MALE_SEX_FOR_CLINICAL_USE"
+        }
+      },
+      "MOTHER_1": {
+        "content": {
+          "ancestries": [
+            "European"
+          ],
+          "geographical_region": "Italy",
+          "karyotype": "OTHER",
+          "phenotypic_features": [
+            "Leukemia"
+          ],
+          "sex": "FEMALE_SEX_FOR_CLINICAL_USE"
+        }
+      },
+      "FATHER_1": {
+        "content": {
+          "ancestries": [
+            "European"
+          ],
+          "geographical_region": "Italy",
+          "karyotype": "OTHER",
+          "phenotypic_features": [
+            "Leukemia"
+          ],
+          "sex": "MALE_SEX_FOR_CLINICAL_USE"
+        }
+      }
+    },
+    "LibraryPreparationProtocol": {
+      "LIB_PREP_1": {
+        "content": {
+          "description": "Sequence library is prepared like this. ",
+          "end_bias": "FULL_LENGTH",
+          "library_layout": "PE",
+          "library_name": "Library A",
+          "library_preparation": "PCR-amplification",
+          "library_preparation_kit_manufacturer": "Illumina",
+          "library_preparation_kit_retail_name": "ILLUMINA_TRU_SEQ_DNA",
+          "library_selection": "UNSPECIFIED",
+          "library_type": "WGS",
+          "primer": "GENE_SPECIFIC",
+          "target_regions": [
+            "chr6:123456-12345678"
+          ]
+        }
+      }
+    },
+    "Publication": {
+      "PUB_1": {
+        "content": {
+          "abstract": "This study aims finding findings.",
+          "author": "John Doe",
+          "doi": "10.1234/abcd.5678",
+          "journal": "Journal of Studies",
+          "title": "A paper of a study",
+          "year": 1965
+        },
+        "relations": {
+          "study": {
+            "targetClass": "Study",
+            "targetResources": "STUDY_A"
+          }
+        }
+      },
+      "PUB_2": {
+        "content": {
+          "abstract": "This study aims finding more findings.",
+          "author": "Joe Dohn",
+          "doi": "10.9876/efgh.5432",
+          "journal": "Journal of Studies",
+          "title": "Another paper of the same study",
+          "year": 1967
+        },
+        "relations": {
+          "study": {
+            "targetClass": "Study",
+            "targetResources": "STUDY_B"
+          }
+        }
+      }
+    },
+    "Sample": {
+      "SAMPLE_1": {
+        "content": {
+          "description": "Arterial blood sample 1",
+          "isolation": "Blood collection tube holder/needle",
+          "name": "GHGAS_blood_sample1",
+          "storage": "FROZEN_AT_-20",
+          "type": "CF_DNA"
+        },
+        "relations": {
+          "biospecimen": {
+            "targetClass": "Biospecimen",
+            "targetResources": "BIOSPECIMEN_1"
+          },
+          "condition": {
+            "targetClass": "Condition",
+            "targetResources": "COND_1"
+          }
+        }
+      },
+      "SAMPLE_2": {
+        "content": {
+          "description": "white adipose tissue sample 1",
+          "isolation": "Core needle biopsy",
+          "name": "GHGAS_tissue_sample1",
+          "storage": "FROZEN_AT_-80",
+          "type": "CF_DNA"
+        },
+        "relations": {
+          "biospecimen": {
+            "targetClass": "Biospecimen",
+            "targetResources": "BIOSPECIMEN_2"
+          },
+          "condition": {
+            "targetClass": "Condition",
+            "targetResources": "COND_2"
+          }
+        }
+      }
+    },
+    "SampleFile": {},
+    "SequencingExperiment": {
+      "SEQ_EXP_1": {
+        "content": {
+          "description": "Experiment is done like this. ",
+          "title": "GHGAE_SEQ_EXP_1",
+          "type": "Experiement type A"
+        },
+        "relations": {
+          "library_preparation_protocol": {
+            "targetClass": "LibraryPreparationProtocol",
+            "targetResources": "LIB_PREP_1"
+          },
+          "sequencing_protocol": {
+            "targetClass": "SequencingProtocol",
+            "targetResources": "SEQ_PRO_1"
+          }
+        }
+      }
+    },
+    "SequencingProcess": {
+      "SEQ_PROCESS_1": {
+        "content": {
+          "description": "Sequencing process A is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process A",
+          "sequencing_lane_id": "LANE_123",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_123"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_1"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      },
+      "SEQ_PROCESS_2": {
+        "content": {
+          "description": "Sequencing process B is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process B",
+          "sequencing_lane_id": "LANE_124",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_124"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_1"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      },
+      "SEQ_PROCESS_3": {
+        "content": {
+          "description": "Sequencing process C is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process C",
+          "sequencing_lane_id": "LANE_125",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_125"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_1"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      },
+      "SEQ_PROCESS_4": {
+        "content": {
+          "description": "Sequencing process D is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process D",
+          "sequencing_lane_id": "LANE_126",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_126"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_2"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      },
+      "SEQ_PROCESS_5": {
+        "content": {
+          "description": "Sequencing process E is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process E",
+          "sequencing_lane_id": "LANE_127",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_127"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_2"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      },
+      "SEQ_PROCESS_6": {
+        "content": {
+          "description": "Sequencing process F is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process F",
+          "sequencing_lane_id": "LANE_128",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_128"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_2"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      },
+      "SEQ_PROCESS_7": {
+        "content": {
+          "description": "Sequencing process G is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process G",
+          "sequencing_lane_id": "LANE_129",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_129"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_2"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      },
+      "SEQ_PROCESS_8": {
+        "content": {
+          "description": "Sequencing process H is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process H",
+          "sequencing_lane_id": "LANE_130",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_130"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_2"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      },
+      "SEQ_PROCESS_9": {
+        "content": {
+          "description": "Sequencing process I is conducted like this.",
+          "index_sequence": "AGTCGATCGTAC",
+          "name": "Sequencing process I",
+          "sequencing_lane_id": "LANE_131",
+          "sequencing_machine_id": "SEQ_MACHINE_123",
+          "sequencing_run_id": "RUN_131"
+        },
+        "relations": {
+          "sample": {
+            "targetClass": "Sample",
+            "targetResources": "SAMPLE_2"
+          },
+          "sequencing_experiment": {
+            "targetClass": "SequencingExperiment",
+            "targetResources": "SEQ_EXP_1"
+          }
+        }
+      }
+    },
+    "SequencingProcessFile": {
+      "SEQ_FILE_1": {
+        "content": {
+          "checksum": "179d3b3a5ebb2d21f55e9963cd11b9c13490133d46f48ecfd1dc9155526a7c17",
+          "checksum_type": "SHA256",
+          "dataset": "DS_A",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_1.fastq.gz",
+          "size": 37
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_1"
+          }
+        }
+      },
+      "SEQ_FILE_2": {
+        "content": {
+          "checksum": "cce8d1620fe57101fe6abeb26e32b731995b64a7f254cc22c3d4d3996091f01d",
+          "checksum_type": "SHA256",
+          "dataset": "DS_A",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_2.fastq.gz",
+          "size": 153
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_2"
+          }
+        }
+      },
+      "SEQ_FILE_3": {
+        "content": {
+          "checksum": "4d34ab99339c1ccc6ed3c12f5704dc860ac07f39643fbd20dcf8aec2e9745ac0",
+          "checksum_type": "SHA256",
+          "dataset": "DS_A",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_3.fastq.gz",
+          "size": 1000
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_3"
+          }
+        }
+      },
+      "SEQ_FILE_4": {
+        "content": {
+          "checksum": "d60adf77e7d62fa786691b7f11af3b5d3d6c67dbea5d247632f5774267fdad75",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_4.fastq.gz",
+          "size": 1024
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_4"
+          }
+        }
+      },
+      "SEQ_FILE_5": {
+        "content": {
+          "checksum": "c5a972aaabf98f53bb631c46d6378b60ad1596fb5c56dbeea94b622f50b35725",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_5.fastq.gz",
+          "size": 1050
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_5"
+          }
+        }
+      },
+      "SEQ_FILE_6": {
+        "content": {
+          "checksum": "4d4e31a0a750686f1214d554d1e983df137995cb0c8a549a958efe9f43d10f46",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_6.fastq.gz",
+          "size": 4000
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_6"
+          }
+        }
+      },
+      "SEQ_FILE_7": {
+        "content": {
+          "checksum": "380aa8639ad048486ddbfe95523d72dc681c41938fe868bb839f0d0ad634c114",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_7.fastq.gz",
+          "size": 53249
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_7"
+          }
+        }
+      },
+      "SEQ_FILE_8": {
+        "content": {
+          "checksum": "0b53a708ffaadacee98365425bc5b42339cf1a8a7734ba6f843e0a41a1b3ba30",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_8.fastq.gz",
+          "size": 96257
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_8"
+          }
+        }
+      },
+      "SEQ_FILE_9": {
+        "content": {
+          "checksum": "28eb8623906504a2441906a2c5d446ee78f7d1193c3f0bb7db43e0bdc026f585",
+          "checksum_type": "SHA256",
+          "dataset": "DS_B",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_9.fastq.gz",
+          "size": 49153
+        },
+        "relations": {
+          "sequencing_process": {
+            "targetClass": "SequencingProcess",
+            "targetResources": "SEQ_PROCESS_9"
+          }
+        }
+      }
+    },
+    "SequencingProtocol": {
+      "SEQ_PRO_1": {
+        "content": {
+          "cell_barcode_offset": 20,
+          "cell_barcode_read": "INDEX1",
+          "cell_barcode_size": 18,
+          "description": "Sequence protocol 1 is conducted like this. ",
+          "flow_cell_id": "ID_Cell 1_Lane_1",
+          "flow_cell_type": "ILLUMINA_NOVA_SEQ_S4",
+          "instrument_model": "ILLUMINA_NOVA_SEQ_6000",
+          "name": "Protocol 1",
+          "sample_barcode_read": "INDEX1",
+          "sequencing_center": "Center A",
+          "sequencing_read_length": "long",
+          "target_coverage": "x50",
+          "type": "DNA-seq",
+          "umi_barcode_offset": 16,
+          "umi_barcode_read": "INDEX1",
+          "umi_barcode_size": 10
+        }
+      }
+    },
+    "Study": {
+      "STUDY_A": {
+        "content": {
+          "affiliations": [
+            "Some Institute",
+            "Some other Institute"
+          ],
+          "attributes": [
+            {
+              "key": "budget",
+              "value": "3.5M"
+            },
+            {
+              "key": "funding",
+              "value": "EU"
+            }
+          ],
+          "description": "A study that is the A study",
+          "title": "The A Study",
+          "type": "SYNTHETIC_GENOMICS"
+        }
+      },
+      "STUDY_B": {
+        "content": {
+          "affiliations": [
+            "Some Institute"
+          ],
+          "description": "A study that is the B study",
+          "title": "The B Study",
+          "type": "WHOLE_GENOME_SEQUENCING"
+        }
+      }
+    },
+    "StudyFile": {
+      "STUDY_FILE_1": {
+        "content": {
+          "checksum": "ff4b3612b3e2763f15530fb26fbb3e107fd3d9f05dea77e8978ff3e005585759",
+          "dataset": "SHA256",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "STUDY_1_SPECIMEN_1_FILE_1.fastq.gz",
+          "size": 40
+        },
+        "relations": {
+          "study": {
+            "targetClass": "Study",
+            "targetResources": "STUDY_A"
+          }
+        }
+      }
+    },
+    "Trio": {
+      "TRIO_1": {
+        "content": {},
+        "relations": {
+          "child": {
+            "targetClass": "Individual",
+            "targetResources": "INDV_1"
+          },
+          "father": {
+            "targetClass": "Individual",
+            "targetResources": "FATHER_1"
+          },
+          "mother": {
+            "targetClass": "Individual",
+            "targetResources": "MOTHER_1"
+          }
+        }
+      }
+    }
+  }
+}
