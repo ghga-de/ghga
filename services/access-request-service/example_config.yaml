@@ -1,0 +1,57 @@
+access_grant_max_days: 730
+access_grant_max_extend: 5.0
+access_grant_min_days: 7
+access_request_topic: access_request_events
+access_upfront_max_days: 180
+api_root_path: ''
+auth_algs:
+- ES256
+auth_check_claims:
+  email: null
+  exp: null
+  iat: null
+  id: null
+  name: null
+auth_key: '{}'
+auth_map_claims: {}
+auto_reload: true
+cors_allow_credentials: false
+cors_allowed_headers: []
+cors_allowed_methods: []
+cors_allowed_origins: []
+cors_exposed_headers: null
+dataset_change_topic: metadata_datasets
+dataset_deletion_type: dataset_deleted
+dataset_upsertion_type: dataset_created
+db_name: access-requests
+db_version_collection: arsDbVersions
+docs_url: /docs
+download_access_url: http://127.0.0.1:8080/download-access
+generate_correlation_id: true
+host: 127.0.0.1
+kafka_compression_type: null
+kafka_dlq_topic: dlq
+kafka_enable_dlq: true
+kafka_max_message_size: 1048576
+kafka_max_retries: 0
+kafka_retry_backoff: 0
+kafka_security_protocol: PLAINTEXT
+kafka_servers:
+- kafka:9092
+kafka_ssl_cafile: ''
+kafka_ssl_certfile: ''
+kafka_ssl_keyfile: ''
+kafka_ssl_password: ''
+log_format: null
+log_level: INFO
+log_traceback: true
+migration_max_wait_sec: null
+migration_wait_sec: 10
+mongo_dsn: '**********'
+mongo_timeout: null
+openapi_url: /openapi.json
+port: 8080
+service_instance_id: '1'
+service_name: ars
+timeout_keep_alive: 90
+workers: 1
