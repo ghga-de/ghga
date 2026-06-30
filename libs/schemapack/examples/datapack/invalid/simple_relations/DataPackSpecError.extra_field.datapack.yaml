@@ -1,0 +1,12 @@
+# Additional field that is not part of the DataPack specification:
+datapack: 3.0.0
+resources:
+  File: {}
+  Dataset:
+    example_dataset:
+      content:
+        dac_contact: dac@example.org
+      relations:
+        files: []
+rootResource: example_dataset
+extra_field: {} # <-

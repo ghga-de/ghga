@@ -1,0 +1,6 @@
+alias: a
+some_relation:
+  - alias: b
+    some_relation:
+      - alias: c
+        some_relation: []

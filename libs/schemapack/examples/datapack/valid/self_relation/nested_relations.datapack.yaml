@@ -1,0 +1,24 @@
+# Nested relations between resources of the same type:
+datapack: 3.0.0
+resources:
+  SomeClass:
+    a:
+      content: {}
+      relations:
+        some_relation:
+          targetClass: SomeClass
+          targetResources:
+            - b
+    b:
+      content: {}
+      relations:
+        some_relation:
+          targetClass: SomeClass
+          targetResources:
+            - c
+    c:
+      content: {}
+      relations:
+        some_relation:
+          targetClass: SomeClass
+          targetResources: []

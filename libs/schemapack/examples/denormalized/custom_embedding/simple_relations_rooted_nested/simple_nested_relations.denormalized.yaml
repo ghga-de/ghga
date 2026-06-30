@@ -1,0 +1,18 @@
+# embedding profile: {"c": True, "b": {"c": False}}
+alias: a1
+property_a: property_of_a1
+b:
+  - alias: b1
+    property_b: property_of_b1
+    c: c1 # <- c is not embedded to b
+  - alias: b2
+    property_b: property_of_b2
+    c: c2 # <- c is not embedded to b
+  - alias: b3
+    property_b: property_of_b3
+    c: c2 # <- c is not embedded to b
+c: #  <- c is embedded to a
+  - alias: c1
+    property_c: property_of_c1
+  - alias: c2
+    property_c: property_of_c2

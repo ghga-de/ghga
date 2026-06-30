@@ -1,0 +1,13 @@
+# Contains a slot for a class that does not exist in the schemapack:
+datapack: 3.0.0
+resources:
+  File: {}
+  Dataset:
+    example_dataset:
+      content:
+        dac_contact: dac@example.org
+      relations:
+        files:
+          targetClass: File
+          targetResources: []
+  NoExistingClass: {} # <-

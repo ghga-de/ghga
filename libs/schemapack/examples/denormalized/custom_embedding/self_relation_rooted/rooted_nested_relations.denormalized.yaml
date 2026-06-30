@@ -1,0 +1,7 @@
+# Embedding profile is an empty dictionary, meaning no custom embedding is applied.
+alias: a
+some_relation:
+  - alias: b
+    some_relation:
+      - alias: c
+        some_relation: []

@@ -1,0 +1,9 @@
+# Contains no content definition for one resource:
+datapack: 3.0.0
+resources:
+  File: {}
+  Dataset:
+    example_dataset:
+      # missing the content definition
+      relations:
+        files: []

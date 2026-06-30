@@ -1,0 +1,45 @@
+datapack: 3.0.0
+resources:
+    Person:
+        Alice:
+            content: {}
+            relations:
+                teammates:
+                    targetClass: Person
+                    targetResources:
+                        - Bob
+                        - Charlie
+                manager:
+                    targetClass: Person
+                    targetResources: Dave
+        Bob:
+            content: {}
+            relations:
+                teammates:
+                    targetClass: Person
+                    targetResources:
+                        - Alice
+                        - Charlie
+                manager:
+                    targetClass: Person
+                    targetResources: Dave
+        Charlie:
+            content: {}
+            relations:
+                teammates:
+                    targetClass: Person
+                    targetResources:
+                        - Alice
+                        - Bob
+                manager:
+                    targetClass: Person
+                    targetResources: Dave
+        Dave:
+            content: {}
+            relations:
+                teammates:
+                    targetClass: Person
+                    targetResources: []
+                manager:
+                    targetClass: Person
+                    targetResources: null

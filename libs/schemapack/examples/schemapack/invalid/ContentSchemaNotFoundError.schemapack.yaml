@@ -1,0 +1,6 @@
+schemapack: 3.0.0
+classes:
+  Dataset:
+    id:
+      propertyName: alias
+    content: /does/not/exist.schema.json # <-

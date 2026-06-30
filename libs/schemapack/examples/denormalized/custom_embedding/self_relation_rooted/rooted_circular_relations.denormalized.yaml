@@ -1,0 +1,7 @@
+# The result of custom embedding on a datapack with circular relations.
+# embedding profile: {"some_relation": {"some_relation": False}}
+alias: a
+some_relation:
+  - alias: b # <- embedded
+    some_relation:
+      - a # <- not embedded

@@ -1,0 +1,44 @@
+# Partial overlap in a relation property with one_to_many cardinality:
+datapack: 3.0.0
+resources:
+  A:
+    a1:
+      content: {}
+      relations:
+        many_to_many:
+          targetClass: B
+          targetResources:
+            - b1
+            - b2
+        one_to_many:
+          targetClass: B
+          targetResources:
+            - b1
+            - b2
+        many_to_one:
+          targetClass: B
+          targetResources: b1
+        one_to_one:
+          targetClass: B
+          targetResources: b1
+    a2:
+      content: {}
+      relations:
+        many_to_many:
+          targetClass: B
+          targetResources: []
+        one_to_many:
+          targetClass: B
+          targetResources:
+            - b1 # overlapping with a1.relations.one_to_many
+        many_to_one:
+          targetClass: B
+          targetResources: b1
+        one_to_one:
+          targetClass: B
+          targetResources: b2
+  B:
+    b1:
+      content: {}
+    b2:
+      content: {}

@@ -1,0 +1,25 @@
+datapack: 4.2.0
+resources:
+  A:
+    a1:
+      content: {}
+    a2:
+      content: {}
+    a3:
+      content: {}
+  B:
+    a1:
+      content: {}
+      relations:
+        b:
+          targetClass: A
+          targetResources:
+            - a1
+            - a2
+    a2:
+      content: {}
+      relations:
+        b:
+          targetClass: A
+          targetResources:
+            - a3

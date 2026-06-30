@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Contains data.",
+  "properties": {
+    "checksum": {
+      "type": "string"
+    },
+    "filename": {
+      "type": "string"
+    },
+    "format": {
+      "type": "string"
+    },
+    "size": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "filename",
+    "format",
+    "checksum",
+    "size"
+  ],
+  "type": "object"
+}

@@ -1,0 +1,30 @@
+# Relation property that is expected to be of many_to_one cardinality is specified as
+# list:
+datapack: 3.0.0
+resources:
+  A:
+    a1:
+      content: {}
+      relations:
+        many_to_many:
+          targetClass: B
+          targetResources:
+            - b1
+            - b2
+        one_to_many:
+          targetClass: B
+          targetResources:
+            - b1
+            - b2
+        many_to_one:
+          targetClass: B
+          targetResources:
+            - b1 # <-
+        one_to_one:
+          targetClass: B
+          targetResources: b1
+  B:
+    b1:
+      content: {}
+    b2:
+      content: {}

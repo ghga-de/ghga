@@ -1,0 +1,14 @@
+# Using comments in content should not cause any problems
+# but did in the past.
+datapack: 3.0.0
+resources:
+  SomeClass:
+    a:
+      content:
+        test:
+          - test # Is this comment causing problems?
+      relations:
+        some_relation:
+          targetClass: SomeClass
+          targetResources:
+            - a

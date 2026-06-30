@@ -1,0 +1,22 @@
+schemapack: 3.0.0
+description: Schema for experimental metadata
+classes:
+  Experiment:
+    id:
+      propertyName: alias
+      description: alias is id
+    content: content_schemas/Experiment.schema.json
+    relations:
+      samples:
+        targetClass: Sample
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true
+  Sample:
+    id:
+      propertyName: alias
+      description: alias is id
+    content: content_schemas/Sample.schema.json

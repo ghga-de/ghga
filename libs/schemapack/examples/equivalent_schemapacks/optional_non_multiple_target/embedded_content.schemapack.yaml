@@ -1,0 +1,31 @@
+schemapack: 4.0.0
+classes:
+  A:
+    id:
+      propertyName: alias
+    content: { # <-
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "AnyObjectCompatible",
+      "type": "object",
+      "properties": {},
+      "additionalProperties": true
+    }
+    relations:
+      b:
+        targetClass: B
+        mandatory:
+          origin: true
+          target: false
+        multiple:
+          origin: true
+          target: false
+  B:
+    id:
+      propertyName: alias
+    content: { # <-
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "AnyObjectCompatible",
+      "type": "object",
+      "properties": {},
+      "additionalProperties": true
+    }

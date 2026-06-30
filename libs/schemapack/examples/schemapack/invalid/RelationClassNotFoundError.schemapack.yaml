@@ -1,0 +1,15 @@
+schemapack: 3.0.0
+classes:
+  Dataset:
+    id:
+      propertyName: alias
+    content: ../../content_schemas/Dataset.schema.json
+    relations:
+      files:
+        targetClass: DoesNotExist # <-
+        mandatory:
+          origin: true
+          target: true
+        multiple:
+          origin: true
+          target: true

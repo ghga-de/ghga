@@ -1,0 +1,31 @@
+datapack: 3.0.0
+resources:
+  Experiment:
+    exp1:
+      content:
+        name: Experiment 1
+        description: This is the first experiment.
+      relations:
+        samples:
+          targetClass: Sample
+          targetResources:
+            - sample1
+    exp2:
+      content:
+        name: Experiment 2
+        description: This is the second experiment.
+      relations:
+        samples:
+          targetClass: Sample
+          targetResources:
+            - sample1
+            - sample2
+  Sample:
+    sample1:
+      content:
+        name: Sample 1
+        description: This is the first sample.
+    sample2:
+      content:
+        name: Sample 2
+        description: This is the first sample.

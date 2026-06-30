@@ -1,0 +1,22 @@
+schemapack: 4.0.0
+description: a schemapack with an optional untyped property 'd' # <-
+classes:
+  A:
+    id:
+      propertyName: alias
+    content:
+      {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties":
+          {
+            "a": { "type": "string" },
+            "b": { "type": "string" },
+            "c": { "type": "string" },
+            "d": {
+              "type": ["string", "number", "boolean", "array", "object", "null", "integer"]
+            }, # <-
+          },
+        "required": ["a", "b", "c"],
+        "additionalProperties": true,
+      }

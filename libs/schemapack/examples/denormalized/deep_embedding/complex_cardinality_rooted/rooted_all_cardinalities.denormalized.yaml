@@ -1,0 +1,11 @@
+alias: a1
+many_to_many:
+  - alias: b1
+  - alias: b2
+one_to_many:
+  - alias: b1
+  - alias: b2
+many_to_one:
+  alias: b1
+one_to_one:
+  alias: b1
