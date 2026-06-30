@@ -156,3 +156,7 @@ source = [
     "/workspace/src",
     "**/lib/python*/site-packages",
 ]
+
+[tool.uv.sources]
+ghga-event-schemas = { workspace = true }
+hexkit = { workspace = true }

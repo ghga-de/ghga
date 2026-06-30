@@ -200,3 +200,6 @@ legacy_tox_ini = """
         py310: pip install --no-deps backports.asyncio.runner==1.2.0 exceptiongroup==1.3.1 tomli==2.4.0
         pytest {posargs}
 """
+
+[tool.uv.sources]
+hexkit = { workspace = true }

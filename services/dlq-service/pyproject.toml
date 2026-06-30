@@ -155,3 +155,7 @@ source = [
     "/workspace/src",
     "**/lib/python*/site-packages",
 ]
+
+[tool.uv.sources]
+ghga-service-commons = { workspace = true }
+hexkit = { workspace = true }

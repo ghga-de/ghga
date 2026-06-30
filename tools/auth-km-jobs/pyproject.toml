@@ -18,7 +18,7 @@ classifiers = [
   "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
-  "typer>=0.21,<0.22",
+  "typer>=0.21",
   "pydantic~=2.12",
   "pydantic-settings~=2.12",
   "pymongo~=4.16",

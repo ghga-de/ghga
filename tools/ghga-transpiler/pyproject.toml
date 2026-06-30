@@ -158,3 +158,6 @@ source = [
     "/workspace/src",
     "**/lib/python*/site-packages",
 ]
+
+[tool.uv.sources]
+schemapack = { workspace = true }

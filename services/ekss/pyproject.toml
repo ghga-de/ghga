@@ -11,6 +11,16 @@ authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
 requires-python = ">=3.13"
+dependencies = [
+    "typer >= 0.25",
+    "ghga-service-commons[api, auth, crypt, transports] >= 7.0.1",
+    "ghga-event-schemas >= 13.0.0",
+    "hexkit[akafka, s3, mongodb, opentelemetry] >= 8.3.0",
+    "crypt4gh >= 1.7",
+    "hvac >= 2",
+    "httpx >= 0.28",
+    "packaging >= 26",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
@@ -35,3 +45,8 @@ ekss = "ekss.__main__:run"
 where = [
     "src",
 ]
+
+[tool.uv.sources]
+ghga-event-schemas = { workspace = true }
+ghga-service-commons = { workspace = true }
+hexkit = { workspace = true }
