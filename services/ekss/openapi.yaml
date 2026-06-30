@@ -1,0 +1,387 @@
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    HttpDecodingError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpDecodingErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: decodingError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpDecodingError
+      type: object
+    HttpDecodingErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpDecodingErrorData
+      type: object
+    HttpDecryptionError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpDecryptionErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: decryptionError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpDecryptionError
+      type: object
+    HttpDecryptionErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpDecryptionErrorData
+      type: object
+    HttpEnvelopeCreationError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpEnvelopeCreationErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: envelopeCreationError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpEnvelopeCreationError
+      type: object
+    HttpEnvelopeCreationErrorData:
+      properties: {}
+      title: HttpEnvelopeCreationErrorData
+      type: object
+    HttpInternalError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpInternalErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: internalError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpInternalError
+      type: object
+    HttpInternalErrorData:
+      additionalProperties: true
+      properties: {}
+      title: HttpInternalErrorData
+      type: object
+    HttpSecretDeletionError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpSecretDeletionErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: secretDeletionError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpSecretDeletionError
+      type: object
+    HttpSecretDeletionErrorData:
+      properties: {}
+      title: HttpSecretDeletionErrorData
+      type: object
+    HttpSecretInsertionError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpSecretInsertionErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: secretInsertionError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpSecretInsertionError
+      type: object
+    HttpSecretInsertionErrorData:
+      properties: {}
+      title: HttpSecretInsertionErrorData
+      type: object
+    HttpSecretNotFoundError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpSecretNotFoundErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: secretNotFoundError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpSecretNotFoundError
+      type: object
+    HttpSecretNotFoundErrorData:
+      properties: {}
+      title: HttpSecretNotFoundErrorData
+      type: object
+    OutboundEnvelopeContent:
+      description: 'Contains the header envelope, which contains the file secret encrypted
+        with the
+
+        client''s public key and the server''s private key'
+      properties:
+        content:
+          title: Content
+          type: string
+      required:
+      - content
+      title: OutboundEnvelopeContent
+      type: object
+    SecretID:
+      description: Contains the Vault-generated secret ID for a file encryption secret.
+      properties:
+        secret_id:
+          title: Secret Id
+          type: string
+      required:
+      - secret_id
+      title: SecretID
+      type: object
+    ValidationError:
+      properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+info:
+  description: A service managing storage and retrieval of symmetric keys in a HashiCorp
+    Vault.
+  title: Encryption Key Store Service
+  version: 5.1.1
+openapi: 3.1.0
+paths:
+  /health:
+    get:
+      description: Used to test if this service is alive
+      operationId: health_health_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: health
+      tags:
+      - EncryptionKeyStoreService
+  /secrets:
+    post:
+      description: Decrypt the provided Crypt4GH-encrypted file secret and store it
+        in the key manager
+      operationId: postEncryptionData
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: Base64-encoded string containing a Crypt4GH-encrypted file
+                encryption secret.
+              maxLength: 124
+              minLength: 124
+              title: Encrypted Secret
+              type: string
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretID'
+          description: Successfully stored file encryption secret.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpDecryptionError'
+          description: Could not decrypt the submitted file secret
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpDecodingError'
+          description: One of the provided inputs could not be decoded as base64 string.
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpInternalError'
+          description: An internal server error has occurred.
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpSecretInsertionError'
+          description: Failed to successfully insert secret into vault.
+      summary: Store Crypt4GH-encrypted file encryption secret
+      tags:
+      - EncryptionKeyStoreService
+  /secrets/{secret_id}:
+    delete:
+      description: Delete the secret with the given ID from the key manager
+      operationId: deleteSecret
+      parameters:
+      - in: path
+        name: secret_id
+        required: true
+        schema:
+          title: Secret Id
+          type: string
+      responses:
+        '204':
+          description: Successfully deleted secret.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpSecretNotFoundError'
+          description: Could not find a secret for the given secret ID.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpSecretDeletionError'
+          description: The secret was found but could not be deleted.
+      summary: Delete the associated secret
+      tags:
+      - EncryptionKeyStoreService
+  /secrets/{secret_id}/envelopes/{client_pk}:
+    get:
+      description: Create header envelope for the file secret with given ID encrypted
+        with a given public key
+      operationId: getEncryptionData
+      parameters:
+      - in: path
+        name: secret_id
+        required: true
+        schema:
+          title: Secret Id
+          type: string
+      - in: path
+        name: client_pk
+        required: true
+        schema:
+          title: Client Pk
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboundEnvelopeContent'
+          description: Created personalized Crypt4GH envelope.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpSecretNotFoundError'
+          description: Could not find a secret for the given secret ID.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpDecodingError'
+          description: One of the provided inputs could not be decoded as base64 string.
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpEnvelopeCreationError'
+          description: Could not create an envelope for the requested secret.
+      summary: Get personalized envelope containing Crypt4GH file encryption/decryption
+        key
+      tags:
+      - EncryptionKeyStoreService
+servers:
+- url: ''
+tags:
+- name: EncryptionKeyStoreService
