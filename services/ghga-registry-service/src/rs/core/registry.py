@@ -74,7 +74,4 @@ class Registry(RegistryPort):
             if not study_ids:
                 return []
             mapping = {"id": {"$in": list(study_ids)}}
-        return [
-            study
-            async for study in self._study_dao.find_all(mapping=mapping, sort=["id"])
-        ]
+        return await self._study_dao.find_all(mapping=mapping, sort=["id"]).to_list()

@@ -98,10 +98,9 @@ class RDUBManager(RDUBManagerPort):
             BoxTitleExistsError: If a box with the given title already exists.
             OperationError: If there's a problem creating a corresponding FileUploadBox.
         """
-        # Title uniqueness check is done this way instead of via unique index to avoid
         # Title uniqueness is checked upfront instead of relying on the unique index to avoid
         # chicken-egg problem with dependent FUB-RDUB creation
-        if [x async for x in self._box_dao.find_all(mapping={"title": title})]:
+        if await self._box_dao.find_all(mapping={"title": title}).total_count():
             log.error(
                 "ResearchDataUploadBox creation failed because a box with the title %s"
                 + " already exists.",
@@ -734,7 +733,7 @@ class RDUBManager(RDUBManagerPort):
 
         if is_ds:
             # Data stewards can see all boxes
-            boxes = [x async for x in self._box_dao.find_all(mapping=mapping)]
+            boxes = await self._box_dao.find_all(mapping=mapping).to_list()
         else:
             # Regular users can only see boxes they have access to
             user_id = UUID(auth_context.id)
