@@ -19,6 +19,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -61,6 +62,10 @@ import {
   MappingConfirmDialogData,
   UploadBoxMappingConfirmDialogComponent,
 } from './upload-box-mapping-confirm-dialog';
+import { UploadBoxMetadataAlignmentComponent } from './upload-box-metadata-alignment';
+
+/** The source of the metadata to map or align the upload box files against */
+export type MappingSource = 'study' | 'upload';
 
 /** A single row in the mapping table */
 export interface MappingRow {
@@ -142,6 +147,7 @@ function computeAutoMappings(
     FormsModule,
     MatAutocompleteModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatCardModule,
     MatFormFieldModule,
     MatIconModule,
@@ -153,6 +159,7 @@ function computeAutoMappings(
     MatSortModule,
     MatTableModule,
     RouterLink,
+    UploadBoxMetadataAlignmentComponent,
   ],
   providers: [MetadataService],
   templateUrl: './upload-box-mapping.html',
@@ -171,6 +178,12 @@ export class UploadBoxMappingComponent implements OnInit {
 
   /** Emitted after a successful mapping submission */
   archived = output<void>();
+
+  /**
+   * Whether to map against a backend study or to check the alignment against an
+   * uploaded metadata file that has not been ingested into the system yet.
+   */
+  source = signal<MappingSource>('study');
 
   /** Currently selected study ID (equal to the GHGA study accession) */
   selectedStudyId = signal<string | undefined>(undefined);

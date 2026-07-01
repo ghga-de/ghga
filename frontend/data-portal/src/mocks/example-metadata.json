@@ -1,0 +1,111 @@
+{
+  "studies": [
+    {
+      "title": "RNA sequencing study of Jane",
+      "description": "Example metadata for testing the upload box alignment check. Its file names match most of the files in the locked mock upload box 'Research Data Upload Box of Jane', so the tool aligns by name and reports a few unmatched entries on both sides.",
+      "type": "research"
+    }
+  ],
+  "datasets": [
+    { "alias": "DATASET_A", "title": "Primary dataset" },
+    { "alias": "DATASET_B", "title": "Supporting dataset" }
+  ],
+  "experiment_method_supporting_files": [
+    {
+      "alias": "FILE_EMSF_001",
+      "name": "reference_genome.fasta",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_EMSF_002",
+      "name": "variants_cohort.vcf",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    }
+  ],
+  "individual_supporting_files": [
+    {
+      "alias": "FILE_ISF_001",
+      "name": "methylation_sample_001.meth",
+      "included_in_submission": true,
+      "dataset": "DATASET_B"
+    },
+    {
+      "alias": "FILE_ISF_002",
+      "name": "chip_peaks_001.bed",
+      "included_in_submission": true,
+      "dataset": "DATASET_B"
+    }
+  ],
+  "process_data_files": [
+    {
+      "alias": "FILE_PDF_001",
+      "name": "aligned_reads_001.bam",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_PDF_002",
+      "name": "aligned_reads_002.cram",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_PDF_003",
+      "name": "aligned_reads_003.bam",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_PDF_004",
+      "name": "extra_unaligned_reads.bam",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_PDF_005",
+      "name": "draft_only_file.txt",
+      "included_in_submission": false,
+      "dataset": "DATASET_A"
+    }
+  ],
+  "research_data_files": [
+    {
+      "alias": "FILE_RDF_001",
+      "name": "sample_001_R1.fastq",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_RDF_002",
+      "name": "sample_001_R2.fastq",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_RDF_003",
+      "name": "sample_002_R1.fastq.gz",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_RDF_004",
+      "name": "sample_002_R2.fastq.gz",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_RDF_005",
+      "name": "sample_003_R1.fastq.gz",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    },
+    {
+      "alias": "FILE_RDF_006",
+      "name": "sample_004_R1.fastq.gz",
+      "included_in_submission": true,
+      "dataset": "DATASET_A"
+    }
+  ]
+}
