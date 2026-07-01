@@ -132,7 +132,7 @@ async def get_claims(
     if not await user_exists(user_id, user_dao=user_dao):
         raise user_not_found_error
 
-    return [claim async for claim in claim_dao.find_all(mapping={"user_id": user_id})]
+    return await claim_dao.find_all(mapping={"user_id": user_id}).to_list()
 
 
 @router.patch(

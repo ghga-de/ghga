@@ -20,6 +20,7 @@ import re
 from collections.abc import AsyncIterator, Mapping
 from contextlib import suppress
 from datetime import timedelta
+from operator import attrgetter
 from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
@@ -30,6 +31,7 @@ from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from hexkit.config import config_from_yaml
 from hexkit.protocols.dao import (
     Dao,
+    FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
     ResourceNotFoundError,
@@ -240,6 +242,55 @@ def request_with_authorization(token: str = "") -> Request:
     return Request({"type": "http", "headers": [(b"authorization", authorization)]})
 
 
+def _matches(data: Mapping[str, Any], mapping: Mapping[str, Any]) -> bool:
+    """Check whether the given data matches the given filter mapping."""
+    for key, value in mapping.items():
+        if isinstance(value, dict) and "$in" in value:
+            # mock the MongoDB "$in" operator
+            if data[key] not in value["$in"]:
+                return False
+        elif data[key] != value:
+            return False
+    return True
+
+
+def mock_find_all(
+    items: list[Any],
+    *,
+    mapping: Mapping[str, Any],
+    skip: int | None = None,
+    limit: int | None = None,
+    sort: list[str] | None = None,
+) -> FindResult[Any]:
+    """Mimic the DAO find_all method for a list of dummy items.
+
+    Returns a FindResult that is async-iterable and also provides to_list()
+    and total_count(), just like the real DAO implementation.
+    """
+    matched = [item for item in items if _matches(item.model_dump(), mapping)]
+    if sort:
+        for field in reversed(sort):
+            reverse = field.startswith("-")
+            attr = field[1:] if reverse else field
+            matched.sort(key=attrgetter(attr), reverse=reverse)
+    total = len(matched)
+    if skip:
+        matched = matched[skip:]
+    if limit is not None:
+        matched = matched[:limit]
+
+    async def results_iterator() -> AsyncIterator[Any]:
+        for item in matched:
+            yield item
+
+    async def get_total_count() -> int:
+        return total
+
+    return FindResult(
+        results_iterator=results_iterator(), get_total_count=get_total_count
+    )
+
+
 class MockUserDao:
     """UserDao that can retrieve one dummy user."""
 
@@ -290,19 +341,18 @@ class MockUserDao:
                 return user
         raise NoHitsFoundError(mapping=mapping)
 
-    async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[User]:
+    def find_all(
+        self,
+        *,
+        mapping: Mapping[str, Any],
+        skip: int | None = None,
+        limit: int | None = None,
+        sort: list[str] | None = None,
+    ) -> FindResult[User]:
         """Find all dummy users with given ID(s)."""
-        for user in self.users:
-            data = user.model_dump()
-            for key, value in mapping.items():
-                if isinstance(value, dict) and "$in" in value:
-                    # mock the MongoDB "$in" operator
-                    if data[key] not in value["$in"]:
-                        break
-                elif data[key] != value:
-                    break
-            else:
-                yield user
+        return mock_find_all(
+            self.users, mapping=mapping, skip=skip, limit=limit, sort=sort
+        )
 
     async def insert(self, dto: User) -> None:
         """Insert the dummy user."""
@@ -367,19 +417,18 @@ class MockIvaDao:
                 return iva
         raise ResourceNotFoundError(id_=id_)
 
-    async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[Iva]:
+    def find_all(
+        self,
+        *,
+        mapping: Mapping[str, Any],
+        skip: int | None = None,
+        limit: int | None = None,
+        sort: list[str] | None = None,
+    ) -> FindResult[Iva]:
         """Find all dummy IVAs."""
-        for iva in self.ivas:
-            data = iva.model_dump()
-            for key, value in mapping.items():
-                if isinstance(value, dict) and "$in" in value:
-                    # mock the MongoDB "$in" operator
-                    if data[key] not in value["$in"]:
-                        break
-                elif data[key] != value:
-                    break
-            else:
-                yield iva
+        return mock_find_all(
+            self.ivas, mapping=mapping, skip=skip, limit=limit, sort=sort
+        )
 
     async def insert(self, dto: Iva) -> None:
         """Insert a dummy IVA."""
@@ -483,20 +532,18 @@ class MockClaimDao:
             raise MultipleHitsFoundError(mapping=mapping)
         return claims[0]
 
-    async def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[Claim]:
+    def find_all(
+        self,
+        *,
+        mapping: Mapping[str, Any],
+        skip: int | None = None,
+        limit: int | None = None,
+        sort: list[str] | None = None,
+    ) -> FindResult[Claim]:
         """Find all dummy user claims."""
-        for claim in self.claims:
-            data = claim.model_dump()
-            for key, value in mapping.items():
-                if isinstance(value, dict) and "$in" in value:
-                    # mock the MongoDB "$in" operator
-                    if data[key] not in value["$in"]:
-                        break
-                elif data[key] != value:
-                    break
-
-            else:
-                yield claim
+        return mock_find_all(
+            self.claims, mapping=mapping, skip=skip, limit=limit, sort=sort
+        )
 
     async def update(self, dto: Claim) -> None:
         """Update a dummy user claim."""
