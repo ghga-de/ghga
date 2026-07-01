@@ -65,7 +65,7 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
   - Prefer assertions on stable end states (URL/title/visible content) over transient intermediate states.
   - For known flaky UI transitions (menus/dialogs/navigation), use small bounded retries in shared test helpers rather than ad-hoc per-test logic.
   - Keep retries minimal (usually 1-2) and always keep a strict final assertion.
-- Docs: `pnpm docs`
+- Docs: `pnpm run docs` (use `run`; pnpm has a built-in `docs` command that would otherwise shadow the script)
 - README table of contents: `pnpm toc` (updates the region between `<!-- toc -->` and `<!-- tocstop -->`)
 
 ## Dev container CLI tools

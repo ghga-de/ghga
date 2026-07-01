@@ -32,8 +32,7 @@ export interface UploadedMetadata {
 
 /** Result of parsing and validating an uploaded metadata file */
 export type MetadataParseResult =
-  | { ok: true; metadata: UploadedMetadata }
-  | { ok: false; error: string };
+  { ok: true; metadata: UploadedMetadata } | { ok: false; error: string };
 
 /** A box file as far as the alignment check is concerned */
 interface AlignmentBoxFile {

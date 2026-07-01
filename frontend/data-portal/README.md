@@ -143,21 +143,11 @@ to install the dependencies.
 
 ### Dependency overrides
 
-The project uses a `.pnpmfile.cjs` file to manage dependency overrides. The following entries are currently in use. Review these from time to time and remove overrides that are no longer necessary.
+There are currently **no dependency overrides** in use.
 
-- `@angular-devkit/core@21.1.0>picomatch: 4.0.4`
-  - Reason: `@compodoc/compodoc@1.2.1` depends on `@angular-devkit/schematics@21.1.0`, which pulls `@angular-devkit/core@21.1.0` and `picomatch@4.0.3` (vulnerable to ReDoS).
-  - Removal criteria: remove this override once Compodoc updates its Angular devkit dependency to a version that no longer resolves to the vulnerable `picomatch` version.
+When a transitive dependency needs to be pinned (for example to pull a security patch that a direct dependency has not yet picked up), add a `.pnpmfile.cjs` file at the repository root with a `readPackage` hook, list the override here together with its reason and removal criteria, and run `pnpm install` to refresh `pnpm-lock.yaml`. Review such overrides from time to time and remove them once no longer necessary.
 
-- `@angular-devkit/core@21.1.0>ajv: >=8.18.0`
-  - Reason: `@compodoc/compodoc@1.2.1` transitively depends on `ajv@8.17.1` (via `@angular-devkit/core`), which is vulnerable to ReDoS ([GHSA-2g4f-4pwh-qvx6](https://github.com/advisories/GHSA-2g4f-4pwh-qvx6)).
-  - Removal criteria: remove once Compodoc updates its `@angular-devkit` dependency to a version that pulls `ajv>=8.18.0`.
-
-- `uuid: >=11.1.1` (applied to http-auth, @compodoc/compodoc, vis-network, vis-data)
-  - Reason: `@compodoc/compodoc@1.2.1` and related packages transitively depend on `uuid` versions with a buffer bounds check vulnerability ([GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq)).
-  - Removal criteria: remove once Compodoc updates its dependencies to pull `uuid>=11.1.1`.
-
-After adding, changing, or removing overrides in `.pnpmfile.cjs`, run `pnpm install` to refresh `pnpm-lock.yaml`.
+> Historical note: overrides for `picomatch`, `ajv`, and `uuid` were previously required because `@compodoc/compodoc@1.x` pulled vulnerable transitive versions. They were removed after upgrading to `@compodoc/compodoc@2`, which resolves those dependencies to patched versions natively.
 
 ---
 
@@ -175,7 +165,9 @@ To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix 
 
 ### Ease of use
 
-For comfort, we are adding these shorthands: `pnpm lint`, `pnpm lf` (for `lint --fix`), and `pnpm docs` (to build and serve the documentation). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
+For comfort, we are adding these shorthands: `pnpm lint`, `pnpm lf` (for `lint --fix`), and `pnpm run docs` (to build and serve the documentation; use `pnpm run docs` rather than `pnpm docs`, because pnpm has a built-in `docs` command that shadows the script). Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
+
+> Note: when generating the docs, Compodoc prints a `Parse error: JSON5: invalid character '(' …` followed by `Routes parsing error, … trying to fix that later`. This is a harmless Compodoc limitation with Angular's arrow-function lazy routes (`loadComponent: () => import(...)` and functional `canActivate` guards) in `src/app/app-routes.ts`: Compodoc recovers on its own and the routes page is still generated. Nothing to fix on our side — it may go away with a future Compodoc release.
 
 ## Automated tests
 
