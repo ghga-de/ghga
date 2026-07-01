@@ -15,6 +15,7 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
 import { UploadBoxState } from '@app/upload/models/box';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { UserUploadBoxDetailsDialogComponent } from '@app/upload/features/user-upload-box-details-dialog/user-upload-box-details-dialog';
 // eslint-disable-next-line boundaries/dependencies
 import { UploadWorkPackageDialogComponent } from '@app/work-packages/features/upload-work-package-dialog/upload-work-package-dialog';
 
@@ -54,6 +55,21 @@ export class UserUploadGrantsListComponent {
 
   /** ID of the box currently being submitted, to disable the button while in flight. */
   protected submittingBoxId = signal<string | null>(null);
+
+  /**
+   * Open a read-only dialog showing the details and files of the box.
+   * @param grant - the upload grant with box information
+   */
+  viewDetails(grant: GrantWithBoxInfo): void {
+    this.#dialog.open(UserUploadBoxDetailsDialogComponent, {
+      data: grant,
+      width: 'clamp(40em, 85vw, 64em)',
+      maxWidth: 'calc(100vw - 2rem)',
+      // Focus the dialog heading instead of the first tabbable element, which
+      // would otherwise be the first sortable column header of the files table.
+      autoFocus: 'first-heading',
+    });
+  }
 
   /**
    * Open the upload token creation dialog for a selected upload grant.

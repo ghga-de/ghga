@@ -14,14 +14,12 @@ import {
   input,
   OnInit,
   signal,
-  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 
@@ -46,9 +44,9 @@ import {
   FileUploadWithAccession,
 } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
-import { FileUploadStatePipe } from '@app/upload/pipes/file-upload-state-pipe';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
+import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';
 import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
 
 /**
@@ -62,13 +60,12 @@ import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapp
     MatButtonModule,
     MatCardModule,
     MatIcon,
-    MatPaginatorModule,
     MatTableModule,
     MatTooltipModule,
     RouterLink,
     Capitalise,
     ParseBytes,
-    FileUploadStatePipe,
+    UploadBoxFilesTableComponent,
     UploadBoxMappingComponent,
   ],
   providers: [CommonDatePipe, ParseBytes],
@@ -177,38 +174,13 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   /** Placeholder columns for the upload grants table. */
   readonly grantColumns = ['grantee', 'status', 'validity', 'details'];
 
-  /** Columns for the file uploads table. */
-  fileColumns = computed<string[]>(() => {
-    const state = this.uploadBox()?.state;
-    if (state === UploadBoxState.archived) {
-      return ['alias', 'accession', 'size', 'uploaded'];
-    }
-    const columns = ['alias', 'status', 'size', 'uploaded'];
-    // Files can only be deleted while the box is still open for uploads.
-    if (state === UploadBoxState.open) {
-      columns.push('delete');
-    }
-    return columns;
-  });
-
   /** The upload grants for this box. */
   grants = computed<UploadGrant[]>(() => this.#uploadBoxService.boxGrants.value());
 
-  /** MatTableDataSource for paginated file uploads. */
-  fileUploadsDataSource = new MatTableDataSource<FileUploadWithAccession>();
-
-  private readonly fileUploadsPaginator = viewChild(MatPaginator);
-
-  #syncFileUploadsEffect = effect(() => {
-    this.fileUploadsDataSource.data = this.#uploadBoxService.boxFileUploads.value();
-  });
-
-  #assignPaginatorEffect = effect(() => {
-    const paginator = this.fileUploadsPaginator();
-    if (paginator) {
-      this.fileUploadsDataSource.paginator = paginator;
-    }
-  });
+  /** The file uploads contained in this box. */
+  fileUploads = computed<FileUploadWithAccession[]>(() =>
+    this.#uploadBoxService.boxFileUploads.value(),
+  );
 
   /**
    * Check if an upload grant is currently active.
@@ -452,6 +424,15 @@ export class UploadBoxManagerDetailComponent implements OnInit {
       this.#deletableFileStates.includes(file.state)
     );
   }
+
+  /**
+   * Bound predicate passed to the files table so it can decide, per file,
+   * whether to render a delete button.
+   * @param file - the file upload to check
+   * @returns true if the file can be deleted
+   */
+  readonly canDeleteFileFn = (file: FileUploadWithAccession): boolean =>
+    this.canDeleteFile(file);
 
   /**
    * Delete a file upload from the box. Files that are still being uploaded

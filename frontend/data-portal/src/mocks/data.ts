@@ -1141,7 +1141,7 @@ export const datasetInformation: DatasetInformation = {
  */
 
 export const uploadBoxes: BoxRetrievalResults = {
-  count: 3,
+  count: 5,
   boxes: [
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
@@ -1182,6 +1182,32 @@ export const uploadBoxes: BoxRetrievalResults = {
       storage_alias: 'TUE03',
       max_size: 8_246_337_208_320, // 7.5 TiB
     },
+    {
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68004',
+      version: 4,
+      state: UploadBoxState.open,
+      title: 'Research Data Upload Box 2 of John',
+      description: 'Upload box for proteomics files of study GHGAS12345678901235',
+      last_changed: '2025-02-04T09:00:00Z',
+      changed_by: 'doe@test.dev',
+      file_count: 15,
+      size: 64424509440, // 60 GiB
+      storage_alias: 'HD02',
+      max_size: 5_497_558_138_880, // 5 TiB
+    },
+    {
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
+      version: 2,
+      state: UploadBoxState.open,
+      title: 'Research Data Upload Box 3 of John',
+      description: 'Upload box for imaging files of study GHGAS12345678901236',
+      last_changed: '2025-02-05T09:00:00Z',
+      changed_by: 'doe@test.dev',
+      file_count: 2,
+      size: 5368709120, // 5 GiB
+      storage_alias: 'TUE03',
+      max_size: 5_497_558_138_880, // 5 TiB
+    },
   ],
 };
 
@@ -1209,7 +1235,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
     id: 'grant-rs-002',
     user_id: 'doe@test.dev',
     iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68004',
     created: '2026-01-03T00:00:00Z',
     valid_from: '2026-01-03',
     valid_until: '2026-12-31',
@@ -1225,7 +1251,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
     id: 'grant-rs-003',
     user_id: 'doe@test.dev',
     iva_id: null,
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
+    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
     created: '2026-01-05T00:00:00Z',
     valid_from: '2026-01-05',
     valid_until: '2026-12-31',
@@ -1537,6 +1563,63 @@ export const uploadBox3FileUploads: FileUploadWithAccession[] = Array.from(
     accession: `GHGAF1234567890${String(2200 + i).padStart(4, '0')}`,
   }),
 );
+
+// 15 files so the file table paginates (paginator shows for more than 10 files).
+export const uploadBox4FileUploads: FileUploadWithAccession[] = Array.from(
+  { length: 15 },
+  (_, i) => {
+    const state = (
+      i % 5 === 3 ? 'inbox' : i % 5 === 4 ? 'init' : 'interrogated'
+    ) as FileUploadWithAccession['state'];
+    const decrypted_size = (i + 1) * 536870912; // 0.5–7.5 GiB per file
+    return {
+      id: `f${String(i + 1).padStart(2, '0')}c36607a-b53f-49ed-bf3e-a5f2dbc68004`,
+      box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68004',
+      alias: `sample_proteome_${String(i + 1).padStart(3, '0')}.raw`,
+      state,
+      state_updated: '2026-02-04T08:00:00Z',
+      storage_alias: 'HD02',
+      bucket_id: 'inbox-hd02',
+      decrypted_sha256:
+        state === 'interrogated' ? (i % 10).toString().repeat(64) : null,
+      decrypted_size,
+      encrypted_size: decrypted_size + 48000,
+      part_size: 16777216,
+      accession: null,
+    };
+  },
+);
+
+export const uploadBox5FileUploads: FileUploadWithAccession[] = [
+  {
+    id: 'f1d36607a-b53f-49ed-bf3e-a5f2dbc68005',
+    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
+    alias: 'sample_image_001.tiff',
+    state: 'interrogated',
+    state_updated: '2026-02-05T08:00:00Z',
+    storage_alias: 'TUE03',
+    bucket_id: 'inbox-tue03',
+    decrypted_sha256: 'd'.repeat(64),
+    decrypted_size: 4294967296, // 4 GiB
+    encrypted_size: 4295000000,
+    part_size: 16777216,
+    accession: null,
+  },
+  {
+    id: 'f2d36607a-b53f-49ed-bf3e-a5f2dbc68005',
+    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
+    alias: 'sample_image_002.tiff',
+    state: 'init',
+    state_updated: '2026-02-05T08:30:00Z',
+    storage_alias: 'TUE03',
+    bucket_id: 'inbox-tue03',
+    decrypted_sha256: null,
+    decrypted_size: 1073741824, // 1 GiB
+    encrypted_size: 1073780000,
+    part_size: 16777216,
+    accession: null,
+  },
+];
 
 /**
  * WPS API

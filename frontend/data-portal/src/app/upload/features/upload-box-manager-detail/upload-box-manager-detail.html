@@ -206,68 +206,14 @@
           </p>
           <p><strong>Files:</strong></p>
           @if (box.file_count > 0) {
-            <div class="overflow-auto">
-              <table mat-table [dataSource]="fileUploadsDataSource" class="w-full">
-                <ng-container matColumnDef="alias">
-                  <th mat-header-cell *matHeaderCellDef>Filename</th>
-                  <td mat-cell *matCellDef="let file">{{ file.alias }}</td>
-                </ng-container>
-                <ng-container matColumnDef="status">
-                  <th mat-header-cell *matHeaderCellDef>Status</th>
-                  <td mat-cell *matCellDef="let file">
-                    <span [class]="(file.state | FileUploadStatePipe).class">{{
-                      (file.state | FileUploadStatePipe).name
-                    }}</span>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="size">
-                  <th mat-header-cell *matHeaderCellDef>Size</th>
-                  <td mat-cell *matCellDef="let file">{{
-                    file.decrypted_size | parseBytes
-                  }}</td>
-                </ng-container>
-                <ng-container matColumnDef="uploaded">
-                  <th mat-header-cell *matHeaderCellDef>Uploaded</th>
-                  <td mat-cell *matCellDef="let file">{{
-                    file.state_updated | date: friendlyDateFormat : timeZone
-                  }}</td>
-                </ng-container>
-                <ng-container matColumnDef="accession">
-                  <th mat-header-cell *matHeaderCellDef>Accession</th>
-                  <td mat-cell *matCellDef="let file">{{ file.accession ?? '—' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="delete">
-                  <th mat-header-cell *matHeaderCellDef class="w-16"></th>
-                  <td mat-cell *matCellDef="let file">
-                    @if (canDeleteFile(file)) {
-                      <button
-                        mat-icon-button
-                        (click)="deleteFile(file)"
-                        [attr.aria-label]="'Delete file ' + file.alias"
-                        data-umami-event="Upload Box Manager Detail Delete File Clicked"
-                        class="text-error"
-                      >
-                        <mat-icon fontIcon="delete"></mat-icon>
-                      </button>
-                    }
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="fileColumns()"></tr>
-                <tr mat-row *matRowDef="let row; columns: fileColumns()"></tr>
-
-                <tr class="mat-row" *matNoDataRow>
-                  <td class="mat-cell p-4 text-base" colspan="4">Loading files...</td>
-                </tr>
-              </table>
-            </div>
-            @if (box.file_count > 10) {
-              <mat-paginator
-                showFirstLastButtons
-                class="sticky left-0"
-                aria-label="Select page of files"
-              ></mat-paginator>
-            }
+            <app-upload-box-files-table
+              [files]="fileUploads()"
+              [boxState]="box.state"
+              [showDelete]="box.state === 'open'"
+              [deletable]="canDeleteFileFn"
+              deleteEventLabel="Upload Box Manager Detail Delete File Clicked"
+              (deleteFile)="deleteFile($event)"
+            />
           } @else {
             <p class="text-warning mt-2">This upload box is still empty.</p>
           }

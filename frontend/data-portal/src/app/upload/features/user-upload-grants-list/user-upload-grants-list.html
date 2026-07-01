@@ -33,6 +33,18 @@
                   <div class="w-full sm:max-w-64">
                     <button
                       mat-stroked-button
+                      (click)="viewDetails(grant)"
+                      aria-label="View details of this upload box"
+                      data-umami-event="User Upload Grants List View Details Clicked"
+                      class="w-full whitespace-nowrap"
+                    >
+                      <mat-icon fontIcon="visibility"></mat-icon>
+                      View details
+                    </button>
+                  </div>
+                  <div class="w-full sm:max-w-64">
+                    <button
+                      mat-stroked-button
                       (click)="createToken(grant)"
                       aria-label="Create an upload token for this upload box"
                       data-umami-event="User Upload Grants List Create Token Clicked"

@@ -24,6 +24,8 @@ import {
   uploadBox1FileUploads,
   uploadBox2FileUploads,
   uploadBox3FileUploads,
+  uploadBox4FileUploads,
+  uploadBox5FileUploads,
   uploadBoxes,
   pediatricLeukemiaDatasetDetails,
   pediatricLeukemiaFileIds,
@@ -278,6 +280,10 @@ export const responses: { [endpoint: string]: ResponseValue } = {
     uploadBox2FileUploads,
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003/uploads':
     uploadBox3FileUploads,
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68004/uploads':
+    uploadBox4FileUploads,
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005/uploads':
+    uploadBox5FileUploads,
   'GET /api/rs/upload-boxes/*/uploads': [],
 
   // Delete a single file upload from a box
@@ -290,6 +296,8 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001': uploadBoxes.boxes[0],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002': uploadBoxes.boxes[1],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68004': uploadBoxes.boxes[3],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005': uploadBoxes.boxes[4],
 
   // Unknown upload box (catch-all, must stay after nested routes above)
   'GET /api/rs/upload-boxes/*': 404,

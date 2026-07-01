@@ -1,0 +1,50 @@
+<h2 mat-dialog-title>Upload Box Details</h2>
+
+<mat-dialog-content>
+  @if (isLoading()) {
+    <app-stencil></app-stencil>
+  } @else if (hasError()) {
+    <p class="text-error"
+      >There was an error retrieving the upload box. Please try again later.</p
+    >
+  } @else if (box(); as box) {
+    <div class="flex flex-col gap-4 pt-2">
+      <div>
+        <p>
+          <strong class="inline-block w-40">Title:</strong>
+          <span>{{ box.title }}</span>
+        </p>
+        <p class="flex">
+          <strong class="inline-block min-w-40">Description:</strong>
+          <span>{{ box.description }}</span>
+        </p>
+        <p>
+          <strong class="inline-block w-40">State:</strong>
+          <strong class="{{ stateClass[box.state] }} capitalize">{{
+            box.state | CapitalisePipe
+          }}</strong>
+        </p>
+        <p>
+          <strong class="inline-block w-40">Files / Size:</strong>
+          <span
+            >{{ box.file_count }} files using {{ box.size | parseBytes }} of
+            {{ box.max_size | parseBytes }}</span
+          >
+        </p>
+      </div>
+
+      <div>
+        <p class="mb-2"><strong>Files:</strong></p>
+        @if (box.file_count > 0) {
+          <app-upload-box-files-table [files]="files()" [boxState]="box.state" />
+        } @else {
+          <p class="text-warning">This upload box is still empty.</p>
+        }
+      </div>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close type="button">Close</button>
+</mat-dialog-actions>
