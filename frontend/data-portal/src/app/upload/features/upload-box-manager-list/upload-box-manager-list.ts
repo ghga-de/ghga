@@ -5,7 +5,7 @@
  */
 
 import { DatePipe } from '@angular/common';
-import { Component, effect, inject, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -29,6 +29,12 @@ const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
   [UploadBoxState.open]: 1,
   [UploadBoxState.archived]: 2,
 };
+
+/** An upload box row annotated with derived display values. */
+interface UploadBoxRow extends ResearchDataUploadBox {
+  stateClass: string;
+  storageLabel: string;
+}
 
 /**
  * Upload Box Manager List component.
@@ -60,9 +66,23 @@ export class UploadBoxManagerListComponent {
   uploadBoxesAreLoading = this.#uploadBoxResource.isLoading;
   uploadBoxesError = this.#uploadBoxResource.error;
 
-  dataSource = new MatTableDataSource<ResearchDataUploadBox>([]);
+  /**
+   * The upload boxes to display, each annotated with derived display values
+   * (state CSS class and human-readable storage label). Deriving these in a
+   * computed keeps the mappings out of the template and change detection, and
+   * lets the labels react when the storage labels finish loading.
+   */
+  #rows = computed<UploadBoxRow[]>(() =>
+    this.uploadBoxes().map((box) => ({
+      ...box,
+      stateClass: UploadBoxStateClass[box.state],
+      storageLabel: this.#uploadBoxService.getStorageLocationLabel(box.storage_alias),
+    })),
+  );
 
-  #updateDataSourceEffect = effect(() => (this.dataSource.data = this.uploadBoxes()));
+  dataSource = new MatTableDataSource<UploadBoxRow>([]);
+
+  #updateDataSourceEffect = effect(() => (this.dataSource.data = this.#rows()));
 
   #uploadBoxErrorEffect = effect(() => {
     if (this.uploadBoxesError()) {
@@ -71,7 +91,7 @@ export class UploadBoxManagerListComponent {
   });
 
   #uploadBoxSortingAccessor = (
-    uploadBox: ResearchDataUploadBox,
+    uploadBox: UploadBoxRow,
     key: string,
   ): string | number => {
     switch (key) {
@@ -86,7 +106,7 @@ export class UploadBoxManagerListComponent {
       case 'limit':
         return uploadBox.max_size;
       case 'location':
-        return this.getStorageLocationLabel(uploadBox.storage_alias);
+        return uploadBox.storageLabel;
       case 'last_change':
         return uploadBox.last_changed;
       default:
@@ -136,24 +156,6 @@ export class UploadBoxManagerListComponent {
     const paginator = this.paginator();
     if (paginator) this.dataSource.paginator = paginator;
   });
-
-  /**
-   * Get the status class for an upload box state.
-   * @param state - the upload box state
-   * @returns a CSS class for the state
-   */
-  getUploadBoxStateClass(state: ResearchDataUploadBox['state']): string {
-    return UploadBoxStateClass[state];
-  }
-
-  /**
-   * Get the human-readable storage location for a storage alias.
-   * @param storageAlias - storage alias from the upload box
-   * @returns storage location label or alias fallback
-   */
-  getStorageLocationLabel(storageAlias: string): string {
-    return this.#uploadBoxService.getStorageLocationLabel(storageAlias);
-  }
 
   /**
    * Navigate to the detail view for a given upload box.

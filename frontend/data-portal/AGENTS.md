@@ -195,6 +195,9 @@ Further project-specific development guidance:
 ## Templates
 
 - Keep templates simple and avoid complex logic
+- Do NOT call functions or methods in template bindings (including interpolation, `@if`/`@for` conditions, and inputs); bind to a signal or a `computed()` instead.
+  - Why: template expressions are re-evaluated on every change detection cycle, so a function call re-runs each time regardless of whether its inputs changed. This is wasteful, scales poorly (worse inside `@for`), and gets more pronounced under zoneless change detection. Signals and `computed()` are memoized: they recompute only when a dependency actually changes, and they let change detection update only what changed.
+  - Exceptions: pure pipes (also memoized) are fine, and event handlers (e.g. `(click)="doThing()"`) are calls in response to user actions, not evaluated during change detection, so they are fine too.
 - Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
 - Use the async pipe to handle observables
 - Do not assume globals like (`new Date()`) are available

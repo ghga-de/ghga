@@ -49,8 +49,8 @@
     </div>
   </div>
 } @else {
-  @let uri = setupUri() | async;
-  @if (uri) {
+  @let setup = setupData() | async;
+  @if (setup) {
     <p>
       The two-factor authentication means that we require you to enter an additional
       6-digit authentication code after you logged in via LS Login. This code can be
@@ -62,7 +62,7 @@
       the GHGA data portal, please scan this QR code with your authenticator app:
     </p>
     <div class="mt-4 mb-6">
-      <qrcode [qrdata]="uri" [width]="256" [margin]="0"></qrcode>
+      <qrcode [qrdata]="setup.uri" [width]="256" [margin]="0"></qrcode>
     </div>
 
     @if (showManualSetup) {
@@ -75,14 +75,14 @@
           type="text"
           size="16"
           readonly
-          [value]="getSecret(uri)"
+          [value]="setup.secret"
           class="mr-2 mb-2 h-10 text-center font-mono"
           aria-label="TOTP setup key"
           aria-readonly="true"
         />
         <button
           mat-icon-button
-          (click)="copySecret(uri)"
+          (click)="copySecret(setup.secret)"
           class="relative"
           matTooltip="Copy setup key"
           matTooltipPosition="right"
@@ -121,7 +121,7 @@
         </button>
       </div>
     </div>
-  } @else if (uri === undefined) {
+  } @else if (setup === undefined) {
     <p>Generating the TOTP setup...</p>
   } @else {
     <p>Error setting up two-factor authentication.</p>

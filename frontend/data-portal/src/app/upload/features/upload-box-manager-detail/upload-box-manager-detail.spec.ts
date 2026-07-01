@@ -239,6 +239,27 @@ describe('UploadBoxManagerDetailComponent', () => {
       expect(screen.getAllByText('John Doe (doe@home.org)')).toHaveLength(3);
     });
 
+    it('should mark a grant as active while today is within its validity period', async () => {
+      // Bounds far in the past/future keep the outcome independent of the clock.
+      uploadBoxService.setBoxGrants([
+        { ...uploadGrants[0], valid_from: '2000-01-01', valid_until: '2999-12-31' },
+      ]);
+      await fixture.whenStable();
+      const status = screen.getByText('active');
+      expect(status).toBeVisible();
+      expect(status).toHaveClass('text-success');
+    });
+
+    it('should mark a grant as inactive once its validity period has passed', async () => {
+      uploadBoxService.setBoxGrants([
+        { ...uploadGrants[0], valid_from: '2000-01-01', valid_until: '2000-12-31' },
+      ]);
+      await fixture.whenStable();
+      const status = screen.getByText('inactive');
+      expect(status).toBeVisible();
+      expect(status).toHaveClass('text-error');
+    });
+
     it('should show "No upload grants found" when grants list is empty', () => {
       expect(screen.getByText(/no upload grants found/i)).toBeVisible();
     });

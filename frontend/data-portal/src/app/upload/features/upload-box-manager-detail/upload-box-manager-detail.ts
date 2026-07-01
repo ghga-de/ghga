@@ -49,6 +49,11 @@ import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-
 import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';
 import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
 
+/** An upload grant annotated with whether it is currently active. */
+interface GrantWithStatus extends UploadGrant {
+  active: boolean;
+}
+
 /**
  * Detail view component for managing an individual upload box.
  * Displays box metadata, upload grants (placeholder), and files (placeholder).
@@ -174,23 +179,23 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   /** Placeholder columns for the upload grants table. */
   readonly grantColumns = ['grantee', 'status', 'validity', 'details'];
 
-  /** The upload grants for this box. */
-  grants = computed<UploadGrant[]>(() => this.#uploadBoxService.boxGrants.value());
+  /**
+   * The upload grants for this box, each annotated with whether it is currently
+   * active. Computed once per grant change (rather than per change-detection
+   * cycle) so the template can bind to `grant.active` instead of calling a method.
+   */
+  grants = computed<GrantWithStatus[]>(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.#uploadBoxService.boxGrants.value().map((grant) => ({
+      ...grant,
+      active: grant.valid_from <= today && today <= grant.valid_until,
+    }));
+  });
 
   /** The file uploads contained in this box. */
   fileUploads = computed<FileUploadWithAccession[]>(() =>
     this.#uploadBoxService.boxFileUploads.value(),
   );
-
-  /**
-   * Check if an upload grant is currently active.
-   * @param grant - the upload grant to check
-   * @returns true if the grant is within its valid period
-   */
-  isGrantActive(grant: UploadGrant): boolean {
-    const today = new Date().toISOString().slice(0, 10);
-    return grant.valid_from <= today && today <= grant.valid_until;
-  }
 
   /** Whether a box state change (lock or reopen) is currently in flight. */
   isChangingState = signal<boolean>(false);
