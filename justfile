@@ -24,8 +24,9 @@ fmt:
     uv run ruff format .
     uv run ruff check --fix .
 
+# mypy per member (a single `mypy .` collides on duplicate module names across members)
 typecheck:
-    uv run mypy .
+    for m in libs/*/src services/*/src tools/*/src; do echo "== $m =="; uv run mypy "$m" || exit 1; done
 
 # Run tests; optionally scope to a member, e.g. `just test libs/hexkit`.
 test target=".":

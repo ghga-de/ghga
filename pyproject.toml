@@ -94,6 +94,9 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 check_untyped_defs = true
 no_site_packages = false
+# monorepo addition (template predates mypy 2.x strictness): the pydantic plugin teaches
+# mypy that BaseSettings configs load from env, so `Config()` is valid (no call-arg errors)
+plugins = ["pydantic.mypy"]
 # monorepo: exclude migration sources/scratch (regex)
 exclude = ['build/lib/', '\.legacy_repos/', '\.migration-work/']
 
