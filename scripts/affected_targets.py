@@ -31,9 +31,15 @@ LEAF_TARGETS = ("testbed",)
 
 # A change touching any of these affects ALL targets (repo-wide concerns).
 GLOBAL_PREFIXES = (
-    "pyproject.toml", "uv.lock", ".python-version", "justfile",
-    ".pre-commit-config.yaml", ".dockerignore",
-    "docker/", "scripts/", ".github/workflows/",
+    "pyproject.toml",
+    "uv.lock",
+    ".python-version",
+    "justfile",
+    ".pre-commit-config.yaml",
+    ".dockerignore",
+    "docker/",
+    "scripts/",
+    ".github/workflows/",
     # the shared chart library underpins every generated chart:
     "deploy/charts/ghga-common/",
 )
@@ -41,11 +47,14 @@ GLOBAL_PREFIXES = (
 
 def changed_files(base: str) -> list[str]:
     """Return files changed vs `base` (merge-base diff), else fall back to the working tree."""
+
     def run(args: list[str]) -> list[str] | None:
         try:
             out = subprocess.run(
                 ["git", "-C", str(REPO), *args],
-                capture_output=True, text=True, check=True,
+                capture_output=True,
+                text=True,
+                check=True,
             ).stdout
         except subprocess.CalledProcessError:
             return None
@@ -58,7 +67,10 @@ def changed_files(base: str) -> list[str]:
             return diff
     # Fallbacks: committed-but-unmerged + uncommitted working tree.
     files: set[str] = set()
-    for args in (["diff", "--name-only", "HEAD"], ["ls-files", "--others", "--exclude-standard"]):
+    for args in (
+        ["diff", "--name-only", "HEAD"],
+        ["ls-files", "--others", "--exclude-standard"],
+    ):
         got = run(args)
         if got:
             files.update(got)
@@ -90,7 +102,10 @@ def all_targets() -> list[str]:
         if not base.is_dir():
             continue
         for member in sorted(p for p in base.iterdir() if p.is_dir()):
-            if any((member / m).exists() for m in ("pyproject.toml", "package.json", "Chart.yaml")):
+            if any(
+                (member / m).exists()
+                for m in ("pyproject.toml", "package.json", "Chart.yaml")
+            ):
                 found.add(f"{root}/{member.name}")
     for leaf in LEAF_TARGETS:
         if (REPO / leaf).is_dir():

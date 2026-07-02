@@ -78,6 +78,9 @@ convention = "pep257"
 "**/tests_*/**" = ["S", "SIM", "PLR", "B011"]
 "**/examples/**" = ["S", "D"]
 "**/__init__.py" = ["D"]
+# tools/auth-km-jobs predates the shared code standard; relax the rules it does not yet meet
+# (rather than retrofit docstrings etc.). Revisit if the tool is modernised.
+"tools/auth-km-jobs/**" = ["D", "B904", "SIM115", "PLC0415"]
 
 # monorepo: internal libraries are workspace *source* -> first-party, not PyPI third-party
 [tool.ruff.lint.isort]

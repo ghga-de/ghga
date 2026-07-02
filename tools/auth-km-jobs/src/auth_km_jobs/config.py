@@ -75,7 +75,7 @@ class Config(BaseSettings):
     )
 
     # MongoDB settings
-    mongo_dsn: str = Field( 
+    mongo_dsn: str = Field(
         default="mongodb://localhost:27017/",
         description="Auth service MongoDB connection string.",
     )
@@ -83,7 +83,7 @@ class Config(BaseSettings):
         default="auth-service",
         description="Name of the auth service database.",
     )
-    user_tokens_collection: str = Field( 
+    user_tokens_collection: str = Field(
         default="user_tokens",
         description="Name of the collection for user tokens.",
     )

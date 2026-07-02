@@ -32,10 +32,11 @@ def get_vault() -> hvac.Client:
     )
 
     if role:
-        Kubernetes(client.adapter).login(role=role, jwt=jwt, mount_point=auth_mount_point)
+        Kubernetes(client.adapter).login(
+            role=role, jwt=jwt, mount_point=auth_mount_point
+        )
 
     return client
-
 
 
 def read_from_vault(path: str) -> str:

@@ -141,13 +141,13 @@ class ObjectIterator:
                             for v in slot_value
                         ]
                     else:
-                        re_serialized_element[
-                            slot_name
-                        ] = ObjectIterator._re_serialize_element(
-                            slot_value,
-                            schema,
-                            slot_def.range,
-                            inline_non_identifiable,
+                        re_serialized_element[slot_name] = (
+                            ObjectIterator._re_serialize_element(
+                                slot_value,
+                                schema,
+                                slot_def.range,
+                                inline_non_identifiable,
+                            )
                         )
                 elif id_slot is not None:  # noqa: SIM102
                     # If the slot is multivalued, we must differentiate whether it

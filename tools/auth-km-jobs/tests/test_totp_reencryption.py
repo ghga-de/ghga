@@ -181,11 +181,9 @@ ERROR: Re-encryption failed
     assert len(collection_after) == NUM_TOKENS
 
 
-def test_populate_vault_and_collection(
-    user_tokens: Collection
-):
+def test_populate_vault_and_collection(user_tokens: Collection):
     """A dummy test to populate the vault and the collection. Should run last.
-    
+
     After running this test, the CLI can be tested manually.
     """
     collection_before = list(user_tokens.find())
@@ -199,4 +197,3 @@ def test_populate_vault_and_collection(
     assert len(collection_after) == NUM_TOKENS
 
     assert collection_after != collection_before
-

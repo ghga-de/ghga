@@ -71,7 +71,7 @@ def main() -> int:
         if not to_add:
             continue
 
-        lines = [f'{n} = {{ workspace = true }}' for n in to_add]
+        lines = [f"{n} = {{ workspace = true }}" for n in to_add]
         if "[tool.uv.sources]" in text:
             text = text.replace(
                 "[tool.uv.sources]", "[tool.uv.sources]\n" + "\n".join(lines), 1

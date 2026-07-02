@@ -30,7 +30,7 @@ app = FastAPI()
 app.include_router(router)
 
 
-def custom_openapi() -> dict[str, Any]:  # noqa: D103
+def custom_openapi() -> dict[str, Any]:
     if app.openapi_schema:
         return app.openapi_schema
     config = DrsApiConfig()
