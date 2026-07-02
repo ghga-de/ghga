@@ -19,12 +19,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
-from ghga_service_commons.utils.context import asyncnullcontext
-from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
-from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
 from dcs.adapters.inbound.event_sub import EventSubTranslator
 from dcs.adapters.inbound.fastapi_ import dummies
@@ -40,6 +34,12 @@ from dcs.core.bucket_cleanup import DownloadBucketCleaner
 from dcs.core.data_repository import DataRepository
 from dcs.ports.inbound.bucket_cleanup import BucketCleanerPort
 from dcs.ports.inbound.data_repository import DataRepositoryPort
+from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
+from ghga_service_commons.utils.context import asyncnullcontext
+from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
 
 @asynccontextmanager

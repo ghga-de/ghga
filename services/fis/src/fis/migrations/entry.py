@@ -14,13 +14,12 @@
 # limitations under the License.
 """Module containing controller function for DB migrations"""
 
+from fis.migrations.definitions import V2Migration, V3Migration
 from hexkit.providers.mongodb.migrations import (
     MigrationConfig,
     MigrationManager,
     MigrationMap,
 )
-
-from fis.migrations.definitions import V2Migration, V3Migration
 
 MIGRATION_MAP = {2: V2Migration, 3: V3Migration}
 

@@ -21,12 +21,6 @@ import re
 import uuid
 from time import perf_counter
 
-from ghga_service_commons.utils.multinode_storage import (
-    S3ObjectStorages,
-)
-from hexkit.protocols.dao import ResourceNotFoundError
-from hexkit.protocols.objstorage import ObjectStorageProtocol
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4, Field, PositiveInt, field_validator
 from pydantic_settings import BaseSettings
 
@@ -38,6 +32,12 @@ from dcs.ports.inbound.data_repository import DataRepositoryPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort
 from dcs.ports.outbound.event_pub import EventPublisherPort
 from dcs.ports.outbound.secrets import SecretsClientPort
+from ghga_service_commons.utils.multinode_storage import (
+    S3ObjectStorages,
+)
+from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.protocols.objstorage import ObjectStorageProtocol
+from hexkit.utils import now_utc_ms_prec
 
 log = logging.getLogger(__name__)
 

@@ -18,6 +18,10 @@ from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
+from jwcrypto.jwk import JWK
+
+from fis.config import Config
+from fis.inject import prepare_rest_app
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import generate_jwk
 from hexkit.providers.akafka.testutils import (  # noqa: F401
@@ -28,10 +32,6 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_container_fixture,
     mongodb_fixture,
 )
-from jwcrypto.jwk import JWK
-
-from fis.config import Config
-from fis.inject import prepare_rest_app
 from tests_fis.fixtures.config import get_config
 from tests_fis.fixtures.joint import JointRig, joint_fixture, rig  # noqa: F401
 

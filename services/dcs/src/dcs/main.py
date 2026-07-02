@@ -15,10 +15,6 @@
 
 """In this module object construction and dependency injection is carried out."""
 
-from ghga_service_commons.api import run_server
-from hexkit.log import configure_logging
-from hexkit.opentelemetry import configure_opentelemetry
-
 from dcs.config import Config
 from dcs.inject import (
     get_persistent_publisher,
@@ -27,6 +23,9 @@ from dcs.inject import (
     prepare_rest_app,
 )
 from dcs.migrations import run_db_migrations
+from ghga_service_commons.api import run_server
+from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
 
 DB_VERSION = 3
 

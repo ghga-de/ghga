@@ -22,6 +22,8 @@ from math import ceil
 from typing import Any
 from uuid import uuid4
 
+from pydantic import UUID4
+
 from ghga_event_schemas.pydantic_ import (
     FileInternallyRegistered,
     InterrogationFailure,
@@ -35,8 +37,6 @@ from hexkit.protocols.dao import (
     UniqueConstraintViolationError,
 )
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4
-
 from ucs.config import Config
 from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.core.models import (

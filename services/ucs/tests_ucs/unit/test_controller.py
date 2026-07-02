@@ -23,6 +23,7 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+
 from ghga_event_schemas.pydantic_ import (
     FileInternallyRegistered,
     FileUploadState,
@@ -31,7 +32,6 @@ from ghga_event_schemas.pydantic_ import (
 from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
-
 from tests_ucs.fixtures.joint import JointRig
 from tests_ucs.fixtures.utils import (
     DECRYPTED_SIZE,

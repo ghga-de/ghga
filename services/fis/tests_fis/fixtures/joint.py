@@ -22,12 +22,6 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 import pytest_asyncio
-from ghga_service_commons.api.testing import AsyncTestClient
-from hexkit.providers.akafka import KafkaEventSubscriber
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.testing.dao import new_mock_dao_class
-from hexkit.providers.testing.eventpub import InMemEventPublisher, InMemEventStore
 
 from fis.adapters.outbound.event_pub import EventPubTranslator
 from fis.config import Config
@@ -38,6 +32,12 @@ from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import FileDao, InterrogationReportDao
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.secrets import SecretsClientPort
+from ghga_service_commons.api.testing import AsyncTestClient
+from hexkit.providers.akafka import KafkaEventSubscriber
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.testing.dao import new_mock_dao_class
+from hexkit.providers.testing.eventpub import InMemEventPublisher, InMemEventStore
 from tests_fis.fixtures.config import get_config
 
 __all__ = ["JointFixture", "joint_fixture"]

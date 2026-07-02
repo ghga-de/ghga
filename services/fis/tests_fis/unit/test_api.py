@@ -19,13 +19,13 @@ import logging
 from uuid import uuid4
 
 import pytest
-from ghga_service_commons.api.testing import AsyncTestClient
-from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
-from hexkit.utils import now_utc_ms_prec
 from jwcrypto.jwk import JWK
 
 from fis.constants import DHFS_USER_AGENT_PREFIX, GHGA, OLD_DHFS_USER_AGENT_PREFIX
 from fis.core import models
+from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
+from hexkit.utils import now_utc_ms_prec
 from tests_fis.fixtures.joint import JointRig
 from tests_fis.fixtures.utils import create_file_under_interrogation
 

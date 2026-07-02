@@ -19,7 +19,6 @@ from datetime import timedelta
 from uuid import uuid4
 
 from hexkit.utils import now_utc_ms_prec
-
 from ifrs.core.models import ArchivableFileUpload, FileUpload
 from tests_ifrs.fixtures.joint import INTERROGATION_BUCKET
 

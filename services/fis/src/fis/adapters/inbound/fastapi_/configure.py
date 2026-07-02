@@ -19,11 +19,11 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from ghga_service_commons.api import ApiConfigBase, configure_app
 
 from fis import __version__
 from fis.adapters.inbound.fastapi_.routes import router
 from fis.config import Config
+from ghga_service_commons.api import ApiConfigBase, configure_app
 
 config = Config()
 

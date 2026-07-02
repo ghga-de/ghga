@@ -19,8 +19,8 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from ghga_service_commons.api import ApiConfigBase, configure_app
 
+from ghga_service_commons.api import ApiConfigBase, configure_app
 from ucs import __version__
 from ucs.adapters.inbound.fastapi_.routes import router
 

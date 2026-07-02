@@ -17,6 +17,7 @@
 
 from uuid import UUID, uuid4
 
+from dcs.core.models import AccessTimeDrsObject
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
@@ -27,8 +28,6 @@ from hexkit.providers.mongodb.migrations.helpers import (
     convert_uuids_and_datetimes_v6,
 )
 from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
-
-from dcs.core.models import AccessTimeDrsObject
 
 DRS_OBJECTS = "drs_objects"
 DCS_PERSISTED_EVENTS = "dcsPersistedEvents"

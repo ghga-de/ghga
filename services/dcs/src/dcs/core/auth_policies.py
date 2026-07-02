@@ -16,8 +16,9 @@
 
 from typing import Literal
 
-from ghga_service_commons.utils.crypt import decode_key
 from pydantic import UUID4, BaseModel, Field, field_validator
+
+from ghga_service_commons.utils.crypt import decode_key
 
 
 class WorkOrderContext(BaseModel):

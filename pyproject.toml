@@ -32,40 +32,67 @@ dev = [
 
 # ----------------------------------------------------------------------------------------
 # Repo-wide tool configuration (single source of truth — replaces N per-repo copies).
+# Rule sets are ported VERBATIM from the retired microservice-repository-template
+# (.pyproject_generation/pyproject_template.toml). Only `src`/`exclude`, the per-file-ignore
+# GLOBS, and the isort first-party list are adapted to the monorepo layout.
 # ----------------------------------------------------------------------------------------
 [tool.ruff]
 line-length = 88
 target-version = "py313"
-src = ["libs", "services", "tools", "scripts"]
+# monorepo: point first-party detection at each member's src/ (was a single "src" per repo)
+src = ["libs/*/src", "services/*/src", "tools/*/src", "scripts"]
 exclude = [
     ".git", ".devcontainer", "__pycache__", "build", "dist",
-    ".legacy_repos", ".migration-work",
+    # monorepo: never lint migration sources/scratch or the JS front end
+    ".legacy_repos", ".migration-work", "frontend",
 ]
 
 [tool.ruff.lint]
-select = ["C90", "F", "I", "S", "B", "N", "UP", "PL", "RUF", "SIM", "D"]
-ignore = ["E111", "RUF001", "N818", "B008", "D205", "D400", "D401", "D107", "D206", "D300", "PLC0206"]
+# --- ported verbatim from the template ---
 fixable = ["UP", "I", "D", "RUF022"]
-
-[tool.ruff.lint.per-file-ignores]
-"scripts/*" = ["PL", "S", "SIM", "D"]
-"**/tests/*" = ["S", "SIM", "PLR", "B011"]
-"**/tests_*/*" = ["S", "SIM", "PLR", "B011"]
-"**/__init__.py" = ["D"]
-
-[tool.ruff.lint.pydocstyle]
-convention = "pep257"
+ignore = [
+    "E111", "E114", "E116",  # indentation (formatter-managed)
+    "PLW",                    # pylint warnings
+    "RUF001",                 # ambiguous unicode character strings
+    "RUF010",                 # explicit str/repr conversion (!s / !r)
+    "RUF012",                 # mutable class default needs ClassVar
+    "N818",                   # Error suffix on exception names
+    "B008",                   # function call in argument defaults
+    "PLR2004",                # magic-value comparison
+    "D205", "D400", "D401", "D107", "D206", "D300",  # pydocstyle relaxations
+    "UP040",                  # `type` statement (mypy support pending)
+    "PLC0206",                # dict value extraction without `.items()`
+]
+select = ["C90", "F", "I", "S", "B", "N", "UP", "PL", "RUF", "SIM", "D"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+# template per-file-ignore rule sets, globs widened for the monorepo layout
+[tool.ruff.lint.per-file-ignores]
+"**/scripts/**" = ["PL", "S", "SIM", "D"]
+"**/tests/**" = ["S", "SIM", "PLR", "B011"]
+"**/tests_*/**" = ["S", "SIM", "PLR", "B011"]
+"**/examples/**" = ["S", "D"]
+"**/__init__.py" = ["D"]
+
+# monorepo: internal libraries are workspace *source* -> first-party, not PyPI third-party
+[tool.ruff.lint.isort]
+known-first-party = ["hexkit", "ghga_service_commons", "ghga_event_schemas", "schemapack", "metldata"]
+
 [tool.mypy]
+# --- ported verbatim from the template ---
 disable_error_code = "import"
 show_error_codes = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 check_untyped_defs = true
-exclude = ["^\\.legacy_repos/", "^\\.migration-work/", "build/"]
+no_site_packages = false
+# monorepo: exclude migration sources/scratch (regex)
+exclude = ['build/lib/', '\.legacy_repos/', '\.migration-work/']
 
 [tool.pytest.ini_options]
 minversion = "9.0"

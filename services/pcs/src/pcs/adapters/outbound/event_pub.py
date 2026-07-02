@@ -17,7 +17,6 @@
 from ghga_event_schemas.configs import FileDeletionRequestEventsConfig
 from ghga_event_schemas.pydantic_ import FileDeletionRequested
 from hexkit.protocols.eventpub import EventPublisherProtocol
-
 from pcs.ports.outbound.event_pub import EventPubTranslatorPort
 
 __all__ = ["EventPubTranslator", "EventPubTranslatorConfig"]

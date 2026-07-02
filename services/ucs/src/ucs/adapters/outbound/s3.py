@@ -19,10 +19,10 @@ import logging
 from contextlib import contextmanager
 from typing import Any
 
-from ghga_service_commons.utils.multinode_storage import ObjectStorages
-from hexkit.protocols.objstorage import ObjectStorageProtocol
 from pydantic import UUID4
 
+from ghga_service_commons.utils.multinode_storage import ObjectStorages
+from hexkit.protocols.objstorage import ObjectStorageProtocol
 from ucs.config import Config
 from ucs.core.models import FileUpload, FileUploadBasics
 from ucs.ports.outbound.storage import S3ClientPort

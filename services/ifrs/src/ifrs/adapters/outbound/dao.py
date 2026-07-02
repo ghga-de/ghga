@@ -16,7 +16,6 @@
 """DAO translators for accessing the database."""
 
 from hexkit.protocols.dao import DaoFactoryProtocol
-
 from ifrs.core.models import FileMetadata
 from ifrs.ports.outbound.dao import FileMetadataDao
 

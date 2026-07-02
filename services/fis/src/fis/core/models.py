@@ -14,9 +14,10 @@
 # limitations under the License.
 """Models for internal representation"""
 
+from pydantic import UUID4, BaseModel, Field, SecretBytes, model_validator
+
 from ghga_event_schemas.pydantic_ import FileUploadState
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, BaseModel, Field, SecretBytes, model_validator
 
 
 class BaseFileInformation(BaseModel):

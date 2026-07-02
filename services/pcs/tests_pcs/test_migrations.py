@@ -20,8 +20,8 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from pcs.migrations import run_db_migrations
 from tests_pcs.fixtures.config import get_config
 

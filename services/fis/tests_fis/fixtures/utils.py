@@ -18,9 +18,8 @@
 from pathlib import Path
 from uuid import uuid4
 
-from hexkit.utils import now_utc_ms_prec
-
 from fis.core.models import FileUnderInterrogation
+from hexkit.utils import now_utc_ms_prec
 
 BASE_DIR = Path(__file__).parent.resolve()
 

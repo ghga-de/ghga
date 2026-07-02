@@ -14,8 +14,9 @@
 # limitations under the License.
 """Defines exceptions that can occur during envelope data extraction"""
 
-from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import BaseModel
+
+from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 
 
 class HttpSecretInsertionError(HttpCustomExceptionBase):

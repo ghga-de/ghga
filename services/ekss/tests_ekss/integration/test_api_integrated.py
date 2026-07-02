@@ -20,9 +20,9 @@ import os
 
 import crypt4gh.header
 import pytest
-from ghga_service_commons.api.testing import AsyncTestClient
 
 from ekss.inject import prepare_rest_app
+from ghga_service_commons.api.testing import AsyncTestClient
 from tests_ekss.fixtures.config import get_config
 from tests_ekss.fixtures.keypair import KeypairFixture
 from tests_ekss.fixtures.utils import make_secret_payload

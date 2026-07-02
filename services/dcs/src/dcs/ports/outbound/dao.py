@@ -15,13 +15,12 @@
 
 """DAO interface for accessing the database."""
 
+from dcs.core import models
 from hexkit.protocols.dao import (  # noqa: F401
     Dao,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
 )
-
-from dcs.core import models
 
 # port described by a type alias:
 DrsObjectDaoPort = Dao[models.AccessTimeDrsObject]

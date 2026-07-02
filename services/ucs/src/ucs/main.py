@@ -21,7 +21,6 @@ import logging
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-
 from ucs.config import Config
 from ucs.inject import (
     prepare_core,

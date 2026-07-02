@@ -15,9 +15,10 @@
 
 """Defines dataclasses for holding business-logic data"""
 
+from pydantic import UUID4, BaseModel, Field
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, BaseModel, Field
 
 
 class CoreFileMetadata(BaseModel):

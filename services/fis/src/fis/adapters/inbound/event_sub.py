@@ -18,11 +18,10 @@
 import logging
 from uuid import UUID
 
-from ghga_event_schemas.configs import FileUploadEventsConfig
-from hexkit.protocols.daosub import DaoSubscriberProtocol
-
 from fis.core.models import FileUnderInterrogation
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
+from ghga_event_schemas.configs import FileUploadEventsConfig
+from hexkit.protocols.daosub import DaoSubscriberProtocol
 
 log = logging.getLogger(__name__)
 

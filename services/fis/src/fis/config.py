@@ -14,12 +14,6 @@
 # limitations under the License.
 """Config Parameter Modeling and Parsing"""
 
-from ghga_service_commons.api import ApiConfigBase
-from hexkit.config import config_from_yaml
-from hexkit.log import LoggingConfig
-from hexkit.opentelemetry import OpenTelemetryConfig
-from hexkit.providers.mongodb.migrations import MigrationConfig
-from hexkit.providers.mongokafka import MongoKafkaConfig
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from pydantic import Field, field_validator
 
@@ -28,6 +22,12 @@ from fis.adapters.outbound.event_pub import EventPubConfig
 from fis.adapters.outbound.http import HttpClientConfig
 from fis.adapters.outbound.secrets import SecretsClientConfig
 from fis.constants import SERVICE_NAME
+from ghga_service_commons.api import ApiConfigBase
+from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 
 
 @config_from_yaml(prefix=SERVICE_NAME)

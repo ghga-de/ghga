@@ -19,7 +19,6 @@ from ghga_event_schemas.configs import FileUploadBoxEventsConfig, FileUploadEven
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from hexkit.providers.mongodb import MongoDbIndex
-
 from ucs.constants import (
     FILE_UPLOAD_BOXES_COLLECTION,
     FILE_UPLOADS_COLLECTION,

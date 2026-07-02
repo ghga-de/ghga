@@ -17,6 +17,11 @@
 
 import logging
 
+from pydantic import UUID4
+
+from dcs.constants import TRACER
+from dcs.core import models
+from dcs.ports.inbound.data_repository import DataRepositoryPort
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     FileDeletionRequestEventsConfig,
@@ -25,11 +30,6 @@ from ghga_event_schemas.configs import (
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
-from dcs.constants import TRACER
-from dcs.core import models
-from dcs.ports.inbound.data_repository import DataRepositoryPort
 
 log = logging.getLogger(__name__)
 

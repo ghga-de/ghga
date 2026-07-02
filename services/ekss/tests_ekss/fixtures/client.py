@@ -20,10 +20,10 @@ from dataclasses import dataclass
 from unittest.mock import AsyncMock
 
 import pytest_asyncio
-from ghga_service_commons.api.testing import AsyncTestClient
 
 from ekss.inject import prepare_rest_app
 from ekss.ports.inbound.secrets import SecretsHandlerPort
+from ghga_service_commons.api.testing import AsyncTestClient
 from tests_ekss.fixtures.config import get_config
 
 

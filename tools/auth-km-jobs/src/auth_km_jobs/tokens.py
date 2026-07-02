@@ -2,7 +2,7 @@ from hashlib import sha256
 from secrets import token_urlsafe
 from typing import NamedTuple
 
-__all__ = ["generate_simple_token", "SimpleToken"]
+__all__ = ["SimpleToken", "generate_simple_token"]
 
 
 class SimpleToken(NamedTuple):
@@ -14,7 +14,6 @@ class SimpleToken(NamedTuple):
 
 def generate_simple_token(length: int = 32) -> SimpleToken:
     """Generate a random simple token of the given length."""
-
     token = token_urlsafe(length)
     token_hash = sha256(token.encode()).hexdigest()
 

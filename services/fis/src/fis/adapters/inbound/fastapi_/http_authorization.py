@@ -18,12 +18,12 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import BaseModel, Field
 
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.constants import GHGA
+from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 __all__ = ["AuthProviders", "require_data_hub_jwt"]
 

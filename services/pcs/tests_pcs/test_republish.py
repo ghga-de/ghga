@@ -18,9 +18,9 @@
 from uuid import uuid4
 
 import pytest
+
 from ghga_event_schemas.pydantic_ import FileDeletionRequested
 from hexkit.correlation import set_new_correlation_id
-
 from pcs.inject import get_persistent_publisher
 from tests_pcs.fixtures.joint import JointFixture
 

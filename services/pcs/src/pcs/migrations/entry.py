@@ -19,7 +19,6 @@ from hexkit.providers.mongodb.migrations import (
     MigrationManager,
     MigrationMap,
 )
-
 from pcs.migrations.definitions import V2Migration
 
 MIGRATION_MAP = {2: V2Migration}

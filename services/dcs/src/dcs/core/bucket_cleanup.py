@@ -19,18 +19,18 @@ import logging
 import uuid
 from datetime import timedelta
 
-from ghga_service_commons.utils.multinode_storage import (
-    S3ObjectStorages,
-    S3ObjectStoragesConfig,
-)
-from hexkit.protocols.dao import NoHitsFoundError
-from hexkit.utils import now_utc_ms_prec
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
 from dcs.core.errors import StorageAliasNotConfiguredError
 from dcs.ports.inbound.bucket_cleanup import BucketCleanerPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort
+from ghga_service_commons.utils.multinode_storage import (
+    S3ObjectStorages,
+    S3ObjectStoragesConfig,
+)
+from hexkit.protocols.dao import NoHitsFoundError
+from hexkit.utils import now_utc_ms_prec
 
 log = logging.getLogger(__name__)
 

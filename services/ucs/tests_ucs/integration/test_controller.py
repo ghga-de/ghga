@@ -25,11 +25,11 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+
 from ghga_event_schemas.pydantic_ import FileDeletionRequested, InterrogationSuccess
 from hexkit.correlation import set_correlation_id
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
-
 from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.joint import JointFixture
 from ucs.adapters.outbound.dao import FIELDS_NOT_PUBLISHED

@@ -19,11 +19,11 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from ghga_service_commons.api import ApiConfigBase, configure_app
 
 from ekss import __version__
 from ekss.adapters.inbound.fastapi_.routes import router
 from ekss.config import CONFIG
+from ghga_service_commons.api import ApiConfigBase, configure_app
 
 
 def get_openapi_schema(api) -> dict[str, Any]:

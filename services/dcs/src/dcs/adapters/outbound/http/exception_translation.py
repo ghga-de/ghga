@@ -20,6 +20,7 @@ provided exception specs for all API endpoints
 """
 
 import httpx
+
 from ghga_service_commons.httpyexpect.client import ExceptionMapping, ResponseTranslator
 
 

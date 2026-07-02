@@ -19,10 +19,10 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+
 from ghga_event_schemas.pydantic_ import FileDeletionRequested, FileInternallyRegistered
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.utils import now_utc_ms_prec
-
 from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.config import get_config
 from ucs.inject import prepare_event_subscriber

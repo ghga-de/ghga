@@ -19,11 +19,10 @@ from contextlib import suppress
 from hashlib import sha256
 from uuid import UUID
 
-from hexkit.providers.mongodb.migrations import Document, MigrationDefinition
-from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
-
 from dcs.constants import DCS_PERSISTED_EVENTS_COLLECTION, DRS_OBJECTS_COLLECTION
 from dcs.core.models import AccessTimeDrsObject
+from hexkit.providers.mongodb.migrations import Document, MigrationDefinition
+from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
 
 
 def derive_file_id_from_accession(accession: str) -> UUID:

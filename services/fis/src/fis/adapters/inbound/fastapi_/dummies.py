@@ -20,9 +20,9 @@ replaced at runtime by actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
+from ghga_service_commons.api.di import DependencyDummy
 
 interrogator_dummy = DependencyDummy("interrogator_port")
 auth_providers_dummy = DependencyDummy("auth_providers_dummy")

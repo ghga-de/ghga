@@ -22,9 +22,9 @@ to be replaced  with actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
 from ekss.ports.inbound.secrets import SecretsHandlerPort
+from ghga_service_commons.api.di import DependencyDummy
 
 __all__ = ["SecretsHandlerDummy", "secrets_handler_port"]
 

@@ -15,6 +15,11 @@
 
 """Adapter for publishing events to other services."""
 
+from pydantic import UUID4
+
+from dcs.constants import TRACER
+from dcs.core import models
+from dcs.ports.outbound.event_pub import EventPublisherPort
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     DownloadServedEventsConfig,
@@ -23,11 +28,6 @@ from ghga_event_schemas.configs import (
     FileStagingRequestedEventsConfig,
 )
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import UUID4
-
-from dcs.constants import TRACER
-from dcs.core import models
-from dcs.ports.outbound.event_pub import EventPublisherPort
 
 
 class EventPubTranslatorConfig(

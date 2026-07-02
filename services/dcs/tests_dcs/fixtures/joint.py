@@ -33,21 +33,6 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest_asyncio
-from ghga_event_schemas.pydantic_ import (
-    FileInternallyRegistered,
-    FileRegisteredForDownload,
-)
-from ghga_service_commons.api.testing import AsyncTestClient
-from ghga_service_commons.utils import utc_dates
-from ghga_service_commons.utils.multinode_storage import (
-    S3ObjectStorageNodeConfig,
-    S3ObjectStoragesConfig,
-)
-from hexkit.providers.akafka import KafkaEventSubscriber
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.s3.testutils import S3Fixture, temp_file_object
-from hexkit.utils import now_utc_ms_prec
 from jwcrypto.jwk import JWK
 from pydantic import UUID4
 
@@ -63,6 +48,21 @@ from dcs.inject import (
 from dcs.ports.inbound.bucket_cleanup import BucketCleanerPort
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort
+from ghga_event_schemas.pydantic_ import (
+    FileInternallyRegistered,
+    FileRegisteredForDownload,
+)
+from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.utils import utc_dates
+from ghga_service_commons.utils.multinode_storage import (
+    S3ObjectStorageNodeConfig,
+    S3ObjectStoragesConfig,
+)
+from hexkit.providers.akafka import KafkaEventSubscriber
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.s3.testutils import S3Fixture, temp_file_object
+from hexkit.utils import now_utc_ms_prec
 from tests_dcs.fixtures.config import get_config
 from tests_dcs.fixtures.utils import (
     generate_token_signing_keys,

@@ -26,7 +26,6 @@ from hexkit.providers.akafka import (
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import PersistentKafkaPublisher
-
 from ifrs.adapters.inbound.event_sub import (
     EventSubTranslator,
     FileUploadOutboxTranslator,

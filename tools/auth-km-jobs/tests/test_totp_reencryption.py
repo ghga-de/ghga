@@ -1,7 +1,7 @@
 """Integration test for re-encryption of TOTP tokens."""
 
 import base64
-from typing import Generator
+from collections.abc import Generator
 from uuid import uuid4
 
 import nacl.secret
@@ -188,7 +188,6 @@ def test_populate_vault_and_collection(
     
     After running this test, the CLI can be tested manually.
     """
-
     collection_before = list(user_tokens.find())
     assert len(collection_before) == NUM_TOKENS
 

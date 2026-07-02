@@ -23,6 +23,9 @@ from dataclasses import dataclass
 import httpx
 import pytest
 import pytest_asyncio
+from jwcrypto.jwk import JWK
+from pydantic import UUID4
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.auth.ghga import AuthConfig
 from ghga_service_commons.utils.jwt_helpers import generate_jwk
@@ -37,9 +40,6 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.providers.testing.objstorage import InMemObjectStorage
-from jwcrypto.jwk import JWK
-from pydantic import UUID4
-
 from tests_ucs.fixtures import ConfigFixture
 from tests_ucs.fixtures.config import get_config
 from tests_ucs.fixtures.in_mem_obj_storage import InMemS3ObjectStorages

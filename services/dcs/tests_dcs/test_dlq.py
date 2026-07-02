@@ -19,10 +19,10 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
-from ghga_event_schemas import pydantic_ as event_schemas
-from hexkit.providers.akafka.testutils import KafkaFixture
 
 from dcs.inject import prepare_event_subscriber
+from ghga_event_schemas import pydantic_ as event_schemas
+from hexkit.providers.akafka.testutils import KafkaFixture
 from tests_dcs.fixtures.config import get_config
 from tests_dcs.fixtures.joint import JointFixture
 

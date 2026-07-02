@@ -15,6 +15,7 @@
 """Set up session-scope fixtures for tests."""
 
 import pytest
+
 from ghga_service_commons.auth.ghga import AuthConfig
 from ghga_service_commons.utils import jwt_helpers
 from hexkit.providers.akafka.testutils import (  # noqa: F401
@@ -29,7 +30,6 @@ from hexkit.providers.s3.testutils import (  # noqa: F401
     s3_container_fixture,
     s3_fixture,
 )
-
 from tests_ucs.fixtures import ConfigFixture
 from tests_ucs.fixtures.config import get_config
 from tests_ucs.fixtures.joint import joint_fixture, patch_s3_calls, rig  # noqa: F401

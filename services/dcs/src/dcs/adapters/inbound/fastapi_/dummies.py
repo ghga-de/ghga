@@ -21,10 +21,10 @@ replaced at runtime by actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
 from dcs.core.data_repository import DataRepositoryConfig
 from dcs.ports.inbound.data_repository import DataRepositoryPort
+from ghga_service_commons.api.di import DependencyDummy
 
 data_repo_port = DependencyDummy("data_repo_port")
 auth_provider = DependencyDummy("auth_provider")

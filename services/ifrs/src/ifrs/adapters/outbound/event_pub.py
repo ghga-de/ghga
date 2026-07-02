@@ -15,6 +15,8 @@
 
 """Adapter for publishing events to other services."""
 
+from pydantic import UUID4
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     FileDeletedEventsConfig,
@@ -22,8 +24,6 @@ from ghga_event_schemas.configs import (
     FileStagedEventsConfig,
 )
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import UUID4
-
 from ifrs.constants import TRACER
 from ifrs.core import models
 from ifrs.ports.outbound.event_pub import EventPublisherPort

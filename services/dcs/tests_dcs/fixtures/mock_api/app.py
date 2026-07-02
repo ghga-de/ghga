@@ -16,6 +16,7 @@
 
 import httpx
 from fastapi import status
+
 from ghga_service_commons.api.mock_router import MockRouter
 from ghga_service_commons.httpyexpect.server.exceptions import (
     HttpCustomExceptionBase,

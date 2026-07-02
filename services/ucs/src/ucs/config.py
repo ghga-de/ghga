@@ -15,6 +15,9 @@
 
 """Config Parameter Modeling and Parsing"""
 
+from pydantic import Field, PositiveInt
+from pydantic_settings import BaseSettings
+
 from ghga_service_commons.api import ApiConfigBase
 from ghga_service_commons.auth.ghga import AuthConfig
 from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
@@ -23,9 +26,6 @@ from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
-from pydantic import Field, PositiveInt
-from pydantic_settings import BaseSettings
-
 from ucs.adapters.inbound.event_sub import EventSubConfig
 from ucs.adapters.outbound.dao import UploadDaoConfig
 from ucs.constants import SERVICE_NAME

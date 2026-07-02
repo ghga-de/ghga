@@ -19,11 +19,11 @@ import logging
 from contextlib import suppress
 from uuid import uuid4
 
+from pydantic import UUID4
+
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4
-
 from ifrs.config import Config
 from ifrs.constants import TRACER
 from ifrs.core import models

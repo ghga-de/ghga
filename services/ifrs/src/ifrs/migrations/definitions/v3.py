@@ -21,7 +21,6 @@ from uuid import UUID
 
 from hexkit.providers.mongodb.migrations import Document, MigrationDefinition
 from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
-
 from ifrs.config import Config
 from ifrs.core.models import FileMetadata
 

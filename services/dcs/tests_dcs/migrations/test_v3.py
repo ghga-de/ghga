@@ -16,10 +16,10 @@
 """Tests for the v3 migration"""
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from dcs.constants import DCS_PERSISTED_EVENTS_COLLECTION, DRS_OBJECTS_COLLECTION
 from dcs.migrations import run_db_migrations
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from tests_dcs.fixtures.config import get_config
 from tests_dcs.migrations.v3_test_data import (
     EXPECTED_MIGRATED_DRS_OBJECTS,

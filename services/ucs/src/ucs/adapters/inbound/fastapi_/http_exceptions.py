@@ -15,9 +15,10 @@
 
 """A collextion of http exceptions."""
 
+from pydantic import UUID4, BaseModel
+
 from ghga_event_schemas.pydantic_ import UploadBoxState
 from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
-from pydantic import UUID4, BaseModel
 
 
 class HttpUnknownStorageAliasError(HttpCustomExceptionBase):

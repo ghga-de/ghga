@@ -26,6 +26,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+
 from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
     S3ObjectStoragesConfig,
@@ -34,7 +35,6 @@ from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import FederatedS3Fixture
-
 from ifrs.adapters.outbound.dao import get_file_dao
 from ifrs.config import Config
 from ifrs.inject import prepare_core, prepare_event_subscriber

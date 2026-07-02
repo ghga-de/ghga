@@ -17,11 +17,11 @@
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
+
 from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
 from ghga_service_commons.utils.simple_token import check_token
-from pydantic import BaseModel, Field
-
 from pcs.adapters.inbound.fastapi_ import dummies
 
 __all__ = ["TokenAuthContext", "require_token"]

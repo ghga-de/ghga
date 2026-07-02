@@ -21,7 +21,6 @@ from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
-
 from pcs.adapters.inbound.fastapi_.config import TokenHashConfig
 from pcs.adapters.outbound.event_pub import EventPubTranslatorConfig
 from pcs.constants import SERVICE_NAME

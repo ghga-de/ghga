@@ -31,7 +31,6 @@ from ghga_event_schemas.pydantic_ import (
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-
 from ucs.constants import TRACER
 from ucs.ports.inbound.controller import UploadControllerPort
 

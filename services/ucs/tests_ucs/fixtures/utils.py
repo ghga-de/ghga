@@ -19,12 +19,12 @@ from pathlib import Path
 from typing import Literal, TypeAlias
 from uuid import UUID, uuid4
 
-from ghga_event_schemas.pydantic_ import FileUploadState
-from ghga_service_commons.utils import jwt_helpers
-from hexkit.utils import now_utc_ms_prec
 from jwcrypto.jwk import JWK
 from pydantic import UUID4
 
+from ghga_event_schemas.pydantic_ import FileUploadState
+from ghga_service_commons.utils import jwt_helpers
+from hexkit.utils import now_utc_ms_prec
 from ucs.adapters.inbound.fastapi_ import rest_models as models
 from ucs.core.models import FileUpload
 

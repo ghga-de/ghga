@@ -17,8 +17,9 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from pydantic import UUID4
+
+from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 
 
 class BucketCleanerPort(ABC):

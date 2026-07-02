@@ -15,6 +15,7 @@
 """Set up session-scope fixtures for tests."""
 
 import pytest
+
 from hexkit.correlation import correlation_id_var, new_correlation_id
 from hexkit.providers.akafka.testutils import (
     kafka_container_fixture,  # noqa: F401
@@ -30,7 +31,6 @@ from hexkit.providers.s3.testutils import (  # noqa: F401
     federated_s3_fixture,
     s3_multi_container_fixture,
 )
-
 from tests_ifrs.fixtures.joint import (  # noqa: F401
     DOWNLOAD_BUCKET,
     INTERROGATION_BUCKET,

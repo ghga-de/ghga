@@ -17,13 +17,6 @@
 
 from typing import Any
 
-from ghga_service_commons.auth.ghga import AuthConfig
-from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
-from hexkit.config import config_from_yaml
-from hexkit.log import LoggingConfig
-from hexkit.opentelemetry import OpenTelemetryConfig
-from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb.migrations import MigrationConfig
 from pydantic import Field
 
 from dcs.adapters.inbound.event_sub import EventSubTranslatorConfig
@@ -34,6 +27,13 @@ from dcs.adapters.outbound.http.secrets import SecretsClientConfig
 from dcs.constants import SERVICE_NAME
 from dcs.core.bucket_cleanup import BucketCleanupConfig
 from dcs.core.data_repository import DataRepositoryConfig
+from ghga_service_commons.auth.ghga import AuthConfig
+from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
+from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
+from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
 
 
 class WorkOrderTokenConfig(AuthConfig):

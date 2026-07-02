@@ -21,8 +21,8 @@ replaced at runtime by actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
+from ghga_service_commons.api.di import DependencyDummy
 from pcs.adapters.inbound.fastapi_.config import TokenHashConfig
 from pcs.ports.inbound.file_deletion import FileDeletionPort
 

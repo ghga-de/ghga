@@ -16,8 +16,9 @@
 
 """A collection of http exceptions."""
 
-from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 from pydantic import BaseModel
+
+from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 
 
 class HttpEnvelopeNotFoundError(HttpCustomExceptionBase):

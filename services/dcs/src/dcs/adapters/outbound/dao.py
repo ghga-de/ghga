@@ -15,11 +15,10 @@
 
 """DAO translators for accessing the database."""
 
-from hexkit.protocols.dao import DaoFactoryProtocol
-
 from dcs.constants import DRS_OBJECTS_COLLECTION
 from dcs.core import models
 from dcs.ports.outbound.dao import DrsObjectDaoPort
+from hexkit.protocols.dao import DaoFactoryProtocol
 
 
 async def get_drs_dao(*, dao_factory: DaoFactoryProtocol) -> DrsObjectDaoPort:

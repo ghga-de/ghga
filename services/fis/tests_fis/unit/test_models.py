@@ -19,11 +19,11 @@ from contextlib import nullcontext
 from uuid import uuid4
 
 import pytest
-from ghga_event_schemas.pydantic_ import FileUploadState
-from hexkit.utils import now_utc_ms_prec
 from pydantic import SecretBytes, ValidationError
 
 from fis.core.models import FileUnderInterrogation, InterrogationReportWithSecret
+from ghga_event_schemas.pydantic_ import FileUploadState
+from hexkit.utils import now_utc_ms_prec
 
 
 def test_interrogation_report_validator():

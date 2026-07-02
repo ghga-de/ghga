@@ -20,11 +20,11 @@ import logging
 
 import crypt4gh.header
 from crypt4gh.keys import get_private_key
-from ghga_service_commons.utils.crypt import decrypt
 
 from ekss.config import Config
 from ekss.ports.inbound.secrets import SecretsHandlerPort
 from ekss.ports.outbound.vault import VaultClientPort
+from ghga_service_commons.utils.crypt import decrypt
 
 log = logging.getLogger(__name__)
 

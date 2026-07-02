@@ -17,11 +17,11 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 from hexkit.protocols.objstorage import (  # noqa: F401
     ObjectStorageProtocol as ObjectStoragePort,
 )
-from pydantic import UUID4
-
 from ucs.core.models import FileUpload, FileUploadBasics
 
 

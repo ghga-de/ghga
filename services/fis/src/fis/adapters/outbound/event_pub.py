@@ -14,6 +14,9 @@
 # limitations under the License.
 """Adapter for publishing events to other services."""
 
+from pydantic import UUID4
+
+from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     FileInterrogationFailureEventsConfig,
@@ -21,9 +24,6 @@ from ghga_event_schemas.configs import (
 )
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import UUID4
-
-from fis.ports.outbound.event_pub import EventPubTranslatorPort
 
 
 class EventPubConfig(

@@ -18,6 +18,7 @@
 import logging
 from uuid import uuid4
 
+from fis.config import Config
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
@@ -29,8 +30,6 @@ from hexkit.providers.mongodb.migrations.helpers import (
     convert_uuids_and_datetimes_v6,
 )
 from hexkit.providers.mongokafka.provider.persistent_pub import PersistentKafkaEvent
-
-from fis.config import Config
 
 log = logging.getLogger(__name__)
 

@@ -15,12 +15,11 @@
 
 """Module containing entrypoint functions."""
 
+from ekss.config import Config
+from ekss.inject import prepare_rest_app
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-
-from ekss.config import Config
-from ekss.inject import prepare_rest_app
 
 
 async def run_rest_app():

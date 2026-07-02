@@ -17,9 +17,9 @@
 
 from typing import Literal, TypeVar
 
-from ghga_event_schemas.pydantic_ import UploadBoxState
 from pydantic import UUID4, BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
+from ghga_event_schemas.pydantic_ import UploadBoxState
 from ucs.constants import MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.core.models import FileUpload
 

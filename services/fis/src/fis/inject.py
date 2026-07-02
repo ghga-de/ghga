@@ -20,14 +20,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
-from hexkit.providers.akafka import (
-    ComboTranslator,
-    KafkaEventPublisher,
-    KafkaEventSubscriber,
-)
-from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
 from fis.adapters.inbound.event_sub import OutboxSubTranslator
 from fis.adapters.inbound.fastapi_ import dummies
@@ -40,6 +32,14 @@ from fis.adapters.outbound.secrets import SecretsClient
 from fis.config import Config
 from fis.constants import AUTH_CHECK_CLAIMS
 from fis.core.interrogation import InterrogationHandler, InterrogationHandlerPort
+from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
+from hexkit.providers.akafka import (
+    ComboTranslator,
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+)
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import PersistentKafkaPublisher
 
 
 @asynccontextmanager

@@ -5,7 +5,7 @@ from contextlib import redirect_stderr
 from crypt4gh.keys.c4gh import encode_private_key
 from nacl.public import PrivateKey
 
-__all__ = ["generate_crypt4gh_key_pair", "Crypt4GHKeyPair"]
+__all__ = ["Crypt4GHKeyPair", "generate_crypt4gh_key_pair"]
 
 
 class Crypt4GHKeyPair:

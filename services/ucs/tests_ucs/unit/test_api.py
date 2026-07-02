@@ -21,8 +21,8 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
-from ghga_service_commons.api.testing import AsyncTestClient
 
+from ghga_service_commons.api.testing import AsyncTestClient
 from tests_ucs.fixtures import ConfigFixture, utils
 from ucs.adapters.inbound.fastapi_ import http_exceptions
 from ucs.constants import MAX_PART_SIZE, MIN_PART_SIZE

@@ -15,6 +15,7 @@
 """Session-scoped fixture setup"""
 
 import pytest
+
 from hexkit.correlation import correlation_id_var, new_correlation_id
 from hexkit.providers.akafka.testutils import (  # noqa: F401
     kafka_container_fixture,

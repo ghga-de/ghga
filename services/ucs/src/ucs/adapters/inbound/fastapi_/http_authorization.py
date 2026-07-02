@@ -19,9 +19,9 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
-
 from ucs.adapters.inbound.fastapi_ import dummies
 from ucs.adapters.inbound.fastapi_ import rest_models as models
 from ucs.config import Config

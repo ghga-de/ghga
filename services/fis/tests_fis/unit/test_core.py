@@ -19,12 +19,12 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
-from hexkit.utils import now_utc_ms_prec
 
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import ResourceNotFoundError
 from fis.ports.outbound.secrets import SecretsClientPort
+from hexkit.utils import now_utc_ms_prec
 from tests_fis.fixtures.joint import JointRig
 from tests_fis.fixtures.utils import create_file_under_interrogation
 

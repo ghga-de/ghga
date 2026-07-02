@@ -19,12 +19,13 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
+from pydantic import Field
+
 from ghga_service_commons.transports import (
     CompositeConfig,
     CompositeTransportFactory,
     ratelimiting_retry_proxies,
 )
-from pydantic import Field
 
 __all__ = ["HttpClientConfig", "get_configured_httpx_client"]
 

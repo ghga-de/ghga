@@ -21,8 +21,8 @@ replaced at runtime by actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
+from ghga_service_commons.api.di import DependencyDummy
 from ucs.ports.inbound.controller import UploadControllerPort
 
 auth_provider_bundle = DependencyDummy("auth_provider_bundle")

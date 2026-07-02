@@ -17,6 +17,8 @@
 
 import logging
 
+from pydantic import UUID4
+
 from ghga_event_schemas.configs import (
     FileDeletionRequestEventsConfig,
     FileStagingRequestedEventsConfig,
@@ -27,8 +29,6 @@ from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
 from ifrs.constants import TRACER
 from ifrs.core.models import FileUpload
 from ifrs.ports.inbound.file_registry import FileRegistryPort

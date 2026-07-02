@@ -17,7 +17,6 @@
 
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-
 from ifrs.config import Config
 from ifrs.inject import get_persistent_publisher, prepare_event_subscriber
 from ifrs.migrations import run_db_migrations

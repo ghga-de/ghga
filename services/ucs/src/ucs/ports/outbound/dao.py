@@ -20,7 +20,6 @@ from abc import ABC, abstractmethod
 
 from hexkit.protocols.dao import Dao, ResourceAlreadyExistsError, ResourceNotFoundError
 from hexkit.protocols.daopub import DaoPublisher
-
 from ucs.core import models
 from ucs.core.models import FileUploadBox, UploadActivity
 

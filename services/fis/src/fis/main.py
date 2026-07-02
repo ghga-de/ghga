@@ -14,10 +14,6 @@
 # limitations under the License.
 """REST API configuration and function for CLI"""
 
-from ghga_service_commons.api import run_server
-from hexkit.log import configure_logging
-from hexkit.opentelemetry import configure_opentelemetry
-
 from fis.config import Config
 from fis.inject import (
     get_persistent_publisher,
@@ -25,6 +21,9 @@ from fis.inject import (
     prepare_rest_app,
 )
 from fis.migrations import run_db_migrations
+from ghga_service_commons.api import run_server
+from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
 
 DB_VERSION = 3
 

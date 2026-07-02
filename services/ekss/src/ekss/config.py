@@ -17,14 +17,14 @@
 
 from pathlib import Path
 
-from ghga_service_commons.api import ApiConfigBase
-from hexkit.config import config_from_yaml
-from hexkit.log import LoggingConfig
-from hexkit.opentelemetry import OpenTelemetryConfig
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
 from ekss.constants import SERVICE_NAME
+from ghga_service_commons.api import ApiConfigBase
+from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
 
 
 class VaultConfig(BaseSettings):

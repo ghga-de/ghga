@@ -15,9 +15,9 @@
 
 """Main business-logic of this service"""
 
-from ghga_event_schemas.pydantic_ import FileDeletionRequested
 from pydantic import UUID4
 
+from ghga_event_schemas.pydantic_ import FileDeletionRequested
 from pcs.ports.inbound.file_deletion import FileDeletionPort
 from pcs.ports.outbound.event_pub import EventPubTranslatorPort
 

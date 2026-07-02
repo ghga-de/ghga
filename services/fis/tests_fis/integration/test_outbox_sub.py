@@ -18,9 +18,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from hexkit.providers.akafka.testutils import KafkaFixture
 
 from fis.inject import prepare_event_subscriber
+from hexkit.providers.akafka.testutils import KafkaFixture
 from tests_fis.fixtures.config import get_config
 from tests_fis.fixtures.utils import create_file_under_interrogation
 

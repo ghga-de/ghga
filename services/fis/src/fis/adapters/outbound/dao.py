@@ -14,11 +14,10 @@
 # limitations under the License.
 """DAO translators for accessing the database."""
 
-from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb import MongoDbIndex
-
 from fis.core.models import FileUnderInterrogation, InterrogationReport
 from fis.ports.outbound.dao import FileDao, InterrogationReportDao
+from hexkit.protocols.dao import DaoFactoryProtocol
+from hexkit.providers.mongodb import MongoDbIndex
 
 
 async def get_file_dao(*, dao_factory: DaoFactoryProtocol) -> FileDao:
