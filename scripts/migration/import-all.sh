@@ -37,7 +37,11 @@ import_row() {
   git -C "$MONOREPO" remote remove "$remote" 2>/dev/null || true
   git -C "$MONOREPO" remote add "$remote" "$rw"
   git -C "$MONOREPO" fetch -q "$remote" "$branch"
-  git -C "$MONOREPO" merge --allow-unrelated-histories --no-edit \
+  # -X no-renames: with --allow-unrelated-histories the merge base is empty, so git's rename
+  # detection can spuriously match an incoming file (e.g. tools/ghga-transpiler/pyproject.toml)
+  # to a same-named file already in the tree (libs/schemapack/pyproject.toml) and try to merge
+  # them. Disabling rename detection keeps disjoint dest paths disjoint.
+  git -C "$MONOREPO" merge --allow-unrelated-histories --no-edit -X no-renames \
       -m "Import ${source} (${subpath})@${branch} into ${dest} (history-preserving)" \
       "${remote}/${branch}"
   git -C "$MONOREPO" remote remove "$remote"
