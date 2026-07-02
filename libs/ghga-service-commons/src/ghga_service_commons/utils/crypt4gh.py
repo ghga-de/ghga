@@ -146,11 +146,17 @@ def generate_keypair() -> Crypt4GHKeyPair:
     """Generate a new Crypt4GH keypair."""
     sk_file, sk_path = mkstemp(prefix="private", suffix=".key")
     pk_file, pk_path = mkstemp(prefix="public", suffix=".key")
+    # crypt4gh >= 1.8 writes the keys by PATH and chmods them afterwards; close mkstemp's
+    # file descriptors so it opens the paths cleanly (and the fds don't leak).
+    os.close(sk_file)
+    os.close(pk_file)
 
     # Crypt4GH does not reset the umask it sets, so we need to deal with it
     original_umask = os.umask(0o022)
     passphrase = os.urandom(32).hex().encode()
-    c4gh.generate(seckey=sk_file, pubkey=pk_file, passphrase=passphrase)
+    # crypt4gh >= 1.8 made `comment` a required positional arg (previously defaulted to
+    # None). Passing None writes no comment — identical to the prior default behaviour.
+    c4gh.generate(seckey=sk_path, pubkey=pk_path, passphrase=passphrase, comment=None)
     public_key = get_public_key(pk_path)
     private_key = get_private_key(sk_path, passphrase.decode)
     os.umask(original_umask)

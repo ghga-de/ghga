@@ -35,7 +35,7 @@ run member suites with `cwd` = the member dir, and set `<SVC>_CONFIG_YAML` for t
 
 | Component | Count | Cause | Fix |
 |---|---|---|---|
-| `ghga-service-commons` | 4 fail | `crypt4gh.keys.generate()` now requires a `comment` arg (crypt4gh 1.8.6). `src/ghga_service_commons/utils/crypt4gh.py:153` | add the `comment` argument |
+| ~~`ghga-service-commons`~~ | ~~4 fail~~ | ~~crypt4gh 1.8.6~~ | **RESOLVED** — two crypt4gh-1.8 incompatibilities in `utils/crypt4gh.py::generate_keypair`: (1) `generate()` now requires `comment` → pass `comment=None` (writes no comment, == prior default); (2) it now `chmod`s the key **path** after closing the opened fd → pass `sk_path`/`pk_path` (not `mkstemp` fds) and close the fds. Suite now 275 pass, 0 fail. |
 | ~~`ghga-transpiler`~~ | ~~2 err~~ | ~~schemapack 2.0.0→4.2.0~~ | **RESOLVED** — root cause was the **wrong branch**: `main` (3.x, pins schemapack) was imported instead of the integrated line **`v2`** (2.4.1, no schemapack dep). Re-imported from `v2`; transpiler now green (8 pass), `datasteward-kit`'s `transpiler<3` satisfied, `schemapack` is now an internal orphan. See the migration commits + `repos.tsv` branch column. |
 
 ## Dependency / environment gaps (mechanical — not logic regressions)
