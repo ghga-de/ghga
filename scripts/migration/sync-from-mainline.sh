@@ -29,20 +29,20 @@ want_dest() {
 }
 
 sync_row() {
-  local kind="$1" source="$2" subpath="$3" dest="$4"
+  local kind="$1" source="$2" subpath="$3" dest="$4" branch="$5"
   want_dest "$dest" || return 0
-  log "syncing ${source} (${subpath}) -> ${dest}"
-  local rw remote; rw="$(rewrite_for_row "$kind" "$source" "$subpath" "$dest")"
+  log "syncing ${source} (${subpath})@${branch} -> ${dest}"
+  local rw remote; rw="$(rewrite_for_row "$kind" "$source" "$subpath" "$dest" "$branch")"
   remote="sync_${dest//\//__}"
   git -C "$MONOREPO" remote remove "$remote" 2>/dev/null || true
   git -C "$MONOREPO" remote add "$remote" "$rw"
-  git -C "$MONOREPO" fetch -q "$remote" "$BRANCH"
-  if git -C "$MONOREPO" merge-base --is-ancestor "${remote}/${BRANCH}" HEAD 2>/dev/null; then
+  git -C "$MONOREPO" fetch -q "$remote" "$branch"
+  if git -C "$MONOREPO" merge-base --is-ancestor "${remote}/${branch}" HEAD 2>/dev/null; then
     log "  up to date."
   else
     git -C "$MONOREPO" merge --no-edit \
-        -m "Sync ${source} (${subpath}) -> ${dest} from ${GHGA_ORG}/${BRANCH}" \
-        "${remote}/${BRANCH}" \
+        -m "Sync ${source} (${subpath})@${branch} -> ${dest} from ${GHGA_ORG}/${branch}" \
+        "${remote}/${branch}" \
       || die "merge conflict in ${dest} — resolve, commit, then re-run for the remaining dests"
   fi
   git -C "$MONOREPO" remote remove "$remote"

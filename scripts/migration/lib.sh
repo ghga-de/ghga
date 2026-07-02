@@ -50,32 +50,35 @@ require_tools() {
   git filter-repo --version >/dev/null 2>&1 || die "git-filter-repo not found (pip install git-filter-repo)"
 }
 
-# Iterate manifest rows: calls `handle_row kind source subpath dest` for each.
+# Iterate manifest rows: calls `handle_row kind source subpath dest branch` for each.
+# The 5th column (branch) is optional; defaults to `main`. Most repos track main, but some
+# have a different *compatible* branch (e.g. ghga-transpiler -> v2).
 each_row() {
-  local handler="$1" kind source subpath dest
+  local handler="$1" kind source subpath dest branch
   [[ -f "$MANIFEST" ]] || die "manifest not found: $MANIFEST"
-  while IFS=$'\t' read -r kind source subpath dest; do
+  while IFS=$'\t' read -r kind source subpath dest branch; do
     [[ -z "${kind:-}" || "${kind:0:1}" == "#" ]] && continue
-    "$handler" "$kind" "$source" "$subpath" "$dest"
+    "$handler" "$kind" "$source" "$subpath" "$dest" "${branch:-main}"
   done < "$MANIFEST"
 }
 
-# Fetch (or refresh) a pristine mirror of a source repo into SRC_CACHE.
+# Fetch (or refresh) a pristine mirror of a source repo into SRC_CACHE, on the given branch.
+# The local .legacy_repos mirror is only trusted for `main`; any other branch is cloned from
+# the upstream org (github) so the correct branch is guaranteed.
 ensure_src() {
-  local source="$1" dst="${SRC_CACHE}/$1"
+  local source="$1" branch="$2" dst="${SRC_CACHE}/$1"
   if [[ -d "$dst/.git" ]]; then
-    log "refreshing source: $source"
-    git -C "$dst" fetch --tags --prune origin "$BRANCH"
-    git -C "$dst" checkout -q "$BRANCH"
-    git -C "$dst" reset -q --hard "origin/${BRANCH}"
+    log "refreshing source: $source ($branch)"
+    git -C "$dst" fetch -q --tags --prune origin "$branch"
+    git -C "$dst" checkout -q -B "$branch" "origin/${branch}"
   else
     mkdir -p "$SRC_CACHE"
-    if [[ -n "$LEGACY_DIR" && -d "${LEGACY_DIR}/${source}/.git" ]]; then
-      log "cloning source from local mirror: $source"
-      git clone -q --branch "$BRANCH" "file://${LEGACY_DIR}/${source}" "$dst"
+    if [[ -n "$LEGACY_DIR" && -d "${LEGACY_DIR}/${source}/.git" && "$branch" == "main" ]]; then
+      log "cloning source from local mirror: $source (main)"
+      git clone -q --branch "$branch" "file://${LEGACY_DIR}/${source}" "$dst"
     else
-      log "cloning source from ${GH_BASE}/${source}.git"
-      git clone -q --branch "$BRANCH" "${GH_BASE}/${source}.git" "$dst"
+      log "cloning source from ${GH_BASE}/${source}.git ($branch)"
+      git clone -q --branch "$branch" "${GH_BASE}/${source}.git" "$dst"
     fi
   fi
 }
@@ -83,9 +86,9 @@ ensure_src() {
 # Produce a rewritten clone for one destination at RW_DIR/<dest-slug> whose
 # history has the files at `dest` and the boilerplate removed. Echoes the path.
 rewrite_for_row() {
-  local kind="$1" source="$2" subpath="$3" dest="$4"
+  local kind="$1" source="$2" subpath="$3" dest="$4" branch="${5:-main}"
   local slug rw; slug="${dest//\//__}"; rw="${RW_DIR}/${slug}"
-  ensure_src "$source"
+  ensure_src "$source" "$branch"
   rm -rf "$rw"; mkdir -p "$RW_DIR"
   git clone -q "${SRC_CACHE}/${source}" "$rw"
 
