@@ -6,9 +6,10 @@ default:
     @just --list
 
 # --- Python workspace -------------------------------------------------------------------
-# Resolve + install all workspace members and the shared dev toolchain.
+# Resolve + install all workspace members, their extras, and the shared dev toolchain.
+# --all-extras is needed so member test suites (which use optional deps) can run.
 sync:
-    uv sync --all-packages
+    uv sync --all-packages --all-extras
 
 # Update the single workspace lockfile.
 lock:
