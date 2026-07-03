@@ -30,3 +30,6 @@ frontend/**/dist/
 # Local env / secrets
 .env
 *.local.yaml
+
+# pytest --debug output
+pytestdebug.log

@@ -1,0 +1,30 @@
+host: 127.0.0.1
+port: 8080
+workers: 1
+auto_reload: true
+cors_allowed_origins: []
+cors_allow_credentials: False
+cors_allowed_methods: []
+cors_allowed_headers: []
+
+mongo_dsn: "mongodb://mongodb:27017"
+db_name: "dev-db"
+
+service_instance_id: 'wps_1'
+kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: True
+
+access_url: "http://127.0.0.1:8080"
+
+research_data_upload_box_topic: upload-boxes
+dataset_change_topic: metadata-datasets
+dataset_upsertion_type: dataset_created
+dataset_deletion_type: dataset_deleted
+accession_map_topic: file-accession-mappings
+
+# the default keys are invalid but set for creating the example specs
+auth_key: "{}"
+work_package_signing_key: "{}"
+
+migration_wait_sec: 10
+db_version_collection: wpsDbVersions

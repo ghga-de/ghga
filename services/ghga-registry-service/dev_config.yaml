@@ -1,0 +1,21 @@
+service_instance_id: "1"
+kafka_servers: ["kafka:9092"]
+mongo_dsn: mongodb://localhost:27017
+db_name: rs
+mongo_timeout: 300
+db_version_collection: rsDbVersions
+migration_wait_sec: 5
+accession_map_topic: file-accession-mappings
+auth_key: "{}"
+access_url: http://127.0.0.1/access
+ucs_url: http://127.0.0.1/upload
+audit_record_topic: audit-records
+audit_record_type: audit_record_logged
+work_order_signing_key: "{}"
+file_upload_box_topic: file-upload-boxes
+research_data_upload_box_topic: research-data-upload-boxes
+study_topic: studies
+# LEGACY: searchable resource events consumed from metldata producer
+resource_change_topic: searchable-resources
+resource_upsertion_type: searchable_resource_upserted
+resource_deletion_type: searchable_resource_deleted

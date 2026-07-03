@@ -1,0 +1,24 @@
+mongo_dsn: mongodb://localhost:27017
+db_name: metadata-store
+searchable_classes:
+  Dataset:
+    description: Dataset grouping files under controlled access.
+    facetable_fields:
+      - key: type # a field directly part of the dataset
+        name: Type
+      - key: "study.type" # a field that is part of study that is embedded into this dataset
+        name: Study Type
+      - key: "study.project.alias" # a field part of a deeply embedded resource
+        name: Project Alias
+    selected_fields:
+      - key: accession
+        name: Dataset ID
+      - key: title
+        name: Title
+
+resource_change_topic: searchable_resources
+resource_deletion_type: searchable_resource_deleted
+resource_upsertion_type: searchable_resource_upserted
+service_instance_id: "001"
+kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: True

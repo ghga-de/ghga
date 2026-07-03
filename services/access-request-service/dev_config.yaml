@@ -1,0 +1,28 @@
+host: 127.0.0.1
+port: 8080
+log_level: INFO
+workers: 1
+auto_reload: true
+cors_allowed_origins: []
+cors_allow_credentials: False
+cors_allowed_methods: []
+cors_allowed_headers: []
+
+mongo_dsn: "mongodb://mongodb:27017"
+db_name: "access-requests"
+migration_wait_sec: 10
+db_version_collection: arsDbVersions
+
+access_request_topic: access_request_events
+
+dataset_change_topic: metadata_datasets
+dataset_upsertion_type: dataset_created
+dataset_deletion_type: dataset_deleted
+
+service_instance_id: "1"
+kafka_servers: ["kafka:9092"]
+kafka_enable_dlq: true
+
+download_access_url: "http://127.0.0.1:8080/download-access"
+
+auth_key: "{}"

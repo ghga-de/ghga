@@ -1,0 +1,30 @@
+# Please only mention the non-default settings here:
+
+auto_reload: true
+
+host: 0.0.0.0
+port: 8080
+
+mongo_dsn: mongodb://mongodb:27017/
+db_name: "dev-db"
+
+log_level: DEBUG
+
+provide_apis: ["users"]
+
+service_instance_id: "1"
+kafka_servers: ["kafka:9092"]
+auth_topic: auth
+user_topic: users
+iva_state_changed_topic: ivas
+iva_state_changed_type: iva_state_changed
+iva_send_code_type: iva_send_code
+second_factor_recreated_type: second_factor_recreated
+dataset_change_topic: metadata_datasets
+dataset_deletion_type: dataset_deleted
+dataset_upsertion_type: dataset_created
+
+enable_opentelemetry: false
+
+migration_wait_sec: 10
+db_version_collection: authDbVersions

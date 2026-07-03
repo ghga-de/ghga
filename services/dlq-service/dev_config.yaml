@@ -1,0 +1,10 @@
+service_instance_id: "1"
+kafka_servers: ["kafka:9092"]
+mongo_dsn: mongodb://localhost:27017
+db_name: dlqs
+mongo_timeout: 300
+token_hashes:
+# plaintext token: 43fadc91-b98f-4925-bd31-1b054b13dc55
+- 7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e
+migration_wait_sec: 10
+db_version_collection: dlqsDbVersions
