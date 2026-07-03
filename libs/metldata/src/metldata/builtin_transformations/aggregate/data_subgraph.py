@@ -26,7 +26,7 @@ from linkml_runtime.linkml_model import SlotDefinition
 
 from metldata.builtin_transformations.aggregate.cached_model import CachedMetadataModel
 from metldata.custom_types import Json
-from metldata.metadata_utils import get_resource_dict_of_class
+from metldata.metadata_utils import index_resources_by_id
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.essentials import MetadataModel
 
@@ -196,7 +196,7 @@ class DataSubgraph:
                             f"Intermediate path slot '{slot_def.name}' does"
                             " not have a class range."
                         )
-                    resources_by_id[slot_def.range] = get_resource_dict_of_class(
+                    resources_by_id[slot_def.range] = index_resources_by_id(
                         class_name=slot_def.range,
                         global_metadata=submission_data,
                         anchor_points_by_target=self._anchor_points,
@@ -207,7 +207,7 @@ class DataSubgraph:
                 and not slot_def.inlined
                 and slot_def.range not in resources_by_id
             ):
-                resources_by_id[slot_def.range] = get_resource_dict_of_class(
+                resources_by_id[slot_def.range] = index_resources_by_id(
                     class_name=slot_def.range,
                     global_metadata=submission_data,
                     anchor_points_by_target=self._anchor_points,

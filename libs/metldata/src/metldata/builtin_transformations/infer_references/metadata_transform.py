@@ -17,6 +17,7 @@
 """Logic for transforming metadata."""
 
 from metldata.builtin_transformations.infer_references.path.resolve import (
+    ResolutionIndex,
     resolve_reference_for_metadata_resource,
 )
 from metldata.builtin_transformations.infer_references.reference import (
@@ -45,6 +46,7 @@ def add_reference_to_metadata_resource(
     global_metadata: Json,
     reference: InferredReference,
     anchor_points_by_target: dict[str, AnchorPoint],
+    index: ResolutionIndex | None = None,
 ) -> Json:
     """Add an inferred reference to an individual metadata resource.
 
@@ -53,6 +55,9 @@ def add_reference_to_metadata_resource(
         global_metadata: The global metadata context to look up references in.
         reference: The inferred reference.
         anchor_points: The anchor points of the metadata model.
+        index:
+            A resolution index for ``global_metadata``, shared across all resources of
+            the same source class for this reference. Built on demand if omitted.
 
     Raises:
         MetadataTransformationError:
@@ -79,6 +84,7 @@ def add_reference_to_metadata_resource(
         global_metadata=global_metadata,
         reference_path=reference.path,
         anchor_points_by_target=anchor_points_by_target,
+        index=index,
     )
 
     # get IDs of final target resources:
@@ -123,12 +129,21 @@ def add_reference_to_metadata(
         anchor_points_by_target=anchor_points_by_target,
     )
 
+    # The metadata is only read (not modified) while resolving this reference, so build
+    # the resolution index once and share it across all source resources instead of
+    # rebuilding (and rescanning the relevant classes) for every resource.
+    index = ResolutionIndex(
+        global_metadata=metadata,
+        anchor_points_by_target=anchor_points_by_target,
+    )
+
     modified_resources = [
         add_reference_to_metadata_resource(
             resource=resource,
             global_metadata=metadata,
             reference=reference,
             anchor_points_by_target=anchor_points_by_target,
+            index=index,
         )
         for resource in resources
     ]

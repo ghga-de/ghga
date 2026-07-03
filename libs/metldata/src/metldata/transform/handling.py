@@ -94,6 +94,7 @@ class TransformationHandler:
         *,
         annotation: SubmissionAnnotation,
         assume_validated: bool = False,
+        validate_output: bool = True,
     ) -> Json:
         """Transforms metadata using the transformation definition. Validates the
         original metadata against the original model and the transformed metadata
@@ -103,6 +104,12 @@ class TransformationHandler:
             metadata: The metadata to be transformed.
             annotation: The annotation on the metadata.
             assume_validated: Whether the input can be assumed to be valid.
+            validate_output:
+                Whether to validate the transformed metadata against the transformed
+                model. May be disabled for intermediate steps whose output is only
+                consumed by subsequent steps (and never published as an artifact),
+                since any downstream step that does produce an artifact validates its
+                own output.
 
         Raises:
             MetadataTransformationError:
@@ -113,7 +120,8 @@ class TransformationHandler:
         transformed_metadata = self._metadata_transformer.transform(
             metadata=metadata, annotation=annotation
         )
-        self._transformed_metadata_validator.validate(transformed_metadata)
+        if validate_output:
+            self._transformed_metadata_validator.validate(transformed_metadata)
 
         return transformed_metadata
 
@@ -253,6 +261,11 @@ class WorkflowHandler:
         """Run the workflow definition on metadata and its annotation to generate
         artifacts.
         """
+        # Only steps whose output is published as an artifact need their output
+        # validated; outputs that merely feed subsequent steps are left to be validated
+        # downstream when an artifact is produced.
+        artifact_steps = set(self._resolved_workflow.artifacts.values())
+
         transformed_metadata: dict[str, Json] = {}
         assume_validated = False
         for step_name in self._resolved_workflow.step_order:
@@ -265,6 +278,7 @@ class WorkflowHandler:
                     input_metadata,
                     annotation=annotation,
                     assume_validated=assume_validated,
+                    validate_output=step_name in artifact_steps,
                 )
             )
             assume_validated = True

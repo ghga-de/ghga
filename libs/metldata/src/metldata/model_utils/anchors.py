@@ -115,8 +115,16 @@ def get_slot_target_class(*, slot: SlotDefinition, schema_view: SchemaView) -> s
     return slot.range
 
 
-def get_anchor_points(*, model: MetadataModel) -> set[AnchorPoint]:
-    """Get all anchor points of the specified model."""
+def get_anchor_points(*, model: MetadataModel) -> list[AnchorPoint]:
+    """Get all anchor points of the specified model.
+
+    The anchor points are returned in the order in which their root slots appear in the
+    root class. This ordering is deterministic, so that dictionaries built from the
+    anchor points (and the artifacts derived from them) have a stable slot order.
+    Returning a set here previously made the iteration order depend on per-process hash
+    randomization, which shuffled the top-level keys of generated artifacts from run to
+    run (the data was unaffected, only the key order).
+    """
     identifiers_by_class = get_class_identifiers(model=model)
 
     schema_view = model.schema_view
@@ -126,7 +134,7 @@ def get_anchor_points(*, model: MetadataModel) -> set[AnchorPoint]:
     for root_slot in root_slots:
         check_root_slot(root_slot)
 
-    anchor_point: set[AnchorPoint] = set()
+    anchor_points: list[AnchorPoint] = []
     for root_slot in root_slots:
         target_class = get_slot_target_class(slot=root_slot, schema_view=schema_view)
         identifier = identifiers_by_class[target_class]
@@ -135,7 +143,7 @@ def get_anchor_points(*, model: MetadataModel) -> set[AnchorPoint]:
                 f"The class '{target_class}' has no identifier defined."
             )
 
-        anchor_point.add(
+        anchor_points.append(
             AnchorPoint(
                 target_class=target_class,
                 identifier_slot=identifier,
@@ -143,7 +151,7 @@ def get_anchor_points(*, model: MetadataModel) -> set[AnchorPoint]:
             )
         )
 
-    return anchor_point
+    return anchor_points
 
 
 def get_anchors_points_by_target(*, model: MetadataModel) -> dict[str, AnchorPoint]:
