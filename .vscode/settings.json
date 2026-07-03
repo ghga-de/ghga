@@ -1,0 +1,22 @@
+{
+  // Shared uv workspace virtualenv.
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+  // Flat pytest discovery from the repo root COLLIDES across members: every member has a
+  // `tests` package and the suites do `from tests.fixtures... import ...`, which only resolves
+  // when the member is its own rootdir. So discovery is disabled for the root folder.
+  //
+  // >>> Open `ghga.code-workspace` (File > Open Workspace from File) for working per-member
+  //     test discovery: each member is a folder with its own rootdir, so imports resolve. <<<
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": false,
+
+  "search.exclude": {
+    ".legacy_repos/**": true,
+    ".migration-work/**": true,
+    "**/.venv/**": true
+  },
+  "files.exclude": {
+    ".migration-work": true
+  }
+}

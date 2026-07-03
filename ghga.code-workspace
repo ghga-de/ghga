@@ -1,0 +1,147 @@
+{
+  "folders": [
+    {
+      "name": "Monorepo Root",
+      "path": "."
+    },
+    {
+      "name": "lib \u00b7 ghga-event-schemas",
+      "path": "libs/ghga-event-schemas"
+    },
+    {
+      "name": "lib \u00b7 ghga-service-commons",
+      "path": "libs/ghga-service-commons"
+    },
+    {
+      "name": "lib \u00b7 hexkit",
+      "path": "libs/hexkit"
+    },
+    {
+      "name": "lib \u00b7 metldata",
+      "path": "libs/metldata"
+    },
+    {
+      "name": "lib \u00b7 schemapack",
+      "path": "libs/schemapack"
+    },
+    {
+      "name": "svc \u00b7 access-request-service",
+      "path": "services/access-request-service"
+    },
+    {
+      "name": "svc \u00b7 auth-service",
+      "path": "services/auth-service"
+    },
+    {
+      "name": "svc \u00b7 datahub-file-service",
+      "path": "services/datahub-file-service"
+    },
+    {
+      "name": "svc \u00b7 dataset-information-service",
+      "path": "services/dataset-information-service"
+    },
+    {
+      "name": "svc \u00b7 dcs",
+      "path": "services/dcs"
+    },
+    {
+      "name": "svc \u00b7 dlq-service",
+      "path": "services/dlq-service"
+    },
+    {
+      "name": "svc \u00b7 ekss",
+      "path": "services/ekss"
+    },
+    {
+      "name": "svc \u00b7 em-transformation-service",
+      "path": "services/em-transformation-service"
+    },
+    {
+      "name": "svc \u00b7 fis",
+      "path": "services/fis"
+    },
+    {
+      "name": "svc \u00b7 ghga-registry-service",
+      "path": "services/ghga-registry-service"
+    },
+    {
+      "name": "svc \u00b7 ifrs",
+      "path": "services/ifrs"
+    },
+    {
+      "name": "svc \u00b7 mass",
+      "path": "services/mass"
+    },
+    {
+      "name": "svc \u00b7 notification-orchestration-service",
+      "path": "services/notification-orchestration-service"
+    },
+    {
+      "name": "svc \u00b7 notification-service",
+      "path": "services/notification-service"
+    },
+    {
+      "name": "svc \u00b7 pcs",
+      "path": "services/pcs"
+    },
+    {
+      "name": "svc \u00b7 reverse-transpiler-service",
+      "path": "services/reverse-transpiler-service"
+    },
+    {
+      "name": "svc \u00b7 state-management-service",
+      "path": "services/state-management-service"
+    },
+    {
+      "name": "svc \u00b7 ucs",
+      "path": "services/ucs"
+    },
+    {
+      "name": "svc \u00b7 upload-orchestration-service",
+      "path": "services/upload-orchestration-service"
+    },
+    {
+      "name": "svc \u00b7 well-known-value-service",
+      "path": "services/well-known-value-service"
+    },
+    {
+      "name": "svc \u00b7 work-package-service",
+      "path": "services/work-package-service"
+    },
+    {
+      "name": "tool \u00b7 auth-km-jobs",
+      "path": "tools/auth-km-jobs"
+    },
+    {
+      "name": "tool \u00b7 ghga-connector",
+      "path": "tools/ghga-connector"
+    },
+    {
+      "name": "tool \u00b7 ghga-datasteward-kit",
+      "path": "tools/ghga-datasteward-kit"
+    },
+    {
+      "name": "tool \u00b7 ghga-transpiler",
+      "path": "tools/ghga-transpiler"
+    },
+    {
+      "name": "tool \u00b7 ghga-validator",
+      "path": "tools/ghga-validator"
+    },
+    {
+      "name": "frontend \u00b7 data-portal",
+      "path": "frontend/data-portal"
+    },
+    {
+      "name": "testbed",
+      "path": "testbed"
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder:Monorepo Root}/.venv/bin/python",
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+    "python.analysis.autoImportCompletions": true
+  }
+}
