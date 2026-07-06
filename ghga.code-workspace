@@ -97,10 +97,6 @@
       "path": "services/ucs"
     },
     {
-      "name": "svc \u00b7 upload-orchestration-service",
-      "path": "services/upload-orchestration-service"
-    },
-    {
       "name": "svc \u00b7 well-known-value-service",
       "path": "services/well-known-value-service"
     },

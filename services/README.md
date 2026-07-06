@@ -6,7 +6,7 @@ Planned members (after import): `auth-service`, `access-request-service`,
 `dataset-information-service`, `mass`, `notification-service`,
 `notification-orchestration-service`, `work-package-service`, `well-known-value-service`,
 `dlq-service`, `state-management-service`, `ghga-registry-service`,
-`reverse-transpiler-service`, `em-transformation-service`, `upload-orchestration-service`,
+`reverse-transpiler-service`, `em-transformation-service`,
 `datahub-file-service`, and the file-services `dcs`, `ekss`, `fis`, `ifrs`, `pcs`, `ucs`
 (flattened in from `file-services-backend`).
 

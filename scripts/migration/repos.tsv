@@ -41,7 +41,6 @@ service	state-management-service	.	services/state-management-service	main
 service	ghga-registry-service	.	services/ghga-registry-service	main
 service	reverse-transpiler-service	.	services/reverse-transpiler-service	main
 service	em-transformation-service	.	services/em-transformation-service	main
-service	upload-orchestration-service	.	services/upload-orchestration-service	main
 service	datahub-file-service	.	services/datahub-file-service	main
 #
 # CLIs and jobs

@@ -90,7 +90,6 @@ class Config(BaseSettings):
         "dlq",
         "rts",
         "ucs",
-        "uos",
     ]
 
     object_storages: ObjectStoragesConfig = ObjectStoragesConfig(
@@ -146,7 +145,6 @@ class Config(BaseSettings):
         "pcs",
         "dlq",
         "rts",
-        "uos",
     ]
 
     # internal APIs
@@ -290,10 +288,6 @@ class Config(BaseSettings):
     # upload-controller
     ucs_db_name: str = "ucs"
     ucs_url: str = "ucs"
-
-    # upload-orchestration
-    uos_db_name: str = "uos"
-    uos_url: str = "uos"
 
     # lox24 mock server
     lox24_mock_url: str = "http://lox24-mock:8080"

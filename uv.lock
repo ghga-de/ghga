@@ -37,7 +37,6 @@ members = [
     "schemapack",
     "sms",
     "ucs",
-    "uos",
     "wkvs",
     "wps",
 ]
@@ -4008,25 +4007,6 @@ requires-dist = [
     { name = "hvac", specifier = ">=2" },
     { name = "packaging", specifier = ">=26" },
     { name = "typer", specifier = ">=0.25" },
-]
-
-[[package]]
-name = "uos"
-version = "2.0.1"
-source = { editable = "services/upload-orchestration-service" }
-dependencies = [
-    { name = "ghga-event-schemas" },
-    { name = "ghga-service-commons", extra = ["api", "auth", "crypt"] },
-    { name = "hexkit", extra = ["akafka", "mongodb", "opentelemetry"] },
-    { name = "typer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "ghga-event-schemas", editable = "libs/ghga-event-schemas" },
-    { name = "ghga-service-commons", extras = ["api", "auth", "crypt"], editable = "libs/ghga-service-commons" },
-    { name = "hexkit", extras = ["akafka", "mongodb", "opentelemetry"], editable = "libs/hexkit" },
-    { name = "typer", specifier = ">=0.15" },
 ]
 
 [[package]]
