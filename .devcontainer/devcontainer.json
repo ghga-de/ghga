@@ -1,8 +1,22 @@
 {
   "name": "Python & Claude",
-  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {},
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
-  }
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/va-h/devcontainers-features/uv:1": {}
+  },
+  // Persist uv's managed Python interpreters and its wheel cache across rebuilds.
+  // The workspace .venv lives on the (surviving) bind mount but symlinks its interpreter
+  // into ~/.local/share/uv/python/...; without this volume a rebuild wipes that target and
+  // the venv symlink dangles (breaking pytest discovery). Persisting ~/.cache/uv additionally
+  // skips re-downloading/rebuilding every dependency wheel on each rebuild.
+  "mounts": [
+    "source=ghga-uv-data,target=/home/vscode/.local/share/uv,type=volume",
+    "source=ghga-uv-cache,target=/home/vscode/.cache/uv,type=volume"
+  ],
+  // Fresh named volumes mount root-owned; hand them to the vscode user before syncing, then
+  // rebuild the workspace venv so pytest discovery works the moment the window opens.
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.local/share/uv /home/vscode/.cache/uv; uv sync --all-packages --all-extras"
 }
