@@ -36,7 +36,11 @@
       <div>
         <p class="mb-2"><strong>Files:</strong></p>
         @if (box.file_count > 0) {
-          <app-upload-box-files-table [files]="files()" [boxState]="box.state" />
+          <app-upload-box-files-table
+            [files]="files()"
+            [boxState]="box.state"
+            [loading]="filesLoading()"
+          />
         } @else {
           <p class="text-warning">This upload box is still empty.</p>
         }

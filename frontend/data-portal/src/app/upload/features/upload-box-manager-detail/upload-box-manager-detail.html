@@ -208,6 +208,7 @@
             <app-upload-box-files-table
               [files]="fileUploads()"
               [boxState]="box.state"
+              [loading]="filesLoading()"
               [showDelete]="box.state === 'open'"
               [deletable]="canDeleteFileFn"
               deleteEventLabel="Upload Box Manager Detail Delete File Clicked"

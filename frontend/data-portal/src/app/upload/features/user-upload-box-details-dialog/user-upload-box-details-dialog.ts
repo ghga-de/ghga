@@ -63,13 +63,22 @@ export class UserUploadBoxDetailsDialogComponent {
   protected hasError = computed<boolean>(() => !this.box() && !!this.#box.error());
 
   /**
-   * The files contained in the box. Filtered by box ID so files left over from a
-   * previously opened box are never shown while the fresh list is loading.
+   * The files contained in the box. Filtered by the box's file upload box ID so
+   * files left over from a previously opened box are never shown while the fresh
+   * list is loading. Each file references the underlying file upload box via its
+   * `box_id`, which is the `file_upload_box_id` of the research box, not its `id`.
    */
-  protected files = computed<FileUploadWithAccession[]>(() =>
-    this.#uploadBoxService.boxFileUploads
+  protected files = computed<FileUploadWithAccession[]>(() => {
+    const fileUploadBoxId = this.box()?.file_upload_box_id;
+    if (!fileUploadBoxId) return [];
+    return this.#uploadBoxService.boxFileUploads
       .value()
-      .filter((file) => file.box_id === this.boxId),
+      .filter((file) => file.box_id === fileUploadBoxId);
+  });
+
+  /** Whether the box's file list is still being loaded. */
+  protected filesLoading = computed<boolean>(() =>
+    this.#uploadBoxService.boxFileUploads.isLoading(),
   );
 
   /** Load the box files once the box is available and known to be non-empty. */

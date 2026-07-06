@@ -45,6 +45,7 @@ const files: FileUploadWithAccession[] = [
  * @param inputs - the signal inputs to set
  * @param inputs.files - the file uploads to display
  * @param inputs.boxState - the state of the box the files belong to
+ * @param inputs.loading - whether the file list is still loading
  * @param inputs.showDelete - whether to show the delete column
  * @param inputs.deletable - predicate deciding which files are deletable
  * @returns the created fixture
@@ -52,6 +53,7 @@ const files: FileUploadWithAccession[] = [
 async function createComponent(inputs: {
   files: FileUploadWithAccession[];
   boxState: UploadBoxState;
+  loading?: boolean;
   showDelete?: boolean;
   deletable?: (file: FileUploadWithAccession) => boolean;
 }): Promise<ComponentFixture<UploadBoxFilesTableComponent>> {
@@ -61,6 +63,9 @@ async function createComponent(inputs: {
   const fixture = TestBed.createComponent(UploadBoxFilesTableComponent);
   fixture.componentRef.setInput('files', inputs.files);
   fixture.componentRef.setInput('boxState', inputs.boxState);
+  if (inputs.loading !== undefined) {
+    fixture.componentRef.setInput('loading', inputs.loading);
+  }
   if (inputs.showDelete !== undefined) {
     fixture.componentRef.setInput('showDelete', inputs.showDelete);
   }
@@ -134,6 +139,26 @@ describe('UploadBoxFilesTableComponent', () => {
     await fixture.whenStable();
 
     expect(aliasOrder()).toEqual(['alpha.txt', 'beta.txt', 'gamma.txt']);
+  });
+
+  it('should show a loading placeholder while the file list is loading', async () => {
+    await createComponent({
+      files: [],
+      boxState: UploadBoxState.open,
+      loading: true,
+    });
+    expect(screen.getByText(/loading files/i)).toBeInTheDocument();
+    expect(screen.queryByText(/still empty/i)).not.toBeInTheDocument();
+  });
+
+  it('should show an empty placeholder once loaded with no files', async () => {
+    await createComponent({
+      files: [],
+      boxState: UploadBoxState.open,
+      loading: false,
+    });
+    expect(screen.getByText(/still empty/i)).toBeInTheDocument();
+    expect(screen.queryByText(/loading files/i)).not.toBeInTheDocument();
   });
 
   it('should show the accession column for archived boxes', async () => {

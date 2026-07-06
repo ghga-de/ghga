@@ -197,6 +197,11 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     this.#uploadBoxService.boxFileUploads.value(),
   );
 
+  /** Whether the box's file list is still being loaded. */
+  filesLoading = computed<boolean>(() =>
+    this.#uploadBoxService.boxFileUploads.isLoading(),
+  );
+
   /** Whether a box state change (lock or reopen) is currently in flight. */
   isChangingState = signal<boolean>(false);
 

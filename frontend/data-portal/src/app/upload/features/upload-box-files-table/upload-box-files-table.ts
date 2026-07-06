@@ -51,6 +51,13 @@ export class UploadBoxFilesTableComponent {
   /** The state of the box the files belong to (controls the visible columns). */
   boxState = input.required<UploadBoxState>();
 
+  /**
+   * Whether the file list is still being loaded. Controls the empty-table
+   * placeholder: while loading it reads as "loading", once loaded it reads as
+   * "empty" instead of showing a permanent loading message.
+   */
+  loading = input<boolean>(false);
+
   /** Whether to show a column with per-file delete buttons. */
   showDelete = input<boolean>(false);
 

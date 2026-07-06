@@ -1145,6 +1145,7 @@ export const uploadBoxes: BoxRetrievalResults = {
   boxes: [
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
       version: 1,
       state: UploadBoxState.open,
       title: 'Research Data Upload Box of John',
@@ -1158,6 +1159,7 @@ export const uploadBoxes: BoxRetrievalResults = {
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
       version: 4,
       state: UploadBoxState.locked,
       title: 'Research Data Upload Box of Jane',
@@ -1171,6 +1173,7 @@ export const uploadBoxes: BoxRetrievalResults = {
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68003',
       version: 2,
       state: UploadBoxState.archived,
       title: 'Research Data Upload Box of Joan',
@@ -1184,6 +1187,7 @@ export const uploadBoxes: BoxRetrievalResults = {
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68004',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68004',
       version: 4,
       state: UploadBoxState.open,
       title: 'Research Data Upload Box 2 of John',
@@ -1197,6 +1201,7 @@ export const uploadBoxes: BoxRetrievalResults = {
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68005',
       version: 2,
       state: UploadBoxState.open,
       title: 'Research Data Upload Box 3 of John',
@@ -1271,7 +1276,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
 export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   {
     id: 'f1b36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
     alias: 'sample_rna_001_R1.fastq.gz',
     state: 'interrogated',
     state_updated: '2026-01-10T08:00:00Z',
@@ -1285,7 +1290,7 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f2b36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
     alias: 'sample_rna_001_R2.fastq.gz',
     state: 'interrogated',
     state_updated: '2026-01-10T08:05:00Z',
@@ -1299,7 +1304,7 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f3b36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
     alias: 'metadata_manifest.csv',
     state: 'inbox',
     state_updated: '2026-01-10T09:00:00Z',
@@ -1313,7 +1318,7 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f4b36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
     alias: 'sample_rna_002_R1.fastq.gz',
     state: 'init',
     state_updated: '2026-01-10T09:30:00Z',
@@ -1333,7 +1338,7 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
 export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   {
     id: 'f1a36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_001_R1.fastq',
     state: 'interrogated',
     state_updated: '2026-01-14T10:12:00Z',
@@ -1347,7 +1352,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f2a36607a-b53f-49ed-bf3e-a5f2dbc68002',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_001_R2.fastq',
     state: 'interrogated',
     state_updated: '2026-01-14T10:45:00Z',
@@ -1361,7 +1366,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f3a36607a-b53f-49ed-bf3e-a5f2dbc68003',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_002_R1.fastq.gz',
     state: 'interrogated',
     state_updated: '2026-01-14T11:20:00Z',
@@ -1375,7 +1380,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f4a36607a-b53f-49ed-bf3e-a5f2dbc68004',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_002_R2.fastq.gz',
     state: 'interrogated',
     state_updated: '2026-01-14T11:55:00Z',
@@ -1389,7 +1394,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f5a36607a-b53f-49ed-bf3e-a5f2dbc68005',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'reference_genome.fasta',
     state: 'interrogated',
     state_updated: '2026-01-15T08:30:00Z',
@@ -1403,7 +1408,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f6a36607a-b53f-49ed-bf3e-a5f2dbc68006',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'aligned_reads_001.bam',
     state: 'interrogated',
     state_updated: '2026-01-15T09:10:00Z',
@@ -1417,7 +1422,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f7a36607a-b53f-49ed-bf3e-a5f2dbc68007',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'aligned_reads_002.cram',
     state: 'interrogated',
     state_updated: '2026-01-15T09:55:00Z',
@@ -1431,7 +1436,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f8a36607a-b53f-49ed-bf3e-a5f2dbc68008',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'variants_cohort.vcf',
     state: 'interrogated',
     state_updated: '2026-01-15T14:00:00Z',
@@ -1445,7 +1450,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f9a36607a-b53f-49ed-bf3e-a5f2dbc68009',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'chip_peaks_001.bed',
     state: 'interrogated',
     state_updated: '2026-01-15T14:30:00Z',
@@ -1459,7 +1464,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fa036607a-b53f-49ed-bf3e-a5f2dbc68010',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'methylation_sample_001.meth',
     state: 'interrogated',
     state_updated: '2026-01-16T08:00:00Z',
@@ -1473,7 +1478,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fb036607a-b53f-49ed-bf3e-a5f2dbc68011',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'ms_proteomics_run1.raw',
     state: 'interrogated',
     state_updated: '2026-01-16T09:15:00Z',
@@ -1487,7 +1492,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fc036607a-b53f-49ed-bf3e-a5f2dbc68012',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'study_data_manifest.pdf',
     state: 'interrogated',
     state_updated: '2026-01-16T10:00:00Z',
@@ -1501,7 +1506,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fd036607a-b53f-49ed-bf3e-a5f2dbc68013',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_003_R1.fastq.gz',
     state: 'failed',
     state_updated: '2026-01-16T11:00:00Z',
@@ -1515,7 +1520,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fe036607a-b53f-49ed-bf3e-a5f2dbc68014',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'aligned_reads_003.bam',
     state: 'awaiting_archival',
     state_updated: '2026-01-17T07:45:00Z',
@@ -1529,7 +1534,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'ff036607a-b53f-49ed-bf3e-a5f2dbc68015',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'chip_peaks_002.bed',
     state: 'interrogated',
     state_updated: '2026-01-17T08:30:00Z',
@@ -1550,7 +1555,7 @@ export const uploadBox3FileUploads: FileUploadWithAccession[] = Array.from(
   { length: 28 },
   (_, i) => ({
     id: `f${String(i + 1).padStart(2, '0')}036607a-b53f-49ed-bf3e-a5f2dbc68003`,
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68003',
     alias: `archived_sample_${String(i + 1).padStart(3, '0')}.fastq.gz`,
     state: 'archived' as FileUploadWithAccession['state'],
     state_updated: '2025-06-01T10:00:00Z',
@@ -1574,7 +1579,7 @@ export const uploadBox4FileUploads: FileUploadWithAccession[] = Array.from(
     const decrypted_size = (i + 1) * 536870912; // 0.5–7.5 GiB per file
     return {
       id: `f${String(i + 1).padStart(2, '0')}c36607a-b53f-49ed-bf3e-a5f2dbc68004`,
-      box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68004',
+      box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68004',
       alias: `sample_proteome_${String(i + 1).padStart(3, '0')}.raw`,
       state,
       state_updated: '2026-02-04T08:00:00Z',
@@ -1593,7 +1598,7 @@ export const uploadBox4FileUploads: FileUploadWithAccession[] = Array.from(
 export const uploadBox5FileUploads: FileUploadWithAccession[] = [
   {
     id: 'f1d36607a-b53f-49ed-bf3e-a5f2dbc68005',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68005',
     alias: 'sample_image_001.tiff',
     state: 'interrogated',
     state_updated: '2026-02-05T08:00:00Z',
@@ -1607,7 +1612,7 @@ export const uploadBox5FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f2d36607a-b53f-49ed-bf3e-a5f2dbc68005',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68005',
     alias: 'sample_image_002.tiff',
     state: 'init',
     state_updated: '2026-02-05T08:30:00Z',
