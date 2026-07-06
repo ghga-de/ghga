@@ -35,17 +35,26 @@ def execute_aggregation(
     anchor_point = original_model.anchors_points_by_target[aggregation.input]
     id_slot = anchor_point.identifier_slot
     input_anchor_data = original_data[anchor_point.root_slot]
+
+    # A subgraph depends only on the model and the (constant) submission data, not on
+    # the individual input element. Build one subgraph per operation up front and reuse
+    # it across all input elements, instead of rebuilding it - and re-indexing the
+    # entire submission - for every (input element, operation) pair.
+    subgraphs = [
+        DataSubgraph(
+            model=original_model,
+            submission_data=original_data,
+            origin=aggregation.input,
+            path_strings=operation.input_paths,
+            visit_once_classes=operation.visit_only_once,
+        )
+        for operation in aggregation.operations
+    ]
+
     output_data: list[Json] = []
     for input_element in input_anchor_data:
         result = ExpandingDict()
-        for operation in aggregation.operations:
-            subgraph = DataSubgraph(
-                model=original_model,
-                submission_data=original_data,
-                origin=aggregation.input,
-                path_strings=operation.input_paths,
-                visit_once_classes=operation.visit_only_once,
-            )
+        for operation, subgraph in zip(aggregation.operations, subgraphs, strict=True):
             try:
                 aggregated = operation.function.func(
                     subgraph.terminal_nodes(data=input_element)

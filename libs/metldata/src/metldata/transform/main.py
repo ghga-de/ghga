@@ -16,11 +16,13 @@
 
 """Main logic for running a transformation workflow on submissions."""
 
+import logging
 from collections.abc import Awaitable, Callable
 
 from metldata.event_handling.event_handling import (
     FileSystemEventPublisher,
     FileSystemEventSubscriber,
+    get_topic_path,
 )
 from metldata.event_handling.models import SubmissionEventPayload
 from metldata.model_utils.essentials import MetadataModel
@@ -29,6 +31,22 @@ from metldata.transform.base import WorkflowConfig, WorkflowDefinition
 from metldata.transform.config import TransformationEventHandlingConfig
 from metldata.transform.handling import WorkflowHandler
 from metldata.transform.source_event_subscriber import SourceEventSubscriber
+
+log = logging.getLogger(__name__)
+
+
+def _count_source_events(*, event_config: TransformationEventHandlingConfig) -> int:
+    """Count the source events awaiting transformation without parsing them.
+
+    Used only to display progress; returns 0 if the topic does not exist yet.
+    """
+    topic_path = get_topic_path(
+        topic=event_config.source_event_topic,
+        event_store_path=event_config.event_store_path,
+    )
+    if not topic_path.exists():
+        return 0
+    return sum(1 for path in topic_path.iterdir() if path.suffix == ".json")
 
 
 async def run_workflow_on_source_event(
@@ -79,15 +97,32 @@ async def run_workflow_on_all_source_events(
     artifact_publisher = ArtifactEventPublisher(
         config=event_config, provider=event_publisher
     )
-    source_event_subscriber = SourceEventSubscriber(
-        config=event_config,
-        run_workflow_func=lambda source_event: run_workflow_on_source_event(
+
+    total = _count_source_events(event_config=event_config)
+    log.info("Found %d submission(s) to transform.", total)
+    processed = 0
+
+    async def run_workflow_func(source_event: SubmissionEventPayload) -> None:
+        nonlocal processed
+        processed += 1
+        log.info(
+            "Transforming submission %d/%d: '%s'",
+            processed,
+            total,
+            source_event.submission_id,
+        )
+        await run_workflow_on_source_event(
             workflow_handler=workflow_handler,
             source_event=source_event,
             publish_artifact_func=artifact_publisher.publish_artifact,
-        ),
+        )
+
+    source_event_subscriber = SourceEventSubscriber(
+        config=event_config,
+        run_workflow_func=run_workflow_func,
     )
     event_subscriber = FileSystemEventSubscriber(
         config=event_config, translator=source_event_subscriber
     )
     await event_subscriber.run()
+    log.info("Finished transforming %d submission(s).", processed)

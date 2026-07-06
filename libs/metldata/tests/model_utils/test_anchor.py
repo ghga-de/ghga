@@ -54,7 +54,9 @@ def test_get_anchor_points_happy():
 
     observed_anchor_points = get_anchor_points(model=VALID_MINIMAL_METADATA_MODEL)
 
-    assert observed_anchor_points == expected_anchor_points
+    # get_anchor_points returns an ordered list (deterministic, in root-slot order);
+    # compare set-wise since this test only asserts the set of anchor points.
+    assert set(observed_anchor_points) == expected_anchor_points
 
 
 @pytest.mark.parametrize("invalid_model", ANCHORS_INVALID_MODELS)

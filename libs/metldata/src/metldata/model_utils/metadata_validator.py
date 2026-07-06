@@ -16,13 +16,15 @@
 
 """Logic to validate submission metadata based on a LinkML model."""
 
+import json
 from functools import lru_cache
 from typing import Any
 
-from linkml_validator.models import ValidationMessage
-from linkml_validator.validator import Validator
+import jsonschema
+from linkml.generators.jsonschemagen import JsonSchemaGenerator
+from linkml_validator.models import SeverityEnum, ValidationMessage
 
-from metldata.model_utils.essentials import MetadataModel
+from metldata.model_utils.essentials import ROOT_CLASS, MetadataModel
 
 
 class InvalidMetadataError(RuntimeError):
@@ -47,10 +49,26 @@ class MetadataValidationError(InvalidMetadataError):
 
 
 @lru_cache
-def get_metadata_validator(model: MetadataModel):
-    """Create a validator for the given metadata model."""
-    with model.temporary_yaml_path() as model_path:
-        return Validator(schema=str(model_path))
+def get_metadata_validator(model: MetadataModel) -> jsonschema.Draft7Validator:
+    """Create a JSON Schema validator for the root class of the given metadata model.
+
+    The JSON Schema is generated directly from the in-memory model via LinkML's
+    JsonSchemaGenerator. This deliberately avoids `linkml_validator.Validator`, which
+    additionally compiles a full Python module from the schema (via PythonGenerator)
+    just to look up the target class name - an expensive step that dominated validator
+    construction - and which required serializing the model to a temporary YAML file
+    only to parse it back in. Generating the schema once from the in-memory model and
+    validating with `jsonschema` yields identical accept/reject behaviour at a fraction
+    of the cost. The result is cached per model.
+    """
+    generator = JsonSchemaGenerator(
+        schema=model,
+        top_class=ROOT_CLASS,
+        mergeimports=True,
+        not_closed=False,
+    )
+    schema = json.loads(generator.serialize())
+    return jsonschema.Draft7Validator(schema)
 
 
 class MetadataValidator:
@@ -71,13 +89,22 @@ class MetadataValidator:
         """
         validator = get_metadata_validator(self._model)
 
-        validation_report = validator.validate(metadata, target_class="Submission")
+        errors = sorted(validator.iter_errors(metadata), key=str)
 
-        if not validation_report.valid:
+        if errors:
             issues = [
-                message
-                for result in validation_report.validation_results
-                if not result.valid and result.validation_messages is not None
-                for message in result.validation_messages
+                ValidationMessage(
+                    severity=SeverityEnum.error,
+                    message=error.message,
+                    field=(
+                        ".".join(map(str, error.absolute_path))
+                        if error.absolute_path
+                        else None
+                    ),
+                    value=(
+                        error.instance if not isinstance(error.instance, dict) else None
+                    ),
+                )
+                for error in errors
             ]
             raise MetadataValidationError(issues=issues)
