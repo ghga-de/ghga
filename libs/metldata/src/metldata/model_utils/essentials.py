@@ -80,6 +80,9 @@ class MetadataModel(SchemaDefinition):
         model_dict = dataclasses.asdict(self)
 
         if essential:
+            # `metamodel_version` is environmental (the linkml metamodel version) and
+            # can leak in from global linkml state; it is not authored model content.
+            model_dict.pop("metamodel_version", None)
             if "classes" in model_dict:
                 for class_ in model_dict["classes"].values():
                     if "from_schema" in class_:
@@ -97,10 +100,22 @@ class MetadataModel(SchemaDefinition):
                                 del slot["from_schema"]
                             if "domain_of" in slot:
                                 del slot["domain_of"]
+                            # linkml >=1.10 (the py3.13 workspace can't use metldata's
+                            # upstream linkml==1.6.1) derives these onto slot_usage; not
+                            # essential authored content (authored mappings live on the
+                            # top-level slot).
+                            if "exact_mappings" in slot:
+                                del slot["exact_mappings"]
+                            if "in_subset" in slot:
+                                del slot["in_subset"]
             if "slots" in model_dict:
                 for slot in model_dict["slots"].values():
                     if "from_schema" in slot:
                         del slot["from_schema"]
+                    # linkml >=1.10 populates `domain_of` (the classes a slot is
+                    # used in) on top-level slots; it is derived, not essential.
+                    if "domain_of" in slot:
+                        del slot["domain_of"]
             if "enums" in model_dict:
                 for enum in model_dict["enums"].values():
                     if "from_schema" in enum:
