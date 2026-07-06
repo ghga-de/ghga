@@ -16,7 +16,10 @@
     "source=ghga-uv-data,target=/home/vscode/.local/share/uv,type=volume",
     "source=ghga-uv-cache,target=/home/vscode/.cache/uv,type=volume"
   ],
-  // Fresh named volumes mount root-owned; hand them to the vscode user before syncing, then
-  // rebuild the workspace venv so pytest discovery works the moment the window opens.
-  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.local/share/uv /home/vscode/.cache/uv; uv sync --all-packages --all-extras"
+  // Fresh named volumes mount root-owned, and Docker also creates their parent dirs
+  // (~/.local, ~/.local/share) root-owned — which blocks `uv tool install` from creating
+  // ~/.local/bin. Chown the parents AND the volume contents to vscode, install the
+  // migration tooling (git-filter-repo, also lost on rebuild), then rebuild the workspace
+  // venv so pytest discovery works the moment the window opens.
+  "postCreateCommand": "sudo chown vscode:vscode /home/vscode/.local /home/vscode/.local/share && sudo chown -R vscode:vscode /home/vscode/.local/share/uv /home/vscode/.cache/uv && uv tool install git-filter-repo && uv sync --all-packages --all-extras"
 }
