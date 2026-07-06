@@ -14,6 +14,11 @@ mongodb:
 # This parameter is used as Kafka's group id
 serviceName: rs-rest
 
+migrationInitContainer:
+  executable: rs
+  executableArgs:
+    - migrate-db
+
 # Those values are directly injected into the service's configuration
 config:
   host: 0.0.0.0
@@ -26,6 +31,8 @@ config:
   ucs_url: http://upload-controller:8080
   auth_key: '{}'
   work_order_signing_key: '{}'
+  db_version_collection: rsDbVersions
+  migration_wait_sec: 5
 
 executable: rs
 executableArgs:
@@ -81,6 +88,27 @@ _topics:
     type:
       name: audit_record_type
       value: audit_record_logged
+    kafkaUser:
+      operations:
+        - Write
+  resourceChangeEvent:
+    # as consumer
+    topic:
+      name: resource_change_topic
+      value: searchable-resources
+    types:
+    - name: resource_deletion_type
+      value: searchable_resource_deleted
+    - name: resource_upsertion_type
+      value: searchable_resource_upserted
+    kafkaUser:
+      operations:
+        - Read
+  studyEvent:
+    # as producer
+    topic:
+      name: study_topic
+      value: studies
     kafkaUser:
       operations:
         - Write
