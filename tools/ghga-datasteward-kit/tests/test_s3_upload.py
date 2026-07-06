@@ -16,6 +16,7 @@
 """Testing the whole encryption, upload, validation flow"""
 
 import asyncio
+import ipaddress
 import sys
 import threading
 import time
@@ -61,14 +62,29 @@ ALIAS = "test_file"
 BUCKET_ID = "test-bucket"
 FILE_SIZE = 50 * 1024**2
 
+def _is_testcontainer_host(host: str) -> bool:
+    """Whether a request host is a testcontainers-exposed endpoint (to pass through).
+
+    testcontainers publishes container ports on the docker host: `localhost`/`127.0.0.1`
+    under local Docker, but the docker-bridge gateway IP (e.g. `172.17.0.1`) under
+    docker-in-docker. So treat any IP-literal host — not just a fixed list — as a real
+    container endpoint, while mocked GHGA APIs use domain names.
+    """
+    if host in ("localhost", "host.docker.internal"):
+        return True
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return True
+
+
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.httpx_mock(
         assert_all_responses_were_requested=False,
         can_send_already_matched_responses=True,
-        should_mock=lambda request: (
-            request.url.host not in ("127.0.0.1", "localhost", "host.docker.internal")
-        ),
+        should_mock=lambda request: not _is_testcontainer_host(request.url.host),
     ),
 ]
 
