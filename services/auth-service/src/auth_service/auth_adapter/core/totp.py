@@ -196,7 +196,10 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
             issuer=self.issuer,
             name=name,
         )
-        return totp.provisioning_uri(image=str(self.image) if self.image else None)
+        # pyotp>=2.10 forwards provisioning_uri kwargs straight into build_uri, which
+        # rejects any non-string value; only pass `image` when it is actually set.
+        image_kwarg = {"image": str(self.image)} if self.image else {}
+        return totp.provisioning_uri(**image_kwarg)
 
     def generate_token(self) -> TOTPToken:
         """Generate a TOTP token."""
