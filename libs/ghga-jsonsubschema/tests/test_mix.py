@@ -148,6 +148,15 @@ def test_not_number():
     assert not is_subschema(s2, s1)
 
 
+def test_not_non_validating():
+    # a negated schema with only non-validating keywords is a negated top,
+    # i.e. bottom (this used to abort the whole process via sys.exit)
+    s1 = {"not": {"title": "everything"}}
+    s2 = {"type": "string"}
+    assert is_subschema(s1, s2)
+    assert not is_subschema(s2, s1)
+
+
 # Tests for bottom and top
 
 

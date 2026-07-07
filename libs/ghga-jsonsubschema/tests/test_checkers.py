@@ -6,7 +6,16 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 from jsonsubschema._canonicalization import simplify_schema_and_embed_checkers
-from jsonsubschema._checkers import JSONbot, JSONtop, is_bot, is_top
+from jsonsubschema._checkers import (
+    JSONanyOf,
+    JSONbot,
+    JSONtop,
+    JSONTypeInteger,
+    JSONTypeNull,
+    JSONTypeString,
+    is_bot,
+    is_top,
+)
 
 # Tests for is_top
 
@@ -51,3 +60,23 @@ def test_uninhabited_schema_is_bot() -> None:
 
 def test_zero_is_not_bot() -> None:
     assert not is_bot(0)
+
+
+# Tests for JSONanyOf
+
+
+def test_any_of_flattens_adjacent_nested_unions() -> None:
+    # adjacent nested anyOf members must both be flattened away
+    # (a nested union defeats the per-type subtype checks)
+    nested = JSONanyOf(
+        {
+            "anyOf": [
+                JSONTypeNull({"type": "null"}),
+                JSONanyOf({"anyOf": [JSONTypeInteger({"type": "integer"})]}),
+                JSONanyOf({"anyOf": [JSONTypeString({"type": "string"})]}),
+            ]
+        }
+    )
+    assert all("anyOf" not in member for member in nested.anyOf)
+    assert nested.anyOf is nested["anyOf"]
+    assert nested.is_subtype(nested)

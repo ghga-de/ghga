@@ -16,7 +16,8 @@ __all__ = ["main"]
 def main():
     """CLI entry point for jsonsubschema"""
     parser = argparse.ArgumentParser(
-        description="CLI for ssonsubschema tool which checks whether a LHS JSON schema is a subschema (<:) of another RHS JSON schema."
+        description="CLI for jsonsubschema tool which checks whether a LHS JSON "
+        "schema is a subschema (<:) of another RHS JSON schema."
     )
     parser.add_argument(
         "LHS",

@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0
 import copy
 import math
 import re
-import sys
 
 import jsonsubschema._constants as definitions
 import jsonsubschema._utils as utils
@@ -18,52 +17,53 @@ from jsonsubschema._checkers import (
     bool_to_constructor,
     type_to_constructor,
 )
-from jsonsubschema.exceptions import UnsupportedEnumCanonicalization
+from jsonsubschema.exceptions import (
+    UnsupportedDependencies,
+    UnsupportedEnumCanonicalization,
+)
 
 _nan = float("nan")
-TOP: dict = {}
 BOT: dict = {"not": {}}
 
 
 def canonicalize_schema(obj):
+    """Validate and rewrite ``obj`` into an equivalent canonical JSON schema."""
     # {"enum": []} is uninhabited; intercept before validate_schema rejects it
     if utils.is_dict(obj) and obj.get("enum") == []:
         return BOT
 
-    # First, make sure the given json is a valid json schema.
-    # should throw jsonschema.SchemaError on unknown types
+    # First, make sure the given json is a valid json schema;
+    # this throws jsonschema.SchemaError on unknown types.
     utils.validate_schema(obj)
 
     # Second, canonicalize the schema.
     if utils.is_dict(obj):
         canonical_schema = canonicalize_dict(obj)
 
-    # Finally, ensure that canonicalized schema is till a valid json schema.
+    # Finally, ensure that the canonicalized schema is still a valid json schema.
     utils.validate_schema(canonical_schema)
 
     return canonical_schema
 
 
-def canonicalize_dict(d, outer_key=None):  # noqa: C901, PLR0911, PLR0912
-    # not actually needed, but for testing
-    # canonicalization to work properly;
+def canonicalize_dict(d, outer_key=None):  # noqa: C901, PLR0911
+    """Canonicalize a schema given as a dict, dispatching on its keywords.
+
+    ``outer_key`` is the key under which ``d`` appears in its parent schema;
+    it is used to leave dict containers such as ``properties`` untouched.
+    """
+    # Not strictly needed, but return these trivial schemas unchanged
+    # so that tests of the canonicalization work properly.
     if d in ({}, {"not": {}}):
         return d
 
-    # Ignore (drop) any other validatoin keyword when there is a $ref
-    # Currently, jsonref handles this case properly,
-    # We might need to handle it again on out own when
-    # we handle recursive $ref independently from jsonref.
-    # if d.get("$ref"):
-    #     for k in list(d.keys()):
-    #         if k != "$ref" and k not in definitions.JNonValidation:
-    #             del d[k]
+    # In draft 4, any validation keyword alongside a $ref is ignored;
+    # jsonref's ref resolution (which runs before canonicalization)
+    # already drops such siblings, so no handling is needed here.
 
-    # Skip normal dict canonicalization
-    # for object.properties;
-    #   patternProperties;
-    #   dependencies
-    # because these should be usual dict containers.
+    # Skip normal dict canonicalization for the contents of properties,
+    # patternProperties and dependencies: these are usual dict containers
+    # mapping keys to schemas, not schemas themselves.
     if outer_key in ["properties", "patternProperties"]:
         for k, v in d.items():
             d[k] = canonicalize_dict(v)
@@ -86,59 +86,72 @@ def canonicalize_dict(d, outer_key=None):  # noqa: C901, PLR0911, PLR0912
 
     if has_connectors:
         return canonicalize_connectors(d)
-    elif "enum" in d:
+    if "enum" in d:
         return canonicalize_enum(d)
-    elif "const" in d:
+    if "const" in d:
         return canonicalize_const(d)
-    elif utils.is_str(t):
+    if utils.is_str(t):
         return canonicalize_single_type(d)
-    elif utils.is_list(t):
+    if utils.is_list(t):
         return canonicalize_list_of_types(d)
-    else:
-        d["type"] = sorted(definitions.Jtypes)
-        return canonicalize_list_of_types(d)
+    d["type"] = sorted(definitions.Jtypes)
+    return canonicalize_list_of_types(d)
+
+
+def _is_relevant_keyword(k, t):
+    """Return whether keyword ``k`` is relevant for a schema of type ``t``."""
+    return (
+        k in definitions.Jcommonkw
+        or k in definitions.JtypesToKeywords.get(t, set())
+        or k in definitions.JNonValidation
+    )
+
+
+def _canonicalize_keywords(d, t):
+    """Drop irrelevant keywords of ``d`` in place and canonicalize the rest.
+
+    Returns ``False`` if the ``enum`` admits no value of type ``t``,
+    which renders the schema uninhabited.
+    """
+    for k, v in list(d.items()):
+        if not _is_relevant_keyword(k, t):
+            d.pop(k)
+        elif utils.is_dict(v):
+            d[k] = canonicalize_dict(v, k)
+        elif utils.is_list(v):
+            if k == "enum":
+                v = utils.get_typed_enum_vals(v, t)
+                if not v:
+                    return False
+                d[k] = v
+            elif k == "required":
+                d[k] = sorted(set(v))
+            else:
+                # "list" must be operand of boolean connectors
+                d[k] = [canonicalize_dict(i) for i in v]
+    return True
 
 
 def canonicalize_single_type(d):
+    """Canonicalize a schema with a single ``type``, dropping irrelevant keywords."""
     t = d.get("type")
-    if t in definitions.Jtypes:
-        # Remove irrelevant keywords
-        for k, v in list(d.items()):
-            if (
-                k not in definitions.Jcommonkw
-                and k not in definitions.JtypesToKeywords.get(t, set())
-                and k not in definitions.JNonValidation
-            ):
-                d.pop(k)
-            elif utils.is_dict(v):
-                d[k] = canonicalize_dict(v, k)
-            elif utils.is_list(v):
-                if k == "enum":
-                    v = utils.get_typed_enum_vals(v, t)
-                    # if not v:
-                    #     return BOT
-                    # else:
-                    d[k] = v
-                elif k == "required":
-                    d[k] = sorted(set(v))
-                else:
-                    # "list" must be operand of boolean connectors
-                    d[k] = [canonicalize_dict(i) for i in v]
-        if "enum" in d:
-            return rewrite_enum(d)
-        else:
-            return d
-
-    # jsonschema validation in the begining prevents
-    # reaching this case. So we don't need this.
-    # else:
-    #     print("Unknown schema type {} at:".format(t))
-    #     print(d)
-    #     print("Exiting...")
-    #     sys.exit(1)
+    if t not in definitions.Jtypes:
+        # cannot happen: the jsonschema validation at the start rejects unknown types
+        raise ValueError(f"Unknown schema type {t!r} at: {d}")
+    if t == "object" and d.get("dependencies"):
+        # fail loudly instead of ignoring the constraint and potentially
+        # returning an unsound verdict
+        raise UnsupportedDependencies(schema=d)
+    if not _canonicalize_keywords(d, t):
+        # no enum value fits the type, so the schema is uninhabited
+        return BOT
+    if "enum" in d:
+        return rewrite_enum(d)
+    return d
 
 
 def canonicalize_list_of_types(d):
+    """Canonicalize a schema with a list of ``type`` values into an ``anyOf``."""
     schema_types = set(d.get("type"))
     if schema_types == definitions.JallTypes and not set(d.keys()).intersection(
         definitions.JtypesRestrictionKeywords
@@ -147,27 +160,15 @@ def canonicalize_list_of_types(d):
 
     any_of_schemas = []
     for schema_type in schema_types:
-        if schema_type in definitions.Jtypes:
-            typed_schema = copy.deepcopy(d)
-            typed_schema["type"] = schema_type
-            typed_schema = canonicalize_single_type(typed_schema)
-            any_of_schemas.append(typed_schema)
+        typed_schema = copy.deepcopy(d)
+        typed_schema["type"] = schema_type
+        any_of_schemas.append(canonicalize_single_type(typed_schema))
 
-        # jsonschema validation in the begining prevents
-        # reaching this case. So we don't need this.
-        # else:
-        # print("Unknown schema type {} at: {}".format(schema_type, schema_types))
-        # print(d)
-        # print("Exiting...")
-        # sys.exit(1)
-
-    # if len(anyofs) == 1:
-    #     return anyofs[0]
-    # elif len(anyofs) > 1:
     return {"anyOf": any_of_schemas}
 
 
 def canonicalize_enum(d):
+    """Canonicalize an ``enum`` schema, keeping only values valid against ``d``."""
     valid_vals = utils.get_valid_enum_vals(d["enum"], d)
     if not valid_vals:
         return BOT
@@ -180,7 +181,7 @@ def canonicalize_enum(d):
     )
     if "type" in d:
         orig_t = d["type"]
-        orig_t = set([orig_t]) if utils.is_str(orig_t) else set(orig_t)
+        orig_t = {orig_t} if utils.is_str(orig_t) else set(orig_t)
         d["type"] = orig_t.intersection(actual_t)
     else:
         d["type"] = actual_t
@@ -188,11 +189,18 @@ def canonicalize_enum(d):
 
 
 def canonicalize_const(d):
+    """Canonicalize a ``const`` schema by rewriting it as a single-value ``enum``."""
     d["enum"] = [d.pop("const")]
     return canonicalize_enum(d)
 
 
 def canonicalize_connectors(d):
+    """Canonicalize a schema built from boolean connectors.
+
+    The connectors are ``anyOf``/``allOf``/``oneOf``/``not``. A ``oneOf`` is
+    rewritten in terms of ``anyOf``/``allOf``/``not``, and a
+    connector combined with other keywords is first split into an ``allOf``.
+    """
     connectors = definitions.Jconnectors.intersection(d.keys())
     lhs_kw = definitions.Jkeywords.intersection(d.keys())
     lhs_kw_without_connectors = lhs_kw.difference(connectors)
@@ -205,7 +213,7 @@ def canonicalize_connectors(d):
             d["not"] = canonicalize_dict(d["not"])
             return canonicalize_not(d)
 
-        elif connector == "oneOf":
+        if connector == "oneOf":
             if len(d[connector]) == 1:
                 return canonicalize_dict(d[connector].pop())
             any_of_schemas = []
@@ -220,70 +228,69 @@ def canonicalize_connectors(d):
 
         # Here, the connector is either allOf or oneOf
         # So we better simplify them before proceeding more.
-        else:
-            d[connector] = [canonicalize_dict(schema) for schema in d[connector]]
-            # return d
-            simplified = simplify_schema_and_embed_checkers(d)
-            return simplified
+        d[connector] = [canonicalize_dict(schema) for schema in d[connector]]
+        return simplify_schema_and_embed_checkers(d)
 
     # Connector + other keywords. Combine them first.
-    else:
-        all_of_schemas = []
-        for connector in connectors:
-            all_of_schemas.append(canonicalize_dict({connector: d[connector]}))
-            del d[connector]
-        if lhs_kw_without_connectors:
-            all_of_schemas.append(
-                canonicalize_dict({k: d[k] for k in lhs_kw_without_connectors})
-            )
-        return {"allOf": all_of_schemas}
-        # return simplify_schema_and_embed_checkers({"allOf": allofs})
+    all_of_schemas = []
+    for connector in connectors:
+        all_of_schemas.append(canonicalize_dict({connector: d[connector]}))
+        del d[connector]
+    if lhs_kw_without_connectors:
+        all_of_schemas.append(
+            canonicalize_dict({k: d[k] for k in lhs_kw_without_connectors})
+        )
+    return {"allOf": all_of_schemas}
 
 
 def canonicalize_not(d):
+    """Canonicalize a negated (``not``) schema by pushing the negation inward.
+
+    Double negations cancel and De Morgan's laws turn negated connectors into
+    the dual connector of negated operands.
+    """
     # d: {} has a 'not' schema
     negated_schema = d["not"]
 
     t = negated_schema.get("type")
 
-    # if "enum" in negated_schema:
-    #     return canonicalize_negated_enum(negated_schema)
-
-    if negated_schema == {} or t in definitions.Jtypes:
+    if t in definitions.Jtypes:
         return d
 
+    if not definitions.Jkeywords.intersection(negated_schema.keys()):
+        # The negated schema has no validating keywords, so it accepts
+        # every document and its negation is uninhabited.
+        return BOT
+
     connectors = definitions.Jconnectors.intersection(negated_schema.keys())
-    if connectors and len(connectors) == 1:
+    if len(connectors) == 1:
         connector = connectors.pop()
         # Case "not: {"not": {...}}
         # Return positive schema (2 nots cancel each other)
         if connector == "not":
             return negated_schema["not"]
 
-        elif connector == "anyOf":
-            all_of_schemas = []
-            for schema in negated_schema["anyOf"]:
-                all_of_schemas.append(canonicalize_not({"not": schema}))
+        if connector == "anyOf":
+            all_of_schemas = [
+                canonicalize_not({"not": schema}) for schema in negated_schema["anyOf"]
+            ]
             return {"allOf": all_of_schemas}
 
-        # Should not reach here. Should be canonicalized and
-        # simplified by now.
-        elif connector == "allOf":
-            # anyofs = []
-            # for i in negated_schema["allOf"]:
-            #     anyofs.append(canonicalize_not({"not": i}))
-            # return {"anyOf": anyofs}
-            return canonicalize_not({"not": canonicalize_connectors(negated_schema)})
+        # allOf/oneOf: rewrite the connector first, then push the negation
+        # into the result.
+        return canonicalize_not({"not": canonicalize_connectors(negated_schema)})
 
-            #     anyofs.append(canonicalize_not({"not": i}))
-        # Should not reach here. Should be canonicalized by now.
-        # elif c == "oneOf":
-        #     return canonicalize_not({"not": canonicalize_connectors(negated_schema)})
-    else:
-        sys.exit(">>>>>> Ewwwww! Shouldn't be here during canonicalization. <<<<<<")
+    # cannot happen: the negated schema was canonicalized before, which
+    # yields either a typed schema or a single boolean connector
+    raise ValueError(f"Cannot negate the canonicalized schema: {negated_schema}")
 
 
 def rewrite_enum(d):
+    """Rewrite a typed ``enum`` schema into range/pattern constraints per value.
+
+    Array and object enums are not supported and raise
+    :class:`UnsupportedEnumCanonicalization`.
+    """
     t = d.get("type")
     enum = d.get("enum")
 
@@ -318,19 +325,14 @@ def rewrite_enum(d):
     return ret
 
 
-def simplify_schema_and_embed_checkers(s):  # noqa: C901, PLR0912
+def simplify_schema_and_embed_checkers(s):  # noqa: C901, PLR0911, PLR0912
     """This function assumes the schema s is already canonicalized.
     So it must be a dict
     """
     if s == {} or not definitions.Jkeywords.intersection(s.keys()):
-        top = JSONtop()
-        # top.update(s)
-        return top
+        return JSONtop()
     if "not" in s and s["not"] == {}:
-        bot = JSONbot()
-        # del s["not"]
-        # bot.update(s)
-        return bot
+        return JSONbot()
 
     # json.array specific
     if "items" in s:
@@ -344,20 +346,15 @@ def simplify_schema_and_embed_checkers(s):  # noqa: C901, PLR0912
 
     # json.object specific
     if "properties" in s:
-        s["properties"] = dict(
-            [
-                (k, simplify_schema_and_embed_checkers(v))
-                for k, v in s["properties"].items()
-            ]
-        )
+        s["properties"] = {
+            k: simplify_schema_and_embed_checkers(v) for k, v in s["properties"].items()
+        }
 
     if "patternProperties" in s:
-        s["patternProperties"] = dict(
-            [
-                (k, simplify_schema_and_embed_checkers(v))
-                for k, v in s["patternProperties"].items()
-            ]
-        )
+        s["patternProperties"] = {
+            k: simplify_schema_and_embed_checkers(v)
+            for k, v in s["patternProperties"].items()
+        }
 
     if "additionalProperties" in s and utils.is_dict(s["additionalProperties"]):
         s["additionalProperties"] = simplify_schema_and_embed_checkers(
@@ -377,3 +374,4 @@ def simplify_schema_and_embed_checkers(s):  # noqa: C901, PLR0912
     if "allOf" in s:
         allofs = [simplify_schema_and_embed_checkers(i) for i in s["allOf"]]
         return bool_to_constructor["allOf"]({"allOf": allofs})
+    return None

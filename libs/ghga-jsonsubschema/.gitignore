@@ -20,7 +20,9 @@ dist
 *.json
 *.log
 
-.claude
+.claude/*
+!.claude/skills/
+/.dev/
 
 .vscode/*
 !.vscode/settings.json

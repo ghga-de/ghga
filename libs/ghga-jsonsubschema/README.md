@@ -88,13 +88,36 @@ uv run pytest --cov tests/
 
 ## Changes made by GHGA
 
-This fork is based on the latest unreleased main branch of [IBM/jsonsubschema](https://github.com/ibm/jsonsubschema) and introduces additional changes:
+This fork is based on version 0.0.8 of [IBM/jsonsubschema](https://github.com/ibm/jsonsubschema) and introduces additional changes:
 
 * Public API names have been changed to align with PEP 8.
 * The minimum required Python version is now 3.13.
 * Packaging uses more modern conventions.
 * Tests have been converted from `unittest` to `pytest`.
 * An empty `enum` is now treated as an uninhabited schema.
+* Bugs inherited from upstream have been fixed: negating a numeric schema now
+  respects `exclusiveMinimum`/`exclusiveMaximum`, intersecting numeric schemas
+  no longer drops exclusive bounds, nested `anyOf` unions are now fully
+  flattened (previously, adjacent nested unions could make two equivalent
+  schemas compare as unrelated), and arrays with at most one item are now
+  recognized as satisfying `uniqueItems`.
+* The `dependencies` keyword (which upstream silently ignores) now raises
+  `exceptions.UnsupportedDependencies` instead of potentially returning
+  unsound verdicts.
+* Negating an integer schema (e.g.
+  `{"not": {"type": "integer", "minimum": 10, "maximum": 20}}`) now yields
+  the exact complement — including the non-integer numbers, represented
+  internally as `{"type": "number", "not": {"multipleOf": 1}}` — where
+  upstream silently computes a too-small complement that can yield unsound
+  verdicts. Only negating a numeric schema with a non-trivial `multipleOf`
+  (whose complement would contain the non-multiples) raises
+  `exceptions.UnsupportedNegatedNumeric` instead of returning potentially
+  wrong results.
+* Uninhabited numeric schemas whose `multipleOf` has no multiple within the
+  schema's bounds are now recognized as such, and subtype checks of numeric
+  schemas admitting a single value are now exact (e.g.
+  `{"type": "integer"}` is now a subschema of
+  `{"type": "number", "multipleOf": 0.5}`).
 
 ## License
 

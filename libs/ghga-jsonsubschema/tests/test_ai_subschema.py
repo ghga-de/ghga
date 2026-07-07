@@ -7,9 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 
 import jsonsubschema
 
-# from jsonsubschema.exp_dircmp import run_issubset
-
-
 # Tests with AI-generated examples
 
 lr_old_schema = {
@@ -90,7 +87,8 @@ nmf_schema = {
 
 tfidf_schema = {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "description": "Input data schema for training the TfidfVectorizer from scikit-learn.",
+    "description": "Input data schema for training the TfidfVectorizer "
+    "from scikit-learn.",
     "type": "object",
     "required": ["X"],
     "additionalProperties": False,
@@ -796,57 +794,11 @@ expected = {
 
 
 def test_dataset_op():
-    # for name in  operator_names +  dataset_names:
-    #     schema = globals()[name + '_schema']
-    #     with open("test/lale/"+name+".json", "w") as f:
-    #         f.write(json.dumps(schema))
-    count = 0
     for op_name in operator_names:
         for ds_name in dataset_names:
             op_schema = globals()[op_name + "_schema"]
             ds_schema = globals()[ds_name + "_schema"]
-            # try:
             result = jsonsubschema.is_subschema(ds_schema, op_schema)
-            # result = jsonsubschema.is_subschema(ds_schema, op_schema)
-            # assert result == expected[op_name][ds_name], f'dataset {ds_name} operator {op_name}'
-            assert result == expected[op_name][ds_name]
-            count += 1
-            # except Exception:
-            #     pass
-    print(count)
-
-
-# def _test_dataset_op_issubset(self):
-#     # for name in  operator_names +  dataset_names:
-#     #     schema = globals()[name + '_schema']
-#     #     with open("test/lale/"+name+".json", "w") as f:
-#     #         f.write(json.dumps(schema))
-#     tp, fp, tn, fn = 0, 0, 0, 0
-#     for j, op_name in enumerate(operator_names):
-#         for i, ds_name in enumerate(dataset_names):
-#             op_file = "test/lale/"+op_name+".json"
-#             ds_file = "test/lale/"+ds_name+".json"
-
-#             # op_schema = json.load(open(op_file, "r"))
-#             # ds_schema = json.load(open(ds_file, "r"))
-#             # result = jsonsubschema.is_subschema(ds_schema, op_schema)
-
-#             # assert result == expected[op_name][ds_name], f'dataset {ds_name} operator {op_name}'
-#             with self.subTest(f'dataset {ds_name} operator {op_name}: {i,j}'):
-#                 result = run_issubset(ds_file, op_file)
-#                 if result is True:
-#                     if  result != expected[op_name][ds_name]:
-#                         fp+=1
-#                     else:
-#                         tp+=1
-#                 elif result is False:
-#                     if result != expected[op_name][ds_name]:
-#                         fn+=1
-#                     else:
-#                         tn+= 1
-#                 self.assertTrue(result == expected[op_name][ds_name])
-
-#     print("False positives", fp)
-#     print("False negatives", fn)
-#     print("True positives", tp)
-#     print("True negatives", tn)
+            assert result == expected[op_name][ds_name], (
+                f"dataset {ds_name} operator {op_name}"
+            )

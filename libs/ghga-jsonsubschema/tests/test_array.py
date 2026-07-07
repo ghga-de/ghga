@@ -30,6 +30,23 @@ def test_unique():
     assert not is_subschema(s2, s1)
 
 
+def test_unique_trivial():
+    # arrays with at most one item are trivially unique
+    s1 = {"type": "array", "maxItems": 1}
+    s2 = {"type": "array", "uniqueItems": True}
+    assert is_subschema(s1, s2)
+    assert not is_subschema(s2, s1)
+
+
+def test_unique_not_trivial():
+    # arrays with two items may contain duplicates,
+    # so uniqueness is a real constraint here
+    s1 = {"type": "array", "maxItems": 2}
+    s2 = {"type": "array", "uniqueItems": True}
+    assert not is_subschema(s1, s2)
+    assert not is_subschema(s2, s1)
+
+
 def test_empty_items1():
     s1 = {"type": "array"}
     s2 = {"type": "array", "items": {}}

@@ -7,7 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 
 import copy
 
+import pytest
+
 from jsonsubschema import is_subschema
+from jsonsubschema.exceptions import UnsupportedDependencies
 
 # Tests for object subtype
 
@@ -566,10 +569,23 @@ def test_property_top2():
 # Tests for dependency keyword
 
 
-def test_1():
-    s1 = {"type": "object", "dependencies": {"foo": {"type": "string"}}}
+def test_dependencies_unsupported():
+    # schema dependencies as well as property dependencies are unsupported
+    # and fail loudly, on whichever side of the check they appear
+    for dependencies in ({"foo": {"type": "string"}}, {"foo": ["bar"]}):
+        s1 = {"type": "object", "dependencies": dependencies}
+        s2 = {"type": "object"}
+
+        with pytest.raises(UnsupportedDependencies):
+            is_subschema(s1, s2)
+        with pytest.raises(UnsupportedDependencies):
+            is_subschema(s2, s1)
+
+
+def test_empty_dependencies_ignored():
+    # an empty "dependencies" does not constrain anything
+    s1 = {"type": "object", "dependencies": {}}
     s2 = {"type": "object"}
 
     assert is_subschema(s1, s2)
-    # with self.subTest('"dependencies" not yet supported.'):
-    #     self.assertFalse(is_subschema(s2, s2))
+    assert is_subschema(s2, s1)
