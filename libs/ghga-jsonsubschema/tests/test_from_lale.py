@@ -6516,11 +6516,9 @@ def test_82():
                 "minimumForOptimizer": 2,
                 "maximumForOptimizer": 8,
             },
-            # "affinity": {"not": {}},
             "compute_full_tree": {"enum": ["auto"]},
             "linkage": {"enum": ["ward", "complete", "average", "single"]},
         },
-        # },
         "additionalProperties": False,
         "required": ["compute_full_tree"],
     }
@@ -6534,7 +6532,8 @@ def test_82():
                 "minimumForOptimizer": 2,
                 "maximumForOptimizer": 8,
             },
-            # "affinity": {"enum": ["euclidean", "l1", "l2", "manhattan", "cosine", "precomputed"]},
+            # "affinity": {"enum":
+            #     ["euclidean", "l1", "l2", "manhattan", "cosine", "precomputed"]},
             "compute_full_tree": {"enum": ["auto"]},
             "linkage": {"enum": ["complete", "average", "single"]},
         },

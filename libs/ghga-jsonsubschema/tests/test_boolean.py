@@ -242,13 +242,17 @@ def test_not_and_two_booleans():
 
 
 def test_not_and_two_nested_booleans():
+    # both schemas negate "booleans or integers in [10, 20]"
+    s1 = {
+        "not": {
+            "anyOf": [{"type": "integer"}, {"type": "boolean"}],
+            "allOf": [{"minimum": 10}, {"maximum": 20}],
+        }
+    }
+    s2 = {"not": {"type": ["integer", "boolean"], "minimum": 10, "maximum": 20}}
 
-    pass
-
-    # with self.subTest('LHS < RHS'):
-    #     self.assertTrue(is_subschema(s1, s2))
-    # with self.subTest('LHS > RHS'):
-    #     self.assertTrue(is_subschema(s2, s1))
+    assert is_subschema(s1, s2)
+    assert is_subschema(s2, s1)
 
 
 def test_two_booleans():

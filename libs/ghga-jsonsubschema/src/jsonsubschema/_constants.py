@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 import operator
 from functools import reduce
 
-Jnumeric = set(["integer", "number"])
+Jnumeric = {"integer", "number"}
 
 Jtypes = Jnumeric.union(["string", "boolean", "null", "array", "object"])
 
@@ -46,17 +46,15 @@ JtypesToKeywords = {
 
 JtypesRestrictionKeywords = reduce(operator.add, JtypesToKeywords.values())
 
-Jconnectors = set(["anyOf", "allOf", "oneOf", "not"])
+Jconnectors = {"anyOf", "allOf", "oneOf", "not"}
 
 Jcommonkw = Jconnectors.union(["enum", "type", "const"])
 
-JNonValidation = set(
-    ["$schema", "$id", "definitions", "title", "description", "format"]
-)
+JNonValidation = {"$schema", "$id", "definitions", "title", "description", "format"}
 
-# Jkeywords = Jcommonkw.union(Jtypes, reduce(operator.add, JtypesToKeywords.values())).union(["$ref"])
+# JNonValidation is deliberately not part of Jkeywords:
+# including it would conflict with canonicalize_connectors.
 Jkeywords = Jcommonkw.union(Jtypes, JtypesRestrictionKeywords, ["$ref"])
-# .union(JNonValidation) # conflicts with canonicalize_connectors
 
 JtypesToPyTypes = {
     "integer": int,
@@ -68,4 +66,4 @@ JtypesToPyTypes = {
     "object": dict,
 }
 
-PyTypesToJtypes = dict([(v, k) for k, v in JtypesToPyTypes.items()])
+PyTypesToJtypes = {v: k for k, v in JtypesToPyTypes.items()}

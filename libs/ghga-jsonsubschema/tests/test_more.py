@@ -486,7 +486,7 @@ def test_transaction():
             },
             "sha3_hexdigest": {"pattern": "[0-9a-f]{64}", "type": "string"},
             "uuid4": {
-                "pattern": "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}",
+                "pattern": "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}",  # noqa: E501
                 "type": "string",
             },
             "operation": {
@@ -637,24 +637,24 @@ def test_transaction():
                                                         "anyOf": [
                                                             {
                                                                 "type": "object",
-                                                                "additionalProperties": False,
+                                                                "additionalProperties": False,  # noqa: E501
                                                                 "required": [
                                                                     "type",
                                                                     "public_key",
                                                                 ],
                                                                 "properties": {
                                                                     "type": {
-                                                                        "type": "string",
-                                                                        "pattern": "^ed25519-sha-256$",
+                                                                        "type": "string",  # noqa: E501
+                                                                        "pattern": "^ed25519-sha-256$",  # noqa: E501
                                                                     },
                                                                     "public_key": {
-                                                                        "$ref": "#/definitions/base58"
+                                                                        "$ref": "#/definitions/base58"  # noqa: E501
                                                                     },
                                                                 },
                                                             },
                                                             {
                                                                 "type": "object",
-                                                                "additionalProperties": False,
+                                                                "additionalProperties": False,  # noqa: E501
                                                                 "required": [
                                                                     "type",
                                                                     "threshold",
@@ -662,11 +662,11 @@ def test_transaction():
                                                                 ],
                                                                 "properties": {
                                                                     "type": {
-                                                                        "type": "string",
-                                                                        "pattern": "^threshold-sha-256$",
+                                                                        "type": "string",  # noqa: E501
+                                                                        "pattern": "^threshold-sha-256$",  # noqa: E501
                                                                     },
                                                                     "threshold": {
-                                                                        "type": "integer",
+                                                                        "type": "integer",  # noqa: E501
                                                                         "minimum": 1,
                                                                         "maximum": 100,
                                                                     },
@@ -734,7 +734,7 @@ def test_transaction():
             },
             "sha3_hexdigest": {"pattern": "[0-9a-f]{64}", "type": "string"},
             "uuid4": {
-                "pattern": "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}",
+                "pattern": "[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}",  # noqa: E501
                 "type": "string",
             },
             "operation": {
@@ -891,24 +891,24 @@ def test_transaction():
                                                         "anyOf": [
                                                             {
                                                                 "type": "object",
-                                                                "additionalProperties": False,
+                                                                "additionalProperties": False,  # noqa: E501
                                                                 "required": [
                                                                     "type",
                                                                     "public_key",
                                                                 ],
                                                                 "properties": {
                                                                     "type": {
-                                                                        "type": "string",
-                                                                        "pattern": "^ed25519-sha-256$",
+                                                                        "type": "string",  # noqa: E501
+                                                                        "pattern": "^ed25519-sha-256$",  # noqa: E501
                                                                     },
                                                                     "public_key": {
-                                                                        "$ref": "#/definitions/base58"
+                                                                        "$ref": "#/definitions/base58"  # noqa: E501
                                                                     },
                                                                 },
                                                             },
                                                             {
                                                                 "type": "object",
-                                                                "additionalProperties": False,
+                                                                "additionalProperties": False,  # noqa: E501
                                                                 "required": [
                                                                     "type",
                                                                     "threshold",
@@ -916,11 +916,11 @@ def test_transaction():
                                                                 ],
                                                                 "properties": {
                                                                     "type": {
-                                                                        "type": "string",
-                                                                        "pattern": "^threshold-sha-256$",
+                                                                        "type": "string",  # noqa: E501
+                                                                        "pattern": "^threshold-sha-256$",  # noqa: E501
                                                                     },
                                                                     "threshold": {
-                                                                        "type": "integer",
+                                                                        "type": "integer",  # noqa: E501
                                                                         "minimum": 1,
                                                                         "maximum": 100,
                                                                     },
