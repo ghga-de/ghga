@@ -92,7 +92,7 @@ charts:
     name: remotebackup
     description: remotebackup
     appVersion: "3.2.7"
-    version: "3.3.0"
+    version: "3.3.1"
   datahub-monitor:
     name: datahub-monitor
     description: datahub-monitor
