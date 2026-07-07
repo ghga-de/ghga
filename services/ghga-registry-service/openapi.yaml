@@ -611,7 +611,7 @@ info:
   description: A service providing a web-accessible management and auth layer over
     upload-path file services.
   title: GHGA Registry Service
-  version: 4.0.1
+  version: 4.0.2
 openapi: 3.1.0
 paths:
   /health:
