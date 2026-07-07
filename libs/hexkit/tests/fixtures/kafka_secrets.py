@@ -17,6 +17,7 @@
 """Generate secrets for authenticated and encrypted communication with Kafka."""
 
 import datetime
+import ipaddress
 import secrets
 import string
 
@@ -123,9 +124,10 @@ def generate_cert(
     days: int,
     extended_key_usage: list[ObjectIdentifier],
     issuer_key: rsa.RSAPublicKey,
+    san: x509.SubjectAlternativeName | None = None,
 ) -> x509.Certificate:
     """Generate a certificate with the given parameters."""
-    return (
+    builder = (
         x509.CertificateBuilder()
         .subject_name(subject)
         .issuer_name(issuer)
@@ -165,8 +167,54 @@ def generate_cert(
             x509.AuthorityKeyIdentifier.from_issuer_public_key(issuer_key),
             critical=False,
         )
-        .sign(signing_key, hashes.SHA256())
     )
+    if san is not None:
+        # Modern TLS verifies the SAN (not the CN); required for hostname/IP matching.
+        builder = builder.add_extension(san, critical=False)
+    return builder.sign(signing_key, hashes.SHA256())
+
+
+def docker_bridge_gateway() -> str | None:
+    """Best-effort docker default-bridge gateway IP, or None if undeterminable.
+
+    This is the address testcontainers uses to reach mapped container ports under
+    docker-in-docker (where `localhost` does not reach them). Determined without a
+    running container, so it can be baked into the cert before the broker starts.
+    """
+    try:
+        import docker  # a testcontainers dependency, always present in test envs
+
+        config = docker.from_env().networks.get("bridge").attrs["IPAM"]["Config"]
+        return config[0]["Gateway"]
+    except Exception:
+        return None
+
+
+def san_for_host(host: str) -> x509.SubjectAlternativeName:
+    """Build a SubjectAlternativeName covering `host` plus the endpoints testcontainers
+    may use to reach the broker.
+
+    Modern TLS verifies the SAN (not the CN), and an IP host must be an IPAddress entry
+    rather than a DNSName. testcontainers reaches containers via `localhost` under local
+    Docker but via the docker-bridge gateway IP (e.g. 172.17.0.1) under docker-in-docker,
+    so cover all of localhost / 127.0.0.1 / the bridge gateway / the requested host.
+    """
+    candidates = ["localhost", "127.0.0.1", host]
+    gateway = docker_bridge_gateway()
+    if gateway:
+        candidates.append(gateway)
+
+    names: list[x509.GeneralName] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        try:
+            names.append(x509.IPAddress(ipaddress.ip_address(candidate)))
+        except ValueError:
+            names.append(x509.DNSName(candidate))
+    return x509.SubjectAlternativeName(names)
 
 
 def generate_signed_cert(
@@ -192,6 +240,7 @@ def generate_signed_cert(
             else ExtendedKeyUsageOID.SERVER_AUTH
         ],
         issuer_key=ca_key.public_key(),  # Use the CA's public key
+        san=san_for_host(cn),
     )
     return cert, key
 

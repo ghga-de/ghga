@@ -18,7 +18,6 @@
 
 import asyncio
 import os
-import site
 import subprocess
 import sys
 from pathlib import Path
@@ -45,15 +44,18 @@ async def test_cli(kafka: KafkaFixture, monkeypatch: pytest.MonkeyPatch):
     os.chdir(APP_DIR)
     kafka_server = kafka.kafka_servers[0]
     monkeypatch.setenv(name="STREAM_CALC_KAFKA_SERVERS", value=f'["{kafka_server}"]')
-    monkeypatch.setenv(
-        name="PYTHONPATH", value=":".join((str(APP_DIR), *site.getsitepackages()))
-    )
+    # Only the app dir is needed; the subprocess runs the workspace venv interpreter,
+    # which already resolves hexkit (and other deps) via its editable `.pth` files.
+    # Appending site-packages here would defeat that `.pth` resolution under uv.
+    monkeypatch.setenv(name="PYTHONPATH", value=str(APP_DIR))
 
     await submit_test_problems(CASES, kafka_server=kafka_server)
 
+    # argv[0] must be the interpreter path (not "-m"): CPython locates its venv from
+    # argv[0], and only then processes the editable `.pth` files that make hexkit
+    # importable under uv. Passing executable= with argv[0]="-m" breaks that.
     with subprocess.Popen(
-        args=["-m", "stream_calc"],
-        executable=sys.executable,
+        args=[sys.executable, "-m", "stream_calc"],
     ) as process:
         await asyncio.wait_for(
             check_problem_outcomes(cases=CASES, kafka_server=kafka_server),
