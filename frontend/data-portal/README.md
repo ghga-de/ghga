@@ -30,7 +30,7 @@ This repository contains the front-end application for the GHGA data portal.
 
 This project is a single Angular application designed as a modularized frontend monolith. Major building blocks:
 
-- Angular (version 21)
+- Angular (version 22)
 - Angular Material
 - Tailwind CSS (version 4)
 - Unit testing: Vitest
@@ -185,7 +185,7 @@ Note: the VS Code Vitest extension runs plain `vitest` directly, which does not 
 
 ### End-to-End tests
 
-We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/) for details.
+We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/intro) for details.
 
 Comprehensive end-to-end tests for real backend behavior are maintained in the separate GHGA archive test bed repository. The e2e tests in this repository focus on frontend behavior and expected API contracts.
 
@@ -268,8 +268,8 @@ This project is best supported in VS Code with GitHub Copilot, but tools like Cl
 
 ## References
 
-- [Playwright](https://playwright.dev/) and the docs for it [docs for it](https://playwright.dev/docs/).
-- [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli)
+- [Playwright](https://playwright.dev/) and [the docs for it](https://playwright.dev/docs/intro).
+- [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli).
 - [Pnpm](https://pnpm.io/) and [the docs for it](https://pnpm.io/motivation).
 - [Vitest](https://vitest.dev/) for unit tests. [Testing Library](https://testing-library.com/) for queries with an [Angular integration](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/).
 
