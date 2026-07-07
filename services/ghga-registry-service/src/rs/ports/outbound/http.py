@@ -119,7 +119,9 @@ class FileBoxClientPort(ABC):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
     class FUBIncompleteUploadsError(RuntimeError):
-        """Raised when locking is rejected because some files are still being uploaded."""
+        """Raised when locking is rejected because some files are still being
+        uploaded.
+        """
 
         def __init__(self, *, incomplete_file_ids: list[UUID4]):
             self.incomplete_file_ids = incomplete_file_ids
@@ -194,7 +196,8 @@ class FileBoxClientPort(ABC):
 
         Raises:
             FUBVersionError if the remote box version differs from `version`.
-            FUBMaxSizeTooLowError if the new max_size is smaller than bytes already uploaded.
+            FUBMaxSizeTooLowError if the new max_size is smaller than bytes already
+            uploaded.
             OperationError if there's a problem with the operation.
         """
         ...

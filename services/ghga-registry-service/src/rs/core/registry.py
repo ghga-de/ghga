@@ -38,8 +38,8 @@ class Registry(RegistryPort):
         self._rdub_manager = rdub_manager
         self._legacy_resource_manager = legacy_resource_manager
         self._study_dao = study_dao
-        # Owns file accession / file ID mappings; exposed via the file_controller property
-        # and used to resolve which studies still have unmapped file accessions.
+        # Owns file accession / file ID mappings; exposed via the file_controller
+        # property, used to resolve which studies still have unmapped file accessions.
         self._file_controller = file_controller
 
     @property

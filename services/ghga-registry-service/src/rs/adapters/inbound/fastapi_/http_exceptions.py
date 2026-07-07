@@ -89,13 +89,17 @@ class HttpBoxTitleExistsError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=f"A ResearchDataUploadBox with the title '{title}' already exists.",
+            description=(
+                f"A ResearchDataUploadBox with the title '{title}' already exists."
+            ),
             data={"title": title},
         )
 
 
 class HttpArchivalPrereqsError(HttpCustomExceptionBase):
-    """Thrown when archival prerequisites are not met (e.g. files missing accessions)."""
+    """Thrown when archival prerequisites are not met (e.g. files missing
+    accessions).
+    """
 
     exception_id = "archivalPrereqsNotMet"
 
@@ -117,7 +121,9 @@ class HttpBoxMaxSizeTooLowError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description="The requested max size is lower than the bytes already uploaded.",
+            description=(
+                "The requested max size is lower than the bytes already uploaded."
+            ),
             data={},
         )
 
@@ -241,7 +247,9 @@ class HttpNotAuthorizedError(HttpCustomExceptionBase):
 
 
 class HttpIncompleteUploadsError(HttpCustomExceptionBase):
-    """Thrown when locking a box is rejected because files still have incomplete uploads."""
+    """Thrown when locking a box is rejected because files still have incomplete
+    uploads.
+    """
 
     exception_id = "incompleteUploads"
 

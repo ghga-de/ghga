@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "rs"
-version = "4.0.0"
+version = "4.0.1"
 description = "GHGA Registry Service - a service for ingesting and archiving metadata from data submitters."
 dependencies = [
     "typer >= 0.26",
@@ -72,6 +72,8 @@ ignore = [
     "E111",
     "E114",
     "E116",
+    "E117",
+    "W191",
     "PLW",
     "RUF001",
     "RUF010",
@@ -100,6 +102,13 @@ select = [
     "RUF",
     "SIM",
     "D",
+    "E",
+    "W",
+    "ASYNC",
+    "LOG",
+    "PERF",
+    "RET",
+    "C4",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -111,6 +120,7 @@ max-complexity = 10
     "S",
     "SIM",
     "D",
+    "E402",
 ]
 "tests/*" = [
     "S",

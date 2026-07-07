@@ -54,7 +54,8 @@ class RDUBManagerPort(ABC):
             super().__init__(msg)
 
     class AccessionMapError(RuntimeError):
-        """Raised when an operation fails for a reason directly related to the accession map.
+        """Raised when an operation fails for a reason directly related to the accession
+        map.
 
         `error_type` is always set and indicates the specific failure:
         - "archived": box is already archived; no item lists populated.
@@ -101,10 +102,14 @@ class RDUBManagerPort(ABC):
             super().__init__(f"{len(incomplete_file_ids)} file(s) are incomplete.")
 
     class BoxTitleExistsError(RuntimeError):
-        """Raised when trying to create an upload box with a title that already exists"""
+        """Raised when trying to create an upload box with a title that already
+        exists.
+        """
 
     class BoxMaxSizeTooLowError(RuntimeError):
-        """Raised when the requested max_size is smaller than the bytes already uploaded."""
+        """Raised when the requested max_size is smaller than the bytes already
+        uploaded.
+        """
 
     class BoxStateError(RuntimeError):
         """Raised when an operation is incompatible with the box's current state
@@ -170,13 +175,18 @@ class RDUBManagerPort(ABC):
 
         Raises:
             BoxNotFoundError: If the research data upload box doesn't exist.
-            BoxAccessError: If the user doesn't have access to the research data upload box.
-            BoxVersionError: If the requested ResearchDataUploadBox version is outdated or
-                the FileUploadBox version is outdated when updating the FileUploadBox.
+            BoxAccessError: If the user doesn't have access to the research data
+                upload box.
+            BoxVersionError: If the requested ResearchDataUploadBox version is outdated
+                or the FileUploadBox version is outdated when updating the
+                FileUploadBox.
             StateChangeError: If the requested state transition is invalid.
-            OperationError: If there's a problem updating the corresponding FileUploadBox.
-            ArchivalPrereqsError: If trying to archive the box and prerequisites aren't met.
-            BoxSizeTooSmallError: If the new max_size is smaller than the bytes already uploaded.
+            OperationError: If there's a problem updating the corresponding
+                FileUploadBox.
+            ArchivalPrereqsError: If trying to archive the box and prerequisites
+                aren't met.
+            BoxSizeTooSmallError: If the new max_size is smaller than bytes already
+                uploaded.
             ValueError: If state and max_size are both specified.
         """
         ...
@@ -309,7 +319,8 @@ class RDUBManagerPort(ABC):
             BoxNotFoundError: If the box doesn't exist.
             BoxAccessError: If the user doesn't have access to the box.
             BoxStateError: If the box is locked.
-            OperationError: If there's a problem communicating with the file box service.
+            OperationError: If there's a problem communicating with the file box
+                service.
         """
         ...
 
@@ -336,7 +347,8 @@ class RDUBManagerPort(ABC):
             BoxVersionError: If the requested ResearchDataUploadBox version is outdated,
                 or the associated FileUploadBox version is outdated.
             BoxStateError: If the box is archived and cannot be deleted.
-            OperationError: If there's a problem communicating with the file box service.
+            OperationError: If there's a problem communicating with the file box
+                service.
         """
         ...
 
@@ -355,7 +367,7 @@ class RDUBManagerPort(ABC):
         **Files with a state of *cancelled* or *failed* are ignored.**
 
         Check the specified ResearchDataUploadBox to verify it exists, that the version
-        stated in the request is current, and that the box has not already been archived.
+        stated in the request is current, and the box has not already been archived.
 
         Next, check the mapping to verify that every file ID is specified exactly
         once (and thus mapping is 1:1). This does not mean that the mapping contains
@@ -367,7 +379,8 @@ class RDUBManagerPort(ABC):
         - each file ID in the mapping exists in the retrieved list of files
         - all file IDs in the box are included in the mapping
 
-        Finally, submit the accession map to the file controller and update the RDUB version.
+        Finally, submit the accession map to the file controller and update the RDUB
+        version.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist

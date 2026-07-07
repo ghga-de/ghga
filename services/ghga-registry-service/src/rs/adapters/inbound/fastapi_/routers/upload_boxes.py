@@ -160,7 +160,10 @@ async def delete_research_data_upload_box(
         403: {"description": "Not authorized."},
         404: {"description": "Upload box not found."},
         409: {
-            "description": "Update failed due to a title conflict, an outdated request, or unmet prerequisites."
+            "description": (
+                "Update failed due to a title conflict, an outdated request,"
+                " or unmet prerequisites."
+            )
         },
         422: {"description": "Validation error in request body."},
     },
@@ -232,10 +235,9 @@ async def get_research_data_upload_box(
     existing box, this endpoint will return a 404.
     """
     try:
-        box = await registry.rdub_manager.get_research_data_upload_box(
+        return await registry.rdub_manager.get_research_data_upload_box(
             box_id=box_id, auth_context=auth_context
         )
-        return box
     except RDUBManagerPort.BoxAccessError as err:
         # Return BoxAccessError as a 404 on purpose
         raise HttpBoxNotFoundError(box_id=box_id) from err
@@ -269,11 +271,10 @@ async def list_upload_box_files(
 ) -> list[FileUploadWithAccession]:
     """List file uploads in an upload box."""
     try:
-        file_uploads = await registry.rdub_manager.get_upload_box_files(
+        return await registry.rdub_manager.get_upload_box_files(
             box_id=box_id,
             auth_context=auth_context,
         )
-        return file_uploads
     except RDUBManagerPort.BoxAccessError as err:
         raise HttpNotAuthorizedError() from err
     except RDUBManagerPort.BoxNotFoundError as err:
@@ -291,7 +292,9 @@ async def list_upload_box_files(
     responses={
         204: {"description": "Accession map successfully submitted."},
         400: {
-            "description": "One or more duplicate, absent, or unknown file IDs detected."
+            "description": (
+                "One or more duplicate, absent, or unknown file IDs detected."
+            )
         },
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
@@ -389,13 +392,12 @@ async def get_research_data_upload_boxes(
     they have access to according to the access API.
     """
     try:
-        results = await registry.rdub_manager.get_research_data_upload_boxes(
+        return await registry.rdub_manager.get_research_data_upload_boxes(
             auth_context=auth_context,
             skip=skip,
             limit=limit,
             state=state,
         )
-        return results
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to get upload boxes") from err
@@ -424,14 +426,13 @@ async def create_research_data_upload_box(
 ) -> UUID4:
     """Create a new upload box. Requires Data Steward role."""
     try:
-        box_id = await registry.rdub_manager.create_research_data_upload_box(
+        return await registry.rdub_manager.create_research_data_upload_box(
             title=request.title,
             description=request.description,
             storage_alias=request.storage_alias,
             max_size=request.max_size,
             data_steward_id=UUID(auth_context.id),
         )
-        return box_id
     except RDUBManagerPort.BoxTitleExistsError as err:
         raise HttpBoxTitleExistsError(title=request.title) from err
     except Exception as err:

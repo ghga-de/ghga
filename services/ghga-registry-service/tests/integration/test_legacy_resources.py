@@ -62,8 +62,9 @@ def _embedded_dataset_payload(study_accession: str = "GHGAS1") -> dict:
     such per-category lists are *not* consulted.
 
     The payload deliberately carries properties we do not consume - both at the content
-    level (``accession``, ``title``, ``description``, ``research_data_files``) and inside
-    the embedded study (``alias``, ``ega_accession``, ``description_html``) - to confirm
+    level (``accession``, ``title``, ``description``, ``research_data_files``) and
+    inside the embedded study (``alias``, ``ega_accession``, ``description_html``) -
+    to confirm
     that extra properties do not make validation of the consumed subschema fail.
     """
     return {
@@ -144,7 +145,8 @@ async def test_existing_study_is_not_updated(joint_fixture: JointFixture):
     stored_first = _study_collection(joint_fixture).find_one({"_id": "GHGAS1"})
     assert stored_first is not None
 
-    # A second event carrying the same study id but a different title must not update it.
+    # A second event carrying the same study id but a different title must not update
+    # it.
     changed = _embedded_dataset_payload()
     changed["content"]["study"]["title"] = "A different title"
     await joint_fixture.kafka.publish_event(
@@ -274,7 +276,8 @@ async def test_existing_file_accession_study_is_updated(joint_fixture: JointFixt
     assert stored["GHGAF2"]["study_id"] == "GHGAS1"
     assert stored["GHGAF2"]["file_id"] is None
 
-    # The unmapped accession tracked under a different study was updated, still no file ID.
+    # The unmapped accession tracked under a different study was updated, still no
+    # file ID.
     assert stored["GHGAF4"]["study_id"] == "GHGAS1"
     assert stored["GHGAF4"]["file_id"] is None
 
@@ -287,9 +290,9 @@ async def test_registry_study_queries(joint_fixture: JointFixture):
     """The registry can look up a single study and list studies with an unmapped filter.
 
     After consuming a resource that stores a study and tracks its (unmapped) file
-    accessions, the study is retrievable by ID and appears in the listing. It is included
-    by the ``with_unmapped_files`` filter while any of its accessions lack a file ID, and
-    drops out of that filtered listing once all of them have been mapped.
+    accessions, the study is retrievable by ID and appears in the listing. It is
+    included by the ``with_unmapped_files`` filter while any of its accessions lack a
+    file ID, and drops out of that filtered listing once all of them have been mapped.
     """
     config = joint_fixture.config
     registry = joint_fixture.registry
@@ -337,7 +340,9 @@ async def test_registry_study_queries(joint_fixture: JointFixture):
 
 
 async def test_searchable_resource_deletion_is_consumed(joint_fixture: JointFixture):
-    """A deletion event (carrying only SearchableResourceInfo) is consumed without error."""
+    """A deletion event (carrying only SearchableResourceInfo) is consumed without
+    error.
+    """
     config = joint_fixture.config
 
     await joint_fixture.kafka.publish_event(

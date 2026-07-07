@@ -107,15 +107,15 @@ class FileController(FileControllerPort):
 
         - if no entry exists yet, a new unmapped entry (no file ID) is created, carrying
           the study ID;
-        - if an unmapped entry already exists but carries a different study ID (including
-          none yet), the study ID is updated.
+        - if an unmapped entry already exists but carries a different study ID
+          (including none yet), the study ID is updated.
 
-        Entries that are already mapped to a file ID, or that already carry the same study
-        ID, are left untouched. Since only unmapped entries (no file ID) are written, none
-        of these writes publish an outbox event.
+        Entries that are already mapped to a file ID, or that already carry the same
+        study ID, are left untouched. Since only unmapped entries (no file ID) are
+        written, none of these writes publish an outbox event.
 
-        LEGACY: Only the searchable-resource consumer needs this. Remove once this service
-        owns studies and experimental metadata itself.
+        LEGACY: Only the searchable-resource consumer needs this. Remove once this
+        service owns studies and experimental metadata itself.
         """
         for accession in accessions:
             try:

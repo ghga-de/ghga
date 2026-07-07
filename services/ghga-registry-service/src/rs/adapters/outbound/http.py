@@ -132,7 +132,10 @@ class AccessClient(AccessClientPort):
         try:
             return GrantId(id=response.json()["id"])
         except Exception as err:
-            msg = "Failed to extract the ID of the newly created access grant from the response body."
+            msg = (
+                "Failed to extract the ID of the newly created access grant"
+                " from the response body."
+            )
             log.error(msg, exc_info=True)
             raise self.AccessAPIError(msg) from err
 
@@ -150,17 +153,16 @@ class AccessClient(AccessClientPort):
 
         if response.status_code == 404:
             raise self.GrantNotFoundError()
-        else:
-            log.error(
-                "Failed to revoke upload access for grant ID %s.",
-                grant_id,
-                extra={
-                    "grant_id": grant_id,
-                    "status_code": response.status_code,
-                    "response_text": response.text,
-                },
-            )
-            raise self.AccessAPIError("Failed to revoke upload access.")
+        log.error(
+            "Failed to revoke upload access for grant ID %s.",
+            grant_id,
+            extra={
+                "grant_id": grant_id,
+                "status_code": response.status_code,
+                "response_text": response.text,
+            },
+        )
+        raise self.AccessAPIError("Failed to revoke upload access.")
 
     async def get_upload_access_grants(
         self,
@@ -198,8 +200,7 @@ class AccessClient(AccessClientPort):
             raise self.AccessAPIError(msg)
 
         try:
-            grants = [UploadGrant.model_validate(grant) for grant in response.json()]
-            return grants
+            return [UploadGrant.model_validate(grant) for grant in response.json()]
         except Exception as err:
             msg = "Failed to extract grant information from response."
             log.error(msg, exc_info=True, extra=params)
@@ -216,7 +217,7 @@ class AccessClient(AccessClientPort):
         status_code = response.status_code
         if status_code == httpx.codes.NOT_FOUND:
             return []
-        elif status_code != httpx.codes.OK:
+        if status_code != httpx.codes.OK:
             log.error(
                 "Failed to retrieve list of research data upload boxes accessible to"
                 + " user %s from the access API.",
@@ -276,7 +277,9 @@ class AccessClient(AccessClientPort):
 
 
 class FileBoxClientConfig(WOTSigningConfig):
-    """Config parameters for interacting with the service owning FileUploadBoxes."""
+    """Config parameters for interacting with the service owning
+    FileUploadBoxes.
+    """
 
     ucs_url: HttpUrl = Field(
         default=...,
@@ -339,7 +342,7 @@ class FileBoxClient(FileBoxClientPort):
             raise self.FUBIncompleteUploadsError(
                 incomplete_file_ids=incomplete_file_ids
             )
-        elif exception_id == "boxVersionOutdated":
+        if exception_id == "boxVersionOutdated":
             log.error(
                 "Failed to %s FileUploadBox %s because the version specified"
                 + " in the request is out of date.",
@@ -348,7 +351,7 @@ class FileBoxClient(FileBoxClientPort):
                 extra=extra,
             )
             raise self.FUBVersionError(box_id=box_id)
-        elif exception_id == "boxMaxSizeTooLow":
+        if exception_id == "boxMaxSizeTooLow":
             max_size = body["max_size"]
             log.error(
                 "Failed to resize FileUploadBox %s because the new max_size %i is"
@@ -360,7 +363,7 @@ class FileBoxClient(FileBoxClientPort):
             raise self.FUBMaxSizeTooLowError(
                 f"New max_size {max_size} is smaller than the bytes already uploaded."
             )
-        elif exception_id == "boxStateError":
+        if exception_id == "boxStateError":
             msg = (
                 f"Cannot {operation} FileUploadBox {box_id} because the box's state"
                 + " prevents it. The RS and UCS box states might be out of sync."
@@ -390,7 +393,8 @@ class FileBoxClient(FileBoxClientPort):
         )
         if response.status_code != 201:
             log.error(
-                "Error creating new FileUploadBox in external service with storage alias %s.",
+                "Error creating new FileUploadBox in external service with storage"
+                " alias %s.",
                 storage_alias,
                 extra={
                     "status_code": response.status_code,
@@ -567,7 +571,8 @@ class FileBoxClient(FileBoxClientPort):
 
         Raises:
             FUBVersionError if the remote box version differs from `version`.
-            FUBMaxSizeTooLowError if the new max_size is smaller than bytes already uploaded.
+            FUBMaxSizeTooLowError if the new max_size is smaller than bytes already
+            uploaded.
             OperationError if there's a problem with the operation.
         """
         wot = ResizeFileBoxWorkOrder(box_id=box_id)

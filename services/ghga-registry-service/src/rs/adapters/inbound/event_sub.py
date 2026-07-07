@@ -50,7 +50,9 @@ class OutboxSubTranslator(DaoSubscriberProtocol):
         self._registry = registry
 
     async def changed(self, resource_id: str, update: FileUploadBox) -> None:
-        """Consume an upserted FileUploadBox and update its parent ResearchDataUploadBox"""
+        """Consume an upserted FileUploadBox and update its parent
+        ResearchDataUploadBox.
+        """
         await self._registry.rdub_manager.upsert_file_upload_box(file_upload_box=update)
 
     async def deleted(self, resource_id: str) -> None:

@@ -1046,8 +1046,9 @@ async def test_accession_map_error_translation(
     error_kwargs,
     expected_data,
 ):
-    """Test that every AccessionMapError permutation translates to an HttpAccessionMapError
-    with the correct status code (409 for conflict/archived, 400 for file ID errors),
+    """Test that every AccessionMapError permutation translates to an
+    HttpAccessionMapError with the correct status code (409 for conflict/archived,
+    400 for file ID errors),
     the correct exception_id, and the correct populated data fields.
     """
     rdub_manager = AsyncMock()
@@ -1115,7 +1116,8 @@ async def test_create_box_rejects_blank_fields(
 async def test_update_box_invalid_request_body(
     config: Config, ds_auth_headers, request_body
 ):
-    """Test that the PATCH /upload-boxes endpoint rejects invalid request bodies with 422.
+    """Test that the PATCH /upload-boxes endpoint rejects invalid request bodies with
+    422.
 
     Covers two model-level constraints: state and max_size are mutually exclusive,
     and max_size must be a positive integer when provided.

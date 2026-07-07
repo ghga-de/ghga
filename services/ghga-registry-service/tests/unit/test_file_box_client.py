@@ -225,7 +225,8 @@ async def test_get_file_upload_list(
     )
     assert file_list == []
 
-    # Verify that 404 results in OperationError if missing_box_ok is set to False (default)
+    # Verify that 404 results in OperationError if missing_box_ok is set to False
+    # (default)
     httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)

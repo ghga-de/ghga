@@ -100,7 +100,9 @@ async def get_file_accession_dao(
 async def get_box_dao(
     *, config: OutboxPubConfig, dao_publisher_factory: MongoKafkaDaoPublisherFactory
 ) -> BoxDao:
-    """Construct a ResearchDataUploadBox outbox DAO from the provided dao_publisher_factory"""
+    """Construct a ResearchDataUploadBox outbox DAO from the provided
+    dao_publisher_factory.
+    """
     if not dao_publisher_factory:
         raise RuntimeError("No DAO Factory and no override provided for BoxDao")
 

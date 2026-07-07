@@ -233,7 +233,9 @@ class CreateUploadBoxRequest(BaseModel):
     storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
     max_size: PositiveInt = Field(
         ...,
-        description="Maximum number of bytes allowed to be uploaded to the box across all files",
+        description=(
+            "Maximum number of bytes allowed to be uploaded to the box across all files"
+        ),
     )
 
     @field_validator("title", "description", "storage_alias")
@@ -339,7 +341,9 @@ class GrantWithBoxInfo(UploadGrant):
 
 
 class BoxRetrievalResults(BaseModel):
-    """A model encapsulating retrieved research data upload boxes and the count thereof."""
+    """A model encapsulating retrieved research data upload boxes and the count
+    thereof.
+    """
 
     count: int = Field(..., description="The total number of unpaginated results")
     boxes: list[ResearchDataUploadBox] = Field(

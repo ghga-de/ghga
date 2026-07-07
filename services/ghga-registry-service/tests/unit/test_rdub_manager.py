@@ -300,7 +300,9 @@ async def test_lock_box_incomplete_uploads_error(
 async def test_force_true_ignored_on_non_lock_transitions(
     rig: JointRig, populated_boxes: list[UUID], caplog, target_state: str
 ):
-    """Test that force=True is silently ignored (with a debug log) for unlock and archive."""
+    """Test that force=True is silently ignored (with a debug log) for unlock and
+    archive.
+    """
     box_id = populated_boxes[0]
     box = await rig.box_dao.get_by_id(box_id)
     box.state = "locked"
@@ -326,7 +328,8 @@ async def test_force_true_ignored_on_non_lock_transitions(
 async def test_update_research_data_upload_box_unauthorized(
     rig: JointRig, populated_boxes: list[UUID]
 ):
-    """Test the scenario where a user tries updating box attributes like title or description.
+    """Test the scenario where a user tries updating box attributes like title or
+    description.
 
     Regular users are not authorized to do this, so this should be blocked.
     """
@@ -395,7 +398,9 @@ async def test_update_research_data_upload_box_title_exists(
 
 
 async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[UUID]):
-    """Test the normal path of getting a list of FileUpload objects for a box from the file box service."""
+    """Test the normal path of getting a list of FileUpload objects for a box from
+    the file box service.
+    """
     # Mock the file box client to return a list of FileUpload objects
     test_file_uploads = [
         models.FileUploadWithAccession(
@@ -440,7 +445,9 @@ async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[U
 async def test_get_upload_box_files_access_error(
     rig: JointRig, populated_boxes: list[UUID]
 ):
-    """Test the case where getting box files fails because the user doesn't have access."""
+    """Test the case where getting box files fails because the user doesn't have
+    access.
+    """
     # Mock the access client to return that the user does NOT have access to this box
     rig.access_client.check_box_access.return_value = False  # type: ignore
 
@@ -477,7 +484,9 @@ async def test_get_upload_box_files_box_not_found(rig: JointRig):
 
 
 async def test_upsert_file_upload_box_happy(rig: JointRig, populated_boxes: list[UUID]):
-    """Test the method that consumes FileUploadBox data and uses it to update RDUBoxes."""
+    """Test the method that consumes FileUploadBox data and uses it to update
+    RDUBoxes.
+    """
     # Get the created box to verify initial state
     box_id = populated_boxes[0]
     initial_box = await rig.box_dao.get_by_id(box_id)
@@ -490,7 +499,7 @@ async def test_upsert_file_upload_box_happy(rig: JointRig, populated_boxes: list
 
     # Create a FileUploadBox with updated data
     updated_file_upload_box = models.FileUploadBox(
-        id=file_upload_box_id,  # This should match the file_upload_box_id in our research box
+        id=file_upload_box_id,  # matches the file_upload_box_id in our research box
         version=1,
         state="locked",
         file_count=5,
@@ -995,8 +1004,8 @@ async def test_store_accession_map_invalid_or_unmapped_file_ids(
 async def test_store_accession_map_archived_box(
     rig: JointRig, populated_boxes: list[UUID]
 ):
-    """Test that submitting an accession map for an archived box raises AccessionMapError
-    with error_type 'archived'.
+    """Test that submitting an accession map for an archived box raises
+    AccessionMapError with error_type 'archived'.
     """
     box_id = populated_boxes[0]
     box = await rig.box_dao.get_by_id(box_id)
@@ -1017,7 +1026,9 @@ async def test_store_accession_map_archived_box(
 async def test_store_accession_map_filters_cancelled_and_failed(
     rig: JointRig, populated_boxes: list[UUID]
 ):
-    """Test that cancelled and failed files are filtered out when validating accession map."""
+    """Test that cancelled and failed files are filtered out when validating the
+    accession map.
+    """
     box_id = populated_boxes[0]
 
     # Create test file uploads including cancelled and failed ones
@@ -1294,7 +1305,8 @@ async def test_archive_research_data_upload_box_happy(
     box.version = 1
     await rig.box_dao.update(box)
 
-    # Create test file uploads
+    # Create test file uploads: 2 active + 1 cancelled without an accession.
+    # The cancelled file must not block archival.
     test_file_ids = [uuid4() for _ in range(2)]
     test_file_uploads = [
         models.FileUploadWithAccession(
@@ -1314,11 +1326,30 @@ async def test_archive_research_data_upload_box_happy(
         for i, file_id in enumerate(test_file_ids)
     ]
 
+    # Include a cancelled file so we can test that these don't block archival
+    cancelled_file_id = uuid4()
+    test_file_uploads.append(
+        models.FileUploadWithAccession(
+            id=cancelled_file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="cancelled",
+            decrypted_sha256="checksum_cancelled",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="cancelled",
+            state_updated=now_utc_ms_prec(),
+        )
+    )
+
     # Mock the file box client
     rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
     rig.file_upload_box_client.archive_file_upload_box = AsyncMock()  # type: ignore
 
-    # Insert predetermined file accession mappings
+    # Only map accessions for the active files, leave the cancelled file unmapped
     await rig.file_accession_dao.insert(
         models.FileAccession(pid="GHGAF001", file_id=test_file_ids[0])
     )
@@ -1463,7 +1494,9 @@ async def test_archive_box_missing_accessions(
 async def test_archive_box_file_upload_box_version_error(
     rig: JointRig, populated_boxes: list[UUID]
 ):
-    """Test that a FileUploadBox version error during archival raises BoxVersionError and rolls back."""
+    """Test that a FileUploadBox version error during archival raises BoxVersionError
+    and rolls back.
+    """
     box_id = populated_boxes[0]
 
     # Lock the box
@@ -1575,8 +1608,8 @@ async def test_resize_box_fub_max_size_too_low(
 
 
 async def test_resize_box_fub_version_error(rig: JointRig, populated_boxes: list[UUID]):
-    """Test that FUBVersionError from UCS during resize is translated into BoxVersionError
-    and that the local box state is rolled back.
+    """Test that FUBVersionError from UCS during resize is translated into
+    BoxVersionError and that the local box state is rolled back.
     """
     box_id = populated_boxes[0]
     box = await rig.box_dao.get_by_id(box_id)
@@ -1828,7 +1861,9 @@ async def test_delete_box_version_mismatch(rig: JointRig, populated_boxes: list[
 
 
 async def test_delete_box_archived_rejected(rig: JointRig, populated_boxes: list[UUID]):
-    """Test that an archived box cannot be deleted (BoxStateError) and is left intact."""
+    """Test that an archived box cannot be deleted (BoxStateError) and is left
+    intact.
+    """
     box_id = populated_boxes[0]
     box = await rig.box_dao.get_by_id(box_id)
     box.state = "archived"
@@ -1864,7 +1899,8 @@ async def test_delete_box_grant_revocation_tolerates_missing(
         Mock(id=uuid4()),
     ]
 
-    # Set the AccessClient mock to raise a GrantNotFoundError when trying to delete a grant
+    # Set the AccessClient mock to raise a GrantNotFoundError when trying to delete
+    # a grant
     rig.access_client.revoke_upload_access.side_effect = (  # type: ignore
         AccessClientPort.GrantNotFoundError()
     )
