@@ -116,6 +116,37 @@ async def test_upload_files_from_list_deletes_on_errors(error: BaseException):
         mock_uploader.delete_file.assert_called_once()
 
 
+@pytest.mark.parametrize("overwrite", [True, False])
+async def test_upload_files_from_list_applies_overwrite(overwrite: bool):
+    """Test that the overwrite flag is forwarded to every file's Uploader."""
+    with NamedTemporaryFile() as f1, NamedTemporaryFile() as f2:
+        file_infos = [
+            make_file_info_for_upload(path=Path(f1.name), alias="first"),
+            make_file_info_for_upload(path=Path(f2.name), alias="second"),
+        ]
+        mock_uploader = make_mock_uploader()
+
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.Uploader",
+                return_value=mock_uploader,
+            ) as mock_uploader_cls,
+            patch("ghga_connector.core.uploading.batch_processing.Crypt4GHEncryptor"),
+        ):
+            await upload_files_from_list(
+                upload_client=AsyncMock(),
+                file_info_list=file_infos,
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+                overwrite=overwrite,
+            )
+
+        overwrite_kwargs = [
+            call.kwargs["overwrite"] for call in mock_uploader_cls.call_args_list
+        ]
+        assert overwrite_kwargs == [overwrite, overwrite]
+
+
 @pytest.mark.parametrize("delete_raises", [None, RuntimeError("delete failed")])
 async def test_perform_cleanup_restores_sigint_handler(delete_raises):
     """perform_cleanup must restore the previous SIGINT handler afterward, both on a
@@ -483,6 +514,39 @@ async def test_run_batch_upload_does_not_skip_cancelled_or_failed():
             )
 
         assert captured == ["cancelled-file", "failed-file"]
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+async def test_run_batch_upload_applies_overwrite(overwrite: bool):
+    """Test that the user-supplied overwrite flag is applied to each upload pass.
+
+    This is similar to test_upload_files_from_list_applies_overwrite but checks at the
+    batch cycle level.
+    """
+    with NamedTemporaryFile() as f:
+        file_infos = [make_file_info_for_upload(path=Path(f.name), alias="fresh-file")]
+        upload_client = _make_upload_client([])
+
+        captured: list[bool] = []
+
+        async def fake_batch_cycle(*, overwrite, **_kwargs):
+            captured.append(overwrite)
+            return BatchPassResult(failed=[], halted=False)
+
+        with patch(
+            "ghga_connector.core.uploading.batch_processing.upload_files_from_list",
+            fake_batch_cycle,
+        ):
+            await run_batch_upload(
+                upload_client=upload_client,
+                file_info_list=file_infos,
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+                max_retries=0,
+                overwrite=overwrite,
+            )
+
+        assert captured == [overwrite]
 
 
 async def test_run_batch_upload_all_skipped_does_not_upload():

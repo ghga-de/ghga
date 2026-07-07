@@ -269,13 +269,13 @@ async def init_upload_placeholder(object_id: str):
 
 
 @mock_external_app.get(UPLOAD + "/boxes/{box_id}/uploads")
-async def list_box_uploads(box_id: UUID):
+async def list_box_uploads(box_id: UUID, skip: int = 0, limit: int = 50):
     """Mock for the Upload API's GET /boxes/{box_id}/uploads endpoint.
 
-    For now this always returns an empty list. To make dynamic, add an overridable
-    method like `init_upload_placeholder()`.
+    For now this always returns an empty (but paginated) listing. To make dynamic, add
+    an overridable method like `init_upload_placeholder()`.
     """
-    return JSONResponse(status_code=200, content=[])
+    return JSONResponse(status_code=200, content={"items": [], "total_count": 0})
 
 
 @mock_external_app.post(UPLOAD + "/boxes/{box_id}/uploads")

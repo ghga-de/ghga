@@ -41,6 +41,9 @@ DOWNLOAD_URL_CACHE_SIZE = 250
 UPLOAD_WOT_LIFESPAN = 30  # The WPS default of 30 seconds
 UPLOAD_WOT_CACHE_TIME = UPLOAD_WOT_LIFESPAN - CACHE_MIN_FRESH
 UPLOAD_WOT_CACHE_SIZE = 250
+# Page size used when listing a FileUploadBox's uploads. The Upload API paginates this
+#  endpoint and caps the limit at 100, so request the maximum to minimize round trips.
+UPLOAD_LISTING_PAGE_SIZE = 100
 ENVELOPE_SIZE = 124  # for one recipient (i.e. GHGA)
 MIN_PART_SIZE = 5 * 1024**2  # 5 MiB (S3 minimum for multipart parts)
 MAX_PART_SIZE = 5 * 1024**3  # 5 GiB (S3 maximum for multipart parts)

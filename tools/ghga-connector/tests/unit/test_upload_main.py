@@ -124,6 +124,7 @@ async def test_upload_files_applies_config_part_size(
         max_retries,
         dry_run,
         shorten,
+        overwrite,
     ):
         captured.extend(file_info_list)
 

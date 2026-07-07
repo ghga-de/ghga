@@ -82,7 +82,7 @@ NON_EXISTING_OBJECTS_ = DEFAULT_NON_EXISTING_OBJECTS
 def config_from_localstack_container(container: LocalStackContainer) -> S3Config:
     """Prepares a S3Config from an instance of a localstack test container."""
     s3_endpoint_url = container.get_url()
-    return S3Config(  # type: ignore [call-arg]
+    return S3Config(
         s3_endpoint_url=s3_endpoint_url,
         s3_access_key_id="test",
         s3_secret_access_key=SecretStr("test"),

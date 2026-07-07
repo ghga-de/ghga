@@ -121,7 +121,28 @@ async def test_initiate_file_upload_returns_file_id():
             decrypted_size=file_info.decrypted_size,
             encrypted_size=file_info.encrypted_size,
             part_size=file_info.part_size,
+            overwrite=False,
         )
+
+
+async def test_initiate_file_upload_forwards_overwrite():
+    """Test that the Uploader class correctly sets 'overwrite' in call to create_file_upload."""
+    with NamedTemporaryFile() as f:
+        upload_client = AsyncMock()
+        upload_client.create_file_upload.return_value = FILE_ID, TEST_STORAGE_ALIAS2
+        file_info = make_file_info_for_upload(
+            path=Path(f.name), alias=FILE_ALIAS, decrypted_size=1000
+        )
+        uploader = Uploader(
+            upload_client=upload_client,
+            file_info=file_info,
+            max_concurrent_uploads=1,
+            overwrite=True,
+        )
+
+        await uploader.initiate_file_upload()
+
+        assert upload_client.create_file_upload.call_args.kwargs["overwrite"] is True
 
 
 async def test_initiate_file_upload_wraps_exception():
