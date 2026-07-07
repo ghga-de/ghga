@@ -60,6 +60,17 @@ spec:
           {{- if $envVars }}
           env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
           {{- end }}
+          {{- if or .Values.envVarsConfigMap .Values.envVarsSecret }}
+          envFrom:
+            {{- if .Values.envVarsConfigMap }}
+            - configMapRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.envVarsConfigMap "context" $) }}
+            {{- end }}
+            {{- if .Values.envVarsSecret }}
+            - secretRef:
+                name: {{ include "common.tplvalues.render" (dict "value" .Values.envVarsSecret "context" $) }}
+            {{- end }}
+          {{- end }}
           volumeMounts: {{- include "ghga-common.volumemounts" $ | nindent 12 }}
       volumes: {{- include "ghga-common.volumes" $ | nindent 10 }}
 {{- end -}}
