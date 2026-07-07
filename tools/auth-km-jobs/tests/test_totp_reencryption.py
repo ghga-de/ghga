@@ -22,8 +22,12 @@ NUM_TOKENS = 3
 
 
 @pytest.fixture
-def user_tokens() -> Generator[Collection]:
-    """Create and populate user tokens collection for tests."""
+def user_tokens(config) -> Generator[Collection]:
+    """Create and populate user tokens collection for tests.
+
+    Depends on `config` (see conftest) so auth_km_jobs is pointed at the ephemeral
+    MongoDB + Vault containers before the collection is built.
+    """
     dsn = config.mongo_dsn
     collection_name = config.user_tokens_collection
 

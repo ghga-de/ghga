@@ -32,7 +32,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=9,<10",
+  # test-only: ephemeral Vault + MongoDB via hexkit's provider testcontainers fixtures
+  "hexkit[mongodb, vault]>=8.3",
+  "testcontainers>=4.14,<5",
 ]
+
+[tool.uv.sources]
+hexkit = { workspace = true }
 
 [project.scripts]
 run = "auth_km_jobs.__main__:app"

@@ -314,12 +314,15 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "hexkit", extra = ["mongodb", "vault"] },
     { name = "pytest" },
+    { name = "testcontainers" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "crypt4gh", specifier = "~=1.7" },
+    { name = "hexkit", extras = ["mongodb", "vault"], marker = "extra == 'dev'", editable = "libs/hexkit" },
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "hvac", specifier = "~=2.4.0" },
     { name = "jwcrypto", specifier = "~=1.5.6" },
@@ -328,6 +331,7 @@ requires-dist = [
     { name = "pymongo", specifier = "~=4.16" },
     { name = "pynacl", specifier = "~=1.6.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9,<10" },
+    { name = "testcontainers", marker = "extra == 'dev'", specifier = ">=4.14,<5" },
     { name = "typer", specifier = ">=0.21" },
 ]
 provides-extras = ["dev"]

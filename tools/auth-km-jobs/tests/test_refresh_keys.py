@@ -18,8 +18,12 @@ config = Config()
 
 
 @pytest.fixture()
-def vault_client() -> Generator:
-    """Return a Vault client for tests."""
+def vault_client(config) -> Generator:
+    """Return a Vault client for tests.
+
+    Depends on `config` (see conftest) so auth_km_jobs is pointed at the ephemeral Vault
+    container before the client is built.
+    """
     client = get_vault()
 
     def delete(path: str):
