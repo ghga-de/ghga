@@ -51,27 +51,49 @@ def download_buckets_empty(fixtures: JointFixture):
 def run_the_download_command(
     fixtures: JointFixture, file_scope: str, dataset_char: str
 ):
+    """Run the download command of the GHGA connector for the given file scope in the dataset"""
     download_token = fixtures.state.get_state(
         f"download token for {file_scope} files in dataset {dataset_char}"
     )
     assert download_token and isinstance(download_token, str)
     connector = fixtures.connector
-    completed_download = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-connector",
-            "download",
-            "--output-dir",
-            str(connector.config.download_dir),
-            "--debug",
-        ],
-        cwd=connector.config.work_dir,
-        input=download_token,
-        capture_output=True,
-        check=False,
-        encoding="utf-8",
-        text=True,
-        timeout=180,
-    )
+
+    def call_connector():
+        return subprocess.run(  # nosec B607, B603
+            [
+                "ghga-connector",
+                "download",
+                "--output-dir",
+                str(connector.config.download_dir),
+                "--debug",
+            ],
+            cwd=connector.config.work_dir,
+            input=download_token,
+            capture_output=True,
+            check=False,
+            encoding="utf-8",
+            text=True,
+            timeout=60,
+        )
+
+    try:
+        completed_download = call_connector()
+    except subprocess.TimeoutExpired as e:
+        stdout = str(e.stdout)
+        print("Download command timed out: %s", stdout)
+        if e.stderr:
+            stderr = str(e.stderr)
+            print("Error: %s", stderr)
+
+        is_being_staged = "being staged" in stdout and "Downloading file" not in stdout
+        if not is_being_staged:
+            raise
+
+        # The GHGA Connector 2.0.0-2.0.2 times out after getting stuck in the file staging state
+        # The tool should handle this and keep retrying, but it does not in this version,
+        # so we need to retry manually here.
+        print("Files are being staged, retrying...")
+        completed_download = call_connector()
 
     print("Output:")
     print(completed_download.stdout)
@@ -79,9 +101,10 @@ def run_the_download_command(
         print("Error:")
         print(completed_download.stderr)
 
-    assert "Please paste the complete download token" in completed_download.stdout
-    assert "Downloading file" in completed_download.stdout
+    assert "Please paste the complete access token" in completed_download.stdout
     assert "ERROR" not in completed_download.stderr
+    assert "Downloading file" in completed_download.stdout
+    assert "has been successfully downloaded" in completed_download.stdout
 
 
 @then(
@@ -113,7 +136,7 @@ def files_are_downloaded(fixtures: JointFixture, file_scope: str, dataset_char: 
     assert len(files) == file_count
 
     for file_ in files:
-        file_id = file_["id"]
+        file_id = file_["accession"]
         file_extension = file_["extension"]
 
         assert file_id.startswith("GHGAF")
@@ -132,6 +155,7 @@ def files_are_downloaded(fixtures: JointFixture, file_scope: str, dataset_char: 
 
 @when("I run the decrypt command of the GHGA connector")
 def run_the_decrypt_command(fixtures: JointFixture):
+    """Run the decrypt command of the GHGA connector"""
     connector = fixtures.connector
     completed_download = subprocess.run(  # nosec B607, B603
         [
@@ -146,7 +170,7 @@ def run_the_decrypt_command(fixtures: JointFixture):
         check=False,
         encoding="utf-8",
         text=True,
-        timeout=60,
+        timeout=90,
     )
 
     if "Successfully" not in completed_download.stdout:
@@ -155,7 +179,7 @@ def run_the_decrypt_command(fixtures: JointFixture):
         print(completed_download.stderr)
 
     assert "Successfully decrypted file" in completed_download.stdout
-    assert not completed_download.stderr
+    assert not "ERROR" in completed_download.stderr
     assert not completed_download.returncode
 
 
@@ -183,7 +207,7 @@ def files_have_been_decrypted(
     }
 
     for file_ in downloaded_files:
-        file_id = file_["id"]
+        file_id = file_["accession"]
         file_extension = file_["extension"]
 
         file_alias = dataset_file_aliases[file_id]

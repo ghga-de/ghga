@@ -29,7 +29,7 @@ from .conftest import (
 )
 from .utils import IVA_TYPE_NAMES
 
-scenarios("../features/502_data_portal_access_grants.feature")
+scenarios("../features/503_data_portal_access_grants.feature")
 
 TIMEOUT = 3000
 
@@ -127,9 +127,9 @@ def filter_access_requests_all_statuses(fixtures: JointFixture):
     form = page.locator(form_selector)
     expect(form.locator("mat-form-field")).to_have_count(10, timeout=TIMEOUT)
 
-    form.locator("mat-form-field:has-text('Request status')").click()
+    form.locator("mat-form-field:has-text('Resolution')").click()
     page.get_by_role(
-        "option", name=re.compile("All request statuses", re.IGNORECASE)
+        "option", name=re.compile("All resolutions", re.IGNORECASE)
     ).first.click()
 
 
@@ -179,7 +179,7 @@ def check_access_request_detail_page(
 def check_access_request_status(fixtures: JointFixture, status: str):
     """Check the status of the access request on the detail page."""
     page = fixtures.playwright.page
-    expect(page.locator("main")).to_contain_text(f"Status:{status.lower()}")
+    expect(page.locator("main")).to_contain_text(f"Resolution:{status.lower()}")
 
 
 @when(parse('I "{action}" the access request'))

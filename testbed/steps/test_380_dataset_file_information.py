@@ -51,9 +51,10 @@ def get_all_dataset_information(
 def get_file_information_from_metadata(file_metadata):
     """Extract the file information from the metadata"""
     return {
-        "size": file_metadata["Unencrypted file size"],
-        "sha256_hash": file_metadata["Unencrypted file checksum"],
-        "storage_alias": file_metadata["Storage alias"],
+        "accession": file_metadata["accession"],
+        "size": file_metadata["decrypted_size"],
+        "sha256_hash": file_metadata["decrypted_sha256"],
+        "storage_alias": file_metadata["storage_alias"],
     }
 
 
@@ -64,6 +65,7 @@ def get_file_information_from_metadata(file_metadata):
 def request_dataset_file_information(
     alias: str, config: Config, http: HttpClient, state: StateStorage
 ) -> Response:
+    """Request the information for all files in the given dataset"""
     return get_all_dataset_information(
         alias=alias, config=config, http=http, state=state
     )
@@ -71,18 +73,22 @@ def request_dataset_file_information(
 
 @then(parse('I get the details of all files in "{alias}" dataset'))
 def check_dataset_file_information(alias: str, response: Response, state: StateStorage):
+    """Check that the file information matches the metadata for all files in the dataset"""
     result = response.json()
     assert result
-    datasets = state.get_state("all available datasets")
-    assert datasets[alias]["accession"] == result.get("accession")
+    rdub = "primary" if alias == "DS_A" else "secondary" if alias == "DS_B" else None
+    assert rdub, f"Unknown dataset alias: {alias}"
+    files = state.get_state(f"rdub_{rdub}_files")
+    files = {file["accession"]: file for file in files}
+
     dataset_file_information = result["file_information"]
     assert len(dataset_file_information) == EXPECTED_DATASET_FILE_COUNT[alias]
-    all_file_information = state.get_state("all file information")
-    for file in dataset_file_information:
-        accession = file.pop("accession")
-        file_metadata = all_file_information[accession]
-        file_information = get_file_information_from_metadata(file_metadata)
-        assert file_information == file
+
+    for file_information in dataset_file_information:
+        accession = file_information["accession"]
+        assert accession in files, f"Unexpected file accession: {accession}"
+        file_metadata = get_file_information_from_metadata(files[accession])
+        assert file_information == file_metadata
 
 
 @when(
@@ -91,24 +97,26 @@ def check_dataset_file_information(alias: str, response: Response, state: StateS
 def request_single_file_information(
     file_reference: str, config: Config, http: HttpClient, state: StateStorage
 ) -> Response:
-    all_file_information = state.get_state("all file information")
-    file_id = (
-        min(all_file_information)
-        if file_reference == "single"
-        else "non-existing"
-        if file_reference == "non-existing"
-        else ValueError(f"Unknown file reference: {file_reference}")
-    )
+    """Request the information for a single file"""
+    files = state.get_state("rdub_primary_files")
+    if file_reference == "single":
+        file_id = min(files, key=lambda f: f["accession"])["accession"]
+    elif file_reference == "non-existing":
+        file_id = "non-existing"
+    else:
+        raise ValueError(f"Unknown file reference: {file_reference}")
     url = f"{config.dins_url}/file_information/{file_id}"
     return http.get(url)
 
 
 @then("I get the details of the file correctly")
 def check_single_file_information(response: Response, state: StateStorage):
+    """Check that the file information matches the metadata for the single file"""
     result = response.json()
     assert result
-    all_file_information = state.get_state("all file information")
-    accession = result.pop("accession")
-    file_metadata = all_file_information[accession]
+    files = state.get_state("rdub_primary_files")
+    files = {file["accession"]: file for file in files}
+    accession = result["accession"]
+    file_metadata = files[accession]
     file_information = get_file_information_from_metadata(file_metadata)
     assert file_information == result

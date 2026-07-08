@@ -85,11 +85,13 @@ class MongoFixture(StateManager):
         db_name: str,
         collection_name: str,
         query: Mapping[str, Any] | None = None,
+        extend_mapping: bool = True,
     ) -> dict[str, Any] | None:
         documents = self.find_documents(
             db_name=db_name,
             collection_name=collection_name,
             query=query,
+            extend_mapping=extend_mapping,
         )
         return documents[0] if documents else None
 
@@ -99,11 +101,12 @@ class MongoFixture(StateManager):
         collection_name: str,
         query: Mapping[str, Any] | None = None,
         sloppy: bool = False,
+        extend_mapping: bool = True,
     ) -> list[dict[str, Any]]:
         """Return one document from the given collection matching the given filter."""
         url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
         if query:
-            if db_name != "tb":
+            if db_name != "tb" and extend_mapping:
                 query = self.extended_mapping(query)  # type: ignore
             query = self.stringify_query_params(query)
         response = self.http.get(url, headers=self.auth_headers, params=query)
@@ -123,6 +126,8 @@ class MongoFixture(StateManager):
         collection_name: str,
         query: Mapping[str, Any],
         timeout: float = TIMEOUT,
+        interval: float = INTERVAL,
+        extend_mapping: bool = True,
     ) -> dict[str, Any] | None:
         documents = self.wait_for_documents(
             db_name=db_name,
@@ -130,6 +135,8 @@ class MongoFixture(StateManager):
             query=query,
             number=1,
             timeout=timeout,
+            interval=interval,
+            extend_mapping=extend_mapping,
         )
         return documents[0] if documents else None
 
@@ -141,6 +148,7 @@ class MongoFixture(StateManager):
         number: int = 1,
         timeout: float = TIMEOUT,
         interval: float = INTERVAL,
+        extend_mapping: bool = True,
     ) -> list[dict[str, Any]] | None:
         """Wait for a number of documents.
 
@@ -151,7 +159,9 @@ class MongoFixture(StateManager):
         """
         slept: float = 0
         while slept < timeout:
-            documents = self.find_documents(db_name, collection_name, query, True)
+            documents = self.find_documents(
+                db_name, collection_name, query, True, extend_mapping
+            )
             if len(documents) >= number:
                 return documents
             sleep(interval)
@@ -159,10 +169,18 @@ class MongoFixture(StateManager):
         return None
 
     def upsert_document(
-        self, db_name: str, collection_name: str, document: dict[str, Any]
+        self,
+        db_name: str,
+        collection_name: str,
+        document: dict[str, Any],
+        extend_mapping: bool = True,
     ):
-        """Replace one document in the given collection."""
-        if db_name != "tb":
+        """Replace one document in the given collection.
+
+        Set `extend_mapping=False` when the document already carries extended-JSON
+        values or when the `_id` is not a UUID.
+        """
+        if db_name != "tb" and extend_mapping:
             document = self.extended_mapping(document)
         url = f"{self.config.sms_url}/documents/{db_name}.{collection_name}"
         data = {"documents": document, "id_field": "_id"}
@@ -186,6 +204,33 @@ class MongoFixture(StateManager):
         assert response.status_code == 204, (
             f"Failed to delete document: {response.text}"
         )
+
+    def wait_for_removal(
+        self,
+        db_name: str,
+        collection_name: str,
+        query: Mapping[str, Any],
+        timeout: float = TIMEOUT,
+        interval: float = INTERVAL,
+        extend_mapping: bool = True,
+    ) -> bool:
+        """Wait until no document matches the given query.
+
+        The counterpart to `wait_for_documents`: polls until `find_document`
+        finds nothing for the given filter and returns True, or returns False if
+        a match still remains at timeout. Useful for event-driven deletions that
+        propagate to a collection asynchronously.
+        """
+        slept: float = 0
+        while slept < timeout:
+            if (
+                self.find_document(db_name, collection_name, query, extend_mapping)
+                is None
+            ):
+                return True
+            sleep(interval)
+            slept += interval
+        return False
 
 
 @fixture(name="mongo", scope="session")

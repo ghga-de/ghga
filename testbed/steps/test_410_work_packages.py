@@ -117,7 +117,7 @@ def create_work_package(
     elif file_scope in ["vcf", "fastq"]:
         extension = f".{file_scope}.gz"
         files = [file for file in files if file["extension"] == extension]
-        file_ids = [file["id"] for file in files]
+        file_ids = [file["accession"] for file in files]
     else:
         raise ValueError("Unknown file_scope {file_scope}")
 

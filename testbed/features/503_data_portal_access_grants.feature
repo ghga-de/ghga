@@ -1,5 +1,5 @@
 @dataportal @frontend
-Feature: 402 Data Portal Requests
+Feature: 503 Data Portal Requests
   As a user, I can create dataset access requests and download tokens
 
     Scenario: Starting data portal access request tests

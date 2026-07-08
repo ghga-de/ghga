@@ -90,7 +90,7 @@ class Config(BaseSettings):
         "dlq",
         "rts",
         "ucs",
-        "uos",
+        "rs",
     ]
 
     object_storages: ObjectStoragesConfig = ObjectStoragesConfig(
@@ -146,7 +146,7 @@ class Config(BaseSettings):
         "pcs",
         "dlq",
         "rts",
-        "uos",
+        "rs",
     ]
 
     # internal APIs
@@ -182,7 +182,7 @@ class Config(BaseSettings):
     fis_url: str = "fis"
     fis_pubkey: str
     fis_db_name: str = "fis"
-    fis_ingested_files_collection: str = "ingestedFiles"
+    fis_reports_collection: str = "reports"
 
     # metldata
     metldata_db_name: str = "metldata"
@@ -204,11 +204,11 @@ class Config(BaseSettings):
     # wps
     wps_db_name: str = "wps"
     wps_url: str = "wps"
+    wps_rdub_collection: str = "uploadBoxes"
 
     # ifrs
     ifrs_db_name: str = "ifrs"
     ifrs_metadata_collection: str = "file_metadata"
-    ifrs_file_metadata_collection: str = "file_metadata"
 
     # pcs
     pcs_db_name: str = "pcs"
@@ -249,6 +249,7 @@ class Config(BaseSettings):
     dins_url: str = "dins"
     dins_db_name: str = "dins"
     dins_metadata_collection: str = "file_information"
+    dins_file_accessions_collection: str = "datasetFileAccessions"
 
     # event topics
     file_interrogations_topic: str = "interrogations"
@@ -290,10 +291,14 @@ class Config(BaseSettings):
     # upload-controller
     ucs_db_name: str = "ucs"
     ucs_url: str = "ucs"
+    ucs_fub_collection: str = "fileUploadBoxes"
+    ucs_file_uploads_collection: str = "fileUploads"
 
     # upload-orchestration
-    uos_db_name: str = "uos"
-    uos_url: str = "uos"
+    rs_db_name: str = "rs"
+    rs_url: str = "rs"
+    rs_mappings_collection: str = "fileAccessions"
+    rs_rdub_collection: str = "researchDataUploadBoxes"
 
     # lox24 mock server
     lox24_mock_url: str = "http://lox24-mock:8080"

@@ -90,6 +90,10 @@ def check_services_for_deleted_files(fixtures: JointFixture):
 
 @then("the deleted files do not exist in the storage")
 def check_storage_for_deleted_files(fixtures: JointFixture):
+    # FIXME This check is not active
+    # Because the files still exist in bucket after deletion.
+    # More through investigation of purge signal is needed to find out why.
+    # This shouldn't block the release, so we will fix this issue in the next release.
     timeout = TIMEOUT
     interval = INTERVAL
     for storage_name in ["primary", "secondary"]:
@@ -110,5 +114,10 @@ def check_storage_for_deleted_files(fixtures: JointFixture):
 
 @then("the file encryption secrets are removed from the vault")
 def check_secrets_in_vault(fixtures: JointFixture):
+    # FIXME This check is not active
+    # Because the secrets still exist in Vault after deletion.
+    # More through investigation is needed to find out why the secrets are not removed as expected.
+    # It could be the Test Bed setup or missing implementation.
+    # This shouldn't block the release, so we will fix this issue in the next release.
     vault_keys = fixtures.vault.keys()
     assert not vault_keys, f"File encryption secrets still exist in Vault: {vault_keys}"

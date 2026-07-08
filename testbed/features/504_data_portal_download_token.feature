@@ -1,5 +1,5 @@
 @dataportal @frontend
-Feature: 403 Data Portal Download Token
+Feature: 504 Data Portal Download Token
   As a user, I can create download tokens for the available datasets
 
     Background:

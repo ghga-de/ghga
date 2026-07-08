@@ -60,6 +60,7 @@ from pytest_bdd import (  # noqa: RUF100
 )
 
 from steps.conftest_1x import *  # noqa: F403
+from steps.conftest_2x import *  # noqa: F403
 from steps.conftest_5x import *  # noqa: F403
 from steps.utils import (
     EXPECTED_NOTIFICATIONS,
@@ -308,7 +309,19 @@ def check_item_count_in_list(count: int, results: list):
 @then(parse('the expected item count in response is "{count:d}"'))
 def check_item_count_in_response(count: int, response: Response):
     results = response.json()
-    check_item_count_in_list(count=count, results=results)
+
+    if isinstance(results, list):
+        check_item_count_in_list(count=count, results=results)
+
+    if isinstance(results, dict):
+        # Handle paginated responses like {'count': 0, 'boxes': []}
+        for key in ("boxes", "results", "hits"):
+            if key in results:
+                results = results[key]
+                break
+        else:
+            assert False, f"No known list key found in response: {results}"
+        assert len(results) == count
 
 
 @then(
@@ -447,4 +460,61 @@ def check_cli_error(
     ), (
         f'Expected error message "{expected_error_message}" not found in output:\n'
         f"{combined_output}"
+    )
+
+
+@given("no file has been uploaded to the upload boxes yet")
+def reset_upload_box_state(mongo: MongoFixture, state: StateStorage, config: Config):
+    """Reset the state of the upload boxes in the database, without deleting them."""
+    # Remove all upload entries
+    mongo.empty_databases(config.ucs_db_name, collection_names=["fileUploads"])
+
+    # Reset file upload box states in UCS
+    ucs_boxes = mongo.find_documents(
+        config.ucs_db_name,
+        config.ucs_fub_collection,
+        sloppy=True,
+    )
+    for box in ucs_boxes:
+        updated_box = dict(box)
+        updated_box["version"] = 0
+        updated_box["file_count"] = 0
+        updated_box["size"] = 0
+        updated_box["state"] = "open"
+        mongo.upsert_document(
+            config.ucs_db_name,
+            config.ucs_fub_collection,
+            updated_box,
+        )
+
+    # Reset file upload box states in rs
+    rs_boxes = mongo.find_documents(
+        config.rs_db_name,
+        config.rs_rdub_collection,
+        sloppy=True,
+    )
+    for box in rs_boxes:
+        updated_box = dict(box)
+        updated_box["version"] = 0
+        updated_box["file_upload_box_version"] = 0
+        updated_box["file_count"] = 0
+        updated_box["size"] = 0
+        updated_box["state"] = "open"
+        mongo.upsert_document(
+            config.rs_db_name,
+            config.rs_rdub_collection,
+            updated_box,
+        )
+
+
+@given("I have an empty working directory for the GHGA connector")
+def clean_connector_work_dir(connector: ConnectorFixture):
+    connector.reset_work_dir()
+
+
+@given("my Crypt4GH key pair has been stored in two key files")
+def keys_are_made_available(connector: ConnectorFixture, config: Config):
+    connector.store_keys(
+        public_key=config.user_public_crypt4gh_key,
+        private_key=config.user_private_crypt4gh_key,
     )

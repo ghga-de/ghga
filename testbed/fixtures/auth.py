@@ -175,7 +175,7 @@ class TokenGenerator:
 
     def get_saved_session(self, name: str, state_store: StateStorage) -> Session | None:
         """Check state store and get session for the user"""
-        sub = self.get_sub(name)
+        sub = name if "@ghga.dev" in name else self.get_sub(name)
         assert state_store, "No state store provided. Cannot query session."
         session = state_store.get_state(f"session-{sub}") or None
         return Session(**session) if session else None
@@ -203,7 +203,6 @@ class TokenGenerator:
             session = self.get_saved_session(name, state_store)
             if session:
                 auth_headers = self.headers(session)
-                response = self.auth_login(headers=auth_headers)
                 session_id = session.session_id
 
         if not session_id:
