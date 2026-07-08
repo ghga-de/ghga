@@ -17,8 +17,10 @@
 
 import asyncio
 import logging
+from uuid import uuid4
 
 from ghga_service_commons.api import run_server
+from hexkit.correlation import set_correlation_id
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 
@@ -76,7 +78,7 @@ async def perform_cleanup(run_forever: bool = True) -> None:
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
-    async with prepare_core(config=config) as controller:
+    async with prepare_core(config=config) as controller, set_correlation_id(uuid4()):
         is_first_run = True
         while run_forever or is_first_run:
             is_first_run = False

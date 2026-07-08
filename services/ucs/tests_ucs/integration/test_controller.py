@@ -16,7 +16,7 @@
 """Integration tests for the UploadController"""
 
 import hashlib
-from contextlib import nullcontext
+from contextlib import asynccontextmanager, nullcontext
 from datetime import timedelta
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -34,6 +34,7 @@ from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.joint import JointFixture
 from ucs.adapters.outbound.dao import FIELDS_NOT_PUBLISHED
 from ucs.constants import FILE_UPLOADS_COLLECTION, UPLOAD_ACTIVITY_COLLECTION
+from ucs.main import perform_cleanup
 from ucs.ports.inbound.controller import UploadControllerPort
 
 pytestmark = pytest.mark.asyncio()
@@ -770,7 +771,9 @@ async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog
     )
 
 
-async def test_cleanup_aborts_orphaned_s3_uploads(joint_fixture: JointFixture):
+async def test_cleanup_aborts_orphaned_s3_uploads(
+    joint_fixture: JointFixture, monkeypatch: pytest.MonkeyPatch
+):
     """Test that the cleanup job aborts S3 multipart uploads with no corresponding
     FileUpload record, while leaving recently-initiated uploads untouched.
     """
@@ -804,8 +807,13 @@ async def test_cleanup_aborts_orphaned_s3_uploads(joint_fixture: JointFixture):
     assert orphaned_s3_upload_id in active_uploads_before
     assert len(active_uploads_before) == 2
 
-    # Run the cleanup job
-    await controller.cleanup_stale_uploads()
+    # Run the cleanup job (patch prepare_core to return our test object)
+    @asynccontextmanager
+    async def _prepare_core(config):
+        yield joint_fixture.upload_controller
+
+    monkeypatch.setattr("ucs.main.prepare_core", _prepare_core)
+    await perform_cleanup(run_forever=False)
 
     # The orphaned upload should be aborted
     active_uploads_after = await s3_storage.get_all_multipart_uploads(
@@ -873,9 +881,13 @@ async def test_cleanup_cancels_despite_s3_abort_failure(
 
     monkeypatch.setattr(s3_client, "abort_multipart_upload", failing_abort)
 
-    # Run the cleanup job
-    async with set_correlation_id(uuid4()):
-        await controller.cleanup_stale_uploads()
+    # Run the cleanup job (patch prepare_core to return our test object)
+    @asynccontextmanager
+    async def _prepare_core(config):
+        yield joint_fixture.upload_controller
+
+    monkeypatch.setattr("ucs.main.prepare_core", _prepare_core)
+    await perform_cleanup(run_forever=False)
 
     # The FileUpload should be marked 'cancelled' despite the S3 failure
     file_upload_doc = db[FILE_UPLOADS_COLLECTION].find_one({"_id": file_id})
