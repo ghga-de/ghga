@@ -322,7 +322,7 @@ async def update_box(  # noqa: C901, PLR0912
     },
 )
 @TRACER.start_as_current_span("routes.get_box_uploads")
-async def get_box_uploads(
+async def get_box_uploads(  # noqa: PLR0913
     box_id: UUID4,
     work_order: Annotated[
         rest_models.ViewFileBoxWorkOrder,
@@ -330,7 +330,18 @@ async def get_box_uploads(
     ],
     upload_controller: dummies.UploadControllerDummy,
     skip: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=0, le=100)] = 50,
+    limit: Annotated[int, Query(ge=0, le=1000)] = 10,
+    sort: Annotated[
+        rest_models.SortString | None,
+        Query(
+            description="A comma-separated list of FileUpload field names defining"
+            + " the sort order, where field names prefixed with '-' indicate"
+            + " descending order (e.g. 'state,-decrypted_size')."
+            + " Defaults to sorting by alias in ascending order."
+            + " If 'alias' is not referenced, it is appended as an ascending"
+            + " tiebreaker to guarantee a stable order."
+        ),
+    ] = None,
 ) -> rest_models.BoxUploadsPage:
     """Retrieve a paginated list of FileUploads for a FileUploadBox.
 
@@ -341,7 +352,10 @@ async def get_box_uploads(
 
     try:
         file_uploads, total_count = await upload_controller.get_box_file_info(
-            box_id=box_id, skip=skip, limit=limit
+            box_id=box_id,
+            skip=skip,
+            limit=limit,
+            sort=sort.split(",") if sort else ["alias"],
         )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error

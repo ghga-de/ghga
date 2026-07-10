@@ -205,7 +205,7 @@ async def test_get_box_uploads_response_format(
     file_upload_b.alias = "test1.vcf"
     file_upload_b.box_id = TEST_BOX_ID
 
-    # Test with default parameters (no skip/limit in query string)
+    # Test with default parameters (no skip/limit/sort in query string)
     core_mock.get_box_file_info.return_value = ([file_upload_a, file_upload_b], 5)
     response = await rest_client.get(url, headers=token_header)
     assert response.status_code == 200
@@ -215,7 +215,7 @@ async def test_get_box_uploads_response_format(
     assert body["items"][0]["alias"] == "test0.bam"
     assert body["items"][1]["alias"] == "test1.vcf"
     core_mock.get_box_file_info.assert_awaited_with(
-        box_id=TEST_BOX_ID, skip=0, limit=50
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"]
     )
 
     # Test with skip and limit parameters explicitly set
@@ -228,7 +228,27 @@ async def test_get_box_uploads_response_format(
     assert body["total_count"] == 5
     assert len(body["items"]) == 1
     assert body["items"][0]["alias"] == "test1.vcf"
-    core_mock.get_box_file_info.assert_awaited_with(box_id=TEST_BOX_ID, skip=3, limit=1)
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID, skip=3, limit=1, sort=["alias"]
+    )
+
+    # Test that the comma-separated sort parameter is forwarded as a list
+    core_mock.get_box_file_info.return_value = ([file_upload_b, file_upload_a], 5)
+    response = await rest_client.get(
+        url, params={"sort": "-alias,state"}, headers=token_header
+    )
+    assert response.status_code == 200
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["-alias", "state"]
+    )
+
+    # An empty sort parameter is treated the same as omitting it
+    core_mock.get_box_file_info.return_value = ([file_upload_a, file_upload_b], 5)
+    response = await rest_client.get(url, params={"sort": ""}, headers=token_header)
+    assert response.status_code == 200
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"]
+    )
 
     # skip beyond all results  controller returns empty page but preserves total_count
     core_mock.get_box_file_info.return_value = ([], 5)
@@ -254,12 +274,25 @@ async def test_get_box_uploads_invalid_params(
     response = await rest_client.get(url, params={"skip": -1}, headers=token_header)
     assert response.status_code == 422
 
-    # limit must be <= 100
-    response = await rest_client.get(url, params={"limit": 101}, headers=token_header)
+    # limit must be <= 1000
+    response = await rest_client.get(url, params={"limit": 1001}, headers=token_header)
     assert response.status_code == 422
 
     # limit must also be >=0
     response = await rest_client.get(url, params={"limit": -1}, headers=token_header)
+    assert response.status_code == 422
+
+    # sort specs must reference FileUpload fields (modulo a leading '-')
+    response = await rest_client.get(
+        url, params={"sort": "alias,-bogus,fake"}, headers=token_header
+    )
+    assert response.status_code == 422
+    assert "bogus, fake" in response.text
+
+    # bracketed values are not valid syntax
+    response = await rest_client.get(
+        url, params={"sort": "[alias,state]"}, headers=token_header
+    )
     assert response.status_code == 422
 
 
