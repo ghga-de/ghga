@@ -175,12 +175,9 @@ async def test_unlock_file_upload_box(
         )
 
 
-async def test_get_file_upload_list(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
-):
-    """Test the get_file_upload_list function"""
-    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
-    file_list_response = [
+def _make_file_uploads(count: int) -> list[FileUploadWithAccession]:
+    """Build a list of distinct FileUploadWithAccession instances for testing."""
+    return [
         FileUploadWithAccession(
             id=uuid4(),
             box_id=uuid4(),
@@ -195,13 +192,48 @@ async def test_get_file_upload_list(
             state_updated=now_utc_ms_prec(),
             part_size=100,
         )
-        for i in range(3)
+        for i in range(count)
     ]
+
+
+async def test_get_file_upload_list(
+    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+):
+    """Test the get_file_upload_list function returns a single page and total count."""
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    file_list_response = _make_file_uploads(3)
     httpx_mock.add_response(
-        200, json=[x.model_dump(mode="json") for x in file_list_response]
+        200,
+        json={
+            "items": [x.model_dump(mode="json") for x in file_list_response],
+            "total_count": len(file_list_response),
+        },
     )
-    file_list = await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
+    file_list, total_count = await file_upload_box_client.get_file_upload_list(
+        box_id=TEST_BOX_ID, skip=5, limit=10, sort=["alias", "-state"]
+    )
     assert file_list == file_list_response
+    assert total_count == len(file_list_response)
+
+    # Confirm skip/limit/sort were forwarded to the endpoint as query parameters.
+    # sort must be forwarded as a single, non-exploded comma-separated value.
+    request = httpx_mock.get_requests()[-1]
+    assert request.url.params.get("skip") == "5"
+    assert request.url.params.get("limit") == "10"
+    assert request.url.params.get_list("sort") == ["alias,-state"]
+    assert request.url.params.get("sort") == "alias,-state"
+
+    # Confirm sort is omitted entirely when not provided
+    httpx_mock.add_response(
+        200,
+        json={
+            "items": [x.model_dump(mode="json") for x in file_list_response],
+            "total_count": len(file_list_response),
+        },
+    )
+    await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
+    request = httpx_mock.get_requests()[-1]
+    assert "sort" not in request.url.params
 
     # Check off-normal status code
     httpx_mock.add_response(500, json="Some error occurred.")
@@ -213,23 +245,88 @@ async def test_get_file_upload_list(
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
 
-    # Check with empty list response
-    httpx_mock.add_response(200, json=[])
-    file_list = await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
+    # Check with empty page response
+    httpx_mock.add_response(200, json={"items": [], "total_count": 0})
+    file_list, total_count = await file_upload_box_client.get_file_upload_list(
+        box_id=TEST_BOX_ID
+    )
     assert file_list == []
+    assert total_count == 0
 
-    # Verify that 404 is softened to an empty list if missing_box_ok is set to True
+
+async def test_get_file_upload_list_missing_box(
+    config: Config,
+    httpx_mock: HTTPXMock,
+    httpx_client: httpx.AsyncClient,
+):
+    """Test that a 404 is softened to an empty list when missing_box_ok is set."""
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
-    file_list = await file_upload_box_client.get_file_upload_list(
+    file_list, total_count = await file_upload_box_client.get_file_upload_list(
         box_id=TEST_BOX_ID, missing_box_ok=True
     )
     assert file_list == []
+    assert total_count == 0
 
     # Verify that 404 results in OperationError if missing_box_ok is set to False
     # (default)
     httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
+
+
+async def test_get_all_file_uploads(
+    config: Config,
+    httpx_mock: HTTPXMock,
+    httpx_client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Verify that get_all_file_uploads pages through the endpoint and concatenates
+    every page into a single list.
+    """
+    # Shrink the page size so a handful of uploads spans multiple pages
+    monkeypatch.setattr("rs.adapters.outbound.http.UCS_UPLOADS_PAGE_SIZE", 2)
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    file_list_response = _make_file_uploads(5)
+    total_count = len(file_list_response)
+    # Three pages: [0, 1], [2, 3], [4]
+    for start in range(0, total_count, 2):
+        httpx_mock.add_response(
+            200,
+            json={
+                "items": [
+                    x.model_dump(mode="json")
+                    for x in file_list_response[start : start + 2]
+                ],
+                "total_count": total_count,
+            },
+        )
+    file_list = await file_upload_box_client.get_all_file_uploads(box_id=TEST_BOX_ID)
+    assert file_list == file_list_response
+
+    # Confirm each page was requested with the expected skip/limit query params
+    requests = httpx_mock.get_requests()
+    assert [
+        (r.url.params.get("skip"), r.url.params.get("limit")) for r in requests
+    ] == [("0", "2"), ("2", "2"), ("4", "2")]
+
+
+async def test_get_all_file_uploads_missing_box(
+    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+):
+    """Test that a 404 is softened to an empty list when missing_box_ok is set."""
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
+    file_list = await file_upload_box_client.get_all_file_uploads(
+        box_id=TEST_BOX_ID, missing_box_ok=True
+    )
+    assert file_list == []
+
+    httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
+    with pytest.raises(FileBoxClient.OperationError):
+        file_list = await file_upload_box_client.get_all_file_uploads(
+            box_id=TEST_BOX_ID, missing_box_ok=False
+        )
 
 
 async def test_archive_file_upload_box(

@@ -25,6 +25,7 @@ from hexkit.utils import now_utc_ms_prec
 from rs.config import Config
 from rs.core.models import (
     BoxRetrievalResults,
+    BoxUploadsPage,
     FileUploadWithAccession,
     GrantId,
     GrantWithBoxInfo,
@@ -438,16 +439,47 @@ async def test_list_upload_box_files(
             for i in range(3)
         ]
 
+        # Set the RDUBManager's get_upload_box_files method to return the desired value
         file_list_json = [file.model_dump(mode="json") for file in file_list]
-        rdub_manager.rdub_manager.get_upload_box_files.return_value = file_list
+        page_json = {"items": file_list_json, "total_count": len(file_list)}
+        rdub_manager.rdub_manager.get_upload_box_files.return_value = BoxUploadsPage(
+            items=file_list, total_count=len(file_list)
+        )
         response = await rest_client.get(url, headers=user_auth_headers)
         assert response.status_code == 200
-        assert response.json() == file_list_json
+        assert response.json() == page_json
 
         # normal response with data steward auth
         response = await rest_client.get(url, headers=ds_auth_headers)
         assert response.status_code == 200
-        assert response.json() == file_list_json
+        assert response.json() == page_json
+
+        # Verify that the skip/limit query params are passed to the RDUBManager
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.get_upload_box_files.return_value = BoxUploadsPage(
+            items=file_list, total_count=len(file_list)
+        )
+        response = await rest_client.get(
+            url, headers=user_auth_headers, params={"skip": 2, "limit": 10}
+        )
+        assert response.status_code == 200
+        _, kwargs = rdub_manager.rdub_manager.get_upload_box_files.call_args
+        assert kwargs["skip"] == 2
+        assert kwargs["limit"] == 10
+        # No sort specified, so it defaults to alias ascending
+        assert kwargs["sort"] == ["alias"]
+
+        # Verify that a comma-separated sort value is split and passed to the RDUBManager
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.get_upload_box_files.return_value = BoxUploadsPage(
+            items=file_list, total_count=len(file_list)
+        )
+        response = await rest_client.get(
+            url, headers=user_auth_headers, params={"sort": "alias,-state"}
+        )
+        assert response.status_code == 200
+        _, kwargs = rdub_manager.rdub_manager.get_upload_box_files.call_args
+        assert kwargs["sort"] == ["alias", "-state"]
 
         # handle box access error from core
         rdub_manager.reset_mock()
@@ -470,6 +502,36 @@ async def test_list_upload_box_files(
         rdub_manager.rdub_manager.get_upload_box_files.side_effect = TypeError()
         response = await rest_client.get(url, headers=user_auth_headers)
         assert response.status_code == 500
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"limit": 1001},
+        {"limit": -1},
+        {"skip": -1},
+        {"sort": "bogus_field"},
+        {"sort": "-bogus_field"},
+        {"sort": "alias,bogus_field"},
+        {"sort": "-"},
+        {"sort": "alias,"},
+        {"sort": ",state"},
+    ],
+)
+async def test_list_upload_box_files_invalid_params(
+    config: Config, user_auth_headers, params: dict
+):
+    """Test that out-of-range skip/limit values and invalid sort specs on the file
+    list endpoint return 422.
+    """
+    rdub_manager = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/uploads"
+        response = await rest_client.get(url, headers=user_auth_headers, params=params)
+        assert response.status_code == 422
 
 
 async def test_revoke_upload_access_grant(

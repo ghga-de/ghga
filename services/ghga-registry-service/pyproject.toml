@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "rs"
-version = "4.0.2"
+version = "5.0.0"
 description = "GHGA Registry Service - a service for ingesting and archiving metadata from data submitters."
 dependencies = [
     "typer >= 0.26",

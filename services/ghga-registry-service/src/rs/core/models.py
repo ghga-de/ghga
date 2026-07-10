@@ -45,6 +45,7 @@ __all__ = [
     "AccessionMapRequest",
     "BaseWorkOrderToken",
     "BoxRetrievalResults",
+    "BoxUploadsPage",
     "ChangeFileBoxWorkOrder",
     "CreateFileBoxWorkOrder",
     "CreateUploadBoxRequest",
@@ -371,4 +372,20 @@ class FileUploadWithAccession(FileUpload):
 
     accession: PID | None = Field(
         default=None, description="The accession number assigned to this file."
+    )
+
+
+class BoxUploadsPage(BaseModel):
+    """A page of file uploads for an upload box, plus the total unpaginated count."""
+
+    items: list[FileUploadWithAccession] = Field(
+        ...,
+        description=(
+            "The file uploads on this page, in the requested sort order"
+            + " (alias by default)"
+        ),
+    )
+    total_count: int = Field(
+        ...,
+        description="The total number of file uploads in the box (unpaginated)",
     )

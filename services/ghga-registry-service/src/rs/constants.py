@@ -25,6 +25,7 @@ WORK_ORDER_TOKEN_VALID_SECONDS = 30
 FILE_ACCESSION_COLLECTION = "fileAccessions"
 STUDY_COLLECTION = "studies"
 HTTPX_TIMEOUT = 60
+UCS_UPLOADS_PAGE_SIZE = 100
 VALID_STATE_TRANSITIONS = [
     ("open", "locked"),
     ("locked", "open"),

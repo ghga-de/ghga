@@ -25,7 +25,7 @@ from jwcrypto import jwk
 from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr
 from pydantic_settings import BaseSettings
 
-from rs.constants import HTTPX_TIMEOUT
+from rs.constants import HTTPX_TIMEOUT, UCS_UPLOADS_PAGE_SIZE
 from rs.core.models import (
     BaseWorkOrderToken,
     ChangeFileBoxWorkOrder,
@@ -485,21 +485,45 @@ class FileBoxClient(FileBoxClientPort):
             raise self.OperationError("Failed to unlock FileUploadBox.")
 
     async def get_file_upload_list(
-        self, *, box_id: UUID4, missing_box_ok: bool = False
-    ) -> list[FileUploadWithAccession]:
-        """Get list of file uploads in a FileUploadBox.
+        self,
+        *,
+        box_id: UUID4,
+        skip: int = 0,
+        limit: int | None = None,
+        sort: list[str] | None = None,
+        missing_box_ok: bool = False,
+    ) -> tuple[list[FileUploadWithAccession], int]:
+        """Get a page of file uploads in a FileUploadBox.
 
-        If the FileUploadBox does not exist and missing_box_ok is set to True, this
-        method will return an empty list. Otherwise it will raise an OperationError.
+        Returns a 2-tuple of the page's file uploads and the total (unpaginated) count.
+        It is assumed that `skip`, `limit`, and `sort` are validated beforehand - they
+        are not validated in this method.
+
+        `skip`, `limit`, and `sort` are forwarded to the owning service's paginated
+        endpoint. `sort` is a list of FileUpload field names to sort by, each optionally
+        prefixed with a dash to denote descending order. When omitted, the owning
+        service's default ordering (by alias) is used.
+
+        If the FileUploadBox does not exist and `missing_box_ok` is set to True, this
+        method will return an empty page. Otherwise it will raise an OperationError.
 
         Raises:
             OperationError if there's a problem with the operation.
         """
         wot = ViewFileBoxWorkOrder(box_id=box_id)
         headers = self._auth_header(wot)
+        params: dict[str, Any] = {"skip": skip}
+        if limit is not None:
+            params["limit"] = limit
+        if sort:
+            # Forward as a single comma-separated value (non-exploded) to match the
+            # owning service's query-param convention. Passing the list directly would
+            # make httpx emit repeated `sort=...` params instead.
+            params["sort"] = ",".join(sort)
         response = await self._client.get(
             f"{self._ucs_url}/boxes/{box_id}/uploads",
             headers=headers,
+            params=params,
             timeout=HTTPX_TIMEOUT,
         )
         if response.status_code != 200:
@@ -507,10 +531,10 @@ class FileBoxClient(FileBoxClientPort):
                 log.warning(
                     "Received a 404 when getting files list for FileUploadBox %s."
                     + " It is likely that conflicting state exists between RS and UCS."
-                    + " Returning an empty list to continue processing.",
+                    + " Returning an empty page to continue processing.",
                     box_id,
                 )
-                return []
+                return [], 0
             log.error(
                 "Error getting file list for FileUploadBox %s.",
                 box_id,
@@ -520,15 +544,50 @@ class FileBoxClient(FileBoxClientPort):
                     "response_body": response.json(),
                 },
             )
-            raise self.OperationError("Failed to unlock FileUploadBox.")
+            raise self.OperationError("Failed to get FileUploadBox file list.")
 
         try:
-            files = response.json()
-            return [FileUploadWithAccession(**file) for file in files]
+            page = response.json()
+            file_uploads = [FileUploadWithAccession(**file) for file in page["items"]]
+            total_count = page["total_count"]
         except Exception as err:
-            msg = "Failed to extract list of file IDs from response body."
+            msg = "Failed to extract list of file uploads from response body."
             log.error(msg, exc_info=True)
             raise self.OperationError(msg) from err
+
+        return file_uploads, total_count
+
+    async def get_all_file_uploads(
+        self, *, box_id: UUID4, missing_box_ok: bool = False
+    ) -> list[FileUploadWithAccession]:
+        """Get every file upload in a FileUploadBox by paging through the endpoint.
+
+        Use this instead of `get_file_upload_list` when the complete set of uploads is
+        required (e.g. for deletion or validation) rather than a single page.
+
+        If the FileUploadBox does not exist and `missing_box_ok` is set to True, this
+        method will return an empty list. Otherwise it will raise an OperationError.
+
+        Raises:
+            OperationError if there's a problem with the operation.
+        """
+        file_uploads: list[FileUploadWithAccession] = []
+        skip = 0
+        while True:
+            page, total_count = await self.get_file_upload_list(
+                box_id=box_id,
+                skip=skip,
+                limit=UCS_UPLOADS_PAGE_SIZE,
+                missing_box_ok=missing_box_ok,
+            )
+            file_uploads.extend(page)
+            skip += len(page)
+
+            # Stop once every upload is collected
+            if skip >= total_count or not page:
+                break
+
+        return file_uploads
 
     async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Archive a FileUploadBox in the owning service.

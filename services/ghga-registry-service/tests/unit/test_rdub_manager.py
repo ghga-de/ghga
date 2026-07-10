@@ -308,7 +308,7 @@ async def test_force_true_ignored_on_non_lock_transitions(
     box.state = "locked"
     box.version = 1
     await rig.box_dao.update(box)
-    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = []  # type: ignore
 
     with caplog.at_level("DEBUG", logger="rs.core.rdub_manager"):
         await rig.rdub_manager.update_research_data_upload_box(
@@ -419,9 +419,12 @@ async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[U
         )
         for i in range(3)
     ]
-    # Sort by alias as expected by the RDUBManager
-    test_file_uploads_sorted = sorted(test_file_uploads, key=lambda x: x.alias)
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+
+    # Set the FileBoxClient method's return value
+    rig.file_upload_box_client.get_file_upload_list.return_value = (  # type: ignore
+        test_file_uploads,
+        len(test_file_uploads),
+    )
 
     # Mock the access client for non-data steward case
     box_id = populated_boxes[0]
@@ -429,14 +432,23 @@ async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[U
 
     # Call the method
     result = await rig.rdub_manager.get_upload_box_files(
-        box_id=box_id, auth_context=USER1_AUTH_CONTEXT
+        box_id=box_id,
+        auth_context=USER1_AUTH_CONTEXT,
+        skip=1,
+        limit=5,
+        sort=["alias", "-state"],
     )
 
-    # Verify the results are sorted by alias
-    assert result == test_file_uploads_sorted
+    # Verify the page preserves the file box service's ordering and total count
+    assert result.items == test_file_uploads
+    assert result.total_count == len(test_file_uploads)
 
-    # Verify the file box client was called
+    # Verify the file box client was called with the pagination and sort args forwarded
     rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
+    _, kwargs = rig.file_upload_box_client.get_file_upload_list.call_args  # type: ignore
+    assert kwargs["skip"] == 1
+    assert kwargs["limit"] == 5
+    assert kwargs["sort"] == ["alias", "-state"]
 
     # Verify access check was performed for non-data steward
     rig.access_client.check_box_access.assert_called_once()  # type: ignore
@@ -874,7 +886,7 @@ async def test_store_accession_map_happy(rig: JointRig, populated_boxes: list[UU
     ]
 
     # Mock the file box client
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
 
     # Create an accession map
     mapping = {
@@ -893,7 +905,7 @@ async def test_store_accession_map_happy(rig: JointRig, populated_boxes: list[UU
     assert not await rig.file_accession_dao.find_all(mapping={}).total_count()
 
     # Verify file box client was not called
-    rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.assert_not_called()  # type: ignore
 
     # Get current box ID
     box = await rig.box_dao.get_by_id(box_id)
@@ -919,7 +931,7 @@ async def test_store_accession_map_happy(rig: JointRig, populated_boxes: list[UU
         assert file_accession_map.file_id == file_id
 
     # Verify file box client was called
-    rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.assert_called_once()  # type: ignore
 
 
 async def test_store_accession_map_invalid_or_unmapped_file_ids(
@@ -951,7 +963,7 @@ async def test_store_accession_map_invalid_or_unmapped_file_ids(
     ]
 
     # Mock the file box client
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
 
     # Duplicate file IDs are caught before the FUB call
     duplicate_id = test_file_ids[0]
@@ -964,7 +976,7 @@ async def test_store_accession_map_invalid_or_unmapped_file_ids(
         )
     assert exc_info.value.error_type == "duplicate_file_ids"
     assert exc_info.value.affected_file_ids == [str(duplicate_id)]
-    rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.assert_not_called()  # type: ignore
 
     # Create an accession map with a file ID that doesn't exist in the box
     invalid_file_id = uuid4()
@@ -983,7 +995,7 @@ async def test_store_accession_map_invalid_or_unmapped_file_ids(
     assert exc_info.value.affected_file_ids == [str(invalid_file_id)]
 
     # Verify file box client was called (only for the unknown_file_ids case)
-    rig.file_upload_box_client.get_file_upload_list.assert_called_once()  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.assert_called_once()  # type: ignore
 
     # Create an accession map that omits a file
     mapping = {"GHGAF001": test_file_ids[0]}
@@ -1093,7 +1105,7 @@ async def test_store_accession_map_filters_cancelled_and_failed(
     ]
 
     # Mock the file box client
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
 
     # Create an accession map for only the valid files
     mapping = {"GHGAF001": test_file_ids[0], "GHGAF004": test_file_ids[3]}
@@ -1157,7 +1169,7 @@ async def test_store_accession_map_file_conflict(
         )
         for i, file_id in enumerate([file_id_a, file_id_b])
     ]
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
 
     # Pre-insert an accession already mapped to a different file ID, plus a second
     # accession that is still unmapped (both must exist to be mappable at all).
@@ -1346,7 +1358,7 @@ async def test_archive_research_data_upload_box_happy(
     )
 
     # Mock the file box client
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
     rig.file_upload_box_client.archive_file_upload_box = AsyncMock()  # type: ignore
 
     # Only map accessions for the active files, leave the cancelled file unmapped
@@ -1468,7 +1480,7 @@ async def test_archive_box_missing_accessions(
     ]
 
     # Mock the file box client to return the file uploads
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
 
     # Insert predetermined file accession mappings
     await rig.file_accession_dao.insert(
@@ -1525,7 +1537,7 @@ async def test_archive_box_file_upload_box_version_error(
     ]
 
     # Mock the file box client
-    rig.file_upload_box_client.get_file_upload_list.return_value = test_file_uploads  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
     rig.file_upload_box_client.archive_file_upload_box = AsyncMock(  # type: ignore
         side_effect=FileBoxClientPort.FUBVersionError(box_id=box_id)
     )
@@ -1761,7 +1773,7 @@ async def test_delete_research_data_upload_box_happy(
     #  uses the file list to know which mappings to delete
     file_ids = [uuid4(), uuid4()]
     files = [_make_file_upload(file_id, i) for i, file_id in enumerate(file_ids)]
-    rig.file_upload_box_client.get_file_upload_list.return_value = files  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = files  # type: ignore
     await rig.file_accession_dao.insert(
         models.FileAccession(pid="GHGAF001", file_id=file_ids[0])
     )
@@ -1817,7 +1829,7 @@ async def test_delete_box_locked_is_allowed(rig: JointRig, populated_boxes: list
     await rig.box_dao.update(box)
 
     # Set up the mocks to return empty file & grant lists
-    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = []  # type: ignore
     rig.access_client.get_upload_access_grants.return_value = []  # type: ignore
 
     # Delete the box
@@ -1893,7 +1905,7 @@ async def test_delete_box_grant_revocation_tolerates_missing(
     box = await rig.box_dao.get_by_id(box_id)
 
     # Set up the mocks so they returns no file list, but do return a couple of grant IDs
-    rig.file_upload_box_client.get_file_upload_list.return_value = []  # type: ignore
+    rig.file_upload_box_client.get_all_file_uploads.return_value = []  # type: ignore
     rig.access_client.get_upload_access_grants.return_value = [  # type: ignore
         Mock(id=uuid4()),
         Mock(id=uuid4()),

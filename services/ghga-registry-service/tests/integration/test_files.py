@@ -86,12 +86,15 @@ async def test_submission(
     )
     httpx_mock.add_response(
         method="GET",
-        url=f"{joint_fixture.config.ucs_url}/boxes/{file_upload_box_id}/uploads",
+        url=f"{joint_fixture.config.ucs_url}/boxes/{file_upload_box_id}/uploads?skip=0&limit=100",
         status_code=200,
-        json=[
-            file_upload1.model_dump(mode="json"),
-            file_upload2.model_dump(mode="json"),
-        ],
+        json={
+            "items": [
+                file_upload1.model_dump(mode="json"),
+                file_upload2.model_dump(mode="json"),
+            ],
+            "total_count": 2,
+        },
     )
 
     # Prepare the HTTP request attributes

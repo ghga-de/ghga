@@ -34,8 +34,8 @@ from rs.constants import VALID_STATE_TRANSITIONS
 from rs.core.models import (
     PID,
     BoxRetrievalResults,
+    BoxUploadsPage,
     FileUploadBox,
-    FileUploadWithAccession,
     GrantId,
     GrantWithBoxInfo,
     ResearchDataUploadBox,
@@ -333,7 +333,7 @@ class RDUBManager(RDUBManagerPort):
         box_id = box.id
 
         # Get files list from File Box API - this always gets the latest data
-        files = await self._file_upload_box_client.get_file_upload_list(
+        files = await self._file_upload_box_client.get_all_file_uploads(
             box_id=box.file_upload_box_id
         )
 
@@ -603,10 +603,20 @@ class RDUBManager(RDUBManagerPort):
         *,
         box_id: UUID4,
         auth_context: AuthContext,
-    ) -> list[FileUploadWithAccession]:
-        """Get list of file uploads for a research data upload box.
+        skip: int = 0,
+        limit: int | None = None,
+        sort: list[str] | None = None,
+    ) -> BoxUploadsPage:
+        """Get a page of file uploads for a research data upload box.
 
-        Returns a list of file uploads in the upload box.
+        `skip`, `limit`, and `sort` are forwarded to the file box service's paginated
+        endpoint. `sort` is a list of FileUpload field names to sort by, each optionally
+        prefixed with a dash to denote descending order; when omitted, the file box
+        service's default ordering (by alias) is used.
+        Returns a BoxUploadsPage with the page's file uploads and the total unpaginated
+        count.
+        It is assumed that `skip`, `limit`, and `sort` are validated beforehand - they
+        are not validated in this method.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.
@@ -619,22 +629,20 @@ class RDUBManager(RDUBManagerPort):
             box_id=box_id, auth_context=auth_context
         )
 
-        # Get file list from file box service
-        file_uploads = await self._file_upload_box_client.get_file_upload_list(
-            box_id=upload_box.file_upload_box_id
+        # Get the requested page of file uploads from the file box service
+        file_uploads, total = await self._file_upload_box_client.get_file_upload_list(
+            box_id=upload_box.file_upload_box_id, skip=skip, limit=limit, sort=sort
         )
 
-        # Get accessions from database
-        file_ids = {f.id for f in file_uploads}
+        # Get accessions from database and attach them to the page's file uploads
         accession_map = await self._file_controller.get_accessions_by_file_ids(
-            file_ids=file_ids
+            file_ids={f.id for f in file_uploads}
         )
-        for i, file_upload in enumerate(file_uploads):
+        for file_upload in file_uploads:
             if file_upload.id in accession_map:
-                file_uploads[i].accession = accession_map[file_upload.id]
+                file_upload.accession = accession_map[file_upload.id]
 
-        # Sort files by alias for predictability
-        return sorted(file_uploads, key=lambda x: x.alias)
+        return BoxUploadsPage(items=file_uploads, total_count=total)
 
     async def upsert_file_upload_box(self, file_upload_box: FileUploadBox) -> None:
         """Handle FileUploadBox update events from file box service.
@@ -910,7 +918,7 @@ class RDUBManager(RDUBManagerPort):
 
         # Get a list of the FileUploads tied to this box
         fub_id = box.file_upload_box_id
-        files = await self._file_upload_box_client.get_file_upload_list(
+        files = await self._file_upload_box_client.get_all_file_uploads(
             box_id=fub_id, missing_box_ok=True
         )
 
@@ -1046,7 +1054,7 @@ class RDUBManager(RDUBManagerPort):
             )
 
         # Get files list from File Box API
-        files = await self._file_upload_box_client.get_file_upload_list(
+        files = await self._file_upload_box_client.get_all_file_uploads(
             box_id=box.file_upload_box_id
         )
 

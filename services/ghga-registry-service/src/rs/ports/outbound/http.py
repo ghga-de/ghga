@@ -166,11 +166,43 @@ class FileBoxClientPort(ABC):
 
     @abstractmethod
     async def get_file_upload_list(
+        self,
+        *,
+        box_id: UUID4,
+        skip: int = 0,
+        limit: int | None = None,
+        sort: list[str] | None = None,
+        missing_box_ok: bool = False,
+    ) -> tuple[list[FileUploadWithAccession], int]:
+        """Get a page of file uploads in a FileUploadBox.
+
+        Returns a 2-tuple of the page's file uploads and the total (unpaginated) count.
+        It is assumed that `skip`, `limit`, and `sort` are validated beforehand - they
+        are not validated in this method.
+
+        `skip`, `limit`, and `sort` are forwarded to the owning service's paginated
+        endpoint. `sort` is a list of FileUpload field names to sort by, each optionally
+        prefixed with a dash to denote descending order. When omitted, the owning
+        service's default ordering (by alias) is used.
+
+        If the FileUploadBox does not exist and `missing_box_ok` is set to True, this
+        method will return an empty page. Otherwise it will raise an OperationError.
+
+        Raises:
+            OperationError if there's a problem with the operation.
+        """
+        ...
+
+    @abstractmethod
+    async def get_all_file_uploads(
         self, *, box_id: UUID4, missing_box_ok: bool = False
     ) -> list[FileUploadWithAccession]:
-        """Get list of file uploads in a FileUploadBox.
+        """Get every file upload in a FileUploadBox by paging through the endpoint.
 
-        If the FileUploadBox does not exist and missing_box_ok is set to True, this
+        Use this instead of `get_file_upload_list` when the complete set of uploads is
+        required (e.g. for deletion or validation) rather than a single page.
+
+        If the FileUploadBox does not exist and `missing_box_ok` is set to True, this
         method will return an empty list. Otherwise it will raise an OperationError.
 
         Raises:

@@ -20,7 +20,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import UUID4, NonNegativeInt
+from pydantic import UUID4, AfterValidator, NonNegativeInt
 
 from rs.adapters.inbound.fastapi_ import dummies
 from rs.adapters.inbound.fastapi_.auth import StewardAuthContext, UserAuthContext
@@ -41,8 +41,9 @@ from rs.constants import TRACER
 from rs.core.models import (
     AccessionMapRequest,
     BoxRetrievalResults,
+    BoxUploadsPage,
     CreateUploadBoxRequest,
-    FileUploadWithAccession,
+    FileUpload,
     ResearchDataUploadBox,
     UpdateUploadBoxRequest,
     UploadBoxState,
@@ -52,6 +53,32 @@ from rs.ports.inbound.rdub_manager import RDUBManagerPort
 log = logging.getLogger(__name__)
 
 box_router = APIRouter()
+
+# The fields that file uploads may be sorted by (a leading dash denotes descending order)
+_SORTABLE_FILE_UPLOAD_FIELDS = frozenset(FileUpload.model_fields)
+
+
+def _ensure_valid_sort_fields(sort: str) -> str:
+    """Ensure each comma-separated sort spec references a FileUpload field.
+
+    A "-" prefix on a spec (denoting descending order) is ignored for validation.
+    An empty string is allowed and means no sort was specified.
+    """
+    if not sort:
+        return sort
+    invalid_fields = [
+        field_name
+        for field_name in (spec.removeprefix("-") for spec in sort.split(","))
+        if field_name not in _SORTABLE_FILE_UPLOAD_FIELDS
+    ]
+    if invalid_fields:
+        raise ValueError(
+            f"sort references nonexistent FileUpload fields: {', '.join(invalid_fields)}"
+        )
+    return sort
+
+
+SortString = Annotated[str, AfterValidator(_ensure_valid_sort_fields)]
 
 
 @box_router.delete(
@@ -251,29 +278,50 @@ async def get_research_data_upload_box(
 @box_router.get(
     "/{box_id}/uploads",
     summary="List files in upload box",
-    description="List the details of all files uploads for a research data upload box.",
-    response_model=list[FileUploadWithAccession],
+    description=(
+        "Retrieve a paginated list of file uploads for an upload box. By"
+        + " default, up to 10 results will be returned at a time. The max is 1000."
+        + " Use the `sort` parameter to control ordering: provide one or more"
+        + " FileUpload field names, optionally prefixed with '-' for descending order."
+        + " By default, FileUploads are sorted by alias."
+    ),
+    response_model=BoxUploadsPage,
     responses={
         200: {
-            "model": list[FileUploadWithAccession],
+            "model": BoxUploadsPage,
             "description": "File upload information successfully retrieved.",
         },
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
         404: {"description": "Upload box not found."},
+        422: {"description": "Validation error in query parameters."},
     },
 )
 @TRACER.start_as_current_span("routes.list_upload_box_files")
-async def list_upload_box_files(
+async def list_upload_box_files(  # noqa: PLR0913
     box_id: UUID,
     registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
-) -> list[FileUploadWithAccession]:
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=0, le=1000)] = 10,
+    sort: Annotated[
+        SortString | None,
+        Query(
+            description="A comma-separated list of FileUpload field names defining"
+            + " the sort order, where field names prefixed with '-' indicate"
+            + " descending order (e.g. 'alias,-decrypted_size')."
+            + " Defaults to sorting by alias in ascending order."
+        ),
+    ] = None,
+) -> BoxUploadsPage:
     """List file uploads in an upload box."""
     try:
         return await registry.rdub_manager.get_upload_box_files(
             box_id=box_id,
             auth_context=auth_context,
+            skip=skip,
+            limit=limit,
+            sort=sort.split(",") if sort else ["alias"],
         )
     except RDUBManagerPort.BoxAccessError as err:
         raise HttpNotAuthorizedError() from err

@@ -50,6 +50,26 @@ components:
       - boxes
       title: BoxRetrievalResults
       type: object
+    BoxUploadsPage:
+      description: A page of file uploads for an upload box, plus the total unpaginated
+        count.
+      properties:
+        items:
+          description: The file uploads on this page, in the requested sort order
+            (alias by default)
+          items:
+            $ref: '#/components/schemas/FileUploadWithAccession'
+          title: Items
+          type: array
+        total_count:
+          description: The total number of file uploads in the box (unpaginated)
+          title: Total Count
+          type: integer
+      required:
+      - items
+      - total_count
+      title: BoxUploadsPage
+      type: object
     CreateUploadBoxRequest:
       description: Request model for creating a new research data upload box.
       properties:
@@ -611,7 +631,7 @@ info:
   description: A service providing a web-accessible management and auth layer over
     upload-path file services.
   title: GHGA Registry Service
-  version: 4.0.2
+  version: 5.0.0
 openapi: 3.1.0
 paths:
   /health:
@@ -1001,8 +1021,11 @@ paths:
       - ResearchDataUploadBoxes
   /upload-boxes/{box_id}/uploads:
     get:
-      description: List the details of all files uploads for a research data upload
-        box.
+      description: 'Retrieve a paginated list of file uploads for an upload box. By
+        default, up to 10 results will be returned at a time. The max is 1000. Use
+        the `sort` parameter to control ordering: provide one or more FileUpload field
+        names, optionally prefixed with ''-'' for descending order. By default, FileUploads
+        are sorted by alias.'
       operationId: list_upload_box_files_upload_boxes__box_id__uploads_get
       parameters:
       - in: path
@@ -1012,16 +1035,45 @@ paths:
           format: uuid
           title: Box Id
           type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          maximum: 1000
+          minimum: 0
+          title: Limit
+          type: integer
+      - description: A comma-separated list of FileUpload field names defining the
+          sort order, where field names prefixed with '-' indicate descending order
+          (e.g. 'alias,-decrypted_size'). Defaults to sorting by alias in ascending
+          order.
+        in: query
+        name: sort
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: A comma-separated list of FileUpload field names defining the
+            sort order, where field names prefixed with '-' indicate descending order
+            (e.g. 'alias,-decrypted_size'). Defaults to sorting by alias in ascending
+            order.
+          title: Sort
       responses:
         '200':
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/FileUploadWithAccession'
-                title: Response 200 List Upload Box Files Upload Boxes  Box Id  Uploads
-                  Get
-                type: array
+                $ref: '#/components/schemas/BoxUploadsPage'
           description: File upload information successfully retrieved.
         '401':
           description: Not authenticated.
@@ -1030,11 +1082,7 @@ paths:
         '404':
           description: Upload box not found.
         '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
+          description: Validation error in query parameters.
       security:
       - HTTPBearer: []
       summary: List files in upload box
