@@ -47,6 +47,20 @@ fe-build:
 fe-test:
     cd frontend/data-portal && pnpm test
 
+fe-lint:
+    cd frontend/data-portal && pnpm lint
+
+# Run the data-portal dev server with MOCKED api + oidc (MSW) — no backend needed.
+# Generates public/config.js (mock_api=true) and serves on http://localhost:8080.
+# (Bare `pnpm start` won't work on its own: it skips the config.js generation this
+# launcher does — that's why the server needs run.js, not plain `ng serve`.)
+fe-dev:
+    cd frontend/data-portal && node run.js --dev
+
+# Run the data-portal against a real backend (default: staging) instead of mocks.
+fe-dev-backend:
+    cd frontend/data-portal && node run.js --dev --with-backend
+
 # --- Migration (see docs/migration/runbook.md) ------------------------------------------
 # Dry-run the history-preserving import from the local .legacy_repos snapshot.
 import-from-snapshot:

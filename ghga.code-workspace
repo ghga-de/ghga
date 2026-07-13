@@ -138,6 +138,15 @@
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
-    "python.analysis.autoImportCompletions": true
+    "python.analysis.autoImportCompletions": true,
+    // Ruff is the Python formatter/linter (mirrors `just fmt`); scope it to .py so the
+    // now-also-installed Prettier doesn't trigger a "multiple formatters" prompt.
+    "[python]": {
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports.ruff": "explicit"
+      }
+    }
   }
 }
