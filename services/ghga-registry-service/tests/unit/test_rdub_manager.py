@@ -449,9 +449,23 @@ async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[U
     assert kwargs["skip"] == 1
     assert kwargs["limit"] == 5
     assert kwargs["sort"] == ["alias", "-state"]
+    assert kwargs["with_checksums"] is False
 
     # Verify access check was performed for non-data steward
     rig.access_client.check_box_access.assert_called_once()  # type: ignore
+
+    # Verify with_checksums=True is forwarded to the file box client when requested
+    result = await rig.rdub_manager.get_upload_box_files(
+        box_id=box_id,
+        auth_context=USER1_AUTH_CONTEXT,
+        skip=1,
+        limit=5,
+        sort=["alias", "-state"],
+        with_checksums=True,
+    )
+    assert result.items == test_file_uploads
+    _, kwargs = rig.file_upload_box_client.get_file_upload_list.call_args  # type: ignore
+    assert kwargs["with_checksums"] is True
 
 
 async def test_get_upload_box_files_access_error(

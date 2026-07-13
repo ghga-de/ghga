@@ -598,7 +598,7 @@ class RDUBManager(RDUBManagerPort):
             ),
         )
 
-    async def get_upload_box_files(
+    async def get_upload_box_files(  # noqa: PLR0913
         self,
         *,
         box_id: UUID4,
@@ -606,6 +606,7 @@ class RDUBManager(RDUBManagerPort):
         skip: int = 0,
         limit: int | None = None,
         sort: list[str] | None = None,
+        with_checksums: bool = False,
     ) -> BoxUploadsPage:
         """Get a page of file uploads for a research data upload box.
 
@@ -617,6 +618,9 @@ class RDUBManager(RDUBManagerPort):
         count.
         It is assumed that `skip`, `limit`, and `sort` are validated beforehand - they
         are not validated in this method.
+
+        `with_checksums` determines whether the per-part checksum lists
+        (`encrypted_parts_md5` and `encrypted_parts_sha256`) are populated or null.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.
@@ -631,7 +635,11 @@ class RDUBManager(RDUBManagerPort):
 
         # Get the requested page of file uploads from the file box service
         file_uploads, total = await self._file_upload_box_client.get_file_upload_list(
-            box_id=upload_box.file_upload_box_id, skip=skip, limit=limit, sort=sort
+            box_id=upload_box.file_upload_box_id,
+            skip=skip,
+            limit=limit,
+            sort=sort,
+            with_checksums=with_checksums,
         )
 
         # Get accessions from database and attach them to the page's file uploads

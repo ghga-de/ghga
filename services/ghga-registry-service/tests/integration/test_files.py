@@ -86,7 +86,7 @@ async def test_submission(
     )
     httpx_mock.add_response(
         method="GET",
-        url=f"{joint_fixture.config.ucs_url}/boxes/{file_upload_box_id}/uploads?skip=0&limit=100",
+        url=f"{joint_fixture.config.ucs_url}/boxes/{file_upload_box_id}/uploads?skip=0&limit=100&with_checksums=false",
         status_code=200,
         json={
             "items": [

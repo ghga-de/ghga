@@ -468,18 +468,24 @@ async def test_list_upload_box_files(
         assert kwargs["limit"] == 10
         # No sort specified, so it defaults to alias ascending
         assert kwargs["sort"] == ["alias"]
+        # with_checksums defaults to False when not specified
+        assert kwargs["with_checksums"] is False
 
         # Verify that a comma-separated sort value is split and passed to the RDUBManager
+        #  also check that `with_checksums` is sent to the RDUBManager
         rdub_manager.reset_mock()
         rdub_manager.rdub_manager.get_upload_box_files.return_value = BoxUploadsPage(
             items=file_list, total_count=len(file_list)
         )
         response = await rest_client.get(
-            url, headers=user_auth_headers, params={"sort": "alias,-state"}
+            url,
+            headers=user_auth_headers,
+            params={"sort": "alias,-state", "with_checksums": "true"},
         )
         assert response.status_code == 200
         _, kwargs = rdub_manager.rdub_manager.get_upload_box_files.call_args
         assert kwargs["sort"] == ["alias", "-state"]
+        assert kwargs["with_checksums"] is True
 
         # handle box access error from core
         rdub_manager.reset_mock()

@@ -240,7 +240,7 @@ class RDUBManagerPort(ABC):
         ...
 
     @abstractmethod
-    async def get_upload_box_files(
+    async def get_upload_box_files(  # noqa: PLR0913
         self,
         *,
         box_id: UUID4,
@@ -248,6 +248,7 @@ class RDUBManagerPort(ABC):
         skip: int = 0,
         limit: int | None = None,
         sort: list[str] | None = None,
+        with_checksums: bool = False,
     ) -> BoxUploadsPage:
         """Get a page of file uploads for a research data upload box.
 
@@ -259,6 +260,9 @@ class RDUBManagerPort(ABC):
         count.
         It is assumed that `skip`, `limit`, and `sort` are validated beforehand - they
         are not validated in this method.
+
+        `with_checksums` determines whether the per-part checksum lists
+        (`encrypted_parts_md5` and `encrypted_parts_sha256`) are populated or null.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.

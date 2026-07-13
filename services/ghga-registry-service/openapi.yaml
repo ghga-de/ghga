@@ -1068,6 +1068,19 @@ paths:
             (e.g. 'alias,-decrypted_size'). Defaults to sorting by alias in ascending
             order.
           title: Sort
+      - description: Whether to include the per-part checksum lists (encrypted_parts_md5
+          and encrypted_parts_sha256) on each file upload. Defaults to False, in which
+          case those fields are returned as null.
+        in: query
+        name: with_checksums
+        required: false
+        schema:
+          default: false
+          description: Whether to include the per-part checksum lists (encrypted_parts_md5
+            and encrypted_parts_sha256) on each file upload. Defaults to False, in
+            which case those fields are returned as null.
+          title: With Checksums
+          type: boolean
       responses:
         '200':
           content:

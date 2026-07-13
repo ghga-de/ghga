@@ -109,7 +109,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     # Brief detour: Ensure getting files list raises an error if the FUB doesn't exist
     httpx_mock.add_response(
         method="GET",
-        url=f"{file_box_service_url}/boxes/{file_upload_box_id}/uploads?skip=0",
+        url=f"{file_box_service_url}/boxes/{file_upload_box_id}/uploads?skip=0&with_checksums=false",
         status_code=404,
         json={"exception_id": "boxNotFound"},
     )
@@ -236,7 +236,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     # Mock the file box service to return the list of files
     httpx_mock.add_response(
         method="GET",
-        url=f"{file_box_service_url}/boxes/{file_upload_box_id}/uploads?skip=0&limit=100",
+        url=f"{file_box_service_url}/boxes/{file_upload_box_id}/uploads?skip=0&limit=100&with_checksums=false",
         status_code=200,
         json={
             "items": [

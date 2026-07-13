@@ -484,13 +484,14 @@ class FileBoxClient(FileBoxClientPort):
             )
             raise self.OperationError("Failed to unlock FileUploadBox.")
 
-    async def get_file_upload_list(
+    async def get_file_upload_list(  # noqa: PLR0913
         self,
         *,
         box_id: UUID4,
         skip: int = 0,
         limit: int | None = None,
         sort: list[str] | None = None,
+        with_checksums: bool = False,
         missing_box_ok: bool = False,
     ) -> tuple[list[FileUploadWithAccession], int]:
         """Get a page of file uploads in a FileUploadBox.
@@ -504,6 +505,11 @@ class FileBoxClient(FileBoxClientPort):
         prefixed with a dash to denote descending order. When omitted, the owning
         service's default ordering (by alias) is used.
 
+        `with_checksums` is forwarded to the owning service to control whether the
+        per-part checksum lists (`encrypted_parts_md5` and `encrypted_parts_sha256`) are
+        included on each file upload. When False, the owning service returns None for
+        those fields.
+
         If the FileUploadBox does not exist and `missing_box_ok` is set to True, this
         method will return an empty page. Otherwise it will raise an OperationError.
 
@@ -512,7 +518,7 @@ class FileBoxClient(FileBoxClientPort):
         """
         wot = ViewFileBoxWorkOrder(box_id=box_id)
         headers = self._auth_header(wot)
-        params: dict[str, Any] = {"skip": skip}
+        params: dict[str, Any] = {"skip": skip, "with_checksums": with_checksums}
         if limit is not None:
             params["limit"] = limit
         if sort:
@@ -558,12 +564,18 @@ class FileBoxClient(FileBoxClientPort):
         return file_uploads, total_count
 
     async def get_all_file_uploads(
-        self, *, box_id: UUID4, missing_box_ok: bool = False
+        self,
+        *,
+        box_id: UUID4,
+        with_checksums: bool = False,
+        missing_box_ok: bool = False,
     ) -> list[FileUploadWithAccession]:
         """Get every file upload in a FileUploadBox by paging through the endpoint.
 
         Use this instead of `get_file_upload_list` when the complete set of uploads is
         required (e.g. for deletion or validation) rather than a single page.
+
+        `with_checksums` determines if per-part checksum lists are populated or `None`.
 
         If the FileUploadBox does not exist and `missing_box_ok` is set to True, this
         method will return an empty list. Otherwise it will raise an OperationError.
@@ -578,6 +590,7 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
                 skip=skip,
                 limit=UCS_UPLOADS_PAGE_SIZE,
+                with_checksums=with_checksums,
                 missing_box_ok=missing_box_ok,
             )
             file_uploads.extend(page)

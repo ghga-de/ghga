@@ -313,6 +313,14 @@ async def list_upload_box_files(  # noqa: PLR0913
             + " Defaults to sorting by alias in ascending order."
         ),
     ] = None,
+    with_checksums: Annotated[
+        bool,
+        Query(
+            description="Whether to include the per-part checksum lists"
+            + " (encrypted_parts_md5 and encrypted_parts_sha256) on each file upload."
+            + " Defaults to False, in which case those fields are returned as null."
+        ),
+    ] = False,
 ) -> BoxUploadsPage:
     """List file uploads in an upload box."""
     try:
@@ -322,6 +330,7 @@ async def list_upload_box_files(  # noqa: PLR0913
             skip=skip,
             limit=limit,
             sort=sort.split(",") if sort else ["alias"],
+            with_checksums=with_checksums,
         )
     except RDUBManagerPort.BoxAccessError as err:
         raise HttpNotAuthorizedError() from err
