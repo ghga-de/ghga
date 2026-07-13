@@ -10,10 +10,18 @@ integration tests on Kubernetes.
 ## Start here
 - **[architecture/overview.md](architecture/overview.md)** — the target architecture (layout,
   uv workspace, versioning, Helm, test bed, CI/CD), key tensions and their resolutions.
+- **[architecture/metadata-and-file-journeys.md](architecture/metadata-and-file-journeys.md)** —
+  current-state reference for how metadata and files flow (submission, accessions, upload,
+  file mapping, serving). Read before touching those paths.
 - **[migration/runbook.md](migration/runbook.md)** — phased, executable migration with a cutover
   checklist.
 - **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the
   [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
+
+## Features
+- **[features/early-data-lifecycle.md](features/early-data-lifecycle.md)** — early rollout of the
+  GHGA data lifecycle (study lifecycle PIDs + revisions, reuse-friendly file mapping) on the
+  existing LinkML/offline stack. Design + per-component change list.
 
 ## Decisions (ADRs)
 | # | Decision |
