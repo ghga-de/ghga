@@ -415,6 +415,18 @@ async def test_get_box_uploads(rig: JointRig):
     assert [r.alias for r in file_uploads] == ["file0", "file1", "file2"]
     assert all(r.id in file_ids for r in file_uploads)
 
+    # The part checksum lists should be stripped by default
+    assert all(r.encrypted_parts_md5 is None for r in file_uploads)
+    assert all(r.encrypted_parts_sha256 is None for r in file_uploads)
+
+    # The part checksum lists should be included when with_checksums is True,
+    #  and stripping them must not have modified the stored data
+    file_uploads, _ = await controller.get_box_file_info(
+        box_id=box_id, with_checksums=True
+    )
+    assert all(r.encrypted_parts_md5 == ["abc123"] for r in file_uploads)
+    assert all(r.encrypted_parts_sha256 == ["def456"] for r in file_uploads)
+
     # Get the file uploads sorted by alias in descending order
     file_uploads, total_count = await controller.get_box_file_info(
         box_id=box_id, sort=["-alias"]

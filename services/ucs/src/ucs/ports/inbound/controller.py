@@ -465,6 +465,7 @@ class UploadControllerPort(ABC):
         skip: int = 0,
         limit: int | None = None,
         sort: list[str] | None = None,
+        with_checksums: bool = False,
     ) -> tuple[list[FileUpload], int]:
         """Return a page of FileUploads for a FileUploadBox.
 
@@ -474,6 +475,9 @@ class UploadControllerPort(ABC):
         sorted by alias in ascending order. If `sort` does not reference the alias
         field, alias (ascending) is appended as a tiebreaker so the resulting
         order is stable.
+
+        The flag `with_checksums` determines whether the part checksum lists
+        (`encrypted_parts_md5` and `encrypted_parts_sha256`) are populated.
 
         Raises:
         - `PaginationError` if skip and/or limit are invalid.

@@ -342,6 +342,14 @@ async def get_box_uploads(  # noqa: PLR0913
             + " tiebreaker to guarantee a stable order."
         ),
     ] = None,
+    with_checksums: Annotated[
+        bool,
+        Query(
+            description="If True, include the part checksum lists"
+            + " (encrypted_parts_md5 and encrypted_parts_sha256) in the returned"
+            + " FileUploads. They are omitted by default as they can be very large."
+        ),
+    ] = False,
 ) -> rest_models.BoxUploadsPage:
     """Retrieve a paginated list of FileUploads for a FileUploadBox.
 
@@ -356,6 +364,7 @@ async def get_box_uploads(  # noqa: PLR0913
             skip=skip,
             limit=limit,
             sort=sort.split(",") if sort else ["alias"],
+            with_checksums=with_checksums,
         )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error

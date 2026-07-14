@@ -1063,6 +1063,19 @@ paths:
             order. If 'alias' is not referenced, it is appended as an ascending tiebreaker
             to guarantee a stable order.
           title: Sort
+      - description: If True, include the part checksum lists (encrypted_parts_md5
+          and encrypted_parts_sha256) in the returned FileUploads. They are omitted
+          by default as they can be very large.
+        in: query
+        name: with_checksums
+        required: false
+        schema:
+          default: false
+          description: If True, include the part checksum lists (encrypted_parts_md5
+            and encrypted_parts_sha256) in the returned FileUploads. They are omitted
+            by default as they can be very large.
+          title: With Checksums
+          type: boolean
       responses:
         '200':
           content:

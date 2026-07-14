@@ -215,7 +215,7 @@ async def test_get_box_uploads_response_format(
     assert body["items"][0]["alias"] == "test0.bam"
     assert body["items"][1]["alias"] == "test1.vcf"
     core_mock.get_box_file_info.assert_awaited_with(
-        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"]
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"], with_checksums=False
     )
 
     # Test with skip and limit parameters explicitly set
@@ -229,7 +229,7 @@ async def test_get_box_uploads_response_format(
     assert len(body["items"]) == 1
     assert body["items"][0]["alias"] == "test1.vcf"
     core_mock.get_box_file_info.assert_awaited_with(
-        box_id=TEST_BOX_ID, skip=3, limit=1, sort=["alias"]
+        box_id=TEST_BOX_ID, skip=3, limit=1, sort=["alias"], with_checksums=False
     )
 
     # Test that the comma-separated sort parameter is forwarded as a list
@@ -239,7 +239,11 @@ async def test_get_box_uploads_response_format(
     )
     assert response.status_code == 200
     core_mock.get_box_file_info.assert_awaited_with(
-        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["-alias", "state"]
+        box_id=TEST_BOX_ID,
+        skip=0,
+        limit=10,
+        sort=["-alias", "state"],
+        with_checksums=False,
     )
 
     # An empty sort parameter is treated the same as omitting it
@@ -247,7 +251,17 @@ async def test_get_box_uploads_response_format(
     response = await rest_client.get(url, params={"sort": ""}, headers=token_header)
     assert response.status_code == 200
     core_mock.get_box_file_info.assert_awaited_with(
-        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"]
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"], with_checksums=False
+    )
+
+    # The with_checksums query parameter is forwarded to the controller
+    core_mock.get_box_file_info.return_value = ([file_upload_a, file_upload_b], 5)
+    response = await rest_client.get(
+        url, params={"with_checksums": True}, headers=token_header
+    )
+    assert response.status_code == 200
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"], with_checksums=True
     )
 
     # skip beyond all results  controller returns empty page but preserves total_count
