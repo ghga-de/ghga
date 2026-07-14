@@ -20,6 +20,9 @@ SERVICE_NAME = "ucs"
 TRACER = trace.get_tracer_provider().get_tracer(SERVICE_NAME)
 FILE_UPLOAD_BOXES_COLLECTION = "fileUploadBoxes"
 FILE_UPLOADS_COLLECTION = "fileUploads"
+# FileUpload states that count toward a box's file_count and size (i.e. files that
+#  have finished uploading and have not been cancelled or failed)
+COUNTED_UPLOAD_STATES = ("inbox", "interrogated", "awaiting_archival", "archived")
 MIN_PART_SIZE = 5 * 1024**2
 MAX_PART_SIZE = 5 * 1024**3
 MAX_PART_COUNT = 10000

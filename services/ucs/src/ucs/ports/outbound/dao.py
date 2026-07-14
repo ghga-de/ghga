@@ -20,11 +20,13 @@ from abc import ABC, abstractmethod
 
 from hexkit.protocols.dao import Dao, ResourceAlreadyExistsError, ResourceNotFoundError
 from hexkit.protocols.daopub import DaoPublisher
+from pydantic import UUID4
 
 from ucs.core import models
 from ucs.core.models import FileUploadBox, UploadActivity
 
 __all__ = [
+    "BoxStatsAggregatorPort",
     "FileUploadBoxDao",
     "FileUploadDao",
     "ResourceAlreadyExistsError",
@@ -36,6 +38,21 @@ __all__ = [
 FileUploadBoxDao = DaoPublisher[FileUploadBox]
 FileUploadDao = DaoPublisher[models.FileUpload]
 UploadActivityDao = Dao[UploadActivity]
+
+
+class BoxStatsAggregatorPort(ABC):
+    """Port for computing FileUploadBox statistics directly from the datastore.
+
+    Implementations compute the stats server-side to avoid loading and deserializing
+    full FileUpload documents.
+    """
+
+    @abstractmethod
+    async def compute_box_stats(self, *, box_id: UUID4) -> tuple[int, int]:
+        """Return a `(file_count, total_decrypted_size)` tuple aggregated over the
+        FileUploads in the given box that count toward its stats (i.e. files that have
+        finished uploading and are not cancelled or failed).
+        """
 
 
 class UploadDaoPublisherFactoryPort(ABC):

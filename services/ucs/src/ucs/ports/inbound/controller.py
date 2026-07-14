@@ -148,6 +148,13 @@ class UploadControllerPort(ABC):
             )
             super().__init__(msg)
 
+    class BoxStatsCalcError(UploadError):
+        """Raised when the statistics for a FileUploadBox cannot be calculated."""
+
+        def __init__(self, *, box_id: UUID4):
+            msg = f"Failed to calculate statistics for FileUploadBox {box_id}."
+            super().__init__(msg)
+
     class BoxMaxSizeTooLowError(UploadError):
         """Raised when the requested max_size is less than the box's current committed size."""
 

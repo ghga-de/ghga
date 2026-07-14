@@ -15,6 +15,7 @@
 
 """Tests that check the REST API's behavior and auth handling"""
 
+import logging
 from dataclasses import dataclass
 from unittest.mock import AsyncMock
 from uuid import UUID
@@ -619,9 +620,19 @@ async def test_create_box_endpoint_error_handling(
                 box_id=TEST_BOX_ID, file_ids=[(TEST_FILE_ID, "test_file")]
             ),
         ),
+        (
+            UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpInternalError(),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
-    ids=["BoxNotFound", "BoxVersionOutdated", "IncompleteUploads", "InternalError"],
+    ids=[
+        "BoxNotFound",
+        "BoxVersionOutdated",
+        "IncompleteUploads",
+        "BoxStatsCalcError",
+        "InternalError",
+    ],
 )
 async def test_update_box_endpoint_error_handling(
     config: ConfigFixture,
@@ -929,6 +940,10 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
             ),
             http_exceptions.HttpFileUploadStateError(file_id=TEST_FILE_ID),
         ),
+        (
+            UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpInternalError(),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
     ids=[
@@ -938,6 +953,7 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
         "UploadCompletionError",
         "UploadSizeMismatchError",
         "FileUploadStateError",
+        "BoxStatsCalcError",
         "InternalError",
     ],
 )
@@ -969,6 +985,42 @@ async def test_complete_file_upload_endpoint_error_translation(
     assert response.json()["description"] == str(http_error)
 
 
+async def test_box_stats_calc_error_not_re_logged_by_api(
+    config: ConfigFixture, app_fixture: AppFixture, caplog
+):
+    """BoxStatsCalcError is already logged by the controller, so the API layer must
+    translate it to a 500 without emitting another error log of its own.
+    """
+    routes_logger = "ucs.adapters.inbound.fastapi_.routes"
+    wps_jwk = config.wps_jwk
+    body: dict = {
+        "decrypted_sha256": "unencrypted_checksum",
+        "encrypted_md5": "encrypted_checksum",
+        "encrypted_parts_md5": ["abc123"],
+        "encrypted_parts_sha256": ["def456"],
+    }
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.complete_file_upload.side_effect = UploadControllerPort.BoxStatsCalcError(
+        box_id=TEST_BOX_ID
+    )
+    token_header = utils.close_file_token_header(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=wps_jwk
+    )
+    with caplog.at_level(logging.ERROR, logger=routes_logger):
+        response = await rest_client.patch(
+            f"/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}",
+            json=body,
+            headers=token_header,
+        )
+    assert response.json()["description"] == str(http_exceptions.HttpInternalError())
+    assert not [
+        record
+        for record in caplog.records
+        if record.name == routes_logger and record.levelno >= logging.ERROR
+    ]
+
+
 @pytest.mark.parametrize(
     "core_error, http_error",
     [
@@ -996,6 +1048,10 @@ async def test_complete_file_upload_endpoint_error_translation(
             ),
             http_exceptions.HttpUploadAbortError(),
         ),
+        (
+            UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpInternalError(),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
     ids=[
@@ -1004,6 +1060,7 @@ async def test_complete_file_upload_endpoint_error_translation(
         "UnknownStorageAlias",
         "FileUploadNotFound",
         "UploadAbortError",
+        "BoxStatsCalcError",
         "InternalError",
     ],
 )

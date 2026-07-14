@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager, nullcontext
 from fastapi import FastAPI
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
-from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongodb import ConfiguredMongoClient, MongoDbDaoFactory
 from hexkit.providers.mongokafka.provider import MongoKafkaDaoPublisherFactory
 
 from ucs.adapters.inbound.event_sub import EventSubTranslator
@@ -30,9 +30,11 @@ from ucs.adapters.inbound.fastapi_.configure import get_configured_app
 from ucs.adapters.inbound.fastapi_.http_authorization import (
     JWTAuthContextProviderBundle,
 )
+from ucs.adapters.outbound.box_stats import MongoDbBoxStatsAggregator
 from ucs.adapters.outbound.dao import UploadDaoPublisherFactory, get_upload_activity_dao
 from ucs.adapters.outbound.s3 import S3Client
 from ucs.config import Config
+from ucs.constants import FILE_UPLOADS_COLLECTION
 from ucs.core.controller import UploadController
 from ucs.ports.inbound.controller import UploadControllerPort
 
@@ -62,6 +64,7 @@ async def prepare_core(
     async with (
         MongoKafkaDaoPublisherFactory.construct(config=config) as dao_pub_factory,
         MongoDbDaoFactory.construct(config=config) as dao_factory,
+        ConfiguredMongoClient(config=config) as mongo_client,
     ):
         upload_dao_factory = UploadDaoPublisherFactory(
             config=config, dao_publisher_factory=dao_pub_factory
@@ -69,12 +72,18 @@ async def prepare_core(
         file_upload_box_dao = await upload_dao_factory.get_file_upload_box_dao()
         file_upload_dao = await upload_dao_factory.get_file_upload_dao()
         upload_activity_dao = await get_upload_activity_dao(dao_factory=dao_factory)
+        box_stats_aggregator = MongoDbBoxStatsAggregator(
+            client=mongo_client,
+            db_name=config.db_name,
+            collection_name=FILE_UPLOADS_COLLECTION,
+        )
 
         controller = UploadController(
             config=config,
             file_upload_box_dao=file_upload_box_dao,
             file_upload_dao=file_upload_dao,
             upload_activity_dao=upload_activity_dao,
+            box_stats_aggregator=box_stats_aggregator,
             s3_client=s3_client,
         )
         yield controller

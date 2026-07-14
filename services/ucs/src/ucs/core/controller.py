@@ -47,6 +47,7 @@ from ucs.core.models import (
 )
 from ucs.ports.inbound.controller import UploadControllerPort
 from ucs.ports.outbound.dao import (
+    BoxStatsAggregatorPort,
     FileUploadBoxDao,
     FileUploadDao,
     ResourceNotFoundError,
@@ -60,19 +61,21 @@ log = logging.getLogger(__name__)
 class UploadController(UploadControllerPort):
     """A class for managing file uploads"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         config: Config,
         file_upload_box_dao: FileUploadBoxDao,
         file_upload_dao: FileUploadDao,
         upload_activity_dao: UploadActivityDao,
+        box_stats_aggregator: BoxStatsAggregatorPort,
         s3_client: S3ClientPort,
     ):
         self._config = config
         self._file_upload_box_dao = file_upload_box_dao
         self._file_upload_dao = file_upload_dao
         self._upload_activity_dao = upload_activity_dao
+        self._box_stats_aggregator = box_stats_aggregator
         self._s3_client = s3_client
 
     async def _get_box_at_version(
@@ -686,6 +689,7 @@ class UploadController(UploadControllerPort):
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
         - `UploadSizeMismatchError` if the object size doesn't match the declared encrypted_size.
         - `ChecksumMismatchError` if the checksums don't match.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         # Get the FileUploadBox instance and verify that it is unlocked
         box = await self._get_unlocked_box(box_id=box_id)
@@ -769,6 +773,7 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         # Make sure box exists and is unlocked (unless overridden)
         box = await self._get_unlocked_box(box_id=box_id)
@@ -931,7 +936,7 @@ class UploadController(UploadControllerPort):
         """Update FileUploadBox stats (file count & size) in an idempotent manner,
         counting only files that are finished uploading.
 
-        Re-fetches the box to get the latest state, verifies the version is still
+        Re-fetches the box to get the latest state and verifies the version is still
         current before applying any changes.
 
         This helps mitigate potential state inconsistency arising from a hard crash.
@@ -939,21 +944,11 @@ class UploadController(UploadControllerPort):
         Raises:
         - `BoxNotFoundError` if the box no longer exists.
         - `BoxVersionError` if the box version has changed since it was fetched.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         box = await self._get_box_at_version(box_id=box_id, version=version)
 
-        file_count = 0
-        total_size = 0
-        async for file_upload in self._file_upload_dao.find_all(
-            mapping={
-                "box_id": box_id,
-                "state": {
-                    "$in": ["inbox", "interrogated", "awaiting_archival", "archived"]
-                },
-            }
-        ):
-            file_count += 1
-            total_size += file_upload.decrypted_size
+        file_count, total_size = await self._calc_box_stats(box_id=box_id)
 
         # Since every update triggers an event, only update if data differs
         if file_count != box.file_count or total_size != box.size:
@@ -961,6 +956,23 @@ class UploadController(UploadControllerPort):
             box.file_count = file_count
             box.size = total_size
             await self._file_upload_box_dao.update(box)
+
+    async def _calc_box_stats(self, *, box_id: UUID4) -> tuple[int, int]:
+        """Compute a box's (file_count, total_decrypted_size) via the aggregator,
+        translating any datastore error into a `BoxStatsCalcError`.
+
+        Raises:
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        """
+        try:
+            return await self._box_stats_aggregator.compute_box_stats(box_id=box_id)
+        except Exception as err:
+            log.error(
+                "Box stats computation failed with the following error: %s",
+                err,
+                extra={"box_id": box_id},
+            )
+            raise self.BoxStatsCalcError(box_id=box_id) from err
 
     async def create_file_upload_box(
         self, *, storage_alias: str, max_size: int
@@ -1024,6 +1036,7 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `IncompleteUploadsError` if force is False and the box has incomplete FileUploads.
         - `UploadAbortError` if force is True and aborting an in-progress upload fails.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         box = await self._get_box_at_version(box_id=box_id, version=version)
 
@@ -1063,8 +1076,13 @@ class UploadController(UploadControllerPort):
                 log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
                 raise error
 
+        # Recompute stats
+        file_count, total_size = await self._calc_box_stats(box_id=box_id)
+
         box.version += 1
         box.state = "locked"
+        box.file_count = file_count
+        box.size = total_size
         await self._file_upload_box_dao.update(box)
         log.info("Locked box with ID %s.", box_id)
 
