@@ -43,6 +43,19 @@ def test_parses_path_then_alias(tmp_path):
     assert result[0].decrypted_size == 5
 
 
+def test_does_not_read_file_content(tmp_path):
+    """Test that loading the TSV doesn't read the file/perform the encryption check."""
+    data_file = tmp_path / "already.c4gh"
+    data_file.write_bytes(b"crypt4gh\x01\x00\x00\x00")
+    tsv_path = _write_tsv(tmp_path, [f"{data_file}\tencrypted-alias"])
+
+    # Should not get an error
+    result = load_file_info_from_tsv(tsv_path)
+
+    assert len(result) == 1
+    assert result[0].alias == "encrypted-alias"
+
+
 def test_ignores_blank_lines(tmp_path):
     """Blank lines in the TSV are skipped."""
     first = tmp_path / "a.bam"

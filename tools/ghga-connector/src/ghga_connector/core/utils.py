@@ -28,7 +28,6 @@ from pydantic import SecretBytes
 
 from ghga_connector import exceptions
 from ghga_connector.core.downloading.structs import FileInfo
-from ghga_connector.core.file_operations import is_file_encrypted
 from ghga_connector.core.message_display import CLIMessageDisplay
 
 log = logging.getLogger(__name__)
@@ -141,8 +140,6 @@ def parse_file_upload_path(s: str) -> Path:
     path = Path(s).resolve()
     if not (path.exists() and path.is_file()):
         raise exceptions.FileDoesNotExistError(file_path=path)
-    if is_file_encrypted(path):
-        raise exceptions.FileAlreadyEncryptedError(file_path=path)
     return path
 
 

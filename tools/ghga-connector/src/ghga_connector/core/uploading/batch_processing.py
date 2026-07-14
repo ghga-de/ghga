@@ -27,6 +27,7 @@ from ghga_connector import exceptions
 from ghga_connector.constants import BATCH_RETRY_BACKOFF_SEC, DEFAULT_BATCH_MAX_RETRIES
 from ghga_connector.core import CLIMessageDisplay, utils
 from ghga_connector.core.crypt.encryption import Crypt4GHEncryptor
+from ghga_connector.core.file_operations import is_file_encrypted
 from ghga_connector.core.uploading.api_calls import UploadClient
 from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
 from ghga_connector.core.uploading.uploader import Uploader
@@ -226,12 +227,16 @@ class BatchPassResult:
 
     Attributes:
         failed: The files that did not upload successfully during this pass.
+        rejected: The files that were rejected because they are already Crypt4GH
+            encrypted. Unlike `failed`, these must not be retried, since the file
+            content will not change between passes.
         halted: True if the batch was stopped before all files were attempted
             (e.g. the upload box ran out of space or the user aborted). When set,
             the caller should not retry, since retrying cannot help.
     """
 
     failed: list[FileInfoForUpload] = field(default_factory=list)
+    rejected: list[FileInfoForUpload] = field(default_factory=list)
     halted: bool = False
 
 
@@ -254,14 +259,36 @@ async def upload_files_from_list(  # noqa: PLR0913
     If ``overwrite`` is set, every file is initiated with overwrite=True, so the Upload
     API replaces any existing FileUpload for a given alias instead of rejecting the request.
 
+    Each file is inspected for pre-existing Crypt4GH encryption right before its
+    upload starts. Files that are already encrypted are rejected and reported via the
+    result's ``rejected`` list; they are never retried.
+
     Returns a ``BatchPassResult`` describing which files failed and whether the pass was
     halted before all files were attempted.
     """
     failed: list[FileInfoForUpload] = []
+    rejected: list[FileInfoForUpload] = []
     for index, file_info in enumerate(file_info_list):
         # Display name for user-facing messages and the progress bar; logs and API
         # calls always use the full alias.
         display_alias = _display_name(file_info.alias, shorten=shorten)
+
+        log.info("Checking whether %s is already Crypt4GH encrypted.", file_info.alias)
+        try:
+            already_encrypted = is_file_encrypted(file_info.path)
+        except OSError as err:
+            CLIMessageDisplay.failure(
+                f"Could not read the file for {display_alias}: {err}"
+            )
+            failed.append(file_info)
+            continue
+        if already_encrypted:
+            CLIMessageDisplay.failure(
+                str(exceptions.FileAlreadyEncryptedError(file_path=file_info.path))
+            )
+            rejected.append(file_info)
+            continue
+
         uploader = Uploader(
             upload_client=upload_client,
             file_info=file_info,
@@ -288,7 +315,7 @@ async def upload_files_from_list(  # noqa: PLR0913
                 + f" upload by running `ghga-connector ubox`, then `rm {display_alias}`."
             )
             failed.extend(file_info_list[index:])
-            return BatchPassResult(failed=failed, halted=True)
+            return BatchPassResult(failed=failed, rejected=rejected, halted=True)
         except Exception as err:
             CLIMessageDisplay.failure(str(err))
 
@@ -300,7 +327,7 @@ async def upload_files_from_list(  # noqa: PLR0913
                 )
                 # Retrying is futile, so mark the pass as halted.
                 failed.extend(file_info_list[index:])
-                return BatchPassResult(failed=failed, halted=True)
+                return BatchPassResult(failed=failed, rejected=rejected, halted=True)
 
             # For other errors, go to next file because there's nothing else to do here
             failed.append(file_info)
@@ -331,7 +358,7 @@ async def upload_files_from_list(  # noqa: PLR0913
             # An explicit user abort stops the whole batch rather than retrying.
             failed.append(file_info)
             failed.extend(file_info_list[index + 1 :])
-            return BatchPassResult(failed=failed, halted=True)
+            return BatchPassResult(failed=failed, rejected=rejected, halted=True)
         except BaseException as err:
             # All other errors are handled here
             CLIMessageDisplay.failure(str(err))
@@ -344,7 +371,7 @@ async def upload_files_from_list(  # noqa: PLR0913
             # This is the success case
             CLIMessageDisplay.success(f"Successfully uploaded {display_alias}.")
 
-    return BatchPassResult(failed=failed, halted=False)
+    return BatchPassResult(failed=failed, rejected=rejected, halted=False)
 
 
 async def _already_uploaded_aliases(upload_client: UploadClient) -> set[str]:
@@ -401,6 +428,51 @@ def _report_dry_run(pending: list[FileInfoForUpload], *, shorten: bool) -> None:
         )
 
 
+def _report_batch_outcome(
+    *,
+    pending: list[FileInfoForUpload],
+    rejected: list[FileInfoForUpload],
+    halted: bool,
+    max_retries: int,
+    shorten: bool,
+) -> None:
+    """Print the final summary of a batch upload run.
+
+    Success is only reported when nothing is left pending and no file was rejected
+    for being already Crypt4GH encrypted.
+    """
+    if rejected:
+        rejected_aliases = _summarize_aliases(
+            [_display_name(fi.alias, shorten=shorten) for fi in rejected]
+        )
+        CLIMessageDisplay.failure(
+            f"{len(rejected)} file(s) were rejected because they are already Crypt4GH"
+            + f" encrypted: {rejected_aliases}"
+        )
+
+    if not pending:
+        if not rejected:
+            CLIMessageDisplay.success(
+                "Batch upload complete. All files uploaded successfully."
+            )
+        return
+
+    aliases = _summarize_aliases(
+        [_display_name(fi.alias, shorten=shorten) for fi in pending]
+    )
+    if halted:
+        # The stop reason was already reported by upload_files_from_list.
+        CLIMessageDisplay.failure(
+            f"{len(pending)} file(s) were not uploaded: {aliases}"
+        )
+    else:
+        retry_word = "retry" if max_retries == 1 else "retries"
+        CLIMessageDisplay.failure(
+            f"{len(pending)} file(s) did not upload after {max_retries} {retry_word}:"
+            + f" {aliases}"
+        )
+
+
 async def run_batch_upload(  # noqa: PLR0913
     *,
     upload_client: UploadClient,
@@ -417,7 +489,9 @@ async def run_batch_upload(  # noqa: PLR0913
     Files whose alias is already present in the upload box (in any non-cancelled
     state) are skipped, so re-running the command resumes where a previous run left
     off. Files that fail to upload are retried up to ``max_retries`` times, waiting
-    ``BATCH_RETRY_BACKOFF_SEC`` seconds between passes.
+    ``BATCH_RETRY_BACKOFF_SEC`` seconds between passes. Files that turn out to be
+    already Crypt4GH encrypted are rejected when it is their turn to upload and are
+    not retried.
 
     If ``dry_run`` is True, the upload box is still queried so that already-uploaded
     files are reported as skipped, but the files that remain are only listed - no
@@ -452,6 +526,7 @@ async def run_batch_upload(  # noqa: PLR0913
     CLIMessageDisplay.display(f"Uploading {len(pending)} file(s)...")
     attempt = 0
     halted = False
+    rejected: list[FileInfoForUpload] = []
     while True:
         result = await upload_files_from_list(
             upload_client=upload_client,
@@ -462,12 +537,10 @@ async def run_batch_upload(  # noqa: PLR0913
             overwrite=overwrite,
         )
         pending = result.failed
+        rejected.extend(result.rejected)
 
         if not pending:
-            CLIMessageDisplay.success(
-                "Batch upload complete. All files uploaded successfully."
-            )
-            return
+            break
 
         # A halted pass (box full or user abort) is not retried.
         # Note: If `halted=True`, the cause is already logged via CLIMessageDisplay
@@ -485,17 +558,10 @@ async def run_batch_upload(  # noqa: PLR0913
         )
         await asyncio.sleep(BATCH_RETRY_BACKOFF_SEC)
 
-    aliases = _summarize_aliases(
-        [_display_name(fi.alias, shorten=shorten) for fi in pending]
+    _report_batch_outcome(
+        pending=pending,
+        rejected=rejected,
+        halted=halted,
+        max_retries=max_retries,
+        shorten=shorten,
     )
-    if halted:
-        # The stop reason was already reported by upload_files_from_list.
-        CLIMessageDisplay.failure(
-            f"{len(pending)} file(s) were not uploaded: {aliases}"
-        )
-    else:
-        retry_word = "retry" if max_retries == 1 else "retries"
-        CLIMessageDisplay.failure(
-            f"{len(pending)} file(s) did not upload after {max_retries} {retry_word}:"
-            + f" {aliases}"
-        )

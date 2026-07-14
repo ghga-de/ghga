@@ -331,6 +331,82 @@ async def test_upload_files_from_list_processes_each_file():
             mock_uploader.upload_file.assert_called_once()
 
 
+async def test_upload_files_from_list_rejects_encrypted_file():
+    """Ensure a file that is already Crypt4GH-encrypted is rejected when it is its turn,
+    without initiating a server-side upload, and does not stop the rest of the batch.
+    """
+    crypt4gh_header = b"crypt4gh" + b"\x01\x00\x00\x00"
+    with NamedTemporaryFile() as encrypted, NamedTemporaryFile() as plain:
+        encrypted.write(crypt4gh_header)
+        encrypted.flush()
+        file_infos = [
+            make_file_info_for_upload(path=Path(encrypted.name), alias="encrypted"),
+            make_file_info_for_upload(path=Path(plain.name), alias="plain"),
+        ]
+        mock_uploader = make_mock_uploader()
+
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.Uploader",
+                return_value=mock_uploader,
+            ),
+            patch("ghga_connector.core.uploading.batch_processing.Crypt4GHEncryptor"),
+            patch(
+                "ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"
+            ) as mock_display,
+        ):
+            result = await upload_files_from_list(
+                upload_client=AsyncMock(),
+                file_info_list=file_infos,
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+            )
+
+        # The encrypted file is rejected (not failed) and the plain file still uploads:
+        assert not result.halted
+        assert [fi.alias for fi in result.rejected] == ["encrypted"]
+        assert result.failed == []
+        mock_uploader.initiate_file_upload.assert_called_once()
+        mock_uploader.upload_file.assert_called_once()
+
+        failure_messages = [
+            str(call.args[0]) for call in mock_display.failure.call_args_list
+        ]
+        assert any("already Crypt4GH encrypted" in msg for msg in failure_messages)
+
+
+async def test_upload_files_from_list_fails_unreadable_file():
+    """Test that a file that cannot be read when it's about to be processed is reported
+    as failed instead of crashing the batch.
+    """
+    with NamedTemporaryFile() as f:
+        missing = make_file_info_for_upload(
+            path=Path(f.name).parent / "no-such-file.bam", alias="gone"
+        )
+        present = make_file_info_for_upload(path=Path(f.name), alias="present")
+        mock_uploader = make_mock_uploader()
+
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.Uploader",
+                return_value=mock_uploader,
+            ),
+            patch("ghga_connector.core.uploading.batch_processing.Crypt4GHEncryptor"),
+            patch("ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"),
+        ):
+            result = await upload_files_from_list(
+                upload_client=AsyncMock(),
+                file_info_list=[missing, present],
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+            )
+
+        assert not result.halted
+        assert [fi.alias for fi in result.failed] == ["gone"]
+        assert result.rejected == []
+        mock_uploader.initiate_file_upload.assert_called_once()
+
+
 async def test_upload_files_from_list_reports_failures():
     """Make sure that if a file upload results in an error, the file is returned in the
     result's failed list.
@@ -811,6 +887,51 @@ async def test_run_batch_upload_retries_failures():
             )
 
         assert calls == [["flaky"], ["flaky"]]
+
+
+async def test_run_batch_upload_does_not_retry_rejected_files():
+    """Files rejected as already encrypted are not retried, are reported at the end,
+    and suppress the all-files-uploaded success message.
+    """
+    with NamedTemporaryFile() as f:
+        rejected = make_file_info_for_upload(path=Path(f.name), alias="pre-encrypted")
+        upload_client = _make_upload_client([])
+
+        call_count = 0
+
+        async def fake_batch_cycle(*, file_info_list, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            return BatchPassResult(failed=[], rejected=[rejected], halted=False)
+
+        with (
+            patch(
+                "ghga_connector.core.uploading.batch_processing.upload_files_from_list",
+                fake_batch_cycle,
+            ),
+            patch(
+                "ghga_connector.core.uploading.batch_processing.CLIMessageDisplay"
+            ) as mock_display,
+        ):
+            await run_batch_upload(
+                upload_client=upload_client,
+                file_info_list=[rejected],
+                my_private_key=SecretBytes(b"\x00" * 32),
+                max_concurrent_uploads=1,
+                max_retries=3,
+            )
+
+        # No retry pass is attempted for a rejected file.
+        assert call_count == 1
+
+        failure_messages = [
+            str(call.args[0]) for call in mock_display.failure.call_args_list
+        ]
+        assert any(
+            "already Crypt4GH encrypted" in msg and "pre-encrypted" in msg
+            for msg in failure_messages
+        )
+        mock_display.success.assert_not_called()
 
 
 async def test_run_batch_upload_stops_after_max_retries():
