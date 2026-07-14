@@ -28,6 +28,7 @@ from rs.core.models import (
     FileUploadBox,
     GrantId,
     GrantWithBoxInfo,
+    HubStorageSummary,
     ResearchDataUploadBox,
     UploadBoxState,
 )
@@ -315,6 +316,11 @@ class RDUBManagerPort(ABC):
 
         Returns a BoxRetrievalResults instance with the boxes and unpaginated count.
         """
+        ...
+
+    @abstractmethod
+    async def get_storage_overview(self) -> list[HubStorageSummary]:
+        """Aggregate upload box storage statistics per data hub (storage alias)."""
         ...
 
     @abstractmethod

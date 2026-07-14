@@ -38,6 +38,7 @@ from rs.core.models import (
     FileUploadBox,
     GrantId,
     GrantWithBoxInfo,
+    HubStorageSummary,
     ResearchDataUploadBox,
     UploadBoxState,
 )
@@ -808,6 +809,24 @@ class RDUBManager(RDUBManagerPort):
             boxes = boxes[:limit]
 
         return BoxRetrievalResults(count=count, boxes=boxes)
+
+    async def get_storage_overview(self) -> list[HubStorageSummary]:
+        """Aggregate upload box storage statistics per data hub (storage alias)."""
+        summaries: dict[str, HubStorageSummary] = {}
+        async for box in self._box_dao.find_all(mapping={}):
+            summary = summaries.get(box.storage_alias)
+            if summary is None:
+                summaries[box.storage_alias] = HubStorageSummary(
+                    storage_alias=box.storage_alias,
+                    total_size=box.size,
+                    file_count=box.file_count,
+                    box_count=1,
+                )
+            else:
+                summary.total_size += box.size
+                summary.file_count += box.file_count
+                summary.box_count += 1
+        return [summaries[alias] for alias in sorted(summaries)]
 
     async def delete_file_upload(
         self,

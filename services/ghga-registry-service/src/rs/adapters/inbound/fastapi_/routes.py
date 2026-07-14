@@ -20,7 +20,7 @@ import logging
 from fastapi import APIRouter
 
 from rs.adapters.inbound.fastapi_.routers.studies import study_router
-from rs.adapters.inbound.fastapi_.routers.upload_boxes import box_router
+from rs.adapters.inbound.fastapi_.routers.upload_boxes import box_router, storage_router
 from rs.adapters.inbound.fastapi_.routers.upload_grants import upload_grant_router
 from rs.constants import TRACER
 
@@ -36,6 +36,7 @@ router.include_router(
     upload_grant_router, prefix="/upload-grants", tags=["UploadGrants"]
 )
 router.include_router(study_router, prefix="/studies", tags=["Studies"])
+router.include_router(storage_router, prefix="/storages", tags=["Storages"])
 
 
 @router.get(

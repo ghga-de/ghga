@@ -363,6 +363,37 @@ components:
           type: array
       title: HTTPValidationError
       type: object
+    HubStorageSummary:
+      description: Aggregated upload box storage statistics for a single data hub.
+      properties:
+        box_count:
+          description: Number of upload boxes using this hub's storage
+          minimum: 0.0
+          title: Box Count
+          type: integer
+        file_count:
+          description: Total number of file uploads across all upload boxes for this
+            hub
+          minimum: 0.0
+          title: File Count
+          type: integer
+        storage_alias:
+          description: S3 storage alias identifying the data hub
+          title: Storage Alias
+          type: string
+        total_size:
+          description: Total number of bytes uploaded across all upload boxes for
+            this hub
+          minimum: 0.0
+          title: Total Size
+          type: integer
+      required:
+      - storage_alias
+      - total_size
+      - file_count
+      - box_count
+      title: HubStorageSummary
+      type: object
     ResearchDataUploadBox:
       description: A class representing a ResearchDataUploadBox.
       properties:
@@ -645,6 +676,32 @@ paths:
               schema: {}
           description: Successful Response
       summary: health
+  /storages:
+    get:
+      description: 'Returns aggregated upload box storage statistics for each data
+        hub (identified by storage alias): the total number of bytes uploaded, the
+        total number of file uploads, and the number of upload boxes. Requires the
+        Data Steward role.'
+      operationId: get_storage_overview_storages_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/HubStorageSummary'
+                title: Response 200 Get Storage Overview Storages Get
+                type: array
+          description: Storage overview successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+      security:
+      - HTTPBearer: []
+      summary: Get per-hub storage overview
+      tags:
+      - Storages
   /studies:
     get:
       description: Returns the list of all studies, sorted by study ID. When `with_unmapped_files`

@@ -33,6 +33,7 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    NonNegativeInt,
     PositiveInt,
     StringConstraints,
     ValidationInfo,
@@ -59,6 +60,7 @@ __all__ = [
     "GrantAccessRequest",
     "GrantId",
     "GrantWithBoxInfo",
+    "HubStorageSummary",
     "ResearchDataUploadBox",
     "ResizeFileBoxWorkOrder",
     "Study",
@@ -349,6 +351,29 @@ class BoxRetrievalResults(BaseModel):
     count: int = Field(..., description="The total number of unpaginated results")
     boxes: list[ResearchDataUploadBox] = Field(
         ..., description="The retrieved research data upload boxes"
+    )
+
+
+class HubStorageSummary(BaseModel):
+    """Aggregated upload box storage statistics for a single data hub."""
+
+    storage_alias: str = Field(
+        ..., description="S3 storage alias identifying the data hub"
+    )
+    total_size: NonNegativeInt = Field(
+        ...,
+        description=(
+            "Total number of bytes uploaded across all upload boxes for this hub"
+        ),
+    )
+    file_count: NonNegativeInt = Field(
+        ...,
+        description=(
+            "Total number of file uploads across all upload boxes for this hub"
+        ),
+    )
+    box_count: NonNegativeInt = Field(
+        ..., description="Number of upload boxes using this hub's storage"
     )
 
 

@@ -29,6 +29,7 @@ from rs.core.models import (
     FileUploadWithAccession,
     GrantId,
     GrantWithBoxInfo,
+    HubStorageSummary,
     ResearchDataUploadBox,
     Study,
     StudyStatus,
@@ -110,6 +111,52 @@ async def test_get_research_data_upload_box(
         registry.reset_mock()
         registry.rdub_manager.get_research_data_upload_box.side_effect = TypeError()
         response = await rest_client.get(url, headers=user_auth_headers)
+        assert response.status_code == 500
+
+
+async def test_get_storage_overview(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test the GET /storages endpoint"""
+    registry = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/storages"
+
+        # unauthenticated
+        response = await rest_client.get(url)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.get(url, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # normal response but user is not a data steward (no data_steward role)
+        response = await rest_client.get(url, headers=user_auth_headers)
+        assert response.status_code == 403
+
+        # normal response with data steward role
+        summaries = [
+            HubStorageSummary(
+                storage_alias="HD01", total_size=1500, file_count=5, box_count=2
+            ),
+            HubStorageSummary(
+                storage_alias="TUE01", total_size=250, file_count=1, box_count=1
+            ),
+        ]
+        registry.rdub_manager.get_storage_overview.return_value = summaries
+        response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 200
+        assert response.json() == [
+            summary.model_dump(mode="json") for summary in summaries
+        ]
+
+        # handle other exception
+        registry.reset_mock()
+        registry.rdub_manager.get_storage_overview.side_effect = TypeError()
+        response = await rest_client.get(url, headers=ds_auth_headers)
         assert response.status_code == 500
 
 

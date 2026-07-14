@@ -44,6 +44,7 @@ from rs.core.models import (
     BoxUploadsPage,
     CreateUploadBoxRequest,
     FileUpload,
+    HubStorageSummary,
     ResearchDataUploadBox,
     UpdateUploadBoxRequest,
     UploadBoxState,
@@ -53,6 +54,10 @@ from rs.ports.inbound.rdub_manager import RDUBManagerPort
 log = logging.getLogger(__name__)
 
 box_router = APIRouter()
+
+# Separate router for the top-level /storages path, which aggregates upload box
+# statistics per storage and therefore doesn't live under the /upload-boxes prefix
+storage_router = APIRouter()
 
 # The fields that file uploads may be sorted by (a leading dash denotes descending order)
 _SORTABLE_FILE_UPLOAD_FIELDS = frozenset(FileUpload.model_fields)
@@ -235,6 +240,39 @@ async def update_research_data_upload_box(
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to update upload box") from err
+
+
+@storage_router.get(
+    "",
+    summary="Get per-hub storage overview",
+    description="Returns aggregated upload box storage statistics for each data hub"
+    + " (identified by storage alias): the total number of bytes uploaded, the total"
+    + " number of file uploads, and the number of upload boxes. Requires the Data Steward"
+    + " role.",
+    response_model=list[HubStorageSummary],
+    responses={
+        200: {
+            "model": list[HubStorageSummary],
+            "description": "Storage overview successfully retrieved.",
+        },
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized."},
+    },
+)
+@TRACER.start_as_current_span("routes.get_storage_overview")
+async def get_storage_overview(
+    registry: dummies.RegistryDummy,
+    auth_context: StewardAuthContext,
+) -> list[HubStorageSummary]:
+    """Get aggregated upload box storage statistics per data hub.
+
+    Requires Data Steward role.
+    """
+    try:
+        return await registry.rdub_manager.get_storage_overview()
+    except Exception as err:
+        log.error(err, exc_info=True)
+        raise HttpInternalError(message="Failed to get storage overview") from err
 
 
 @box_router.get(

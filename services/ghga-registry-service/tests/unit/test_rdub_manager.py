@@ -871,6 +871,40 @@ async def test_get_boxes_pagination(rig: JointRig, populated_boxes: list[UUID]):
     assert len(results.boxes) == 5
 
 
+async def test_get_storage_overview(rig: JointRig):
+    """Test per-hub aggregation of upload box storage statistics."""
+    box_specs = [("HD01", 1000, 3), ("HD01", 500, 2), ("TUE01", 250, 1)]
+    for i, (storage_alias, size, file_count) in enumerate(box_specs):
+        box = models.ResearchDataUploadBox(
+            version=0,
+            state="open",
+            title=f"Overview Box {i}",
+            description="A box for the storage overview test",
+            last_changed=now_utc_ms_prec(),
+            changed_by=TEST_DS_ID,
+            file_upload_box_id=uuid4(),
+            file_upload_box_version=0,
+            file_upload_box_state="open",
+            storage_alias=storage_alias,
+            max_size=TEST_MAX_SIZE,
+            size=size,
+            file_count=file_count,
+        )
+        await rig.box_dao.insert(box)
+
+    overview = await rig.rdub_manager.get_storage_overview()
+
+    assert [summary.model_dump() for summary in overview] == [
+        {"storage_alias": "HD01", "total_size": 1500, "file_count": 5, "box_count": 2},
+        {"storage_alias": "TUE01", "total_size": 250, "file_count": 1, "box_count": 1},
+    ]
+
+
+async def test_get_storage_overview_no_boxes(rig: JointRig):
+    """Test that the storage overview is empty when no upload boxes exist."""
+    assert await rig.rdub_manager.get_storage_overview() == []
+
+
 async def test_store_accession_map_happy(rig: JointRig, populated_boxes: list[UUID]):
     """Test the normal path of updating an accession map.
 
