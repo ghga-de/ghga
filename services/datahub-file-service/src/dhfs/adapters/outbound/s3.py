@@ -122,12 +122,11 @@ class S3Client(S3ClientPort):
         - ObjectNotFoundError if the file doesn't exist in the inbox.
         """
         try:
-            download_url = await self._storage.get_object_download_url(
+            return await self._storage.get_object_download_url(
                 bucket_id=bucket_id,
                 object_id=object_id,
                 expires_after=DOWNLOAD_URL_LIFESPAN,
             )
-            return download_url
         except ObjectStorageProtocol.BucketNotFoundError as err:
             raise self.BucketNotFoundError(bucket_id=bucket_id) from err
         except ObjectStorageProtocol.ObjectNotFoundError as err:
@@ -232,10 +231,9 @@ class S3Client(S3ClientPort):
             )
 
         try:
-            upload_id = await self._storage.init_multipart_upload(
+            return await self._storage.init_multipart_upload(
                 bucket_id=self._interrogation_bucket_id, object_id=object_id
             )
-            return upload_id
         except ObjectStorageProtocol.MultiPartUploadAlreadyExistsError as err:
             raise self.UploadInitError(object_id=object_id) from err
         except ObjectStorageProtocol.BucketNotFoundError as err:
@@ -309,14 +307,13 @@ class S3Client(S3ClientPort):
             if status_code == 400:
                 # A bad MD5 means that uploading the re-encrypted file has failed
                 raise self.BadPartMD5Error(part_no=part_no, object_id=object_id)
-            else:
-                detail = response.content.decode()
-                raise self.UploadPartError(
-                    object_id=object_id,
-                    part_no=part_no,
-                    status_code=response.status_code,
-                    detail=detail,
-                )
+            detail = response.content.decode()
+            raise self.UploadPartError(
+                object_id=object_id,
+                part_no=part_no,
+                status_code=response.status_code,
+                detail=detail,
+            )
 
     async def complete_upload(
         self, *, upload_id: str, object_id: str, part_count: int

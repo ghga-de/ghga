@@ -85,6 +85,86 @@
       "title": "Http Request Timeout Seconds",
       "type": "number"
     },
+    "data_hub_crypt4gh_public_key_path": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Path to the Data Hub's Crypt4GH public key file. Only needed for running `dhfs verify`.",
+      "examples": [
+        "./key.pub"
+      ],
+      "title": "Data Hub Crypt4Gh Public Key Path"
+    },
+    "inbox_bucket_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The inbox bucket ID - only needed for running `dhfs verify`.",
+      "examples": [
+        "inbox",
+        "hub-inbox"
+      ],
+      "title": "Inbox Bucket Id"
+    },
+    "inbox_write_s3_access_key_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "S3 access key ID with write access to the inbox bucket. Only needed for running `dhfs verify`.",
+      "examples": [
+        "my-write-access-key-id"
+      ],
+      "title": "Inbox Write S3 Access Key Id"
+    },
+    "inbox_write_s3_secret_access_key": {
+      "anyOf": [
+        {
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "S3 secret access key with write access to the inbox bucket. Only needed for running `dhfs verify`.",
+      "title": "Inbox Write S3 Secret Access Key"
+    },
+    "inbox_write_s3_session_token": {
+      "anyOf": [
+        {
+          "format": "password",
+          "type": "string",
+          "writeOnly": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional S3 session token for the write-capable inbox credentials. Only needed for running `dhfs verify`.",
+      "title": "Inbox Write S3 Session Token"
+    },
     "data_hub_crypt4gh_private_key_path": {
       "description": "Path to the Data Hub's Crypt4GH private key file",
       "examples": [

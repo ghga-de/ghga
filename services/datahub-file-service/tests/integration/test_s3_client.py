@@ -177,7 +177,7 @@ async def test_init_interrogation_bucket_upload(
     url = await joint_fixture.s3.storage.get_part_upload_url(
         upload_id=upload_id, bucket_id=interrogation, object_id=object_id, part_number=1
     )
-    response = httpx.put(url, content=b"some content but not too much")
+    response = httpx.put(url, content=b"some content but not too much")  # noqa: ASYNC210
     assert response.status_code == 200
 
 
@@ -243,7 +243,7 @@ async def test_upload_file_part(joint_fixture: JointFixture, s3_client: S3Client
     url = await joint_fixture.s3.storage.get_object_download_url(
         bucket_id=interrogation, object_id=object_id
     )
-    uploaded_data = httpx.get(url)
+    uploaded_data = httpx.get(url)  # noqa: ASYNC210
     assert uploaded_data.content == part
 
 

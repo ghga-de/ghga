@@ -19,7 +19,7 @@ import asyncio
 
 import typer
 
-from dhfs.main import perform_cleanup, run_interrogator
+from dhfs.main import perform_cleanup, run_interrogator, verify
 
 cli = typer.Typer()
 
@@ -34,3 +34,18 @@ def sync_interrogate(forever: bool = True):
 def sync_run_cleanup():
     """Run the S3 'interrogation' bucket cleanup routine."""
     asyncio.run(perform_cleanup())
+
+
+@cli.command(name="verify")
+def sync_verify(
+    file_size: int = typer.Option(
+        125,
+        "--file-size",
+        help="Size of the dummy file in MiB. Default is 125.",
+    ),
+):
+    """Run the re-encryption process on a dummy file to verify that DHFS works with the
+    current S3 backend. Outbound API calls to GHGA Central are mocked except for a
+    single call at the start which validates the current DHFS version.
+    """
+    asyncio.run(verify(file_size=file_size * 1024**2))

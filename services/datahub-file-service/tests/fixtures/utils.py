@@ -77,7 +77,7 @@ async def upload_dummy_data(
     url = await storage.get_part_upload_url(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id, part_number=1
     )
-    httpx.put(url, content=content)
+    httpx.put(url, content=content)  # noqa: ASYNC210
     await storage.complete_multipart_upload(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
     )
@@ -87,7 +87,10 @@ def get_crypt4gh_private_key(
     key_path: Path = DHFS_CRYPT4GH_PRIVATE_KEY_PATH, passphrase: SecretStr | None = None
 ) -> SecretBytes:
     """Get the crypt4gh private key stored in the specified path"""
-    callback = lambda: passphrase.get_secret_value() if passphrase else None
+
+    def callback():
+        return passphrase.get_secret_value() if passphrase else None
+
     return SecretBytes(get_private_key(key_path, callback))
 
 
@@ -161,7 +164,7 @@ async def upload_encrypted_object(
             object_id=object_id,
             part_number=i + 1,
         )
-        httpx.put(url, content=content)
+        httpx.put(url, content=content)  # noqa: ASYNC210
     await storage.complete_multipart_upload(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
     )

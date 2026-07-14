@@ -39,15 +39,16 @@ class CentralClientConfig(BaseSettings):
     """Configuration required for the CentralClient class"""
 
     central_api_crypt4gh_public_key: str = Field(
-        ...,
+        default=...,
         description="The Crypt4GH public key used by the Central API. This is used to"
         + " encrypt new file encryption secrets.",
     )
     central_api_url: HttpUrl = Field(
-        ..., description="The base URL used to connect to to the GHGA Central API"
+        default=...,
+        description="The base URL used to connect to to the GHGA Central API",
     )
     data_hub_signing_key: SecretStr = Field(
-        ...,
+        default=...,
         description="The Data Hub's private JWK for signing JWT auth tokens",
         examples=['{"crv": "P-256", "kty": "EC", "x": "...", "y": "...", "d": "..."}'],
     )
