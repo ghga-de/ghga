@@ -127,89 +127,44 @@ This necessitates merging the Persisted Administrative Metadata (PAM) back into 
 **Assumptions**
 
 - The class being added will not exist in the schema.
-- If the newly added class has a relation, the target class of that relation must exist in the schema.
+- Every `targetClass` named in relations must exist in the input model.
+- The EMIM must conform to globally unique ids. This is required to avoid ambiguity when resolving the relations during data transformation.
 
 **Configuration model**
 
 ```python
-class AddClassConfig(BaseModel):
-    class_name: str                                    # PascalCase; must not already exist in the schema
-    id_property_name: str                              # the property used as the resource ID
-    content_schema: dict                               # a valid JSON Schema object for the class content
-    description: str | None = None
-    relations: list[Relation] | None = None                 # optional list of relations from the new class to existing classes
+# A model extending a schemapack relation specification with additional annotations
+class RelationSpec(ClassRelation): # ClassRelation is defined in schemapack library
+    relation_property_name: str # The name of the relation.
+    target_resources: # Field in the new class's annotation holding the FK to the target resource.
 
 
-class Relation(BaseModel):
-    relation_name: str
-    description: str | None = None
-    target_class: str
-    target_resource_id_field: str                       # the property in the target class used to reference the target resource ID
-    mandatory: MandatoryRelationSpec
-    multiple: MultipleRelationSpec
+
+class AddClassConfig(BaseSettings):
+    """A model describing a configuration for adding a class."""
+
+    class_name: str # The name of the class to add.
+    id_property_name: str # The property used as the resource ID.
+    content_schema: dict # A valid JSON Schema object describing the class content.
+    description: str | None
+    relations: list[RelationSpec] # Relations from the new class to existing classes.
+
 ```
 
 **Model transformation**
 
 - Add the new `ClassDefinition` (with content schema and any declared relations) to the schemapack.
 - Raise `ModelAssumptionError` if a class with `class_name` already exists.
-- Raise `ModelAssumptionError` if any `target_class` in `relations` does not exist in the schema.
+- Raise `ModelAssumptionError` if any `targetClass` in `relations` does not exist in the schema.
 
 **Data transformation**
 
 For the class declared in `config.class_name`, the transformation inserts the resources sourced from the PAM into the DataPack. Each PAM resource is processed individually and split into two parts before being written:
 
 - **Content** — properties that match the JSON Schema declared in `config.content_schema` are kept under the resource's content.
-- **Relations** — for every entry in `config.relations`, the property named by `target_resource_id_field` is read from the incoming PAM record, removed from content, and written as a relation under `relations.<relation_name>` with `targetClass = target_class` and `targetResources` set to the value(s) read.
+- **Relations** — for every entry in `config.relations`, the property named by `target_resources` is read from the incoming PAM record, removed from content. Its values are matched with the target resources of the `targetClass`. The matching values are written as targetResources under `relations.<relation_property_name>`.
 - **Resource ID** — taken from the PAM record under the name given by `config.id_property_name` and used as the key under `resources.<class_name>`.
 
-##### 2.4. `infer_relation_from_content` Transformation
-
-The need for the `infer_relation_from_content` transformation comes from the new design of the metadata schema. After the `add_class` transformation re-introduces `Dataset` into the EMIM, the `Dataset` content carries a flat list of file resource IDs under the `files` property. These IDs span the EMIM file classes. The dataset back-reference that used to exist on each of these file classes must be reconstructed before the aggregate stats workflow can run path inferences such as `Dataset<(dataset)ResearchDataFile…`.
-
-This transformation walks the flat ID listing on a source class, resolves each ID to the file class it belongs to, and writes a relation pointing back to the source class on the resolved resource. It differs from `infer_relation` in that the source of the link information is a content property holding resource IDs, not an existing relation path.
-
-**Assumptions**
-
-- The source class declared in the configuration must exist in the schema and must declare the content property holding the ID listing.
-- The candidate target classes declared in the configuration must exist in the schema.
-- The relation name declared in the configuration must not already exist on any of the candidate target classes.
-- Each resource ID held by the source content property must resolve to a resource in exactly one of the candidate target classes. An unresolvable ID, or an ID present in more than one candidate class, is a data transformation error.
-
-**Configuration model**
-
-```python
-class InferRelationFromContentConfig(BaseModel):
-    source_class: str                          # class holding the ID listing (e.g. Dataset)
-    source_content_property: str               # name of the property on source_class holding the flat list of IDs
-    new_relation_name: str                     # name of the relation to add on each resolved target resource
-    target_classes: list[str]                  # candidate classes where the listed IDs may be resolved
-    description: str | None = None
-    mandatory: MandatoryRelationSpec
-    multiple: MultipleRelationSpec
-```
-
-See the [Appendix](#appendix-pam-transformation-configurations) for the concrete configuration used in the aggregate stats workflow.
-**Model transformation**
-
-- For each class in `config.target_classes`, add a relation declaration named `config.new_relation_name` with `targetClass = config.source_class` and `mandatory`/`multiple` from the configuration.
-- The source class is not modified; the content property listing the IDs is left in place.
-- If the listing is no longer wanted in the final output, remove it with a subsequent `transform_content` step.
-
-**Data transformation**
-
-1. Build a mapping from each ID listed under `source_content_property` to the resources that reference it, e.g. it produces:
-
-```
-file_id_1 → [DS_A, DS_B]
-file_id_2 → [DS_A]
-file_id_3 → [DS_B, DS_C]
-...
-```
-
-2. The keys of this mapping are intersected with the resource IDs of the `config.target_classes`, e.g.: intersection with `ResearchDataFile` resources: file_id_1, file_id_2
-
-3. For each ID in the intersection, add the value from the mapping to its relations, `relations.<relation_name>.targetResources`, e.g. ResearchDataFiles -> file_id_1 -> relations -> dataset -> [DS_A, DS_B]
 
 ##### 2.5. Aggregate Stats Workflow: Adding Back PAM Classes via `add_class`
 
@@ -399,10 +354,10 @@ content_schema: {
     "type": "object"
   }
 relations:
-  - relation_name: study
+  - relation_property_name: study
     description: "A relation from Publication to Study."
-    target_class: Study
-    target_resource_id_field: study_id
+    targetClass: Study
+    target_resources: study_id
     mandatory: MandatoryRelationSpec # placeholder; defined during implementation
     multiple: MultipleRelationSpec # placeholder; defined during implementation
 ```
@@ -450,42 +405,29 @@ content_schema: {
           "institute": { "type": "string" }
         },
         "required": ["id", "name", "email", "institute"]
-      },
-      "files": { "type": "array", "items": { "type": "string" } }
+      }
     },
     "required": ["id", "title", "description", "types", "study_id", "dap", "dac", "files"],
     "type": "object"
   }
 relations:
-  - relation_name: study
+  - relation_property_name: study
     description: "A relation from Dataset to Study."
-    target_class: Study
-    target_resource_id_field: study_id
-    mandatory: MandatoryRelationSpec
-    multiple: MultipleRelationSpec
-```
-
-### `infer_relation_from_content`
-
-#### Dataset
-
-Reconstructs the `dataset` relation on each EMIM file class by resolving the flat list of file IDs held on `Dataset.content.files`.
-
-```yaml
-source_class: Dataset
-source_content_property: files
-new_relation_name: dataset
-description: "Reconstruct the dataset back-reference on each file class by resolving the flat list of file IDs held on Dataset.content.files."
-target_classes:
-  - ResearchDataFile
-  - ProcessDataFile
-  - IndividualSupportingFile
-  - ExperimentMethodSupportingFile
-  - AnalysisMethodSupportingFile
-mandatory: # placeholder; defined during implementation
-  origin: false
-  target: false
-multiple: # placeholder; defined during implementation
-  origin: true
-  target: false
+    targetClass: Study
+    target_resources: study_id
+    mandatory: MandatoryRelationSpec # placeholder
+    multiple: MultipleRelationSpec # placeholder
+  - relation_property_name: research_data_files
+    description: "A relation from Dataset to ResearchDataFile."
+    targetClass: ResearchDataFile
+    target_resources: files
+    mandatory: MandatoryRelationSpec # placeholder
+    multiple: MultipleRelationSpec # placeholder
+  - relation_property_name: process_data_files
+    description: "A relation from Dataset to ProcessDataFile."
+    targetClass: ProcessDataFile
+    target_resources: files
+    mandatory: MandatoryRelationSpec # placeholder
+    multiple: MultipleRelationSpec # placeholder
+  - ... # Three more relations from Dataset to the remaining EMIM file classes, all with the same target_resources: files
 ```
