@@ -253,9 +253,11 @@ Collected here as a checklist; details in
 1. **Accession format** is `{prefix}{14 random digits}` with no structure/version → studies move
    to `GHGA.YY.XXX.V`; child entities to `{study_pid}.{alias}`; datasets to `{study_pid}.DS.xxx`.
 2. **No cross-submission stability / no versioning** → studies gain a stable lineage
-   (`GHGA.YY.XXX`) with an incrementing version, and explicit study-level deprecation.
-3. **File mapping is 1:1 and box-centric, coupled to archival** → many-accessions-per-file,
-   study/submission-centric mapping, decoupled from archival (files archivable unmapped).
+   (`GHGA.YY.XXX`) with an incrementing version; study-level deprecation is **inferred service-side**
+   by metldata (highest loaded version wins), with rs/mass/portal as consumers.
+3. **File mapping is 1:1 and box-centric, with mapping as a prerequisite for archival** →
+   many-accessions-per-file, study/submission-centric mapping, and the dependency **inverted**:
+   files are archived first, then mapped against archived boxes.
 4. **Search shows everything; no legacy handling** → superseded studies' datasets are hidden from
    search but reachable by URL/PID, with an "updated version" hint.
 5. **`studies[0]` one-study-per-submission assumption** in the loader — the study becomes the
