@@ -4,17 +4,14 @@
 {{- with .annotations }}
 {{ toYaml . }}
 {{- end }}
-{{- if .role }}
-{{- $role := .role }}
+{{- $role := .role | default $.Release.Name }}
 {{- range .roleTrimSuffixes | default (list "-consumer" "-clean-up-job") }}
 {{- $role = trimSuffix . $role }}
 {{- end }}
-vault.hashicorp.com/role: "{{ $role }}"
-{{- else if .rolePrefix }}
-vault.hashicorp.com/role: "{{ .rolePrefix }}-{{ $.Release.Name }}"
-{{- else }}
-vault.hashicorp.com/role: "{{ $.Release.Name }}"
+{{- with .rolePrefix }}
+{{- $role = printf "%s-%s" . $role }}
 {{- end }}
+vault.hashicorp.com/role: "{{ $role }}"
 {{- if .caCert }}
 vault.hashicorp.com/ca-cert: "{{ .caCert }}"
 {{- end }}
