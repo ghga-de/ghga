@@ -217,7 +217,7 @@ async def test_delete_inbox_file_completed(
 
 
 async def test_delete_inbox_file_incomplete(s3_client: S3ClientPort):
-    """Deleting an incomplete upload aborts the multipart upload."""
+    """Test that deleting an incomplete upload aborts the multipart upload."""
     file_upload = make_file_upload()
     upload_id = await s3_client.init_multipart_upload(
         file_upload_basics=_to_basics(file_upload)

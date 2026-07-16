@@ -304,13 +304,16 @@ class S3Client(S3ClientPort):
         with handle_bucket_and_general_s3_errors(
             op_name="does_object_exist", bucket_id=file_upload.bucket_id, extra=extra
         ):
-            try:
+            does_object_exist = await object_storage.does_object_exist(
+                bucket_id=bucket_id, object_id=object_id
+            )
+            if does_object_exist:
                 await object_storage.delete_object(
                     bucket_id=bucket_id, object_id=object_id
                 )
                 log.info("Deleted object %s from bucket %s.", object_id, bucket_id)
                 return
-            except object_storage.ObjectNotFoundError:
+            else:
                 log.info(
                     "No object found with ID %s. It might be deleted already, or maybe"
                     + " the upload wasn't completed. Will attempt to abort upload %s.",
