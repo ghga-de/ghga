@@ -1,9 +1,15 @@
 {{- define "ghga-common.vaultAgentBoilerplate" -}}
 {{/* Vault agent boilerplate */}}
 {{- with .Values.vaultAgent }}
-{{- .annotations | toYaml }}
+{{- with .annotations }}
+{{ toYaml . }}
+{{- end }}
 {{- if .role }}
-vault.hashicorp.com/role: "{{ .role }}"
+{{- $role := .role }}
+{{- range .roleTrimSuffixes | default (list "-consumer" "-clean-up-job") }}
+{{- $role = trimSuffix . $role }}
+{{- end }}
+vault.hashicorp.com/role: "{{ $role }}"
 {{- else if .rolePrefix }}
 vault.hashicorp.com/role: "{{ .rolePrefix }}-{{ $.Release.Name }}"
 {{- else }}
