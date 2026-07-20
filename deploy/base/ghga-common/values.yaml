@@ -278,9 +278,6 @@ exports:
     strimziApiVersion: kafka.strimzi.io/v1
     vaultAgent:
       enabled: false
-      roleTrimSuffixes:
-      - "-consumer"
-      - "-clean-up-job"
       annotations:
         vault.hashicorp.com/tls-skip-verify: "false"
         vault.hashicorp.com/agent-inject: "true"

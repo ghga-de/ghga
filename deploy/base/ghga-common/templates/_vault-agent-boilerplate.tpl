@@ -4,10 +4,7 @@
 {{- with .annotations }}
 {{ toYaml . }}
 {{- end }}
-{{- $role := .role | default $.Release.Name }}
-{{- range .roleTrimSuffixes | default (list "-consumer" "-clean-up-job") }}
-{{- $role = trimSuffix . $role }}
-{{- end }}
+{{- $role := .role | default (.releaseNameOverwrite | default $.Release.Name) }}
 {{- with .rolePrefix }}
 {{- $role = printf "%s-%s" . $role }}
 {{- end }}
