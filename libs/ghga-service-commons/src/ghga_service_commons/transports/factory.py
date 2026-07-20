@@ -70,10 +70,7 @@ class CompositeTransportFactory:
         ratelimiting_transport = AsyncRateLimitingTransport(
             config=config, transport=base_transport
         )
-        retry_transport = AsyncRetryTransport(
-            config=config, transport=ratelimiting_transport
-        )
-        return retry_transport
+        return AsyncRetryTransport(config=config, transport=ratelimiting_transport)
 
     @classmethod
     def create_ratelimiting_retry_transport(

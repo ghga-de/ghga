@@ -67,8 +67,21 @@ class S3ObjectStorages(ObjectStorages):
 
     def __init__(self, *, config: S3ObjectStoragesConfig):
         self._config = config
+        self._storage_cache: dict[str, S3ObjectStorage] = {}
 
     def for_alias(self, endpoint_alias: str) -> tuple[str, S3ObjectStorage]:
-        """Get bucket ID and object storage instance for a specific alias."""
+        """Get bucket ID and object storage instance for a specific alias.
+
+        The object storage instance is created lazily on first access and cached,
+        so subsequent calls for the same alias reuse the same instance.
+
+        Caveat: Its underlying boto3 client is thread-safe, but any boto3 resource used is not.
+        This is not an issue in the current hexkit implementation, but might change if more
+        resource usage is introduced.
+        """
         node_config = self._config.object_storages[endpoint_alias]
-        return node_config.bucket, S3ObjectStorage(config=node_config.credentials)
+        storage = self._storage_cache.get(endpoint_alias)
+        if storage is None:
+            storage = S3ObjectStorage(config=node_config.credentials)
+            self._storage_cache[endpoint_alias] = storage
+        return node_config.bucket, storage

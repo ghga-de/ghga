@@ -40,7 +40,7 @@ async def get_auth_context(
 ) -> DemoAuthContext | None:
     """Get an authentication and authorization context using FastAPI."""
     context = await get_auth_context_using_credentials(credentials, auth_provider)
-    return context  # workaround mypy issue #12156
+    return context  # workaround mypy issue #12156  # noqa: RET504
 
 
 async def require_auth_context(

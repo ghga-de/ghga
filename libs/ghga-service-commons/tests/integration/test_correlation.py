@@ -204,10 +204,7 @@ async def test_async_client(generate_correlation_id: bool):
     async def endpoint(request: Request):
         """Return the correlation ID header value from the request."""
         assert CORRELATION_ID_HEADER_NAME in request.headers
-        correlation_id = correlation_id_from_str(
-            request.headers[CORRELATION_ID_HEADER_NAME]
-        )
-        return correlation_id
+        return correlation_id_from_str(request.headers[CORRELATION_ID_HEADER_NAME])
 
     # Create an AsyncClient instance (NOT AsyncTestClient!)
     async with AsyncClient(

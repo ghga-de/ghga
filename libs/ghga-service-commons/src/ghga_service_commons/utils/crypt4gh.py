@@ -144,17 +144,19 @@ def extract_file_secret(
 
 def generate_keypair() -> Crypt4GHKeyPair:
     """Generate a new Crypt4GH keypair."""
-    sk_file, sk_path = mkstemp(prefix="private", suffix=".key")
-    pk_file, pk_path = mkstemp(prefix="public", suffix=".key")
+    sk_fd, sk_path = mkstemp(prefix="private", suffix=".key")
+    pk_fd, pk_path = mkstemp(prefix="public", suffix=".key")
 
     # Crypt4GH does not reset the umask it sets, so we need to deal with it
     original_umask = os.umask(0o022)
     passphrase = os.urandom(32).hex().encode()
-    c4gh.generate(seckey=sk_file, pubkey=pk_file, passphrase=passphrase)
+    c4gh.generate(seckey=sk_path, pubkey=pk_path, passphrase=passphrase, comment=None)
     public_key = get_public_key(pk_path)
     private_key = get_private_key(sk_path, passphrase.decode)
     os.umask(original_umask)
 
+    os.close(sk_fd)
+    os.close(pk_fd)
     Path(pk_path).unlink()
     Path(sk_path).unlink()
 

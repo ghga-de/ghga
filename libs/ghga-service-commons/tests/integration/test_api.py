@@ -18,7 +18,6 @@
 import asyncio
 import multiprocessing
 import re
-import time
 
 import httpx
 import pytest
@@ -48,11 +47,12 @@ async def test_run_server():
     process.start()
 
     # give server time to come up:
-    time.sleep(2)
+    await asyncio.sleep(2)
 
     # run test query:
     try:
-        response = httpx.get(f"http://{config.host}:{config.port}/greet")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"http://{config.host}:{config.port}/greet")
     except Exception as exc:
         raise exc
     finally:
