@@ -53,5 +53,5 @@
   // also lost on rebuild), then provision BOTH stacks: the Python workspace venv (uv), the
   // front-end node_modules (pnpm), and the Playwright browsers — so pytest discovery, the
   // Angular tooling, and the E2E tests all work the moment the window opens.
-  "postCreateCommand": "sudo chown vscode:vscode /home/vscode/.local /home/vscode/.local/share /home/vscode/.cache && sudo chown -R vscode:vscode /home/vscode/.local/share/uv /home/vscode/.cache/uv /home/vscode/.cache/ms-playwright && uv tool install git-filter-repo && uv sync --all-packages --all-extras && (cd frontend/data-portal && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium)"
+  "postCreateCommand": "sudo chown vscode:vscode /home/vscode/.local /home/vscode/.local/share /home/vscode/.cache && sudo chown -R vscode:vscode /home/vscode/.local/share/uv /home/vscode/.cache/uv /home/vscode/.cache/ms-playwright && uv tool install --reinstall git-filter-repo && uv sync --all-packages --all-extras && (cd frontend/data-portal && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium)"
 }
