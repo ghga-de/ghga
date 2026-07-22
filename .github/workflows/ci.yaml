@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -38,7 +38,7 @@ jobs:
       python: ${{ steps.affected.outputs.python }}
       frontend: ${{ steps.affected.outputs.frontend }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # full history for the merge-base diff
       - id: affected
@@ -75,7 +75,7 @@ jobs:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.python) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -98,7 +98,7 @@ jobs:
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.frontend) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: ${{ matrix.target }}/package.json

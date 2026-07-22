@@ -27,7 +27,7 @@ jobs:
       name: ${{ steps.tag.outputs.name }}
       version: ${{ steps.tag.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: tag
         run: |
           ref="${GITHUB_REF_NAME}"            # name/x.y.z
@@ -42,7 +42,7 @@ jobs:
       NAME: ${{ needs.resolve.outputs.name }}
       VERSION: ${{ needs.resolve.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # TODO (do NOT wire up until publish targets are agreed — see the header):
       # branch by the component's [tool.ghga] capabilities:
       #  - image=true  -> docker build -f docker/Dockerfile --build-arg PACKAGE=$NAME ...
