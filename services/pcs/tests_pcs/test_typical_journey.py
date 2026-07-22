@@ -43,8 +43,7 @@ def expected_event_from_file_id(*, file_id: UUID4, config: Config) -> ExpectedEv
     files_deletion_event = event_schemas.FileDeletionRequested(file_id=TEST_FILE_ID)
     payload = json.loads(files_deletion_event.model_dump_json())
     type_ = config.file_deletion_request_type
-    expected_event = ExpectedEvent(payload=payload, type_=type_, key=str(file_id))
-    return expected_event
+    return ExpectedEvent(payload=payload, type_=type_, key=str(file_id))
 
 
 async def test_happy_journey(joint_fixture: JointFixture):
