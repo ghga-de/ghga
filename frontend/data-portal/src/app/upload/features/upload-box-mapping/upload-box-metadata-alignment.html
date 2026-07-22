@@ -1,0 +1,144 @@
+<div class="flex flex-col gap-4">
+  <!-- Metadata file card -->
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title><h2>Metadata file</h2></mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <p
+        >Upload a metadata JSON file to check how well the files in this upload box
+        align with metadata that has not been ingested into the system yet. Nothing is
+        submitted to the backend.</p
+      >
+
+      <!-- File picker -->
+      <input
+        #fileInput
+        type="file"
+        accept="application/json,.json"
+        class="hidden"
+        (change)="onFileSelected($event)"
+      />
+      <div class="mt-2 flex flex-wrap items-center gap-3">
+        <button mat-stroked-button (click)="fileInput.click()">
+          <mat-icon fontIcon="upload_file" />
+          {{
+            uploadedMetadata() || parseError()
+              ? 'Choose a different file'
+              : 'Upload metadata file'
+          }}
+        </button>
+        @if (fileName()) {
+          <span class="text-gray-700">{{ fileName() }}</span>
+        }
+      </div>
+
+      @if (parseError(); as error) {
+        <p class="text-error mt-3 flex items-center gap-2">
+          <mat-icon fontIcon="error" />
+          <span>{{ error }}</span>
+        </p>
+      }
+
+      <!-- First study details -->
+      @if (uploadedMetadata(); as metadata) {
+        <div class="mt-4">
+          <p>
+            <strong class="inline-block w-40">Study title:</strong>
+            <span>{{ metadata.study.title }}</span>
+          </p>
+          <p class="flex">
+            <strong class="inline-block min-w-40">Description:</strong>
+            <span>{{ metadata.study.description }}</span>
+          </p>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Alignment card -->
+  @if (uploadedMetadata()) {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title><h2>Alignment</h2></mat-card-title>
+      </mat-card-header>
+
+      <mat-card-content>
+        @if (boxFilesLoading()) {
+          <mat-progress-bar mode="indeterminate" class="my-[0.5em]" />
+        }
+        @if (alignment(); as result) {
+          <div class="flex flex-col gap-4">
+            <!-- Summary -->
+            <div class="flex flex-col gap-1 text-base">
+              <p>
+                <strong>Aligned by:</strong>
+                {{ result.field === 'alias' ? 'file alias' : 'file name' }}
+                <span class="text-gray-700"
+                  >(alias: {{ result.aliasMatchCount }}, name:
+                  {{ result.nameMatchCount }} matches)</span
+                >
+              </p>
+              <p>
+                <strong>Matching files:</strong>&nbsp;<span class="text-success">{{
+                  result.matchCount
+                }}</span>
+                of {{ result.totalMetadata }} metadata files and
+                {{ result.totalBoxFiles }} upload box files
+              </p>
+            </div>
+
+            <!-- Unmatched metadata files -->
+            <div>
+              <p class="font-medium">
+                Metadata files without a match
+                @if (result.unmatchedMetadata.length > 0) {
+                  <span class="text-warning"
+                    >({{ result.unmatchedMetadata.length }})</span
+                  >
+                }
+              </p>
+              @if (result.unmatchedMetadata.length > 0) {
+                <ul class="ml-4 list-disc text-base">
+                  @for (file of result.unmatchedMetadata; track $index) {
+                    <li>
+                      {{ result.field === 'alias' ? file.alias : file.name }}
+                      <span class="text-gray-600"
+                        >({{ result.field === 'alias' ? 'name' : 'alias' }}:
+                        {{ result.field === 'alias' ? file.name : file.alias }})</span
+                      >
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="text-gray-700">All metadata files were matched.</p>
+              }
+            </div>
+
+            <!-- Unmatched box files -->
+            <div>
+              <p class="font-medium">
+                Upload box files without a match
+                @if (result.unmatchedBoxFiles.length > 0) {
+                  <span class="text-error"
+                    >({{ result.unmatchedBoxFiles.length }})</span
+                  >
+                }
+              </p>
+              @if (result.unmatchedBoxFiles.length > 0) {
+                <ul class="ml-4 list-disc text-base">
+                  @for (file of result.unmatchedBoxFiles; track file.id) {
+                    <li>{{ file.alias }}</li>
+                  }
+                </ul>
+              } @else {
+                <p class="text-gray-700">All upload box files were matched.</p>
+              }
+            </div>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

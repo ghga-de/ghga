@@ -65,7 +65,7 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
   - Prefer assertions on stable end states (URL/title/visible content) over transient intermediate states.
   - For known flaky UI transitions (menus/dialogs/navigation), use small bounded retries in shared test helpers rather than ad-hoc per-test logic.
   - Keep retries minimal (usually 1-2) and always keep a strict final assertion.
-- Docs: `pnpm docs`
+- Docs: `pnpm run docs` (use `run`; pnpm has a built-in `docs` command that would otherwise shadow the script)
 - README table of contents: `pnpm toc` (updates the region between `<!-- toc -->` and `<!-- tocstop -->`)
 
 ## Dev container CLI tools
@@ -195,6 +195,9 @@ Further project-specific development guidance:
 ## Templates
 
 - Keep templates simple and avoid complex logic
+- Do NOT call functions or methods in template bindings (including interpolation, `@if`/`@for` conditions, and inputs); bind to a signal or a `computed()` instead.
+  - Why: template expressions are re-evaluated on every change detection cycle, so a function call re-runs each time regardless of whether its inputs changed. This is wasteful, scales poorly (worse inside `@for`), and gets more pronounced under zoneless change detection. Signals and `computed()` are memoized: they recompute only when a dependency actually changes, and they let change detection update only what changed.
+  - Exceptions: pure pipes (also memoized) are fine, and event handlers (e.g. `(click)="doThing()"`) are calls in response to user actions, not evaluated during change detection, so they are fine too.
 - Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
 - Use the async pipe to handle observables
 - Do not assume globals like (`new Date()`) are available

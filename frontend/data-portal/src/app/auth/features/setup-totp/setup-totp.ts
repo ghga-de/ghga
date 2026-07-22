@@ -45,13 +45,16 @@ export class SetupTotpComponent {
   allowNavigation = false; // used by canDeactivate guard
 
   /**
-   * Get the provisioning URI as a signal
+   * The provisioning URI together with the secret extracted from it, as a signal.
+   * Resolving the secret here (instead of in the template) keeps the derivation
+   * out of change detection.
    */
-  setupUri = computed(async () => {
+  setupData = computed(async () => {
     const state = this.#sessionState();
     if (!['NeedsTotpToken', 'LostTotpToken'].includes(state)) return null;
     const uri = await this.#authService.createTotpToken();
-    return uri;
+    if (!uri) return null;
+    return { uri, secret: this.#getSecret(uri) };
   });
 
   showManualSetup = false;
@@ -75,16 +78,16 @@ export class SetupTotpComponent {
    * @param uri - The provisioning URI containing the secret
    * @returns just the secret from the URI
    */
-  getSecret(uri: string): string {
+  #getSecret(uri: string): string {
     return new URLSearchParams(uri.substring(uri.indexOf('?'))).get('secret')!;
   }
 
   /**
    * Copy the secret to the clipboard
-   * @param uri - The provisioning URI containing the secret
+   * @param secret - The TOTP setup secret
    */
-  copySecret(uri: string): void {
-    navigator.clipboard.writeText(this.getSecret(uri));
+  copySecret(secret: string): void {
+    navigator.clipboard.writeText(secret);
   }
 
   /**

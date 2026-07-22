@@ -214,7 +214,7 @@ export class AccessRequestDurationEditComponent implements OnInit {
     }
   };
 
-  saveDisabled = () => !this.durationForm().valid();
+  saveDisabled = computed<boolean>(() => !this.durationForm().valid());
 
   changed = () => {
     const wasModified = this.isModified();

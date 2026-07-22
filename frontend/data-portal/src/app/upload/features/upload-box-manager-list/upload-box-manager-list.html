@@ -28,11 +28,7 @@
         <th mat-header-cell *matHeaderCellDef mat-sort-header class="min-w-32"
           >State</th
         >
-        <td
-          mat-cell
-          *matCellDef="let box"
-          class="{{ getUploadBoxStateClass(box.state) }} capitalize"
-        >
+        <td mat-cell *matCellDef="let box" class="{{ box.stateClass }} capitalize">
           {{ box.state | CapitalisePipe }}
         </td>
       </ng-container>
@@ -61,7 +57,7 @@
           Storage location
         </th>
         <td mat-cell *matCellDef="let box">
-          {{ getStorageLocationLabel(box.storage_alias) }}
+          {{ box.storageLabel }}
         </td>
       </ng-container>
 

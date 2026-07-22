@@ -105,6 +105,22 @@ export class MetadataService {
   }
 
   /**
+   * Fetch the unique files for a study given its accession.
+   *
+   * Fetches the metldata Study resource for the accession and then resolves its
+   * files via {@link filesOfStudy}. This is used by the upload box mapping tool,
+   * which only knows the study accession (the rs study ID) and needs the file
+   * names/aliases that only metldata carries.
+   * @param accession Study accession (equal to the rs study ID)
+   * @returns An observable emitting a list of unique EM files
+   */
+  filesOfStudyId(accession: string): Observable<EmFile[]> {
+    return this.#http
+      .get<Study>(`${this.#studyUrl}/${accession}`)
+      .pipe(concatMap((study) => this.filesOfStudy(study)));
+  }
+
+  /**
    * Fetch the unique files for a study.
    *
    * Unfortunately, this method is not efficient, but it is only used temporarily

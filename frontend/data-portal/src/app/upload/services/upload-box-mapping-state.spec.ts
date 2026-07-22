@@ -22,7 +22,7 @@ describe('UploadBoxMappingStateService', () => {
 
   it('should save and return a snapshot for the requested box id', () => {
     const snapshot: MappingSnapshot = {
-      studyAccession: 'STUDY-001',
+      studyId: 'STUDY-001',
       mappedField: 'alias',
       manualMappings: [['meta-1', 'file-1']],
     };
@@ -34,12 +34,12 @@ describe('UploadBoxMappingStateService', () => {
 
   it('should keep snapshots isolated per upload box id', () => {
     const firstSnapshot: MappingSnapshot = {
-      studyAccession: 'STUDY-001',
+      studyId: 'STUDY-001',
       mappedField: 'alias',
       manualMappings: [['meta-1', 'file-1']],
     };
     const secondSnapshot: MappingSnapshot = {
-      studyAccession: 'STUDY-002',
+      studyId: 'STUDY-002',
       mappedField: 'name',
       manualMappings: [['meta-2', null]],
     };
@@ -53,12 +53,12 @@ describe('UploadBoxMappingStateService', () => {
 
   it('should clear only the requested box snapshot', () => {
     service.saveSnapshot('box-1', {
-      studyAccession: 'STUDY-001',
+      studyId: 'STUDY-001',
       mappedField: 'alias',
       manualMappings: [['meta-1', 'file-1']],
     });
     service.saveSnapshot('box-2', {
-      studyAccession: 'STUDY-002',
+      studyId: 'STUDY-002',
       mappedField: 'name',
       manualMappings: [['meta-2', 'file-2']],
     });
@@ -67,7 +67,7 @@ describe('UploadBoxMappingStateService', () => {
 
     expect(service.snapshotFor('box-1')).toBeUndefined();
     expect(service.snapshotFor('box-2')).toEqual({
-      studyAccession: 'STUDY-002',
+      studyId: 'STUDY-002',
       mappedField: 'name',
       manualMappings: [['meta-2', 'file-2']],
     });

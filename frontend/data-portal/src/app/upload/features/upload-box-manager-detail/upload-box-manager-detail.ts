@@ -14,14 +14,13 @@ import {
   input,
   OnInit,
   signal,
-  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 
 import { DisplayUser, UserService } from '@app/auth/services/user';
@@ -45,10 +44,15 @@ import {
   FileUploadWithAccession,
 } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
-import { FileUploadStatePipe } from '@app/upload/pipes/file-upload-state-pipe';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
+import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';
 import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
+
+/** An upload grant annotated with whether it is currently active. */
+interface GrantWithStatus extends UploadGrant {
+  active: boolean;
+}
 
 /**
  * Detail view component for managing an individual upload box.
@@ -61,15 +65,15 @@ import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapp
     MatButtonModule,
     MatCardModule,
     MatIcon,
-    MatPaginatorModule,
     MatTableModule,
+    MatTooltipModule,
     RouterLink,
     Capitalise,
     ParseBytes,
-    FileUploadStatePipe,
+    UploadBoxFilesTableComponent,
     UploadBoxMappingComponent,
   ],
-  providers: [CommonDatePipe],
+  providers: [CommonDatePipe, ParseBytes],
   templateUrl: './upload-box-manager-detail.html',
 })
 export class UploadBoxManagerDetailComponent implements OnInit {
@@ -78,6 +82,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   #location = inject(NavigationTrackingService);
   #notificationService = inject(NotificationService);
   #confirmationService = inject(ConfirmationService);
+  #parseBytes = inject(ParseBytes);
   #dialog = inject(MatDialog);
   #router = inject(Router);
   #isBackNavigation = this.#router.getCurrentNavigation()?.trigger === 'popstate';
@@ -174,48 +179,28 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   /** Placeholder columns for the upload grants table. */
   readonly grantColumns = ['grantee', 'status', 'validity', 'details'];
 
-  /** Columns for the file uploads table. */
-  fileColumns = computed<string[]>(() => {
-    const state = this.uploadBox()?.state;
-    if (state === UploadBoxState.archived) {
-      return ['alias', 'accession', 'size', 'uploaded'];
-    }
-    const columns = ['alias', 'status', 'size', 'uploaded'];
-    // Files can only be deleted while the box is still open for uploads.
-    if (state === UploadBoxState.open) {
-      columns.push('delete');
-    }
-    return columns;
-  });
-
-  /** The upload grants for this box. */
-  grants = computed<UploadGrant[]>(() => this.#uploadBoxService.boxGrants.value());
-
-  /** MatTableDataSource for paginated file uploads. */
-  fileUploadsDataSource = new MatTableDataSource<FileUploadWithAccession>();
-
-  private readonly fileUploadsPaginator = viewChild(MatPaginator);
-
-  #syncFileUploadsEffect = effect(() => {
-    this.fileUploadsDataSource.data = this.#uploadBoxService.boxFileUploads.value();
-  });
-
-  #assignPaginatorEffect = effect(() => {
-    const paginator = this.fileUploadsPaginator();
-    if (paginator) {
-      this.fileUploadsDataSource.paginator = paginator;
-    }
-  });
-
   /**
-   * Check if an upload grant is currently active.
-   * @param grant - the upload grant to check
-   * @returns true if the grant is within its valid period
+   * The upload grants for this box, each annotated with whether it is currently
+   * active. Computed once per grant change (rather than per change-detection
+   * cycle) so the template can bind to `grant.active` instead of calling a method.
    */
-  isGrantActive(grant: UploadGrant): boolean {
+  grants = computed<GrantWithStatus[]>(() => {
     const today = new Date().toISOString().slice(0, 10);
-    return grant.valid_from <= today && today <= grant.valid_until;
-  }
+    return this.#uploadBoxService.boxGrants.value().map((grant) => ({
+      ...grant,
+      active: grant.valid_from <= today && today <= grant.valid_until,
+    }));
+  });
+
+  /** The file uploads contained in this box. */
+  fileUploads = computed<FileUploadWithAccession[]>(() =>
+    this.#uploadBoxService.boxFileUploads.value(),
+  );
+
+  /** Whether the box's file list is still being loaded. */
+  filesLoading = computed<boolean>(() =>
+    this.#uploadBoxService.boxFileUploads.isLoading(),
+  );
 
   /** Whether a box state change (lock or reopen) is currently in flight. */
   isChangingState = signal<boolean>(false);
@@ -339,6 +324,66 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   }
 
   /**
+   * Whether the upload box can be deleted. Archived boxes cannot be deleted by
+   * the backend, so the delete button is disabled for them.
+   */
+  canDeleteBox = computed<boolean>(
+    () => this.uploadBox()?.state !== UploadBoxState.archived,
+  );
+
+  /**
+   * Ask for confirmation and, on approval, delete the upload box and all its
+   * files. For a non-empty box, the confirmation states how many files (and
+   * their total size) will be removed; for an empty box it only warns that the
+   * action cannot be undone.
+   */
+  deleteBox(): void {
+    const box = this.uploadBox();
+    if (!box || box.state === UploadBoxState.archived) return;
+    const message =
+      box.file_count > 0
+        ? `<p>This box currently contains <strong>${box.file_count} ` +
+          `file${box.file_count === 1 ? '' : 's'}</strong> with a total size of ` +
+          `<strong>${this.#parseBytes.transform(box.size)}</strong>.</p>` +
+          '<p>Deleting the box will <strong>permanently remove all files</strong> ' +
+          'it contains. This action <strong>cannot be undone</strong>.</p>'
+        : '<p>This box is currently empty. Deleting it ' +
+          '<strong>cannot be undone</strong>.</p>';
+    this.#confirmationService.confirm({
+      title: 'Delete upload box?',
+      message,
+      cancelText: 'Cancel',
+      confirmText: 'Delete the box',
+      confirmClass: 'error',
+      callback: (confirmed) => {
+        if (confirmed) this.#deleteBox(box);
+      },
+    });
+  }
+
+  /**
+   * Perform the actual box deletion request, report the outcome and, on success,
+   * navigate back to the upload box list.
+   * @param box - the upload box to delete
+   */
+  #deleteBox(box: ResearchDataUploadBox): void {
+    this.isChangingState.set(true);
+    this.#uploadBoxService.deleteUploadBox(box.id, box.version).subscribe({
+      next: () => {
+        this.isChangingState.set(false);
+        this.#notificationService.showSuccess('The upload box has been deleted.');
+        this.goBack();
+      },
+      error: () => {
+        this.isChangingState.set(false);
+        this.#notificationService.showError(
+          'Failed to delete the upload box. Please try again.',
+        );
+      },
+    });
+  }
+
+  /**
    * Open a dialog to edit the box details (title, description, size limit).
    */
   editDetails(): void {
@@ -389,6 +434,15 @@ export class UploadBoxManagerDetailComponent implements OnInit {
       this.#deletableFileStates.includes(file.state)
     );
   }
+
+  /**
+   * Bound predicate passed to the files table so it can decide, per file,
+   * whether to render a delete button.
+   * @param file - the file upload to check
+   * @returns true if the file can be deleted
+   */
+  readonly canDeleteFileFn = (file: FileUploadWithAccession): boolean =>
+    this.canDeleteFile(file);
 
   /**
    * Delete a file upload from the box. Files that are still being uploaded

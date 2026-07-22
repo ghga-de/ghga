@@ -44,8 +44,14 @@ export interface ResearchDataUploadBox extends ResearchDataUploadBoxBase {
   changed_by: string;
   file_count: number;
   size: number; // current size in bytes
-  // Note: the API also returns file_upload_box_id, file_upload_box_version, and
-  // file_upload_box_state, but these are not used in the frontend.
+  // The ID of the underlying FileUploadBox. This differs from `id` (the research
+  // data upload box ID) and is the value that each file upload references via its
+  // own `box_id`, so it is needed to associate file uploads with this box.
+  // Optional because locally created boxes (see UploadBoxService) do not have it
+  // yet; the backend always returns it.
+  file_upload_box_id?: string;
+  // Note: the API also returns file_upload_box_version and file_upload_box_state,
+  // but these are not used in the frontend.
 }
 
 /** Data to update a Research Data Upload Box */

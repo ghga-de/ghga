@@ -17,6 +17,7 @@ import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { BoxRetrievalResults, UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
+import { FileIdMap, Study as RsStudy } from '@app/upload/models/study';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageResponse } from '@app/work-packages/models/work-package';
 
@@ -1140,10 +1141,11 @@ export const datasetInformation: DatasetInformation = {
  */
 
 export const uploadBoxes: BoxRetrievalResults = {
-  count: 3,
+  count: 5,
   boxes: [
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
       version: 1,
       state: UploadBoxState.open,
       title: 'Research Data Upload Box of John',
@@ -1157,6 +1159,7 @@ export const uploadBoxes: BoxRetrievalResults = {
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
       version: 4,
       state: UploadBoxState.locked,
       title: 'Research Data Upload Box of Jane',
@@ -1170,6 +1173,7 @@ export const uploadBoxes: BoxRetrievalResults = {
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68003',
       version: 2,
       state: UploadBoxState.archived,
       title: 'Research Data Upload Box of Joan',
@@ -1180,6 +1184,34 @@ export const uploadBoxes: BoxRetrievalResults = {
       size: 1567890123,
       storage_alias: 'TUE03',
       max_size: 8_246_337_208_320, // 7.5 TiB
+    },
+    {
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68004',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68004',
+      version: 4,
+      state: UploadBoxState.open,
+      title: 'Research Data Upload Box 2 of John',
+      description: 'Upload box for proteomics files of study GHGAS12345678901235',
+      last_changed: '2025-02-04T09:00:00Z',
+      changed_by: 'doe@test.dev',
+      file_count: 15,
+      size: 64424509440, // 60 GiB
+      storage_alias: 'HD02',
+      max_size: 5_497_558_138_880, // 5 TiB
+    },
+    {
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68005',
+      version: 2,
+      state: UploadBoxState.open,
+      title: 'Research Data Upload Box 3 of John',
+      description: 'Upload box for imaging files of study GHGAS12345678901236',
+      last_changed: '2025-02-05T09:00:00Z',
+      changed_by: 'doe@test.dev',
+      file_count: 2,
+      size: 5368709120, // 5 GiB
+      storage_alias: 'TUE03',
+      max_size: 5_497_558_138_880, // 5 TiB
     },
   ],
 };
@@ -1208,7 +1240,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
     id: 'grant-rs-002',
     user_id: 'doe@test.dev',
     iva_id: '32b50c92-489f-4418-ace8-e7552e3cf36d',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68004',
     created: '2026-01-03T00:00:00Z',
     valid_from: '2026-01-03',
     valid_until: '2026-12-31',
@@ -1224,7 +1256,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
     id: 'grant-rs-003',
     user_id: 'doe@test.dev',
     iva_id: null,
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
+    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68005',
     created: '2026-01-05T00:00:00Z',
     valid_from: '2026-01-05',
     valid_until: '2026-12-31',
@@ -1244,7 +1276,7 @@ export const uploadGrants: GrantWithBoxInfo[] = [
 export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   {
     id: 'f1b36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
     alias: 'sample_rna_001_R1.fastq.gz',
     state: 'interrogated',
     state_updated: '2026-01-10T08:00:00Z',
@@ -1258,7 +1290,7 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f2b36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
     alias: 'sample_rna_001_R2.fastq.gz',
     state: 'interrogated',
     state_updated: '2026-01-10T08:05:00Z',
@@ -1272,7 +1304,7 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f3b36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
     alias: 'metadata_manifest.csv',
     state: 'inbox',
     state_updated: '2026-01-10T09:00:00Z',
@@ -1286,7 +1318,7 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f4b36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
     alias: 'sample_rna_002_R1.fastq.gz',
     state: 'init',
     state_updated: '2026-01-10T09:30:00Z',
@@ -1306,7 +1338,7 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
 export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   {
     id: 'f1a36607a-b53f-49ed-bf3e-a5f2dbc68001',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_001_R1.fastq',
     state: 'interrogated',
     state_updated: '2026-01-14T10:12:00Z',
@@ -1320,7 +1352,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f2a36607a-b53f-49ed-bf3e-a5f2dbc68002',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_001_R2.fastq',
     state: 'interrogated',
     state_updated: '2026-01-14T10:45:00Z',
@@ -1334,7 +1366,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f3a36607a-b53f-49ed-bf3e-a5f2dbc68003',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_002_R1.fastq.gz',
     state: 'interrogated',
     state_updated: '2026-01-14T11:20:00Z',
@@ -1348,7 +1380,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f4a36607a-b53f-49ed-bf3e-a5f2dbc68004',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_002_R2.fastq.gz',
     state: 'interrogated',
     state_updated: '2026-01-14T11:55:00Z',
@@ -1362,7 +1394,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f5a36607a-b53f-49ed-bf3e-a5f2dbc68005',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'reference_genome.fasta',
     state: 'interrogated',
     state_updated: '2026-01-15T08:30:00Z',
@@ -1376,7 +1408,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f6a36607a-b53f-49ed-bf3e-a5f2dbc68006',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'aligned_reads_001.bam',
     state: 'interrogated',
     state_updated: '2026-01-15T09:10:00Z',
@@ -1390,7 +1422,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f7a36607a-b53f-49ed-bf3e-a5f2dbc68007',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'aligned_reads_002.cram',
     state: 'interrogated',
     state_updated: '2026-01-15T09:55:00Z',
@@ -1404,7 +1436,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f8a36607a-b53f-49ed-bf3e-a5f2dbc68008',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'variants_cohort.vcf',
     state: 'interrogated',
     state_updated: '2026-01-15T14:00:00Z',
@@ -1418,7 +1450,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'f9a36607a-b53f-49ed-bf3e-a5f2dbc68009',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'chip_peaks_001.bed',
     state: 'interrogated',
     state_updated: '2026-01-15T14:30:00Z',
@@ -1432,7 +1464,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fa036607a-b53f-49ed-bf3e-a5f2dbc68010',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'methylation_sample_001.meth',
     state: 'interrogated',
     state_updated: '2026-01-16T08:00:00Z',
@@ -1446,7 +1478,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fb036607a-b53f-49ed-bf3e-a5f2dbc68011',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'ms_proteomics_run1.raw',
     state: 'interrogated',
     state_updated: '2026-01-16T09:15:00Z',
@@ -1460,7 +1492,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fc036607a-b53f-49ed-bf3e-a5f2dbc68012',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'study_data_manifest.pdf',
     state: 'interrogated',
     state_updated: '2026-01-16T10:00:00Z',
@@ -1474,7 +1506,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fd036607a-b53f-49ed-bf3e-a5f2dbc68013',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'sample_003_R1.fastq.gz',
     state: 'failed',
     state_updated: '2026-01-16T11:00:00Z',
@@ -1488,7 +1520,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'fe036607a-b53f-49ed-bf3e-a5f2dbc68014',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'aligned_reads_003.bam',
     state: 'awaiting_archival',
     state_updated: '2026-01-17T07:45:00Z',
@@ -1502,7 +1534,7 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
   },
   {
     id: 'ff036607a-b53f-49ed-bf3e-a5f2dbc68015',
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
     alias: 'chip_peaks_002.bed',
     state: 'interrogated',
     state_updated: '2026-01-17T08:30:00Z',
@@ -1523,7 +1555,7 @@ export const uploadBox3FileUploads: FileUploadWithAccession[] = Array.from(
   { length: 28 },
   (_, i) => ({
     id: `f${String(i + 1).padStart(2, '0')}036607a-b53f-49ed-bf3e-a5f2dbc68003`,
-    box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68003',
     alias: `archived_sample_${String(i + 1).padStart(3, '0')}.fastq.gz`,
     state: 'archived' as FileUploadWithAccession['state'],
     state_updated: '2025-06-01T10:00:00Z',
@@ -1536,6 +1568,63 @@ export const uploadBox3FileUploads: FileUploadWithAccession[] = Array.from(
     accession: `GHGAF1234567890${String(2200 + i).padStart(4, '0')}`,
   }),
 );
+
+// 15 files so the file table paginates (paginator shows for more than 10 files).
+export const uploadBox4FileUploads: FileUploadWithAccession[] = Array.from(
+  { length: 15 },
+  (_, i) => {
+    const state = (
+      i % 5 === 3 ? 'inbox' : i % 5 === 4 ? 'init' : 'interrogated'
+    ) as FileUploadWithAccession['state'];
+    const decrypted_size = (i + 1) * 536870912; // 0.5–7.5 GiB per file
+    return {
+      id: `f${String(i + 1).padStart(2, '0')}c36607a-b53f-49ed-bf3e-a5f2dbc68004`,
+      box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68004',
+      alias: `sample_proteome_${String(i + 1).padStart(3, '0')}.raw`,
+      state,
+      state_updated: '2026-02-04T08:00:00Z',
+      storage_alias: 'HD02',
+      bucket_id: 'inbox-hd02',
+      decrypted_sha256:
+        state === 'interrogated' ? (i % 10).toString().repeat(64) : null,
+      decrypted_size,
+      encrypted_size: decrypted_size + 48000,
+      part_size: 16777216,
+      accession: null,
+    };
+  },
+);
+
+export const uploadBox5FileUploads: FileUploadWithAccession[] = [
+  {
+    id: 'f1d36607a-b53f-49ed-bf3e-a5f2dbc68005',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68005',
+    alias: 'sample_image_001.tiff',
+    state: 'interrogated',
+    state_updated: '2026-02-05T08:00:00Z',
+    storage_alias: 'TUE03',
+    bucket_id: 'inbox-tue03',
+    decrypted_sha256: 'd'.repeat(64),
+    decrypted_size: 4294967296, // 4 GiB
+    encrypted_size: 4295000000,
+    part_size: 16777216,
+    accession: null,
+  },
+  {
+    id: 'f2d36607a-b53f-49ed-bf3e-a5f2dbc68005',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68005',
+    alias: 'sample_image_002.tiff',
+    state: 'init',
+    state_updated: '2026-02-05T08:30:00Z',
+    storage_alias: 'TUE03',
+    bucket_id: 'inbox-tue03',
+    decrypted_sha256: null,
+    decrypted_size: 1073741824, // 1 GiB
+    encrypted_size: 1073780000,
+    part_size: 16777216,
+    accession: null,
+  },
+];
 
 /**
  * WPS API
@@ -1837,3 +1926,228 @@ export const uploadBoxTestDatasetDetails: DatasetDetailsRaw = {
     },
   ],
 };
+
+/**
+ * The dedicated upload-box file-mapping test study as served by rs.
+ *
+ * Its `id` equals the GHGA study accession of `uploadBoxTestStudyData`, so the
+ * metldata Study/EmbeddedDataset chain resolves and the file names/aliases can
+ * be shown in the mapping tool. This is the study the mapping e2e test drives.
+ */
+export const uploadBoxTestRsStudy: RsStudy = {
+  id: 'GHGAS99999999999001',
+  title: 'Upload Box File Mapping Test Study',
+  description: 'Dedicated study for testing the file mapping UI with upload box 2.',
+  types: ['test_genomics'],
+  affiliations: ['Test affiliation'],
+  status: 'draft',
+  num_datasets: 1,
+  num_publications: 0,
+  has_em: true,
+  created: '2026-01-10T08:00:00Z',
+  created_by: 'doe@test.dev',
+  approved: null,
+  approved_by: null,
+  superseded_by_id: null,
+};
+
+/**
+ * RS file mapping status for the upload-box test study.
+ *
+ * Served at `GET /studies/GHGAS99999999999001/file-ids`. Maps each metadata
+ * research-data-file accession to its internal file ID, or `null` when the file
+ * is still unmapped. All files are unmapped except `GHGAF99999999999016`
+ * (some_unessential_data.csv), which is already mapped (has an internal file ID)
+ * and is therefore filtered out of the mapping tool — demonstrating that the
+ * tool only lists files that still need mapping.
+ */
+export const uploadBoxTestFileIds: FileIdMap = {
+  GHGAF99999999999001: null,
+  GHGAF99999999999002: null,
+  GHGAF99999999999003: null,
+  GHGAF99999999999004: null,
+  GHGAF99999999999005: null,
+  GHGAF99999999999006: null,
+  GHGAF99999999999007: null,
+  GHGAF99999999999008: null,
+  GHGAF99999999999009: null,
+  GHGAF99999999999010: null,
+  GHGAF99999999999011: null,
+  GHGAF99999999999012: null,
+  GHGAF99999999999013: null,
+  GHGAF99999999999014: null,
+  GHGAF99999999999015: null,
+  GHGAF99999999999016: '2b9f4d6e-1c3a-4e7b-9f0d-7a5c8e2b1d40',
+};
+
+/*
+ * Additional studies for the mapping-tool study selector.
+ *
+ * These are realistic studies (not the dedicated file-mapping test study, so
+ * they deliberately do not carry "File Mapping Test" in their name) that exist
+ * mainly to populate the dropdown with more than one entry. Each one still
+ * resolves through its own small metldata Study/EmbeddedDataset chain and has a
+ * file-ids endpoint, so selecting it shows a coherent set of unmapped files.
+ */
+
+/** metldata Study resource for the pediatric leukemia study */
+export const pediatricLeukemiaStudyData: Study = {
+  accession: 'GHGAS00000000000002',
+  ega_accession: 'EGAS00000000002',
+  alias: 'PEDIATRIC_LEUKEMIA',
+  types: ['cancer_genomics'],
+  title: 'Genomic Landscape of Pediatric Acute Leukemia',
+  affiliations: ['University Children’s Hospital'],
+  datasets: ['GHGAD00000000000002'],
+  description:
+    'Whole-genome sequencing of matched tumor and normal samples from a pediatric acute leukemia cohort.',
+  publications: ['GHGA000000002'],
+};
+
+/** metldata EmbeddedDataset resource for the pediatric leukemia study */
+export const pediatricLeukemiaDatasetDetails: DatasetDetailsRaw = {
+  ...datasetDetails,
+  accession: 'GHGAD00000000000002',
+  ega_accession: 'EGAD00000000002',
+  title: 'Pediatric Acute Leukemia WGS',
+  description: 'Matched tumor/normal whole-genome sequencing data.',
+  process_data_files: [],
+  experiment_method_supporting_files: [],
+  analysis_method_supporting_files: [],
+  individual_supporting_files: [],
+  experiments: [],
+  samples: [],
+  research_data_files: [
+    {
+      accession: 'GHGAF00000000000201',
+      ega_accession: 'EGAF00000201',
+      alias: 'tumor_wgs_R1.fastq.gz',
+      name: 'Tumor WGS Read 1',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF00000000000202',
+      ega_accession: 'EGAF00000202',
+      alias: 'tumor_wgs_R2.fastq.gz',
+      name: 'Tumor WGS Read 2',
+      format: 'FASTQ',
+    },
+    {
+      accession: 'GHGAF00000000000203',
+      ega_accession: 'EGAF00000203',
+      alias: 'normal_wgs.bam',
+      name: 'Normal WGS Alignment',
+      format: 'BAM',
+    },
+  ],
+};
+
+/** RS file mapping status for the pediatric leukemia study */
+export const pediatricLeukemiaFileIds: FileIdMap = {
+  GHGAF00000000000201: null,
+  GHGAF00000000000202: null,
+  // already mapped, hence filtered out of the mapping tool
+  GHGAF00000000000203: 'b71e0c92-5a4d-4f18-8c2a-1e6d3f905b22',
+};
+
+/** RS study entry for the pediatric leukemia study */
+export const pediatricLeukemiaRsStudy: RsStudy = {
+  id: 'GHGAS00000000000002',
+  title: 'Genomic Landscape of Pediatric Acute Leukemia',
+  description:
+    'Whole-genome sequencing of matched tumor and normal samples from a pediatric acute leukemia cohort.',
+  types: ['cancer_genomics'],
+  affiliations: ['University Children’s Hospital'],
+  status: 'draft',
+  num_datasets: 1,
+  num_publications: 1,
+  has_em: true,
+  created: '2026-02-03T09:30:00Z',
+  created_by: 'doe@test.dev',
+  approved: null,
+  approved_by: null,
+  superseded_by_id: null,
+};
+
+/** metldata Study resource for the rare neurological disorders study */
+export const rareNeuroStudyData: Study = {
+  accession: 'GHGAS00000000000003',
+  ega_accession: 'EGAS00000000003',
+  alias: 'RARE_NEURO',
+  types: ['rare_disease_genomics'],
+  title: 'Whole-Genome Sequencing of Rare Neurological Disorders',
+  affiliations: ['Institute of Human Genetics'],
+  datasets: ['GHGAD00000000000003'],
+  description:
+    'Whole-genome sequencing of families affected by undiagnosed rare neurological disorders.',
+  publications: [],
+};
+
+/** metldata EmbeddedDataset resource for the rare neurological disorders study */
+export const rareNeuroDatasetDetails: DatasetDetailsRaw = {
+  ...datasetDetails,
+  accession: 'GHGAD00000000000003',
+  ega_accession: 'EGAD00000000003',
+  title: 'Rare Neurological Disorders WGS',
+  description: 'Family-based whole-genome sequencing data.',
+  process_data_files: [],
+  experiment_method_supporting_files: [],
+  analysis_method_supporting_files: [],
+  individual_supporting_files: [],
+  experiments: [],
+  samples: [],
+  research_data_files: [
+    {
+      accession: 'GHGAF00000000000301',
+      ega_accession: 'EGAF00000301',
+      alias: 'proband_wgs.cram',
+      name: 'Proband WGS Alignment',
+      format: 'CRAM',
+    },
+    {
+      accession: 'GHGAF00000000000302',
+      ega_accession: 'EGAF00000302',
+      alias: 'trio_variants.vcf',
+      name: 'Trio Joint Variant Calls',
+      format: 'VCF',
+    },
+  ],
+};
+
+/** RS file mapping status for the rare neurological disorders study */
+export const rareNeuroFileIds: FileIdMap = {
+  GHGAF00000000000301: null,
+  GHGAF00000000000302: null,
+};
+
+/** RS study entry for the rare neurological disorders study */
+export const rareNeuroRsStudy: RsStudy = {
+  id: 'GHGAS00000000000003',
+  title: 'Whole-Genome Sequencing of Rare Neurological Disorders',
+  description:
+    'Whole-genome sequencing of families affected by undiagnosed rare neurological disorders.',
+  types: ['rare_disease_genomics'],
+  affiliations: ['Institute of Human Genetics'],
+  status: 'draft',
+  num_datasets: 1,
+  num_publications: 0,
+  has_em: true,
+  created: '2026-03-18T14:05:00Z',
+  created_by: 'roe@test.dev',
+  approved: null,
+  approved_by: null,
+  superseded_by_id: null,
+};
+
+/**
+ * RS studies that still have unmapped files.
+ *
+ * Served at `GET /studies?with_unmapped_files=true`. Each entry's `id` equals a
+ * GHGA study accession whose metldata Study/EmbeddedDataset chain and file-ids
+ * endpoint are mocked, so any of them can be selected in the mapping tool.
+ */
+export const studiesWithUnmappedFiles: RsStudy[] = [
+  pediatricLeukemiaRsStudy,
+  rareNeuroRsStudy,
+  uploadBoxTestRsStudy,
+];

@@ -40,7 +40,7 @@ export const FileUploadStateClass: Record<FileUploadState, string> = {
 export interface FileUploadWithAccession {
   /** Unique identifier for the file upload */
   id: string;
-  /** ID of the box this file belongs to */
+  /** ID of the underlying file upload box this file belongs to */
   box_id: string;
   /** The alias (filename) of the uploaded file */
   alias: string;

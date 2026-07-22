@@ -12,12 +12,12 @@ import { uploadBox1FileUploads, uploadBoxes, uploadGrants } from '@app/../mocks/
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { UserService } from '@app/auth/services/user';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
+import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
@@ -72,6 +72,7 @@ class MockUploadBoxService {
   deleteFileUpload = vitest.fn(() => of(undefined));
   lockUploadBox = vitest.fn(() => of(undefined));
   openUploadBox = vitest.fn(() => of(undefined));
+  deleteUploadBox = vitest.fn(() => of(undefined));
 
   getStorageLocationLabel = (alias: string) =>
     this.storageLabels.value()[alias] ?? alias;
@@ -126,17 +127,24 @@ class MockUploadBoxService {
 }
 
 /**
- * Minimal mock of MetadataSearchService for the embedded mapping component.
+ * Minimal mock of StudyService for the embedded mapping component.
  */
-class MockMetadataSearchService {
-  loadStudiesMap = vitest.fn(() => of(new Map()));
+class MockStudyService {
+  studies = {
+    value: () => [],
+    isLoading: () => false,
+    error: () => undefined,
+  };
+
+  loadStudies = vitest.fn();
+  loadFileIds = vitest.fn(() => of({}));
 }
 
 /**
  * Minimal mock of MetadataService for the embedded mapping component.
  */
 class MockMetadataService {
-  filesOfStudy = vitest.fn(() => of([]));
+  filesOfStudyId = vitest.fn(() => of([]));
 }
 
 const mockDialog = { open: vitest.fn() };
@@ -179,7 +187,7 @@ describe('UploadBoxManagerDetailComponent', () => {
         { provide: NavigationTrackingService, useValue: mockNavigationService },
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
-        { provide: MetadataSearchService, useClass: MockMetadataSearchService },
+        { provide: StudyService, useClass: MockStudyService },
         { provide: MatDialog, useValue: mockDialog },
       ],
     })
@@ -229,6 +237,27 @@ describe('UploadBoxManagerDetailComponent', () => {
       uploadBoxService.setBoxGrants(uploadGrants);
       await fixture.whenStable();
       expect(screen.getAllByText('John Doe (doe@home.org)')).toHaveLength(3);
+    });
+
+    it('should mark a grant as active while today is within its validity period', async () => {
+      // Bounds far in the past/future keep the outcome independent of the clock.
+      uploadBoxService.setBoxGrants([
+        { ...uploadGrants[0], valid_from: '2000-01-01', valid_until: '2999-12-31' },
+      ]);
+      await fixture.whenStable();
+      const status = screen.getByText('active');
+      expect(status).toBeVisible();
+      expect(status).toHaveClass('text-success');
+    });
+
+    it('should mark a grant as inactive once its validity period has passed', async () => {
+      uploadBoxService.setBoxGrants([
+        { ...uploadGrants[0], valid_from: '2000-01-01', valid_until: '2000-12-31' },
+      ]);
+      await fixture.whenStable();
+      const status = screen.getByText('inactive');
+      expect(status).toBeVisible();
+      expect(status).toHaveClass('text-error');
     });
 
     it('should show "No upload grants found" when grants list is empty', () => {
@@ -537,6 +566,102 @@ describe('UploadBoxManagerDetailComponent', () => {
         expect(mockNotificationService.showError).toHaveBeenCalled();
         expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('deleting the box', () => {
+    const archivedBox = uploadBoxes.boxes[2];
+
+    beforeEach(() => {
+      mockDialog.open.mockReset();
+      mockNavigationService.back.mockClear();
+      mockNotificationService.showSuccess.mockClear();
+      mockNotificationService.showError.mockClear();
+      uploadBoxService.deleteUploadBox.mockClear();
+      uploadBoxService.deleteUploadBox.mockReturnValue(of(undefined));
+    });
+
+    it('should show an enabled delete button for a non-archived box', async () => {
+      uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+      fixture.componentRef.setInput('id', TEST_BOX.id);
+      await fixture.whenStable();
+
+      const button = screen.getByRole('button', { name: /delete upload box/i });
+      expect(button).toBeVisible();
+      expect(button).toBeEnabled();
+    });
+
+    it('should show a disabled delete button for an archived box', async () => {
+      uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+      fixture.componentRef.setInput('id', archivedBox.id);
+      await fixture.whenStable();
+
+      const button = screen.getByRole('button', { name: /delete upload box/i });
+      expect(button).toBeVisible();
+      expect(button).toBeDisabled();
+    });
+
+    it('should delete the box after confirmation and navigate back', async () => {
+      uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+      fixture.componentRef.setInput('id', TEST_BOX.id);
+      await fixture.whenStable();
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+
+      component.deleteBox();
+      await fixture.whenStable();
+
+      expect(mockDialog.open).toHaveBeenCalledTimes(1);
+      expect(uploadBoxService.deleteUploadBox).toHaveBeenCalledWith(
+        TEST_BOX.id,
+        TEST_BOX.version,
+      );
+      expect(mockNotificationService.showSuccess).toHaveBeenCalled();
+      // goBack() defers the actual navigation with setTimeout; flush it.
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(mockNavigationService.back).toHaveBeenCalled();
+    });
+
+    it('should not delete the box when the confirmation is cancelled', async () => {
+      uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+      fixture.componentRef.setInput('id', TEST_BOX.id);
+      await fixture.whenStable();
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+      component.deleteBox();
+      await fixture.whenStable();
+
+      expect(uploadBoxService.deleteUploadBox).not.toHaveBeenCalled();
+      expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+    });
+
+    it('should not delete an archived box even if called directly', async () => {
+      uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+      fixture.componentRef.setInput('id', archivedBox.id);
+      await fixture.whenStable();
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+
+      component.deleteBox();
+      await fixture.whenStable();
+
+      expect(mockDialog.open).not.toHaveBeenCalled();
+      expect(uploadBoxService.deleteUploadBox).not.toHaveBeenCalled();
+    });
+
+    it('should show an error notification when deletion fails', async () => {
+      uploadBoxService.setUploadBoxes(uploadBoxes.boxes);
+      fixture.componentRef.setInput('id', TEST_BOX.id);
+      await fixture.whenStable();
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+      uploadBoxService.deleteUploadBox.mockReturnValueOnce(
+        throwError(() => new Error('failed')),
+      );
+
+      component.deleteBox();
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showError).toHaveBeenCalled();
+      expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+      expect(mockNavigationService.back).not.toHaveBeenCalled();
     });
   });
 });

@@ -24,9 +24,19 @@ import {
   uploadBox1FileUploads,
   uploadBox2FileUploads,
   uploadBox3FileUploads,
+  uploadBox4FileUploads,
+  uploadBox5FileUploads,
   uploadBoxes,
+  pediatricLeukemiaDatasetDetails,
+  pediatricLeukemiaFileIds,
+  pediatricLeukemiaStudyData,
+  rareNeuroDatasetDetails,
+  rareNeuroFileIds,
+  rareNeuroStudyData,
+  studiesWithUnmappedFiles,
   uploadBoxTestDatasetDetails,
   uploadBoxTestDatasetSummary,
+  uploadBoxTestFileIds,
   uploadBoxTestStudyData,
   uploadGrants,
   users,
@@ -145,10 +155,20 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Upload box mapping test dataset details (files match box 2 aliases for testing)
   'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD99999999999001':
     uploadBoxTestDatasetDetails,
+  // Dataset details for additional studies shown in the mapping-tool selector
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD00000000000002':
+    pediatricLeukemiaDatasetDetails,
+  'GET /api/metldata/artifacts/embedded_public/classes/EmbeddedDataset/resources/GHGAD00000000000003':
+    rareNeuroDatasetDetails,
 
   // Get study details (embedded) — specific entries before the wildcard catch-all
   'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/GHGAS99999999999001':
     uploadBoxTestStudyData,
+  // Study resources for additional studies shown in the mapping-tool selector
+  'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/GHGAS00000000000002':
+    pediatricLeukemiaStudyData,
+  'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/GHGAS00000000000003':
+    rareNeuroStudyData,
   // Get study details (embedded)
   'GET /api/metldata/artifacts/embedded_public/classes/Study/resources/*': studyData,
 
@@ -226,6 +246,18 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/rts/studies/GHGAS12345678901234': 404,
 
   /**
+   * RS Studies API
+   */
+
+  // Fetch studies that still have unmapped files (for the mapping tool)
+  'GET /api/rs/studies?with_unmapped_files=true': studiesWithUnmappedFiles,
+
+  // Fetch the file mapping status (accession -> file ID or null) for a study
+  'GET /api/rs/studies/GHGAS99999999999001/file-ids': uploadBoxTestFileIds,
+  'GET /api/rs/studies/GHGAS00000000000002/file-ids': pediatricLeukemiaFileIds,
+  'GET /api/rs/studies/GHGAS00000000000003/file-ids': rareNeuroFileIds,
+
+  /**
    * RS Upload Boxes API
    */
 
@@ -248,15 +280,24 @@ export const responses: { [endpoint: string]: ResponseValue } = {
     uploadBox2FileUploads,
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003/uploads':
     uploadBox3FileUploads,
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68004/uploads':
+    uploadBox4FileUploads,
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005/uploads':
+    uploadBox5FileUploads,
   'GET /api/rs/upload-boxes/*/uploads': [],
 
   // Delete a single file upload from a box
   'DELETE /api/rs/upload-boxes/*/uploads/*': 204,
 
+  // Delete an entire upload box (keep after the nested uploads route above)
+  'DELETE /api/rs/upload-boxes/*': 204,
+
   // Fetch a single upload box
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001': uploadBoxes.boxes[0],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002': uploadBoxes.boxes[1],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68004': uploadBoxes.boxes[3],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005': uploadBoxes.boxes[4],
 
   // Unknown upload box (catch-all, must stay after nested routes above)
   'GET /api/rs/upload-boxes/*': 404,
