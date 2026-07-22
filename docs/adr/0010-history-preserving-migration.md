@@ -1,4 +1,4 @@
-# ADR-0010 — History-preserving migration with one-way incremental sync; sandbox orgs
+# ADR-0010 — History-preserving migration with one-way incremental sync
 
 - **Status:** Accepted
 - **Date:** 2026-06-30
@@ -10,11 +10,13 @@ commitment. Mainline keeps committing daily during this window. The code migrati
 **history-preserving**, and the monorepo must be able to catch up to mainline at cutover.
 
 ## Decision
-- **Host the sandbox under `github.com/lkuchenb`.** CD targets separate orgs: images →
-  DockerHub `lkuchenb`; charts → GHCR under `lkuchenb`. **No PyPI publishing during the
-  sandbox** — internal deps are source ([ADR-0002](0002-uv-workspace-source-coupled-libs.md)),
-  so it isn't needed, and PyPI's global namespace blocks reusing prod lib names anyway. PyPI
-  pipelines are authored but disabled until cutover.
+- **Host the monorepo at `github.com/ghga-de/ghga`** — a new repo, developed separately from the
+  existing per-component repos until cutover.
+- **Publish targets (images, charts, PyPI) are not yet decided.** Until they are, the release
+  workflow stays dormant: no triggers, no publish steps, no write permissions. Nothing is
+  published from this repo. PyPI is not needed meanwhile because internal deps are consumed as
+  source ([ADR-0002](0002-uv-workspace-source-coupled-libs.md)); note that PyPI's global
+  namespace also constrains reusing prod lib names, so that choice needs care at cutover.
 - **Import with `git filter-repo`**, per the manifest
   [scripts/migration/repos.tsv](../../scripts/migration/repos.tsv): move each repo into its
   destination subdir **and drop centralised boilerplate** (`lock/`, `.github/`, `.template/`,

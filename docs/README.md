@@ -35,13 +35,14 @@ integration tests on Kubernetes.
 | [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI via a generic OIDC provider (mock-oauth2-server default) |
 | [0008](adr/0008-state-management-service-testbed-only.md) | `state-management-service` is test-bed-only, values-gated |
 | [0009](adr/0009-testbed-kind-minikube.md) | Integration test bed on kind (CI) / minikube (local); same artifact as the install |
-| [0010](adr/0010-history-preserving-migration.md) | History-preserving import + one-way sync; sandbox under `lkuchenb` |
+| [0010](adr/0010-history-preserving-migration.md) | History-preserving import + one-way sync; hosted at `ghga-de/ghga` |
 | [0011](adr/0011-helm-chart-boundary-hybrid.md) | Helm chart boundary = **hybrid** (app charts own app-coupled CRDs) |
 | [0012](adr/0012-self-contained-edge-envoy-gateway.md) | Self-contained edge & ext-authz via **Envoy Gateway** (Istio → staging) |
 | [0013](adr/0013-adopt-ghga-common-chart-system.md) | Adopt & evolve the existing `ghga-common` chart library + generator |
 | [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` capability markers; place by primary identity |
 | [0015](adr/0015-task-runner.md) | Task runner: `just` now, `moon` later |
 | [0016](adr/0016-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) |
+| [0017](adr/0017-local-integration-host-cluster.md) | Local integration on a host-level cluster; no DinD/DooD in the devcontainer |
 
 ## Phased roadmap (high level)
 
@@ -51,7 +52,7 @@ integration tests on Kubernetes.
 | **2. Import** | All repos imported, history-preserving, into `libs/`/`services/`/`tools/`/`frontend/`/`testbed/` | runbook §2, `import-all.sh` |
 | **3. Harmonise** | `[tool.uv.sources]` wiring, single `uv.lock` (skew reconciled), one toolchain, shared Dockerfile, lib matrix | runbook §3, ADR-0002 |
 | **4. Charts & test bed** | Adopt `ghga-common` + generator; `ghga-demo` umbrella (Envoy Gateway edge + lightweight infra + AAI); testbed = the same install on kind | runbook §4, ADR-0011/12/13/06/07/09 |
-| **5. CI/CD (sandbox)** | Affected-target gate + kind integration gate; image/chart publish to `lkuchenb`; PyPI off | runbook §5, ADR-0004 |
+| **5. CI/CD** | Stage 1: affected-target component gate (incl. reverse-dep closure + front end) — enable now; Stage 2: kind integration gate after charts; publish targets TBD (release dormant) | runbook §5, ADR-0004/0009/0017 |
 | **6. Sync** | Periodic one-way sync from mainline keeps the gap small | runbook §6, `sync-from-mainline.sh` |
 | **7. Cutover** | Flip CD to prod orgs, enable PyPI, archive old repos | runbook §7 |
 

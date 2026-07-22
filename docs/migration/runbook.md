@@ -8,16 +8,22 @@
 
 ## 0. Prerequisites
 
-Install: `git`, [`git-filter-repo`](https://github.com/newren/git-filter-repo)
-(`pipx install git-filter-repo`), `uv`, `just` ([ADR-0015](../adr/0015-task-runner.md)), `helm`,
-`kind`, `kubectl`, `docker`, `pnpm`/`node`. (No mesh/Istio needed for the self-contained path —
-the umbrella bundles Envoy Gateway, [ADR-0012](../adr/0012-self-contained-edge-envoy-gateway.md).)
+**In the devcontainer** (provisioned automatically): `git`,
+[`git-filter-repo`](https://github.com/newren/git-filter-repo), `uv`, `just`
+([ADR-0015](../adr/0015-task-runner.md)), `helm`, `kubectl`, `pnpm`/`node`.
 
-Accounts/secrets for the **sandbox** ([ADR-0010](../adr/0010-history-preserving-migration.md)):
-- GitHub: repo under **`github.com/lkuchenb`** (e.g. `lkuchenb/ghga-monorepo`).
-- DockerHub: namespace **`lkuchenb`** + an access token → store as the `DOCKERHUB_TOKEN` Actions secret.
-- Charts: GHCR under `lkuchenb` (uses the built-in `GITHUB_TOKEN`).
-- **No PyPI** during the sandbox — pipelines exist but stay disabled.
+**On the host** ([ADR-0017](../adr/0017-local-integration-host-cluster.md)): a local Kubernetes
+cluster — OrbStack k8s on macOS, minikube on Linux/WSL2 — plus the docker/podman that builds
+images next to it. The devcontainer talks to the cluster only via a namespace-scoped kubeconfig;
+it runs **no DinD/DooD for the integration path** (component tests keep DinD until hexkit grows
+in-memory provider alternatives). (No mesh/Istio needed for the self-contained path — the
+umbrella bundles Envoy Gateway, [ADR-0012](../adr/0012-self-contained-edge-envoy-gateway.md).)
+
+Hosting ([ADR-0010](../adr/0010-history-preserving-migration.md)):
+- GitHub: repo at **`github.com/ghga-de/ghga`**.
+- **No publish credentials are needed or configured.** Publish targets (images, charts, PyPI)
+  are not yet decided; the release workflow is dormant with no publish steps and no secrets.
+  Do not add registry secrets until the targets are agreed.
 
 The legacy clones already exist at [.legacy_repos/](../../.legacy_repos/) (snapshot). For the
 initial import you may use them via `LEGACY_DIR`; **incremental sync must fetch from `ghga-de`**
@@ -102,25 +108,36 @@ incremental sync stays low-conflict:
 3. Port the `testbed/` suite to target the umbrella; re-point its mint-a-user calls at
    `mock-oauth2-server`; gate `state-management-service` behind the test-bed profile
    ([ADR-0008](../adr/0008-state-management-service-testbed-only.md)).
-4. Validate locally (same artifact users install):
+4. Validate locally against the **host-level cluster**
+   ([ADR-0017](../adr/0017-local-integration-host-cluster.md)) — same artifact users install:
    ```bash
-   kind create cluster
-   # build + load affected images, then:
+   # on the HOST: start the cluster (once) and build the affected images next to it
+   #   macOS:  enable OrbStack Kubernetes (its docker-built images are directly visible)
+   #   Linux:  minikube start --apiserver-names=host.docker.internal ; minikube image build ...
+   # in the DEVCONTAINER (scoped kubeconfig):
    helm install ghga ./deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-testbed.yaml
    kubectl port-forward svc/<gateway> 8443:443   # bare cluster: no LoadBalancer
    uv run pytest testbed/
    ```
+   (CI does the same on kind: runner-built images + `kind load image-archive`.)
    > CRD note: Gateway API + Envoy Gateway CRDs ship in the chart's `crds/` (install-only);
    > CRD **upgrades** need a manual `kubectl apply` ([ADR-0012](../adr/0012-self-contained-edge-envoy-gateway.md)).
 
-## 5. Phase 5 — CI/CD (sandbox targets)
+## 5. Phase 5 — CI/CD
 
-- **PR gate:** affected-target lint/type/unit + the kind integration gate
-  ([ADR-0009](../adr/0009-testbed-kind-minikube.md)).
-- **Image/chart publish:** on `name/x.y.z` tags → DockerHub `lkuchenb` / GHCR `lkuchenb`
+Enabled in two stages (the component gate does **not** wait for the charts):
+
+- **Stage 1 — component gate (enable now):** affected-target lint / format / type-check / unit
+  tests, including the front-end leg (pnpm lint + vitest). Requires the affected-target
+  computation to include **reverse dependencies** of changed internal libs (a `hexkit` change
+  must run its consumers' suites, not just `libs/hexkit`).
+- **Stage 2 — integration gate (after Phase 4):** the kind-based `ghga-demo` install + testbed
+  run ([ADR-0009](../adr/0009-testbed-kind-minikube.md),
+  [ADR-0017](../adr/0017-local-integration-host-cluster.md)).
+- **Image/chart/PyPI publish:** targets **not yet decided**; the release workflow is dormant
+  (no triggers, no publish steps, no write permissions) and must stay so until they are
   ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
-- **PyPI publish:** authored but **disabled** (sandbox).
-- Push the repo to `github.com/lkuchenb/ghga-monorepo`.
+- Push the repo to `github.com/ghga-de/ghga`.
 
 ## 6. Ongoing — one-way incremental sync
 
@@ -137,8 +154,8 @@ Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`
 
 - [ ] Final `sync-from-mainline.sh` against `ghga-de` HEAD; resolve remaining deltas.
 - [ ] Freeze mainline repos (announce; protect branches / make read-only).
-- [ ] Flip CD targets: DockerHub `lkuchenb` → `ghga`; GHCR → org registry; **enable PyPI**
-      publishing for `libs/*` and `tools/*`.
+- [ ] Decide + wire the CD targets (image registry, chart registry, PyPI), add the required
+      secrets, then enable the release workflow's tag trigger and write permissions.
 - [ ] Reconcile versions so the first monorepo release of each component continues its PyPI/image
       series (no version regressions).
 - [ ] Move the repo to `github.com/ghga-de/<monorepo>`; set CODEOWNERS per path.

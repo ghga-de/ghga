@@ -1,6 +1,8 @@
 # ADR-0009 — Integration test bed on Kubernetes (kind in CI, minikube locally)
 
-- **Status:** Accepted
+- **Status:** Accepted — local execution amended by
+  [ADR-0017](0017-local-integration-host-cluster.md) (host-level cluster, no DinD/DooD in the
+  devcontainer, image delivery per platform)
 - **Date:** 2026-06-30
 - **Deciders:** Leon Kuchenbecker
 
