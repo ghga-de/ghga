@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dhfs"
-version = "3.0.2"
+version = "3.1.0"
 description = "Data Hub File Service - a service enabling file inspection and re-encryption at Data Hubs"
 dependencies = [
     "typer >= 0.25.1",
@@ -73,6 +73,9 @@ ignore = [
     "E111",
     "E114",
     "E116",
+    "E117",
+    "E501",
+    "W191",
     "PLW",
     "RUF001",
     "RUF010",
@@ -101,6 +104,13 @@ select = [
     "RUF",
     "SIM",
     "D",
+    "E",
+    "W",
+    "ASYNC",
+    "LOG",
+    "PERF",
+    "RET",
+    "C4",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -112,6 +122,7 @@ max-complexity = 10
     "S",
     "SIM",
     "D",
+    "E402",
 ]
 "tests/*" = [
     "S",

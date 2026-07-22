@@ -32,13 +32,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/datahub-file-service):
 ```bash
-docker pull ghga/datahub-file-service:3.0.2
+docker pull ghga/datahub-file-service:3.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/datahub-file-service:3.0.2 .
+docker build -t ghga/datahub-file-service:3.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -46,7 +46,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/datahub-file-service:3.0.2 --help
+docker run -p 8080:8080 ghga/datahub-file-service:3.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -75,6 +75,48 @@ The service requires the following configuration parameters:
 - <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request. Minimum: `0`. Default: `0.0`.
 - <a id="properties/retry_after_applicable_for_num_requests"></a>**`retry_after_applicable_for_num_requests`** *(integer)*: Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. Exclusive minimum: `0`. Default: `1`.
 - <a id="properties/http_request_timeout_seconds"></a>**`http_request_timeout_seconds`** *(number)*: Request timeout setting in seconds. Default: `60.0`.
+- <a id="properties/data_hub_crypt4gh_public_key_path"></a>**`data_hub_crypt4gh_public_key_path`**: Path to the Data Hub's Crypt4GH public key file. Only needed for running `dhfs verify`. Default: `null`.
+  - **Any of**
+    - <a id="properties/data_hub_crypt4gh_public_key_path/anyOf/0"></a>*string, format: path*
+    - <a id="properties/data_hub_crypt4gh_public_key_path/anyOf/1"></a>*null*
+
+  Examples:
+  ```json
+  "./key.pub"
+  ```
+
+- <a id="properties/inbox_bucket_id"></a>**`inbox_bucket_id`**: The inbox bucket ID - only needed for running `dhfs verify`. Default: `null`.
+  - **Any of**
+    - <a id="properties/inbox_bucket_id/anyOf/0"></a>*string*
+    - <a id="properties/inbox_bucket_id/anyOf/1"></a>*null*
+
+  Examples:
+  ```json
+  "inbox"
+  ```
+
+  ```json
+  "hub-inbox"
+  ```
+
+- <a id="properties/inbox_write_s3_access_key_id"></a>**`inbox_write_s3_access_key_id`**: S3 access key ID with write access to the inbox bucket. Only needed for running `dhfs verify`. Default: `null`.
+  - **Any of**
+    - <a id="properties/inbox_write_s3_access_key_id/anyOf/0"></a>*string*
+    - <a id="properties/inbox_write_s3_access_key_id/anyOf/1"></a>*null*
+
+  Examples:
+  ```json
+  "my-write-access-key-id"
+  ```
+
+- <a id="properties/inbox_write_s3_secret_access_key"></a>**`inbox_write_s3_secret_access_key`**: S3 secret access key with write access to the inbox bucket. Only needed for running `dhfs verify`. Default: `null`.
+  - **Any of**
+    - <a id="properties/inbox_write_s3_secret_access_key/anyOf/0"></a>*string, format: password*
+    - <a id="properties/inbox_write_s3_secret_access_key/anyOf/1"></a>*null*
+- <a id="properties/inbox_write_s3_session_token"></a>**`inbox_write_s3_session_token`**: Optional S3 session token for the write-capable inbox credentials. Only needed for running `dhfs verify`. Default: `null`.
+  - **Any of**
+    - <a id="properties/inbox_write_s3_session_token/anyOf/0"></a>*string, format: password*
+    - <a id="properties/inbox_write_s3_session_token/anyOf/1"></a>*null*
 - <a id="properties/data_hub_crypt4gh_private_key_path"></a>**`data_hub_crypt4gh_private_key_path`** *(string, format: path, required)*: Path to the Data Hub's Crypt4GH private key file.
 
   Examples:

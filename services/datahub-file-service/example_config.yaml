@@ -17,8 +17,13 @@ client_retry_status_codes:
 - 504
 data_hub_crypt4gh_private_key_passphrase: null
 data_hub_crypt4gh_private_key_path: key.sec
+data_hub_crypt4gh_public_key_path: key.pub
 data_hub_signing_key: '**********'
 http_request_timeout_seconds: 60.0
+inbox_bucket_id: hub1-inbox
+inbox_write_s3_access_key_id: test
+inbox_write_s3_secret_access_key: '**********'
+inbox_write_s3_session_token: null
 interrogation_bucket_id: hub1-interrogation
 library_log_level: CRITICAL
 library_logger_names:

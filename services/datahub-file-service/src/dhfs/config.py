@@ -21,7 +21,7 @@ from pathlib import Path
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig, LogLevel
 from hexkit.providers.s3 import S3Config
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
 from dhfs.adapters.outbound.central import CentralClientConfig
@@ -50,12 +50,58 @@ class Crypt4GHConfig(BaseSettings):
     )
 
 
+class VerifierConfig(BaseSettings):
+    """Additional S3 credentials with write access to the inbox bucket.
+
+    These are only required when running `dhfs verify`. DHFS normally has
+    read-only access to the inbox; these credentials are used solely to upload and
+    subsequently delete the dummy file used for verification.
+    """
+
+    data_hub_crypt4gh_public_key_path: Path | None = Field(
+        default=None,
+        examples=["./key.pub"],
+        description=(
+            "Path to the Data Hub's Crypt4GH public key file. Only needed for"
+            + " running `dhfs verify`."
+        ),
+    )
+    inbox_bucket_id: str | None = Field(
+        default=None,
+        examples=["inbox", "hub-inbox"],
+        description="The inbox bucket ID - only needed for running `dhfs verify`.",
+    )
+    inbox_write_s3_access_key_id: str | None = Field(
+        default=None,
+        examples=["my-write-access-key-id"],
+        description=(
+            "S3 access key ID with write access to the inbox bucket."
+            + " Only needed for running `dhfs verify`."
+        ),
+    )
+    inbox_write_s3_secret_access_key: SecretStr | None = Field(
+        default=None,
+        description=(
+            "S3 secret access key with write access to the inbox bucket."
+            + " Only needed for running `dhfs verify`."
+        ),
+    )
+    inbox_write_s3_session_token: SecretStr | None = Field(
+        default=None,
+        description=(
+            "Optional S3 session token for the write-capable inbox credentials."
+            + " Only needed for running `dhfs verify`."
+        ),
+    )
+
+
 @config_from_yaml(prefix=SERVICE_NAME)
 class Config(
     LoggingConfig,
     S3Config,
     CentralClientConfig,
     Crypt4GHConfig,
+    VerifierConfig,
     HttpClientConfig,
 ):
     """Config parameters and their defaults."""
@@ -107,4 +153,4 @@ class Config(
         return False
 
 
-CONFIG = Config()  # type: ignore
+CONFIG = Config()
