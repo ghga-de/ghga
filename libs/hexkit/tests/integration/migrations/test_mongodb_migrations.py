@@ -27,12 +27,14 @@ from pymongo.collection import Collection
 
 from hexkit.providers.mongodb import MongoDbConfig
 from hexkit.providers.mongodb.migrations import (
+    DbVersionMismatchError,
     MigrationConfig,
     MigrationDefinition,
     MigrationManager,
     MigrationMap,
     MigrationStepError,
     Reversible,
+    check_db_version,
 )
 from hexkit.providers.mongodb.migrations._manager import MigrationTimeoutError
 from hexkit.providers.mongodb.provider import ConfiguredMongoClient
@@ -175,7 +177,7 @@ async def test_v1_init(mongodb: MongoDbFixture):
     assert verdoc["version"] == 1
     completed = verdoc["completed"].astimezone(timezone.utc)
     assert completed - now < timedelta(seconds=3)
-    assert verdoc["backward"] == False
+    assert not verdoc["backward"]
     assert isinstance(verdoc["total_duration_ms"], int)
 
 
@@ -246,7 +248,7 @@ async def test_copy_indexes(mongodb: MongoDbFixture, indexes: list[IndexModel]):
 
     # Verify created index info
     index_info = collection.index_information()
-    created_indexes = [_ for _ in index_info.items()][1:]
+    created_indexes = list(index_info.items())[1:]
     assert len(created_indexes) == len(indexes)
     for expected, (created_name, created_index) in zip(
         expected_indexes, created_indexes, strict=True
@@ -276,7 +278,7 @@ async def test_copy_indexes(mongodb: MongoDbFixture, indexes: list[IndexModel]):
 
     # Repeat comparison to confirm the indexes were copied to the new collection
     index_info = collection.index_information()
-    copied_indexes = [_ for _ in index_info.items()][1:]
+    copied_indexes = list(index_info.items())[1:]
     assert len(copied_indexes) == len(indexes)
     for expected, (copied_name, copied_index) in zip(
         expected_indexes, copied_indexes, strict=True
@@ -370,7 +372,7 @@ async def test_unapply_not_defined(mongodb: MongoDbFixture):
     version_docs = version_collection.find().to_list()
     assert len(version_docs) == 2
     assert version_docs[-1]["version"] == 2
-    assert version_docs[-1]["backward"] == False
+    assert not version_docs[-1]["backward"]
 
     # Now run migrations with v1 as the target, in order to go backward and trigger error
     with pytest.raises(
@@ -416,7 +418,7 @@ async def test_successful_unapply(mongodb: MongoDbFixture):
     version_docs = version_collection.find().to_list()
     assert len(version_docs) == 3
     assert version_docs[-1]["version"] == 1
-    assert version_docs[-1]["backward"] == True
+    assert version_docs[-1]["backward"]
 
 
 async def test_batch_processing(mongodb: MongoDbFixture):
@@ -637,3 +639,41 @@ async def test_version_in_backwards_migration_error(mongodb: MongoDbFixture):
             config=config, target_version=1, migration_map=migration_map
         )
     assert err.value.args[0] == msg
+
+
+async def test_check_db_version_up_to_date(mongodb: MongoDbFixture):
+    """Ensure check_db_version doesn't raise when the DB is already at the target version."""
+    config = make_migration_config(mongodb.config)
+    migration_map = {2: V2BasicMigration}
+    await run_db_migrations(
+        config=config, target_version=2, migration_map=migration_map
+    )
+
+    await check_db_version(config=config, target_version=2)
+
+
+async def test_check_db_version_mismatch(mongodb: MongoDbFixture):
+    """Ensure that check_db_version raises DbVersionMismatchError when versions differ.
+
+    Covers both an uninitialized DB (no version records at all) and a DB that has
+    been migrated but not to the version the caller expects.
+    """
+    config = make_migration_config(mongodb.config)
+
+    # No migrations have been run yet, so the recorded version is effectively 0
+    with pytest.raises(DbVersionMismatchError):
+        await check_db_version(config=config, target_version=2)
+
+    # Run a migration to get the DB to version 2
+    migration_map = {2: V2BasicMigration}
+    await run_db_migrations(
+        config=config, target_version=2, migration_map=migration_map
+    )
+
+    # Make sure we get an error if DB is behind
+    with pytest.raises(DbVersionMismatchError):
+        await check_db_version(config=config, target_version=3)
+
+    # Make sure we also get an error if the DB is ahead
+    with pytest.raises(DbVersionMismatchError):
+        await check_db_version(config=config, target_version=1)

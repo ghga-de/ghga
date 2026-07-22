@@ -23,10 +23,10 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "hexkit"
-version = "8.3.1"
+version = "8.6.0"
 description = "A Toolkit for Building Microservices using the Hexagonal Architecture"
 dependencies = [
-    "opentelemetry-api >=1.39, <2",
+    "opentelemetry-api >=1.44, <2",
     "pydantic >=2.12, <3",
     "pydantic_settings >=2.12, <3",
     "PyYAML >=6, <7",
@@ -54,35 +54,35 @@ vault = [
     "hvac >=2.4, <3",
 ]
 opentelemetry-base = [
-    "opentelemetry-sdk >=1.39.1, <2",
-    "opentelemetry-exporter-otlp >=1.39.1, <2",
-    "opentelemetry-instrumentation >=0.60b1",
-    "opentelemetry-instrumentation-httpx >=0.60b1",
-    "opentelemetry-distro >=0.60b1",
+    "opentelemetry-sdk >=1.44, <2",
+    "opentelemetry-exporter-otlp >=1.44, <2",
+    "opentelemetry-instrumentation >=0.65b0",
+    "opentelemetry-instrumentation-httpx >=0.65b0",
+    "opentelemetry-distro >=0.65b0",
 ]
 opentelemetry-akafka = [
     "hexkit[opentelemetry-base]",
     "hexkit[akafka]",
-    "opentelemetry-instrumentation-aiokafka >=0.60b1",
+    "opentelemetry-instrumentation-aiokafka >=0.65b0",
 ]
 opentelemetry-mongodb = [
     "hexkit[opentelemetry-base]",
     "hexkit[mongodb]",
-    "opentelemetry-instrumentation-pymongo >=0.60b1",
+    "opentelemetry-instrumentation-pymongo >=0.65b0",
 ]
 opentelemetry-fastapi = [
     "hexkit[opentelemetry-base]",
-    "opentelemetry-instrumentation-fastapi >=0.60b1",
+    "opentelemetry-instrumentation-fastapi >=0.65b0",
 ]
 opentelemetry-s3 = [
     "hexkit[opentelemetry-base]",
     "hexkit[s3]",
-    "opentelemetry-instrumentation-botocore >=0.60b1",
+    "opentelemetry-instrumentation-botocore >=0.65b0",
 ]
 opentelemetry-redis = [
     "hexkit[opentelemetry-base]",
     "hexkit[redis]",
-    "opentelemetry-instrumentation-redis >=0.60b1",
+    "opentelemetry-instrumentation-redis >=0.65b0",
 ]
 opentelemetry = [
     "hexkit[opentelemetry-akafka]",
@@ -157,6 +157,9 @@ ignore = [
     "E111",
     "E114",
     "E116",
+    "E117",
+    "E501",
+    "W191",
     "PLW",
     "RUF001",
     "RUF010",
@@ -185,6 +188,13 @@ select = [
     "RUF",
     "SIM",
     "D",
+    "E",
+    "W",
+    "ASYNC",
+    "LOG",
+    "PERF",
+    "RET",
+    "C4",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -196,6 +206,7 @@ max-complexity = 10
     "S",
     "SIM",
     "D",
+    "E402",
 ]
 "tests/*" = [
     "S",
@@ -256,19 +267,14 @@ legacy_tox_ini = """
 
     [testenv:docs]
     basepython = python3.13
-    allowlist_externals =
-        mv
-        rm
     deps =
         --no-deps -r ./lock/requirements-dev.txt
+    commands_pre =
+        # great-docs (Python >= 3.11 only) is kept out of the shared dev lock so it
+        # does not break the py310 test env; install it here where docs are built.
+        pip install great-docs==0.14.1
     commands =
-        rm -rf site/api
-        pdoc -d google -o docs/api hexkit
-        mv docs/api/index.html docs/api/index.md
-        mkdocs build
-        mv docs/api/index.md docs/api/index.html
-        rm -rf site/api
-        mv docs/api site/api
+        great-docs build
 
     [testenv]
     pass_env =

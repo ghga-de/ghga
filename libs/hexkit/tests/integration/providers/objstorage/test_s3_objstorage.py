@@ -15,7 +15,7 @@
 
 """Test S3 storage DAO"""
 
-from contextlib import AbstractContextManager, nullcontext
+from contextlib import nullcontext
 from unittest.mock import Mock
 
 import pytest
@@ -140,6 +140,17 @@ async def test_get_object_size(s3: S3Fixture, tmp_file: FileObject):  # noqa: F8
     assert expected_size == observed_size
 
 
+async def test_get_object_metadata(s3: S3Fixture, tmp_file: FileObject):  # noqa: F811
+    """Test if the get_object_metadata method returns the expected fields."""
+    await s3.populate_file_objects([tmp_file])
+    object_metadata = await s3.storage.get_object_metadata(
+        bucket_id=tmp_file.bucket_id, object_id=tmp_file.object_id
+    )
+
+    assert object_metadata["ContentLength"] == len(tmp_file.content)
+    assert object_metadata["ETag"]
+
+
 async def test_list_all_object_ids(s3: S3Fixture, tmp_file: FileObject):  # noqa: F811
     """Test if listing all object IDs for a bucket works correctly."""
     file_fixture2 = tmp_file.model_copy(deep=True)
@@ -230,13 +241,24 @@ async def test_handling_non_existing_file_and_bucket(
             object_id=non_existing_object_id,
         )
 
+    # deleting a non-existing object in an existing bucket succeeds silently:
+    await s3.storage.delete_object(
+        bucket_id=existing_bucket_id,
+        object_id=non_existing_object_id,
+    )
+
+    with pytest.raises(ObjectStorageProtocol.BucketNotFoundError):
+        await s3.storage.list_all_object_ids(bucket_id=non_existing_bucket_id)
+
+    # the destination object must not exist in the copy scenarios below, since the
+    # destination check runs before the source is inspected:
     with pytest.raises(ObjectStorageProtocol.BucketNotFoundError):
         # copy when source bucket does not exist:
         await s3.storage.copy_object(
             source_bucket_id=non_existing_bucket_id,
             source_object_id=non_existing_object_id,
             dest_bucket_id=existing_bucket_id,
-            dest_object_id=existing_object_id,
+            dest_object_id=non_existing_object_id,
         )
 
     with pytest.raises(ObjectStorageProtocol.ObjectNotFoundError):
@@ -245,7 +267,7 @@ async def test_handling_non_existing_file_and_bucket(
             source_bucket_id=existing_bucket_id,
             source_object_id=non_existing_object_id,
             dest_bucket_id=existing_bucket_id,
-            dest_object_id=existing_object_id,
+            dest_object_id=non_existing_object_id,
         )
 
     with pytest.raises(ObjectStorageProtocol.BucketNotFoundError):
@@ -262,13 +284,23 @@ async def test_handling_non_existing_file_and_bucket(
             bucket_id=existing_bucket_id, object_id=non_existing_object_id
         )
 
-    with pytest.raises(ObjectStorageProtocol.ObjectNotFoundError):
-        await s3.storage.get_object_download_url(
-            bucket_id=existing_bucket_id, object_id=non_existing_object_id
+    with pytest.raises(ObjectStorageProtocol.BucketNotFoundError):
+        await s3.storage.get_object_size(
+            bucket_id=non_existing_bucket_id, object_id=non_existing_object_id
         )
 
     with pytest.raises(ObjectStorageProtocol.ObjectNotFoundError):
-        await s3.storage.delete_object(
+        await s3.storage.get_object_metadata(
+            bucket_id=existing_bucket_id, object_id=non_existing_object_id
+        )
+
+    with pytest.raises(ObjectStorageProtocol.BucketNotFoundError):
+        await s3.storage.get_object_metadata(
+            bucket_id=non_existing_bucket_id, object_id=non_existing_object_id
+        )
+
+    with pytest.raises(ObjectStorageProtocol.ObjectNotFoundError):
+        await s3.storage.get_object_download_url(
             bucket_id=existing_bucket_id, object_id=non_existing_object_id
         )
 
@@ -322,9 +354,6 @@ async def test_using_non_existing_upload(
     bucket_id = real_bucket_id if bucket_id_correct else "wrong-bucket"
     object_id = real_object_id if object_id_correct else "wrong-object"
 
-    def get_exception_context() -> AbstractContextManager:
-        return pytest.raises(exception) if exception else nullcontext()
-
     # call relevant methods from the provider:
     with pytest.raises(exception):
         await s3.storage._assert_multipart_upload_exists(
@@ -338,6 +367,11 @@ async def test_using_non_existing_upload(
 
     with pytest.raises(exception):
         await s3.storage.complete_multipart_upload(
+            upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
+        )
+
+    with pytest.raises(exception):
+        await s3.storage.abort_multipart_upload(
             upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
         )
 
@@ -504,10 +538,10 @@ async def test_list_parts_high_index(s3: S3Fixture):
     # Perform tests inside a single setup instead of uploading all parts anew each time:
     parts = []
     for max_parts, first_part_no, expected_parts, fail_msg in [
-        (None, None, [n for n in range(1, count)], "Basic pagination failed"),
-        (count, None, [n for n in range(1, count)], "Failed when max_parts > 1000"),
+        (None, None, list(range(1, count)), "Basic pagination failed"),
+        (count, None, list(range(1, count)), "Failed when max_parts > 1000"),
         (1, 1025, [1025], "Failed when targeting single part with PartNumber > 1000"),
-        (None, 1025, [n for n in range(1025, count)], "Failed to get last parts"),
+        (None, 1025, list(range(1025, count)), "Failed to get last parts"),
         (3, None, [1, 2, 3], "Failed to get first three parts with no first_part_no"),
     ]:
         parts = await s3.storage.list_parts(
@@ -696,6 +730,46 @@ async def test_list_multipart_uploads_for_object(s3: S3Fixture):
         bucket_id=bucket_id, object_id=object_id_2
     )
     assert uploads == []
+
+
+async def test_prefix_filter_ignores_sibling_object_ids(s3: S3Fixture):
+    """Ensure server-side `Prefix` filtering does not conflate object IDs that share
+    a prefix.
+    """
+    bucket_id = "test"
+    await s3.storage.create_bucket(bucket_id)
+
+    # "abc" is a strict prefix of "abcd", so Prefix="abc" matches both server-side.
+    short_object_id = "abc"
+    long_object_id = "abcd"
+
+    short_upload_id = await s3.storage.init_multipart_upload(
+        bucket_id=bucket_id, object_id=short_object_id
+    )
+    long_upload_id = await s3.storage.init_multipart_upload(
+        bucket_id=bucket_id, object_id=long_object_id
+    )
+
+    # Filter matches both, but we extract by key on the filtered list
+    # These should return only for the correct object id
+    uploads = await s3.storage.list_multipart_uploads_for_object(
+        bucket_id=bucket_id, object_id=short_object_id
+    )
+    assert uploads == [short_upload_id]
+
+    uploads = await s3.storage.list_multipart_uploads_for_object(
+        bucket_id=bucket_id, object_id=long_object_id
+    )
+    assert uploads == [long_upload_id]
+
+    # Ensure this also doesn't raise MultipleActiveUploadsError.
+    url = await s3.storage.get_part_upload_url(
+        upload_id=short_upload_id,
+        bucket_id=bucket_id,
+        object_id=short_object_id,
+        part_number=1,
+    )
+    assert url
 
 
 async def test_get_all_multipart_uploads(s3: S3Fixture):

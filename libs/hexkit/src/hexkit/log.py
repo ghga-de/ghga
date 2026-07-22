@@ -49,12 +49,12 @@ class LoggingConfig(BaseSettings):
         default="INFO", description="The minimum log level to capture."
     )
     service_name: str = Field(
-        ...,
+        default=...,
         examples=["my-cool-special-service"],
         description="The name of the (micro-)service. This will be included in log messages.",
     )
     service_instance_id: str = Field(
-        ...,
+        default=...,
         examples=["germany-bw-instance-001"],
         description=(
             "A string that uniquely identifies this instance across all instances of"
@@ -105,7 +105,7 @@ class JsonFormatter(Formatter):
         """
         # Create a log record dictionary
         log_record = record.__dict__
-        output: dict[str, Any] = dict()
+        output: dict[str, Any] = {}
 
         output["timestamp"] = log_record["timestamp"]
         output["service"] = log_record["service"]
