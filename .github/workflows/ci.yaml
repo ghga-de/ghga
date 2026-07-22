@@ -66,7 +66,10 @@ jobs:
           # testbed / deploy targets are exercised by the integration gate (Stage 2).
 
   check-python:
-    needs: discover
+    # lint is a dependency so its uv sync populates the shared uv cache once;
+    # the matrix jobs then restore with an exact hit and never race to save it.
+    # (Also fails fast: a lint failure doesn't burn ~30 matrix runners.)
+    needs: [discover, lint]
     if: ${{ needs.discover.outputs.python != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
