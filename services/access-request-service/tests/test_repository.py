@@ -227,7 +227,9 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         self._requests = {request.id: request for request in ACCESS_REQUESTS}
         self.last_upsert = None
 
-    def find_all(self, *, mapping: Mapping[str, Any]) -> AsyncIterator[AccessRequest]:
+    def find_all(  # type: ignore[override]
+        self, *, mapping: Mapping[str, Any]
+    ) -> AsyncIterator[AccessRequest]:
         """Find all records using a mapping."""
 
         async def async_iterator():
