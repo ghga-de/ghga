@@ -5,21 +5,29 @@ Generalises the legacy `get_affected_services.py` to the whole monorepo: a chang
 member directory affects that member; a change to a repo-wide file (root pyproject/lock,
 toolchain, shared Dockerfile, CI, scripts, or the shared chart library) affects *everything*.
 
+Unlike the FSB original (where services never depend on each other and shared libs arrive
+via the repo-wide lock), this workspace source-couples internal libraries — so a change to
+a lib affects every member that (transitively) depends on it. The dependency graph is
+derived from the members' own pyproject.toml files: any dependency whose (normalised) name
+is another workspace member counts as an internal edge.
+
 Usage:
     python scripts/affected_targets.py [--base origin/main] [--format json|lines|matrix]
 
 Output (json, default):
     {"all": false, "targets": ["libs/hexkit", "services/auth-service"]}
 
-stdlib only — runs under plain python or `uv run`.
+stdlib only (python >= 3.11 for tomllib) — runs under plain python or `uv run`.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -78,7 +86,7 @@ def changed_files(base: str) -> list[str]:
 
 
 def affected(files: list[str]) -> tuple[bool, list[str]]:
-    """Map changed files to (all?, sorted target list)."""
+    """Map changed files to (all?, sorted target list), including dependents."""
     if any(f.startswith(GLOBAL_PREFIXES) for f in files):
         return True, all_targets()
     hit: set[str] = set()
@@ -91,7 +99,66 @@ def affected(files: list[str]) -> tuple[bool, list[str]]:
         for leaf in LEAF_TARGETS:
             if f == leaf or f.startswith(leaf + "/"):
                 hit.add(leaf)
-    return False, sorted(hit)
+    return False, sorted(with_dependents(hit))
+
+
+def _canonical(name: str) -> str:
+    """PEP-503-style package-name normalisation."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _requirement_name(spec: str) -> str:
+    """Extract the bare package name from a PEP-508 requirement string."""
+    return _canonical(re.split(r"[\s\[<>=!~;(@]", spec.strip(), maxsplit=1)[0])
+
+
+def internal_dep_graph() -> dict[str, set[str]]:
+    """Map each Python member target to the member targets it depends on.
+
+    An edge exists when a member's pyproject declares a dependency (regular or
+    extra) whose normalised name is another workspace member's project name.
+    Workspace-internal deps are source-coupled, so a change to the dependency
+    must re-check the dependent.
+    """
+    name_to_target: dict[str, str] = {}
+    raw_deps: dict[str, list[str]] = {}
+    for target in all_targets():
+        manifest = REPO / target / "pyproject.toml"
+        if not manifest.is_file():
+            continue
+        project = tomllib.loads(manifest.read_text()).get("project", {})
+        name = project.get("name")
+        if not name:
+            continue
+        name_to_target[_canonical(name)] = target
+        deps = list(project.get("dependencies", []))
+        for extra in project.get("optional-dependencies", {}).values():
+            deps.extend(extra)
+        raw_deps[target] = deps
+    return {
+        target: {
+            name_to_target[dep]
+            for dep in map(_requirement_name, deps)
+            if dep in name_to_target and name_to_target[dep] != target
+        }
+        for target, deps in raw_deps.items()
+    }
+
+
+def with_dependents(targets: set[str]) -> set[str]:
+    """Expand a target set with everything that transitively depends on it."""
+    dependents: dict[str, set[str]] = {}
+    for member, deps in internal_dep_graph().items():
+        for dep in deps:
+            dependents.setdefault(dep, set()).add(member)
+    result = set(targets)
+    queue = list(targets)
+    while queue:
+        for member in dependents.get(queue.pop(), ()):
+            if member not in result:
+                result.add(member)
+                queue.append(member)
+    return result
 
 
 def all_targets() -> list[str]:
