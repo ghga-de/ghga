@@ -38,23 +38,16 @@ async def test_check_if_removable(rig: JointRig):
     """Test the `.check_if_removable()` method"""
     # A non-existent file should net us a return value of True
     file = create_file_under_interrogation(HUB1)
-    assert (
-        await rig.interrogation_handler.check_if_removable(object_id=file.object_id)
-        == True
-    )
+    assert await rig.interrogation_handler.check_if_removable(object_id=file.object_id)
 
     await rig.file_dao.insert(file)
-    assert (
-        await rig.interrogation_handler.check_if_removable(object_id=file.object_id)
-        == False
+    assert not await rig.interrogation_handler.check_if_removable(
+        object_id=file.object_id
     )
 
     file.can_remove = True
     await rig.file_dao.update(file)
-    assert (
-        await rig.interrogation_handler.check_if_removable(object_id=file.object_id)
-        == True
-    )
+    assert await rig.interrogation_handler.check_if_removable(object_id=file.object_id)
 
 
 async def test_report_handling_successful(rig: JointRig):
@@ -300,14 +293,14 @@ async def test_get_files_not_yet_interrogated(rig: JointRig):
     for file in hub2_files + hub1_files:
         await rig.file_dao.insert(file)
 
-    hub1_ids = set(f.id for f in hub1_files)
-    hub2_ids = set(f.id for f in hub2_files)
+    hub1_ids = {f.id for f in hub1_files}
+    hub2_ids = {f.id for f in hub2_files}
 
     # Make sure the query mapping works by querying for one of the hubs
     retrieve_h1 = await rig.interrogation_handler.get_files_not_yet_interrogated(
         storage_alias=HUB1
     )
-    assert set(f.id for f in retrieve_h1) == hub1_ids
+    assert {f.id for f in retrieve_h1} == hub1_ids
 
     # Set a file to 'interrogated'
     hub1_files[0].interrogated = True
@@ -332,7 +325,7 @@ async def test_get_files_not_yet_interrogated(rig: JointRig):
     results_h1 = await rig.interrogation_handler.get_files_not_yet_interrogated(
         storage_alias=HUB1
     )
-    assert set(f.id for f in results_h1) == hub1_ids
+    assert {f.id for f in results_h1} == hub1_ids
 
     # Compare Hub 2 results
     hub2_ids.remove(hub2_files[0].id)
@@ -340,7 +333,7 @@ async def test_get_files_not_yet_interrogated(rig: JointRig):
     results_h2 = await rig.interrogation_handler.get_files_not_yet_interrogated(
         storage_alias=HUB2
     )
-    assert set(f.id for f in results_h2) == hub2_ids
+    assert {f.id for f in results_h2} == hub2_ids
 
 
 @pytest.mark.parametrize("report_is_present", [True, False])

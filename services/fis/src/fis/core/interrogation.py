@@ -156,13 +156,13 @@ class InterrogationHandler(InterrogationHandlerPort):
                     extra={"file_id": file_id, "differing_fields": different_fields},
                 )
                 raise self.InterrogationReportConflict(file_id=file_id)
-            else:
-                # We've already seen this report, so don't do anything
-                log.info(
-                    "Received duplicate InterrogationReport for file %s, ignoring.",
-                    file_id,
-                )
-                return True
+
+            # We've already seen this report, so don't do anything
+            log.info(
+                "Received duplicate InterrogationReport for file %s, ignoring.",
+                file_id,
+            )
+            return True
 
     async def _handle_failure_report(
         self,
@@ -289,7 +289,7 @@ class InterrogationHandler(InterrogationHandlerPort):
         """
         if file.state == "init":
             return
-        elif file.state == "inbox":
+        if file.state == "inbox":
             with suppress(ResourceAlreadyExistsError):
                 await self._file_dao.insert(file)
                 return
