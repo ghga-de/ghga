@@ -1,16 +1,20 @@
 # Integration gate — install the self-reliant ghga-demo umbrella on kind and run the test bed.
-# This is what keeps HEAD always integrated (ADR-0009). SCAFFOLD: enable once the charts land.
+# This is what keeps HEAD always integrated (ADR-0009).
+# SCAFFOLD: the steps are still TODO; needs deploy/charts/ghga-demo + testbed wiring.
+#
+# DORMANT: manual-run only. To enable automatic runs, restore:
+#   on:
+#     pull_request:
+#     push:
+#       branches: [main]
 name: integration
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   testbed:
     runs-on: ubuntu-latest
-    # if: false   # TODO: drop once deploy/charts/ghga-demo exists
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,4 +28,5 @@ jobs:
       #    Envoy Gateway brings Gateway API CRDs; gateway Service is NodePort on kind (ADR-0012).
       # 3) Run the BDD + Playwright suite against the cluster:
       #      uv run pytest testbed/
-      - run: echo "TODO: implement once deploy/charts/ghga-demo + testbed/ are in place"
+      - run: |
+          echo "TODO: implement once deploy/charts/ghga-demo + testbed/ are in place"

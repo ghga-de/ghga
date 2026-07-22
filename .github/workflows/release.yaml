@@ -1,16 +1,24 @@
 # Release — a pushed tag `name/x.y.z` releases ONLY that component (ADR-0004).
-# Sandbox targets: images -> DockerHub `lkuchenb`, charts -> GHCR `lkuchenb`, PyPI OFF (ADR-0010).
-# SCAFFOLD: wire the build/publish steps once members + charts exist.
+#
+# DORMANT, AND MUST NOT PUBLISH. Publish targets are not decided yet, so this workflow has
+# no triggers, no publish steps, and no write permissions. Keep all three until the target
+# registries and credentials are agreed.
+#
+# To enable, restore the tag trigger and the write permission:
+#   on:
+#     push:
+#       tags:
+#         - "*/*.*.*"   # e.g. hexkit/8.4.0, dcs/10.2.0, ghga/2.1.0
+#   permissions:
+#     contents: read
+#     packages: write   # GHCR (charts)
 name: release
 
 on:
-  push:
-    tags:
-      - "*/*.*.*"   # e.g. hexkit/8.4.0, dcs/10.2.0, ghga/2.1.0
+  workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write   # GHCR (charts)
 
 jobs:
   resolve:
@@ -35,9 +43,11 @@ jobs:
       VERSION: ${{ needs.resolve.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      # Branch by the component's [tool.ghga] capabilities:
+      # TODO (do NOT wire up until publish targets are agreed — see the header):
+      # branch by the component's [tool.ghga] capabilities:
       #  - image=true  -> docker build -f docker/Dockerfile --build-arg PACKAGE=$NAME ...
-      #                   push docker.io/lkuchenb/$NAME:$VERSION (+ DHI flavour); package the chart
-      #                   and push to ghcr.io/lkuchenb/charts/$NAME:$VERSION
-      #  - pypi=true   -> uv build --package $NAME ; publish  (DISABLED in sandbox — ADR-0010)
-      - run: echo "TODO: publish ${NAME} ${VERSION} to the lkuchenb sandbox (images/charts; PyPI off)"
+      #                   push <registry>/$NAME:$VERSION (+ DHI flavour); package the chart
+      #                   and push to <oci-registry>/charts/$NAME:$VERSION
+      #  - pypi=true   -> uv build --package $NAME ; publish
+      - run: |
+          echo "DORMANT: would release ${NAME} ${VERSION} — no publish target configured."

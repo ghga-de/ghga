@@ -1,11 +1,14 @@
 # CI — lint / type-check / test the workspace targets affected by a change.
-# SCAFFOLD: structure is final; exercisable once members + uv.lock exist (post-import).
+#
+# DORMANT: manual-run only. To enable automatic runs, restore:
+#   on:
+#     pull_request:
+#     push:
+#       branches: [main]
 name: ci
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
