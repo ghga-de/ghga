@@ -26,7 +26,7 @@ DB_VERSION = 2
 
 async def consume_events(run_forever: bool = True):
     """Start consuming events with kafka"""
-    config = Config()  # type: ignore
+    config = Config()
 
     configure_logging(config=config)
 

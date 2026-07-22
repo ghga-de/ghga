@@ -40,4 +40,4 @@ class Config(ApiConfigBase, LoggingConfig, KafkaConfig, MigrationConfig):
     )
 
 
-CONFIG = Config()  # type: ignore
+CONFIG = Config()

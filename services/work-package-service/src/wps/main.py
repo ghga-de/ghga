@@ -28,7 +28,7 @@ DB_VERSION = 3
 
 async def run_rest_app() -> None:
     """Run the HTTP REST API."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
@@ -38,7 +38,7 @@ async def run_rest_app() -> None:
 
 async def consume_events(run_forever: bool = True) -> None:
     """Run an event consumer listening to the configured topic."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
@@ -48,7 +48,7 @@ async def consume_events(run_forever: bool = True) -> None:
 
 async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
     await run_db_migrations(config=config, target_version=DB_VERSION)

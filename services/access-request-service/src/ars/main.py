@@ -27,7 +27,7 @@ DB_VERSION = 3
 
 async def run_rest_app():
     """Run the HTTP REST API."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
 
     await run_db_migrations(config=config, target_version=DB_VERSION)
@@ -38,7 +38,7 @@ async def run_rest_app():
 
 async def consume_events(run_forever: bool = True) -> None:
     """Run an event consumer listening to the configured topic."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
 
     await run_db_migrations(config=config, target_version=DB_VERSION)
@@ -49,7 +49,7 @@ async def consume_events(run_forever: bool = True) -> None:
 
 async def publish_events(*, all: bool = False):
     """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
 
     await run_db_migrations(config=config, target_version=DB_VERSION)

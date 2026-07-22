@@ -88,7 +88,7 @@ def get_object_storage(config: LegacyConfig):
     s3_config = S3Config(
         s3_endpoint_url=endpoint_url,
         s3_access_key_id=storage_config.credentials.s3_access_key_id.get_secret_value(),
-        s3_secret_access_key=storage_config.credentials.s3_secret_access_key.get_secret_value(),  # type: ignore
+        s3_secret_access_key=storage_config.credentials.s3_secret_access_key.get_secret_value(),
         s3_session_token=None,
         aws_config_ini=None,
     )

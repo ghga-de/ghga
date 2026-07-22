@@ -90,7 +90,7 @@ class UploadController(UploadControllerPort):
         try:
             box = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
-            error = self.BoxNotFoundError(box_id=box_id)
+            error: Exception = self.BoxNotFoundError(box_id=box_id)
             log.info(error)
             raise error from err
 
@@ -269,7 +269,7 @@ class UploadController(UploadControllerPort):
         try:
             box = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
-            error = self.BoxNotFoundError(box_id=box_id)
+            error: Exception = self.BoxNotFoundError(box_id=box_id)
             log.info(error)
             raise error from err
 
@@ -417,7 +417,7 @@ class UploadController(UploadControllerPort):
         # Ensure that another upload is allowed at the moment
         max_concurrent = self._config.max_concurrent_uploads_per_box
         if in_progress_count >= max_concurrent:
-            error = self.TooManyOpenUploadsError(
+            error: Exception = self.TooManyOpenUploadsError(
                 box_id=box.id, max_concurrent=max_concurrent
             )
             log.info(error, extra=extra)  # intentionally set to INFO
@@ -700,7 +700,7 @@ class UploadController(UploadControllerPort):
         try:
             file_upload = await self._file_upload_dao.get_by_id(file_id)
         except ResourceNotFoundError as err:
-            error = self.FileUploadNotFound(file_id=file_id)
+            error: Exception = self.FileUploadNotFound(file_id=file_id)
             log.info(error, extra=extra)
             raise error from err
 
@@ -837,7 +837,7 @@ class UploadController(UploadControllerPort):
         try:
             box = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
-            error = self.BoxNotFoundError(box_id=box_id)
+            error: Exception = self.BoxNotFoundError(box_id=box_id)
             log.info(error)
             raise error from err
 
@@ -1339,7 +1339,7 @@ class UploadController(UploadControllerPort):
         try:
             file_upload = await self._file_upload_dao.get_by_id(file_id)
         except ResourceNotFoundError as err:
-            error = self.FileUploadNotFound(file_id=file_id)
+            error: Exception = self.FileUploadNotFound(file_id=file_id)
             log.error(error, extra={"file_id": file_id})
             raise error from err
 

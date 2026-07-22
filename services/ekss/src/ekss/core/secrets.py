@@ -50,7 +50,7 @@ class SecretsHandler(SecretsHandlerPort):
         try:
             file_secret = self._vault_client.get_secret(key=secret_id)
         except VaultClientPort.SecretRetrievalError as err:
-            error = self.SecretRetrievalError(secret_id=secret_id)
+            error: Exception = self.SecretRetrievalError(secret_id=secret_id)
             log.error(error, extra={"secret_id": secret_id})
             raise error from err
 
@@ -79,7 +79,7 @@ class SecretsHandler(SecretsHandlerPort):
         try:
             base64_file_secret = decrypt(encrypted_secret, self._private_key)
         except Exception as err:
-            error = self.SecretDecryptionError()
+            error: Exception = self.SecretDecryptionError()
             log.error(error)
             raise error from err
 
@@ -110,7 +110,7 @@ class SecretsHandler(SecretsHandlerPort):
         try:
             self._vault_client.delete_secret(key=secret_id)
         except VaultClientPort.SecretRetrievalError as err:
-            error = self.SecretRetrievalError(secret_id=secret_id)
+            error: Exception = self.SecretRetrievalError(secret_id=secret_id)
             log.error(error)
             raise error from err
         except VaultClientPort.SecretDeletionError as err:

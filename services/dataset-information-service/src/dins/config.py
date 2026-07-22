@@ -39,4 +39,4 @@ class Config(
     service_name: str = SERVICE_NAME
 
 
-CONFIG = Config()  # type: ignore [call-arg]
+CONFIG = Config()

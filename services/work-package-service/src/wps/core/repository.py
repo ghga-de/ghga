@@ -521,7 +521,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         match work_type:
             case "create":
                 work_order = CreateFileWorkOrder(
-                    alias=alias,  # type: ignore
+                    alias=alias,
                     box_id=file_upload_box_id,
                     user_public_crypt4gh_key=user_public_crypt4gh_key,
                 )

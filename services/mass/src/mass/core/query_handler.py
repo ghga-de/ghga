@@ -132,7 +132,7 @@ class QueryHandler(QueryHandlerPort):
             break
 
         try:
-            query_results = models.QueryResults(**aggregator_results)  # type: ignore
+            query_results = models.QueryResults(**aggregator_results)
         except ValidationError as err:
             log.warning("Search results validation error: %s", err)
             raise self.ValidationError() from err

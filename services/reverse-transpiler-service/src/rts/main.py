@@ -32,7 +32,7 @@ DB_VERSION = 2
 
 async def run_rest_app():
     """Run the HTTP REST API."""
-    config = Config()  # type: ignore [call-arg]
+    config = Config()
     configure_logging(config=config)
 
     async with prepare_rest_app(config=config) as app:
@@ -41,7 +41,7 @@ async def run_rest_app():
 
 async def consume_events(run_forever: bool = True):
     """Run the event consumer"""
-    config = Config()  # type: ignore[call-arg]
+    config = Config()
     configure_logging(config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
@@ -50,6 +50,6 @@ async def consume_events(run_forever: bool = True):
 
 async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
-    config = Config()  # type: ignore
+    config = Config()
     configure_logging(config=config)
     await run_db_migrations(config=config, target_version=DB_VERSION)

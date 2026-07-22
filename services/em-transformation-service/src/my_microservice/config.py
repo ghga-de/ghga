@@ -39,4 +39,4 @@ class Config(ApiConfigBase, LoggingConfig):
     )
 
 
-CONFIG = Config()  # type: ignore
+CONFIG = Config()

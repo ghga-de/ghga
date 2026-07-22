@@ -45,12 +45,12 @@ class DLQSubTranslator(DLQSubscriberProtocol):
     ) -> None:
         """Consume an event"""
         event = RawDLQEvent(
-            payload=payload,  # type: ignore
+            payload=payload,
             type_=type_,
             topic=topic,
             key=key,
             dlq_id=event_id,
             timestamp=timestamp,
-            headers=headers,  # type: ignore
+            headers=headers,
         )
         await self.dlq_manager.store_event(event=event)

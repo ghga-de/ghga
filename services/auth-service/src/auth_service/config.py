@@ -171,7 +171,7 @@ class Config(
         return v
 
 
-CONFIG = Config()  # type: ignore
+CONFIG = Config()
 
 
 def get_config() -> Config:

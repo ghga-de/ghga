@@ -68,7 +68,7 @@ class V2Migration(MigrationDefinition, Reversible):
 
     async def apply(self):  # noqa: C901
         """Perform the migration."""
-        config = Config()  # type: ignore
+        config = Config()
         all_collections = [
             config.claims_collection,
             config.ivas_collection,
@@ -176,7 +176,7 @@ class V2Migration(MigrationDefinition, Reversible):
 
     async def unapply(self):  # noqa: C901
         """Reverse the migration."""
-        config = Config()  # type: ignore
+        config = Config()
         all_collections = [
             config.claims_collection,
             config.ivas_collection,

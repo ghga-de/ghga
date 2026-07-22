@@ -55,4 +55,4 @@ class Config(
     )
 
 
-CONFIG = Config()  # type: ignore
+CONFIG = Config()

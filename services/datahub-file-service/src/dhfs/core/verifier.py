@@ -168,8 +168,8 @@ def _get_inbox_storage_with_write_access(config: Config) -> S3ObjectStorage:
     """
     inbox_write_s3_config = S3Config(
         s3_endpoint_url=config.s3_endpoint_url,
-        s3_access_key_id=config.inbox_write_s3_access_key_id,  # type: ignore
-        s3_secret_access_key=config.inbox_write_s3_secret_access_key,  # type: ignore
+        s3_access_key_id=config.inbox_write_s3_access_key_id,
+        s3_secret_access_key=config.inbox_write_s3_secret_access_key,
         s3_session_token=config.inbox_write_s3_session_token,
     )
     return S3ObjectStorage(config=inbox_write_s3_config)
@@ -257,7 +257,7 @@ async def _upload_inbox_dummy_file(
         id=FILE_ID,
         object_id=OBJECT_ID_UUID,
         storage_alias=config.storage_alias,
-        bucket_id=config.inbox_bucket_id,  # type: ignore[arg-type]
+        bucket_id=config.inbox_bucket_id,
         decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
         decrypted_size=encrypted_object.unencrypted_size,
         encrypted_size=encrypted_object.encrypted_size,

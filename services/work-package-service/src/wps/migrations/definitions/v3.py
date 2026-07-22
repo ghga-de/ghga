@@ -39,7 +39,7 @@ class V3Migration(MigrationDefinition, Reversible):
 
     async def apply(self):
         """Perform the migration."""
-        config = Config()  # type: ignore
+        config = Config()
         datasets_collection = config.datasets_collection
 
         async def rename_id_to_accession(doc: Document) -> Document:
@@ -77,7 +77,7 @@ class V3Migration(MigrationDefinition, Reversible):
 
     async def unapply(self):
         """Revert the migration."""
-        config = Config()  # type: ignore
+        config = Config()
         datasets_collection = config.datasets_collection
 
         async def rename_accession_to_id(doc: Document) -> Document:

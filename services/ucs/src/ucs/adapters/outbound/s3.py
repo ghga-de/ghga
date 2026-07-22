@@ -41,7 +41,7 @@ def handle_bucket_and_general_s3_errors(
     try:
         yield
     except ObjectStorageProtocol.BucketNotFoundError as err:
-        error = S3ClientPort.BucketNotFoundError(bucket_id=bucket_id)
+        error: Exception = S3ClientPort.BucketNotFoundError(bucket_id=bucket_id)
         log.error(error, extra=extra)
         raise error from err
     except ObjectStorageProtocol.ObjectStorageProtocolError as err:
@@ -259,7 +259,7 @@ class S3Client(S3ClientPort):
                     bucket_id=bucket_id, object_id=str(object_id)
                 )
             except object_storage.ObjectNotFoundError as err:
-                error = self.S3ObjectNotFoundError(
+                error: Exception = self.S3ObjectNotFoundError(
                     bucket_id=bucket_id, object_id=str(object_id)
                 )
                 log.error(error, extra=extra)

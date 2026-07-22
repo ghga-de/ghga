@@ -25,7 +25,7 @@ from rs import __version__
 from rs.adapters.inbound.fastapi_.routes import router
 from rs.config import Config
 
-config = Config()  # type: ignore
+config = Config()
 
 
 def get_openapi_schema(api) -> dict[str, Any]:

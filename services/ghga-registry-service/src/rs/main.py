@@ -43,7 +43,7 @@ DB_VERSION = 2
 
 async def migrate_db():
     """Run database migrations as a one-off command."""
-    config = Config()  # type: ignore[call-arg]
+    config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
@@ -52,7 +52,7 @@ async def migrate_db():
 
 async def run_rest_app():
     """Run the HTTP REST API."""
-    config = Config()  # type: ignore [call-arg]
+    config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
@@ -62,7 +62,7 @@ async def run_rest_app():
 
 async def consume_events(run_forever: bool = True):
     """Run the event consumer"""
-    config = Config()  # type: ignore[call-arg]
+    config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
@@ -74,7 +74,7 @@ async def publish_events(*, all: bool = False):
     """Publish pending events. Set `--all` to (re)publish all events regardless of
     status.
     """
-    config = Config()  # type: ignore[call-arg]
+    config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
