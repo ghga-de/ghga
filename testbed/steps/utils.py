@@ -67,6 +67,7 @@ ADMIN_PAGES = {
     "Access Grant Manager": ["access-grant-manager", ""],
     "IVA Manager": ["iva-manager", ""],
     "User Manager": ["user-manager", ""],
+    "Upload Box Manager": ["upload-box-manager", "Upload Box Manager"],
 }
 
 

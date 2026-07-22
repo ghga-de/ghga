@@ -4,7 +4,6 @@ Feature: 280 Dataset File Information
 
   Background:
     Given we have the state "all available datasets"
-    And we have the state "all file information"
 
   Scenario: View details of all files in the dataset A
     When I request the details of all files in "DS_A" dataset

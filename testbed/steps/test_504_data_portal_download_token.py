@@ -30,7 +30,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/503_data_portal_download_token.feature")
+scenarios("../features/504_data_portal_download_token.feature")
 
 TIMEOUT = 3000
 
@@ -125,7 +125,9 @@ def create_download_token(fixtures: JointFixture, file_scope: str, dataset_alias
         )
         extension = f".{file_scope}.gz"
         file_ids = [
-            file["id"] for file in all_dataset_files if file["extension"] == extension
+            file["accession"]
+            for file in all_dataset_files
+            if file["extension"] == extension
         ]
     elif file_scope != "all":
         raise ValueError(f"Unknown file_scope '{file_scope}'")

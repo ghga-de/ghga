@@ -18,7 +18,13 @@
 
 import re
 
-from fixtures import JointFixture, PlaywrightFixture
+from fixtures import (
+    Config,
+    JointFixture,
+    MongoFixture,
+    PlaywrightFixture,
+    StateStorage,
+)
 from playwright.sync_api import expect
 from pytest_bdd import given, then, when
 
@@ -151,3 +157,34 @@ def open_account_page(fixtures: JointFixture):
     expect(profile_menu_items.nth(0)).to_contain_text("Your GHGA account page")
     profile_menu_items.nth(0).click()
     page.wait_for_load_state()
+
+
+@given("we have no accession mappings yet")
+def empty_file_mappings(config: Config, mongo: MongoFixture):
+    """Unmap the RS accession records so the box can be (re-)mapped via the UI."""
+    mappings = mongo.find_documents(
+        config.rs_db_name, config.rs_mappings_collection, sloppy=True
+    )
+    for document in mappings:
+        document["file_id"] = None
+        document["mapped"] = None
+        mongo.upsert_document(
+            config.rs_db_name,
+            config.rs_mappings_collection,
+            document,
+            extend_mapping=False,
+        )
+
+
+@given("we have no upload boxes yet")
+def clear_upload_boxes(state: StateStorage, config: Config, mongo: MongoFixture):
+    """Clear any existing upload boxes from the state."""
+    state.unset_state("rdub_primary")
+    state.unset_state("rdub_secondary")
+    collections = [
+        (config.ucs_db_name, config.ucs_fub_collection),
+        (config.rs_db_name, config.rs_rdub_collection),
+        (config.wps_db_name, config.wps_rdub_collection),
+    ]
+    for db_name, collection_name in collections:
+        mongo.empty_databases(db_name, collection_name)

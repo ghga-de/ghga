@@ -1,31 +1,32 @@
 # All your requirements go here. Please adapt as needed:
 
-ghga-connector==1.8.0
-ghga-datasteward-kit==5.3.0
+ghga-connector==3.0.1
+ghga-datasteward-kit==5.4.1
+metldata >=4.2,<5
 
-ghga-event-schemas>=9.2,<10
-ghga-service-commons[auth,crypt]>=6,<7
-hexkit[all]>=7.2,<8
-openpyxl >= 3.0.0,<4
+ghga-event-schemas>=13,<14
+ghga-service-commons[auth,crypt]>=7,<8
+hexkit[all]>=8,<9
+openpyxl >= 3.1,<4
 
-crypt4gh>=1.7,<2
+crypt4gh>=1.8,<2
 
 # pytest-bdd currently does not work properly with pytest >= 8
 # therefore we need to pin pytest to an older version until this is fixed
 # see https://github.com/pytest-dev/pytest-bdd/issues/689
-pytest>=7.4.4,<8
-pytest-asyncio>=0.23.7,<0.24
-pytest-bdd>=7.2.0,<8
-pytest-cov>=5.0.0,<6
+pytest>=9.0.3,<10
+pytest-asyncio>=1,<2
+pytest-bdd>=8.1,<9
+pytest-cov>=7,<8
 pyotp>=2.9,<3
 
-click>=8.1.7,<9
-typer>=0.19.1
-httpx>=0.27,<0.28
+click>=8.2,<9
+typer>=0.26
+httpx>=0.28,<0.29
 
-hvac>=2.2.0,<3
+hvac>=2.2,<3
 
 #playwright
-playwright>=1.51.0,<2
-pytest-html>=4.1.1,<5
-pytest-xdist>=3.6.1,<4
+playwright>=1.6,<2
+pytest-html>=4.2,<5
+pytest-xdist>=3.8,<4

@@ -65,6 +65,7 @@ class ConnectorConfig(BaseSettings):
     user_public_key_path: Path = work_dir / "key.pub"
     user_private_key_path: Path = work_dir / "key.sec"
     download_dir: Path = work_dir / "download"
+    file_metadata_dir: Path = work_dir / "file_metadata"
 
 
 class ConnectorFixture:

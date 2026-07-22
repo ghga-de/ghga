@@ -139,6 +139,7 @@ def check_no_datasets_in_list(response: Response):
     target_fixture="download_attempt",
 )
 def run_the_download_command(fixtures: JointFixture) -> subprocess.CompletedProcess:
+    """Run the download command of the GHGA connector for all files in the dataset"""
     download_token = fixtures.state.get_state(
         "download token for all files in dataset A"
     )
@@ -170,6 +171,6 @@ def run_the_download_command(fixtures: JointFixture) -> subprocess.CompletedProc
 
 @then("I get an error message that the token is not valid")
 def check_failed_attempt(download_attempt: subprocess.CompletedProcess):
-    assert "Please paste the complete download token" in download_attempt.stdout
+    assert "Please paste the complete access token" in download_attempt.stdout
     assert "auth token is not valid" in download_attempt.stderr
     assert download_attempt.returncode == 1

@@ -162,8 +162,8 @@ def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
         description = dataset.get("description")
         files = dataset.get("files")
         assert isinstance(files, list)
-        assert all(isinstance(file_.get("id"), str) for file_ in files)
-        assert all(file_["id"].startswith("GHGAF") for file_ in files)
+        assert all(isinstance(file_.get("accession"), str) for file_ in files)
+        assert all(file_["accession"].startswith("GHGAF") for file_ in files)
         extensions = Counter(file.get("extension") for file in files)
         simplified_datasets[title] = {"description": description, "files": extensions}
     assert simplified_datasets == {

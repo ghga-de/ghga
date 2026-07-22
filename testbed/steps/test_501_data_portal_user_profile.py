@@ -102,7 +102,7 @@ def validate_profile_page(fixtures: JointFixture, full_name: str):
     expect(main).to_contain_text(full_name)
 
     profile_components = page.locator("mat-card")
-    expect(profile_components).to_have_count(4)
+    expect(profile_components).to_have_count(5)
 
     email_inner_texts = inner_text_as_list(profile_components.nth(0))
     assert email_inner_texts[0] == "Email"

@@ -156,7 +156,7 @@ def allow_pending_request(
         url = f"{fixtures.config.ars_url}/access-requests/{request_id}"
         data = {"status": "allowed"}
         response = fixtures.http.patch(url, headers=headers, json=data)
-        assert response.status_code == 204
+        assert response.status_code == 204, f"Failed to allow request {response.text}"
     return requests
 
 

@@ -89,19 +89,6 @@ def user_gets_id(full_name: str, fixtures: JointFixture, response: Response):
     fixtures.state.set_state("registered users", registered_users)
 
 
-@given("I have an empty working directory for the GHGA connector")
-def clean_connector_work_dir(connector: ConnectorFixture):
-    connector.reset_work_dir()
-
-
-@given("my Crypt4GH key pair has been stored in two key files")
-def keys_are_made_available(connector: ConnectorFixture, config: Config):
-    connector.store_keys(
-        public_key=config.user_public_crypt4gh_key,
-        private_key=config.user_private_crypt4gh_key,
-    )
-
-
 @then(parse('the response error message is "{expected_reason}"'))
 def check_reason(expected_reason: str, response: Response):
     assert expected_reason in response.json()["detail"]

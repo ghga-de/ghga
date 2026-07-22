@@ -29,7 +29,6 @@ from pytest import fixture
 
 from fixtures.config import Config
 from fixtures.dsk import DskFixture
-from fixtures.utils import calculate_checksum
 
 __all__ = ["FileBatch", "FileObject", "file_fixture"]
 
@@ -38,7 +37,7 @@ class FileBatch(BaseModel):
     """File batch model"""
 
     file_objects: list[FileObject]
-    tsv_file: Path
+    file_info: list[tuple[str, Path]]
 
 
 def subset_file_batch_by_scope(file_batch: FileBatch, file_scope: str) -> FileBatch:
@@ -51,27 +50,22 @@ def subset_file_batch_by_scope(file_batch: FileBatch, file_scope: str) -> FileBa
         raise ValueError(f"Unknown file scope: {file_scope}")
 
     subset_file_objects = []
-    scoped_tsv_file = file_batch.tsv_file.parent / f"filtered_{file_scope}.tsv"
-    with open(file_batch.tsv_file) as infile, open(scoped_tsv_file, "w") as outfile:
-        reader = csv.reader(infile, delimiter="\t")
-        writer = csv.writer(outfile, delimiter="\t")
+    subset_file_info = []
+    for alias, file_path in file_batch.file_info:
+        if file_path.name.endswith(extension):
+            file_object = next(
+                (
+                    file_obj
+                    for file_obj in file_batch.file_objects
+                    if file_obj.file_path == Path(file_path)
+                ),
+                None,
+            )
+            if file_object:
+                subset_file_objects.append(file_object)
+                subset_file_info.append((alias, file_path))
 
-        for row in reader:
-            file_path = row[0]
-            if file_path.endswith(extension):
-                writer.writerow(row)
-                file_object = next(
-                    (
-                        file_obj
-                        for file_obj in file_batch.file_objects
-                        if file_obj.file_path == Path(file_path)
-                    ),
-                    None,
-                )
-                if file_object:
-                    subset_file_objects.append(file_object)
-
-    return FileBatch(file_objects=subset_file_objects, tsv_file=Path(scoped_tsv_file))
+    return FileBatch(file_objects=subset_file_objects, file_info=subset_file_info)
 
 
 def create_named_file(
@@ -102,7 +96,7 @@ def create_named_file(
     file_object = FileObject(
         file_path=Path(file_path),
         bucket_id="",  # Not used in the tests, but required by the model
-        object_id=alias,
+        object_id=alias.strip(),
     )
     return file_object
 
@@ -127,39 +121,30 @@ def file_fixture(
 
     file_batches: dict[str, FileBatch] = {}
     for dataset, files in datasets.items():
-        files_to_upload_tsv = dsk.config.submission_registry / f"{dataset}_files.tsv"
         created_files = []
-        with open(files_to_upload_tsv, "w", encoding="utf-8") as tsv_file:
-            file_sizes = (
-                [3]  # See create_named_file(), for file content/alias truncation.
-                + [
-                    round(config.default_file_size / (len(files) - 1)) * i
-                    for i in range(1, len(files) - 1)
-                ]
-                + [config.default_file_size]
-            )  # Distribution of file sizes to the file count
-            for i, file_ in enumerate(files):
-                file_object = create_named_file(
-                    target_dir=temp_dir,
-                    config=config,
-                    name=file_["name"],
-                    alias=file_["alias"],
-                    file_size=file_sizes[i],
-                )
+        file_info = []  # List of tuples (alias, file_path) for upload
+        file_sizes = (
+            [3]  # See create_named_file(), for file content/alias truncation.
+            + [
+                round(config.default_file_size / (len(files) - 1)) * i
+                for i in range(1, len(files) - 1)
+            ]
+            + [config.default_file_size]
+        )  # Distribution of file sizes to the file count
+        for i, file_ in enumerate(files):
+            file_object = create_named_file(
+                target_dir=temp_dir,
+                config=config,
+                name=file_["name"],
+                alias=file_["alias"],
+                file_size=file_sizes[i],
+            )
 
-                created_files.append(file_object)
-                tsv_file.write(f"{file_object.file_path}\t{file_object.object_id}\n")
+            created_files.append(file_object)
+            file_info.append((file_object.object_id, file_object.file_path))
 
         file_batches.update(
-            {
-                dataset: FileBatch(
-                    file_objects=created_files, tsv_file=files_to_upload_tsv
-                )
-            }
+            {dataset: FileBatch(file_objects=created_files, file_info=file_info)}
         )
 
     yield file_batches
-
-    for file_batch in file_batches.values():
-        for file_object in file_batch.file_objects:
-            os.remove(file_object.file_path)

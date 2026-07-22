@@ -198,6 +198,16 @@ def check_dataset_information(
     corrected_payload: MetadataDatasetOverview,
 ):
     """Check if the dataset is known to the dataset information service."""
+    # Confirm that the dataset is in the DINS database
+    document = fixtures.mongo.wait_for_document(
+        fixtures.config.dins_db_name,
+        fixtures.config.dins_file_accessions_collection,
+        query={"_id": corrected_payload.accession},
+        extend_mapping=False,  # the _id field type is string, not UUID
+    )
+    assert document, f"Dataset {corrected_payload.accession} not found in DINS database"
+
+    # Confirm the API returns the dataset information
     url = f"{fixtures.config.dins_url}/dataset_information/{dlq_event.dlq_id}"
     response = fixtures.http.get(url)
     assert response.status_code == 200, f"Failed to get dataset: {response.text}"
