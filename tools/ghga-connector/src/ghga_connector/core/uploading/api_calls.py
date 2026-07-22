@@ -19,11 +19,12 @@ import logging
 from uuid import UUID
 
 import httpx
-from pydantic import UUID4
+from pydantic import UUID4, ValidationError
 from tenacity import RetryError
 
 from ghga_connector import exceptions
 from ghga_connector.config import get_upload_api_url
+from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
 from ghga_connector.core.api_calls.utils import is_service_healthy
 from ghga_connector.core.uploading.structs import UploadedFileInfo
 from ghga_connector.core.work_package import WorkPackageClient
@@ -116,7 +117,9 @@ class UploadClient:
     async def get_box_uploads(self) -> list[UploadedFileInfo]:
         """Contact the Upload API to list the FileUploads in the FileUploadBox.
 
-        Returns a list of UploadedFileInfo objects describing the box contents.
+        The listing endpoint is paginated, so successive pages are requested until the
+        whole box has been retrieved. Returns a list of UploadedFileInfo objects
+        describing the box contents.
         """
         rdub_id, fub_id = await self._work_package_client.get_package_box_ids()
 
@@ -131,21 +134,49 @@ class UploadClient:
         url = f"{self._upload_api_url}/boxes/{fub_id}/uploads"
         headers = _form_authorization_headers(view_wot)
 
-        try:
-            log.debug("Requesting box upload listing at url %s", url)
-            response = await self._client.get(url, headers=headers)
-        except RetryError as retry_error:
-            _check_for_request_errors(retry_error, url)
-            response = retry_error.last_attempt.result()
+        uploads: list[UploadedFileInfo] = []
+        skip = 0
+        while True:
+            params = {"skip": skip, "limit": UPLOAD_LISTING_PAGE_SIZE}
+            try:
+                log.debug(
+                    "Requesting box upload listing at url %s (skip=%i)", url, skip
+                )
+                response = await self._client.get(url, headers=headers, params=params)
+            except RetryError as retry_error:
+                _check_for_request_errors(retry_error, url)
+                response = retry_error.last_attempt.result()
 
-        if response.status_code != 200:
-            self._handle_bad_status_codes(
-                status_code=response.status_code,
-                response=response,
-                file_upload_box_id=fub_id,
-            )
+            if response.status_code != 200:
+                self._handle_bad_status_codes(
+                    status_code=response.status_code,
+                    response=response,
+                    file_upload_box_id=fub_id,
+                )
 
-        return [UploadedFileInfo.model_validate(item) for item in response.json()]
+            try:
+                page = response.json()
+            except ValueError as error:
+                raise exceptions.UnexpectedError(
+                    "The Upload API returned a box upload listing without a valid"
+                    " JSON body."
+                ) from error
+
+            try:
+                items = page["items"]
+                total_count = page["total_count"]
+                uploads.extend(UploadedFileInfo.model_validate(item) for item in items)
+            except (ValidationError, KeyError, TypeError) as error:
+                raise exceptions.UnexpectedError(
+                    f"The Upload API returned an invalid box upload listing: {error}"
+                ) from error
+
+            # Stop once the whole box has been collected
+            if len(uploads) >= total_count:
+                break
+            skip += len(items)  # Don't assume API always allows our limit
+
+        return uploads
 
     async def create_file_upload(
         self,
@@ -154,8 +185,13 @@ class UploadClient:
         decrypted_size: int,
         encrypted_size: int,
         part_size: int,
+        overwrite: bool = False,
     ) -> tuple[UUID4, str]:
-        """Contact the Upload API to initiate a new upload for a file alias"""
+        """Contact the Upload API to initiate a new upload for a file alias.
+
+        When ``overwrite`` is True, the Upload API will replace any existing FileUpload
+        for this alias that is in the "init" or "inbox" state instead of rejecting it.
+        """
         rdub_id, fub_id = await self._work_package_client.get_package_box_ids()
 
         # Shouldn't need to worry about cache busting here
@@ -174,6 +210,7 @@ class UploadClient:
             "decrypted_size": decrypted_size,
             "encrypted_size": encrypted_size,
             "part_size": part_size,
+            "overwrite": overwrite,
         }
 
         try:
@@ -423,11 +460,6 @@ def _handle_404(
                 work_package_id=work_package_id,
                 file_id=file_id,  # type: ignore
             )
-        case "s3UploadDetailsNotFound":
-            raise exceptions.S3UploadDetailsError(
-                file_alias=file_alias,  # type: ignore
-                work_package_id=work_package_id,
-            )
         case "s3UploadNotFound":
             raise exceptions.S3UploadMissingError()
 
@@ -448,6 +480,10 @@ def _handle_409(
             raise exceptions.UploadBoxLockedError(work_package_id=work_package_id)
         case "fileUploadAlreadyExists":
             raise exceptions.UploadAlreadyExistsError(work_package_id=work_package_id)
+        case "fileUploadStateError":
+            # This exception ID is used for a few things in UCS, but only gets raised
+            #  here for trying to complete a failed or cancelled file
+            raise exceptions.FileUploadStateError(alias=file_alias)  # type: ignore
         case "orphanedMultipartUpload":
             raise exceptions.OrphanedUploadError(
                 file_alias=file_alias,  # type: ignore

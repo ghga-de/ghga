@@ -50,17 +50,22 @@ class Uploader:
         file_info: FileInfoForUpload,
         max_concurrent_uploads: int,
         display_name: str | None = None,
+        overwrite: bool = False,
     ):
         """Instantiate the Uploader.
 
         ``display_name`` is used only for the progress bar label; if omitted, the file
         alias is used. The alias sent to the Upload API is always the full alias.
+
+        If `overwrite` is True, each uploaded file replaces any existing FileUpload for
+        its alias as long as it has not reached the "interrogated" state (re-encrypted).
         """
         self._upload_client = upload_client
         self._file_alias = file_info.alias
         self._display_name = display_name or file_info.alias
         self._file_path = file_info.path
         self._file_info = file_info
+        self._overwrite = overwrite
         self._semaphore = asyncio.Semaphore(max_concurrent_uploads)
 
     def new_progress_bar(self) -> UploadProgressBar:
@@ -84,6 +89,7 @@ class Uploader:
                 decrypted_size=self._file_info.decrypted_size,
                 encrypted_size=self._file_info.encrypted_size,
                 part_size=self._file_info.part_size,
+                overwrite=self._overwrite,
             )
             return self._file_id, storage_alias
         except TooManyRequestsError as exc:

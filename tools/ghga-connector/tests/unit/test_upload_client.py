@@ -18,7 +18,7 @@
 from collections.abc import AsyncGenerator
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -29,6 +29,7 @@ from pytest_httpx import HTTPXMock
 from tenacity import RetryError
 
 from ghga_connector import exceptions
+from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
 from ghga_connector.core.client import async_client
 from ghga_connector.core.uploading.api_calls import (
     UploadClient,
@@ -95,6 +96,7 @@ async def test_create_file_upload_success(
         "decrypted_size": decrypted_size,
         "encrypted_size": encrypted_size,
         "part_size": 100,
+        "overwrite": False,
     }
 
     response_body = {
@@ -133,21 +135,66 @@ async def test_create_file_upload_success(
         )
 
 
+@pytest.mark.parametrize("overwrite", [True, False])
+async def test_create_file_upload_sends_overwrite(
+    upload_client: UploadClient, httpx_mock: HTTPXMock, overwrite: bool
+):
+    """Make sure create_file_upload forwards the overwrite flag in the request body."""
+    url = f"{upload_client._upload_api_url}/boxes/{TEST_FUB_ID}/uploads"
+    decrypted_size = 2000
+    encrypted_size = 2124
+    body = {
+        "alias": FILE_ALIAS,
+        "decrypted_size": decrypted_size,
+        "encrypted_size": encrypted_size,
+        "part_size": 100,
+        "overwrite": overwrite,
+    }
+    response_body = {
+        "file_id": str(FILE_ID),
+        "alias": FILE_ALIAS,
+        "storage_alias": TEST_STORAGE_ALIAS1,
+    }
+    # The response is only returned if the request body matches the expected body,
+    # including the overwrite flag.
+    httpx_mock.add_response(
+        201, url=url, match_json=body, method="POST", json=response_body
+    )
+
+    file_id, _ = await upload_client.create_file_upload(
+        file_alias=FILE_ALIAS,
+        decrypted_size=decrypted_size,
+        encrypted_size=encrypted_size,
+        part_size=100,
+        overwrite=overwrite,
+    )
+    assert file_id == FILE_ID
+
+
 async def test_get_box_uploads(upload_client: UploadClient, httpx_mock: HTTPXMock):
     """Test that get_box_uploads requests a view WOT and parses the listing."""
     url = f"{upload_client._upload_api_url}/boxes/{TEST_FUB_ID}/uploads"
-    response_body = [
-        {
-            "id": str(FILE_ID),
-            "alias": FILE_ALIAS,
-            "decrypted_size": 2048,
-            "encrypted_size": 4096,
-            "state": "inbox",
-            # An unexpected extra field should be ignored, not cause a failure
-            "some_unmodeled_field": "ignored",
-        }
-    ]
-    httpx_mock.add_response(200, url=url, method="GET", json=response_body)
+    response_body = {
+        "items": [
+            {
+                "id": str(FILE_ID),
+                "alias": FILE_ALIAS,
+                "decrypted_size": 2048,
+                "encrypted_size": 4096,
+                "state": "inbox",
+                # An unexpected extra field should be ignored, not cause a failure
+                "some_unmodeled_field": "ignored",
+            }
+        ],
+        "total_count": 1,
+    }
+    httpx_mock.add_response(
+        200,
+        url=url,
+        method="GET",
+        json=response_body,
+        match_params={"skip": "0", "limit": str(UPLOAD_LISTING_PAGE_SIZE)},
+    )
 
     uploads = await upload_client.get_box_uploads()
 
@@ -166,9 +213,60 @@ async def test_get_box_uploads(upload_client: UploadClient, httpx_mock: HTTPXMoc
     )
 
     # Test that other status codes will trigger the error translation
-    httpx_mock.add_response(500, url=url, method="GET", json=[])
+    httpx_mock.add_response(
+        500,
+        url=url,
+        method="GET",
+        json=[],
+        match_params={"skip": "0", "limit": str(UPLOAD_LISTING_PAGE_SIZE)},
+    )
     with pytest.raises(exceptions.UnexpectedError):
         _ = await upload_client.get_box_uploads()
+
+
+async def test_get_box_uploads_pagination(
+    upload_client: UploadClient, httpx_mock: HTTPXMock
+):
+    """Test that get_box_uploads fetches every page of a paginated listing."""
+    url = f"{upload_client._upload_api_url}/boxes/{TEST_FUB_ID}/uploads"
+    total_count = UPLOAD_LISTING_PAGE_SIZE + 1
+
+    def _item(index: int) -> dict[str, Any]:
+        return {
+            "id": str(uuid4()),
+            "alias": f"file-{index}",
+            "decrypted_size": 2048,
+            "encrypted_size": 4096,
+            "state": "inbox",
+        }
+
+    # First (full) page, then a second page with the remaining single item.
+    httpx_mock.add_response(
+        200,
+        url=url,
+        method="GET",
+        json={
+            "items": [_item(i) for i in range(UPLOAD_LISTING_PAGE_SIZE)],
+            "total_count": total_count,
+        },
+        match_params={"skip": "0", "limit": str(UPLOAD_LISTING_PAGE_SIZE)},
+    )
+    httpx_mock.add_response(
+        200,
+        url=url,
+        method="GET",
+        json={"items": [_item(UPLOAD_LISTING_PAGE_SIZE)], "total_count": total_count},
+        match_params={
+            "skip": str(UPLOAD_LISTING_PAGE_SIZE),
+            "limit": str(UPLOAD_LISTING_PAGE_SIZE),
+        },
+    )
+
+    uploads = await upload_client.get_box_uploads()
+    assert len(uploads) == total_count
+    assert {upload.alias for upload in uploads} == {
+        f"file-{i}" for i in range(total_count)
+    }
 
 
 async def test_get_part_upload_url(upload_client: UploadClient, httpx_mock: HTTPXMock):
@@ -362,15 +460,6 @@ async def test_delete_file(upload_client: UploadClient, httpx_mock: HTTPXMock):
             FILE_ID,
             exceptions.FileNotInBoxError,
         ),
-        # 404 status codes - s3UploadDetailsNotFound
-        (
-            404,
-            {"exception_id": "s3UploadDetailsNotFound"},
-            TEST_FUB_ID,
-            FILE_ALIAS,
-            FILE_ID,
-            exceptions.S3UploadDetailsError,
-        ),
         # 404 status codes - s3UploadNotFound
         (
             404,
@@ -415,6 +504,15 @@ async def test_delete_file(upload_client: UploadClient, httpx_mock: HTTPXMock):
             FILE_ALIAS,
             FILE_ID,
             exceptions.OrphanedUploadError,
+        ),
+        # 409 status codes - fileUploadStateError
+        (
+            409,
+            {"exception_id": "fileUploadStateError"},
+            TEST_FUB_ID,
+            FILE_ALIAS,
+            FILE_ID,
+            exceptions.FileUploadStateError,
         ),
         # 507 status code - boxMaxSizeExceeded
         (

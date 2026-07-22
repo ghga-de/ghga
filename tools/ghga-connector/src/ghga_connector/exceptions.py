@@ -221,6 +221,18 @@ class FileNotInBoxError(RuntimeError):
         super().__init__(message)
 
 
+class FileUploadStateError(RuntimeError):
+    """Raised when the requested action is incompatible with the FileUpload's state.
+
+    At the moment, this is only raised when trying to complete a failed or cancelled
+    file upload.
+    """
+
+    def __init__(self, *, alias: str):
+        msg = f"Cannot complete {alias} because it appears to be cancelled or failed."
+        super().__init__(msg)
+
+
 class FileNotRegisteredError(RuntimeError):
     """Thrown when a request for a file returns a 404 error."""
 
@@ -448,18 +460,6 @@ class S3StorageError(RuntimeError):
         msg = (
             "There was a problem with the S3 storage configuration for the upload box"
             + f" associated with Work Package {work_package_id}."
-        )
-        super().__init__(msg)
-
-
-class S3UploadDetailsError(RuntimeError):
-    """Raised when the Upload API fails to find expected details of an ongoing S3 upload"""
-
-    def __init__(self, *, file_alias: str, work_package_id: UUID4):
-        msg = (
-            "The Upload API failed to find the expected information about the ongoing"
-            + f" S3 upload for file alias {file_alias} in the upload box associated"
-            + f" with Work Package {work_package_id}."
         )
         super().__init__(msg)
 
