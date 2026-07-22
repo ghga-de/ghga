@@ -468,10 +468,9 @@ async def create_file_upload(  # noqa: C901
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
 
-    response_payload = rest_models.FileUploadCreationResponse(
+    return rest_models.FileUploadCreationResponse(
         file_id=file_id, alias=file_alias, storage_alias=storage_alias
     )
-    return response_payload
 
 
 @router.get(
@@ -507,7 +506,7 @@ async def get_part_upload_url(  # noqa: PLR0913
     """
     if work_order.box_id != box_id or work_order.file_id != file_id:
         raise http_exceptions.HttpNotAuthorizedError()
-    elif work_order.work_type != "upload":
+    if work_order.work_type != "upload":
         raise http_exceptions.HttpNotAuthorizedError(status_code=401)
 
     try:

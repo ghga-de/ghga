@@ -203,15 +203,14 @@ class UploadController(UploadControllerPort):
                         extra=extra,
                     )
                     raise mark_failed_err
-                else:
-                    log.warning(
-                        "While marking FileUpload %s as 'failed', encountered another error."
-                        + " If it's from Kafka, this is fine - just fix Kafka and run"
-                        + " the publish-all job. If it's not related to Kafka at all,"
-                        + " then this warrants further investigation. Error: %s",
-                        file_upload.id,
-                        mark_failed_err,
-                    )
+                log.warning(
+                    "While marking FileUpload %s as 'failed', encountered another error."
+                    + " If it's from Kafka, this is fine - just fix Kafka and run"
+                    + " the publish-all job. If it's not related to Kafka at all,"
+                    + " then this warrants further investigation. Error: %s",
+                    file_upload.id,
+                    mark_failed_err,
+                )
 
             # This is INFO level because it's normal procedure for cleanup.
             log.info(
@@ -1123,7 +1122,7 @@ class UploadController(UploadControllerPort):
         if box.state == "archived":
             log.info("Box with ID %s is already archived", box_id)
             return
-        elif box.state == "open":
+        if box.state == "open":
             log.info("Can't unlock box %s because it's still open.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
 
@@ -1158,7 +1157,7 @@ class UploadController(UploadControllerPort):
                 raise self.FileArchivalError(
                     f"File part checksums appear corrupted for file {file.id}."
                 )
-            elif file.failure_reason:
+            if file.failure_reason:
                 raise self.FileArchivalError(
                     f"The 'failure_reason' for file {file.id} is unexpectedly filled out."
                 )

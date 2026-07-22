@@ -313,13 +313,12 @@ class S3Client(S3ClientPort):
                 )
                 log.info("Deleted object %s from bucket %s.", object_id, bucket_id)
                 return
-            else:
-                log.info(
-                    "No object found with ID %s. It might be deleted already, or maybe"
-                    + " the upload wasn't completed. Will attempt to abort upload %s.",
-                    object_id,
-                    s3_upload_id,
-                )
+            log.info(
+                "No object found with ID %s. It might be deleted already, or maybe"
+                + " the upload wasn't completed. Will attempt to abort upload %s.",
+                object_id,
+                s3_upload_id,
+            )
 
         with handle_bucket_and_general_s3_errors(
             op_name="abort_multipart_upload",
