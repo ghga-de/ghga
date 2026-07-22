@@ -19,8 +19,9 @@ InterrogationReports.
 
 import logging
 from contextlib import suppress
+from typing import cast
 
-from pydantic import UUID4
+from pydantic import UUID4, SecretBytes
 
 from fis.config import Config
 from fis.core import models
@@ -176,6 +177,11 @@ class InterrogationHandler(InterrogationHandlerPort):
         and updates the FileUnderInterrogation state. If the event publish fails,
         the stored report is rolled back and the exception is re-raised.
         """
+        # The model_validator on InterrogationReportWithSecret guarantees `reason`
+        # is non-None when passed=False, which is how this handler is reached.
+        # cast() is a runtime no-op; it only narrows the type for the checker.
+        reason = cast(str, report.reason)
+
         # Store DB copy of report
         await self._interrogation_report_dao.insert(
             models.InterrogationReport(**report.model_dump(exclude={"secret"}))
@@ -196,7 +202,7 @@ class InterrogationHandler(InterrogationHandlerPort):
             file_id=report.file_id,
             storage_alias=report.storage_alias,
             interrogated_at=report.interrogated_at,
-            reason=report.reason,
+            reason=reason,
         )
         log.info("Successfully processed failure report for file %s.", report.file_id)
 
@@ -213,9 +219,19 @@ class InterrogationHandler(InterrogationHandlerPort):
         InterrogationSuccess event. If some error occurs while updating the database,
         the secret is deleted from EKSS.
         """
+        # The model_validator on InterrogationReportWithSecret guarantees these
+        # fields are non-None when passed=True, which is how this handler is
+        # reached. cast() is a runtime no-op; it only narrows types for the checker.
+        secret = cast(SecretBytes, report.secret)
+        bucket_id = cast(str, report.bucket_id)
+        object_id = cast(UUID4, report.object_id)
+        encrypted_size = cast(int, report.encrypted_size)
+        encrypted_parts_md5 = cast(list[str], report.encrypted_parts_md5)
+        encrypted_parts_sha256 = cast(list[str], report.encrypted_parts_sha256)
+
         # Deposit the secret with the EKSS
         try:
-            secret_id = await self._secrets_client.deposit_secret(secret=report.secret)
+            secret_id = await self._secrets_client.deposit_secret(secret=secret)
         except Exception as err:
             raise self.SecretDepositionError(
                 file_id=file.id, reason="See logs for details."
@@ -233,9 +249,9 @@ class InterrogationHandler(InterrogationHandlerPort):
             updated_file = file.model_copy(deep=True)
             updated_file.state = "interrogated"
             updated_file.state_updated = report.interrogated_at
-            updated_file.object_id = report.object_id
-            updated_file.bucket_id = report.bucket_id
-            updated_file.encrypted_size = report.encrypted_size
+            updated_file.object_id = object_id
+            updated_file.bucket_id = bucket_id
+            updated_file.encrypted_size = encrypted_size
             updated_file.interrogated = True
             await self._file_dao.update(updated_file)
             log.debug("Updated file %s while processing InterrogationReport", file.id)
@@ -259,12 +275,12 @@ class InterrogationHandler(InterrogationHandlerPort):
                 file_id=report.file_id,
                 secret_id=secret_id,
                 storage_alias=report.storage_alias,
-                bucket_id=report.bucket_id,
-                object_id=report.object_id,
+                bucket_id=bucket_id,
+                object_id=object_id,
                 interrogated_at=report.interrogated_at,
-                encrypted_parts_md5=report.encrypted_parts_md5,
-                encrypted_parts_sha256=report.encrypted_parts_sha256,
-                encrypted_size=report.encrypted_size,
+                encrypted_parts_md5=encrypted_parts_md5,
+                encrypted_parts_sha256=encrypted_parts_sha256,
+                encrypted_size=encrypted_size,
             )
             log.info(
                 "Successfully processed success report for file %s.", report.file_id
