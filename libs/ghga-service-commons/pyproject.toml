@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=69",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -11,8 +11,9 @@ authors = [
 ]
 requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -23,7 +24,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "7.0.5"
+version = "7.1.0"
 description = "A library that contains common functionality used in services of GHGA"
 dependencies = [
     "pydantic >=2, <3",
@@ -47,13 +48,13 @@ auth = [
 ]
 crypt = [
     "pynacl>=1.6.2, <2",
-    "crypt4gh>=1.7, <2",
+    "crypt4gh>=1.8.6, <2",
 ]
 dev = [
     "requests>=2.32, <3",
 ]
 objectstorage = [
-    "hexkit>=8",
+    "hexkit[s3]>=8",
 ]
 transports = [
     "hishel[async]>=1.1.8, <2",
@@ -100,6 +101,9 @@ ignore = [
     "E111",
     "E114",
     "E116",
+    "E117",
+    "E501",
+    "W191",
     "PLW",
     "RUF001",
     "RUF010",
@@ -128,6 +132,13 @@ select = [
     "RUF",
     "SIM",
     "D",
+    "E",
+    "W",
+    "ASYNC",
+    "LOG",
+    "PERF",
+    "RET",
+    "C4",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -139,6 +150,7 @@ max-complexity = 10
     "S",
     "SIM",
     "D",
+    "E402",
 ]
 "tests/*" = [
     "S",
@@ -174,9 +186,16 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "9.0"
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.paths]
+source = [
+    "src",
+    "/workspace/src",
+    "**/lib/python*/site-packages",
+]
 
 [tool.tox]
 legacy_tox_ini = """

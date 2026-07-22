@@ -43,7 +43,7 @@ def cached_ratelimiting_retry_proxies(
 
     The returned dictionary needs to be provided as `mounts` to the client.
     """
-    mounts: dict[str, AsyncBaseTransport | None] = dict()
+    mounts: dict[str, AsyncBaseTransport | None] = {}
     for key, transport in _get_base_proxies_from_env().items():
         if transport is None:
             # NO_PROXY host: keep None so httpx connects directly for this host.
@@ -65,7 +65,7 @@ def ratelimiting_retry_proxies(
 
     The returned dictionary needs to be provided as `mounts` to the client.
     """
-    mounts: dict[str, AsyncBaseTransport | None] = dict()
+    mounts: dict[str, AsyncBaseTransport | None] = {}
     for key, transport in _get_base_proxies_from_env().items():
         if transport is None:
             # NO_PROXY host: keep None so httpx connects directly for this host.

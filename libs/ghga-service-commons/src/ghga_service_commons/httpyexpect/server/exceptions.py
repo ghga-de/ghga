@@ -156,6 +156,4 @@ class HttpCustomExceptionBase(ABC, HttpException):
             model_config = ConfigDict(extra="forbid")
 
         # customize the class name by subclassing:
-        named_custom_model = type(body_model_name, (CustomBodyModel,), {})
-
-        return named_custom_model
+        return type(body_model_name, (CustomBodyModel,), {})
