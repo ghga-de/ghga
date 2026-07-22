@@ -127,7 +127,7 @@ incremental sync stays low-conflict:
 
 Enabled in two stages (the component gate does **not** wait for the charts):
 
-- **Stage 1 — component gate (enable now):** affected-target lint / format / type-check / unit
+- **Stage 1 — component gate (enabled):** affected-target lint / format / type-check / unit
   tests, including the front-end leg (pnpm lint + vitest). Requires the affected-target
   computation to include **reverse dependencies** of changed internal libs (a `hexkit` change
   must run its consumers' suites, not just `libs/hexkit`).

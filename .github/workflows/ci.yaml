@@ -1,58 +1,119 @@
-# CI — lint / type-check / test the workspace targets affected by a change.
+# CI Stage 1 — the component gate (runbook §5).
 #
-# DORMANT: manual-run only. To enable automatic runs, restore:
-#   on:
-#     pull_request:
-#     push:
-#       branches: [main]
+# Lint the whole repo, then type-check + test exactly the workspace targets affected by
+# the change set, including transitive dependents of changed internal libraries
+# (scripts/affected_targets.py). Python suites run their testcontainers against the
+# runner's native Docker daemon. The integration gate (Stage 2) and the release workflow
+# stay dormant until charts land / publish targets are decided.
 name: ci
 
 on:
-  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  discover:
+  # Repo-wide lint: covers every member plus root-level code (scripts/, docs snippets)
+  # in one cheap pass; --locked also asserts uv.lock is in sync with the pyprojects.
+  lint:
     runs-on: ubuntu-latest
-    outputs:
-      targets: ${{ steps.affected.outputs.targets }}
-      all: ${{ steps.affected.outputs.all }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # need history for the affected-target diff
-      - id: affected
-        run: |
-          base="origin/${{ github.base_ref || 'main' }}"
-          json=$(python scripts/affected_targets.py --base "$base")
-          echo "all=$(echo "$json" | python -c 'import sys,json;print(json.load(sys.stdin)["all"])')" >> "$GITHUB_OUTPUT"
-          echo "targets=$(echo "$json" | python -c 'import sys,json;print(json.dumps(json.load(sys.stdin)["targets"]))')" >> "$GITHUB_OUTPUT"
-
-  check:
-    needs: discover
-    if: ${{ needs.discover.outputs.targets != '[]' }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ${{ fromJSON(needs.discover.outputs.targets) }}
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      # Python targets (libs/services/tools). The front-end target is handled separately.
-      - if: ${{ !startsWith(matrix.target, 'frontend/') }}
-        run: |
-          uv sync --package "$(basename '${{ matrix.target }}')"
-          uv run ruff check "${{ matrix.target }}"
-          uv run ruff format --check "${{ matrix.target }}"
-          uv run mypy "${{ matrix.target }}"
-          uv run pytest "${{ matrix.target }}"
-      # TODO(frontend): pnpm install + lint + vitest for frontend/* targets.
+      - run: uv sync --locked --all-packages --all-extras
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
 
-  # Per-library standalone matrix across supported Python versions (ADR-0002).
-  # TODO: enumerate libs/* and their supported pythons from [tool.ghga]; run `uv run --python ...`.
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      python: ${{ steps.affected.outputs.python }}
+      frontend: ${{ steps.affected.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the merge-base diff
+      - id: affected
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if git cat-file -e "$base^{commit}" 2>/dev/null; then
+            json=$(python3 scripts/affected_targets.py --base "$base")
+          else
+            # branch creation / force push: no usable base -> check everything
+            json=$(python3 scripts/affected_targets.py --all)
+          fi
+          echo "affected: $json"
+          split() { echo "$json" | python3 -c "
+          import json, sys
+          targets = json.load(sys.stdin)['targets']
+          roots = sys.argv[1:]
+          print(json.dumps([t for t in targets if t.split('/')[0] in roots]))
+          " "$@"; }
+          echo "python=$(split libs services tools)" >> "$GITHUB_OUTPUT"
+          echo "frontend=$(split frontend)" >> "$GITHUB_OUTPUT"
+          # testbed / deploy targets are exercised by the integration gate (Stage 2).
+
+  check-python:
+    needs: discover
+    if: ${{ needs.discover.outputs.python != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.discover.outputs.python) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --all-packages --all-extras
+      - name: mypy
+        run: uv run mypy "${{ matrix.target }}/src"
+      - name: pytest
+        # cwd = member dir: each member is its own pytest rootdir (the `tests`
+        # packages collide across members otherwise)
+        working-directory: ${{ matrix.target }}
+        run: uv run pytest -q --durations=10
+
+  check-frontend:
+    needs: discover
+    if: ${{ needs.discover.outputs.frontend != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.discover.outputs.frontend) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: ${{ matrix.target }}/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ${{ matrix.target }}/pnpm-lock.yaml
+      - working-directory: ${{ matrix.target }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm test
+          pnpm build
+        # Playwright E2E is part of the integration gate (Stage 2), not this one.
+
+  # TODO (ADR-0002, separable): per-library standalone matrix across supported Python
+  # versions, validating the *published* combination alongside the integrated one.

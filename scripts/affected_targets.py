@@ -184,9 +184,18 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--base", default="origin/main", help="base ref to diff against")
     ap.add_argument("--format", choices=("json", "lines", "matrix"), default="json")
+    ap.add_argument(
+        "--all",
+        action="store_true",
+        help="skip diffing and emit every target (CI fallback when no base resolves"
+        " — an unknown change set must mean 'check everything', never 'check nothing')",
+    )
     args = ap.parse_args(argv)
 
-    is_all, targets = affected(changed_files(args.base))
+    if args.all:
+        is_all, targets = True, all_targets()
+    else:
+        is_all, targets = affected(changed_files(args.base))
 
     if args.format == "lines":
         print("\n".join(targets))
