@@ -50,10 +50,9 @@ def generate_work_order_token(
     )
     claims = wot.model_dump(mode="json")
 
-    signed_token = jwt_helpers.sign_and_serialize_token(
+    return jwt_helpers.sign_and_serialize_token(
         claims=claims, key=jwk, valid_seconds=valid_seconds
     )
-    return signed_token
 
 
 def generate_token_signing_keys() -> JWK:

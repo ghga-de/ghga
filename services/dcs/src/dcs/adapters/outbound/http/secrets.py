@@ -101,9 +101,8 @@ class SecretsClient(SecretsClientPort):
             raise bad_code_error
 
         body = response.json()
-        content = body["content"]
 
-        return content
+        return body["content"]
 
     # The method name no longer references EKSS, but we'll leave it in the span name
     @TRACER.start_as_current_span("api_calls.delete_secret_from_ekss")

@@ -153,7 +153,8 @@ async def test_happy_journey(
     # download file bytes:
     presigned_url = drs_object_response.json()["access_methods"][0]["access_url"]["url"]
     unintercepted_hosts.append(httpx.URL(presigned_url).host)
-    downloaded_file = httpx.get(presigned_url, timeout=5)
+    async with httpx.AsyncClient() as client:
+        downloaded_file = await client.get(presigned_url, timeout=5)
     downloaded_file.raise_for_status()
     assert downloaded_file.content == file_object.content
 
