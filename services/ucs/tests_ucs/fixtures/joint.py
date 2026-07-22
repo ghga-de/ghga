@@ -46,12 +46,35 @@ from tests_ucs.fixtures.in_mem_obj_storage import InMemS3ObjectStorages
 from tests_ucs.fixtures.utils import TEST_MAX_BOX_SIZE
 from ucs.adapters.outbound.s3 import S3Client
 from ucs.config import Config
+from ucs.constants import COUNTED_UPLOAD_STATES
 from ucs.core import models
 from ucs.core.controller import UploadController
 from ucs.core.models import FileUpload, FileUploadBox, UploadActivity
 from ucs.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from ucs.ports.inbound.controller import UploadControllerPort
+from ucs.ports.outbound.dao import BoxStatsAggregatorPort, FileUploadDao
 from ucs.ports.outbound.storage import S3ClientPort
+
+
+class InMemBoxStatsAggregator(BoxStatsAggregatorPort):
+    """In-memory box stats aggregator for unit tests.
+
+    Mirrors the MongoDB aggregation by scanning the in-memory FileUpload DAO, so the
+    controller's stat logic can be exercised without a real database.
+    """
+
+    def __init__(self, *, file_upload_dao: FileUploadDao):
+        self._file_upload_dao = file_upload_dao
+
+    async def compute_box_stats(self, *, box_id: UUID4) -> tuple[int, int]:
+        file_count = 0
+        total_size = 0
+        async for file_upload in self._file_upload_dao.find_all(
+            mapping={"box_id": box_id, "state": {"$in": list(COUNTED_UPLOAD_STATES)}}
+        ):
+            file_count += 1
+            total_size += file_upload.decrypted_size
+        return file_count, total_size
 
 
 @dataclass
@@ -181,11 +204,14 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
 
     storage.get_object_size = mock_get_object_size
 
+    box_stats_aggregator = InMemBoxStatsAggregator(file_upload_dao=file_upload_dao)
+
     controller = UploadController(
         config=(_config),
         file_upload_box_dao=(file_upload_box_dao),
         file_upload_dao=(file_upload_dao),
         upload_activity_dao=upload_activity_dao,
+        box_stats_aggregator=box_stats_aggregator,
         s3_client=s3_client,
     )
 

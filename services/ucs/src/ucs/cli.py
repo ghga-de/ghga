@@ -49,6 +49,6 @@ def sync_consume_events(run_forever: bool = True):
 
 
 @cli.command(name="cleanup")
-def sync_run_cleanup():
+def sync_run_cleanup(run_forever: bool = True):
     """Run the periodic stale upload cleanup job."""
-    asyncio.run(perform_cleanup())
+    asyncio.run(perform_cleanup(run_forever=run_forever))

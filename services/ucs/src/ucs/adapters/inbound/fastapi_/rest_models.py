@@ -15,13 +15,44 @@
 
 """REST API-specific data models (not used by core package)"""
 
-from typing import Literal, TypeVar
-
-from pydantic import UUID4, BaseModel, ConfigDict, Field, PositiveInt, model_validator
+from typing import Annotated, Literal, TypeVar
 
 from ghga_event_schemas.pydantic_ import UploadBoxState
+from pydantic import (
+    UUID4,
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PositiveInt,
+    model_validator,
+)
+
 from ucs.constants import MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.core.models import FileUpload
+
+
+def _ensure_valid_sort_fields(sort: str) -> str:
+    """Ensure each comma-separated sort spec references a FileUpload field.
+
+    A "-" prefix on a spec (denoting descending order) is ignored for validation.
+    An empty string is allowed and means no sort was specified.
+    """
+    if not sort:
+        return sort
+    invalid_fields = [
+        field_name
+        for field_name in (spec.removeprefix("-") for spec in sort.split(","))
+        if field_name not in FileUpload.model_fields
+    ]
+    if invalid_fields:
+        raise ValueError(
+            f"sort references nonexistent FileUpload fields: {', '.join(invalid_fields)}"
+        )
+    return sort
+
+
+SortString = Annotated[str, AfterValidator(_ensure_valid_sort_fields)]
 
 
 class BoxCreationRequest(BaseModel):
@@ -86,6 +117,16 @@ class FileUploadCreationRequest(BaseModel):
         description="The number of bytes in each file part (last part may be smaller)",
         ge=MIN_PART_SIZE,
         le=MAX_PART_SIZE,
+    )
+    overwrite: bool = Field(
+        default=False,
+        description=(
+            "If True and a FileUpload for this alias already exists in an active state"
+            " (init or inbox), cancel and replace it atomically. Has no effect on"
+            " already-failed or already-cancelled uploads."
+            " Uploads in interrogated, awaiting_archival, or archived state cannot be"
+            " overwritten."
+        ),
     )
 
     @model_validator(mode="after")

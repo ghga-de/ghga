@@ -19,6 +19,7 @@ import logging
 from asyncio import sleep
 from contextlib import nullcontext
 from datetime import timedelta
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -312,6 +313,77 @@ async def test_lock_file_upload_box(rig: JointRig):
     assert file_upload_box_dao.latest.state == "locked"
 
 
+async def test_completion_recomputes_box_stats_from_truth(rig: JointRig):
+    """Test that completing an upload derives box stats from the current FileUpload
+    states, correcting any prior drift rather than blindly incrementing.
+    """
+    file_upload_box_dao = rig.file_upload_box_dao
+    box_id = await rig.create_default_box()
+
+    # Simulate out-of-sync size/file count on the box (version 0 -> 1)
+    drifted_box = await file_upload_box_dao.get_by_id(box_id)
+    drifted_box.file_count = 5
+    drifted_box.size = 12345
+    await file_upload_box_dao.update(drifted_box)
+
+    # Complete one file upload so the box has real stats again
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    object_id = rig.file_upload_dao.latest.object_id
+    await rig.controller.complete_file_upload(
+        box_id=box_id,
+        file_id=file_id,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{object_id}",
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+    )
+    assert file_upload_box_dao.latest.file_count == 1
+    assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+
+async def test_lock_recomputes_box_stats(rig: JointRig):
+    """Test that locking a box unconditionally recomputes its stats from the current
+    FileUploads, correcting any prior drift in the same write that locks the box.
+    """
+    file_upload_box_dao = rig.file_upload_box_dao
+    box_id = await rig.create_default_box()
+
+    # Complete one upload so the box has a real, counted file (version 0 -> 1)
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    object_id = rig.file_upload_dao.latest.object_id
+    await rig.controller.complete_file_upload(
+        box_id=box_id,
+        file_id=file_id,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{object_id}",
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+    )
+
+    # Manufacture stat drift, then lock and confirm the lock write corrected it
+    drifted_box = await file_upload_box_dao.get_by_id(box_id)
+    drifted_box.file_count = 5
+    drifted_box.size = 12345
+    await file_upload_box_dao.update(drifted_box)
+
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=1)
+    assert file_upload_box_dao.latest.state == "locked"
+    assert file_upload_box_dao.latest.file_count == 1
+    assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+
 async def test_unlock_file_upload_box(rig: JointRig):
     """Test unlocking a locked FileUploadBox"""
     file_upload_box_dao = rig.file_upload_box_dao
@@ -407,12 +479,47 @@ async def test_get_box_uploads(rig: JointRig):
     # Create a third, empty box
     empty_box_id = await rig.create_default_box()
 
-    # Get the file uploads for the first box - should be sorted by alias
+    # Get the file uploads for the first box - should be sorted by alias by default
     file_uploads, total_count = await controller.get_box_file_info(box_id=box_id)
     assert len(file_uploads) == 3
     assert total_count == 3
     assert [r.alias for r in file_uploads] == ["file0", "file1", "file2"]
     assert all(r.id in file_ids for r in file_uploads)
+
+    # The part checksum lists should be stripped by default
+    assert all(r.encrypted_parts_md5 is None for r in file_uploads)
+    assert all(r.encrypted_parts_sha256 is None for r in file_uploads)
+
+    # The part checksum lists should be included when with_checksums is True,
+    #  and stripping them must not have modified the stored data
+    file_uploads, _ = await controller.get_box_file_info(
+        box_id=box_id, with_checksums=True
+    )
+    assert all(r.encrypted_parts_md5 == ["abc123"] for r in file_uploads)
+    assert all(r.encrypted_parts_sha256 == ["def456"] for r in file_uploads)
+
+    # Get the file uploads sorted by alias in descending order
+    file_uploads, total_count = await controller.get_box_file_info(
+        box_id=box_id, sort=["-alias"]
+    )
+    assert total_count == 3
+    assert [r.alias for r in file_uploads] == ["file2", "file1", "file0"]
+
+    # When the sort spec doesn't reference alias, it should be appended. If it is
+    #  included, then it shouldn't be appended.
+    with patch.object(
+        rig.file_upload_dao, "find_all", wraps=rig.file_upload_dao.find_all
+    ) as find_all_spy:
+        await controller.get_box_file_info(box_id=box_id, sort=["-state"])
+        assert find_all_spy.call_args.kwargs["sort"] == ["-state", "alias"]
+        await controller.get_box_file_info(
+            box_id=box_id, sort=["-state", "-alias", "decrypted_size"]
+        )
+        assert find_all_spy.call_args.kwargs["sort"] == [
+            "-state",
+            "-alias",
+            "decrypted_size",
+        ]
 
     # Verify the other box returns only its own files
     other_uploads, other_total = await controller.get_box_file_info(box_id=other_box_id)
@@ -1301,6 +1408,169 @@ async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
     # Original FileUpload must be untouched
     assert len(file_upload_dao.resources) == 1
     assert (await file_upload_dao.get_by_id(file_id_1)).state == "inbox"
+
+
+@pytest.mark.parametrize("state", ["init", "inbox"])
+async def test_overwrite_cancels_active_upload(
+    rig: JointRig,
+    state: FileUploadState,
+):
+    """Test that when overwrite=True, an active FileUpload in 'init' or 'inbox' state is
+    cancelled and replaced by a new one for the same alias without raising an error.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+
+    box_id = await rig.create_default_box()
+    file_id_1, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    object_id_1 = str(rig.file_upload_dao.latest.object_id)
+
+    if state == "inbox":
+        await controller.complete_file_upload(
+            box_id=box_id,
+            file_id=file_id_1,
+            unencrypted_checksum="unencrypted_checksum",
+            encrypted_checksum=f"etag_for_{object_id_1}",
+            encrypted_parts_md5=["abc123"],
+            encrypted_parts_sha256=["def456"],
+        )
+        assert (await file_upload_dao.get_by_id(file_id_1)).state == "inbox"
+
+    file_id_2, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+        overwrite=True,
+    )
+
+    assert file_id_2 != file_id_1
+
+    # Old upload should be cancelled now
+    old_upload = await file_upload_dao.get_by_id(file_id_1)
+    assert old_upload.state == "cancelled"
+
+    # New upload should be in 'init' state
+    new_upload = await file_upload_dao.get_by_id(file_id_2)
+    assert new_upload.state == "init"
+    assert new_upload.alias == "test_file"
+
+    # S3 resources for the old upload should have been cleaned up
+    if state == "init":
+        assert not await object_storage.list_multipart_uploads_for_object(
+            bucket_id=bucket_id, object_id=object_id_1
+        )
+    else:
+        assert not await object_storage.does_object_exist(
+            bucket_id=bucket_id, object_id=object_id_1
+        )
+
+
+@pytest.mark.parametrize(
+    "state",
+    ["interrogated", "awaiting_archival", "archived"],
+)
+async def test_overwrite_blocked_for_immutable_states(
+    rig: JointRig,
+    state: FileUploadState,
+):
+    """Test that when overwrite=True, uploads in 'interrogated', 'awaiting_archival', or
+    'archived' state cannot be replaced and FileUploadAlreadyExists is raised.
+
+    The InMemDao doesn't enforce compound unique indexes, so we simulate the
+    MongoDB UniqueConstraintViolationError the same way existing idempotence tests do.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+
+    box_id = await rig.create_default_box()
+
+    # Insert a FileUpload directly in the non-overwritable state
+    file_upload = make_file_upload(state=state)
+    file_upload.box_id = box_id
+    file_upload.alias = "test_file"
+    await file_upload_dao.insert(file_upload)
+
+    # Simulate the compound unique index violation MongoDB would raise on insert
+    async def patched_insert(dto):
+        raise UniqueConstraintViolationError(
+            unique_fields={"box_id": str(box_id), "alias": "test_file"}
+        )
+
+    file_upload_dao.insert = patched_insert
+
+    with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
+        await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test_file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+            overwrite=True,
+        )
+
+    # Original FileUpload must be untouched
+    assert len(file_upload_dao.resources) == 1
+    assert (await file_upload_dao.get_by_id(file_upload.id)).state == state
+
+
+@pytest.mark.parametrize("state", ["init", "inbox"])
+async def test_overwrite_false_still_blocks_active_upload(
+    rig: JointRig, state: FileUploadState
+):
+    """With overwrite=False (default), an active 'init' or 'inbox' upload still raises
+    FileUploadAlreadyExists, confirming overwrite is opt-in.
+
+    The InMemDao doesn't enforce compound unique indexes, so we simulate the
+    MongoDB UniqueConstraintViolationError the same way existing idempotence tests do.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+
+    box_id = await rig.create_default_box()
+    file_id_1, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    if state == "inbox":
+        file_upload = file_upload_dao.latest
+        file_upload.state = "inbox"
+        await file_upload_dao.update(file_upload)
+        assert file_upload_dao.latest.state == "inbox"
+
+    # Simulate the compound unique index violation MongoDB would raise on insert
+    async def patched_insert(dto):
+        raise UniqueConstraintViolationError(
+            unique_fields={"box_id": str(box_id), "alias": "test_file"}
+        )
+
+    file_upload_dao.insert = patched_insert
+
+    with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
+        await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test_file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+            overwrite=False,
+        )
+
+    # First upload must be untouched and still in 'init'
+    upload = await file_upload_dao.get_by_id(file_id_1)
+    assert upload.state == state
 
 
 @pytest.mark.parametrize(

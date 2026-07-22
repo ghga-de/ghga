@@ -305,6 +305,9 @@ async def update_box(  # noqa: C901, PLR0912
         ) from error
     except UploadControllerPort.UploadAbortError as error:
         raise http_exceptions.HttpUploadAbortError() from error
+    except UploadControllerPort.BoxStatsCalcError as error:
+        # The controller already logs the underlying cause, so don't re-log here
+        raise http_exceptions.HttpInternalError() from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
@@ -322,7 +325,7 @@ async def update_box(  # noqa: C901, PLR0912
     },
 )
 @TRACER.start_as_current_span("routes.get_box_uploads")
-async def get_box_uploads(
+async def get_box_uploads(  # noqa: PLR0913
     box_id: UUID4,
     work_order: Annotated[
         rest_models.ViewFileBoxWorkOrder,
@@ -330,7 +333,26 @@ async def get_box_uploads(
     ],
     upload_controller: dummies.UploadControllerDummy,
     skip: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=0, le=100)] = 50,
+    limit: Annotated[int, Query(ge=0, le=1000)] = 10,
+    sort: Annotated[
+        rest_models.SortString | None,
+        Query(
+            description="A comma-separated list of FileUpload field names defining"
+            + " the sort order, where field names prefixed with '-' indicate"
+            + " descending order (e.g. 'state,-decrypted_size')."
+            + " Defaults to sorting by alias in ascending order."
+            + " If 'alias' is not referenced, it is appended as an ascending"
+            + " tiebreaker to guarantee a stable order."
+        ),
+    ] = None,
+    with_checksums: Annotated[
+        bool,
+        Query(
+            description="If True, include the part checksum lists"
+            + " (encrypted_parts_md5 and encrypted_parts_sha256) in the returned"
+            + " FileUploads. They are omitted by default as they can be very large."
+        ),
+    ] = False,
 ) -> rest_models.BoxUploadsPage:
     """Retrieve a paginated list of FileUploads for a FileUploadBox.
 
@@ -341,7 +363,11 @@ async def get_box_uploads(
 
     try:
         file_uploads, total_count = await upload_controller.get_box_file_info(
-            box_id=box_id, skip=skip, limit=limit
+            box_id=box_id,
+            skip=skip,
+            limit=limit,
+            sort=sort.split(",") if sort else ["alias"],
+            with_checksums=with_checksums,
         )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
@@ -402,6 +428,7 @@ async def create_file_upload(  # noqa: C901
             decrypted_size=file_upload_creation.decrypted_size,
             encrypted_size=file_upload_creation.encrypted_size,
             part_size=file_upload_creation.part_size,
+            overwrite=file_upload_creation.overwrite,
         )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
@@ -522,7 +549,7 @@ async def get_part_upload_url(  # noqa: PLR0913
     },
 )
 @TRACER.start_as_current_span("routes.complete_file_upload")
-async def complete_file_upload(
+async def complete_file_upload(  # noqa: C901
     box_id: UUID4,
     file_id: UUID4,
     file_upload_completion: rest_models.FileUploadCompletionRequest,
@@ -568,6 +595,9 @@ async def complete_file_upload(
         raise http_exceptions.HttpChecksumMismatchError(file_id=file_id) from error
     except UploadControllerPort.UploadSizeMismatchError as error:
         raise http_exceptions.HttpUploadSizeMismatchError(file_id=file_id) from error
+    except UploadControllerPort.BoxStatsCalcError as error:
+        # The controller already logs the underlying cause, so don't re-log here
+        raise http_exceptions.HttpInternalError() from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
@@ -620,6 +650,9 @@ async def remove_file_upload(
         raise http_exceptions.HttpUnknownStorageAliasError() from error
     except UploadControllerPort.UploadAbortError as error:
         raise http_exceptions.HttpUploadAbortError() from error
+    except UploadControllerPort.BoxStatsCalcError as error:
+        # The controller already logs the underlying cause, so don't re-log here
+        raise http_exceptions.HttpInternalError() from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error

@@ -47,6 +47,7 @@ from ucs.core.models import (
 )
 from ucs.ports.inbound.controller import UploadControllerPort
 from ucs.ports.outbound.dao import (
+    BoxStatsAggregatorPort,
     FileUploadBoxDao,
     FileUploadDao,
     ResourceNotFoundError,
@@ -60,19 +61,21 @@ log = logging.getLogger(__name__)
 class UploadController(UploadControllerPort):
     """A class for managing file uploads"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         config: Config,
         file_upload_box_dao: FileUploadBoxDao,
         file_upload_dao: FileUploadDao,
         upload_activity_dao: UploadActivityDao,
+        box_stats_aggregator: BoxStatsAggregatorPort,
         s3_client: S3ClientPort,
     ):
         self._config = config
         self._file_upload_box_dao = file_upload_box_dao
         self._file_upload_dao = file_upload_dao
         self._upload_activity_dao = upload_activity_dao
+        self._box_stats_aggregator = box_stats_aggregator
         self._s3_client = s3_client
 
     async def _get_box_at_version(
@@ -340,7 +343,7 @@ class UploadController(UploadControllerPort):
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
 
-    async def initiate_file_upload(
+    async def initiate_file_upload(  # noqa: C901, PLR0913, PLR0915
         self,
         *,
         box_id: UUID4,
@@ -348,21 +351,30 @@ class UploadController(UploadControllerPort):
         decrypted_size: int,
         encrypted_size: int,
         part_size: int,
+        overwrite: bool = False,
     ) -> tuple[UUID4, str]:
         """Initialize a new multipart upload.
 
         Returns the file ID and storage alias as a 2-tuple.
+
+        If `overwrite` is True and an active FileUpload (in 'init' or 'inbox' state)
+        already exists for this alias, it will be cancelled/aborted before the new
+        upload is created. Uploads in 'interrogated', 'awaiting_archival', or 'archived'
+        state cannot be overwritten and will still raise `FileUploadAlreadyExists`.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
         - `BoxMaxSizeExceededError` if adding the file would exceed the box's size limit.
         - `TooManyOpenUploadsError` if the box is already at the concurrent upload limit.
-        - `FileUploadAlreadyExists` if there's already a FileUpload for this alias.
+        - `FileUploadAlreadyExists` if there's already a FileUpload for this alias that
+            cannot be overwritten.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAlreadyInProgressError` if an upload is already in progress.
         - `PartSizeError` if the specified part size would results in more
             parts than S3 allows, or is smaller or larger than what S3 allows.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         """
         extra: dict[str, Any] = {"box_id": box_id, "alias": alias}
         # Get the box and resolve S3 storage details
@@ -376,6 +388,22 @@ class UploadController(UploadControllerPort):
             raise self.UnknownStorageAliasError(storage_alias=storage_alias) from err
         extra["storage_alias"] = storage_alias
         extra["bucket_id"] = bucket_id
+
+        # If overwrite is requested, cancel any active upload for this alias before
+        # re-deriving size/count. 'failed'/'cancelled' states are handled later by
+        # _insert_file_upload; only 'init'/'inbox' need explicit cancellation here.
+        if overwrite:
+            try:
+                existing_upload = await self._file_upload_dao.find_one(
+                    mapping={"box_id": box_id, "alias": alias}
+                )
+            except NoHitsFoundError:
+                existing_upload = None
+
+            if existing_upload and existing_upload.state in ("init", "inbox"):
+                await self.remove_file_upload(box_id=box_id, file_id=existing_upload.id)
+                # Re-fetch box to get the updated size/file count
+                box = await self._get_unlocked_box(box_id=box_id)
 
         # Get both box size + in progress size and the number of in progress files
         current_size = box.size
@@ -661,6 +689,7 @@ class UploadController(UploadControllerPort):
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
         - `UploadSizeMismatchError` if the object size doesn't match the declared encrypted_size.
         - `ChecksumMismatchError` if the checksums don't match.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         # Get the FileUploadBox instance and verify that it is unlocked
         box = await self._get_unlocked_box(box_id=box_id)
@@ -744,6 +773,7 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         # Make sure box exists and is unlocked (unless overridden)
         box = await self._get_unlocked_box(box_id=box_id)
@@ -906,7 +936,7 @@ class UploadController(UploadControllerPort):
         """Update FileUploadBox stats (file count & size) in an idempotent manner,
         counting only files that are finished uploading.
 
-        Re-fetches the box to get the latest state, verifies the version is still
+        Re-fetches the box to get the latest state and verifies the version is still
         current before applying any changes.
 
         This helps mitigate potential state inconsistency arising from a hard crash.
@@ -914,21 +944,11 @@ class UploadController(UploadControllerPort):
         Raises:
         - `BoxNotFoundError` if the box no longer exists.
         - `BoxVersionError` if the box version has changed since it was fetched.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         box = await self._get_box_at_version(box_id=box_id, version=version)
 
-        file_count = 0
-        total_size = 0
-        async for file_upload in self._file_upload_dao.find_all(
-            mapping={
-                "box_id": box_id,
-                "state": {
-                    "$in": ["inbox", "interrogated", "awaiting_archival", "archived"]
-                },
-            }
-        ):
-            file_count += 1
-            total_size += file_upload.decrypted_size
+        file_count, total_size = await self._calc_box_stats(box_id=box_id)
 
         # Since every update triggers an event, only update if data differs
         if file_count != box.file_count or total_size != box.size:
@@ -936,6 +956,23 @@ class UploadController(UploadControllerPort):
             box.file_count = file_count
             box.size = total_size
             await self._file_upload_box_dao.update(box)
+
+    async def _calc_box_stats(self, *, box_id: UUID4) -> tuple[int, int]:
+        """Compute a box's (file_count, total_decrypted_size) via the aggregator,
+        translating any datastore error into a `BoxStatsCalcError`.
+
+        Raises:
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        """
+        try:
+            return await self._box_stats_aggregator.compute_box_stats(box_id=box_id)
+        except Exception as err:
+            log.error(
+                "Box stats computation failed with the following error: %s",
+                err,
+                extra={"box_id": box_id},
+            )
+            raise self.BoxStatsCalcError(box_id=box_id) from err
 
     async def create_file_upload_box(
         self, *, storage_alias: str, max_size: int
@@ -999,6 +1036,7 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `IncompleteUploadsError` if force is False and the box has incomplete FileUploads.
         - `UploadAbortError` if force is True and aborting an in-progress upload fails.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         box = await self._get_box_at_version(box_id=box_id, version=version)
 
@@ -1038,8 +1076,13 @@ class UploadController(UploadControllerPort):
                 log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
                 raise error
 
+        # Recompute stats
+        file_count, total_size = await self._calc_box_stats(box_id=box_id)
+
         box.version += 1
         box.state = "locked"
+        box.file_count = file_count
+        box.size = total_size
         await self._file_upload_box_dao.update(box)
         log.info("Locked box with ID %s.", box_id)
 
@@ -1130,14 +1173,35 @@ class UploadController(UploadControllerPort):
         log.info("Archived box with ID %s", box_id)
 
     async def get_box_file_info(
-        self, *, box_id: UUID4, skip: int = 0, limit: int | None = None
+        self,
+        *,
+        box_id: UUID4,
+        skip: int = 0,
+        limit: int | None = None,
+        sort: list[str] | None = None,
+        with_checksums: bool = False,
     ) -> tuple[list[FileUpload], int]:
-        """Return a page of FileUploads for a FileUploadBox, sorted by alias.
+        """Return a page of FileUploads for a FileUploadBox.
+
+        The `sort` parameter is a list of FileUpload field names defining the sort
+        order, where a "-" prefix indicates descending order. Field names are
+        assumed to be validated by the caller. If `sort` is None, results are
+        sorted by alias in ascending order. If `sort` does not reference the alias
+        field, alias (ascending) is appended as a tiebreaker so the resulting
+        order is stable.
+
+        The flag `with_checksums` determines whether the part checksum lists
+        (`encrypted_parts_md5` and `encrypted_parts_sha256`) are populated.
 
         Raises:
         - `PaginationError` if skip and/or limit are invalid.
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         """
+        if sort is None:
+            sort = ["alias"]
+        elif all(spec.removeprefix("-") != "alias" for spec in sort):
+            sort = [*sort, "alias"]
+
         try:
             _ = await self._file_upload_box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
@@ -1150,12 +1214,21 @@ class UploadController(UploadControllerPort):
                 mapping={"box_id": box_id},
                 skip=skip,
                 limit=limit,
-                sort=["alias"],
+                sort=sort,
             )
         except ValueError as err:
             raise self.PaginationError() from err
 
-        file_uploads = [x async for x in find_result]
+        if with_checksums:
+            # TODO: Use `.to_list()` once newer hexkit is pulled in
+            file_uploads = [x async for x in find_result]
+        else:
+            file_uploads = [
+                x.model_copy(
+                    update={"encrypted_parts_md5": None, "encrypted_parts_sha256": None}
+                )
+                async for x in find_result
+            ]
         total_count = await find_result.total_count()
         return file_uploads, total_count
 

@@ -252,6 +252,14 @@ components:
           minimum: 1.0
           title: Encrypted Size
           type: integer
+        overwrite:
+          default: false
+          description: If True and a FileUpload for this alias already exists in an
+            active state (init or inbox), cancel and replace it atomically. Has no
+            effect on already-failed or already-cancelled uploads. Uploads in interrogated,
+            awaiting_archival, or archived state cannot be overwritten.
+          title: Overwrite
+          type: boolean
         part_size:
           description: The number of bytes in each file part (last part may be smaller)
           exclusiveMinimum: 0.0
@@ -1032,11 +1040,42 @@ paths:
         name: limit
         required: false
         schema:
-          default: 50
-          maximum: 100
+          default: 10
+          maximum: 1000
           minimum: 0
           title: Limit
           type: integer
+      - description: A comma-separated list of FileUpload field names defining the
+          sort order, where field names prefixed with '-' indicate descending order
+          (e.g. 'state,-decrypted_size'). Defaults to sorting by alias in ascending
+          order. If 'alias' is not referenced, it is appended as an ascending tiebreaker
+          to guarantee a stable order.
+        in: query
+        name: sort
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: A comma-separated list of FileUpload field names defining the
+            sort order, where field names prefixed with '-' indicate descending order
+            (e.g. 'state,-decrypted_size'). Defaults to sorting by alias in ascending
+            order. If 'alias' is not referenced, it is appended as an ascending tiebreaker
+            to guarantee a stable order.
+          title: Sort
+      - description: If True, include the part checksum lists (encrypted_parts_md5
+          and encrypted_parts_sha256) in the returned FileUploads. They are omitted
+          by default as they can be very large.
+        in: query
+        name: with_checksums
+        required: false
+        schema:
+          default: false
+          description: If True, include the part checksum lists (encrypted_parts_md5
+            and encrypted_parts_sha256) in the returned FileUploads. They are omitted
+            by default as they can be very large.
+          title: With Checksums
+          type: boolean
       responses:
         '200':
           content:

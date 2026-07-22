@@ -15,6 +15,7 @@
 
 """Tests that check the REST API's behavior and auth handling"""
 
+import logging
 from dataclasses import dataclass
 from unittest.mock import AsyncMock
 from uuid import UUID
@@ -205,7 +206,7 @@ async def test_get_box_uploads_response_format(
     file_upload_b.alias = "test1.vcf"
     file_upload_b.box_id = TEST_BOX_ID
 
-    # Test with default parameters (no skip/limit in query string)
+    # Test with default parameters (no skip/limit/sort in query string)
     core_mock.get_box_file_info.return_value = ([file_upload_a, file_upload_b], 5)
     response = await rest_client.get(url, headers=token_header)
     assert response.status_code == 200
@@ -215,7 +216,7 @@ async def test_get_box_uploads_response_format(
     assert body["items"][0]["alias"] == "test0.bam"
     assert body["items"][1]["alias"] == "test1.vcf"
     core_mock.get_box_file_info.assert_awaited_with(
-        box_id=TEST_BOX_ID, skip=0, limit=50
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"], with_checksums=False
     )
 
     # Test with skip and limit parameters explicitly set
@@ -228,7 +229,41 @@ async def test_get_box_uploads_response_format(
     assert body["total_count"] == 5
     assert len(body["items"]) == 1
     assert body["items"][0]["alias"] == "test1.vcf"
-    core_mock.get_box_file_info.assert_awaited_with(box_id=TEST_BOX_ID, skip=3, limit=1)
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID, skip=3, limit=1, sort=["alias"], with_checksums=False
+    )
+
+    # Test that the comma-separated sort parameter is forwarded as a list
+    core_mock.get_box_file_info.return_value = ([file_upload_b, file_upload_a], 5)
+    response = await rest_client.get(
+        url, params={"sort": "-alias,state"}, headers=token_header
+    )
+    assert response.status_code == 200
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID,
+        skip=0,
+        limit=10,
+        sort=["-alias", "state"],
+        with_checksums=False,
+    )
+
+    # An empty sort parameter is treated the same as omitting it
+    core_mock.get_box_file_info.return_value = ([file_upload_a, file_upload_b], 5)
+    response = await rest_client.get(url, params={"sort": ""}, headers=token_header)
+    assert response.status_code == 200
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"], with_checksums=False
+    )
+
+    # The with_checksums query parameter is forwarded to the controller
+    core_mock.get_box_file_info.return_value = ([file_upload_a, file_upload_b], 5)
+    response = await rest_client.get(
+        url, params={"with_checksums": True}, headers=token_header
+    )
+    assert response.status_code == 200
+    core_mock.get_box_file_info.assert_awaited_with(
+        box_id=TEST_BOX_ID, skip=0, limit=10, sort=["alias"], with_checksums=True
+    )
 
     # skip beyond all results  controller returns empty page but preserves total_count
     core_mock.get_box_file_info.return_value = ([], 5)
@@ -254,12 +289,25 @@ async def test_get_box_uploads_invalid_params(
     response = await rest_client.get(url, params={"skip": -1}, headers=token_header)
     assert response.status_code == 422
 
-    # limit must be <= 100
-    response = await rest_client.get(url, params={"limit": 101}, headers=token_header)
+    # limit must be <= 1000
+    response = await rest_client.get(url, params={"limit": 1001}, headers=token_header)
     assert response.status_code == 422
 
     # limit must also be >=0
     response = await rest_client.get(url, params={"limit": -1}, headers=token_header)
+    assert response.status_code == 422
+
+    # sort specs must reference FileUpload fields (modulo a leading '-')
+    response = await rest_client.get(
+        url, params={"sort": "alias,-bogus,fake"}, headers=token_header
+    )
+    assert response.status_code == 422
+    assert "bogus, fake" in response.text
+
+    # bracketed values are not valid syntax
+    response = await rest_client.get(
+        url, params={"sort": "[alias,state]"}, headers=token_header
+    )
     assert response.status_code == 422
 
 
@@ -320,6 +368,40 @@ async def test_create_file_upload_endpoint_auth(
         "alias": body["alias"],
         "storage_alias": "HD01",
     }
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+async def test_create_file_upload_passes_overwrite_to_core(
+    config: ConfigFixture, app_fixture: AppFixture, overwrite: bool
+):
+    """Test that the overwrite field from the request body is forwarded to the core."""
+    wps_jwk = config.wps_jwk
+    core_mock = app_fixture.core_mock
+    core_mock.initiate_file_upload.return_value = (TEST_FILE_ID, "HD01")
+
+    body = {
+        "alias": "test_file",
+        "decrypted_size": utils.DECRYPTED_SIZE,
+        "encrypted_size": utils.ENCRYPTED_SIZE,
+        "part_size": utils.PART_SIZE,
+        "overwrite": overwrite,
+    }
+    good_token_header = utils.create_file_token_header(
+        box_id=TEST_BOX_ID, alias="test_file", jwk=wps_jwk
+    )
+    response = await app_fixture.rest_client.post(
+        f"/boxes/{TEST_BOX_ID}/uploads", json=body, headers=good_token_header
+    )
+    assert response.status_code == 201
+
+    core_mock.initiate_file_upload.assert_called_once_with(
+        box_id=TEST_BOX_ID,
+        alias="test_file",
+        decrypted_size=utils.DECRYPTED_SIZE,
+        encrypted_size=utils.ENCRYPTED_SIZE,
+        part_size=utils.PART_SIZE,
+        overwrite=overwrite,
+    )
 
 
 async def test_get_file_part_upload_url_endpoint_auth(
@@ -538,9 +620,19 @@ async def test_create_box_endpoint_error_handling(
                 box_id=TEST_BOX_ID, file_ids=[(TEST_FILE_ID, "test_file")]
             ),
         ),
+        (
+            UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpInternalError(),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
-    ids=["BoxNotFound", "BoxVersionOutdated", "IncompleteUploads", "InternalError"],
+    ids=[
+        "BoxNotFound",
+        "BoxVersionOutdated",
+        "IncompleteUploads",
+        "BoxStatsCalcError",
+        "InternalError",
+    ],
 )
 async def test_update_box_endpoint_error_handling(
     config: ConfigFixture,
@@ -848,6 +940,10 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
             ),
             http_exceptions.HttpFileUploadStateError(file_id=TEST_FILE_ID),
         ),
+        (
+            UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpInternalError(),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
     ids=[
@@ -857,6 +953,7 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
         "UploadCompletionError",
         "UploadSizeMismatchError",
         "FileUploadStateError",
+        "BoxStatsCalcError",
         "InternalError",
     ],
 )
@@ -888,6 +985,42 @@ async def test_complete_file_upload_endpoint_error_translation(
     assert response.json()["description"] == str(http_error)
 
 
+async def test_box_stats_calc_error_not_re_logged_by_api(
+    config: ConfigFixture, app_fixture: AppFixture, caplog
+):
+    """BoxStatsCalcError is already logged by the controller, so the API layer must
+    translate it to a 500 without emitting another error log of its own.
+    """
+    routes_logger = "ucs.adapters.inbound.fastapi_.routes"
+    wps_jwk = config.wps_jwk
+    body: dict = {
+        "decrypted_sha256": "unencrypted_checksum",
+        "encrypted_md5": "encrypted_checksum",
+        "encrypted_parts_md5": ["abc123"],
+        "encrypted_parts_sha256": ["def456"],
+    }
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.complete_file_upload.side_effect = UploadControllerPort.BoxStatsCalcError(
+        box_id=TEST_BOX_ID
+    )
+    token_header = utils.close_file_token_header(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=wps_jwk
+    )
+    with caplog.at_level(logging.ERROR, logger=routes_logger):
+        response = await rest_client.patch(
+            f"/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}",
+            json=body,
+            headers=token_header,
+        )
+    assert response.json()["description"] == str(http_exceptions.HttpInternalError())
+    assert not [
+        record
+        for record in caplog.records
+        if record.name == routes_logger and record.levelno >= logging.ERROR
+    ]
+
+
 @pytest.mark.parametrize(
     "core_error, http_error",
     [
@@ -915,6 +1048,10 @@ async def test_complete_file_upload_endpoint_error_translation(
             ),
             http_exceptions.HttpUploadAbortError(),
         ),
+        (
+            UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpInternalError(),
+        ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
     ids=[
@@ -923,6 +1060,7 @@ async def test_complete_file_upload_endpoint_error_translation(
         "UnknownStorageAlias",
         "FileUploadNotFound",
         "UploadAbortError",
+        "BoxStatsCalcError",
         "InternalError",
     ],
 )
