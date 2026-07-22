@@ -948,15 +948,10 @@ async def test_delete_users_with_associated_data(
     user_ids = [uuid4() for _ in range(2)]
     now = now_utc_ms_prec()
     later = now_utc_ms_prec() + timedelta(days=90)
-    # The users and IVAs collections are managed by hexkit publisher DAOs, whose
-    # queries filter on `__metadata__.deleted`; a document without that field is
-    # invisible to find_all/find_one (a real insert always stamps it). Raw fixtures
-    # must therefore carry it, or the user-deletion cascade cannot find them.
-    metadata = {"__metadata__": {"deleted": False}}
     # create some data for each user
     for id_ in user_ids:
         # create the base dataset for a fake user
-        db[collections[0]].insert_one({"_id": id_, "name": "All the Same", **metadata})
+        db[collections[0]].insert_one({"_id": id_, "name": "All the Same"})
         # create an associated fake user token
         db[collections[1]].insert_one({"_id": id_, "totp_token": {}})
         # create something that can pass as an associated IVA
@@ -968,7 +963,9 @@ async def test_delete_users_with_associated_data(
                 "value": PHONE,
                 "created": now,
                 "changed": now,
-                **metadata,
+                # the IVAs collection is served by a publishing DAO, which only
+                # finds documents that carry (non-deleted) outbox metadata
+                "__metadata__": {"deleted": False, "published": True},
             }
         )
         # create something that can pass as an associated claim

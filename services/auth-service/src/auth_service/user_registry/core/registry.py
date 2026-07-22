@@ -175,7 +175,7 @@ class UserRegistry(UserRegistryPort):
         if status:
             mapping["status"] = status
         try:
-            return [user async for user in self._user_dao.find_all(mapping=mapping)]
+            return await self._user_dao.find_all(mapping=mapping).to_list()
         except Exception as error:
             log.error("Could not retrieve users: %s", error)
             raise self.UserRetrievalError() from error
@@ -346,7 +346,7 @@ class UserRegistry(UserRegistryPort):
                 mapping["user_id"] = user_id
             if state:
                 mapping["state"] = state
-            return [iva async for iva in self._iva_dao.find_all(mapping=mapping)]
+            return await self._iva_dao.find_all(mapping=mapping).to_list()
         except Exception as error:
             log.error("Could not retrieve IVAs: %s", error)
             raise self.IvaRetrievalError(user_id=user_id, state=state) from error

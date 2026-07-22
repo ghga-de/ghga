@@ -57,21 +57,13 @@ add_as_data_stewards = [
 
 
 async def seed_database(config: Config) -> None:
-    """Seed the database with a dummy user that will become a data steward.
-
-    The user is inserted through the same publisher DAO the app uses, so it carries
-    the `__metadata__` bookkeeping that hexkit's publisher-DAO find queries filter on.
-    A plain insert would omit it, making the user invisible to the app-side data
-    steward seeding (which resolves the user via the publisher DAO's find_one).
-    """
+    """Seed the database with a dummy user that will become a data steward."""
     async with (
-        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_publisher_factory,
-        # publisher-DAO writes stamp a correlation id from context, exactly as the
-        # app's own seed_data_steward_claims does.
+        MongoKafkaDaoPublisherFactory.construct(config=config) as dao_factory,
         set_new_correlation_id(),
     ):
         user_dao = await UserDaoPublisherFactory(
-            config=config, dao_publisher_factory=dao_publisher_factory
+            config=config, dao_publisher_factory=dao_factory
         ).get_user_dao()
         try:
             await user_dao.get_by_id(data_steward.id)
