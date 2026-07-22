@@ -192,7 +192,7 @@ wheels = [
 
 [[package]]
 name = "ars"
-version = "8.0.0"
+version = "8.0.1"
 source = { editable = "services/access-request-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -842,7 +842,7 @@ wheels = [
 
 [[package]]
 name = "dcs"
-version = "10.1.1"
+version = "10.1.2"
 source = { editable = "services/dcs" }
 dependencies = [
     { name = "crypt4gh" },
@@ -890,7 +890,7 @@ wheels = [
 
 [[package]]
 name = "dhfs"
-version = "3.0.2"
+version = "3.1.0"
 source = { editable = "services/datahub-file-service" }
 dependencies = [
     { name = "async-lru" },
@@ -911,7 +911,7 @@ requires-dist = [
 
 [[package]]
 name = "dins"
-version = "7.0.0"
+version = "7.0.1"
 source = { editable = "services/dataset-information-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -997,7 +997,7 @@ wheels = [
 
 [[package]]
 name = "ekss"
-version = "5.1.1"
+version = "5.1.2"
 source = { editable = "services/ekss" }
 dependencies = [
     { name = "crypt4gh" },
@@ -1071,7 +1071,7 @@ wheels = [
 
 [[package]]
 name = "fis"
-version = "11.3.1"
+version = "11.3.2"
 source = { editable = "services/fis" }
 dependencies = [
     { name = "crypt4gh" },
@@ -1107,7 +1107,7 @@ wheels = [
 
 [[package]]
 name = "ghga-connector"
-version = "3.0.0"
+version = "3.1.0"
 source = { editable = "tools/ghga-connector" }
 dependencies = [
     { name = "async-lru" },
@@ -1132,7 +1132,7 @@ requires-dist = [
 
 [[package]]
 name = "ghga-datasteward-kit"
-version = "5.4.0"
+version = "5.4.1"
 source = { editable = "tools/ghga-datasteward-kit" }
 dependencies = [
     { name = "crypt4gh" },
@@ -1736,7 +1736,7 @@ wheels = [
 
 [[package]]
 name = "ifrs"
-version = "7.2.2"
+version = "7.2.3"
 source = { editable = "services/ifrs" }
 dependencies = [
     { name = "crypt4gh" },
@@ -2173,7 +2173,7 @@ wheels = [
 
 [[package]]
 name = "mass"
-version = "7.0.0"
+version = "7.0.1"
 source = { editable = "services/mass" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -2767,7 +2767,7 @@ wheels = [
 
 [[package]]
 name = "pcs"
-version = "6.2.1"
+version = "6.2.2"
 source = { editable = "services/pcs" }
 dependencies = [
     { name = "crypt4gh" },
@@ -3505,7 +3505,7 @@ wheels = [
 
 [[package]]
 name = "rs"
-version = "4.0.0"
+version = "5.0.0"
 source = { editable = "services/ghga-registry-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -3519,7 +3519,7 @@ requires-dist = [
     { name = "ghga-event-schemas", editable = "libs/ghga-event-schemas" },
     { name = "ghga-service-commons", extras = ["api", "auth"], editable = "libs/ghga-service-commons" },
     { name = "hexkit", extras = ["akafka", "mongodb", "opentelemetry"], editable = "libs/hexkit" },
-    { name = "typer", specifier = ">=0.25" },
+    { name = "typer", specifier = ">=0.26" },
 ]
 
 [[package]]
@@ -4257,7 +4257,7 @@ wheels = [
 
 [[package]]
 name = "wkvs"
-version = "3.0.0"
+version = "3.0.1"
 source = { editable = "services/well-known-value-service" }
 dependencies = [
     { name = "ghga-service-commons", extra = ["api"] },
