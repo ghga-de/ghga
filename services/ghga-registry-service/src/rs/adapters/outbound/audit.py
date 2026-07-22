@@ -65,7 +65,10 @@ class AuditRepository(AuditRepositoryPort):
         """Log the creation of a ResearchDataUploadBox"""
         await self.create_audit_record(
             label="ResearchDataUploadBox created",
-            description=f"A new ResearchDataUploadBox was created with '{box.title}' (ID: {box.id}).",
+            description=(
+                f"A new ResearchDataUploadBox was created with '{box.title}'"
+                f" (ID: {box.id})."
+            ),
             user_id=user_id,
             action="C",
             entity=ResearchDataUploadBox.__name__,
@@ -78,7 +81,10 @@ class AuditRepository(AuditRepositoryPort):
         """Log changes made to a ResearchDataUploadBox"""
         await self.create_audit_record(
             label="ResearchDataUploadBox updated",
-            description=f"ResearchDataUploadBox '{box.title}' (ID: {box.id}) was updated. New state: {box.state}.",
+            description=(
+                f"ResearchDataUploadBox '{box.title}' (ID: {box.id}) was updated."
+                f" New state: {box.state}."
+            ),
             user_id=user_id,
             action="U",
             entity=ResearchDataUploadBox.__name__,

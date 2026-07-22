@@ -79,8 +79,8 @@ class FileControllerPort(ABC):
     async def get_study_ids_with_unmapped_accessions(self) -> set[str]:
         """Return the IDs of all studies that have at least one unmapped file accession.
 
-        An accession is unmapped while it has no internal UUID4 file ID yet. Accessions that
-        carry no study ID are ignored, as they cannot be attributed to a study.
+        An accession is unmapped while it has no internal UUID4 file ID yet. Accessions
+        that carry no study ID are ignored, as they cannot be attributed to a study.
         """
 
     @abstractmethod

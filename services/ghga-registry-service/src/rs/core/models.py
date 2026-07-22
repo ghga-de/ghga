@@ -33,6 +33,7 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    NonNegativeInt,
     PositiveInt,
     StringConstraints,
     ValidationInfo,
@@ -45,6 +46,7 @@ __all__ = [
     "AccessionMapRequest",
     "BaseWorkOrderToken",
     "BoxRetrievalResults",
+    "BoxUploadsPage",
     "ChangeFileBoxWorkOrder",
     "CreateFileBoxWorkOrder",
     "CreateUploadBoxRequest",
@@ -58,6 +60,7 @@ __all__ = [
     "GrantAccessRequest",
     "GrantId",
     "GrantWithBoxInfo",
+    "HubStorageSummary",
     "ResearchDataUploadBox",
     "ResizeFileBoxWorkOrder",
     "Study",
@@ -233,7 +236,9 @@ class CreateUploadBoxRequest(BaseModel):
     storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
     max_size: PositiveInt = Field(
         ...,
-        description="Maximum number of bytes allowed to be uploaded to the box across all files",
+        description=(
+            "Maximum number of bytes allowed to be uploaded to the box across all files"
+        ),
     )
 
     @field_validator("title", "description", "storage_alias")
@@ -339,11 +344,36 @@ class GrantWithBoxInfo(UploadGrant):
 
 
 class BoxRetrievalResults(BaseModel):
-    """A model encapsulating retrieved research data upload boxes and the count thereof."""
+    """A model encapsulating retrieved research data upload boxes and the count
+    thereof.
+    """
 
     count: int = Field(..., description="The total number of unpaginated results")
     boxes: list[ResearchDataUploadBox] = Field(
         ..., description="The retrieved research data upload boxes"
+    )
+
+
+class HubStorageSummary(BaseModel):
+    """Aggregated upload box storage statistics for a single data hub."""
+
+    storage_alias: str = Field(
+        ..., description="S3 storage alias identifying the data hub"
+    )
+    total_size: NonNegativeInt = Field(
+        ...,
+        description=(
+            "Total number of bytes uploaded across all upload boxes for this hub"
+        ),
+    )
+    file_count: NonNegativeInt = Field(
+        ...,
+        description=(
+            "Total number of file uploads across all upload boxes for this hub"
+        ),
+    )
+    box_count: NonNegativeInt = Field(
+        ..., description="Number of upload boxes using this hub's storage"
     )
 
 
@@ -367,4 +397,20 @@ class FileUploadWithAccession(FileUpload):
 
     accession: PID | None = Field(
         default=None, description="The accession number assigned to this file."
+    )
+
+
+class BoxUploadsPage(BaseModel):
+    """A page of file uploads for an upload box, plus the total unpaginated count."""
+
+    items: list[FileUploadWithAccession] = Field(
+        ...,
+        description=(
+            "The file uploads on this page, in the requested sort order"
+            + " (alias by default)"
+        ),
+    )
+    total_count: int = Field(
+        ...,
+        description="The total number of file uploads in the box (unpaginated)",
     )

@@ -36,10 +36,13 @@ async def run_db_migrations(
 
     Args
     - `config`: Config containing mongo_dsn string and DB versioning collection name
-    - `target_version`: Which version the db needs to be at for this version of the service
-    - `migration_map`: Mapping of version to migration definition. Defaults to `MIGRATION_MAP`.
+    - `target_version`: Which version the db needs to be at for this version of the
+      service
+    - `migration_map`: Mapping of version to migration definition. Defaults to
+      `MIGRATION_MAP`.
 
-    `migration_map` can be specified for testing, but may be left unspecified for production.
+    `migration_map` can be specified for testing, but may be left unspecified for
+    production.
     """
     migration_map = migration_map or MIGRATION_MAP
 

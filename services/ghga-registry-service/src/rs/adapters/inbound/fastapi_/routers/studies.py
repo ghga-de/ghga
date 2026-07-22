@@ -111,8 +111,8 @@ async def get_studies(
     summary="Get the accession to file ID map for a study",
     description=(
         "Returns the map of file accessions to internal file IDs for the given study."
-        " Accessions that have not been mapped to a file ID yet have a null value, which"
-        " lets the mapping tool filter out already mapped files."
+        " Accessions that have not been mapped to a file ID yet have a null value,"
+        " which lets the mapping tool filter out already mapped files."
     ),
     response_model=dict[str, UUID4 | None],
     responses={

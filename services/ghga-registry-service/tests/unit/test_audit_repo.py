@@ -87,7 +87,9 @@ async def test_create_audit_record(config: Config):
 
 
 async def test_log_box_created():
-    """Test the log_box_created function by inspecting how it calls create_audit_record"""
+    """Test the log_box_created function by inspecting how it calls
+    create_audit_record.
+    """
     auditor = AuditRepository(service="rs", event_publisher=AsyncMock())
 
     # Create a test ResearchDataUploadBox
@@ -110,7 +112,10 @@ async def test_log_box_created():
     await auditor.log_box_created(box=box, user_id=user_id)
     auditor.create_audit_record.assert_called_once_with(
         label="ResearchDataUploadBox created",
-        description=f"A new ResearchDataUploadBox was created with '{box.title}' (ID: {box.id}).",
+        description=(
+            f"A new ResearchDataUploadBox was created with '{box.title}'"
+            f" (ID: {box.id})."
+        ),
         action="C",
         user_id=user_id,
         entity="ResearchDataUploadBox",
@@ -119,7 +124,9 @@ async def test_log_box_created():
 
 
 async def test_log_box_updated():
-    """Test the log_box_updated function by inspecting how it calls create_audit_record"""
+    """Test the log_box_updated function by inspecting how it calls
+    create_audit_record.
+    """
     auditor = AuditRepository(service="rs", event_publisher=AsyncMock())
 
     # Create a test ResearchDataUploadBox
@@ -143,7 +150,10 @@ async def test_log_box_updated():
     await auditor.log_box_updated(box=box, user_id=user_id)
     auditor.create_audit_record.assert_called_once_with(
         label="ResearchDataUploadBox updated",
-        description=f"ResearchDataUploadBox '{box.title}' (ID: {box.id}) was updated. New state: {box.state}.",
+        description=(
+            f"ResearchDataUploadBox '{box.title}' (ID: {box.id}) was updated."
+            f" New state: {box.state}."
+        ),
         user_id=user_id,
         action="U",
         entity="ResearchDataUploadBox",

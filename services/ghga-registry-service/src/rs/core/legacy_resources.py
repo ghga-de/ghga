@@ -115,11 +115,12 @@ class LegacyResourceManager(LegacyResourceManagerPort):
         belong to under the ``study`` key of their content, and the aggregation of all
         their file accessions under the ``files`` key. A resource that does not match
         this expected shape - no ``content`` mapping, a missing or null ``study``, a
-        study without an ``accession``, or no ``files`` list - carries no usable metadata
-        and is ignored with a warning.
+        study without an ``accession``, or no ``files`` list - carries no usable
+        metadata and is ignored with a warning.
 
-        The embedded study is extracted and, if not already known, inserted via the study
-        DAO. Studies are only ever created through this mechanism, never updated: the same
+        The embedded study is extracted and, if not already known, inserted via the
+        study DAO. Studies are only ever created through this mechanism, never updated:
+        the same
         study is typically embedded in many resources, and re-inserting it would
         needlessly reset its ``created`` timestamp and churn the outbox.
 

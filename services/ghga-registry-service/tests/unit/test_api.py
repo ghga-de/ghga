@@ -25,9 +25,11 @@ from hexkit.utils import now_utc_ms_prec
 from rs.config import Config
 from rs.core.models import (
     BoxRetrievalResults,
+    BoxUploadsPage,
     FileUploadWithAccession,
     GrantId,
     GrantWithBoxInfo,
+    HubStorageSummary,
     ResearchDataUploadBox,
     Study,
     StudyStatus,
@@ -109,6 +111,52 @@ async def test_get_research_data_upload_box(
         registry.reset_mock()
         registry.rdub_manager.get_research_data_upload_box.side_effect = TypeError()
         response = await rest_client.get(url, headers=user_auth_headers)
+        assert response.status_code == 500
+
+
+async def test_get_storage_overview(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test the GET /storages endpoint"""
+    registry = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/storages"
+
+        # unauthenticated
+        response = await rest_client.get(url)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.get(url, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # normal response but user is not a data steward (no data_steward role)
+        response = await rest_client.get(url, headers=user_auth_headers)
+        assert response.status_code == 403
+
+        # normal response with data steward role
+        summaries = [
+            HubStorageSummary(
+                storage_alias="HD01", total_size=1500, file_count=5, box_count=2
+            ),
+            HubStorageSummary(
+                storage_alias="TUE01", total_size=250, file_count=1, box_count=1
+            ),
+        ]
+        registry.rdub_manager.get_storage_overview.return_value = summaries
+        response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 200
+        assert response.json() == [
+            summary.model_dump(mode="json") for summary in summaries
+        ]
+
+        # handle other exception
+        registry.reset_mock()
+        registry.rdub_manager.get_storage_overview.side_effect = TypeError()
+        response = await rest_client.get(url, headers=ds_auth_headers)
         assert response.status_code == 500
 
 
@@ -438,16 +486,53 @@ async def test_list_upload_box_files(
             for i in range(3)
         ]
 
+        # Set the RDUBManager's get_upload_box_files method to return the desired value
         file_list_json = [file.model_dump(mode="json") for file in file_list]
-        rdub_manager.rdub_manager.get_upload_box_files.return_value = file_list
+        page_json = {"items": file_list_json, "total_count": len(file_list)}
+        rdub_manager.rdub_manager.get_upload_box_files.return_value = BoxUploadsPage(
+            items=file_list, total_count=len(file_list)
+        )
         response = await rest_client.get(url, headers=user_auth_headers)
         assert response.status_code == 200
-        assert response.json() == file_list_json
+        assert response.json() == page_json
 
         # normal response with data steward auth
         response = await rest_client.get(url, headers=ds_auth_headers)
         assert response.status_code == 200
-        assert response.json() == file_list_json
+        assert response.json() == page_json
+
+        # Verify that the skip/limit query params are passed to the RDUBManager
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.get_upload_box_files.return_value = BoxUploadsPage(
+            items=file_list, total_count=len(file_list)
+        )
+        response = await rest_client.get(
+            url, headers=user_auth_headers, params={"skip": 2, "limit": 10}
+        )
+        assert response.status_code == 200
+        _, kwargs = rdub_manager.rdub_manager.get_upload_box_files.call_args
+        assert kwargs["skip"] == 2
+        assert kwargs["limit"] == 10
+        # No sort specified, so it defaults to alias ascending
+        assert kwargs["sort"] == ["alias"]
+        # with_checksums defaults to False when not specified
+        assert kwargs["with_checksums"] is False
+
+        # Verify that a comma-separated sort value is split and passed to the RDUBManager
+        #  also check that `with_checksums` is sent to the RDUBManager
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.get_upload_box_files.return_value = BoxUploadsPage(
+            items=file_list, total_count=len(file_list)
+        )
+        response = await rest_client.get(
+            url,
+            headers=user_auth_headers,
+            params={"sort": "alias,-state", "with_checksums": "true"},
+        )
+        assert response.status_code == 200
+        _, kwargs = rdub_manager.rdub_manager.get_upload_box_files.call_args
+        assert kwargs["sort"] == ["alias", "-state"]
+        assert kwargs["with_checksums"] is True
 
         # handle box access error from core
         rdub_manager.reset_mock()
@@ -470,6 +555,36 @@ async def test_list_upload_box_files(
         rdub_manager.rdub_manager.get_upload_box_files.side_effect = TypeError()
         response = await rest_client.get(url, headers=user_auth_headers)
         assert response.status_code == 500
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"limit": 1001},
+        {"limit": -1},
+        {"skip": -1},
+        {"sort": "bogus_field"},
+        {"sort": "-bogus_field"},
+        {"sort": "alias,bogus_field"},
+        {"sort": "-"},
+        {"sort": "alias,"},
+        {"sort": ",state"},
+    ],
+)
+async def test_list_upload_box_files_invalid_params(
+    config: Config, user_auth_headers, params: dict
+):
+    """Test that out-of-range skip/limit values and invalid sort specs on the file
+    list endpoint return 422.
+    """
+    rdub_manager = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=rdub_manager) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/uploads"
+        response = await rest_client.get(url, headers=user_auth_headers, params=params)
+        assert response.status_code == 422
 
 
 async def test_revoke_upload_access_grant(
@@ -1046,8 +1161,9 @@ async def test_accession_map_error_translation(
     error_kwargs,
     expected_data,
 ):
-    """Test that every AccessionMapError permutation translates to an HttpAccessionMapError
-    with the correct status code (409 for conflict/archived, 400 for file ID errors),
+    """Test that every AccessionMapError permutation translates to an
+    HttpAccessionMapError with the correct status code (409 for conflict/archived,
+    400 for file ID errors),
     the correct exception_id, and the correct populated data fields.
     """
     rdub_manager = AsyncMock()
@@ -1115,7 +1231,8 @@ async def test_create_box_rejects_blank_fields(
 async def test_update_box_invalid_request_body(
     config: Config, ds_auth_headers, request_body
 ):
-    """Test that the PATCH /upload-boxes endpoint rejects invalid request bodies with 422.
+    """Test that the PATCH /upload-boxes endpoint rejects invalid request bodies with
+    422.
 
     Covers two model-level constraints: state and max_size are mutually exclusive,
     and max_size must be a positive integer when provided.

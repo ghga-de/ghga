@@ -34,10 +34,11 @@ from rs.constants import VALID_STATE_TRANSITIONS
 from rs.core.models import (
     PID,
     BoxRetrievalResults,
+    BoxUploadsPage,
     FileUploadBox,
-    FileUploadWithAccession,
     GrantId,
     GrantWithBoxInfo,
+    HubStorageSummary,
     ResearchDataUploadBox,
     UploadBoxState,
 )
@@ -98,10 +99,9 @@ class RDUBManager(RDUBManagerPort):
             BoxTitleExistsError: If a box with the given title already exists.
             OperationError: If there's a problem creating a corresponding FileUploadBox.
         """
-        # Title uniqueness check is done this way instead of via unique index to avoid
-        # Title uniqueness is checked upfront instead of relying on the unique index to avoid
-        # chicken-egg problem with dependent FUB-RDUB creation
-        if [x async for x in self._box_dao.find_all(mapping={"title": title})]:
+        # Title uniqueness is checked upfront instead of relying on the unique index
+        # to avoid chicken-egg problem with dependent FUB-RDUB creation
+        if await self._box_dao.find_all(mapping={"title": title}).total_count():
             log.error(
                 "ResearchDataUploadBox creation failed because a box with the title %s"
                 + " already exists.",
@@ -135,7 +135,8 @@ class RDUBManager(RDUBManagerPort):
         except UniqueConstraintViolationError as err:
             log.error(
                 "ResearchDataUploadBox creation failed because a box with the title %s"
-                + " already exists. FileUploadBox was already created - will attempt cleanup.",
+                + " already exists. FileUploadBox was already created -"
+                + " will attempt cleanup.",
                 title,
                 extra={"title": title, "fub_id": file_upload_box_id},
             )
@@ -167,12 +168,16 @@ class RDUBManager(RDUBManagerPort):
 
         Raises:
             BoxNotFoundError: If the research data upload box doesn't exist.
-            BoxAccessError: If the user doesn't have access to the research data upload box.
-            BoxVersionError: If the requested ResearchDataUploadBox version is outdated or
-                the FileUploadBox version is outdated when updating the FileUploadBox.
+            BoxAccessError: If the user doesn't have access to the research data
+                upload box.
+            BoxVersionError: If the requested ResearchDataUploadBox version is outdated
+                or the FileUploadBox version is outdated when updating the
+                FileUploadBox.
             StateChangeError: If the requested state transition is invalid.
-            OperationError: If there's a problem updating the corresponding FileUploadBox.
-            ArchivalPrereqsError: If trying to archive the box and prerequisites aren't met.
+            OperationError: If there's a problem updating the corresponding
+                FileUploadBox.
+            ArchivalPrereqsError: If trying to archive the box and prerequisites
+                aren't met.
             ValueError: If state and max_size are both specified.
         """
         if state is not None and max_size is not None:
@@ -209,7 +214,8 @@ class RDUBManager(RDUBManagerPort):
             )
             return
 
-        # If not a data steward, the only acceptable update is to move from OPEN to LOCKED
+        # If not a data steward, the only acceptable update is to move from OPEN to
+        # LOCKED
         is_ds = is_data_steward(auth_context)
         if not is_ds and not (
             changed_fields == {"state": "locked"} and box.state == "open"
@@ -272,7 +278,8 @@ class RDUBManager(RDUBManagerPort):
             case ("locked", "open"):  # unlock the box
                 if force:
                     log.debug(
-                        "force=True is ignored for locked->open state changes on RDUB %s",
+                        "force=True is ignored for locked->open state changes on RDUB"
+                        " %s",
                         rdub_id,
                     )
                 await self._file_upload_box_client.unlock_file_upload_box(
@@ -281,7 +288,8 @@ class RDUBManager(RDUBManagerPort):
             case ("locked", "archived"):  # archive the box
                 if force:
                     log.debug(
-                        "force=True is ignored for locked->archived state changes on RDUB %s",
+                        "force=True is ignored for locked->archived state changes on"
+                        " RDUB %s",
                         rdub_id,
                     )
                 # Check prerequisites using old version number for logging purposes
@@ -301,7 +309,9 @@ class RDUBManager(RDUBManagerPort):
                         extra={
                             "box_id": rdub_id,
                             "file_upload_box_id": fub_id,
-                            "request_file_upload_box_version": old_box.file_upload_box_version,
+                            "request_file_upload_box_version": (
+                                old_box.file_upload_box_version
+                            ),
                         },
                     )
                     raise self.BoxVersionError(
@@ -324,7 +334,7 @@ class RDUBManager(RDUBManagerPort):
         box_id = box.id
 
         # Get files list from File Box API - this always gets the latest data
-        files = await self._file_upload_box_client.get_file_upload_list(
+        files = await self._file_upload_box_client.get_all_file_uploads(
             box_id=box.file_upload_box_id
         )
 
@@ -332,17 +342,21 @@ class RDUBManager(RDUBManagerPort):
             # No files in box, nothing to check
             return
 
-        # Make sure all files have an accession number
-        file_ids_in_box = {f.id for f in files}
+        # Make sure all active files have an accession number
+        # (cancelled/failed excluded)
+        file_ids_in_box = {
+            f.id for f in files if f.state not in ("cancelled", "failed")
+        }
         accessions = await self._file_controller.get_accessions_by_file_ids(
             file_ids=file_ids_in_box
         )
-        mapped_file_ids = {fid for fid in accessions}
+        mapped_file_ids = set(accessions)
         unassigned_files = file_ids_in_box - mapped_file_ids
 
         if unassigned_files:
             log.error(
-                "Can't archive RDUB %s because not all files have been assigned an accession.",
+                "Can't archive RDUB %s because not all files have been assigned an"
+                " accession.",
                 box_id,
                 extra={
                     "box_id": box_id,
@@ -392,7 +406,8 @@ class RDUBManager(RDUBManagerPort):
             )
         except FileBoxClientPort.FUBVersionError as version_err:
             log.error(
-                "Can't resize FUB %s for RDUB %s because the FUB version is out of date.",
+                "Can't resize FUB %s for RDUB %s because the FUB version is out of"
+                " date.",
                 box.file_upload_box_id,
                 box.id,
                 extra={
@@ -440,12 +455,14 @@ class RDUBManager(RDUBManagerPort):
         user_id: UUID,
         force: bool = False,
     ) -> None:
-        """Validate the state transition, persist, dispatch _handle_state_change, and audit.
+        """Validate the state transition, persist, dispatch _handle_state_change, and
+        audit.
 
         Rolls back the local DAO write on failure.
 
         Raises:
-            StateChangeError: The requested transition is not in VALID_STATE_TRANSITIONS.
+            StateChangeError: The requested transition is not in
+                VALID_STATE_TRANSITIONS.
             BoxVersionError: FUB version is out of date.
             ArchivalPrereqsError: Archival prerequisites not met.
         """
@@ -582,15 +599,29 @@ class RDUBManager(RDUBManagerPort):
             ),
         )
 
-    async def get_upload_box_files(
+    async def get_upload_box_files(  # noqa: PLR0913
         self,
         *,
         box_id: UUID4,
         auth_context: AuthContext,
-    ) -> list[FileUploadWithAccession]:
-        """Get list of file uploads for a research data upload box.
+        skip: int = 0,
+        limit: int | None = None,
+        sort: list[str] | None = None,
+        with_checksums: bool = False,
+    ) -> BoxUploadsPage:
+        """Get a page of file uploads for a research data upload box.
 
-        Returns a list of file uploads in the upload box.
+        `skip`, `limit`, and `sort` are forwarded to the file box service's paginated
+        endpoint. `sort` is a list of FileUpload field names to sort by, each optionally
+        prefixed with a dash to denote descending order; when omitted, the file box
+        service's default ordering (by alias) is used.
+        Returns a BoxUploadsPage with the page's file uploads and the total unpaginated
+        count.
+        It is assumed that `skip`, `limit`, and `sort` are validated beforehand - they
+        are not validated in this method.
+
+        `with_checksums` determines whether the per-part checksum lists
+        (`encrypted_parts_md5` and `encrypted_parts_sha256`) are populated or null.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.
@@ -603,22 +634,24 @@ class RDUBManager(RDUBManagerPort):
             box_id=box_id, auth_context=auth_context
         )
 
-        # Get file list from file box service
-        file_uploads = await self._file_upload_box_client.get_file_upload_list(
-            box_id=upload_box.file_upload_box_id
+        # Get the requested page of file uploads from the file box service
+        file_uploads, total = await self._file_upload_box_client.get_file_upload_list(
+            box_id=upload_box.file_upload_box_id,
+            skip=skip,
+            limit=limit,
+            sort=sort,
+            with_checksums=with_checksums,
         )
 
-        # Get accessions from database
-        file_ids = {f.id for f in file_uploads}
+        # Get accessions from database and attach them to the page's file uploads
         accession_map = await self._file_controller.get_accessions_by_file_ids(
-            file_ids=file_ids
+            file_ids={f.id for f in file_uploads}
         )
-        for i, file_upload in enumerate(file_uploads):
+        for file_upload in file_uploads:
             if file_upload.id in accession_map:
-                file_uploads[i].accession = accession_map[file_upload.id]
+                file_upload.accession = accession_map[file_upload.id]
 
-        # Sort files by alias for predictability
-        return sorted(file_uploads, key=lambda x: x.alias)
+        return BoxUploadsPage(items=file_uploads, total_count=total)
 
     async def upsert_file_upload_box(self, file_upload_box: FileUploadBox) -> None:
         """Handle FileUploadBox update events from file box service.
@@ -734,7 +767,7 @@ class RDUBManager(RDUBManagerPort):
 
         if is_ds:
             # Data stewards can see all boxes
-            boxes = [x async for x in self._box_dao.find_all(mapping=mapping)]
+            boxes = await self._box_dao.find_all(mapping=mapping).to_list()
         else:
             # Regular users can only see boxes they have access to
             user_id = UUID(auth_context.id)
@@ -777,6 +810,24 @@ class RDUBManager(RDUBManagerPort):
 
         return BoxRetrievalResults(count=count, boxes=boxes)
 
+    async def get_storage_overview(self) -> list[HubStorageSummary]:
+        """Aggregate upload box storage statistics per data hub (storage alias)."""
+        summaries: dict[str, HubStorageSummary] = {}
+        async for box in self._box_dao.find_all(mapping={}):
+            summary = summaries.get(box.storage_alias)
+            if summary is None:
+                summaries[box.storage_alias] = HubStorageSummary(
+                    storage_alias=box.storage_alias,
+                    total_size=box.size,
+                    file_count=box.file_count,
+                    box_count=1,
+                )
+            else:
+                summary.total_size += box.size
+                summary.file_count += box.file_count
+                summary.box_count += 1
+        return [summaries[alias] for alias in sorted(summaries)]
+
     async def delete_file_upload(
         self,
         *,
@@ -792,7 +843,8 @@ class RDUBManager(RDUBManagerPort):
             BoxNotFoundError: If the box doesn't exist.
             BoxAccessError: If the user doesn't have access to the box.
             BoxStateError: If the box is locked.
-            OperationError: If there's a problem communicating with the file box service.
+            OperationError: If there's a problem communicating with the file box
+                service.
         """
         box = await self.get_research_data_upload_box(
             box_id=box_id, auth_context=auth_context
@@ -861,7 +913,8 @@ class RDUBManager(RDUBManagerPort):
             BoxVersionError: If the requested ResearchDataUploadBox version is outdated,
                 or the associated FileUploadBox version is outdated.
             BoxStateError: If the box is archived and cannot be deleted.
-            OperationError: If there's a problem communicating with the file box service.
+            OperationError: If there's a problem communicating with the file box
+                service.
         """
         # Verify the RDUB exists
         try:
@@ -892,7 +945,7 @@ class RDUBManager(RDUBManagerPort):
 
         # Get a list of the FileUploads tied to this box
         fub_id = box.file_upload_box_id
-        files = await self._file_upload_box_client.get_file_upload_list(
+        files = await self._file_upload_box_client.get_all_file_uploads(
             box_id=fub_id, missing_box_ok=True
         )
 
@@ -950,7 +1003,7 @@ class RDUBManager(RDUBManagerPort):
         **Files with a state of *cancelled* or *failed* are ignored.**
 
         Check the specified ResearchDataUploadBox to verify it exists, that the version
-        stated in the request is current, and that the box has not already been archived.
+        stated in the request is current, and the box has not already been archived.
 
         Next, check the mapping to verify that every file ID is specified exactly
         once (and thus mapping is 1:1). This does not mean that the mapping contains
@@ -1021,22 +1074,23 @@ class RDUBManager(RDUBManagerPort):
                 },
             )
             raise self.AccessionMapError(
-                f"Detected {len(duplicate_file_ids)} file ID(s) specified more than once.",
+                f"Detected {len(duplicate_file_ids)} file ID(s) specified more than"
+                " once.",
                 error_type="duplicate_file_ids",
                 affected_file_ids=duplicate_file_ids,
             )
 
         # Get files list from File Box API
-        files = await self._file_upload_box_client.get_file_upload_list(
+        files = await self._file_upload_box_client.get_all_file_uploads(
             box_id=box.file_upload_box_id
         )
 
         requested_file_ids = set(accession_map.values())
 
         # Make sure all specified file IDs are active uploads in the box
-        file_ids_in_box = set(
+        file_ids_in_box = {
             f.id for f in files if f.state not in ("cancelled", "failed")
-        )
+        }
         if invalid_ids := (requested_file_ids - file_ids_in_box):
             log.error(
                 "Accession map for box %s included unknown file IDs.",
@@ -1105,7 +1159,8 @@ class RDUBManager(RDUBManagerPort):
                 },
             )
             raise self.AccessionMapError(
-                f"The following accessions already have immutable mappings: {accessions}",
+                "The following accessions already have immutable mappings:"
+                f" {accessions}",
                 error_type="accession_conflict",
                 conflicting_accessions=err.conflicting_accessions,
             ) from err

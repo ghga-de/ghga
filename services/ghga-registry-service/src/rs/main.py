@@ -71,7 +71,9 @@ async def consume_events(run_forever: bool = True):
 
 
 async def publish_events(*, all: bool = False):
-    """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
+    """Publish pending events. Set `--all` to (re)publish all events regardless of
+    status.
+    """
     config = Config()  # type: ignore[call-arg]
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)

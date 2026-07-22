@@ -20,7 +20,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import UUID4, NonNegativeInt
+from pydantic import UUID4, AfterValidator, NonNegativeInt
 
 from rs.adapters.inbound.fastapi_ import dummies
 from rs.adapters.inbound.fastapi_.auth import StewardAuthContext, UserAuthContext
@@ -41,8 +41,10 @@ from rs.constants import TRACER
 from rs.core.models import (
     AccessionMapRequest,
     BoxRetrievalResults,
+    BoxUploadsPage,
     CreateUploadBoxRequest,
-    FileUploadWithAccession,
+    FileUpload,
+    HubStorageSummary,
     ResearchDataUploadBox,
     UpdateUploadBoxRequest,
     UploadBoxState,
@@ -52,6 +54,36 @@ from rs.ports.inbound.rdub_manager import RDUBManagerPort
 log = logging.getLogger(__name__)
 
 box_router = APIRouter()
+
+# Separate router for the top-level /storages path, which aggregates upload box
+# statistics per storage and therefore doesn't live under the /upload-boxes prefix
+storage_router = APIRouter()
+
+# The fields that file uploads may be sorted by (a leading dash denotes descending order)
+_SORTABLE_FILE_UPLOAD_FIELDS = frozenset(FileUpload.model_fields)
+
+
+def _ensure_valid_sort_fields(sort: str) -> str:
+    """Ensure each comma-separated sort spec references a FileUpload field.
+
+    A "-" prefix on a spec (denoting descending order) is ignored for validation.
+    An empty string is allowed and means no sort was specified.
+    """
+    if not sort:
+        return sort
+    invalid_fields = [
+        field_name
+        for field_name in (spec.removeprefix("-") for spec in sort.split(","))
+        if field_name not in _SORTABLE_FILE_UPLOAD_FIELDS
+    ]
+    if invalid_fields:
+        raise ValueError(
+            f"sort references nonexistent FileUpload fields: {', '.join(invalid_fields)}"
+        )
+    return sort
+
+
+SortString = Annotated[str, AfterValidator(_ensure_valid_sort_fields)]
 
 
 @box_router.delete(
@@ -160,7 +192,10 @@ async def delete_research_data_upload_box(
         403: {"description": "Not authorized."},
         404: {"description": "Upload box not found."},
         409: {
-            "description": "Update failed due to a title conflict, an outdated request, or unmet prerequisites."
+            "description": (
+                "Update failed due to a title conflict, an outdated request,"
+                " or unmet prerequisites."
+            )
         },
         422: {"description": "Validation error in request body."},
     },
@@ -207,6 +242,39 @@ async def update_research_data_upload_box(
         raise HttpInternalError(message="Failed to update upload box") from err
 
 
+@storage_router.get(
+    "",
+    summary="Get per-hub storage overview",
+    description="Returns aggregated upload box storage statistics for each data hub"
+    + " (identified by storage alias): the total number of bytes uploaded, the total"
+    + " number of file uploads, and the number of upload boxes. Requires the Data Steward"
+    + " role.",
+    response_model=list[HubStorageSummary],
+    responses={
+        200: {
+            "model": list[HubStorageSummary],
+            "description": "Storage overview successfully retrieved.",
+        },
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized."},
+    },
+)
+@TRACER.start_as_current_span("routes.get_storage_overview")
+async def get_storage_overview(
+    registry: dummies.RegistryDummy,
+    auth_context: StewardAuthContext,
+) -> list[HubStorageSummary]:
+    """Get aggregated upload box storage statistics per data hub.
+
+    Requires Data Steward role.
+    """
+    try:
+        return await registry.rdub_manager.get_storage_overview()
+    except Exception as err:
+        log.error(err, exc_info=True)
+        raise HttpInternalError(message="Failed to get storage overview") from err
+
+
 @box_router.get(
     "/{box_id}",
     summary="Get upload box details",
@@ -232,10 +300,9 @@ async def get_research_data_upload_box(
     existing box, this endpoint will return a 404.
     """
     try:
-        box = await registry.rdub_manager.get_research_data_upload_box(
+        return await registry.rdub_manager.get_research_data_upload_box(
             box_id=box_id, auth_context=auth_context
         )
-        return box
     except RDUBManagerPort.BoxAccessError as err:
         # Return BoxAccessError as a 404 on purpose
         raise HttpBoxNotFoundError(box_id=box_id) from err
@@ -249,31 +316,60 @@ async def get_research_data_upload_box(
 @box_router.get(
     "/{box_id}/uploads",
     summary="List files in upload box",
-    description="List the details of all files uploads for a research data upload box.",
-    response_model=list[FileUploadWithAccession],
+    description=(
+        "Retrieve a paginated list of file uploads for an upload box. By"
+        + " default, up to 10 results will be returned at a time. The max is 1000."
+        + " Use the `sort` parameter to control ordering: provide one or more"
+        + " FileUpload field names, optionally prefixed with '-' for descending order."
+        + " By default, FileUploads are sorted by alias."
+    ),
+    response_model=BoxUploadsPage,
     responses={
         200: {
-            "model": list[FileUploadWithAccession],
+            "model": BoxUploadsPage,
             "description": "File upload information successfully retrieved.",
         },
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
         404: {"description": "Upload box not found."},
+        422: {"description": "Validation error in query parameters."},
     },
 )
 @TRACER.start_as_current_span("routes.list_upload_box_files")
-async def list_upload_box_files(
+async def list_upload_box_files(  # noqa: PLR0913
     box_id: UUID,
     registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
-) -> list[FileUploadWithAccession]:
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=0, le=1000)] = 10,
+    sort: Annotated[
+        SortString | None,
+        Query(
+            description="A comma-separated list of FileUpload field names defining"
+            + " the sort order, where field names prefixed with '-' indicate"
+            + " descending order (e.g. 'alias,-decrypted_size')."
+            + " Defaults to sorting by alias in ascending order."
+        ),
+    ] = None,
+    with_checksums: Annotated[
+        bool,
+        Query(
+            description="Whether to include the per-part checksum lists"
+            + " (encrypted_parts_md5 and encrypted_parts_sha256) on each file upload."
+            + " Defaults to False, in which case those fields are returned as null."
+        ),
+    ] = False,
+) -> BoxUploadsPage:
     """List file uploads in an upload box."""
     try:
-        file_uploads = await registry.rdub_manager.get_upload_box_files(
+        return await registry.rdub_manager.get_upload_box_files(
             box_id=box_id,
             auth_context=auth_context,
+            skip=skip,
+            limit=limit,
+            sort=sort.split(",") if sort else ["alias"],
+            with_checksums=with_checksums,
         )
-        return file_uploads
     except RDUBManagerPort.BoxAccessError as err:
         raise HttpNotAuthorizedError() from err
     except RDUBManagerPort.BoxNotFoundError as err:
@@ -291,7 +387,9 @@ async def list_upload_box_files(
     responses={
         204: {"description": "Accession map successfully submitted."},
         400: {
-            "description": "One or more duplicate, absent, or unknown file IDs detected."
+            "description": (
+                "One or more duplicate, absent, or unknown file IDs detected."
+            )
         },
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
@@ -389,13 +487,12 @@ async def get_research_data_upload_boxes(
     they have access to according to the access API.
     """
     try:
-        results = await registry.rdub_manager.get_research_data_upload_boxes(
+        return await registry.rdub_manager.get_research_data_upload_boxes(
             auth_context=auth_context,
             skip=skip,
             limit=limit,
             state=state,
         )
-        return results
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to get upload boxes") from err
@@ -424,14 +521,13 @@ async def create_research_data_upload_box(
 ) -> UUID4:
     """Create a new upload box. Requires Data Steward role."""
     try:
-        box_id = await registry.rdub_manager.create_research_data_upload_box(
+        return await registry.rdub_manager.create_research_data_upload_box(
             title=request.title,
             description=request.description,
             storage_alias=request.storage_alias,
             max_size=request.max_size,
             data_steward_id=UUID(auth_context.id),
         )
-        return box_id
     except RDUBManagerPort.BoxTitleExistsError as err:
         raise HttpBoxTitleExistsError(title=request.title) from err
     except Exception as err:

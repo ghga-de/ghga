@@ -45,15 +45,15 @@ def test_pid_too_long():
 
 def _minimal_study(**kwargs) -> Study:
     """Create a Study with only the required fields set."""
-    defaults = dict(
-        id="GHGA-STUDY-001",
-        title="A study",
-        description="A detailed abstract",
-        types=["whole_genome_sequencing"],
-        affiliations=["UKT"],
-        status=StudyStatus.DRAFT,
-        created_by=uuid4(),
-    )
+    defaults = {
+        "id": "GHGA-STUDY-001",
+        "title": "A study",
+        "description": "A detailed abstract",
+        "types": ["whole_genome_sequencing"],
+        "affiliations": ["UKT"],
+        "status": StudyStatus.DRAFT,
+        "created_by": uuid4(),
+    }
     defaults.update(kwargs)
     return Study(**defaults)  # type: ignore
 

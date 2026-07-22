@@ -132,7 +132,9 @@ def prepare_core_with_override(
     config: Config,
     registry_override: RegistryPort | None = None,
 ):
-    """Resolve the prepare_core context manager based on config and override (if any)."""
+    """Resolve the prepare_core context manager based on config and override (if
+    any).
+    """
     return (
         nullcontext(registry_override)
         if registry_override

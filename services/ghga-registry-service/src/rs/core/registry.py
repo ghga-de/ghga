@@ -38,8 +38,8 @@ class Registry(RegistryPort):
         self._rdub_manager = rdub_manager
         self._legacy_resource_manager = legacy_resource_manager
         self._study_dao = study_dao
-        # Owns file accession / file ID mappings; exposed via the file_controller property
-        # and used to resolve which studies still have unmapped file accessions.
+        # Owns file accession / file ID mappings; exposed via the file_controller
+        # property, used to resolve which studies still have unmapped file accessions.
         self._file_controller = file_controller
 
     @property
@@ -74,7 +74,4 @@ class Registry(RegistryPort):
             if not study_ids:
                 return []
             mapping = {"id": {"$in": list(study_ids)}}
-        return [
-            study
-            async for study in self._study_dao.find_all(mapping=mapping, sort=["id"])
-        ]
+        return await self._study_dao.find_all(mapping=mapping, sort=["id"]).to_list()
