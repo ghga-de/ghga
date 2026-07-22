@@ -256,7 +256,7 @@ async def test_rudb_outbox_consumer(config: Config, kafka: KafkaFixture):
         file_upload_box_state="open",
         file_count=0,
         size=0,
-        max_size=1_000_000_000,
+        max_size=0,
         storage_alias="test",
     )
 
