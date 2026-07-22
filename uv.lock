@@ -338,7 +338,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "auth-service"
-version = "10.0.0"
+version = "10.0.1"
 source = { editable = "services/auth-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -1187,7 +1187,7 @@ wheels = [
 
 [[package]]
 name = "ghga-service-commons"
-version = "7.0.5"
+version = "7.1.0"
 source = { editable = "libs/ghga-service-commons" }
 dependencies = [
     { name = "pydantic" },
@@ -1197,7 +1197,7 @@ dependencies = [
 all = [
     { name = "crypt4gh" },
     { name = "fastapi" },
-    { name = "hexkit" },
+    { name = "hexkit", extra = ["s3"] },
     { name = "hishel", extra = ["async"] },
     { name = "httpx" },
     { name = "jwcrypto" },
@@ -1209,7 +1209,7 @@ all = [
 ]
 api = [
     { name = "fastapi" },
-    { name = "hexkit" },
+    { name = "hexkit", extra = ["s3"] },
     { name = "httpx" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1228,7 +1228,7 @@ http = [
     { name = "httpx" },
 ]
 objectstorage = [
-    { name = "hexkit" },
+    { name = "hexkit", extra = ["s3"] },
 ]
 transports = [
     { name = "hishel", extra = ["async"] },
@@ -1238,12 +1238,12 @@ transports = [
 
 [package.metadata]
 requires-dist = [
-    { name = "crypt4gh", marker = "extra == 'crypt'", specifier = ">=1.7,<2" },
+    { name = "crypt4gh", marker = "extra == 'crypt'", specifier = ">=1.8.6,<2" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.128,<1" },
     { name = "ghga-service-commons", extras = ["api", "auth", "crypt", "dev", "http", "objectstorage", "transports"], marker = "extra == 'all'" },
     { name = "ghga-service-commons", extras = ["http"], marker = "extra == 'transports'" },
     { name = "ghga-service-commons", extras = ["http", "objectstorage"], marker = "extra == 'api'" },
-    { name = "hexkit", marker = "extra == 'objectstorage'", editable = "libs/hexkit" },
+    { name = "hexkit", extras = ["s3"], marker = "extra == 'objectstorage'", editable = "libs/hexkit" },
     { name = "hishel", extras = ["async"], marker = "extra == 'transports'", specifier = ">=1.1.8,<2" },
     { name = "httpx", marker = "extra == 'http'", specifier = ">=0.28,<0.29" },
     { name = "jwcrypto", marker = "extra == 'auth'", specifier = ">=1.5.6,<2" },
@@ -4290,7 +4290,7 @@ requires-dist = [
     { name = "ghga-service-commons", extras = ["api", "auth", "crypt"], editable = "libs/ghga-service-commons" },
     { name = "hexkit", extras = ["akafka", "mongodb", "opentelemetry-akafka", "opentelemetry-mongodb", "opentelemetry-fastapi"], editable = "libs/hexkit" },
     { name = "httpx", specifier = ">=0.28" },
-    { name = "typer", specifier = ">=0.25" },
+    { name = "typer", specifier = ">=0.26" },
 ]
 
 [[package]]
