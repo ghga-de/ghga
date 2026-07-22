@@ -22,10 +22,12 @@ fixtures — matching the rest of the monorepo — and point the auth_km_jobs mo
 `config` singletons at them so the code under test talks to the containers.
 """
 
+import pytest
+
 import auth_km_jobs.jwks
 import auth_km_jobs.totp
 import auth_km_jobs.vault
-import pytest
+from auth_km_jobs.config import Config
 from hexkit.providers.mongodb.testutils import (
     mongodb_container_fixture,  # noqa: F401
     mongodb_fixture,  # noqa: F401
@@ -35,8 +37,6 @@ from hexkit.providers.vault.testutils import (
     vault_container_fixture,  # noqa: F401
     vault_fixture,  # noqa: F401
 )
-
-from auth_km_jobs.config import Config
 
 
 @pytest.fixture(name="config")

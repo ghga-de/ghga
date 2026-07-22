@@ -182,7 +182,7 @@ def docker_bridge_gateway() -> str | None:
     running container, so it can be baked into the cert before the broker starts.
     """
     try:
-        import docker  # a testcontainers dependency, always present in test envs
+        import docker  # noqa: PLC0415  # lazy: keep gateway lookup best-effort
 
         config = docker.from_env().networks.get("bridge").attrs["IPAM"]["Config"]
         return config[0]["Gateway"]

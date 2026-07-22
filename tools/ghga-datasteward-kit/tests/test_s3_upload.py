@@ -62,6 +62,7 @@ ALIAS = "test_file"
 BUCKET_ID = "test-bucket"
 FILE_SIZE = 50 * 1024**2
 
+
 def _is_testcontainer_host(host: str) -> bool:
     """Whether a request host is a testcontainers-exposed endpoint (to pass through).
 

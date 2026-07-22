@@ -18,8 +18,8 @@
 from uuid import UUID, uuid4
 
 import pytest
-from hexkit.correlation import set_correlation_id
 
+from hexkit.correlation import set_correlation_id
 from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.joint import JointFixture
 from ucs.constants import COUNTED_UPLOAD_STATES
