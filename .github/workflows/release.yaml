@@ -54,22 +54,35 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "lane=$lane"       >> "$GITHUB_OUTPUT"
           # Platform image set = services/* + frontend defaults, plus tools that opt in
-          # via [tool.ghga] (ADR-0014 directory defaults + explicit markers).
+          # via [tool.ghga] (ADR-0014 directory defaults + explicit markers). The image
+          # ENTRYPOINT is the member's console script: derived from [project.scripts]
+          # (every image member has exactly one), overridable via [tool.ghga].executable.
           echo "images=$(python3 - <<'PY'
-          import json, pathlib, tomllib
+          import json, pathlib, sys, tomllib
           members = []
           for root, default_image in (("services", True), ("tools", False)):
               for p in sorted(pathlib.Path(root).iterdir()):
                   manifest = p / "pyproject.toml"
                   if not manifest.is_file():
                       continue
-                  ghga = tomllib.loads(manifest.read_text()).get("tool", {}).get("ghga", {})
-                  image = ghga.get("image", default_image if ghga.get("release") != "pypi" else False)
+                  data = tomllib.loads(manifest.read_text())
+                  ghga = data.get("tool", {}).get("ghga", {})
+                  lane = ghga.get("release")
+                  image = ghga.get("image", default_image if lane not in ("pypi", "none") else False)
                   if root == "tools" and not ghga:
                       image = False
-                  if image:
-                      data = tomllib.loads(manifest.read_text())
-                      members.append({"path": str(p), "package": data["project"]["name"]})
+                  if not image:
+                      continue
+                  scripts = list(data["project"].get("scripts", {}))
+                  executable = ghga.get("executable") or (scripts[0] if scripts else None)
+                  if not executable:
+                      sys.exit(f"{p}: image member without a console script or "
+                               "[tool.ghga].executable — no ENTRYPOINT derivable")
+                  members.append({
+                      "path": str(p),
+                      "package": data["project"]["name"],
+                      "executable": executable,
+                  })
           print(json.dumps(members))
           PY
           )" >> "$GITHUB_OUTPUT"
@@ -108,7 +121,7 @@ jobs:
         run: |
           docker build -f docker/Dockerfile \
             --build-arg PACKAGE="${{ matrix.member.package }}" \
-            --build-arg EXECUTABLE="${{ matrix.member.package }}" \
+            --build-arg EXECUTABLE="${{ matrix.member.executable }}" \
             --build-arg PLATFORM_VERSION="${{ needs.resolve.outputs.version }}" \
             --build-arg GIT_SHA="${GITHUB_SHA::12}" \
             -t "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" .

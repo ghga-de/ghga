@@ -34,7 +34,10 @@ markers are only written where a member deviates:
 
 Explicit markers (the deviations): `auth-km-jobs` (`platform` + image — a K8s job, relocated
 to `services/` at cutover), `ghga-datasteward-kit` (`platform`, **no** image — run-from-repo),
-`ghga-connector` and `ghga-validator` (`pypi`).
+`ghga-connector` and `ghga-validator` (`pypi`), and `em-transformation-service`
+(`none` — still an unmodified template skeleton, excluded until it has a real identity
+upstream). The image ENTRYPOINT is derived from the member's single `[project.scripts]`
+entry, overridable via `[tool.ghga].executable`.
 
 Members are **placed by primary identity** — `metldata` → `libs/`, `ghga-transpiler` /
 `ghga-validator` → `tools/` — and the folder is purely human grouping. The shared Dockerfile,

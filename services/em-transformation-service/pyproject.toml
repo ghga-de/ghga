@@ -161,3 +161,9 @@ source = [
 ghga-event-schemas = { workspace = true }
 ghga-service-commons = { workspace = true }
 hexkit = { workspace = true }
+
+# Capability markers (ADR-0014): still an unmodified template skeleton (project name
+# 'my_microservice', dummy test suite) — EXCLUDED from all release lanes until it gets
+# a real identity upstream.
+[tool.ghga]
+release = "none"
