@@ -1,7 +1,8 @@
 # ADR-0014 — Capability markers decouple build/release from folder placement
 
-- **Status:** Accepted
-- **Date:** 2026-06-30
+- **Status:** Accepted — **amended 2026-07-23**: added the `release` lane key and
+  directory defaults (see the revised [ADR-0004](0004-versioning-and-release-by-tag.md))
+- **Date:** 2026-06-30 / 2026-07-23
 - **Deciders:** Leon Kuchenbecker
 
 ## Context
@@ -16,15 +17,29 @@ the build/release matrix**:
 
 ```toml
 [tool.ghga]
-image = true    # build & push a container image (and a chart) on its release tag
-pypi  = true    # publish a wheel to PyPI on its release tag
-cli   = true    # exposes a console entry point
+release = "platform"  # release lane: "platform" (lockstep, ADR-0004) | "pypi" | "none"
+image   = true        # built as a container image (platform lane)
+pypi    = true        # publish a wheel to PyPI on its name/x.y.z tag (pypi lane)
+cli     = true        # exposes a console entry point
 ```
+
+To keep the marker (and sync-conflict) surface minimal, **directories provide defaults** and
+markers are only written where a member deviates:
+
+| Directory | Default |
+|---|---|
+| `services/*`, `frontend/*` | `release = "platform"`, `image = true` |
+| `libs/*` | `release = "pypi"`, `pypi = true` |
+| `tools/*`, `testbed`, `deploy/*` | `release = "none"` — tools must opt in explicitly |
+
+Explicit markers (the deviations): `auth-km-jobs` (`platform` + image — a K8s job, relocated
+to `services/` at cutover), `ghga-datasteward-kit` (`platform`, **no** image — run-from-repo),
+`ghga-connector` and `ghga-validator` (`pypi`).
 
 Members are **placed by primary identity** — `metldata` → `libs/`, `ghga-transpiler` /
 `ghga-validator` → `tools/` — and the folder is purely human grouping. The shared Dockerfile,
-the chart generator ([ADR-0013](0013-adopt-ghga-common-chart-system.md)), and the
-affected-target CI all key off the markers, not the path.
+the chart generator ([ADR-0013](0013-adopt-ghga-common-chart-system.md)), the release lanes
+(ADR-0004), and the affected-target CI all key off the markers, not the path.
 
 ## Consequences
 - Hybrids stop being awkward; a `libs/` member can still produce an image; a `tools/` member can

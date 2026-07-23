@@ -29,7 +29,7 @@ integration tests on Kubernetes.
 | [0001](adr/0001-consolidate-into-monorepo.md) | Consolidate into one polyglot monorepo; retire the template + `.template/` sync |
 | [0002](adr/0002-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` |
 | [0003](adr/0003-repository-scope.md) | Scope: everything except `datahub-test-bed` |
-| [0004](adr/0004-versioning-and-release-by-tag.md) | Per-component versions; release via `name/version` tags |
+| [0004](adr/0004-versioning-and-release-by-tag.md) | Hybrid releases: platform lockstep (`ghga/X.Y.Z`) + per-component PyPI lanes |
 | [0005](adr/0005-helm-app-chart-services-and-config-only.md) | ~~App chart = "services + config only"~~ — **superseded by 0011** |
 | [0006](adr/0006-self-contained-demo-lightweight-infra.md) | Self-contained demo umbrella; lightweight infra (revised: Envoy Gateway edge, demo == testbed) |
 | [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI via a generic OIDC provider (mock-oauth2-server default) |
@@ -39,7 +39,7 @@ integration tests on Kubernetes.
 | [0011](adr/0011-helm-chart-boundary-hybrid.md) | Helm chart boundary = **hybrid** (app charts own app-coupled CRDs) |
 | [0012](adr/0012-self-contained-edge-envoy-gateway.md) | Self-contained edge & ext-authz via **Envoy Gateway** (Istio → staging) |
 | [0013](adr/0013-adopt-ghga-common-chart-system.md) | Adopt & evolve the existing `ghga-common` chart library + generator |
-| [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` capability markers; place by primary identity |
+| [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` markers + directory defaults route the release lanes |
 | [0015](adr/0015-task-runner.md) | Task runner: `just` now, `moon` later |
 | [0016](adr/0016-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) |
 | [0017](adr/0017-local-integration-host-cluster.md) | Local integration on a host-level cluster; no DinD/DooD in the devcontainer |
