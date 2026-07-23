@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 version = "0.2.1"
-name = "auth_km_jobs"
+name = "auth-km-jobs"
 description = "GHGA Auth Key Management Jobs"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.13"
@@ -41,7 +41,7 @@ dev = [
 hexkit = { workspace = true }
 
 [project.scripts]
-run = "auth_km_jobs.__main__:app"
+auth-km-jobs = "auth_km_jobs.__main__:app"
 
 [tool.setuptools]
 include-package-data = true

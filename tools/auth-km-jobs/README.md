@@ -27,7 +27,7 @@ The GHGA auth service stores encrypted TOTP tokens in the user token collection 
 
 ## Subcommands
 
-The following subcommands can be executed using `run <command name>`:
+The following subcommands can be executed using `auth-km-jobs <command name>`:
 
 - `refresh-int-keys`: Recreate internal auth token signing keys and store them in the vault
 - `refresh-wps-keys`: Recreate internal work package signing keys and store them in the vault

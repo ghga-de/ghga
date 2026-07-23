@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "auth_service"
+name = "auth-service"
 version = "10.0.1"
 description = "Authentication adapter and services used for the GHGA data portal"
 dependencies = [

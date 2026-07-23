@@ -36,8 +36,11 @@ Explicit markers (the deviations): `auth-km-jobs` (`platform` + image — a K8s 
 to `services/` at cutover), `ghga-datasteward-kit` (`platform`, **no** image — run-from-repo),
 `ghga-connector` and `ghga-validator` (`pypi`), and `em-transformation-service`
 (`none` — still an unmodified template skeleton, excluded until it has a real identity
-upstream). The image ENTRYPOINT is derived from the member's single `[project.scripts]`
-entry, overridable via `[tool.ghga].executable`.
+upstream). Convention: an image member's console
+script is named exactly like its distribution (the two divergers, `auth-service` and
+`auth-km-jobs`, were harmonised by normalising their distribution-name spellings — a
+packaging-inert change — and renaming the latter's generic `run` script); the package
+name therefore doubles as the ENTRYPOINT, enforced by the Dockerfile's build-time guard.
 
 Members are **placed by primary identity** — `metldata` → `libs/`, `ghga-transpiler` /
 `ghga-validator` → `tools/` — and the folder is purely human grouping. The shared Dockerfile,
