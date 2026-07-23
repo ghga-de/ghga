@@ -99,7 +99,7 @@ jobs:
       # clear 401, pointing here.
       - name: Login to DHI registry
         if: ${{ env.DHI_USER != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: dhi.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -114,7 +114,7 @@ jobs:
             -t "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" .
       - name: Login to GHCR
         if: ${{ inputs.push }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
