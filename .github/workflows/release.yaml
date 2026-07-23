@@ -1,21 +1,28 @@
-# Release — a pushed tag `name/x.y.z` releases ONLY that component (ADR-0004).
+# Release — two lanes (revised ADR-0004):
+#   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
+#                  platform version (lockstep; libs embedded from source, never PyPI).
+#   name/x.y.z  -> PYPI lane: publish that component's wheel (closure-train rule for tools).
 #
 # DORMANT, AND MUST NOT PUBLISH. Publish targets are not decided yet, so this workflow has
-# no triggers, no publish steps, and no write permissions. Keep all three until the target
-# registries and credentials are agreed.
+# no tag triggers, no push/publish steps, and no write permissions. `workflow_dispatch`
+# with a `ref` input allows BUILD-ONLY dry runs of the platform lane.
 #
-# To enable, restore the tag trigger and the write permission:
+# To enable, restore the tag trigger and the write permission (and add the push steps):
 #   on:
 #     push:
 #       tags:
-#         - "*/*.*.*"   # e.g. hexkit/8.4.0, dcs/10.2.0, ghga/2.1.0
+#         - "*/*.*.*"   # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
 #   permissions:
 #     contents: read
-#     packages: write   # GHCR (charts)
+#     packages: write   # GHCR (charts/images)
 name: release
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag-style ref to dry-run, e.g. ghga/17.0.0 (build-only, no publish)"
+        required: true
 
 permissions:
   contents: read
@@ -24,30 +31,80 @@ jobs:
   resolve:
     runs-on: ubuntu-latest
     outputs:
-      name: ${{ steps.tag.outputs.name }}
-      version: ${{ steps.tag.outputs.version }}
+      lane: ${{ steps.route.outputs.lane }}
+      name: ${{ steps.route.outputs.name }}
+      version: ${{ steps.route.outputs.version }}
+      images: ${{ steps.route.outputs.images }}
     steps:
       - uses: actions/checkout@v5
-      - id: tag
+      - id: route
         run: |
-          ref="${GITHUB_REF_NAME}"            # name/x.y.z
-          echo "name=${ref%/*}" >> "$GITHUB_OUTPUT"
-          echo "version=${ref##*/}" >> "$GITHUB_OUTPUT"
-      # TODO: assert the tag version == the component's version at HEAD (pyproject/Chart.yaml/package.json).
+          ref="${{ github.event.inputs.ref || github.ref_name }}"   # name/x.y.z
+          name="${ref%/*}"; version="${ref##*/}"
+          if [ "$name" = "ghga" ]; then lane=platform; else lane=pypi; fi
+          echo "name=$name"       >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "lane=$lane"       >> "$GITHUB_OUTPUT"
+          # Platform image set = services/* + frontend defaults, plus tools that opt in
+          # via [tool.ghga] (ADR-0014 directory defaults + explicit markers).
+          echo "images=$(python3 - <<'PY'
+          import json, pathlib, tomllib
+          members = []
+          for root, default_image in (("services", True), ("tools", False)):
+              for p in sorted(pathlib.Path(root).iterdir()):
+                  manifest = p / "pyproject.toml"
+                  if not manifest.is_file():
+                      continue
+                  ghga = tomllib.loads(manifest.read_text()).get("tool", {}).get("ghga", {})
+                  image = ghga.get("image", default_image if ghga.get("release") != "pypi" else False)
+                  if root == "tools" and not ghga:
+                      image = False
+                  if image:
+                      data = tomllib.loads(manifest.read_text())
+                      members.append({"path": str(p), "package": data["project"]["name"]})
+          print(json.dumps(members))
+          PY
+          )" >> "$GITHUB_OUTPUT"
+      # TODO on enablement: assert the tagged commit is on main AND its CI run is green
+      # (the release verifies the integrated HEAD; it does not re-test it).
 
-  publish:
+  # -------- platform lane: build every image, stamped; NO push while dormant ------------
+  build-images:
     needs: resolve
+    if: ${{ needs.resolve.outputs.lane == 'platform' }}
     runs-on: ubuntu-latest
-    env:
-      NAME: ${{ needs.resolve.outputs.name }}
-      VERSION: ${{ needs.resolve.outputs.version }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        member: ${{ fromJSON(needs.resolve.outputs.images) }}
     steps:
       - uses: actions/checkout@v5
-      # TODO (do NOT wire up until publish targets are agreed — see the header):
-      # branch by the component's [tool.ghga] capabilities:
-      #  - image=true  -> docker build -f docker/Dockerfile --build-arg PACKAGE=$NAME ...
-      #                   push <registry>/$NAME:$VERSION (+ DHI flavour); package the chart
-      #                   and push to <oci-registry>/charts/$NAME:$VERSION
-      #  - pypi=true   -> uv build --package $NAME ; publish
+      - name: Build (stamped, not pushed)
+        run: |
+          docker build -f docker/Dockerfile \
+            --build-arg PACKAGE="${{ matrix.member.package }}" \
+            --build-arg EXECUTABLE="${{ matrix.member.package }}" \
+            --build-arg PLATFORM_VERSION="${{ needs.resolve.outputs.version }}" \
+            --build-arg GIT_SHA="${GITHUB_SHA::12}" \
+            -t "ghga/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" .
+      # TODO on enablement: multi-arch via buildx, Trivy scan, push to <registry>;
+      # the front end builds via its own Dockerfile; charts are packaged and pushed as
+      # OCI artifacts with version/appVersion = the platform version (Phase B).
       - run: |
-          echo "DORMANT: would release ${NAME} ${VERSION} — no publish target configured."
+          echo "DORMANT: built ghga/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} — no publish target configured."
+
+  # -------- pypi lane: dormant stub ------------------------------------------------------
+  publish-pypi:
+    needs: resolve
+    if: ${{ needs.resolve.outputs.lane == 'pypi' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # TODO on enablement (ADR-0004 pypi lane):
+      #  - assert tag version == the member's pyproject version at HEAD
+      #  - closure train for tools: changed internal deps must be released from this
+      #    commit first, and the tool pins them exactly
+      #  - prerequisite: the published-combo matrix (ADR-0002) exists for this member
+      - run: |
+          echo "DORMANT: would publish ${{ needs.resolve.outputs.name }} ${{ needs.resolve.outputs.version }} to PyPI — targets not configured."

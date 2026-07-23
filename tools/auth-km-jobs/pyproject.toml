@@ -54,3 +54,8 @@ where = [
 [tool.setuptools.package-data]
 auth_km_jobs = ["py.typed"]
 
+# Capability markers (ADR-0014): K8s-deployed job -> platform release lane.
+# Relocation to services/ is planned for cutover (ADR-0004).
+[tool.ghga]
+release = "platform"
+image = true

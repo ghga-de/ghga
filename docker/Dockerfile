@@ -19,6 +19,10 @@ ARG PYTHON_VERSION=3.13
 # ---- builder: create the venv with the target package -----------------------------------
 FROM ghcr.io/astral-sh/uv:python${PYTHON_VERSION}-bookworm-slim AS builder
 ARG PACKAGE
+# Platform version stamped onto the environment (ADR-0004): the released member's
+# dist-info gets PLATFORM_VERSION verbatim; workspace-internal libs get a
+# `+ghga.<version>` local suffix. Defaults produce clearly-marked dev builds.
+ARG PLATFORM_VERSION=0.0.0+dev
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never
@@ -30,18 +34,28 @@ COPY pyproject.toml uv.lock ./
 COPY libs ./libs
 COPY services ./services
 COPY tools ./tools
+COPY scripts/stamp_platform_version.py /stamp_platform_version.py
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --package "${PACKAGE}"
 
+# Stamp AFTER dependency resolution: uv.lock and member pyprojects stay untouched.
+RUN /app/.venv/bin/python /stamp_platform_version.py \
+        --version "${PLATFORM_VERSION}" --package "${PACKAGE}"
+
 # ---- runner: minimal runtime image ------------------------------------------------------
 FROM python:${PYTHON_VERSION}-slim-bookworm AS runner
 ARG EXECUTABLE
+ARG PLATFORM_VERSION=0.0.0+dev
+ARG GIT_SHA=unknown
 RUN useradd --create-home --uid 1000 appuser
 COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
-    GHGA_EXECUTABLE="${EXECUTABLE}"
+    GHGA_EXECUTABLE="${EXECUTABLE}" \
+    GHGA_PLATFORM_VERSION="${PLATFORM_VERSION}"
+LABEL org.opencontainers.image.version="${PLATFORM_VERSION}" \
+      org.opencontainers.image.revision="${GIT_SHA}"
 USER appuser
 # Exec the member's console script (resolved on PATH inside the venv).
 ENTRYPOINT ["sh", "-c", "exec \"${GHGA_EXECUTABLE}\" \"$@\"", "--"]

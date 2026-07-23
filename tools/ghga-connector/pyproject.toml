@@ -186,3 +186,10 @@ legacy_tox_ini = """
 [tool.uv.sources]
 ghga-service-commons = { workspace = true }
 hexkit = { workspace = true }
+
+# Capability markers (ADR-0014): public end-user CLI -> PyPI release lane with
+# the closure-train rule (co-release changed internal deps, exact pins; ADR-0004).
+[tool.ghga]
+release = "pypi"
+pypi = true
+cli = true
