@@ -6,9 +6,11 @@ the proven `file-services-backend` "one Dockerfile, ENTRYPOINT per service" appr
 the `uv` workspace (resolve from the single `uv.lock`, install only the target package + its
 source-coupled deps).
 
-- [`Dockerfile`](Dockerfile) — standard image.
-- [`Dockerfile.dhi`](Dockerfile.dhi) — Docker Hardened Image variant (private `dhi.io` base),
-  built in parallel by the release flavour matrix.
+- [`Dockerfile`](Dockerfile) — the canonical image, based on GHGA's **Docker Hardened
+  Images** (`dhi.io`, authentication required: `docker login dhi.io` locally /
+  `DOCKERHUB_USERNAME`+`DOCKERHUB_TOKEN` org secrets in CI). Build stages run on the DHI
+  dev variant so the runtime libc matches; the runtime stage is the plain hardened base
+  (non-root, shell-less).
 
 ```bash
 # build from the REPO ROOT:

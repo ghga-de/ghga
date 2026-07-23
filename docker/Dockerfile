@@ -1,28 +1,35 @@
-# Shared image for any deployable workspace member, built from the REPO ROOT:
+# Shared hardened image for any deployable workspace member, built from the REPO ROOT:
 #
 #   docker build -f docker/Dockerfile \
 #       --build-arg PACKAGE=auth-service \
-#       --build-arg EXECUTABLE=auth-service .
+#       --build-arg EXECUTABLE=auth-service \
+#       --build-arg PLATFORM_VERSION=17.0.0 --build-arg GIT_SHA=<sha> .
 #
-# PACKAGE     = the workspace member's distribution name (`uv sync --package <PACKAGE>`)
-# EXECUTABLE  = the member's console script (its [tool.ghga].executable), used as ENTRYPOINT
+# PACKAGE          = the workspace member's distribution name
+# EXECUTABLE       = the member's console script, exposed as the ENTRYPOINT
+# PLATFORM_VERSION = stamped onto the environment (ADR-0004); default marks dev builds
 #
-# Follows uv's canonical multi-stage workspace pattern: resolve from the single uv.lock,
-# install only the target package + its (source-coupled) workspace deps, no dev deps.
-#
-# NOTE (scaffold): this is the initial containerisation approach. It can only be exercised once
-# the workspace members + uv.lock exist (post-import). Pin the uv image digest before relying on
-# it in CI. See docs/adr/0002 and docs/adr/0014.
+# Based on GHGA's Docker Hardened Images (mirrors the template's Dockerfile.dhi):
+# build ON the DHI dev variant so the runtime libc (musl/alpine) matches, run on the plain
+# hardened base (non-root, no shell — hence the /app/entrypoint symlink instead of `sh -c`).
+# NOTE: dhi.io requires authentication (Docker Hub credentials with DHI entitlement) —
+# `docker login dhi.io` locally; DOCKERHUB_USERNAME/DOCKERHUB_TOKEN org secrets in CI.
 
 ARG PYTHON_VERSION=3.13
+ARG BASE=dhi.io/python:${PYTHON_VERSION}-alpine3.23
 
-# ---- builder: create the venv with the target package -----------------------------------
-FROM ghcr.io/astral-sh/uv:python${PYTHON_VERSION}-bookworm-slim AS builder
+# ---- builder: resolve the workspace venv on the DHI dev variant -------------------------
+# hadolint ignore=DL3006
+FROM ${BASE}-sfw-dev AS builder
 ARG PACKAGE
-# Platform version stamped onto the environment (ADR-0004): the released member's
-# dist-info gets PLATFORM_VERSION verbatim; workspace-internal libs get a
-# `+ghga.<version>` local suffix. Defaults produce clearly-marked dev builds.
+ARG EXECUTABLE
 ARG PLATFORM_VERSION=0.0.0+dev
+# Toolchain for source-building native wheels where musllinux wheels are unavailable.
+# hadolint ignore=DL3018
+RUN apk upgrade --no-cache --available && \
+    apk add --no-cache build-base gcc g++ libffi-dev zlib-dev python3-dev
+# uv ships a static (musl-compatible) binary.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never
@@ -43,19 +50,22 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 RUN /app/.venv/bin/python /stamp_platform_version.py \
         --version "${PLATFORM_VERSION}" --package "${PACKAGE}"
 
-# ---- runner: minimal runtime image ------------------------------------------------------
-FROM python:${PYTHON_VERSION}-slim-bookworm AS runner
-ARG EXECUTABLE
+# The hardened runtime has no shell, and exec-form ENTRYPOINT cannot expand variables —
+# expose the member's console script behind a fixed path instead.
+RUN ln -s "/app/.venv/bin/${EXECUTABLE}" /app/entrypoint && test -e /app/entrypoint
+
+# ---- runner: plain hardened base (non-root, no shell) -----------------------------------
+# hadolint ignore=DL3006
+FROM ${BASE} AS runner
 ARG PLATFORM_VERSION=0.0.0+dev
 ARG GIT_SHA=unknown
-RUN useradd --create-home --uid 1000 appuser
-COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
+ARG UID=1000
+COPY --from=builder --chown=${UID}:${UID} /app/.venv /app/.venv
+COPY --from=builder /app/entrypoint /app/entrypoint
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
-    GHGA_EXECUTABLE="${EXECUTABLE}" \
     GHGA_PLATFORM_VERSION="${PLATFORM_VERSION}"
 LABEL org.opencontainers.image.version="${PLATFORM_VERSION}" \
       org.opencontainers.image.revision="${GIT_SHA}"
-USER appuser
-# Exec the member's console script (resolved on PATH inside the venv).
-ENTRYPOINT ["sh", "-c", "exec \"${GHGA_EXECUTABLE}\" \"$@\"", "--"]
+USER ${UID}
+ENTRYPOINT ["/app/entrypoint"]

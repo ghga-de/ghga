@@ -89,8 +89,21 @@ jobs:
       fail-fast: false
       matrix:
         member: ${{ fromJSON(needs.resolve.outputs.images) }}
+    env:
+      DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v5
+      # The hardened base (dhi.io) is auth-gated: log in with the org's Docker Hub
+      # credentials (same secrets mainline uses). Skipped if the org secrets are not
+      # exposed to this repo — the build then fails at the base-image pull with a
+      # clear 401, pointing here.
+      - name: Login to DHI registry
+        if: ${{ env.DHI_USER != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build (stamped)
         run: |
           docker build -f docker/Dockerfile \
