@@ -75,9 +75,11 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 
 ### Both lanes
 
-- Publish **targets** (registries, PyPI enablement) remain undecided; the release workflow
-  stays dormant (no triggers, no publish steps, no write permissions) until they are. The
-  model being decided does not enable publishing.
+- **Final** publish targets (registries, PyPI enablement) remain undecided. Interim
+  (2026-07-23): the platform lane can push images to **GHCR under the repo's namespace**
+  (`ghcr.io/ghga-de/ghga/<member>`, private) — manual `workflow_dispatch` only, no tag
+  triggers, authenticated via the ephemeral `GITHUB_TOKEN` so **no stored credentials
+  exist**. The PyPI lane stays a stub.
 - Local development builds use the same Dockerfile/stamping path with a dev placeholder
   version (`0.0.0+dev.g<sha>`) — release/local parity is the guarantee that "worked locally"
   transfers.
