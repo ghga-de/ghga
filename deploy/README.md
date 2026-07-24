@@ -1,59 +1,33 @@
-# The GHGA Library for Kubernetes
+# `deploy/` — Helm charts (a product of this repo)
 
-Configurations for most GHGA microservice, ready to launch on Kubernetes using [Kubernetes Helm](https://github.com/helm/helm).
+We **adopt and evolve** GHGA's existing `ghga-common` chart system rather than build from
+scratch ([ADR-0013](../docs/adr/0013-adopt-ghga-common-chart-system.md)). The system is
+imported (history-preserving) from the `charts` repo; its own documentation lives in
+[chart-system.md](chart-system.md). Current layout: `base/ghga-common` (library chart),
+`charts/` (generated per-service charts), `src/` (generator + per-service values),
+`scripts/` (chart tooling).
 
-## TL;DR
+Planned structure (adoption target, per the steps below):
 
-```bash
-helm repo add ghga https://ghga-de.github.io/charts
-helm search repo ghga
-helm install my-release ghga/<chart>
+```
+deploy/
+  charts/
+    ghga-common/          # Bitnami-common-based library chart (the binding contract)
+    <per-service charts>/ # generated from ghga-common + workspace [tool.ghga] metadata
+    ghga-demo/            # self-contained, single-command umbrella (== the test bed)
 ```
 
-### Update Chart
+Key decisions:
+- **Hybrid boundary** ([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)): app charts
+  own app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy, KafkaUser[toggle]);
+  the GitOps/platform layer (`devops-kubernetes-hub`, not in this repo) owns the edge `Gateway`,
+  the edge-auth object, and per-env config.
+- **Self-contained edge = Envoy Gateway**
+  ([ADR-0012](../docs/adr/0012-self-contained-edge-envoy-gateway.md)): `helm install ghga` is
+  one command, runs real Gateway-API routing + real Envoy ext_authz against the auth-adapter,
+  no external ops. Full Istio is reserved for the periodic staging check.
+- **Secrets**: K8s Secrets in the demo, Vault Agent + cert-manager in prod
+  ([ADR-0016](../docs/adr/0016-secrets-and-tls.md)).
 
-- Update `appVersion` in `src/charts_app_versions.yaml` to desired version
-- Update `src/values` to add service parameters (only required or parameters which differ from default on purpose)
-- Create PR
-
-## Developer notes
-
-### End-to-end testing of ghga-common
-
-In some scenarios, it makes sense to run end-to-end tests—for example, when changes in ghga-common need to be validated all the way through to a fully functional deployment. To achieve this, follow these steps:
-
-- Create an empty branch (for better diffs) in ghga-de/charts with the prefix ghga-common/.
-
-- Create an empty branch in ghga-de/devops-kubernetes-hub with the prefix testing and push an empty commit, e.g., `git commit --allow-empty -m "Init"`.
-
-- Open a PR and add the labels: `deployed` and `repoRef: ghga-common/<your-suffix>`.
-
-- Verify that the rendered manifests were pushed to the GitOps branch gitops-testing.
-
-- Update your charts branch in ghga-de/charts. If no diffs are present in ghga-de/devops-kubernetes-hub, rerun the GitOps action manually.
-
-### Update library chart ghga-common locally
-
-If you want to try out an update in the dependency Helm chart `ghga-common`, you need to set the dependency to resolve locally. This can be achieved by specifying the path to the local version of the chart.
-
-In your parent chart's Chart.yaml, update the dependency reference for ghga-common to point to the local file path.
-```yaml
-dependencies:
-  - name: ghga-common
-    version: <version>
-    repository: file://../ghga-common
-```
-
-Verify that the local path ../ghga-common correctly points to the updated ghga-common chart on your file system.
-Run the following command to update dependencies and pull the local chart:
-
-```bash
-helm dependency update
-```
-
-Deploy your parent chart and test the integration with the updated ghga-common chart.
-
-```bash
-helm install <release-name> ./<parent-chart>
-```
-
+To prune on adoption: dead Emissary `Mapping`/`AuthService` paths and the
+`istio-ext-authz-sync` Job (the self-contained path sets ext-authz declaratively).
