@@ -56,3 +56,6 @@ frontend	data-portal	.	frontend/data-portal	main
 #
 # Integration test bed (BDD + Playwright) -> runs against kind + helm
 testbed	archive-test-bed	.	testbed	main
+#
+# Helm chart system (library chart + generator + per-service charts; ADR-0013)
+deploy	charts	.	deploy	main

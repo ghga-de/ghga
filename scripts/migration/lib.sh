@@ -37,6 +37,11 @@ drop_paths_for_kind() {
     testbed)
       # Keep features/steps/fixtures + pytest config; drop compose/CI/lock/devcontainer.
       printf '%s\n' .github .devcontainer lock Dockerfile Dockerfile.dhi ;;
+    deploy)
+      # Charts repo: keep base/ + charts/ + src/ (generator) + scripts/ (real chart
+      # tooling, not generated boilerplate) + its .gitignore (chart-dep .tgz patterns);
+      # drop only per-repo CI, devcontainer and pre-commit (covered at the root).
+      printf '%s\n' .github .devcontainer .pre-commit-config.yaml ;;
     *) : ;;
   esac
 }
