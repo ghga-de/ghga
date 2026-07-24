@@ -72,9 +72,19 @@ sync-mainline *args:
 
 # --- Docker -----------------------------------------------------------------------------
 # Build a member image locally, e.g. `just image services/auth-service`.
-# The entrypoint defaults to the package name (script == distribution, ADR-0014).
+# Python members use the shared Dockerfile (entrypoint = package name, ADR-0014);
+# members shipping their own Dockerfile.dhi (frontend) build with it in-place.
+# The image name is the package name from the member's manifest, not the dir name.
 image target:
-    docker build -f docker/Dockerfile --build-arg PACKAGE=$(basename {{target}}) -t ghga-$(basename {{target}}):local .
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -f "{{target}}/Dockerfile.dhi" ]; then
+        name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
+        docker build -f "{{target}}/Dockerfile.dhi" -t "ghga-$name:local" "{{target}}"
+    else
+        name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
+        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" -t "ghga-$name:local" .
+    fi
 
 # Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
 # the cache to ~17 GB within days, and a full disk breaks builds AND testcontainers.
