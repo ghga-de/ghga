@@ -22,7 +22,12 @@ RUN pnpm build
 # prepare runtime artifacts: base package.json with just name and version,
 # js-yaml (symlinks resolved) for runtime, and a group-writable config.js
 # (writable at runtime under any UID)
-RUN jq '{name, version, type}' package.json > ./package.json.run \
+# PLATFORM_VERSION, when given, overrides the package.json version so the
+# app reports the platform release it was built for (inert when unset)
+ARG PLATFORM_VERSION=""
+RUN jq --arg v "${PLATFORM_VERSION}" \
+      '{name, version: (if $v == "" then .version else $v end), type}' \
+      package.json > ./package.json.run \
  && mkdir -p /tmp/runtime-deps \
  && cp -rL node_modules/js-yaml /tmp/runtime-deps/ \
  && touch ./dist/data-portal/browser/config.js \
