@@ -1,0 +1,4 @@
+httpRoute:
+  enabled: true
+
+apiBasePath: /api/test

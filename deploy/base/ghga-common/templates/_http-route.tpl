@@ -12,7 +12,7 @@ filters:
       replacePrefixMatch: /
 backendRefs:
 - name:  {{ include "common.names.fullname" . }}
-  port: {{ .Values.mapping.port }}
+  port: {{ .Values.httpRoute.port }}
   weight: 100
 {{- end -}}
 {{- end -}}
@@ -41,6 +41,9 @@ metadata:
     {{- end }}
 spec:
   rules: {{- include "common.tplvalues.render" ( dict "value" (append .Values.httpRoute.rules (include "ghga-common.default-rule" $ | fromYaml) | uniq) "context" $ ) | nindent 2 }}
-{{- include "common.tplvalues.render" ( dict "value" (omit .Values.httpRoute "enabled" "rules") "context" $ ) | nindent 2 }}
+{{- $extraSpec := omit .Values.httpRoute "enabled" "rules" "port" }}
+{{- if $extraSpec }}
+{{- include "common.tplvalues.render" ( dict "value" $extraSpec "context" $ ) | nindent 2 }}
+{{- end }}
 {{- end -}}
 {{- end -}}

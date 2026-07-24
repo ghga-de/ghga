@@ -192,16 +192,6 @@ exports:
     ingress:
       enabled: false
 
-    mapping:
-      enabled: false
-      port: 8080
-      ambassador_id: 
-      - default
-      rewrite: /
-      hostname: ""
-      prefix: ""
-      timeout_ms: 3000
-
     topicPrefix: ""
     _topics: {}
     _consumerGroup:
@@ -254,8 +244,11 @@ exports:
       name: default
 
     # Set `spec` of HTTPRoute here
+    # (`port` is the backend service port used by the default rule; it is consumed by
+    # the template, not copied into `spec`)
     httpRoute:
       enabled: false
+      port: 8080
       rules: []
     
     probe:

@@ -119,3 +119,20 @@ def test_vault_single_template(rendered_chart, release_name, expected):
     assert command == expected("vault_single_template", "command")
     assert args == expected("vault_single_template", "args")
     
+
+def test_http_route(rendered_chart):
+    manifests = rendered_chart()
+    assert "HTTPRoute" not in manifests
+
+    # minimal shape: spec holds only the default rule (regression check: an empty
+    # leftover of the httpRoute values used to render a bare `{}` into spec)
+    manifests = rendered_chart("http_route.yaml")
+    spec = manifests["HTTPRoute"]["spec"]
+    assert set(spec) == {"rules"}
+    rule = spec["rules"][0]
+    assert rule["backendRefs"][0]["port"] == 8080
+    assert rule["matches"][0]["path"]["value"] == "/api/test"
+
+    # extra httpRoute keys pass through into spec
+    manifests = rendered_chart("http_route.yaml", "http_route_parent_refs.yaml")
+    assert manifests["HTTPRoute"]["spec"]["parentRefs"] == [{"name": "ghga-gateway"}]

@@ -1,0 +1,3 @@
+httpRoute:
+  parentRefs:
+    - name: ghga-gateway
