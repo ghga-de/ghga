@@ -70,6 +70,18 @@ import-from-snapshot:
 sync-mainline *args:
     scripts/migration/sync-from-mainline.sh {{args}}
 
+# --- Docker -----------------------------------------------------------------------------
+# Build a member image locally, e.g. `just image services/auth-service`.
+# The entrypoint defaults to the package name (script == distribution, ADR-0014).
+image target:
+    docker build -f docker/Dockerfile --build-arg PACKAGE=$(basename {{target}}) -t ghga-$(basename {{target}}):local .
+
+# Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
+# the cache to ~17 GB within days, and a full disk breaks builds AND testcontainers.
+docker-prune:
+    docker builder prune -f --keep-storage 5GB
+    docker image prune -f
+
 # --- Local cluster (TODO: implemented once charts land — ADR-0012) ----------------------
 # up:    kind create cluster && build/load affected images && helm install ghga ./deploy/charts/ghga-demo
 # down:  kind delete cluster

@@ -22,7 +22,9 @@ ARG BASE=dhi.io/python:${PYTHON_VERSION}-alpine3.23
 # hadolint ignore=DL3006
 FROM ${BASE}-sfw-dev AS builder
 ARG PACKAGE
-ARG EXECUTABLE
+# Convention: an image member's console script is named like its distribution,
+# so the entrypoint defaults to the package name (see ADR-0014).
+ARG EXECUTABLE=${PACKAGE}
 ARG PLATFORM_VERSION=0.0.0+dev
 # Toolchain for source-building native wheels where musllinux wheels are unavailable.
 # hadolint ignore=DL3018
