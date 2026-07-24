@@ -1,0 +1,6 @@
+vaultAgent:
+  enabled: true
+  caCert: /vault/tls/ca.crt
+  tlsSecret: vault-tls
+  service: https://vault.example.com:8200
+  tlsServerName: vault.example.com

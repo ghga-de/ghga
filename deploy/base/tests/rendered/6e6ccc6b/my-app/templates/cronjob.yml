@@ -1,0 +1,87 @@
+---
+# Source: my-app/templates/cronjob.yml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: test-my-app
+  namespace: "test"
+  labels:
+    app.kubernetes.io/name: my-app
+    helm.sh/chart: my-app-21.1.0
+    app.kubernetes.io/instance: test-my-app
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "6.2.0"
+    app: test-my-app
+  annotations:
+spec:
+  schedule: 
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: my-app
+        helm.sh/chart: my-app-21.1.0
+        app.kubernetes.io/instance: test-my-app
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/version: "6.2.0"
+    spec:
+      template:
+        metadata:
+          annotations:
+          labels:
+            app.kubernetes.io/name: my-app
+            helm.sh/chart: my-app-21.1.0
+            app.kubernetes.io/instance: test-my-app
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/version: "6.2.0"
+            app: test-my-app
+        spec:
+          securityContext:
+            fsGroup: 1000
+          restartPolicy: "OnFailure"
+          serviceAccountName: test-my-app
+          shareProcessNamespace: false
+          containers:
+          - image: docker.io/:6.2.0
+            imagePullPolicy: IfNotPresent
+            
+            env:
+            - name: _CONFIG_YAML
+              value: /etc/config.yaml
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 1000
+              seccompProfile:
+                type: RuntimeDefault
+            name: test-my-app
+            resources:
+              limits:
+                cpu: 1500m
+                memory: 2048M
+              requests:
+                cpu: 1000m
+                memory: 1024M
+            volumeMounts:
+              - mountPath: /etc/config.yaml
+                name: config
+                readOnly: true
+                subPath: config.yaml
+              - mountPath: /tmp/test
+                name: test
+          volumes:
+            - configMap:
+                items:
+                - key: config
+                  path: config.yaml
+                name: test-my-app
+              name: config
+            - emptyDir:
+                sizeLimit: 5Gi
+              name: test
+

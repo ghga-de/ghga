@@ -1,0 +1,11 @@
+extraVolumes:
+  - name: test
+    emptyDir:
+      sizeLimit: 5Gi
+
+extraVolumeMounts:
+  - name: test
+    mountPath: /tmp/test
+
+cronjob:
+  enabled: true

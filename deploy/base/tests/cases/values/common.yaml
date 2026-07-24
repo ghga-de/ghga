@@ -1,0 +1,10 @@
+image:
+  repository: busybox
+  tag: latest
+
+job:
+  enabled: true
+
+executable: sleep
+executableArgs:
+  - "100000000"

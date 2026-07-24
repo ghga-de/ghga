@@ -1,0 +1,107 @@
+---
+# Source: my-app/templates/deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-my-app
+  namespace: "test"
+  labels:
+    app.kubernetes.io/name: my-app
+    helm.sh/chart: my-app-21.1.0
+    app.kubernetes.io/instance: test-my-app
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "6.2.0"
+    app: test-my-app
+  annotations:
+    configmap-hash: 50d39c92fb49c92783ffcc552451aa6a271243200f0ae26ff2c2cc01fdfc3817
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: my-app
+      app.kubernetes.io/instance: test-my-app
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        configmap-hash: 50d39c92fb49c92783ffcc552451aa6a271243200f0ae26ff2c2cc01fdfc3817
+        helm.sh/revision: "1"
+      labels:
+        app.kubernetes.io/name: my-app
+        helm.sh/chart: my-app-21.1.0
+        app.kubernetes.io/instance: test-my-app
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/version: "6.2.0"
+        app: test-my-app
+    spec:
+      securityContext:
+        fsGroup: 1000
+      serviceAccountName: test-my-app
+      
+      shareProcessNamespace: false
+      restartPolicy: Always
+      enableServiceLinks: true
+      containers:
+        - image: docker.io/:6.2.0
+          imagePullPolicy: IfNotPresent
+          
+          env:
+            - name: _CONFIG_YAML
+              value: /etc/config.yaml
+          name: test-my-app
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            limits:
+              cpu: 1500m
+              memory: 2048M
+            requests:
+              cpu: 1000m
+              memory: 1024M
+          volumeMounts:
+            - mountPath: /etc/config.yaml
+              name: config
+              readOnly: true
+              subPath: config.yaml
+            - mountPath: /kafka-secrets/
+              name: kafka-secret
+              readOnly: true
+            - mountPath: /cluster-ca-cert/
+              name: cluster-ca-cert
+              readOnly: true
+      volumes:
+        - configMap:
+            items:
+            - key: config
+              path: config.yaml
+            name: test-my-app
+          name: config
+        - name: kafka-secret
+          secret:
+            optional: false
+            secretName: test-test-my-app
+        - name: cluster-ca-cert
+          secret:
+            optional: false
+            secretName: kafka-cluster-ca-cert      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: test-my-app
+                    app.kubernetes.io/name: my-app
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+
