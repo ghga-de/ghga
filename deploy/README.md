@@ -32,9 +32,17 @@ edge (GatewayClass/Gateway/EnvoyProxy, NodePort 30080 by default) with per-route
 `SecurityPolicy` ext-authz against the auth adapter (headers mirror the prod
 `envoyExtAuthzHttp` provider verbatim), lightweight infra (bitnami Kafka KRaft/MongoDB/
 MinIO, `aai`), and the app charts behind enable conditions. Chart dependencies build
-bottom-up — `just demo-template` does the ordered dep-up + render smoke check. Still to
-land: per-service demo config wiring (oidc_*/DSNs), the secret-gen + seed Jobs
-(ADR-0006/0016), MailHog + Vault dev-mode, and the remaining app charts in the bundle.
+bottom-up — `just demo-template` does the ordered dep-up + render smoke check.
+
+Demo wiring so far: auth-service deploys twice (aliases `auth-adapter`/`auth-rest`,
+selected via `config.provide_apis`) — which is why generated charts flatten the library
+defaults into their values.yaml at generation time (helm's `import-values` is not
+processed for aliased instances). The aai issuer routes through the gateway at
+`/<issuerId>` with no rewrite, so browser and adapter agree on one issuer URL; oidc_* and
+DSN settings for the enabled slice live in the umbrella values (release name `ghga`
+assumed — the config block is plain YAML, not templated). Still to land: the secret-gen +
+seed Jobs (ADR-0006/0016), MailHog + Vault dev-mode, the remaining app charts, and the
+host-cluster install (ADR-0017).
 
 Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (routing is
 Gateway-API `HTTPRoute`; the backend port lives at `httpRoute.port`), the

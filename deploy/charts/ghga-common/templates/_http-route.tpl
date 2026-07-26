@@ -3,7 +3,7 @@
 matches:
 - path:
     type: PathPrefix
-    value: {{ include "ghga-common.apiFullBasePath" . }}
+    value: {{ include "ghga-common.apiFullBasePath" . | default "/" }}
 filters:
 - type: URLRewrite
   urlRewrite:

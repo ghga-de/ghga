@@ -16,6 +16,12 @@ service:
   type: ClusterIP
   port: 8080
 
+# Route the issuer through the demo gateway at /<issuerId> (no rewrite — see
+# templates/httproute.yaml). Enabled by the umbrella.
+httpRoute:
+  enabled: false
+  parentRefs: []
+
 issuerId: ghga
 
 # JSON_CONFIG for mock-oauth2-server. interactiveLogin shows a login form that

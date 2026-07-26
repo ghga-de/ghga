@@ -31,15 +31,15 @@ gateway:
 # contract (headers below are verbatim from the hub's extensionProvider).
 extAuth:
   enabled: true
-  # HTTPRoutes to protect, by subchart name — resource names are derived as
-  # <release>-<chart>. (Prod scopes ext-authz to /api/*; the data-portal route
-  # serves the SPA at / and stays unprotected.)
+  # HTTPRoutes to protect, by subchart alias — resource names are derived as
+  # <release>-<alias>. Prod scopes ext-authz to /api/* — that covers the two auth
+  # routes; wkvs (/.well-known) and the data-portal SPA (/) stay unprotected.
   targetRoutes:
-    - auth-service
-    - wkvs
+    - auth-adapter
+    - auth-rest
   backend:
-    # the auth adapter's ext-authz backend (subchart name + service port)
-    chart: auth-service
+    # the auth adapter's ext-authz backend (subchart alias + service port)
+    chart: auth-adapter
     port: 8080
   headersToExtAuth:
     - x-authorization
@@ -84,10 +84,23 @@ minio:
 
 aai:
   enabled: true
+  # expose the issuer through the gateway at /<issuerId> so browser and cluster
+  # agree on one issuer URL (no rewrite — see the aai chart)
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: ghga
 
 # ---- app charts (demo wiring; grows service by service) ---------------------------------
-auth-service:
+# In-cluster names below assume release name "ghga" (see header): the config block
+# is plain YAML — ghga-common does not template it.
+
+# The ext-authz adapter (prod: Service ext-authz:8080). Serves the session/login
+# API at /api/auth; the gateway consults it for every protected route.
+auth-adapter:
   enabled: true
+  nameOverride: auth-adapter
+  apiBasePath: /api/auth
   httpRoute:
     enabled: true
     port: 8080
@@ -95,6 +108,39 @@ auth-service:
       - name: ghga
   ports:
     enabled: true
+  config:
+    provide_apis: ["ext_auth"]
+    kafka_servers: ["ghga-kafka:9092"]
+    service_instance_id: "1"
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    # in-cluster discovery/JWKS/userinfo; the issuer string must match the iss
+    # claim of browser-minted tokens, i.e. the gateway-facing URL of the aai
+    oidc_authority_url: http://ghga-aai:8080/ghga/
+    oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
+    oidc_issuer: http://localhost:30080/ghga
+    oidc_client_id: ghga-client
+
+# The user registry / claims / access APIs.
+auth-rest:
+  enabled: true
+  nameOverride: auth-rest
+  apiBasePath: /api/users
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    provide_apis: ["users", "claims", "access"]
+    kafka_servers: ["ghga-kafka:9092"]
+    service_instance_id: "1"
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    oidc_authority_url: http://ghga-aai:8080/ghga/
+    oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
+    oidc_issuer: http://localhost:30080/ghga
+    oidc_client_id: ghga-client
 
 wkvs:
   enabled: true
@@ -115,3 +161,10 @@ data-portal:
       - name: ghga
   ports:
     enabled: true
+  config:
+    # browser-facing URLs: everything goes through the gateway NodePort
+    base_url: http://localhost:30080
+    oidc_authority_url: http://localhost:30080/ghga
+    oidc_client_id: ghga-client
+    oidc_use_discovery: true
+    oidc_account_url: http://localhost:30080/ghga/debugger

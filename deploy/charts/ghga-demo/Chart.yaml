@@ -34,10 +34,18 @@ dependencies:
     condition: aai.enabled
 
   # ---- app charts (generated; grow this list as demo config wiring lands) --------------
+  # auth-service deploys twice, as in prod: the ext-authz adapter and the registry
+  # APIs (users/claims/access) — selected via config.provide_apis per alias.
   - name: auth-service
+    alias: auth-adapter
     version: "*"
     repository: file://../auth-service
-    condition: auth-service.enabled
+    condition: auth-adapter.enabled
+  - name: auth-service
+    alias: auth-rest
+    version: "*"
+    repository: file://../auth-service
+    condition: auth-rest.enabled
   - name: wkvs
     version: "*"
     repository: file://../wkvs

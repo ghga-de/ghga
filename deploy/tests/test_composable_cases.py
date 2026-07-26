@@ -157,6 +157,11 @@ def test_http_route(rendered_chart):
     manifests = rendered_chart("http_route.yaml", "http_route_parent_refs.yaml")
     assert manifests["HTTPRoute"]["spec"]["parentRefs"] == [{"name": "ghga-gateway"}]
 
+    # a root base path ("/") must not collapse to an empty match (SPA routes)
+    manifests = rendered_chart("http_route_root.yaml")
+    rule = manifests["HTTPRoute"]["spec"]["rules"][0]
+    assert rule["matches"][0]["path"]["value"] == "/"
+
 
 def test_command_style_exec(rendered_chart):
     """commandStyle=exec renders a real argv without a shell."""

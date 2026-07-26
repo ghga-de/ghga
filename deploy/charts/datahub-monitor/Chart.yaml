@@ -18,8 +18,8 @@ appVersion: "0.2.3"
 apiVersion: v2
 
 dependencies:
+# templates only — the library's default VALUES are flattened into each generated
+# chart's values.yaml by the generator (import-values breaks under helm aliases)
 - name: ghga-common
   version: 2.x.x
   repository: file://../ghga-common
-  import-values:
-  - defaults
