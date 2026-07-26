@@ -44,8 +44,10 @@ assumed — the config block is plain YAML, not templated). A pre-install secret
 (ADR-0006/0016) generates the internal auth JWK pair + TOTP key as plain K8s Secrets
 (idempotent — keys survive upgrades; the adapter consumes the private half, the registry
 instance the public half), and the demo data steward is seeded via
-`add_as_data_stewards`. Still to land: MailHog + Vault dev-mode, the remaining app
-charts, and the host-cluster install (ADR-0017).
+`add_as_data_stewards`. MailHog (SMTP sink, UI via port-forward) and Vault dev-mode
+(functional ekss backend, not secret injection) round out the bundled infra. Still to
+land: the remaining app charts (each bringing its key/token wiring — the compose test
+bed's set_env.sh fan-out is the specification), and the host-cluster install (ADR-0017).
 
 Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (routing is
 Gateway-API `HTTPRoute`; the backend port lives at `httpRoute.port`), the

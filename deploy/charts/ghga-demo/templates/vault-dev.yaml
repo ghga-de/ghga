@@ -1,0 +1,70 @@
+{{- /*
+Vault in dev mode (ADR-0006): a FUNCTIONAL backend for ekss (crypt4gh secret
+storage via the KV API) — not used for secret injection; demo secrets are plain
+K8s Secrets (ADR-0016). Dev mode keeps everything in memory with a fixed root
+token; SKIP_SETCAP avoids the mlock capability so the pod stays unprivileged
+(kind for restricted Pod Security Admission).
+*/ -}}
+{{- if .Values.vault.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-vault
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vault
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vault
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: vault
+          image: {{ .Values.vault.image }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: VAULT_DEV_ROOT_TOKEN_ID
+              value: {{ .Values.vault.rootToken | quote }}
+            - name: VAULT_DEV_LISTEN_ADDRESS
+              value: 0.0.0.0:8200
+            - name: SKIP_SETCAP
+              value: "true"
+          ports:
+            - name: http
+              containerPort: 8200
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health
+              port: http
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-vault
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: 8200
+      targetPort: http
+{{- end }}

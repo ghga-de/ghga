@@ -82,6 +82,17 @@ minio:
     rootUser: demo-access-key
     rootPassword: demo-secret-key
 
+# demo SMTP sink (UI on :8025 via port-forward; same image as the compose test bed)
+mailhog:
+  enabled: true
+  image: mailhog/mailhog:v1.0.1
+
+# vault dev-mode: functional backend for ekss (KV API), NOT secret injection
+vault:
+  enabled: true
+  image: hashicorp/vault:1.18
+  rootToken: dev-token
+
 aai:
   enabled: true
   # expose the issuer through the gateway at /<issuerId> so browser and cluster
