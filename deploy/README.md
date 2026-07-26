@@ -40,9 +40,12 @@ defaults into their values.yaml at generation time (helm's `import-values` is no
 processed for aliased instances). The aai issuer routes through the gateway at
 `/<issuerId>` with no rewrite, so browser and adapter agree on one issuer URL; oidc_* and
 DSN settings for the enabled slice live in the umbrella values (release name `ghga`
-assumed — the config block is plain YAML, not templated). Still to land: the secret-gen +
-seed Jobs (ADR-0006/0016), MailHog + Vault dev-mode, the remaining app charts, and the
-host-cluster install (ADR-0017).
+assumed — the config block is plain YAML, not templated). A pre-install secret-gen Job
+(ADR-0006/0016) generates the internal auth JWK pair + TOTP key as plain K8s Secrets
+(idempotent — keys survive upgrades; the adapter consumes the private half, the registry
+instance the public half), and the demo data steward is seeded via
+`add_as_data_stewards`. Still to land: MailHog + Vault dev-mode, the remaining app
+charts, and the host-cluster install (ADR-0017).
 
 Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (routing is
 Gateway-API `HTTPRoute`; the backend port lives at `httpRoute.port`), the

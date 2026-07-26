@@ -91,6 +91,20 @@ aai:
     parentRefs:
       - name: ghga
 
+# ---- demo secrets (ADR-0006/0016) --------------------------------------------------------
+# Pre-install Job generating plain K8s Secrets (internal auth JWK pair + TOTP key);
+# idempotent, keys stay stable across upgrades. The generator runs the auth-km-jobs
+# image; tags are set by the install tooling (locally built images or a release tag).
+secretGen:
+  enabled: true
+  image:
+    repository: ghcr.io/ghga-de/ghga/auth-km-jobs
+    tag: latest
+    pullPolicy: IfNotPresent
+  kubectlImage:
+    repository: bitnami/kubectl
+    tag: "1.33.4"
+
 # ---- app charts (demo wiring; grows service by service) ---------------------------------
 # In-cluster names below assume release name "ghga" (see header): the config block
 # is plain YAML — ghga-common does not template it.
@@ -101,6 +115,8 @@ auth-adapter:
   enabled: true
   nameOverride: auth-adapter
   apiBasePath: /api/auth
+  # the private internal signing key (+ TOTP key) from the secret-gen Job
+  envVarsSecret: ghga-auth-keys-priv
   httpRoute:
     enabled: true
     port: 8080
@@ -125,6 +141,8 @@ auth-rest:
   enabled: true
   nameOverride: auth-rest
   apiBasePath: /api/users
+  # verification only: the public half of the internal signing key
+  envVarsSecret: ghga-auth-keys-pub
   httpRoute:
     enabled: true
     port: 8080
@@ -141,6 +159,14 @@ auth-rest:
     oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
     oidc_issuer: http://localhost:30080/ghga
     oidc_client_id: ghga-client
+    # seed data steward (ADR-0006) — applied by the claims API at startup;
+    # log in via the aai with exactly this email-shaped subject
+    add_as_data_stewards:
+      - ext_id: data.steward@ghga.dev
+        name: Data Steward
+        email: data.steward@ghga.dev
+        iva_type: Phone
+        iva_value: "+49 123 456789"
 
 wkvs:
   enabled: true
