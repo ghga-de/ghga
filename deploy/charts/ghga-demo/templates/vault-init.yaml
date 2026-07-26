@@ -1,0 +1,63 @@
+{{- /*
+Bootstrap the dev-mode vault for ekss, mirroring the compose test bed's
+init-scripts/vault/setup.sh: enable AppRole auth (ekss speaks AppRole or
+Kubernetes auth, not token auth), create the ekss role with fixed demo
+credentials, and grant it the secret/<vault.path> KV subtree. A plain Job (not
+a hook): it waits for vault to come up and is idempotent via `|| true` guards.
+*/ -}}
+{{- if and .Values.vault.enabled .Values.vault.bootstrapEkss }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-vault-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: vault-init
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  backoffLimit: 6
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: vault-init
+          image: {{ .Values.vault.image }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: VAULT_ADDR
+              value: http://{{ .Release.Name }}-vault:8200
+          command:
+            - sh
+            - -ec
+            - |
+              until vault status > /dev/null 2>&1; do
+                echo "waiting for vault..."; sleep 2
+              done
+              vault login {{ .Values.vault.rootToken }} > /dev/null
+              vault auth enable approle 2> /dev/null || true
+              vault write auth/approle/role/ekss-role \
+                token_policies="ekss-policy" \
+                token_ttl=1h \
+                token_max_ttl=4h \
+                bind_secret_id=true
+              vault write -f auth/approle/role/ekss-role/role-id \
+                role_id="{{ .Values.vault.ekssRoleId }}"
+              vault write -f auth/approle/role/ekss-role/custom-secret-id \
+                secret_id="{{ .Values.vault.ekssSecretId }}"
+              cat <<EOF > /tmp/ekss-policy.hcl
+              path "secret/data/{{ .Values.vault.ekssPath }}/*" {
+                capabilities = ["read", "create", "delete", "list"]
+              }
+              path "secret/metadata/{{ .Values.vault.ekssPath }}/*" {
+                capabilities = ["read", "create", "delete", "list"]
+              }
+              EOF
+              vault policy write ekss-policy /tmp/ekss-policy.hcl
+              echo "vault bootstrapped for ekss"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+{{- end }}

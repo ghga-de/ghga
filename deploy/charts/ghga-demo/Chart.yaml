@@ -50,6 +50,42 @@ dependencies:
     version: "*"
     repository: file://../wkvs
     condition: wkvs.enabled
+  - name: ekss
+    version: "*"
+    repository: file://../ekss
+    condition: ekss.enabled
+  - name: dcs
+    version: "*"
+    repository: file://../dcs
+    condition: dcs.enabled
+  - name: ucs
+    version: "*"
+    repository: file://../ucs
+    condition: ucs.enabled
+  - name: fis
+    version: "*"
+    repository: file://../fis
+    condition: fis.enabled
+  - name: ifrs
+    version: "*"
+    repository: file://../ifrs
+    condition: ifrs.enabled
+  - name: pcs
+    version: "*"
+    repository: file://../pcs
+    condition: pcs.enabled
+  - name: wps
+    version: "*"
+    repository: file://../wps
+    condition: wps.enabled
+  - name: rs
+    version: "*"
+    repository: file://../rs
+    condition: rs.enabled
+  - name: metldata
+    version: "*"
+    repository: file://../metldata
+    condition: metldata.enabled
   - name: data-portal
     version: "*"
     repository: file://../data-portal

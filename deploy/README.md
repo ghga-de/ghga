@@ -45,9 +45,15 @@ assumed — the config block is plain YAML, not templated). A pre-install secret
 (idempotent — keys survive upgrades; the adapter consumes the private half, the registry
 instance the public half), and the demo data steward is seeded via
 `add_as_data_stewards`. MailHog (SMTP sink, UI via port-forward) and Vault dev-mode
-(functional ekss backend, not secret injection) round out the bundled infra. Still to
-land: the remaining app charts (each bringing its key/token wiring — the compose test
-bed's set_env.sh fan-out is the specification), and the host-cluster install (ADR-0017).
+(functional ekss backend, not secret injection; a vault-init Job bootstraps the ekss
+AppRole as in compose) round out the bundled infra. The file + metadata path is wired:
+ekss/dcs/ucs/fis/ifrs/pcs/wps/rs/metldata with compose-derived configs (single MinIO
+stands in for both hub localstacks, buckets provisioned by the chart), prod base paths
+under an /api prefix, ext-authz on every /api/* route, and the full secret matrix
+(distinct signing pairs per role, per-service tokens, crypt4gh file Secret for ekss).
+Still to land: the remaining app charts (ars, mass, dins, ns, nos, dlqs, sms[testbed]),
+metldata's real artifact model (testbed migration), and the host-cluster install
+(ADR-0017).
 
 Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (routing is
 Gateway-API `HTTPRoute`; the backend port lives at `httpRoute.port`), the

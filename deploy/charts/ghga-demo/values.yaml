@@ -35,8 +35,14 @@ extAuth:
   # <release>-<alias>. Prod scopes ext-authz to /api/* — that covers the two auth
   # routes; wkvs (/.well-known) and the data-portal SPA (/) stay unprotected.
   targetRoutes:
-    - auth-adapter
     - auth-rest
+    - dcs
+    - ucs
+    - fis
+    - rs
+    - wps
+    - pcs
+    - metldata
   backend:
     # the auth adapter's ext-authz backend (subchart alias + service port)
     chart: auth-adapter
@@ -81,6 +87,19 @@ minio:
   auth:
     rootUser: demo-access-key
     rootPassword: demo-secret-key
+  # the compose test bed runs two localstack "hubs"; the demo collapses both onto
+  # this one MinIO, keeping the hub1/hub2 bucket split
+  provisioning:
+    enabled: true
+    buckets:
+      - name: hub1-inbox
+      - name: hub1-outbox
+      - name: hub1-interrogations
+      - name: hub1-permanent
+      - name: hub2-inbox
+      - name: hub2-outbox
+      - name: hub2-interrogations
+      - name: hub2-permanent
 
 # demo SMTP sink (UI on :8025 via port-forward; same image as the compose test bed)
 mailhog:
@@ -92,6 +111,11 @@ vault:
   enabled: true
   image: hashicorp/vault:1.18
   rootToken: dev-token
+  # AppRole bootstrap for ekss (fixed demo credentials, as in the compose test bed)
+  bootstrapEkss: true
+  ekssPath: testing
+  ekssRoleId: 9f03d595-c964-441c-a68e-2e1534f2bb56
+  ekssSecretId: a3e80b1d-86d3-4c23-85ee-589031ec2cba
 
 aai:
   enabled: true
@@ -125,7 +149,6 @@ secretGen:
 auth-adapter:
   enabled: true
   nameOverride: auth-adapter
-  apiBasePath: /api/auth
   # the private internal signing key (+ TOTP key) from the secret-gen Job
   envVarsSecret: ghga-auth-keys-priv
   httpRoute:
@@ -151,7 +174,8 @@ auth-adapter:
 auth-rest:
   enabled: true
   nameOverride: auth-rest
-  apiBasePath: /api/users
+  # the portal's auth_url — compose routes /api/auth to the users instance
+  apiBasePath: /api/auth
   # verification only: the public half of the internal signing key
   envVarsSecret: ghga-auth-keys-pub
   httpRoute:
@@ -181,6 +205,7 @@ auth-rest:
 
 wkvs:
   enabled: true
+  envVarsSecret: ghga-wkvs-keys
   httpRoute:
     enabled: true
     port: 8080
@@ -205,3 +230,199 @@ data-portal:
     oidc_client_id: ghga-client
     oidc_use_discovery: true
     oidc_account_url: http://localhost:30080/ghga/debugger
+
+# ---- file + metadata path (compose test bed configs, adapted to the demo infra) ----------
+# Common substitutions: kafka -> ghga-kafka:9092, mongodb -> ghga-mongodb, the two
+# localstack hubs -> the single ghga-minio, ums -> ghga-auth-rest, ekss -> ghga-ekss.
+# Routes take the prod base paths from each member's chart-values, prefixed with /api.
+# Topic wiring comes from each chart's _topics (prod values), not repeated here.
+
+ekss:
+  enabled: true
+  ports:
+    enabled: true
+  config:
+    host: 0.0.0.0
+    port: 8080
+    service_instance_id: rest.1
+    vault_url: http://ghga-vault:8200
+    vault_path: testing
+    vault_role_id: 9f03d595-c964-441c-a68e-2e1534f2bb56
+    vault_secret_id: a3e80b1d-86d3-4c23-85ee-589031ec2cba
+    server_private_key_path: /keys/crypt4gh.sec
+  extraVolumes:
+    - name: c4gh
+      secret:
+        secretName: ghga-c4gh-files
+  extraVolumeMounts:
+    - name: c4gh
+      mountPath: /keys
+      readOnly: true
+
+dcs:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-dcs-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: "1"
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    ekss_base_url: http://ghga-ekss:8080
+    drs_server_uri: drs://localhost:30080/
+    presigned_url_expires_after: 30
+    object_storages:
+      primary:
+        bucket: hub1-outbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+      secondary:
+        bucket: hub2-outbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+
+ucs:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-ucs-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: "1"
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    object_storages:
+      primary:
+        bucket: hub1-inbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+      secondary:
+        bucket: hub2-inbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+
+fis:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-fis-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: rest.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    ekss_api_url: http://ghga-ekss:8080
+
+ifrs:
+  enabled: true
+  config:
+    service_instance_id: consumer.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    object_storages:
+      primary:
+        bucket: hub1-permanent
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+      secondary:
+        bucket: hub2-permanent
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+
+pcs:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-pcs-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: rest.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+wps:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-wps-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: "1"
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    access_url: http://ghga-auth-rest:8080
+
+rs:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-rs-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: "1"
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    access_url: http://ghga-auth-rest:8080
+    ucs_url: http://ghga-ucs:8080
+
+metldata:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-metldata-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: "1"
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    # the artifact model is generated per deployment (compose:
+    # create_metldata_yaml.sh) — real content lands with the testbed migration
+    artifact_infos: []
