@@ -1,15 +1,16 @@
-import json
-from pathlib import Path
-import subprocess
-from typing import Any
+"""Pytest harness rendering the dummy chart against composable values cases."""
+
 import hashlib
+import json
+import subprocess
+from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
 
-BASE_DIR = Path(__file__).resolve().parents[2]
 CASES_DIR = Path(__file__).resolve().parent / "cases"
-DUMMY_CHART_DIR = BASE_DIR / "base" / "tests" / "dummy"
+DUMMY_CHART_DIR = Path(__file__).resolve().parent / "dummy"
 RENDER_TO_FILES = True
 
 
@@ -47,6 +48,7 @@ def _dependency_update():
 
 @pytest.fixture()
 def release_name():
+    """Fixed helm release name for all rendered cases."""
     return "test-my-app"
 
 
@@ -109,6 +111,7 @@ def _load_objects_from_yaml(yaml_str: str) -> dict[str, Any]:
 
 
 def compose_values(*filenames: str) -> dict[str, Any]:
+    """Deep-merge the named values files in order (helm-style)."""
     composed: dict[str, Any] = {}
     for name in filenames:
         composed = _deep_merge(composed, _load_yaml(CASES_DIR / "values" / name))
@@ -117,6 +120,8 @@ def compose_values(*filenames: str) -> dict[str, Any]:
 
 @pytest.fixture
 def rendered_chart(_dependency_update, release_name):
+    """Factory rendering the dummy chart with composed values, keyed by kind."""
+
     def _factory(*filenames: str):
         composed_values = compose_values(*filenames)
         return _load_objects_from_yaml(
@@ -128,6 +133,8 @@ def rendered_chart(_dependency_update, release_name):
 
 @pytest.fixture
 def expected():
+    """Factory loading an expected-values entry from cases/expected."""
+
     def _factory(case: str, key: str):
         expected = _load_yaml(CASES_DIR / "expected" / f"{case}.yaml")
         return expected[key]

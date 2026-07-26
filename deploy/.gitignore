@@ -11,9 +11,11 @@ thumbs.db
 **/__pycache__/
 **/.mypy_cache/
 **/.coverage
-base/tests/dummy/charts/*.tgz
-base/tests/rendered/
-base/tests/*/Chart.lock
-base/tests/*/charts/
+tests/rendered/
+tests/*/Chart.lock
+tests/*/charts/
 charts/*/Chart.lock
 charts/*/charts/
+# the library chart's vendored bitnami-common dependency stays tracked
+!charts/ghga-common/Chart.lock
+!charts/ghga-common/charts/

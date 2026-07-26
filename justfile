@@ -77,7 +77,7 @@ charts version="0.0.0+dev":
 
 # Run the chart library tests (renders the dummy chart via helm).
 charts-test:
-    uv run pytest -q deploy/base/tests/
+    uv run pytest -q deploy/tests/
 
 # --- Docker -----------------------------------------------------------------------------
 # Build a member image locally, e.g. `just image services/auth-service`.

@@ -1,30 +1,36 @@
 # `deploy/` — Helm charts (a product of this repo)
 
 We **adopt and evolve** GHGA's existing `ghga-common` chart system rather than build from
-scratch ([ADR-0013](../docs/adr/0013-adopt-ghga-common-chart-system.md)). The system is
-imported (history-preserving) from the `charts` repo; its own documentation lives in
-[chart-system.md](chart-system.md). Current layout: `base/ghga-common` (library chart),
-`charts/` (generated per-service charts), `src/` (generator + template + auxiliary-chart
-values), `scripts/` (chart tooling).
+scratch ([ADR-0013](../docs/adr/0013-adopt-ghga-common-chart-system.md)). The system was
+imported (history-preserving) from the `charts` repo; the upstream documentation lives in
+[chart-system.md](chart-system.md).
 
-Adoption status: the Emissary paths are pruned, and the generator is DRY against the
-workspace — chart name/description/image/executable derive from the members enumerated by
-`scripts/image_members.py` (the same source the release workflow uses; `appVersion` = the
-platform version), per-member deployment values live in `<member>/chart-values.yaml`, and
-the generated charts use `commandStyle: exec` (the monorepo's hardened images have no
-shell). Regenerate with `just charts [version]`. Charts without a workspace member
-(`test-oidc-provider`, `datahub-monitor`, `remotebackup`) are declared in
-`src/auxiliary_charts.yaml` with values in `src/values/`.
-
-Planned structure (adoption target, per the steps below):
+Layout:
 
 ```
 deploy/
   charts/
     ghga-common/          # Bitnami-common-based library chart (the binding contract)
-    <per-service charts>/ # generated from ghga-common + workspace [tool.ghga] metadata
-    ghga-demo/            # self-contained, single-command umbrella (== the test bed)
+    <per-service charts>/ # generated — do not edit; run `just charts [version]`
+    ghga-demo/            # self-contained, single-command umbrella (== the test bed) [next]
+  src/                    # generator (create_charts.py), chart template, auxiliary values
+  tests/                  # library chart tests (pytest renders the dummy chart via helm)
 ```
+
+How the charts are produced: chart name/description/image/executable derive from the
+workspace members enumerated by `scripts/image_members.py` (the same source the release
+workflow uses); the chart version and `appVersion` are the platform version
+(`just charts <version>`, image tags fall back to `appVersion`). Per-member deployment
+values live in `<member>/chart-values.yaml`, co-located with the member. Generated charts
+use `commandStyle: exec` — the monorepo's hardened images have no shell. Charts without a
+workspace member (`test-oidc-provider`, `datahub-monitor`, `remotebackup`) are declared in
+`src/auxiliary_charts.yaml` with values in `src/values/`.
+
+Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (routing is
+Gateway-API `HTTPRoute`; the backend port lives at `httpRoute.port`), the
+`istio-ext-authz-sync` Job is not carried into the self-contained path (Envoy Gateway sets
+ext-authz declaratively), `charts_app_versions.yaml` and the per-repo version-plumbing
+scripts are dissolved into workspace metadata.
 
 Key decisions:
 - **Hybrid boundary** ([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)): app charts
@@ -37,6 +43,3 @@ Key decisions:
   no external ops. Full Istio is reserved for the periodic staging check.
 - **Secrets**: K8s Secrets in the demo, Vault Agent + cert-manager in prod
   ([ADR-0016](../docs/adr/0016-secrets-and-tls.md)).
-
-To prune on adoption: dead Emissary `Mapping`/`AuthService` paths and the
-`istio-ext-authz-sync` Job (the self-contained path sets ext-authz declaratively).

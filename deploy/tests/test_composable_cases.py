@@ -1,19 +1,25 @@
-from math import exp
+"""Composable render cases for the ghga-common library chart."""
 
 
 def test_config(rendered_chart, expected, release_name):
+    """Config map, volume and mount render from the config values."""
     manifests = rendered_chart("common.yaml", "config.yaml")
-    assert manifests["ConfigMap"]["data"]["config"] == expected("config", "configMap")["data"]
+    assert (
+        manifests["ConfigMap"]["data"]["config"]
+        == expected("config", "configMap")["data"]
+    )
     assert manifests["ConfigMap"]["metadata"]["name"] == f"{release_name}"
     volume = manifests["Deployment"]["spec"]["template"]["spec"]["volumes"][0]
     assert volume == expected("config", "volume")
 
-    mount = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["volumeMounts"][0]
+    mount = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
+        "volumeMounts"
+    ][0]
     assert mount == expected("config", "mount")
 
 
-
 def test_extra_volume(rendered_chart):
+    """Extra volumes reach deployments and cronjobs alike."""
     manifests = rendered_chart("extra_volume.yaml")
     assert (
         "test"
@@ -28,6 +34,7 @@ def test_extra_volume(rendered_chart):
 
 
 def test_kafka_user(rendered_chart, expected):
+    """KafkaUser renders only when enabled, with ACLs and annotations."""
     manifests = rendered_chart()
     assert "KafkaUser" not in manifests
     manifests = rendered_chart("kafka_user.yaml")
@@ -37,11 +44,14 @@ def test_kafka_user(rendered_chart, expected):
     )
     assert (
         expected("kafka_user", "secretAnnotations").items()
-        <= manifests["KafkaUser"]["spec"]["template"]["secret"]["metadata"]["annotations"].items()
+        <= manifests["KafkaUser"]["spec"]["template"]["secret"]["metadata"][
+            "annotations"
+        ].items()
     )
 
 
 def test_vault_agent(rendered_chart, release_name, expected):
+    """Vault agent annotations and command wrapper render when enabled."""
     manifests = rendered_chart("common.yaml", "vault_enabled.yaml")
     exp = expected("vault_enabled", "podAnnotations")
     got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
@@ -49,7 +59,7 @@ def test_vault_agent(rendered_chart, release_name, expected):
     diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
     print(diff)
     assert not diff, diff
-    
+
     assert (
         expected("vault_enabled", "podAnnotations").items()
         <= manifests["Deployment"]["spec"]["template"]["metadata"][
@@ -57,13 +67,16 @@ def test_vault_agent(rendered_chart, release_name, expected):
         ].items()
     )
 
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["command"]
+    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
+        "command"
+    ]
     args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
     assert command == expected("vault_enabled", "command")
     assert args == expected("vault_enabled", "args")
-    
+
 
 def test_vault_boilerplate_extra_annotations(rendered_chart, release_name, expected):
+    """Extra vault annotations merge into the boilerplate."""
     manifests = rendered_chart("common.yaml", "vault_boilerplate.yaml")
     exp = expected("vault_boilerplate", "podAnnotations")
     got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
@@ -79,13 +92,16 @@ def test_vault_boilerplate_extra_annotations(rendered_chart, release_name, expec
         ].items()
     )
 
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["command"]
+    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
+        "command"
+    ]
     args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
     assert command == expected("vault_boilerplate", "command")
     assert args == expected("vault_boilerplate", "args")
 
 
 def test_vault_boilerplate_omits_unset_annotations(rendered_chart):
+    """Unset vault annotations stay absent."""
     manifests = rendered_chart("common.yaml", "vault_enabled.yaml")
     annotations = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
 
@@ -99,6 +115,7 @@ def test_vault_boilerplate_omits_unset_annotations(rendered_chart):
 
 
 def test_vault_single_template(rendered_chart, release_name, expected):
+    """Single-template vault mode renders exec-style command."""
     manifests = rendered_chart("common.yaml", "vault_single_template.yaml")
     exp = expected("vault_single_template", "podAnnotations")
     got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
@@ -106,7 +123,7 @@ def test_vault_single_template(rendered_chart, release_name, expected):
     diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
     print(diff)
     assert not diff, diff
-    
+
     assert (
         expected("vault_single_template", "podAnnotations").items()
         <= manifests["Deployment"]["spec"]["template"]["metadata"][
@@ -114,13 +131,16 @@ def test_vault_single_template(rendered_chart, release_name, expected):
         ].items()
     )
 
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["command"]
+    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
+        "command"
+    ]
     args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
     assert command == expected("vault_single_template", "command")
     assert args == expected("vault_single_template", "args")
-    
+
 
 def test_http_route(rendered_chart):
+    """HTTPRoute renders the default rule; extra keys pass into spec."""
     manifests = rendered_chart()
     assert "HTTPRoute" not in manifests
 
@@ -139,6 +159,7 @@ def test_http_route(rendered_chart):
 
 
 def test_command_style_exec(rendered_chart):
+    """commandStyle=exec renders a real argv without a shell."""
     # shell style (default): command is the shell wrapper, args one joined string
     manifests = rendered_chart("common.yaml")
     container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
