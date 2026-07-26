@@ -25,9 +25,15 @@ and prepends it with a failsafe routine that injects all existing secrets from v
 {{- $cmdString = printf "%s%s" $prefix $cmdString }}
 {{- end }}
 
-{{- /* Handle singleTemplate mode: command includes everything */ -}}
-{{- if (index . 0).Values.vaultAgent.singleTemplate }}
-{{- /* In singleTemplate mode: command is prefixed executable, args are the arguments */ -}}
+{{- /* Exec-style rendering: no shell wrapper. Used by vaultAgent.singleTemplate
+     (secrets are rendered to files, nothing needs sourcing) and by
+     commandStyle=exec (shell-less hardened runtime images). */ -}}
+{{- $execStyle := eq ((index . 0).Values.commandStyle | default "shell") "exec" }}
+{{- if and $execStyle (index . 0).Values.vaultAgent.enabled (not (index . 0).Values.vaultAgent.singleTemplate) }}
+{{- fail "commandStyle=exec cannot source vault agent env files (no shell in the image); use vaultAgent.singleTemplate or commandStyle=shell" }}
+{{- end }}
+{{- if or (index . 0).Values.vaultAgent.singleTemplate $execStyle }}
+{{- /* Command is the prefixed executable, args are passed as a real argv list */ -}}
 {{- $prefixedExec := $executable }}
 {{- if $prefix }}
 {{- $prefixedExec = printf "%s%s" $prefix $executable }}

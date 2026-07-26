@@ -136,3 +136,16 @@ def test_http_route(rendered_chart):
     # extra httpRoute keys pass through into spec
     manifests = rendered_chart("http_route.yaml", "http_route_parent_refs.yaml")
     assert manifests["HTTPRoute"]["spec"]["parentRefs"] == [{"name": "ghga-gateway"}]
+
+
+def test_command_style_exec(rendered_chart):
+    # shell style (default): command is the shell wrapper, args one joined string
+    manifests = rendered_chart("common.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["command"] == ["sh", "-c"]
+
+    # exec style: real argv, no shell involved (shell-less hardened images)
+    manifests = rendered_chart("common.yaml", "command_style_exec.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["command"] == ["myexe"]
+    assert container["args"] == ["run-rest"]

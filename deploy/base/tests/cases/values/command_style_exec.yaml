@@ -1,0 +1,5 @@
+commandStyle: exec
+commandPrefix: ""
+executable: myexe
+executableArgs:
+  - run-rest

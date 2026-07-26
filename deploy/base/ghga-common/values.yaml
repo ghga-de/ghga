@@ -15,6 +15,10 @@ exports:
     # This is the actual Kubernetes `command` field
     command: ["sh", "-c"]
     commandPrefix: /usr/local/bin/
+    # "shell": wrap executable+args in `command` via a shell string (needs a shell in
+    # the image). "exec": render command=[prefixed executable], args as a real argv
+    # list — for shell-less hardened runtime images.
+    commandStyle: shell
 
     # Executable name and arguments (will be combined into a shell command)
     executable: ""
