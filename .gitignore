@@ -33,3 +33,5 @@ frontend/**/dist/
 
 # pytest --debug output
 pytestdebug.log
+# helm chart test debug renders (belt and braces; the harness writes to deploy/tests/rendered)
+rendered/
