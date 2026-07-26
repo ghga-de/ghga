@@ -1,0 +1,34 @@
+# Local AAI (ADR-0007). The default profile runs Navikt mock-oauth2-server: tiny,
+# fully claim-configurable, mints tokens for arbitrary subjects (the test bed's
+# "log in as X"). The issuer id below yields
+#   http://<svc>:<port>/<issuerId>/.well-known/openid-configuration
+# Services must trust exactly this issuer URL; the umbrella templates the
+# auth-service and data-portal oidc_* settings from these values.
+
+image:
+  repository: ghcr.io/navikt/mock-oauth2-server
+  tag: ""  # defaults to the chart appVersion
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8080
+
+issuerId: ghga
+
+# JSON_CONFIG for mock-oauth2-server. interactiveLogin shows a login form that
+# accepts a subject + free-form claims (name, email, ...) — mint email-shaped
+# subs to satisfy the auth-service ext_id format (see the LS-Login assessment).
+jsonConfig:
+  interactiveLogin: true
+  httpServer: NettyWrapper
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi

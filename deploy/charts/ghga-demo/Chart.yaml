@@ -1,0 +1,48 @@
+name: ghga-demo
+description: Self-contained GHGA — single-command umbrella bundling the app charts,
+  an Envoy Gateway edge with real ext-authz, and lightweight operator-free infra
+  (ADR-0006/0012). The same artifact is the per-PR test bed.
+type: application
+version: 0.1.0
+appVersion: "0.0.0+dev"
+apiVersion: v2
+
+dependencies:
+  # ---- edge (ADR-0012): Gateway API + Envoy, no mesh, no sidecars ----------------------
+  - name: gateway-helm
+    alias: envoy-gateway
+    version: 1.8.3
+    repository: oci://docker.io/envoyproxy
+    condition: envoy-gateway.enabled
+
+  # ---- lightweight infra (ADR-0006): operator-free stand-ins ---------------------------
+  - name: kafka
+    version: 32.4.3
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: kafka.enabled
+  - name: mongodb
+    version: 19.1.20
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: mongodb.enabled
+  - name: minio
+    version: 17.0.21
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: minio.enabled
+  - name: aai
+    version: 0.1.0
+    repository: file://../aai
+    condition: aai.enabled
+
+  # ---- app charts (generated; grow this list as demo config wiring lands) --------------
+  - name: auth-service
+    version: "*"
+    repository: file://../auth-service
+    condition: auth-service.enabled
+  - name: wkvs
+    version: "*"
+    repository: file://../wkvs
+    condition: wkvs.enabled
+  - name: data-portal
+    version: "*"
+    repository: file://../data-portal
+    condition: data-portal.enabled

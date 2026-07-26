@@ -1,0 +1,29 @@
+{{- /*
+Real Envoy ext_authz against the real auth adapter (ADR-0012). One SecurityPolicy
+per protected HTTPRoute: Envoy Gateway scopes ext-authz by policy attachment, where
+prod's Istio AuthorizationPolicy scopes by path (/api/*) — same effective surface,
+different object type (the accepted residual gap, validated in staging).
+The header lists mirror the prod envoyExtAuthzHttp extensionProvider verbatim.
+*/ -}}
+{{- if .Values.extAuth.enabled }}
+{{- range .Values.extAuth.targetRoutes }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ext-auth-{{ . }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ printf "%s-%s" $.Release.Name . }}
+  extAuth:
+    http:
+      backendRefs:
+        - name: {{ printf "%s-%s" $.Release.Name $.Values.extAuth.backend.chart }}
+          port: {{ $.Values.extAuth.backend.port }}
+      headersToBackend: {{- toYaml $.Values.extAuth.headersToBackend | nindent 8 }}
+    headersToExtAuth: {{- toYaml $.Values.extAuth.headersToExtAuth | nindent 6 }}
+{{- end }}
+{{- end }}

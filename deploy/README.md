@@ -12,7 +12,8 @@ deploy/
   charts/
     ghga-common/          # Bitnami-common-based library chart (the binding contract)
     <per-service charts>/ # generated — do not edit; run `just charts [version]`
-    ghga-demo/            # self-contained, single-command umbrella (== the test bed) [next]
+    ghga-demo/            # self-contained, single-command umbrella (== the test bed)
+    aai/                  # local AAI subchart (mock-oauth2-server default; ADR-0007)
   src/                    # generator (create_charts.py), chart template, auxiliary values
   tests/                  # library chart tests (pytest renders the dummy chart via helm)
 ```
@@ -25,6 +26,15 @@ values live in `<member>/chart-values.yaml`, co-located with the member. Generat
 use `commandStyle: exec` — the monorepo's hardened images have no shell. Charts without a
 workspace member (`test-oidc-provider`, `datahub-monitor`, `remotebackup`) are declared in
 `src/auxiliary_charts.yaml` with values in `src/values/`.
+
+The demo umbrella (`helm install ghga deploy/charts/ghga-demo`) bundles the Envoy Gateway
+edge (GatewayClass/Gateway/EnvoyProxy, NodePort 30080 by default) with per-route
+`SecurityPolicy` ext-authz against the auth adapter (headers mirror the prod
+`envoyExtAuthzHttp` provider verbatim), lightweight infra (bitnami Kafka KRaft/MongoDB/
+MinIO, `aai`), and the app charts behind enable conditions. Chart dependencies build
+bottom-up — `just demo-template` does the ordered dep-up + render smoke check. Still to
+land: per-service demo config wiring (oidc_*/DSNs), the secret-gen + seed Jobs
+(ADR-0006/0016), MailHog + Vault dev-mode, and the remaining app charts in the bundle.
 
 Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (routing is
 Gateway-API `HTTPRoute`; the backend port lives at `httpRoute.port`), the

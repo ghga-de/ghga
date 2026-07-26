@@ -79,6 +79,20 @@ charts version="0.0.0+dev":
 charts-test:
     uv run pytest -q deploy/tests/
 
+# Build chart dependencies bottom-up (app charts BEFORE the umbrella — the umbrella
+# packages the app charts as they sit on disk), then render ghga-demo as a smoke check.
+demo-template:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for c in deploy/charts/*/; do
+        name=$(basename "$c")
+        { [ "$name" = "ghga-common" ] || [ "$name" = "ghga-demo" ]; } && continue
+        helm dep up "$c" --skip-refresh > /dev/null
+    done
+    helm dep up deploy/charts/ghga-demo --skip-refresh > /dev/null
+    helm template ghga deploy/charts/ghga-demo > /dev/null
+    echo "ghga-demo renders OK"
+
 # --- Docker -----------------------------------------------------------------------------
 # Build a member image locally, e.g. `just image services/auth-service`.
 # Python members use the shared Dockerfile (entrypoint = package name, ADR-0014);

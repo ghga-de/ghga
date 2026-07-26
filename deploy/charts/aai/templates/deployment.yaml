@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aai.fullname" . }}
+  labels: {{- include "aai.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "aai.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "aai.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ .Values.jsonConfig | toJson | sha256sum }}
+    spec:
+      containers:
+        - name: mock-oauth2-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SERVER_PORT
+              value: {{ .Values.service.port | quote }}
+            - name: JSON_CONFIG_PATH
+              value: /config/config.json
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          readinessProbe:
+            httpGet:
+              path: /{{ .Values.issuerId }}/.well-known/openid-configuration
+              port: http
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "aai.fullname" . }}

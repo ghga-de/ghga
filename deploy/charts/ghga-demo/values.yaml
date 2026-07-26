@@ -1,0 +1,117 @@
+# ghga-demo — self-contained profile (ADR-0006). Install as release "ghga":
+#   helm install ghga deploy/charts/ghga-demo
+# Bare clusters have no LoadBalancer: the gateway service defaults to NodePort
+# (set gateway.nodePort, or use port-forward).
+#
+# NOTE on bitnami images: since the 2025 Bitnami catalogue changes, chart-default
+# image repositories may point at gated "secure" images. If pulls fail at install
+# time, override the image repositories to the bitnamilegacy/ equivalents.
+
+# ---- edge -------------------------------------------------------------------------------
+envoy-gateway:
+  enabled: true
+
+gateway:
+  # GatewayClass + Gateway + (NodePort) EnvoyProxy config rendered by this chart
+  className: ghga
+  name: ghga
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+  service:
+    type: NodePort
+    # fixed NodePort for reproducible access (30080 within kind/minikube range)
+    nodePort: 30080
+
+# Envoy ext-authz against the auth adapter — mirrors the prod envoyExtAuthzHttp
+# contract (headers below are verbatim from the hub's extensionProvider).
+extAuth:
+  enabled: true
+  # HTTPRoutes to protect, by subchart name — resource names are derived as
+  # <release>-<chart>. (Prod scopes ext-authz to /api/*; the data-portal route
+  # serves the SPA at / and stays unprotected.)
+  targetRoutes:
+    - auth-service
+    - wkvs
+  backend:
+    # the auth adapter's ext-authz backend (subchart name + service port)
+    chart: auth-service
+    port: 8080
+  headersToExtAuth:
+    - x-authorization
+    - x-csrf-token
+    - cookie
+    - authorization
+  headersToBackend:
+    - cookie
+    - x-authorization
+    - x-csrf-token
+    - x-session
+    - x-request-id
+    - authorization
+
+# ---- lightweight infra ------------------------------------------------------------------
+kafka:
+  enabled: true
+  controller:
+    replicaCount: 1
+  listeners:
+    client:
+      protocol: PLAINTEXT
+    controller:
+      protocol: PLAINTEXT
+    interbroker:
+      protocol: PLAINTEXT
+  extraConfig: |
+    auto.create.topics.enable=true
+
+mongodb:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+
+minio:
+  enabled: true
+  mode: standalone
+  auth:
+    rootUser: demo-access-key
+    rootPassword: demo-secret-key
+
+aai:
+  enabled: true
+
+# ---- app charts (demo wiring; grows service by service) ---------------------------------
+auth-service:
+  enabled: true
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+
+wkvs:
+  enabled: true
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+
+data-portal:
+  enabled: true
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true

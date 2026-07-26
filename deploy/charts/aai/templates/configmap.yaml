@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aai.fullname" . }}
+  labels: {{- include "aai.labels" . | nindent 4 }}
+data:
+  config.json: |
+    {{- .Values.jsonConfig | toPrettyJson | nindent 4 }}
