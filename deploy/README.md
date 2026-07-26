@@ -51,9 +51,11 @@ ekss/dcs/ucs/fis/ifrs/pcs/wps/rs/metldata with compose-derived configs (single M
 stands in for both hub localstacks, buckets provisioned by the chart), prod base paths
 under an /api prefix, ext-authz on every /api/* route, and the full secret matrix
 (distinct signing pairs per role, per-service tokens, crypt4gh file Secret for ekss).
-Still to land: the remaining app charts (ars, mass, dins, ns, nos, dlqs, sms[testbed]),
-metldata's real artifact model (testbed migration), and the host-cluster install
-(ADR-0017).
+The access/metadata/notification path is in too (ars, mass, dins, rts, ns, nos, dlqs;
+sms ships disabled — testbed-only per ADR-0008 — the testbed profile enables it and adds
+it to the protected routes), with a wiremock lox24 SMS-gateway mock beside MailHog. All
+20 deployable services are in the bundle. Still to land: metldata's real artifact model
+(testbed migration) and the host-cluster install (ADR-0017).
 
 Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (routing is
 Gateway-API `HTTPRoute`; the backend port lives at `httpRoute.port`), the

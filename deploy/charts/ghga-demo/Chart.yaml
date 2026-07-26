@@ -86,6 +86,38 @@ dependencies:
     version: "*"
     repository: file://../metldata
     condition: metldata.enabled
+  - name: rts
+    version: "*"
+    repository: file://../rts
+    condition: rts.enabled
+  - name: ars
+    version: "*"
+    repository: file://../ars
+    condition: ars.enabled
+  - name: mass
+    version: "*"
+    repository: file://../mass
+    condition: mass.enabled
+  - name: dins
+    version: "*"
+    repository: file://../dins
+    condition: dins.enabled
+  - name: ns
+    version: "*"
+    repository: file://../ns
+    condition: ns.enabled
+  - name: nos
+    version: "*"
+    repository: file://../nos
+    condition: nos.enabled
+  - name: dlqs
+    version: "*"
+    repository: file://../dlqs
+    condition: dlqs.enabled
+  - name: sms
+    version: "*"
+    repository: file://../sms
+    condition: sms.enabled
   - name: data-portal
     version: "*"
     repository: file://../data-portal

@@ -43,6 +43,11 @@ extAuth:
     - wps
     - pcs
     - metldata
+    - ars
+    - mass
+    - dins
+    - dlqs
+    - rts
   backend:
     # the auth adapter's ext-authz backend (subchart alias + service port)
     chart: auth-adapter
@@ -105,6 +110,11 @@ minio:
 mailhog:
   enabled: true
   image: mailhog/mailhog:v1.0.1
+
+# SMS-gateway mock for the notification service (wiremock + compose's stub)
+lox24Mock:
+  enabled: true
+  image: wiremock/wiremock:3.13.2
 
 # vault dev-mode: functional backend for ekss (KV API), NOT secret injection
 vault:
@@ -426,3 +436,135 @@ metldata:
     # the artifact model is generated per deployment (compose:
     # create_metldata_yaml.sh) — real content lands with the testbed migration
     artifact_infos: []
+
+# ---- access / metadata / notification path ----------------------------------------------
+
+rts:
+  enabled: true
+  apiBasePathPrefix: /api
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: rest.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+
+ars:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-ars-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: rest.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    download_access_url: http://ghga-auth-rest:8080/download-access
+
+mass:
+  enabled: true
+  apiBasePathPrefix: /api
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: rest.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+dins:
+  enabled: true
+  apiBasePathPrefix: /api
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: consumer.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+# consumers only — no routes
+ns:
+  enabled: true
+  config:
+    service_instance_id: consumer.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    smtp_host: ghga-mailhog
+    smtp_port: 1025
+    use_starttls: false
+    from_address: central@ghga.dev
+    smtp_auth:
+      username: central@ghga.dev
+      password: demo
+    lox24_base_url: http://ghga-lox24-mock:8080
+    lox24_send_sms_path: sms
+    lox24_auth_token_header: X-LOX24-AUTH-TOKEN
+    lox24_sender_id: GHGA
+    lox24_token: demo-lox24-token
+
+nos:
+  enabled: true
+  config:
+    service_instance_id: consumer.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    central_data_stewardship_email: central@ghga.dev
+    helpdesk_email: helpdesk@ghga.dev
+
+dlqs:
+  enabled: true
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-dlqs-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: rest.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+# test-bed only (ADR-0008): the testbed profile flips this on (and should add
+# 'sms' to extAuth.targetRoutes)
+sms:
+  enabled: false
+  apiBasePathPrefix: /api
+  envVarsSecret: ghga-sms-keys
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    service_instance_id: rest.1
+    kafka_servers: ["ghga-kafka:9092"]
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    db_permissions:
+      - "*.*:*"
+    db_prefix: ""
+    allow_empty_prefix: true
