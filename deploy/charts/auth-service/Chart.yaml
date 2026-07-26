@@ -1,18 +1,17 @@
 name: auth-service
-description: The auth_adapter subpackage contains the authentication service used
-  by the API gateway via the ExtAuth protocol.
+description: Authentication adapter and services used for the GHGA data portal
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 26.0.5
+version: "0.0.0+dev"
 
 # This is the version number of the application being deployed. This version number should be
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "10.0.1-dhi"
+appVersion: "0.0.0+dev"
 
 # The major version of the API. Minor versions and patches are not relevant as they do not
 # introduce breaking changes.
@@ -20,7 +19,7 @@ apiVersion: v2
 
 dependencies:
 - name: ghga-common
-  version: 2.9.21
-  repository: https://ghga-de.github.io/charts
+  version: 2.x.x
+  repository: file://../../base/ghga-common
   import-values:
   - defaults

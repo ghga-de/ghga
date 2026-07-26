@@ -1,11 +1,16 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
 image:
-  repository: "ghga/auth-service"
-
+  registry: ghcr.io
+  repository: ghga-de/ghga/auth-service
 configPrefix: auth_service
+commandStyle: exec
+commandPrefix: ''
+executable: auth-service
 
-# Service parameters
-
-# Service base path
+# ---- deployment values (services/auth-service/chart-values.yaml) -----------------
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
 apiBasePath: /auth-ext/
 # Name of the database
 mongodb:
@@ -14,18 +19,12 @@ mongodb:
 serviceName: auth-service
 
 config:
-  mongo_dsn: null
+  mongo_dsn:
   host: 0.0.0.0
   enable_opentelemetry: false
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
 
-authService:
-  emissary:
-    enabled: false
-    name: authentication
-
-executable: auth-service
 executableArgs: []
 
 _topics:
@@ -39,7 +38,7 @@ _topics:
       value: second_factor_recreated
     kafkaUser:
       operations:
-        - Write
+      - Write
   ivaEvents:
     # as producer
     topic:
@@ -52,7 +51,7 @@ _topics:
       value: iva_send_code
     kafkaUser:
       operations:
-        - Write
+      - Write
 
   datasetChangeEvent:
     # as consumer
@@ -66,7 +65,7 @@ _topics:
       value: dataset_created
     kafkaUser:
       operations:
-        - Read
+      - Read
   userEvents:
     # as producer
     topic:
@@ -74,4 +73,4 @@ _topics:
       value: users
     kafkaUser:
       operations:
-        - Write
+      - Write

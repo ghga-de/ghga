@@ -1,11 +1,16 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
 image:
-  repository: "ghga/mass"
-
+  registry: ghcr.io
+  repository: ghga-de/ghga/mass
 configPrefix: mass
+commandStyle: exec
+commandPrefix: ''
+executable: mass
 
-# Service parameters
-
-# Service base path
+# ---- deployment values (services/mass/chart-values.yaml) -----------------
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
 apiBasePath: /mass/
 # Name of the database
 mongodb:
@@ -15,7 +20,7 @@ mongodb:
 serviceName: mass-consumer
 
 config:
-  mongo_dsn: null
+  mongo_dsn:
   db_name: metadata-store
   host: "0.0.0.0"
   searchable_classes:
@@ -33,9 +38,8 @@ config:
         name: Dataset title
   kafka_enable_dlq: true
 
-executable: mass
 executableArgs:
-  - run-rest
+- run-rest
 # executableArgs:
 #   - consume-events
 
@@ -52,7 +56,7 @@ _topics:
       value: searchable_resource_upserted
     kafkaUser:
       operations:
-        - Read
+      - Read
   # as producer
   deadLetterQueue:
     topic:
@@ -60,12 +64,12 @@ _topics:
       value: dlq
     kafkaUser:
       operations:
-        - Write
+      - Write
   # as consumer
   deadLetterQueueRetry:
     topic:
-      name: null
+      name:
       value: retry
     kafkaUser:
       operations:
-        - Read
+      - Read

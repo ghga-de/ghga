@@ -4,8 +4,17 @@ We **adopt and evolve** GHGA's existing `ghga-common` chart system rather than b
 scratch ([ADR-0013](../docs/adr/0013-adopt-ghga-common-chart-system.md)). The system is
 imported (history-preserving) from the `charts` repo; its own documentation lives in
 [chart-system.md](chart-system.md). Current layout: `base/ghga-common` (library chart),
-`charts/` (generated per-service charts), `src/` (generator + per-service values),
-`scripts/` (chart tooling).
+`charts/` (generated per-service charts), `src/` (generator + template + auxiliary-chart
+values), `scripts/` (chart tooling).
+
+Adoption status: the Emissary paths are pruned, and the generator is DRY against the
+workspace — chart name/description/image/executable derive from the members enumerated by
+`scripts/image_members.py` (the same source the release workflow uses; `appVersion` = the
+platform version), per-member deployment values live in `<member>/chart-values.yaml`, and
+the generated charts use `commandStyle: exec` (the monorepo's hardened images have no
+shell). Regenerate with `just charts [version]`. Charts without a workspace member
+(`test-oidc-provider`, `datahub-monitor`, `remotebackup`) are declared in
+`src/auxiliary_charts.yaml` with values in `src/values/`.
 
 Planned structure (adoption target, per the steps below):
 

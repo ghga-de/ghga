@@ -58,36 +58,9 @@ jobs:
           # every image member's console script is named exactly like its distribution,
           # so the package name doubles as the ENTRYPOINT (the Dockerfile's `test -e`
           # guard fails the build on any violation).
-          echo "images=$(python3 - <<'PY'
-          import json, pathlib, tomllib
-          members = []
-          for root, default_image in (("services", True), ("tools", False)):
-              for p in sorted(pathlib.Path(root).iterdir()):
-                  manifest = p / "pyproject.toml"
-                  if not manifest.is_file():
-                      continue
-                  data = tomllib.loads(manifest.read_text())
-                  ghga = data.get("tool", {}).get("ghga", {})
-                  lane = ghga.get("release")
-                  image = ghga.get("image", default_image if lane not in ("pypi", "none") else False)
-                  if root == "tools" and not ghga:
-                      image = False
-                  if image:
-                      members.append({"path": str(p), "package": data["project"]["name"],
-                                      "dockerfile": "docker/Dockerfile", "context": "."})
-          # Frontend members build with their own (mainline-synced) DHI Dockerfile and
-          # their directory as context; the image name comes from package.json.
-          for p in sorted(pathlib.Path("frontend").iterdir()):
-              manifest = p / "package.json"
-              dockerfile = p / "Dockerfile.dhi"
-              if not (manifest.is_file() and dockerfile.is_file()):
-                  continue
-              data = json.loads(manifest.read_text())
-              members.append({"path": str(p), "package": data["name"],
-                              "dockerfile": str(dockerfile), "context": str(p)})
-          print(json.dumps(members))
-          PY
-          )" >> "$GITHUB_OUTPUT"
+          # Member enumeration lives in scripts/image_members.py — the same source
+          # the chart generator (deploy/src/create_charts.py) consumes.
+          echo "images=$(python3 scripts/image_members.py)" >> "$GITHUB_OUTPUT"
       # TODO on enablement: assert the tagged commit is on main AND its CI run is green
       # (the release verifies the integrated HEAD; it does not re-test it).
 

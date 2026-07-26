@@ -76,7 +76,7 @@ def _render_chart_case(composed_values: dict[str, Any], release_name: str) -> st
                 "template",
                 release_name,
                 "--output-dir",
-                f"./rendered/{sha[:8]}/",
+                str(Path(__file__).resolve().parent / "rendered" / sha[:8]),
                 "--namespace",
                 "test",
                 "--values",

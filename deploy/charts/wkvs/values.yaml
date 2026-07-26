@@ -1,0 +1,25 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
+image:
+  registry: ghcr.io
+  repository: ghga-de/ghga/wkvs
+configPrefix: wkvs
+commandStyle: exec
+commandPrefix: ''
+executable: wkvs
+
+# ---- deployment values (services/well-known-value-service/chart-values.yaml) -----------------
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
+apiBasePath: /.well-known/
+
+# This parameter is used as Kafka's group id
+serviceName: wkvs
+
+config:
+  dcs_api_url: http://download-controller/download
+  host: "0.0.0.0"
+  ucs_api_url: http://upload-controller/upload
+  wps_api_url: http://work-package/
+
+executableArgs: []

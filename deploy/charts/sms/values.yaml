@@ -1,0 +1,42 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
+image:
+  registry: ghcr.io
+  repository: ghga-de/ghga/sms
+configPrefix: sms
+commandStyle: exec
+commandPrefix: ''
+executable: sms
+
+# ---- deployment values (services/state-management-service/chart-values.yaml) -----------------
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
+apiBasePath: /sms/
+
+# This parameter is used as Kafka's group id
+serviceName: sms-rest
+
+config:
+  host: 0.0.0.0
+  mongo_dsn:
+  db_permissions:
+  - "*.*:*"
+  allow_empty_prefix: true
+  db_prefix: ""
+  token_hashes: []
+  log_level: DEBUG
+  object_storages: {}
+  vault_url: http://vault:8200
+  # Is set in the request
+  vault_path: ""
+
+executableArgs: []
+
+# SMS is just used for testing, it requires access to all topics to clear them
+kafkaTopicsParameters: false
+
+_topics:
+  wildcard:
+    topic:
+      name: wildcard
+      value: '*'

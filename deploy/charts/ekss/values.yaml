@@ -1,0 +1,23 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
+image:
+  registry: ghcr.io
+  repository: ghga-de/ghga/ekss
+configPrefix: ekss
+commandStyle: exec
+commandPrefix: ''
+executable: ekss
+
+# ---- deployment values (services/ekss/chart-values.yaml) -----------------
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
+serviceName: ekss-rest
+
+config:
+  host: 0.0.0.0
+  server_private_key_path: <Please fill>
+  vault_url: http://vault:8200
+  vault_path: ekss
+  enable_opentelemetry: false
+
+executableArgs: []

@@ -1,0 +1,60 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
+image:
+  registry: ghcr.io
+  repository: ghga-de/ghga/fis
+configPrefix: fis
+commandStyle: exec
+commandPrefix: ''
+executable: fis
+
+# ---- deployment values (services/fis/chart-values.yaml) -----------------
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
+apiBasePath: /fis/
+# Name of the database
+mongodb:
+  dbName: file-ingest
+
+# This parameter is used as Kafka's group id
+serviceName: fis-rest
+
+config:
+  host: 0.0.0.0
+  mongo_dsn:
+  db_version_collection: "fisDbVersions"
+  migration_wait_sec: 10
+  enable_opentelemetry: false
+  ekss_api_url: http://encryption-key-store:8080
+
+executableArgs:
+- run-rest
+
+migrationInitContainer:
+  executable: fis
+  executableArgs:
+  - migrate-db
+
+
+_topics:
+  fileUploadValidationSuccess:
+    # as producer
+    topic:
+      name: file_interrogations_topic
+      value: interrogations
+    types:
+    - name: interrogation_success_type
+      value: file_interrogation_success
+    - name: interrogation_failure_type
+      value: file_interrogation_failed
+    kafkaUser:
+      operations:
+      - Write
+  fileUpload:
+    # as consumer
+    topic:
+      name: file_upload_topic
+      value: file-uploads
+    kafkaUser:
+      operations:
+      - Read

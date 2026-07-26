@@ -1,11 +1,16 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
 image:
-  repository: "ghga/metldata"
-
+  registry: ghcr.io
+  repository: ghga-de/ghga/metldata
 configPrefix: metldata
+commandStyle: exec
+commandPrefix: ''
+executable: metldata
 
-# Service parameters
-
-# Service base path
+# ---- deployment values (libs/metldata/chart-values.yaml) -----------------
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
 apiBasePath: /metldata/
 # Name of the database
 mongodb:
@@ -20,17 +25,16 @@ mapping:
 
 config:
   artifact_infos: []
-  mongo_dsn: null
+  mongo_dsn:
   db_name: metadata_artifacts
   host: 0.0.0.0
-  loader_token_hashes: null  # <Please fill - The tokens must be the loader token generated using the data steward kit.>
+  loader_token_hashes:       # <Please fill - The tokens must be the loader token generated using the data steward kit.>
   primary_artifact_name: embedded_public
   primary_dataset_name: EmbeddedDataset
   service_instance_id: 'rest.1'
   publishable_artifacts:
   - "added_accessions"
 
-executable: metldata
 executableArgs: []
 
 _topics:
@@ -41,7 +45,7 @@ _topics:
       value: artifacts
     kafkaUser:
       operations:
-        - Write
+      - Write
   datasetChangeEvent:
     # as producer
     topic:
@@ -54,7 +58,7 @@ _topics:
       value: dataset_created
     kafkaUser:
       operations:
-        - Write
+      - Write
   resourceChangeEvent:
     # as producer
     topic:
@@ -67,4 +71,4 @@ _topics:
       value: searchable_resource_upserted
     kafkaUser:
       operations:
-        - Write
+      - Write

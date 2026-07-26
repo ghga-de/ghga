@@ -1,0 +1,32 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
+image:
+  registry: ghcr.io
+  repository: ghga-de/ghga/data-portal
+configPrefix: data_portal
+commandStyle: exec
+commandPrefix: ''
+
+# ---- deployment values (frontend/data-portal/chart-values.yaml) -----------------
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
+apiBasePath: /
+
+# Service parameters
+config:
+  host: 0.0.0.0
+  oidc_use_discovery: false
+  root_files: {}
+
+configMap:
+  # mountPath: /home/appuser/data-portal.yaml
+  # DHI
+  mountPath: /app/data-portal.yaml
+
+containerSecurityContext:
+  readOnlyRootFilesystem: false
+  # In Data-Portal-UI, node is user 1000 and appuser is user 1001
+  # runAsUser: 1001
+  # For the DHI images
+  runAsUser: 1000
+

@@ -1,0 +1,8 @@
+# ---- derived from workspace metadata by create_charts.py — do not edit -----------------
+image:
+  registry: ghcr.io
+  repository: ghga-de/ghga/dhfs
+configPrefix: dhfs
+commandStyle: exec
+commandPrefix: ''
+executable: dhfs

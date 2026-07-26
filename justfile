@@ -70,6 +70,15 @@ import-from-snapshot:
 sync-mainline *args:
     scripts/migration/sync-from-mainline.sh {{args}}
 
+# --- Helm charts --------------------------------------------------------------------------
+# Regenerate the per-service charts from workspace metadata + member chart-values.yaml.
+charts version="0.0.0+dev":
+    uv run python deploy/src/create_charts.py --version {{version}}
+
+# Run the chart library tests (renders the dummy chart via helm).
+charts-test:
+    uv run pytest -q deploy/base/tests/
+
 # --- Docker -----------------------------------------------------------------------------
 # Build a member image locally, e.g. `just image services/auth-service`.
 # Python members use the shared Dockerfile (entrypoint = package name, ADR-0014);
