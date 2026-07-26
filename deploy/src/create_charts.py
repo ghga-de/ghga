@@ -83,7 +83,11 @@ def stamp_chart(
     chart_dir = OUTPUT_DIR / name
     if chart_dir.exists():
         shutil.rmtree(chart_dir)
-    shutil.copytree(CHART_TEMPLATE, chart_dir)
+    # never propagate resolved-dependency artifacts from the template: a vendored
+    # library .tgz would silently shadow the file:// dependency at install time
+    shutil.copytree(
+        CHART_TEMPLATE, chart_dir, ignore=shutil.ignore_patterns("Chart.lock", "charts")
+    )
 
     with (CHART_TEMPLATE / "Chart.yaml").open("r", encoding="utf-8") as chart_yaml_file:
         chart_yaml = YAML_PARSER.load(chart_yaml_file)
