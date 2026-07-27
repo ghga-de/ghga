@@ -145,10 +145,7 @@ class DownloadBucketCleaner(BucketCleanerPort):
                     await object_storage.delete_object(
                         bucket_id=bucket_id, object_id=str(object_id)
                     )
-                except (
-                    object_storage.ObjectError,
-                    object_storage.ObjectStorageProtocolError,
-                ) as error:
+                except object_storage.ObjectStorageProtocolError as error:
                     cleanup_error = self.CleanupError(
                         object_id=object_id,
                         storage_alias=storage_alias,
