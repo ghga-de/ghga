@@ -164,7 +164,7 @@ up:
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
       --kube-context kind-ghga --timeout 10m
-    echo "gateway: http://localhost:30080  (portal at /, issuer at /ghga)"
+    echo "gateway: http://localhost/  (portal at /, issuer at /ghga)"
 
 down:
     kind delete cluster --name ghga
