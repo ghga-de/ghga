@@ -35,3 +35,5 @@ frontend/**/dist/
 pytestdebug.log
 # helm chart test debug renders (belt and braces; the harness writes to deploy/tests/rendered)
 rendered/
+# local Claude Code state backups — never commit (contains credentials)
+claude-backup/
