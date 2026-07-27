@@ -43,6 +43,7 @@ from ucs.core.models import (
     FileUpload,
     FileUploadBasics,
     FileUploadBox,
+    ObjectMetadata,
     UploadActivity,
 )
 from ucs.ports.inbound.controller import UploadControllerPort
@@ -573,22 +574,11 @@ class UploadController(UploadControllerPort):
                 "Failed to refresh activity entry for file %s.", file_id, exc_info=True
             )
 
-    async def _compare_checksums(
-        self,
-        file_upload: FileUpload,
-        expected_checksum: str,
-    ) -> None:
-        """Verify that the S3-calculated object ETag (MD5) matches the submitted MD5
-        checksum of the encrypted file content. This is effectively an integrity check
-        for the file upload itself.
-
-        If the checksums don't match, this function marks the FileUpload as failed and
-        raises a ChecksumMismatchError.
-        """
-        file_id = file_upload.id
+    async def _get_object_metadata(self, *, file_upload: FileUpload) -> ObjectMetadata:
+        """Fetch the ETag and size of the uploaded object with a single S3 request."""
         object_id = file_upload.object_id
         try:
-            actual_checksum = await self._s3_client.get_object_etag(
+            return await self._s3_client.get_object_metadata(
                 file_upload=file_upload, object_id=object_id
             )
         except S3ClientPort.UnknownStorageAliasError as err:
@@ -603,6 +593,22 @@ class UploadController(UploadControllerPort):
             ) from err
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
+
+    async def _compare_checksums(
+        self,
+        file_upload: FileUpload,
+        actual_checksum: str,
+        expected_checksum: str,
+    ) -> None:
+        """Verify that the S3-calculated object ETag (MD5) matches the submitted MD5
+        checksum of the encrypted file content. This is effectively an integrity check
+        for the file upload itself.
+
+        If the checksums don't match, this function marks the FileUpload as failed and
+        raises a ChecksumMismatchError.
+        """
+        file_id = file_upload.id
+        object_id = file_upload.object_id
 
         if actual_checksum != expected_checksum:
             # Mark upload as failed, then raise an error
@@ -622,7 +628,9 @@ class UploadController(UploadControllerPort):
             log.info(error, extra=extra)
             raise error
 
-    async def _verify_object_size(self, *, file_upload: FileUpload) -> None:
+    async def _verify_object_size(
+        self, *, file_upload: FileUpload, actual_size: int
+    ) -> None:
         """Verify that the S3 object size matches the declared encrypted_size.
 
         If the sizes don't match, marks the FileUpload as failed and raises
@@ -630,22 +638,6 @@ class UploadController(UploadControllerPort):
         """
         file_id = file_upload.id
         object_id = file_upload.object_id
-        try:
-            actual_size = await self._s3_client.get_object_size(
-                file_upload=file_upload, object_id=object_id
-            )
-        except S3ClientPort.UnknownStorageAliasError as err:
-            raise self.UnknownStorageAliasError(
-                storage_alias=file_upload.storage_alias
-            ) from err
-        except S3ClientPort.BucketNotFoundError as err:
-            raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
-        except S3ClientPort.S3ObjectNotFoundError as err:
-            raise self.S3ObjectMissingError(
-                bucket_id=file_upload.bucket_id, object_id=str(object_id)
-            ) from err
-        except S3ClientPort.S3OperationError as err:
-            raise self.S3OperationError(details=str(err)) from err
 
         if actual_size != file_upload.encrypted_size:
             file_upload.state = "failed"
@@ -733,14 +725,20 @@ class UploadController(UploadControllerPort):
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
 
+        # One S3 request for both the etag and the size
+        object_metadata = await self._get_object_metadata(file_upload=file_upload)
+
         # Verify that the md5 checksum calculated by the connector matches the S3 etag
         await self._compare_checksums(
             file_upload=file_upload,
+            actual_checksum=object_metadata.etag,
             expected_checksum=encrypted_checksum,
         )
 
         # Verify that the actual object size matches the declared encrypted_size
-        await self._verify_object_size(file_upload=file_upload)
+        await self._verify_object_size(
+            file_upload=file_upload, actual_size=object_metadata.size
+        )
 
         # Update local collections now that S3 upload is successfully completed
         file_upload.state = "inbox"

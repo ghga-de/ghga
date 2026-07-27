@@ -22,7 +22,7 @@ from hexkit.protocols.objstorage import (  # noqa: F401
 )
 from pydantic import UUID4
 
-from ucs.core.models import FileUpload, FileUploadBasics
+from ucs.core.models import FileUpload, FileUploadBasics, ObjectMetadata
 
 
 class S3ClientPort(ABC):
@@ -162,10 +162,10 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
-    async def get_object_etag(
+    async def get_object_metadata(
         self, *, file_upload: FileUpload, object_id: UUID4
-    ) -> str:
-        """Return the ETag of an object in the inbox bucket (quotes stripped).
+    ) -> ObjectMetadata:
+        """Return the ETag and size of an object in the inbox bucket.
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
@@ -185,19 +185,6 @@ class S3ClientPort(ABC):
             `UnknownStorageAliasError` if the storage alias is not known.
             `S3UploadAbortError` if an abort is required but fails.
             `BucketNotFoundError` if the configured bucket does not exist in S3.
-            `S3OperationError` if S3 returns any other unexpected error.
-        """
-
-    @abstractmethod
-    async def get_object_size(
-        self, *, file_upload: FileUpload, object_id: UUID4
-    ) -> int:
-        """Return the size in bytes of an object in the inbox bucket.
-
-        Raises:
-            `UnknownStorageAliasError` if the storage alias is not known.
-            `BucketNotFoundError` if the configured bucket does not exist in S3.
-            `S3ObjectNotFoundError` if the object is not found in S3.
             `S3OperationError` if S3 returns any other unexpected error.
         """
 

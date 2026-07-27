@@ -24,7 +24,7 @@ from hexkit.protocols.objstorage import ObjectStorageProtocol
 from pydantic import UUID4
 
 from ucs.config import Config
-from ucs.core.models import FileUpload, FileUploadBasics
+from ucs.core.models import FileUpload, FileUploadBasics, ObjectMetadata
 from ucs.ports.outbound.storage import S3ClientPort
 
 log = logging.getLogger(__name__)
@@ -210,6 +210,7 @@ class S3Client(S3ClientPort):
                 )
             except (
                 object_storage.MultiPartUploadNotFoundError,
+                object_storage.MultipleActiveUploadsError,
                 object_storage.MultiPartUploadConfirmError,
             ) as err:
                 if isinstance(
@@ -231,10 +232,10 @@ class S3Client(S3ClientPort):
                     log.error(error, exc_info=True, extra=extra)
                     raise error from err
 
-    async def get_object_etag(
+    async def get_object_metadata(
         self, *, file_upload: FileUpload, object_id: UUID4
-    ) -> str:
-        """Return the ETag of an object in the inbox bucket (quotes stripped).
+    ) -> ObjectMetadata:
+        """Return the ETag and size of an object in the inbox bucket.
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
@@ -252,10 +253,10 @@ class S3Client(S3ClientPort):
         }
 
         with handle_bucket_and_general_s3_errors(
-            op_name="get_object_etag", bucket_id=file_upload.bucket_id, extra=extra
+            op_name="get_object_metadata", bucket_id=file_upload.bucket_id, extra=extra
         ):
             try:
-                etag = await object_storage.get_object_etag(
+                metadata = await object_storage.get_object_metadata(
                     bucket_id=bucket_id, object_id=str(object_id)
                 )
             except object_storage.ObjectNotFoundError as err:
@@ -264,17 +265,19 @@ class S3Client(S3ClientPort):
                 )
                 log.error(error, extra=extra)
                 raise error from err
-            except object_storage.BucketNotFoundError as err:
-                error = self.BucketNotFoundError(bucket_id=bucket_id)
-                log.error(error, extra=extra)
-                raise error from err
-            except object_storage.ObjectStorageProtocolError as err:
+
+            missing = {"ETag", "ContentLength"} - metadata.keys()
+            if missing:
                 error = self.S3OperationError(
-                    operation="get_object_etag", details=str(err)
+                    operation="get_object_metadata",
+                    details=f"S3 object metadata is missing {sorted(missing)}.",
                 )
-                log.error(error, exc_info=True, extra=extra)
-                raise error from err
-            return etag.strip('"')
+                log.error(error, extra=extra)
+                raise error
+
+            return ObjectMetadata(
+                etag=metadata["ETag"].strip('"'), size=metadata["ContentLength"]
+            )
 
     async def delete_inbox_file(self, *, file_upload: FileUpload) -> None:
         """Delete a fully uploaded file from the inbox, or abort any stale multipart.
@@ -358,40 +361,6 @@ class S3Client(S3ClientPort):
                     exc_info=True,
                     extra=extra,
                 )
-                raise error from err
-
-    async def get_object_size(
-        self, *, file_upload: FileUpload, object_id: UUID4
-    ) -> int:
-        """Return the size in bytes of an object in the inbox bucket.
-
-        Raises:
-            `UnknownStorageAliasError` if the storage alias is not known.
-            `BucketNotFoundError` if the configured bucket does not exist in S3.
-            `S3ObjectNotFoundError` if the object is not found in S3.
-            `S3OperationError` if S3 returns any other unexpected error.
-        """
-        bucket_id = file_upload.bucket_id
-        _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
-        extra = {
-            "bucket_id": bucket_id,
-            "object_id": str(object_id),
-            "file_id": file_upload.id,
-            "storage_alias": file_upload.storage_alias,
-        }
-
-        with handle_bucket_and_general_s3_errors(
-            op_name="get_object_size", bucket_id=file_upload.bucket_id, extra=extra
-        ):
-            try:
-                return await object_storage.get_object_size(
-                    bucket_id=bucket_id, object_id=str(object_id)
-                )
-            except object_storage.ObjectNotFoundError as err:
-                error = self.S3ObjectNotFoundError(
-                    bucket_id=bucket_id, object_id=str(object_id)
-                )
-                log.error(error, extra=extra)
                 raise error from err
 
     async def abort_multipart_upload(
@@ -503,16 +472,14 @@ class S3Client(S3ClientPort):
         if not orphaned_object_ids:
             log.info("Did not detect any orphaned objects in the bucket %s.", bucket_id)
 
+        # Deleting an already-gone object succeeds silently, so it counts as deleted.
         deleted_ids = []
-        missing_ids = []
         problem_ids = []
         for object_id in orphaned_object_ids:
             try:
                 await object_storage.delete_object(
                     bucket_id=bucket_id, object_id=object_id
                 )
-            except ObjectStorageProtocol.ObjectNotFoundError:
-                missing_ids.append(object_id)
             except ObjectStorageProtocol.ObjectStorageProtocolError as err:
                 log.error(
                     "Unable to clean up object %s from bucket %s in storage alias %s"
@@ -528,16 +495,12 @@ class S3Client(S3ClientPort):
                 deleted_ids.append(object_id)
 
         problem_msg = ""
-        if problem_ids or missing_ids:
+        if problem_ids:
             problem_msg = (
-                f" An additional {len(problem_ids)} object(s) could not be deleted and"
-                + f" {len(missing_ids)} object(s) were no longer present by the time"
-                + " deletion was attempted."
+                f" An additional {len(problem_ids)} object(s) could not be deleted."
             )
             extra["could_not_delete_count"] = len(problem_ids)
             extra["could_not_delete_object_ids"] = problem_ids
-            extra["no_longer_present_count"] = len(missing_ids)
-            extra["no_longer_present_object_ids"] = missing_ids
 
         extra["deleted_count"] = len(deleted_ids)
         extra["deleted_object_ids"] = deleted_ids

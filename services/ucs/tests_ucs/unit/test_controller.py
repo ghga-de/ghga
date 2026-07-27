@@ -1095,16 +1095,19 @@ async def test_complete_file_upload_size_mismatch(rig: JointRig):
     # Sleep so we can check for the timestamp difference
     await sleep(MIN_SLEEP)
 
-    # Patch get_object_size to return a wrong size for this object
+    # Patch get_object_metadata to report a wrong size for this object
     _, storage = rig.object_storages.for_alias("test")
+    object_id = rig.file_upload_dao.latest.object_id
 
     async def wrong_size(*args, **kwargs):
-        return ENCRYPTED_SIZE + 1
+        return {
+            "ETag": f"etag_for_{object_id}",
+            "ContentLength": ENCRYPTED_SIZE + 1,
+        }
 
-    storage.get_object_size = wrong_size
+    storage.get_object_metadata = wrong_size
 
     # Now try to complete the upload. Should get the UploadSizeMismatchError.
-    object_id = rig.file_upload_dao.latest.object_id
     with pytest.raises(UploadControllerPort.UploadSizeMismatchError):
         await rig.controller.complete_file_upload(
             box_id=box_id,

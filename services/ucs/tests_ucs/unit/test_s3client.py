@@ -167,8 +167,8 @@ async def test_complete_multipart_upload_not_found(s3_client: S3ClientPort):
         await s3_client.complete_multipart_upload(file_upload=file_upload)
 
 
-async def test_get_object_etag(s3_client: S3ClientPort):
-    """Test that the ETag of a completed upload matches the expected value."""
+async def test_get_object_metadata(s3_client: S3ClientPort):
+    """Test that the ETag and size of a completed upload match the expected values."""
     file_upload = make_file_upload()
     upload_id = await s3_client.init_multipart_upload(
         file_upload_basics=_to_basics(file_upload)
@@ -176,25 +176,50 @@ async def test_get_object_etag(s3_client: S3ClientPort):
     file_upload = file_upload.model_copy(update={"s3_upload_id": upload_id})
     await s3_client.complete_multipart_upload(file_upload=file_upload)
 
-    etag = await s3_client.get_object_etag(
+    metadata = await s3_client.get_object_metadata(
         file_upload=file_upload, object_id=file_upload.object_id
     )
-    assert etag == f"etag_for_{file_upload.object_id}"
+    assert metadata.etag == f"etag_for_{file_upload.object_id}"
+    assert metadata.size == 1024  # the dummy value returned by the InMem S3 fixture
 
 
-async def test_get_object_size(s3_client: S3ClientPort):
-    """Test that the size of a completed upload is returned."""
+async def test_get_object_metadata_strips_etag_quotes(
+    s3_client: S3ClientPort, object_storages: ObjectStorages
+):
+    """Test that the surrounding quotes S3 puts around the ETag are stripped."""
     file_upload = make_file_upload()
-    upload_id = await s3_client.init_multipart_upload(
-        file_upload_basics=_to_basics(file_upload)
-    )
-    file_upload = file_upload.model_copy(update={"s3_upload_id": upload_id})
-    await s3_client.complete_multipart_upload(file_upload=file_upload)
+    _, storage = object_storages.for_alias(TEST_STORAGE_ALIAS)
 
-    size = await s3_client.get_object_size(
+    async def quoted_etag(*, bucket_id: str, object_id: str) -> dict:
+        return {"ETag": '"quoted-etag"', "ContentLength": 1024}
+
+    storage.get_object_metadata = quoted_etag  # type: ignore[method-assign]
+
+    metadata = await s3_client.get_object_metadata(
         file_upload=file_upload, object_id=file_upload.object_id
     )
-    assert size == 1024  # the dummy value returned by the InMem S3 fixture
+    assert metadata.etag == "quoted-etag"
+
+
+@pytest.mark.parametrize(
+    "metadata", [{"ETag": '"etag"'}, {"ContentLength": 1024}, {}], ids=str
+)
+async def test_get_object_metadata_incomplete(
+    s3_client: S3ClientPort, object_storages: ObjectStorages, metadata: dict
+):
+    """Test that metadata missing the ETag or size is reported as an S3OperationError."""
+    file_upload = make_file_upload()
+    _, storage = object_storages.for_alias(TEST_STORAGE_ALIAS)
+
+    async def incomplete_metadata(*, bucket_id: str, object_id: str) -> dict:
+        return metadata
+
+    storage.get_object_metadata = incomplete_metadata  # type: ignore[method-assign]
+
+    with pytest.raises(S3ClientPort.S3OperationError):
+        await s3_client.get_object_metadata(
+            file_upload=file_upload, object_id=file_upload.object_id
+        )
 
 
 async def test_delete_inbox_file_completed(
@@ -307,12 +332,7 @@ async def test_unknown_storage_alias_raises_error(s3_client: S3ClientPort):
         await s3_client.complete_multipart_upload(file_upload=file_upload)
 
     with pytest.raises(S3ClientPort.UnknownStorageAliasError):
-        await s3_client.get_object_etag(
-            file_upload=file_upload, object_id=file_upload.object_id
-        )
-
-    with pytest.raises(S3ClientPort.UnknownStorageAliasError):
-        await s3_client.get_object_size(
+        await s3_client.get_object_metadata(
             file_upload=file_upload, object_id=file_upload.object_id
         )
 
@@ -346,8 +366,7 @@ async def test_unknown_storage_alias_raises_error(s3_client: S3ClientPort):
         ("init_multipart_upload", "init_multipart_upload"),
         ("get_part_upload_url", "get_part_upload_url"),
         ("complete_multipart_upload", "complete_multipart_upload"),
-        ("get_object_etag", "get_object_etag"),
-        ("get_object_size", "get_object_size"),
+        ("get_object_metadata", "get_object_metadata"),
         ("delete_inbox_file", "does_object_exist"),
         ("abort_multipart_upload", "abort_multipart_upload"),
         ("list_all_multipart_uploads", "get_all_multipart_uploads"),
@@ -375,7 +394,7 @@ async def test_bucket_not_found_raises_bucket_not_found_error(
         kwargs = {"file_upload_basics": _to_basics(file_upload)}
     elif method_name == "get_part_upload_url":
         kwargs["part_no"] = 1
-    elif method_name in ("get_object_etag", "get_object_size"):
+    elif method_name == "get_object_metadata":
         kwargs["object_id"] = file_upload.object_id
     elif method_name == "abort_multipart_upload":
         kwargs = {
@@ -394,8 +413,8 @@ async def test_object_not_found_raises_s3_object_not_found_error(
     s3_client: S3ClientPort,
     object_storages: ObjectStorages,
 ):
-    """Test that S3Client.get_object_etag() and .get_object_size() translate
-    ObjectNotFoundError into S3ClientPort.S3ObjectNotFoundError.
+    """Test that S3Client.get_object_metadata() translates ObjectNotFoundError into
+    S3ClientPort.S3ObjectNotFoundError.
     """
     file_upload = make_file_upload()
     _, storage = object_storages.for_alias(TEST_STORAGE_ALIAS)
@@ -405,13 +424,12 @@ async def test_object_not_found_raises_s3_object_not_found_error(
             bucket_id=file_upload.bucket_id, object_id=str(file_upload.object_id)
         )
 
-    for method_name in ["get_object_etag", "get_object_size"]:
-        setattr(storage, method_name, do_error)
+    storage.get_object_metadata = do_error  # type: ignore[method-assign]
 
-        with pytest.raises(S3ClientPort.S3ObjectNotFoundError):
-            await getattr(s3_client, method_name)(
-                file_upload=file_upload, object_id=file_upload.object_id
-            )
+    with pytest.raises(S3ClientPort.S3ObjectNotFoundError):
+        await s3_client.get_object_metadata(
+            file_upload=file_upload, object_id=file_upload.object_id
+        )
 
 
 @pytest.mark.parametrize(
@@ -420,8 +438,7 @@ async def test_object_not_found_raises_s3_object_not_found_error(
         ("init_multipart_upload", "init_multipart_upload", {}),
         ("get_part_upload_url", "get_part_upload_url", {"part_no": 1}),
         ("complete_multipart_upload", "complete_multipart_upload", {}),
-        ("get_object_etag", "get_object_etag", {"_object_id": True}),
-        ("get_object_size", "get_object_size", {"_object_id": True}),
+        ("get_object_metadata", "get_object_metadata", {"_object_id": True}),
         ("delete_inbox_file", "does_object_exist", {}),
         ("abort_multipart_upload", "abort_multipart_upload", {}),
         ("list_all_multipart_uploads", "get_all_multipart_uploads", {}),

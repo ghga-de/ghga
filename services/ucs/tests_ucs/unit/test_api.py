@@ -26,7 +26,7 @@ from ghga_service_commons.api.testing import AsyncTestClient
 
 from tests_ucs.fixtures import ConfigFixture, utils
 from ucs.adapters.inbound.fastapi_ import http_exceptions
-from ucs.constants import MAX_PART_SIZE, MIN_PART_SIZE
+from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.inject import prepare_rest_app
 from ucs.ports.inbound.controller import UploadControllerPort
 
@@ -450,6 +450,30 @@ async def test_get_file_part_upload_url_endpoint_auth(
 
     # Make sure the core's refresh_upload_activity() method was called
     core_mock.refresh_upload_activity.assert_awaited_with(file_id=TEST_FILE_ID)
+
+
+@pytest.mark.parametrize("part_no", [0, -1, MAX_PART_COUNT + 1])
+async def test_get_file_part_upload_url_endpoint_part_no_bounds(
+    config: ConfigFixture, app_fixture: AppFixture, part_no: int
+):
+    """Test that an out-of-range part number is rejected as a validation error.
+
+    Object storage raises a plain ValueError for these, which would otherwise surface
+    as a 500 instead of a 422.
+    """
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    token_header = utils.upload_file_token_header(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=config.wps_jwk
+    )
+
+    response = await rest_client.get(
+        f"/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}/parts/{part_no}",
+        headers=token_header,
+    )
+
+    assert response.status_code == 422
+    core_mock.get_part_upload_url.assert_not_awaited()
 
 
 async def test_complete_file_upload_endpoint_auth(

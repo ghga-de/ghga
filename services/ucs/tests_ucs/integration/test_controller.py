@@ -1028,12 +1028,7 @@ async def test_cleanup_of_orphaned_files(
             super().__init__("You don't have permission to do that.")
 
     async def _delete_with_error(bucket_id: str, object_id: str) -> None:
-        """Raises an ObjectNotFoundError, then _S3PermissionError, then reverts."""
-        if object_id == orphaned_object_id1:
-            await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
-            raise s3_storage.ObjectNotFoundError(
-                bucket_id=bucket_id, object_id=object_id
-            )
+        """Raises an _S3PermissionError for one object, deletes the rest normally."""
         if object_id == file_cancelled_object_id:
             raise _S3PermissionError(bucket_id=bucket_id, object_id=object_id)
         return await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
@@ -1050,17 +1045,14 @@ async def test_cleanup_of_orphaned_files(
     with caplog.at_level("INFO"):
         await controller.cleanup_stale_uploads()
 
-    deleted_count = 1 if simulate_errors else 3
+    deleted_count = 2 if simulate_errors else 3
     log_msg = (
         f"Cleaned up {deleted_count} orphaned object(s) from bucket {bucket_id}"
         + " in storage alias test."
     )
 
     if simulate_errors:
-        log_msg += (
-            " An additional 1 object(s) could not be deleted and 1 object(s) were no"
-            + " longer present by the time deletion was attempted."
-        )
+        log_msg += " An additional 1 object(s) could not be deleted."
     assert log_msg in caplog.messages
 
     # Verify that the orphaned and cancelled files are gone, but init and inbox remain

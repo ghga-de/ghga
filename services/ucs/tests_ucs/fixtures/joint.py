@@ -190,19 +190,21 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
     upload_activity_dao = InMemUploadActivityDao()
     s3_client = S3Client(config=_config, object_storages=object_storages)
 
-    # Patch get_object_size to return the encrypted_size stored in the FileUpload
+    # Patch get_object_metadata to report the encrypted_size stored in the FileUpload
     # record for the given object_id. This lets controller tests pass the size check
     # without needing to know what value InMemObjectStorage would otherwise return.
     _, storage = object_storages.for_alias("test")
 
-    async def mock_get_object_size(*, bucket_id: str, object_id: str) -> int:
+    async def mock_get_object_metadata(*, bucket_id: str, object_id: str) -> dict:
+        size = 1024  # The value that the InMem fixture otherwise returns
         for doc in file_upload_dao.resources.values():
             resource = file_upload_dao._deserialize(doc)
             if str(resource.object_id) == object_id:
-                return resource.encrypted_size
-        return 1024  # The value that the InMem fixture otherwise returns
+                size = resource.encrypted_size
+                break
+        return {"ETag": f"etag_for_{object_id}", "ContentLength": size}
 
-    storage.get_object_size = mock_get_object_size
+    storage.get_object_metadata = mock_get_object_metadata
 
     box_stats_aggregator = InMemBoxStatsAggregator(file_upload_dao=file_upload_dao)
 
