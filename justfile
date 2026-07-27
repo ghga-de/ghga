@@ -178,7 +178,7 @@ testbed-artifacts:
     cd testbed/example_data/metadata
     rm -rf artifact_models && mkdir artifact_models
     uv run ghga-datasteward-kit metadata generate-artifact-models --config-path=metadata_config.yaml
-    uv run python ../../../scripts/artifact_values.py
+    uv run --with pyyaml python ../../../scripts/artifact_values.py
     rm -rf artifact_models
 
 # Deploy/refresh the demo with the testbed profile (sms, test OP, artifact model).
