@@ -1,0 +1,13 @@
+# Local/CI integration cluster (ADR-0009/0017 as amended: kind runs in the
+# devcontainer's inner docker daemon; the gateway NodePort is published through
+# the nested chain and reaches the Mac browser via OrbStack's port forwarding).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ghga
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # the demo gateway (EnvoyProxy service NodePort, ghga-demo values)
+      - containerPort: 30080
+        hostPort: 30080
+        protocol: TCP

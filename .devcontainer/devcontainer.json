@@ -5,7 +5,10 @@
     "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/va-h/devcontainers-features/uv:1": {}
+    "ghcr.io/va-h/devcontainers-features/uv:1": {},
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest", "helm": "latest", "minikube": "none"
+    }
   },
   "customizations": {
     "vscode": {
@@ -40,6 +43,7 @@
   // skips re-downloading/rebuilding every dependency wheel on each rebuild.
   // Persisted across rebuilds: uv interpreters + wheel cache (see above), and the Playwright
   // browser binaries (~100MB+ each) so E2E tests don't re-download them on every rebuild.
+  "runArgs": ["--net=host"],
   "mounts": [
     "source=ghga-claude,target=/home/vscode/.claude,type=volume",
     "source=ghga-uv-data,target=/home/vscode/.local/share/uv,type=volume",

@@ -1,0 +1,93 @@
+# Local-image overlay for kind-in-devcontainer installs:
+#   helm upgrade --install ghga deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-local.yaml
+# Images are built by `just demo-images` as ghcr.io/ghga-de/ghga/<package>:local
+# and loaded into the kind node; tag 'local' + IfNotPresent keeps the cluster
+# from ever pulling them. Only the tag differs from the generated defaults.
+
+auth-adapter:
+  image:
+    tag: local
+
+auth-rest:
+  image:
+    tag: local
+
+wkvs:
+  image:
+    tag: local
+
+ekss:
+  image:
+    tag: local
+
+dcs:
+  image:
+    tag: local
+
+ucs:
+  image:
+    tag: local
+
+fis:
+  image:
+    tag: local
+
+ifrs:
+  image:
+    tag: local
+
+pcs:
+  image:
+    tag: local
+
+wps:
+  image:
+    tag: local
+
+rs:
+  image:
+    tag: local
+
+metldata:
+  image:
+    tag: local
+
+ars:
+  image:
+    tag: local
+
+mass:
+  image:
+    tag: local
+
+dins:
+  image:
+    tag: local
+
+ns:
+  image:
+    tag: local
+
+nos:
+  image:
+    tag: local
+
+dlqs:
+  image:
+    tag: local
+
+rts:
+  image:
+    tag: local
+
+sms:
+  image:
+    tag: local
+
+data-portal:
+  image:
+    tag: local
+
+secretGen:
+  image:
+    tag: local

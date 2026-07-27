@@ -97,17 +97,33 @@ demo-template:
 # Build a member image locally, e.g. `just image services/auth-service`.
 # Python members use the shared Dockerfile (entrypoint = package name, ADR-0014);
 # members shipping their own Dockerfile.dhi (frontend) build with it in-place.
-# The image name is the package name from the member's manifest, not the dir name.
+# Tags use the release registry scheme with tag 'local' so the charts' generated
+# image references resolve with only a tag override (values-local.yaml).
 image target:
     #!/usr/bin/env bash
     set -euo pipefail
     if [ -f "{{target}}/Dockerfile.dhi" ]; then
         name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile.dhi" -t "ghga-$name:local" "{{target}}"
+        docker build -f "{{target}}/Dockerfile.dhi" -t "ghcr.io/ghga-de/ghga/$name:local" "{{target}}"
     else
         name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
-        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" -t "ghga-$name:local" .
+        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" -t "ghcr.io/ghga-de/ghga/$name:local" .
     fi
+
+# Build every image member and load them into the kind cluster.
+demo-images:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/image_members.py | python3 -c "
+    import json, sys
+    for m in json.load(sys.stdin):
+        print(m['path'])
+    " | while read -r path; do
+        echo "== building $path =="
+        just image "$path"
+    done
+    docker images --format '{{{{.Repository}}}}:{{{{.Tag}}}}' | grep '^ghcr.io/ghga-de/ghga/.*:local$' \
+      | xargs -n1 kind load docker-image --name ghga
 
 # Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
 # the cache to ~17 GB within days, and a full disk breaks builds AND testcontainers.
@@ -115,6 +131,18 @@ docker-prune:
     docker builder prune -f --keep-storage 5GB
     docker image prune -f
 
-# --- Local cluster (TODO: implemented once charts land — ADR-0012) ----------------------
-# up:    kind create cluster && build/load affected images && helm install ghga ./deploy/charts/ghga-demo
-# down:  kind delete cluster
+# --- Local cluster (kind in the devcontainer's docker; ADR-0009/0017 as amended) --------
+# Bring up (or update) the self-contained demo: cluster + charts. Build/load images
+# first with `just demo-images` (slow the first time; app pods crashloop until loaded).
+up:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kind get clusters 2>/dev/null | grep -qx ghga || kind create cluster --config deploy/kind-config.yaml --wait 120s
+    just demo-template
+    helm upgrade --install ghga deploy/charts/ghga-demo \
+      -f deploy/charts/ghga-demo/values-local.yaml \
+      --kube-context kind-ghga --timeout 10m
+    echo "gateway: http://localhost:30080  (portal at /, issuer at /ghga)"
+
+down:
+    kind delete cluster --name ghga

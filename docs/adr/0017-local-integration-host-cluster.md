@@ -1,8 +1,20 @@
 # ADR-0017 — Local integration runs on a host-level cluster; no DinD/DooD in the devcontainer
 
-- **Status:** Accepted (amends [ADR-0009](0009-testbed-kind-minikube.md)'s local story)
+- **Status:** Accepted (amends [ADR-0009](0009-testbed-kind-minikube.md)'s local story;
+  amended 2026-07-27 — see below)
 - **Date:** 2026-07-10
 - **Deciders:** Leon Kuchenbecker
+
+> **Amendment (2026-07-27):** on OrbStack single-user hosts, the *fast iteration loop*
+> runs **kind inside the devcontainer's inner docker daemon** instead: with the
+> devcontainer on host networking, the kind-published gateway NodePort binds in the
+> OrbStack VM's namespace and is forwarded to the Mac's localhost (verified
+> empirically, browser included), image visibility is solved by `kind load` from the
+> same daemon, and the loop is identical to CI's kind path. This trades the
+> rebuild-persistence and resource-isolation goals of the host cluster for a
+> zero-host-setup, fully in-container loop; the host OrbStack cluster remains the
+> target for persistent, closer-to-real local use once the demo stabilises. The
+> DinD disk/memory pressure caveats apply (see the docker-prune tooling).
 
 ## Context
 
