@@ -2,92 +2,247 @@
 #   helm upgrade --install ghga deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-local.yaml
 # Images are built by `just demo-images` as ghcr.io/ghga-de/ghga/<package>:local
 # and loaded into the kind node; tag 'local' + IfNotPresent keeps the cluster
-# from ever pulling them. Only the tag differs from the generated defaults.
+# from ever pulling them. Demo-sized resources replace the prod defaults — the
+# full platform must fit one kind node.
 
 auth-adapter:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 auth-rest:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 wkvs:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 ekss:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 dcs:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 ucs:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 fis:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 ifrs:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 pcs:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 wps:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 rs:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 metldata:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 ars:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 mass:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 dins:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 ns:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 nos:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 dlqs:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 rts:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 sms:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 data-portal:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
 
 secretGen:
   image:
     tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi

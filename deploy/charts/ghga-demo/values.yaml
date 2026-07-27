@@ -137,7 +137,8 @@ secretGen:
     tag: latest
     pullPolicy: IfNotPresent
   kubectlImage:
-    repository: bitnami/kubectl
+    # alpine/k8s: kubectl + a shell (bitnami/kubectl is catalogue-gated)
+    repository: alpine/k8s
     tag: "1.33.4"
 
 # ---- app charts (demo wiring; grows service by service) ---------------------------------
@@ -201,11 +202,19 @@ auth-rest:
         name: Data Steward
         email: data.steward@ghga.dev
         iva_type: Phone
-        iva_value: "+49 123 456789"
+        iva_value: "+4915112345678"
 
 wkvs:
   enabled: true
   envVarsSecret: ghga-wkvs-keys
+  config:
+    service_instance_id: rest.1
+    storage_aliases:
+      primary: http://ghga-minio:9000
+      secondary: http://ghga-minio:9000
+    storage_labels:
+      primary: Primary
+      secondary: Secondary
   httpRoute:
     enabled: true
     port: 8080
@@ -336,9 +345,13 @@ fis:
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
     ekss_api_url: http://ghga-ekss:8080
+    dhfs_version_constraint: ">2.0.0"
 
 ifrs:
   enabled: true
+  # consumer only: no ports -> no Service (an empty Service is invalid)
+  service:
+    enabled: false
   config:
     service_instance_id: consumer.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -495,6 +508,9 @@ dins:
 # consumers only — no routes
 ns:
   enabled: true
+  # consumer only: no ports -> no Service (an empty Service is invalid)
+  service:
+    enabled: false
   config:
     service_instance_id: consumer.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -514,6 +530,9 @@ ns:
 
 nos:
   enabled: true
+  # consumer only: no ports -> no Service (an empty Service is invalid)
+  service:
+    enabled: false
   config:
     service_instance_id: consumer.1
     kafka_servers: ["ghga-kafka:9092"]

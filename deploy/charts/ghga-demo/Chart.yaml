@@ -28,87 +28,87 @@ dependencies:
   # APIs (users/claims/access) — selected via config.provide_apis per alias.
   - name: auth-service
     alias: auth-adapter
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../auth-service
     condition: auth-adapter.enabled
   - name: auth-service
     alias: auth-rest
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../auth-service
     condition: auth-rest.enabled
   - name: wkvs
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../wkvs
     condition: wkvs.enabled
   - name: ekss
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../ekss
     condition: ekss.enabled
   - name: dcs
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../dcs
     condition: dcs.enabled
   - name: ucs
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../ucs
     condition: ucs.enabled
   - name: fis
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../fis
     condition: fis.enabled
   - name: ifrs
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../ifrs
     condition: ifrs.enabled
   - name: pcs
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../pcs
     condition: pcs.enabled
   - name: wps
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../wps
     condition: wps.enabled
   - name: rs
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../rs
     condition: rs.enabled
   - name: metldata
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../metldata
     condition: metldata.enabled
   - name: rts
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../rts
     condition: rts.enabled
   - name: ars
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../ars
     condition: ars.enabled
   - name: mass
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../mass
     condition: mass.enabled
   - name: dins
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../dins
     condition: dins.enabled
   - name: ns
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../ns
     condition: ns.enabled
   - name: nos
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../nos
     condition: nos.enabled
   - name: dlqs
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../dlqs
     condition: dlqs.enabled
   - name: sms
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../sms
     condition: sms.enabled
   - name: data-portal
-    version: "*"
+    version: ">=0.0.0-0"
     repository: file://../data-portal
     condition: data-portal.enabled

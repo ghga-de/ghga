@@ -146,7 +146,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--version",
-        default="0.0.0+dev",
+        default="0.0.0-dev",
         help="platform version stamped as chart version and appVersion (ADR-0004)",
     )
     parser.add_argument(

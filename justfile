@@ -72,7 +72,7 @@ sync-mainline *args:
 
 # --- Helm charts --------------------------------------------------------------------------
 # Regenerate the per-service charts from workspace metadata + member chart-values.yaml.
-charts version="0.0.0+dev":
+charts version="0.0.0-dev":
     uv run python deploy/src/create_charts.py --version {{version}}
 
 # Run the chart library tests (renders the dummy chart via helm).
