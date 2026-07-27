@@ -22,6 +22,9 @@ from hexkit.opentelemetry import configure_opentelemetry
 from ekss.config import Config
 from ekss.inject import prepare_rest_app
 
+# `configure_opentelemetry()` sets up autoinstrumentation and needs to be called before
+# any FastAPI objects are created for those to be instrumented correctly
+
 
 async def run_rest_app():
     """Run the HTTP REST API."""
