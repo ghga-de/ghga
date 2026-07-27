@@ -137,11 +137,28 @@ docker-prune:
     docker image prune -f
 
 # --- Local cluster (kind in the devcontainer's docker; ADR-0009/0017 as amended) --------
+# On hosts whose outer dockerd enforces an nftables FORWARD drop policy (e.g. a Lima
+# docker VM), the nested bridges lose egress after every VM restart — exempt them in
+# the sanctioned DOCKER-USER chain. Idempotent; skipped where iptables-nft is absent.
+net-fix:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v iptables-nft > /dev/null || { echo "no iptables-nft; skipping"; exit 0; }
+    sudo iptables-nft -S FORWARD 2>/dev/null | grep -q '^-P FORWARD DROP' || { echo "FORWARD policy not DROP; skipping"; exit 0; }
+    for subnet in 172.17.0.0/16 172.18.0.0/16; do
+        for dir in -s -d; do
+            sudo iptables-nft -C DOCKER-USER $dir "$subnet" -j ACCEPT 2>/dev/null \
+              || sudo iptables-nft -I DOCKER-USER $dir "$subnet" -j ACCEPT
+        done
+    done
+    echo "nested-bridge egress exemptions in place"
+
 # Bring up (or update) the self-contained demo: cluster + charts. Build/load images
 # first with `just demo-images` (slow the first time; app pods crashloop until loaded).
 up:
     #!/usr/bin/env bash
     set -euo pipefail
+    just net-fix
     kind get clusters 2>/dev/null | grep -qx ghga || kind create cluster --config deploy/kind-config.yaml --wait 120s
     just demo-template
     helm upgrade --install ghga deploy/charts/ghga-demo \
