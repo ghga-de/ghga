@@ -68,43 +68,33 @@ extAuth:
 # ---- lightweight infra ------------------------------------------------------------------
 kafka:
   enabled: true
-  controller:
-    replicaCount: 1
-  listeners:
-    client:
-      protocol: PLAINTEXT
-    controller:
-      protocol: PLAINTEXT
-    interbroker:
-      protocol: PLAINTEXT
-  extraConfig: |
-    auto.create.topics.enable=true
+  # single-node KRaft on the official image; PLAINTEXT + topic auto-create as in
+  # the compose test bed (see templates/kafka.yaml)
+  image: apache/kafka:4.0.0
+  # fixed KRaft cluster id (any base64-ish 22 chars; fixed so restarts reuse storage)
+  clusterId: GhgaDemoKafkaCluster00
 
 mongodb:
   enabled: true
-  architecture: standalone
-  auth:
-    enabled: false
+  image: mongo:8.2
 
 minio:
   enabled: true
-  mode: standalone
-  auth:
-    rootUser: demo-access-key
-    rootPassword: demo-secret-key
+  image: minio/minio:latest
+  mcImage: minio/mc:latest
+  rootUser: demo-access-key
+  rootPassword: demo-secret-key
   # the compose test bed runs two localstack "hubs"; the demo collapses both onto
   # this one MinIO, keeping the hub1/hub2 bucket split
-  provisioning:
-    enabled: true
-    buckets:
-      - name: hub1-inbox
-      - name: hub1-outbox
-      - name: hub1-interrogations
-      - name: hub1-permanent
-      - name: hub2-inbox
-      - name: hub2-outbox
-      - name: hub2-interrogations
-      - name: hub2-permanent
+  buckets:
+    - hub1-inbox
+    - hub1-outbox
+    - hub1-interrogations
+    - hub1-permanent
+    - hub2-inbox
+    - hub2-outbox
+    - hub2-interrogations
+    - hub2-permanent
 
 # demo SMTP sink (UI on :8025 via port-forward; same image as the compose test bed)
 mailhog:

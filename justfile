@@ -121,9 +121,14 @@ demo-images:
     " | while read -r path; do
         echo "== building $path =="
         just image "$path"
+        name=$(basename "$path")
+        if [ -f "$path/pyproject.toml" ]; then
+            name=$(python3 -c "import tomllib; print(tomllib.load(open('$path/pyproject.toml','rb'))['project']['name'])")
+        elif [ -f "$path/package.json" ]; then
+            name=$(python3 -c "import json; print(json.load(open('$path/package.json'))['name'])")
+        fi
+        kind load docker-image --name ghga "ghcr.io/ghga-de/ghga/$name:local"
     done
-    docker images --format '{{{{.Repository}}}}:{{{{.Tag}}}}' | grep '^ghcr.io/ghga-de/ghga/.*:local$' \
-      | xargs -n1 kind load docker-image --name ghga
 
 # Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
 # the cache to ~17 GB within days, and a full disk breaks builds AND testcontainers.

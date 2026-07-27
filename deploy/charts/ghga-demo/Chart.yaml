@@ -16,18 +16,8 @@ dependencies:
     condition: envoy-gateway.enabled
 
   # ---- lightweight infra (ADR-0006): operator-free stand-ins ---------------------------
-  - name: kafka
-    version: 32.4.3
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: kafka.enabled
-  - name: mongodb
-    version: 19.1.20
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: mongodb.enabled
-  - name: minio
-    version: 17.0.21
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: minio.enabled
+  # kafka/mongodb/minio are plain templates in this chart (official images) — the
+  # bitnami subcharts were dropped when the 2025 catalogue gating broke their pulls
   - name: aai
     version: 0.1.0
     repository: file://../aai

@@ -6,5 +6,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   gatewayClassName: {{ .Values.gateway.className }}
+  # proxy infrastructure (NodePort service etc.) attaches HERE: Envoy Gateway
+  # reconciles Gateway-level parametersRef reliably, the GatewayClass-level
+  # attachment was observed to be ignored (EG 1.8.3)
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: {{ .Values.gateway.name }}-proxy-config
   listeners: {{- toYaml .Values.gateway.listeners | nindent 4 }}
 {{- end }}
