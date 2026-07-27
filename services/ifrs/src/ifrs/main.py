@@ -25,6 +25,10 @@ from ifrs.migrations import run_db_migrations
 DB_VERSION = 3
 
 
+# `configure_opentelemetry()` sets up autoinstrumentation and needs to be called before
+# any pymongo objects are created for those to be instrumented correctly
+
+
 async def consume_events(run_forever: bool = True):
     """Run an event consumer listening to the specified topics."""
     config = Config()
