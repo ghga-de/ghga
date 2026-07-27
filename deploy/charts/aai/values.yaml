@@ -21,6 +21,8 @@ service:
 httpRoute:
   enabled: false
   parentRefs: []
+  # rewrite the Host header on this route (see templates/httproute.yaml)
+  rewriteHost: ""
 
 issuerId: ghga
 
@@ -30,6 +32,19 @@ issuerId: ghga
 jsonConfig:
   interactiveLogin: true
   httpServer: NettyWrapper
+  # inject the claims the auth adapter REQUIRES in access tokens but the mock
+  # does not emit by default: client_id (the mock uses azp) and scope.
+  # NB: issuerId here must match .Values.issuerId above.
+  tokenCallbacks:
+    - issuerId: ghga
+      requestMappings:
+        - requestParam: client_id
+          match: "*"
+          claims:
+            client_id: ghga-client
+            scope: openid profile email
+            # a matching callback replaces the mock's default audience — set it back
+            aud: [default]
 
 resources:
   requests:

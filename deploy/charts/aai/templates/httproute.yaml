@@ -13,6 +13,24 @@ metadata:
 spec:
   parentRefs: {{- toYaml .Values.httpRoute.parentRefs | nindent 4 }}
   rules:
+    {{- if .Values.httpRoute.rewriteHost }}
+    # userinfo validates the bearer token's issuer against the request Host:
+    # rewrite in-cluster calls to the browser-facing host so both agree.
+    # Discovery/JWKS deliberately keep their original Host — the auth adapter
+    # requires the advertised jwks_uri to start with its (in-cluster) authority
+    # URL, and it takes the issuer from explicit config, not discovery.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /{{ .Values.issuerId }}/userinfo
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            hostname: {{ .Values.httpRoute.rewriteHost }}
+      backendRefs:
+        - name: {{ include "aai.fullname" . }}
+          port: {{ .Values.service.port }}
+    {{- end }}
     - matches:
         - path:
             type: PathPrefix

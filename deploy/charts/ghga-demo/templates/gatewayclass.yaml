@@ -18,6 +18,9 @@ spec:
     type: Kubernetes
     kubernetes:
       envoyService:
+        # stable in-cluster name: the auth adapter reaches the aai THROUGH the
+        # gateway (hostname-rewritten) for issuer-consistent discovery/userinfo
+        name: {{ .Values.gateway.name }}-gateway
         type: {{ .Values.gateway.service.type }}
         {{- if and (eq .Values.gateway.service.type "NodePort") .Values.gateway.service.nodePort }}
         patch:

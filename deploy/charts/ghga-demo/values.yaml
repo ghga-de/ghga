@@ -125,6 +125,7 @@ aai:
     enabled: true
     parentRefs:
       - name: ghga
+    rewriteHost: localhost
 
 # ---- demo secrets (ADR-0006/0016) --------------------------------------------------------
 # Pre-install Job generating plain K8s Secrets (internal auth JWK pair + TOTP key);
@@ -164,11 +165,12 @@ auth-adapter:
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
     mongo_dsn: mongodb://ghga-mongodb:27017
-    # in-cluster discovery/JWKS/userinfo; the issuer string must match the iss
-    # claim of browser-minted tokens, i.e. the gateway-facing URL of the aai
-    oidc_authority_url: http://ghga-aai:8080/ghga/
-    oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
-    oidc_issuer: http://localhost:30080/ghga
+    # discovery/JWKS/userinfo go THROUGH the gateway (stable envoy service name,
+    # Host rewritten to 'localhost' on the aai route) so the issuer the mock
+    # derives is byte-identical for browser and cluster: http://localhost/ghga
+    oidc_authority_url: http://ghga-gateway/ghga/
+    oidc_userinfo_endpoint: http://ghga-gateway/ghga/userinfo
+    oidc_issuer: http://localhost/ghga
     oidc_client_id: ghga-client
 
 # The user registry / claims / access APIs.
@@ -191,9 +193,9 @@ auth-rest:
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
     mongo_dsn: mongodb://ghga-mongodb:27017
-    oidc_authority_url: http://ghga-aai:8080/ghga/
-    oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
-    oidc_issuer: http://localhost:30080/ghga
+    oidc_authority_url: http://ghga-gateway/ghga/
+    oidc_userinfo_endpoint: http://ghga-gateway/ghga/userinfo
+    oidc_issuer: http://localhost/ghga
     oidc_client_id: ghga-client
     # seed data steward (ADR-0006) — applied by the claims API at startup;
     # log in via the aai with exactly this email-shaped subject
@@ -233,12 +235,12 @@ data-portal:
   ports:
     enabled: true
   config:
-    # browser-facing URLs: everything goes through the gateway NodePort
-    base_url: http://localhost:30080
-    oidc_authority_url: http://localhost:30080/ghga
+    # browser-facing URLs (the kind config maps the gateway to the Mac's port 80)
+    base_url: http://localhost
+    oidc_authority_url: http://localhost/ghga
     oidc_client_id: ghga-client
     oidc_use_discovery: true
-    oidc_account_url: http://localhost:30080/ghga/debugger
+    oidc_account_url: http://localhost/ghga/debugger
 
 # ---- file + metadata path (compose test bed configs, adapted to the demo infra) ----------
 # Common substitutions: kafka -> ghga-kafka:9092, mongodb -> ghga-mongodb, the two
@@ -284,7 +286,7 @@ dcs:
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
     ekss_base_url: http://ghga-ekss:8080
-    drs_server_uri: drs://localhost:30080/
+    drs_server_uri: drs://localhost/
     presigned_url_expires_after: 30
     object_storages:
       primary:
