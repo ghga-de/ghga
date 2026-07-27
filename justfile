@@ -168,3 +168,59 @@ up:
 
 down:
     kind delete cluster --name ghga
+
+# --- Integration testbed (BDD suite in testbed/; ADR-0009) -------------------------------
+# Generate the metldata artifact model from the testbed's example metadata model
+# (DSKit, ADR-aligned: derived artifact, not committed) as a values overlay.
+testbed-artifacts:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd testbed/example_data/metadata
+    rm -rf artifact_models && mkdir artifact_models
+    uv run ghga-datasteward-kit metadata generate-artifact-models --config-path=metadata_config.yaml
+    uv run python ../../../scripts/artifact_values.py
+    rm -rf artifact_models
+
+# Deploy/refresh the demo with the testbed profile (sms, test OP, artifact model).
+testbed-up:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just net-fix
+    kind get clusters 2>/dev/null | grep -qx ghga || kind create cluster --config deploy/kind-config.yaml --wait 120s
+    [ -f deploy/charts/ghga-demo/values-artifacts.yaml ] || just testbed-artifacts
+    just demo-template
+    docker manifest inspect ghga/test-oidc-provider:2.2.0 > /dev/null 2>&1 || true
+    helm upgrade --install ghga deploy/charts/ghga-demo \
+      -f deploy/charts/ghga-demo/values-local.yaml \
+      -f deploy/charts/ghga-demo/values-artifacts.yaml \
+      -f deploy/charts/ghga-demo/values-testbed.yaml \
+      --kube-context kind-ghga --timeout 10m
+
+# One-time: virtualenv for the testbed suite (own requirements; not a workspace member).
+testbed-install:
+    uv venv .venv-testbed --allow-existing
+    VIRTUAL_ENV=$PWD/.venv-testbed uv pip install -r testbed/requirements.txt
+
+# Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
+# Harvests tokens/keys from the cluster secrets, port-forwards mailhog + lox24, runs pytest.
+testbed *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    K="kubectl --context kind-ghga"
+    secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
+    export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
+    export TB_STATE_MANAGEMENT_TOKEN=$(secret ghga-harness-tokens SMS_TOKEN)
+    export TB_PURGE_CONTROLLER_TOKEN=$(secret ghga-harness-tokens PCS_TOKEN)
+    export TB_DLQ_TOKEN=$(secret ghga-harness-tokens DLQS_TOKEN)
+    export TB_UPLOAD_TOKEN=$(secret ghga-harness-tokens METLDATA_TOKEN)
+    printf '%s' "$TB_UPLOAD_TOKEN" > "$HOME/.ghga_data_steward_token.txt"
+    export TB_FIS_PUBKEY=$(secret ghga-c4gh-files crypt4gh\\.pub | sed -n 2p)
+    # per-run test-user crypt4gh keypair (any fresh pair works)
+    eval "$(uv run --quiet --package auth-km-jobs python -c "from auth_km_jobs.c4gh import generate_crypt4gh_key_pair; k = generate_crypt4gh_key_pair(); print(f'export TB_USER_PRIVATE_CRYPT4GH_KEY={k.export_private()}'); print(f'export TB_USER_PUBLIC_CRYPT4GH_KEY={k.export_public()}')")"
+    $K port-forward svc/ghga-mailhog 8025:8025 > /dev/null 2>&1 &
+    PF1=$!
+    $K port-forward svc/ghga-lox24-mock 8080:8080 > /dev/null 2>&1 &
+    PF2=$!
+    trap "kill $PF1 $PF2 2>/dev/null || true" EXIT
+    sleep 2
+    cd testbed && ../.venv-testbed/bin/pytest -v {{args}}

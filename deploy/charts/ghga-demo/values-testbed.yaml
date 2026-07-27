@@ -1,0 +1,50 @@
+# Testbed profile (ADR-0006/0009): layered on top of values-local.yaml —
+#   helm upgrade --install ghga deploy/charts/ghga-demo \
+#     -f values-local.yaml -f values-artifacts.yaml -f values-testbed.yaml
+# Enables the state-management service, deploys the original GHGA test OP
+# (whose POST /login contract the BDD auth fixtures expect), and points the
+# auth stack at it. values-artifacts.yaml (generated, gitignored) carries the
+# metldata artifact model — see `just testbed-artifacts`.
+
+# testbed-only state manipulation API (ADR-0008)
+sms:
+  enabled: true
+
+# the original test OP at the path the testbed expects (/api/op.test);
+# fixed issuer — no request-host coupling like the mock-oauth2 default aai
+test-oidc-provider:
+  enabled: true
+  image:
+    tag: "2.2.0"
+  apiBasePathPrefix: /api
+  apiBasePath: /op.test/
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# auth stack trusts the test OP instead of the aai (in-cluster discovery;
+# issuer is the OP's fixed value, which also determines test user subs)
+auth-adapter:
+  config:
+    oidc_authority_url: http://ghga-test-oidc-provider:8080/
+    oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
+    oidc_issuer: https://test-aai.ghga.dev
+    oidc_client_id: ""
+
+auth-rest:
+  config:
+    oidc_authority_url: http://ghga-test-oidc-provider:8080/
+    oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
+    oidc_issuer: https://test-aai.ghga.dev
+    oidc_client_id: ""

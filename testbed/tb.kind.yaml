@@ -1,0 +1,45 @@
+# Testbed configuration for the kind-in-devcontainer demo cluster (ADR-0009/0017).
+# Use via:  TB_CONFIG_YAML=testbed/tb.kind.yaml  (the `just testbed` recipe does this
+# and supplies the secret-derived TB_* env vars from the cluster).
+#
+# The gateway serves everything on the Mac/VM port 80 with /api/<segment> routes;
+# see deploy/README.md. Tokens and crypt4gh keys come from env (TB_*), harvested
+# from the secret-gen secrets — never from this file.
+
+black_box_mode: true
+
+external_base_url: http://localhost/api
+data_portal_url: http://localhost
+
+# MailHog and the lox24 mock are not gateway-routed; the run recipe port-forwards them
+mail_url: http://localhost:8025
+lox24_mock_url: http://localhost:8080
+
+# route-name deltas vs the legacy compose paths
+dlq_url: dlqs
+wkvs_url: http://localhost/.well-known
+
+# ucs and the auth adapter ARE gateway-routed here (as in the legacy compose envoy);
+# only ekss stays internal (its path falls through to the SPA, which the health
+# check counts as "not found")
+internal_apis:
+  - ekss
+external_apis:
+  - wkvs
+  - dcs
+  - fis
+  - metldata
+  - ars
+  - ums
+  - wps
+  - mass
+  - mail
+  - op
+  - sms
+  - dins
+  - pcs
+  - dlq
+  - rts
+  - rs
+  - ucs
+  - auth_adapter

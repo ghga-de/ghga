@@ -117,6 +117,10 @@ vault:
   ekssRoleId: 9f03d595-c964-441c-a68e-2e1534f2bb56
   ekssSecretId: a3e80b1d-86d3-4c23-85ee-589031ec2cba
 
+# the original GHGA test OP — enabled only by the testbed profile
+test-oidc-provider:
+  enabled: false
+
 aai:
   enabled: true
   # expose the issuer through the gateway at /<issuerId> so browser and cluster
@@ -211,6 +215,11 @@ wkvs:
   envVarsSecret: ghga-wkvs-keys
   config:
     service_instance_id: rest.1
+    # URLs wkvs SERVES to external clients (connector, DSKit): must be
+    # gateway-reachable, not in-cluster names
+    dcs_api_url: http://localhost/api/ga4gh/drs/v1
+    ucs_api_url: http://localhost/api/ucs
+    wps_api_url: http://localhost/api/wps
     storage_aliases:
       primary: http://ghga-minio:9000
       secondary: http://ghga-minio:9000

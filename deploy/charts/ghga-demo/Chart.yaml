@@ -22,6 +22,12 @@ dependencies:
     version: 0.1.0
     repository: file://../aai
     condition: aai.enabled
+  # testbed profile only (values-testbed.yaml): the original GHGA test OP whose
+  # POST /login mints tokens non-interactively — the BDD auth fixtures use it as-is
+  - name: test-oidc-provider
+    version: ">=0.0.0-0"
+    repository: file://../test-oidc-provider
+    condition: test-oidc-provider.enabled
 
   # ---- app charts (generated; grow this list as demo config wiring lands) --------------
   # auth-service deploys twice, as in prod: the ext-authz adapter and the registry

@@ -19,3 +19,4 @@ charts/*/charts/
 # the library chart's vendored bitnami-common dependency stays tracked
 !charts/ghga-common/Chart.lock
 !charts/ghga-common/charts/
+values-artifacts.yaml
