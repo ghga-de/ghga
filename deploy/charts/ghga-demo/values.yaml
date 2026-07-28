@@ -34,19 +34,19 @@ extAuth:
   # HTTPRoutes to protect, by subchart alias — resource names are derived as
   # <release>-<alias>. Prod scopes ext-authz to /api/* — that covers the two auth
   # routes; wkvs (/.well-known) and the data-portal SPA (/) stay unprotected.
+  # session-based APIs only: services doing their own bearer-token auth
+  # (metldata loader, fis, pcs, dlqs, sms) stay OUT of ext-auth — the adapter's
+  # allow-response scrubs Authorization/X-Authorization (empty value = header
+  # removal in envoy), so their tokens would never arrive
   targetRoutes:
     - auth-rest
     - dcs
     - ucs
-    - fis
     - rs
     - wps
-    - pcs
-    - metldata
     - ars
     - mass
     - dins
-    - dlqs
     - rts
   backend:
     # the auth adapter's ext-authz backend (subchart alias + service port)
@@ -626,3 +626,103 @@ sms:
     vault_path: testing
     vault_role_id: 9f03d595-c964-441c-a68e-2e1534f2bb56
     vault_secret_id: a3e80b1d-86d3-4c23-85ee-589031ec2cba
+
+# ---- consumer siblings (event pipeline; same config, consume-events mode) ---------------
+wps-consumer:
+  enabled: true
+  nameOverride: wps-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-wps-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    access_url: http://ghga-auth-rest:8080
+
+mass-consumer:
+  enabled: true
+  nameOverride: mass-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+ars-consumer:
+  enabled: true
+  nameOverride: ars-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-ars-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    download_access_url: http://ghga-auth-rest:8080/download-access
+
+dcs-consumer:
+  enabled: true
+  nameOverride: dcs-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-dcs-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    ekss_base_url: http://ghga-ekss:8080
+    drs_server_uri: drs://localhost/
+    presigned_url_expires_after: 30
+    object_storages:
+      primary:
+        bucket: hub1-outbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+      secondary:
+        bucket: hub2-outbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+
+dins-consumer:
+  enabled: true
+  nameOverride: dins-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+rts-consumer:
+  enabled: true
+  nameOverride: rts-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017

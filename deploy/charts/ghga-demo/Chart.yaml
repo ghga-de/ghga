@@ -91,6 +91,36 @@ dependencies:
     version: ">=0.0.0-0"
     repository: file://../rts
     condition: rts.enabled
+  - name: wps
+    alias: wps-consumer
+    version: ">=0.0.0-0"
+    repository: file://../wps
+    condition: wps-consumer.enabled
+  - name: mass
+    alias: mass-consumer
+    version: ">=0.0.0-0"
+    repository: file://../mass
+    condition: mass-consumer.enabled
+  - name: ars
+    alias: ars-consumer
+    version: ">=0.0.0-0"
+    repository: file://../ars
+    condition: ars-consumer.enabled
+  - name: dcs
+    alias: dcs-consumer
+    version: ">=0.0.0-0"
+    repository: file://../dcs
+    condition: dcs-consumer.enabled
+  - name: dins
+    alias: dins-consumer
+    version: ">=0.0.0-0"
+    repository: file://../dins
+    condition: dins-consumer.enabled
+  - name: rts
+    alias: rts-consumer
+    version: ">=0.0.0-0"
+    repository: file://../rts
+    condition: rts-consumer.enabled
   - name: ars
     version: ">=0.0.0-0"
     repository: file://../ars

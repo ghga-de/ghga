@@ -257,3 +257,69 @@ secretGen:
     limits:
       cpu: 750m
       memory: 768Mi
+wps-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+mass-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+ars-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+dcs-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+dins-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+rts-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
