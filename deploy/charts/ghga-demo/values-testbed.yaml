@@ -29,6 +29,11 @@ test-oidc-provider:
   config:
     # the issuer the testbed's sub-derivation and the auth stack expect
     issuer: https://test-aai.ghga.dev
+    # the browser flow: the provider validates the client's redirect URI and
+    # answers CORS preflights from the portal's origin
+    redirect_url: http://localhost/oauth/callback
+    cors_allowed_origins:
+      - http://localhost
   resources:
     requests:
       cpu: 50m
