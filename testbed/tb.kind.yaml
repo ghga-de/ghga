@@ -78,3 +78,15 @@ rts_db_name: reverse-transpiler
 ucs_db_name: upload-controller
 rs_db_name: registry
 nos_db_name: notification-orchestration
+
+# The wildcard wipe also drops each service's migration bookkeeping (the
+# *DbVersions collections). That is harmless while the services keep running,
+# but a pod restarting AFTER a wipe re-runs its migrations over data that is
+# already migrated and crash-loops. If that happens, drop the affected database
+# and restart the service (it migrates and re-seeds from scratch):
+#   kubectl exec deploy/ghga-mongodb -- mongosh --quiet \
+#     --eval 'db.getSiblingDB("auth-service").dropDatabase()'
+#   kubectl rollout restart deploy/ghga-auth-adapter deploy/ghga-auth-rest \
+#     deploy/ghga-auth-claims deploy/ghga-nos
+# (preserving the bookkeeping across the wipe is not possible through the state
+# manager: it cannot serialize those documents and answers 500 for them)
