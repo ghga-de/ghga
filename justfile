@@ -115,7 +115,7 @@ image target:
 # trims the build cache as it goes: `kind load` copies into the node's containerd,
 # so holding the docker copy doubles the footprint for no gain on a one-shot runner.
 # Locally the default keeps both — rebuilds are far faster off the warm cache.
-demo-images reclaim="false":
+demo-images reclaim="false": cluster
     #!/usr/bin/env bash
     set -euo pipefail
     python3 scripts/image_members.py | python3 -c "
@@ -163,11 +163,19 @@ net-fix:
 
 # Bring up (or update) the self-contained demo: cluster + charts. Build/load images
 # first with `just demo-images` (slow the first time; app pods crashloop until loaded).
-up:
+# Create the kind cluster if it isn't there yet (idempotent). Everything that loads
+# images into the node or installs into it depends on this: `kind load` fails with
+# "no nodes found for cluster" when the cluster is missing — easy to miss locally,
+# where a cluster is nearly always already up, and fatal in CI, where it never is.
+cluster:
     #!/usr/bin/env bash
     set -euo pipefail
     just net-fix
     kind get clusters 2>/dev/null | grep -qx ghga || kind create cluster --config deploy/kind-config.yaml --wait 120s
+
+up: cluster
+    #!/usr/bin/env bash
+    set -euo pipefail
     just demo-template
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
@@ -190,11 +198,9 @@ testbed-artifacts:
     rm -rf artifact_models
 
 # Deploy/refresh the demo with the testbed profile (sms, test OP, artifact model).
-testbed-up:
+testbed-up: cluster
     #!/usr/bin/env bash
     set -euo pipefail
-    just net-fix
-    kind get clusters 2>/dev/null | grep -qx ghga || kind create cluster --config deploy/kind-config.yaml --wait 120s
     [ -f deploy/charts/ghga-demo/values-artifacts.yaml ] || just testbed-artifacts
     just demo-template
     docker manifest inspect ghga/test-oidc-provider:2.2.0 > /dev/null 2>&1 || true

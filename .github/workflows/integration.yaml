@@ -71,6 +71,12 @@ jobs:
           just testbed-install
           sudo "$PWD/.venv-testbed/bin/playwright" install-deps chromium
 
+      # Images are loaded into the node, so the cluster has to exist first. The
+      # recipes depend on `cluster` themselves; this step just gives cluster
+      # creation its own boundary in the log, and is a no-op once it is up.
+      - name: Create the kind cluster
+        run: just cluster
+
       # No published image tags exist to fall back on yet, so every member is built
       # here. Once the release workflow publishes them, this should build only the
       # affected members (scripts/affected_targets.py) and pull the rest — that change
@@ -88,8 +94,12 @@ jobs:
 
       - name: Cluster state on failure
         if: failure()
+        # diagnostics must not add a second red step when they can't run — e.g. a
+        # failure before the cluster exists
+        continue-on-error: true
         run: |
           K="kubectl --context kind-ghga"
+          kubectl config current-context > /dev/null 2>&1 || { echo "no cluster"; exit 0; }
           echo "::group::pods"; $K get pods -o wide; echo "::endgroup::"
           echo "::group::events"; $K get events --sort-by=.lastTimestamp | tail -60; echo "::endgroup::"
           for p in $($K get pods -o name); do
