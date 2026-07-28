@@ -73,7 +73,10 @@ auth-claims:
         name: Data Steward
         email: data.steward@home.org
         iva_type: Phone
-        iva_value: "+4915112345678"
+        # deliberately the same number the suite gives its test user: one of its
+        # steps keeps only IVAs with that value, so a different one would delete
+        # the steward's and leave the portal's profile page empty
+        iva_value: "+491710000001"
 
 # The suite asserts the exact search options; use the test bed's facet
 # configuration (from the compose environment) rather than the prod one.
