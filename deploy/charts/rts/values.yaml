@@ -136,8 +136,12 @@ resources:
     cpu: "1000m"
     memory: "1024M"
 
-extraVolumes: []
-extraVolumeMounts: []
+extraVolumes:
+- name: tmp
+  emptyDir: {}
+extraVolumeMounts:
+- name: tmp
+  mountPath: /tmp
 sidecars: []
 envVars: []
 envVarsConfigMap: ""
@@ -190,6 +194,9 @@ _topics:
     kafkaUser:
       operations:
       - Read
+
+# openpyxl serializes spreadsheets via NamedTemporaryFile: the hardened image
+# runs with a read-only root filesystem, so provide a writable /tmp
 _consumerGroup:
   operations:
   - Read

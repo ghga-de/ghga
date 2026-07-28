@@ -71,3 +71,12 @@ _topics:
     kafkaUser:
       operations:
       - Read
+
+# openpyxl serializes spreadsheets via NamedTemporaryFile: the hardened image
+# runs with a read-only root filesystem, so provide a writable /tmp
+extraVolumes:
+  - name: tmp
+    emptyDir: {}
+extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
