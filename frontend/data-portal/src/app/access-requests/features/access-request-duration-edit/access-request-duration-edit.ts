@@ -8,6 +8,7 @@ import { DatePipe as CommonDatePipe } from '@angular/common';
 import {
   Component,
   computed,
+  effect,
   inject,
   input,
   OnInit,
@@ -30,6 +31,16 @@ import {
   DEFAULT_TIME_ZONE,
   localDateToContractIsoUtc,
 } from '@app/shared/utils/date-formats';
+
+/**
+ * Compare two nullable dates by their point in time, not by object identity.
+ * @param a - the first date
+ * @param b - the second date
+ * @returns true if both are null or both denote the same point in time
+ */
+function isSameTime(a: Date | null, b: Date | null): boolean {
+  return a === b || (a !== null && b !== null && a.getTime() === b.getTime());
+}
 
 /**
  * Editor for the duration of access requests.
@@ -64,7 +75,6 @@ export class AccessRequestDurationEditComponent implements OnInit {
   edited = output<[keyof AccessRequest, boolean]>();
 
   isOpen = signal<boolean>(false);
-  isModified = signal<boolean>(false);
 
   todayStart = new Date();
   todayEnd = new Date();
@@ -127,6 +137,18 @@ export class AccessRequestDurationEditComponent implements OnInit {
   protected untilDateError = computed(
     () => this.durationForm.untilDate().errors()[0]?.message ?? null,
   );
+
+  isModified = computed<boolean>(
+    () =>
+      this.isOpen() &&
+      (!isSameTime(this.formModel().fromDate, this.#defaultFromDate()) ||
+        !isSameTime(this.formModel().untilDate, this.#defaultUntilDate())),
+  );
+
+  /**
+   * Notify the parent whenever the pending-edit state of the duration changes.
+   */
+  #editedEffect = effect(() => this.edited.emit(['access_ends', this.isModified()]));
 
   constructor() {
     this.todayStart.setHours(0, 0, 0, 0);
@@ -207,23 +229,17 @@ export class AccessRequestDurationEditComponent implements OnInit {
         this.updateAccessStartRanges(selectedLocalDate);
         this.formModel.update((m) => ({ ...m, untilDate: selectedLocalDate }));
       }
-      this.changed();
     } else {
-      this.formModel.update((m) => ({ ...m, fromDate: this.#defaultFromDate() }));
-      this.changed();
+      // the date was cleared, so restore the default of the edited field
+      this.formModel.update((m) =>
+        isFromDate
+          ? { ...m, fromDate: this.#defaultFromDate() }
+          : { ...m, untilDate: this.#defaultUntilDate() },
+      );
     }
   };
 
   saveDisabled = computed<boolean>(() => !this.durationForm().valid());
-
-  changed = () => {
-    const wasModified = this.isModified();
-    const isModified = this.formModel().fromDate !== this.#defaultFromDate();
-    if (isModified !== wasModified) {
-      this.isModified.set(isModified);
-      this.edited.emit(['access_ends', isModified]);
-    }
-  };
 
   cancel = () => {
     if (this.isModified()) {
@@ -231,24 +247,18 @@ export class AccessRequestDurationEditComponent implements OnInit {
         fromDate: this.#defaultFromDate(),
         untilDate: this.#defaultUntilDate(),
       });
-      this.edited.emit(['access_ends', false]);
     }
     this.isOpen.set(false);
   };
 
   save = () => {
-    const { fromDate: selectedFrom, untilDate: selectedUntil } = this.formModel();
-    if (selectedFrom && selectedUntil) {
-      const fromISO = localDateToContractIsoUtc(selectedFrom);
-      const untilISO = localDateToContractIsoUtc(selectedUntil, true);
-      if (this.isModified()) {
-        const saveMap = new Map<keyof AccessRequest, string>();
-        saveMap.set('access_starts', fromISO);
-        saveMap.set('access_ends', untilISO);
-        this.saved.emit(saveMap);
-        this.edited.emit(['access_ends', false]);
-      }
-      this.isOpen.set(false);
+    const { fromDate, untilDate } = this.formModel();
+    if (fromDate && untilDate && this.isModified()) {
+      const saveMap = new Map<keyof AccessRequest, string>();
+      saveMap.set('access_starts', localDateToContractIsoUtc(fromDate));
+      saveMap.set('access_ends', localDateToContractIsoUtc(untilDate, true));
+      this.saved.emit(saveMap);
     }
+    this.isOpen.set(false);
   };
 }

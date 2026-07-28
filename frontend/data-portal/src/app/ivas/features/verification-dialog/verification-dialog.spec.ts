@@ -71,29 +71,41 @@ describe('VerificationDialogComponent', () => {
     vitest.useRealTimers();
   });
 
+  /**
+   * Enter the given text into the rendered code input, like a user would.
+   * @param text - the raw text to enter
+   * @returns the code input element, after the form has settled
+   */
+  async function enterCode(text: string): Promise<HTMLInputElement> {
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    return input;
+  }
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should sanitize input and auto-submit only on the first attempt', () => {
+  it('should sanitize input and auto-submit only on the first attempt', async () => {
     const onSubmitSpy = vitest
       .spyOn(component, 'onSubmit')
       .mockResolvedValue(undefined);
-    const inputElement = document.createElement('input');
-    inputElement.value = 'ab-12!c3';
 
-    component.onInput({ target: inputElement } as unknown as Event);
+    const inputElement = await enterCode('ab-12!c3');
 
     expect(inputElement.value).toBe('AB12C3');
+    expect(
+      (component as unknown as VerificationDialogInternals).codeForm.code().value(),
+    ).toBe('AB12C3');
     expect(onSubmitSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('should clear verification error when user types', () => {
-    const inputElement = document.createElement('input');
-    inputElement.value = 'abc12';
+  it('should clear verification error when user types', async () => {
     (component as unknown as VerificationDialogInternals).verificationError.set(true);
 
-    component.onInput({ target: inputElement } as unknown as Event);
+    await enterCode('abc12');
 
     expect(
       (component as unknown as VerificationDialogInternals).verificationError(),
@@ -130,10 +142,8 @@ describe('VerificationDialogComponent', () => {
     const onSubmitSpy = vitest
       .spyOn(component, 'onSubmit')
       .mockResolvedValue(undefined);
-    const inputElement = document.createElement('input');
-    inputElement.value = 'DEF456';
 
-    component.onInput({ target: inputElement } as unknown as Event);
+    await enterCode('DEF456');
 
     expect(onSubmitSpy).not.toHaveBeenCalled();
   });
