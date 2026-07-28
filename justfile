@@ -111,7 +111,11 @@ image target:
     fi
 
 # Build every image member and load them into the kind cluster.
-demo-images:
+# `reclaim=true` (CI) drops each image from the docker store once it is loaded and
+# trims the build cache as it goes: `kind load` copies into the node's containerd,
+# so holding the docker copy doubles the footprint for no gain on a one-shot runner.
+# Locally the default keeps both — rebuilds are far faster off the warm cache.
+demo-images reclaim="false":
     #!/usr/bin/env bash
     set -euo pipefail
     python3 scripts/image_members.py | python3 -c "
@@ -128,6 +132,10 @@ demo-images:
             name=$(python3 -c "import json; print(json.load(open('$path/package.json'))['name'])")
         fi
         kind load docker-image --name ghga "ghcr.io/ghga-de/ghga/$name:local"
+        if [ "{{reclaim}}" = "true" ]; then
+            docker image rm "ghcr.io/ghga-de/ghga/$name:local" > /dev/null
+            docker builder prune -f --keep-storage 4GB > /dev/null
+        fi
     done
 
 # Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
@@ -197,9 +205,12 @@ testbed-up:
       --kube-context kind-ghga --timeout 10m
 
 # One-time: virtualenv for the testbed suite (own requirements; not a workspace member).
+# The UI phase drives a real browser, so the matching chromium build comes with it
+# (playwright pins the build to the library version; a system chromium won't do).
 testbed-install:
     uv venv .venv-testbed --allow-existing --python 3.12  # 3.13 breaks the pinned linkml (typing.re)
     VIRTUAL_ENV=$PWD/.venv-testbed uv pip install -r testbed/requirements.txt
+    .venv-testbed/bin/playwright install chromium
 
 # Make the in-cluster MinIO name resolve locally: services hand the connector
 # pre-signed S3 URLs built from s3_endpoint_url, and those signatures are bound to
