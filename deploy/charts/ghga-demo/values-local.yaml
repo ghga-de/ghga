@@ -323,3 +323,36 @@ rts-consumer:
       cpu: 750m
       memory: 768Mi
 
+rs-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+ucs-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+fis-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+

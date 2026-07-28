@@ -116,6 +116,21 @@ dependencies:
     version: ">=0.0.0-0"
     repository: file://../dins
     condition: dins-consumer.enabled
+  - name: rs
+    alias: rs-consumer
+    version: ">=0.0.0-0"
+    repository: file://../rs
+    condition: rs-consumer.enabled
+  - name: ucs
+    alias: ucs-consumer
+    version: ">=0.0.0-0"
+    repository: file://../ucs
+    condition: ucs-consumer.enabled
+  - name: fis
+    alias: fis-consumer
+    version: ">=0.0.0-0"
+    repository: file://../fis
+    condition: fis-consumer.enabled
   - name: rts
     alias: rts-consumer
     version: ">=0.0.0-0"

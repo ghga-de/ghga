@@ -159,9 +159,18 @@ def lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
 
     # The box version is a counter that advances oncevery upload and delete,
     # it can diverge from the uploaded-file count (see the interrupted-upload scenario).
-    # Read the live version from the server instead of assuming version
-    box = fixtures.http.get(url, headers=headers).json()
-    version = box["version"]
+    # Read the live version from the server instead of assuming version.
+    # The registry learns about uploads from events, so wait until its view has
+    # caught up (the version stops advancing) before locking — otherwise the
+    # lock is rejected with an out-of-date file upload box version.
+    version = None
+    for _ in range(30):
+        box = fixtures.http.get(url, headers=headers).json()
+        if box["version"] == version:
+            break
+        version = box["version"]
+        time.sleep(1)
+    assert version is not None
     rdub["version"] = version
     fixtures.state.set_state(f"rdub_{storage_name}", rdub)
 
