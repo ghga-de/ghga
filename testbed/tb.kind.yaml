@@ -90,3 +90,8 @@ nos_db_name: notification-orchestration
 #     deploy/ghga-auth-claims deploy/ghga-nos
 # (preserving the bookkeeping across the wipe is not possible through the state
 # manager: it cannot serialize those documents and answers 500 for them)
+
+# Event type names as the current services publish and consume them (the
+# suite's default predates the rename dataset_upserted -> dataset_created);
+# without this the DLQ test's synthetic event is ignored rather than rejected
+dataset_upserted_type: dataset_created
