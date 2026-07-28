@@ -46,7 +46,10 @@ spec:
         {{- include "ghga-common.vaultAgentAnnotations" . | nindent 8 }}
         {{- end }}
         {{- end }}
-        helm.sh/revision: {{ .Release.Revision | quote }}
+        {{- /* NB: no helm.sh/revision here — stamping the release revision into the
+             pod template rolls EVERY deployment on EVERY upgrade, which combined
+             with startup migrations makes unrelated upgrades disruptive. The
+             configmap-hash annotation already restarts pods whose config changed. */}}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
         app: {{ include "common.names.fullname" . }}
         {{- if .Values.podLabels }}
