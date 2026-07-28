@@ -38,7 +38,6 @@ INTERVAL = 0.1  # interval for retrying database operations in seconds
 EXTENDED_ID_FIELDS = ["_id", "user_id", "iva_id"]
 
 
-
 class MongoFixture(StateManager):
     """Fixture for managing MongoDB resources."""
 
