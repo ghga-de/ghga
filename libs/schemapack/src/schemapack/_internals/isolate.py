@@ -205,10 +205,9 @@ def isolate_resource(
         include_target=True,
     )
     rooted_datapack = downscope_datapack(datapack=datapack, resource_map=dependency_map)
-    rooted_datapack = rooted_datapack.model_copy(
+    return rooted_datapack.model_copy(
         update={"rootResource": resource_id, "rootClass": class_name}
     )
-    return rooted_datapack
 
 
 def identify_class_dependencies(
