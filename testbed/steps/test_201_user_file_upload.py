@@ -67,6 +67,19 @@ def create_work_package(full_name: str, fixtures: JointFixture, storage_name: st
     return fixtures.http.post(url, headers=headers, json=data)
 
 
+def _as_list(payload):
+    """Return the item list of a response that may be paginated.
+
+    List endpoints answer {"items": [...], "total_count": n} now; older
+    versions returned a bare list.
+    """
+    if isinstance(payload, dict):
+        for key in ("items", "uploads", "results"):
+            if key in payload:
+                return payload[key]
+    return payload
+
+
 @then(parse('the response contains an upload token for "{storage_name}" storage'))
 def check_upload_token(fixtures: JointFixture, response: Response, storage_name: str):
     """Check that the response contains an upload token and save it in the state."""
@@ -115,7 +128,7 @@ def check_uploaded_files_in_storage(
     """
     storage_config = fixtures.s3.get_storage_config(storage_name)
     bucket_id = getattr(storage_config.buckets, bucket)
-    uploaded_files = response.json()
+    uploaded_files = _as_list(response.json())
     for file_upload in uploaded_files:
         assert "object_id" in file_upload
         object_id = str(file_upload["object_id"])
@@ -231,7 +244,7 @@ def check_uploaded_file_state(
     uploaded = fixtures.state.get_state("last_uploaded_files") or []
     assert uploaded, "No uploaded file was recorded"
     object_id = uploaded[-1]["object_id"]
-    uploads = response.json()
+    uploads = _as_list(response.json())
     matching = [upload for upload in uploads if str(upload.get("alias")) == object_id]
     assert matching, f"Uploaded file {object_id!r} not found in uploads: {uploads}"
     states = {upload.get("state") for upload in matching}
@@ -304,7 +317,9 @@ def check_uploaded_files_states(
     uploaded = fixtures.state.get_state("last_uploaded_files") or []
     assert len(uploaded) >= 2, "Expected at least the two uploaded files in state"
     allowed = {first_state, second_state}
-    alias_to_record = {str(upload.get("alias")): upload for upload in response.json()}
+    alias_to_record = {
+        str(upload.get("alias")): upload for upload in _as_list(response.json())
+    }
     for file in uploaded:
         object_id = file["object_id"]
         record = alias_to_record.get(object_id)
