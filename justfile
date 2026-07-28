@@ -201,8 +201,18 @@ testbed-install:
     uv venv .venv-testbed --allow-existing --python 3.12  # 3.13 breaks the pinned linkml (typing.re)
     VIRTUAL_ENV=$PWD/.venv-testbed uv pip install -r testbed/requirements.txt
 
+# Make the in-cluster MinIO name resolve locally: services hand the connector
+# pre-signed S3 URLs built from s3_endpoint_url, and those signatures are bound to
+# that exact host — so the name must resolve both in-cluster and here.
+testbed-hosts:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    grep -q "ghga-minio" /etc/hosts || echo "127.0.0.1 ghga-minio" | sudo tee -a /etc/hosts > /dev/null
+    echo "ghga-minio resolves locally"
+
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
-# Harvests tokens/keys from the cluster secrets, port-forwards mailhog + lox24, runs pytest.
+# Harvests tokens/keys from the cluster secrets, port-forwards the services the suite
+# and the connector reach directly (mailhog, lox24, minio), runs pytest.
 testbed *args:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -224,6 +234,9 @@ testbed *args:
     PF1=$!
     $K port-forward svc/ghga-lox24-mock 8080:8080 > /dev/null 2>&1 &
     PF2=$!
-    trap "kill $PF1 $PF2 2>/dev/null || true" EXIT
+    just testbed-hosts
+    $K port-forward svc/ghga-minio 9000:9000 > /dev/null 2>&1 &
+    PF3=$!
+    trap "kill $PF1 $PF2 $PF3 2>/dev/null || true" EXIT
     sleep 2
     cd testbed && ../.venv-testbed/bin/pytest -v {{args}}
