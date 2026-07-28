@@ -336,6 +336,7 @@ ekss:
       readOnly: true
 
 dcs:
+  serviceName: dcs
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-dcs-keys
@@ -368,6 +369,7 @@ dcs:
           s3_secret_access_key: demo-secret-key
 
 ucs:
+  serviceName: ucs
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-ucs-keys
@@ -397,6 +399,7 @@ ucs:
           s3_secret_access_key: demo-secret-key
 
 fis:
+  serviceName: fis
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-fis-keys
@@ -457,6 +460,7 @@ pcs:
     mongo_dsn: mongodb://ghga-mongodb:27017
 
 wps:
+  serviceName: wps
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-wps-keys
@@ -474,6 +478,7 @@ wps:
     access_url: http://ghga-auth-claims:8080
 
 rs:
+  serviceName: rs
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-rs-keys
@@ -513,6 +518,7 @@ metldata:
 # ---- access / metadata / notification path ----------------------------------------------
 
 rts:
+  serviceName: rts
   enabled: true
   apiBasePathPrefix: /api
   httpRoute:
@@ -529,6 +535,7 @@ rts:
 
 
 ars:
+  serviceName: ars
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-ars-keys
@@ -546,6 +553,7 @@ ars:
     download_access_url: http://ghga-auth-claims:8080/download-access
 
 mass:
+  serviceName: mass
   enabled: true
   apiBasePathPrefix: /api
   httpRoute:
@@ -561,6 +569,7 @@ mass:
     mongo_dsn: mongodb://ghga-mongodb:27017
 
 dins:
+  serviceName: dins
   enabled: true
   apiBasePathPrefix: /api
   httpRoute:
@@ -577,6 +586,7 @@ dins:
 
 # consumers only — no routes
 ns:
+  serviceName: ns
   enabled: true
   # consumer only: no ports -> no Service (an empty Service is invalid)
   service:
@@ -599,6 +609,7 @@ ns:
     lox24_token: demo-lox24-token
 
 nos:
+  serviceName: nos
   enabled: true
   # consumer only: no ports -> no Service (an empty Service is invalid)
   service:
@@ -612,6 +623,7 @@ nos:
     helpdesk_email: helpdesk@test.dev
 
 dlqs:
+  serviceName: dlqs
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-dlqs-keys
@@ -671,6 +683,7 @@ sms:
 
 # ---- consumer siblings (event pipeline; same config, consume-events mode) ---------------
 wps-consumer:
+  serviceName: wps
   enabled: true
   nameOverride: wps-consumer
   executableArgs:
@@ -686,6 +699,7 @@ wps-consumer:
     access_url: http://ghga-auth-claims:8080
 
 mass-consumer:
+  serviceName: mass
   enabled: true
   nameOverride: mass-consumer
   executableArgs:
@@ -699,6 +713,7 @@ mass-consumer:
     mongo_dsn: mongodb://ghga-mongodb:27017
 
 ars-consumer:
+  serviceName: ars
   enabled: true
   nameOverride: ars-consumer
   executableArgs:
@@ -714,6 +729,7 @@ ars-consumer:
     download_access_url: http://ghga-auth-claims:8080/download-access
 
 dcs-consumer:
+  serviceName: dcs
   enabled: true
   nameOverride: dcs-consumer
   executableArgs:
@@ -744,6 +760,7 @@ dcs-consumer:
           s3_secret_access_key: demo-secret-key
 
 dins-consumer:
+  serviceName: dins
   enabled: true
   nameOverride: dins-consumer
   executableArgs:
@@ -757,6 +774,7 @@ dins-consumer:
     mongo_dsn: mongodb://ghga-mongodb:27017
 
 rts-consumer:
+  serviceName: rts
   enabled: true
   nameOverride: rts-consumer
   executableArgs:
@@ -771,6 +789,7 @@ rts-consumer:
 
 # ---- consumer siblings for the upload path (rs/ucs/fis track box state via events) ----
 rs-consumer:
+  serviceName: rs
   enabled: true
   nameOverride: rs-consumer
   executableArgs:
@@ -787,6 +806,7 @@ rs-consumer:
     ucs_url: http://ghga-ucs:8080
 
 ucs-consumer:
+  serviceName: ucs
   enabled: true
   nameOverride: ucs-consumer
   executableArgs:
@@ -814,6 +834,7 @@ ucs-consumer:
           s3_secret_access_key: demo-secret-key
 
 fis-consumer:
+  serviceName: fis
   enabled: true
   nameOverride: fis-consumer
   executableArgs:
@@ -876,3 +897,18 @@ dhfs-secondary:
     s3_secret_access_key: demo-secret-key
     data_hub_crypt4gh_private_key_path: /keys/crypt4gh.sec
     interrogation_bucket_id: hub2-interrogations
+
+dlqs-consumer:
+  serviceName: dlqs
+  enabled: true
+  nameOverride: dlqs-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-dlqs-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017

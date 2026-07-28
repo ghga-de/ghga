@@ -220,15 +220,19 @@ testbed-reset:
     set -euo pipefail
     K="kubectl --context kind-ghga"
     MPOD=$($K get pods -o name | grep mongodb | head -1)
+    # Drop every service database: the suite's clean slate removes the migration
+    # bookkeeping, so a service restarting afterwards would re-run migrations over
+    # already-migrated data and crash-loop. Starting from empty avoids that.
     $K exec "$MPOD" -- mongosh --quiet --eval \
-      'db.getSiblingDB("auth-service").dropDatabase(); db.getSiblingDB("notification-orchestration").dropDatabase()' > /dev/null
-    $K rollout restart deploy/ghga-auth-adapter deploy/ghga-auth-rest \
-      deploy/ghga-auth-claims deploy/ghga-nos > /dev/null
-    for d in ghga-auth-adapter ghga-auth-rest ghga-auth-claims ghga-nos; do
-        $K rollout status "deploy/$d" --timeout=180s > /dev/null
-    done
-    sleep 15
-    echo "identity state reset (steward re-seeded, projections rebuilt)"
+      'db.adminCommand({listDatabases:1}).databases
+         .map(d => d.name)
+         .filter(n => !["admin","config","local"].includes(n))
+         .forEach(n => db.getSiblingDB(n).dropDatabase())' > /dev/null
+    apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailhog|lox24|test-oidc|aai")
+    echo "$apps" | xargs -r -n1 $K rollout restart > /dev/null
+    for d in $apps; do $K rollout status "$d" --timeout=240s > /dev/null; done
+    sleep 20
+    echo "state reset (databases empty, services re-migrated and re-seeded)"
 
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
 # Harvests tokens/keys from the cluster secrets, port-forwards the services the suite

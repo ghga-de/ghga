@@ -378,3 +378,14 @@ dhfs-secondary:
       cpu: 750m
       memory: 768Mi
 
+dlqs-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+

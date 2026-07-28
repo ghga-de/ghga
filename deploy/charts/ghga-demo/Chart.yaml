@@ -172,6 +172,12 @@ dependencies:
     version: ">=0.0.0-0"
     repository: file://../dlqs
     condition: dlqs.enabled
+  # consumes the dead-letter topic and stores the events for inspection
+  - name: dlqs
+    alias: dlqs-consumer
+    version: ">=0.0.0-0"
+    repository: file://../dlqs
+    condition: dlqs-consumer.enabled
   - name: sms
     version: ">=0.0.0-0"
     repository: file://../sms
