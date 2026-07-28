@@ -193,7 +193,11 @@ auth-rest:
   ports:
     enabled: true
   config:
-    provide_apis: ["users", "access"]
+    # users API only: the access API lives with the claims API on the internal
+    # instance, so exactly ONE instance seeds the data steward (two instances
+    # seeding concurrently on an empty database each create their own user for
+    # the same external ID)
+    provide_apis: ["users"]
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
     mongo_dsn: mongodb://ghga-mongodb:27017
@@ -201,14 +205,6 @@ auth-rest:
     oidc_userinfo_endpoint: http://ghga-gateway/ghga/userinfo
     oidc_issuer: http://localhost/ghga
     oidc_client_id: ghga-client
-    # seeding also runs here (the access API triggers it): keep the list
-    # identical to auth-claims so start order cannot un-seed the steward
-    add_as_data_stewards:
-      - ext_id: data.steward@ghga.dev
-        name: Data Steward
-        email: data.steward@ghga.dev
-        iva_type: Phone
-        iva_value: "+4915112345678"
 
 # The claims repository API: deliberately NOT gateway-routed (prod topology —
 # the testbed asserts /users/{id}/claims is unreachable from outside). Owns the
@@ -220,7 +216,7 @@ auth-claims:
   ports:
     enabled: true
   config:
-    provide_apis: ["claims"]
+    provide_apis: ["claims", "access"]
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
     mongo_dsn: mongodb://ghga-mongodb:27017
@@ -438,7 +434,7 @@ wps:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    access_url: http://ghga-auth-rest:8080
+    access_url: http://ghga-auth-claims:8080
 
 rs:
   enabled: true
@@ -455,7 +451,7 @@ rs:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    access_url: http://ghga-auth-rest:8080
+    access_url: http://ghga-auth-claims:8080
     ucs_url: http://ghga-ucs:8080
 
 metldata:
@@ -510,7 +506,7 @@ ars:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    download_access_url: http://ghga-auth-rest:8080/download-access
+    download_access_url: http://ghga-auth-claims:8080/download-access
 
 mass:
   enabled: true
@@ -650,7 +646,7 @@ wps-consumer:
     kafka_servers:
     - ghga-kafka:9092
     mongo_dsn: mongodb://ghga-mongodb:27017
-    access_url: http://ghga-auth-rest:8080
+    access_url: http://ghga-auth-claims:8080
 
 mass-consumer:
   enabled: true
@@ -678,7 +674,7 @@ ars-consumer:
     kafka_servers:
     - ghga-kafka:9092
     mongo_dsn: mongodb://ghga-mongodb:27017
-    download_access_url: http://ghga-auth-rest:8080/download-access
+    download_access_url: http://ghga-auth-claims:8080/download-access
 
 dcs-consumer:
   enabled: true
