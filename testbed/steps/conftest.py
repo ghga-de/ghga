@@ -314,8 +314,9 @@ def check_item_count_in_response(count: int, response: Response):
         check_item_count_in_list(count=count, results=results)
 
     if isinstance(results, dict):
-        # Handle paginated responses like {'count': 0, 'boxes': []}
-        for key in ("boxes", "results", "hits"):
+        # Handle paginated responses like {'count': 0, 'boxes': []} or the
+        # current {'total_count': 0, 'items': []} shape
+        for key in ("boxes", "results", "hits", "items"):
             if key in results:
                 results = results[key]
                 break
