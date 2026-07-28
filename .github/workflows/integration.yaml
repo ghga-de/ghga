@@ -6,9 +6,9 @@
 # Playwright suite against it. This is what keeps HEAD always integrated.
 #
 # No secrets are needed: the chart's secret-gen hook mints the whole key family
-# in-cluster and the test OP stands in for the identity provider. That is why this
-# gate also produces a real verdict on pull requests from forks, where secrets are
-# withheld.
+# in-cluster and the test OP stands in for the identity provider — so once this
+# does run on pull requests, it will give a real verdict even on those from forks,
+# where secrets are withheld.
 #
 # Runner sizing is the open question this workflow exists to answer empirically.
 # Measured locally, the platform needs ~17 GB of disk before a single test runs:
@@ -18,11 +18,12 @@
 # suffices or we move to self-hosted.
 name: integration
 
+# Manual-run only while the runner question is open. To make it a gate, add:
+#   pull_request:
+#   push:
+#     branches: [main]
 on:
   workflow_dispatch:
-  pull_request:
-  push:
-    branches: [main]
 
 concurrency:
   group: integration-${{ github.ref }}
