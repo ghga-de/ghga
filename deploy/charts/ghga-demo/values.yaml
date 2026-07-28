@@ -555,9 +555,9 @@ ns:
     smtp_host: ghga-mailhog
     smtp_port: 1025
     use_starttls: false
-    from_address: central@ghga.dev
+    from_address: central@test.dev
     smtp_auth:
-      username: central@ghga.dev
+      username: central@test.dev
       password: demo
     lox24_base_url: http://ghga-lox24-mock:8080
     lox24_send_sms_path: sms
@@ -574,8 +574,9 @@ nos:
     service_instance_id: consumer.1
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    central_data_stewardship_email: central@ghga.dev
-    helpdesk_email: helpdesk@ghga.dev
+    # the addresses the test bed (and its fixtures) expect
+    central_data_stewardship_email: central@test.dev
+    helpdesk_email: helpdesk@test.dev
 
 dlqs:
   enabled: true

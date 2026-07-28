@@ -44,6 +44,8 @@ test-oidc-provider:
 # issuer is the OP's fixed value, which also determines test user subs)
 auth-adapter:
   config:
+    # the suite tests deactivation after 3 failed TOTP attempts
+    totp_max_failed_attempts: 3
     oidc_authority_url: http://ghga-test-oidc-provider:8080/
     oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
     oidc_issuer: https://test-aai.ghga.dev

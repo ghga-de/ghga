@@ -37,6 +37,27 @@ TIMEOUT = 10  # timeout for database operations in seconds
 INTERVAL = 0.1  # interval for retrying database operations in seconds
 EXTENDED_ID_FIELDS = ["_id", "user_id", "iva_id"]
 
+# Migration bookkeeping per database: a wildcard wipe would drop these too, and
+# the next service start would then re-run migrations over data that is already
+# migrated (which fails, e.g. re-parsing UUID fields that are UUIDs already).
+# The names come from each member's chart-values db_version_collection.
+DB_VERSION_COLLECTIONS = {
+    "access-request": "arsDbVersions",
+    "auth-service": "authDbVersions",
+    "dataset-information": "dinsDbVersions",
+    "dlqs": "dlqsDbVersions",
+    "download-controller": "dcsDbVersions",
+    "file-ingest": "fisDbVersions",
+    "internal-file-registry": "ifrsDbVersions",
+    "notification": "nsDbVersions",
+    "notification-orchestration": "nosDbVersions",
+    "purge-controller": "pcsDbVersions",
+    "registry": "rsDbVersions",
+    "reverse-transpiler": "rtsDbVersions",
+    "upload-controller": "ucsDbVersions",
+    "work-package": "wpsDbVersions",
+}
+
 
 class MongoFixture(StateManager):
     """Fixture for managing MongoDB resources."""
@@ -78,7 +99,37 @@ class MongoFixture(StateManager):
 
         for db_name in db_names:
             for collection_name in collection_names:
+                version_docs = (
+                    self.take_db_version(db_name) if collection_name == "*" else None
+                )
                 self.remove_documents(db_name=db_name, collection_name=collection_name)
+                if version_docs:
+                    self.restore_db_version(db_name, version_docs)
+
+    def version_collection(self, db_name: str) -> str | None:
+        """Name of the migration-bookkeeping collection of the given database."""
+        return DB_VERSION_COLLECTIONS.get(db_name)
+
+    def take_db_version(self, db_name: str) -> list[dict[str, Any]]:
+        """Read the migration-bookkeeping documents before a wildcard wipe."""
+        collection = self.version_collection(db_name)
+        if not collection:
+            return []
+        return self.find_documents(
+            db_name, collection, sloppy=True, extend_mapping=False
+        )
+
+    def restore_db_version(
+        self, db_name: str, documents: list[dict[str, Any]]
+    ) -> None:
+        """Put the migration-bookkeeping documents back after a wildcard wipe."""
+        collection = self.version_collection(db_name)
+        if not collection:
+            return
+        for document in documents:
+            self.upsert_document(
+                db_name, collection, document, extend_mapping=False
+            )
 
     def find_document(
         self,
