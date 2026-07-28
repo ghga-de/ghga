@@ -15,26 +15,18 @@
 
 """Pluggable, custom and composable logic around HTTP calls."""
 
-from hishel.httpx import AsyncCacheTransport
-
-from .config import CompositeCacheConfig, CompositeConfig
+from .config import CompositeConfig
 from .factory import (
     AsyncRateLimitingTransport,
     AsyncRetryTransport,
     CompositeTransportFactory,
 )
-from .proxy_handling import (
-    cached_ratelimiting_retry_proxies,
-    ratelimiting_retry_proxies,
-)
+from .proxy_handling import ratelimiting_retry_proxies
 
 __all__ = [
-    "AsyncCacheTransport",
     "AsyncRateLimitingTransport",
     "AsyncRetryTransport",
-    "CompositeCacheConfig",
     "CompositeConfig",
     "CompositeTransportFactory",
-    "cached_ratelimiting_retry_proxies",
     "ratelimiting_retry_proxies",
 ]

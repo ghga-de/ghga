@@ -20,7 +20,7 @@ import socket
 from collections.abc import Callable
 from typing import Any, Generic, TypeVar
 
-import httpx
+import httpx2
 
 __all__ = ["AsyncTestClient", "get_free_port"]
 
@@ -35,7 +35,7 @@ def get_free_port() -> int:
 TApp = TypeVar("TApp", bound=Callable[..., Any])
 
 
-class AsyncTestClient(httpx.AsyncClient, Generic[TApp]):
+class AsyncTestClient(httpx2.AsyncClient, Generic[TApp]):
     """Client for testing ASGI apps in the context of a running async event loop.
 
     Usage: ```
@@ -64,5 +64,5 @@ class AsyncTestClient(httpx.AsyncClient, Generic[TApp]):
         """Initialize with ASGI app."""
         self.app = app  # make the application available to tests as well
         super().__init__(
-            transport=httpx.ASGITransport(app=app), base_url="http://localhost:8080"
+            transport=httpx2.ASGITransport(app=app), base_url="http://localhost:8080"
         )

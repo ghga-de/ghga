@@ -17,7 +17,7 @@
 
 import json
 
-import httpx
+import httpx2
 
 from ghga_service_commons.api.mock_router import MockRouter
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
@@ -28,13 +28,13 @@ app: MockRouter = MockRouter(exceptions_to_handle=(HttpException,))
 
 # basic way to register an endpoint
 @app.get("/hello")
-def basic() -> httpx.Response:
+def basic() -> httpx2.Response:
     """Define a basic endpoint."""
-    return httpx.Response(status_code=200, json={"hello": "world"})
+    return httpx2.Response(status_code=200, json={"hello": "world"})
 
 
 @app.get("/items")
-def get_all_items(request: httpx.Request) -> httpx.Response:
+def get_all_items(request: httpx2.Request) -> httpx2.Response:
     """Endpoint meant to match path with the POST endpoint defined below."""
     if request.method == "POST":
         raise HttpException(
@@ -43,17 +43,17 @@ def get_all_items(request: httpx.Request) -> httpx.Response:
             description="A POST request was routed to a GET endpoint",
             data={},
         )
-    return httpx.Response(status_code=200, json={"hello": "world"})
+    return httpx2.Response(status_code=200, json={"hello": "world"})
 
 
 @app.get("/items/{item_name}")
-def get_item(item_name: str) -> httpx.Response:
+def get_item(item_name: str) -> httpx2.Response:
     """Endpoint with only one path variable."""
-    return httpx.Response(status_code=200, json={"expected": item_name})
+    return httpx2.Response(status_code=200, json={"expected": item_name})
 
 
 @app.get("/items/{item_name}/sizes/{item_size}")
-def get_item_and_size(item_name: str, item_size: int) -> httpx.Response:
+def get_item_and_size(item_name: str, item_size: int) -> httpx2.Response:
     """Endpoint with multiple path variables.
 
     Defined after simpler one with same start to make sure pattern matching works. If
@@ -62,11 +62,11 @@ def get_item_and_size(item_name: str, item_size: int) -> httpx.Response:
 
     Also gives a chance to test type-hint interpretation/casting.
     """
-    return httpx.Response(status_code=200, json={"expected": [item_name, item_size]})
+    return httpx2.Response(status_code=200, json={"expected": [item_name, item_size]})
 
 
 @app.post("/items")
-def add_item(request: httpx.Request) -> httpx.Response:
+def add_item(request: httpx2.Request) -> httpx2.Response:
     """Mock endpoint to test getting data from the request body.
 
     Expects "detail" in body.
@@ -90,4 +90,4 @@ def add_item(request: httpx.Request) -> httpx.Response:
             data={},
         )
 
-    return httpx.Response(status_code=201, json={"expected": body["detail"]})
+    return httpx2.Response(status_code=201, json={"expected": body["detail"]})

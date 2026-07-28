@@ -17,7 +17,7 @@
 
 from unittest.mock import AsyncMock, patch
 
-import httpx
+import httpx2
 import pytest
 
 from ghga_service_commons.transports.config import RateLimitingTransportConfig
@@ -26,12 +26,12 @@ from ghga_service_commons.transports.ratelimiting import AsyncRateLimitingTransp
 # The per-request sleep is drawn from random.uniform keeps the real sleep at zero
 # while exposing the delay the transport computed.
 UNIFORM = "ghga_service_commons.transports.ratelimiting.random.uniform"
-_REQUEST = httpx.Request("GET", "http://test")
+_REQUEST = httpx2.Request("GET", "http://test")
 
 
-def _mock_transport(responses: list[httpx.Response]) -> AsyncMock:
+def _mock_transport(responses: list[httpx2.Response]) -> AsyncMock:
     """Build a transport mock returning the given responses in turn."""
-    transport = AsyncMock(spec=httpx.AsyncBaseTransport)
+    transport = AsyncMock(spec=httpx2.AsyncBaseTransport)
     transport.handle_async_request = AsyncMock(side_effect=responses)
     return transport
 
@@ -46,7 +46,7 @@ def _ratelimiter(transport: AsyncMock, **config_kwargs) -> AsyncRateLimitingTran
 @pytest.mark.asyncio
 async def test_passes_through_non_429_response():
     """Ensure non-429 responses are returned unchanged without a Should-Wait header."""
-    response = httpx.Response(httpx.codes.OK)
+    response = httpx2.Response(httpx2.codes.OK)
     ratelimiter = _ratelimiter(_mock_transport([response]))
 
     result = await ratelimiter.handle_async_request(_REQUEST)
@@ -58,7 +58,7 @@ async def test_passes_through_non_429_response():
 @pytest.mark.asyncio
 async def test_429_with_retry_after_sets_wait_time():
     """Ensure a 429 with a Retry-After header stores the wait time and does not signal Should-Wait."""
-    response = httpx.Response(429, headers={"Retry-After": "5"})
+    response = httpx2.Response(429, headers={"Retry-After": "5"})
     ratelimiter = _ratelimiter(_mock_transport([response]))
 
     result = await ratelimiter.handle_async_request(_REQUEST)
@@ -70,7 +70,7 @@ async def test_429_with_retry_after_sets_wait_time():
 @pytest.mark.asyncio
 async def test_429_without_retry_after_sets_should_wait_header():
     """Ensure a 429 without a Retry-After header signals Should-Wait and stores no wait time."""
-    response = httpx.Response(429)
+    response = httpx2.Response(429)
     ratelimiter = _ratelimiter(_mock_transport([response]))
 
     result = await ratelimiter.handle_async_request(_REQUEST)
@@ -83,8 +83,8 @@ async def test_429_without_retry_after_sets_should_wait_header():
 async def test_carried_over_wait_time_is_applied_to_next_request():
     """Ensure a wait time learned from a 429 is applied as the delay before the next request."""
     responses = [
-        httpx.Response(429, headers={"Retry-After": "10"}),
-        httpx.Response(httpx.codes.OK),
+        httpx2.Response(429, headers={"Retry-After": "10"}),
+        httpx2.Response(httpx2.codes.OK),
     ]
     ratelimiter = _ratelimiter(_mock_transport(responses))
 
@@ -104,7 +104,7 @@ async def test_carried_over_wait_time_is_applied_to_next_request():
 async def test_wait_time_reset_after_configured_requests():
     """Ensure stored wait time is cleared once the configured number of requests has passed."""
     ratelimiter = _ratelimiter(
-        _mock_transport([httpx.Response(httpx.codes.OK)] * 2),
+        _mock_transport([httpx2.Response(httpx2.codes.OK)] * 2),
         retry_after_applicable_for_num_requests=2,
     )
     # Simulate a wait time still in effect from a previous Retry-After response.

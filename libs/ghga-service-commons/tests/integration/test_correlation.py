@@ -19,7 +19,7 @@
 from contextlib import nullcontext
 from uuid import UUID
 
-import httpx
+import httpx2
 import pytest
 from fastapi import FastAPI, Request, Response
 from hexkit.correlation import (
@@ -209,7 +209,7 @@ async def test_async_client(generate_correlation_id: bool):
     # Create an AsyncClient instance (NOT AsyncTestClient!)
     async with AsyncClient(
         generate_correlation_id=generate_correlation_id,
-        transport=httpx.ASGITransport(app=app),
+        transport=httpx2.ASGITransport(app=app),
         base_url="http://localhost:8080",
     ) as client:
         # Verify behavior outside of a CID context
