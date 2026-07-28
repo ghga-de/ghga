@@ -11,11 +11,12 @@
 # where secrets are withheld.
 #
 # Runner sizing is the open question this workflow exists to answer empirically.
-# Measured locally, the platform needs ~17 GB of disk before a single test runs:
-# kind's containerd stores images unpacked (~2.8x their compressed size) and
-# `kind load` leaves a second copy behind in the docker store. Every step that
-# touches disk reports it, so the first runs tell us whether a hosted runner
-# suffices or we move to self-hosted.
+# Disk is settled: a stock ubuntu-latest reports ~145 G with ~88 G free — not the
+# 14 G the docs quote — against a platform needing ~17 G before a test runs (kind's
+# containerd stores images unpacked, ~2.8x compressed, and `kind load` leaves a
+# second copy in the docker store; demo-images drops that copy as it goes). What is
+# still unmeasured: build time for all 23 images on 4 vCPU, and memory once the
+# full fleet is up. Measure, don't assume — the documented specs were wrong.
 name: integration
 
 # Manual-run only while the runner question is open. To make it a gate, add:
@@ -38,17 +39,13 @@ jobs:
         with:
           fetch-depth: 0 # chart versions and the affected-target diff want history
 
-      # Reclaim the pre-installed toolchains this repo never uses. Done inline rather
-      # than via a third-party action so the paths stay auditable; `df` on both sides
-      # makes the actual headroom visible in the log.
-      - name: Reclaim runner disk
-        run: |
-          echo "::group::before"; df -h /; echo "::endgroup::"
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-                      /opt/hostedtoolcache/CodeQL /usr/local/share/boost \
-                      /usr/local/share/powershell /usr/share/swift
-          sudo docker image prune --all --force
-          echo "::group::after"; df -h /; echo "::endgroup::"
+      # A stock runner reports ~145 G with ~88 G free, against a platform that needs
+      # ~17 G before a test runs — so nothing is reclaimed here. This baseline and the
+      # Disk report at the end bracket what the run actually costs; if that delta ever
+      # approaches the free space, drop the unused toolchains (/usr/share/dotnet,
+      # /usr/local/lib/android, /opt/ghc, /opt/hostedtoolcache/CodeQL) to buy ~30 G.
+      - name: Disk baseline
+        run: df -h /
 
       - uses: astral-sh/setup-uv@v7
         with:
