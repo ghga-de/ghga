@@ -63,3 +63,9 @@ export interface FileUploadWithAccession {
   /** The accession number assigned to this file */
   accession: string | null;
 }
+
+/** A page of file uploads for a box, plus the total unpaginated count */
+export interface BoxUploadsPage {
+  items: FileUploadWithAccession[];
+  total_count: number;
+}

@@ -18,7 +18,7 @@ import {
   UploadBoxFilter,
   UploadBoxState,
 } from '../models/box';
-import { FileUploadWithAccession } from '../models/file-upload';
+import { BoxUploadsPage, FileUploadWithAccession } from '../models/file-upload';
 import {
   GrantId,
   GrantWithBoxInfo,
@@ -111,7 +111,12 @@ export class UploadBoxService {
       if (!boxId) return undefined;
       return `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads`;
     },
-    { defaultValue: [] },
+    {
+      defaultValue: [],
+      // the endpoint answers with a page ({items, total_count}), while every
+      // consumer here works on the list itself
+      parse: (raw) => (raw as BoxUploadsPage).items ?? [],
+    },
   );
 
   /**
