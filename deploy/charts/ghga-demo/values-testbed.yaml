@@ -55,6 +55,13 @@ auth-rest:
     oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
     oidc_issuer: https://test-aai.ghga.dev
     oidc_client_id: ""
+    # identical to auth-claims (see there): both instances seed
+    add_as_data_stewards:
+      - ext_id: id-of-data-steward@ghga.dev
+        name: Data Steward
+        email: data.steward@home.org
+        iva_type: Phone
+        iva_value: "+4915112345678"
 
 auth-claims:
   config:

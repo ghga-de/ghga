@@ -201,6 +201,14 @@ auth-rest:
     oidc_userinfo_endpoint: http://ghga-gateway/ghga/userinfo
     oidc_issuer: http://localhost/ghga
     oidc_client_id: ghga-client
+    # seeding also runs here (the access API triggers it): keep the list
+    # identical to auth-claims so start order cannot un-seed the steward
+    add_as_data_stewards:
+      - ext_id: data.steward@ghga.dev
+        name: Data Steward
+        email: data.steward@ghga.dev
+        iva_type: Phone
+        iva_value: "+4915112345678"
 
 # The claims repository API: deliberately NOT gateway-routed (prod topology —
 # the testbed asserts /users/{id}/claims is unreachable from outside). Owns the
