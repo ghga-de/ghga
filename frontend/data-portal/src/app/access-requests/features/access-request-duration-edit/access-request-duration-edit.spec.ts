@@ -5,6 +5,7 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 import { AccessRequestDurationEditComponent } from './access-request-duration-edit';
 
@@ -12,6 +13,39 @@ import { accessRequests } from '@app/../mocks/data';
 import { AccessRequestStatus } from '@app/access-requests/models/access-requests';
 import { ConfigService } from '@app/shared/services/config';
 import { localDateToContractIsoUtc } from '@app/shared/utils/date-formats';
+
+interface DurationEditInternals {
+  formModel: {
+    (): { fromDate: Date | null; untilDate: Date | null };
+    set: (value: { fromDate: Date | null; untilDate: Date | null }) => void;
+  };
+}
+
+/**
+ * Read the protected form model of the component under test.
+ * @param component - the component under test
+ * @returns the current form model
+ */
+function getFormModel(component: AccessRequestDurationEditComponent) {
+  return (component as unknown as DurationEditInternals).formModel();
+}
+
+/**
+ * Overwrite the protected form model of the component under test.
+ * @param component - the component under test
+ * @param fromDate - the start date to set
+ * @param untilDate - the end date to set
+ */
+function setFormModel(
+  component: AccessRequestDurationEditComponent,
+  fromDate: Date | null,
+  untilDate: Date | null,
+): void {
+  (component as unknown as DurationEditInternals).formModel.set({
+    fromDate,
+    untilDate,
+  });
+}
 
 /**
  * Mock the config service as needed by the access request duration edit component
@@ -28,7 +62,10 @@ describe('AccessRequestDurationEditComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      providers: [{ provide: ConfigService, useClass: MockConfigService }],
+      providers: [
+        provideNativeDateAdapter(),
+        { provide: ConfigService, useClass: MockConfigService },
+      ],
       imports: [AccessRequestDurationEditComponent],
     }).compileComponents();
 
@@ -60,14 +97,8 @@ describe('AccessRequestDurationEditComponent', () => {
       emitted = value as Map<string, string>;
     });
 
-    (
-      component as unknown as {
-        formModel: {
-          set: (value: { fromDate: Date | null; untilDate: Date | null }) => void;
-        };
-      }
-    ).formModel.set({ fromDate, untilDate });
-    component.changed();
+    component.open();
+    setFormModel(component, fromDate, untilDate);
     component.save();
 
     expect(emitted).toBeDefined();
@@ -75,5 +106,55 @@ describe('AccessRequestDurationEditComponent', () => {
     expect(emitted?.get('access_ends')).toBe(
       localDateToContractIsoUtc(untilDate, true),
     );
+  });
+
+  it('should not consider re-selecting the same dates a modification', () => {
+    component.open();
+    const { fromDate, untilDate } = getFormModel(component);
+
+    // pick the very same dates again, which yields new Date objects
+    component.onDateSelected(new Date(fromDate!), true);
+    component.onDateSelected(new Date(untilDate!), false);
+
+    expect(component.isModified()).toBe(false);
+  });
+
+  it('should report pending edits again after a cancelled edit', async () => {
+    const edits: boolean[] = [];
+    component.edited.subscribe(([, edited]) => edits.push(edited));
+
+    const laterDate = new Date(getFormModel(component).untilDate!);
+    laterDate.setDate(laterDate.getDate() - 1);
+
+    component.open();
+    component.onDateSelected(laterDate, false);
+    await fixture.whenStable();
+    expect(component.isModified()).toBe(true);
+
+    component.cancel();
+    await fixture.whenStable();
+    expect(component.isModified()).toBe(false);
+
+    component.open();
+    component.onDateSelected(laterDate, false);
+    await fixture.whenStable();
+
+    expect(component.isModified()).toBe(true);
+    expect(edits).toEqual([true, false, true]);
+  });
+
+  it('should restore only the cleared date to its default', () => {
+    component.open();
+    const initial = getFormModel(component);
+    const changedFrom = new Date(initial.fromDate!);
+    changedFrom.setDate(changedFrom.getDate() + 1);
+    component.onDateSelected(changedFrom, true);
+
+    // clearing the end date must not touch the start date
+    component.onDateSelected(null as unknown as Date, false);
+
+    const current = getFormModel(component);
+    expect(current.fromDate?.getTime()).toBe(changedFrom.getTime());
+    expect(current.untilDate?.getTime()).toBe(initial.untilDate?.getTime());
   });
 });

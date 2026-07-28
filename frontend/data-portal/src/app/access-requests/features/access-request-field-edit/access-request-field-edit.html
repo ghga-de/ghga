@@ -11,19 +11,9 @@
       <div class="flex items-center">
         <mat-form-field class="grow">
           @if (rows() > 1) {
-            <textarea
-              matInput
-              [formField]="fieldForm.field"
-              [rows]="rows()"
-              (input)="changed()"
-            ></textarea>
+            <textarea matInput [formField]="fieldForm.field" [rows]="rows()"></textarea>
           } @else {
-            <input
-              matInput
-              type="text"
-              [formField]="fieldForm.field"
-              (input)="changed()"
-            />
+            <input matInput type="text" [formField]="fieldForm.field" />
           }
         </mat-form-field>
         <mat-chip
