@@ -166,6 +166,36 @@ auth-adapter:
     enabled: true
   config:
     provide_apis: ["ext_auth"]
+    # Endpoints with their own auth (bearer work-package / work-order / service
+    # tokens) or no auth at all must reach the backend with their Authorization
+    # header INTACT — the ext-auth allow-response otherwise blanks it. Mirrors
+    # the production auth-adapter config (devops-kubernetes-hub).
+    allow_read_paths:
+      # services or endpoints with custom auth mechanisms
+      - /api/dlqs/*
+      - /api/pcs/*
+      - /api/wps/work-packages/*
+      - /api/sms/*
+      - /api/fis/storages/*
+      - /api/ucs/health
+      - /api/ucs/boxes/*
+      # services or endpoints that do not need auth
+      - /api/rts/*
+      - /api/dins/*
+      - /.well-known/*
+      - /service-logo.png
+      - /api/ga4gh/drs/v1/health
+      - /api/ga4gh/drs/v1/objects/*
+    allow_write_paths:
+      - /api/fis/federated/*
+      - /api/metldata/rpc/load-artifacts
+      - /api/wps/work-packages/*
+      - /api/sms/*
+      - /api/pcs/*
+      - /api/fis/legacy/*
+      - /api/dlqs/*
+      - /api/fis/storages/*
+      - /api/ucs/boxes/*
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
     mongo_dsn: mongodb://ghga-mongodb:27017

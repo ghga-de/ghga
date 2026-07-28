@@ -216,7 +216,9 @@ testbed *args:
     printf '%s' "$TB_UPLOAD_TOKEN" > "$HOME/.ghga_data_steward_token.txt"
     export TB_FIS_PUBKEY=$(secret ghga-c4gh-files crypt4gh\\.pub | sed -n 2p)
     # per-run test-user crypt4gh keypair (any fresh pair works)
-    eval "$(uv run --quiet --package auth-km-jobs python -c "from auth_km_jobs.c4gh import generate_crypt4gh_key_pair; k = generate_crypt4gh_key_pair(); print(f'export TB_USER_PRIVATE_CRYPT4GH_KEY={k.export_private()}'); print(f'export TB_USER_PUBLIC_CRYPT4GH_KEY={k.export_public()}')")"
+    # the connector needs the RAW 32-byte secret (export_private is PEM-ish and
+    # fails with "PrivateKey must be created from a 32 bytes long raw secret key")
+    eval "$(uv run --quiet --package auth-km-jobs python -c "from auth_km_jobs.c4gh import generate_crypt4gh_key_pair; k = generate_crypt4gh_key_pair(); print(f'export TB_USER_PRIVATE_CRYPT4GH_KEY={k.export_private_raw()}'); print(f'export TB_USER_PUBLIC_CRYPT4GH_KEY={k.export_public()}')")"
     mkdir -p /tmp/submission /tmp/connector
     $K port-forward svc/ghga-mailhog 8025:8025 > /dev/null 2>&1 &
     PF1=$!
