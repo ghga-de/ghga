@@ -240,6 +240,10 @@ cluster:
 httpRoute:
   enabled: false
   port: 8080
+      # strip the base path before forwarding. Services that reconstruct their own
+      # public URLs (an OIDC discovery document, for example) need the full path
+      # instead and rely on api_root_path to route — set this to false for them.
+  rewritePath: true
   rules: []
 probe:
   enabled: false

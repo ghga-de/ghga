@@ -157,6 +157,12 @@ def test_http_route(rendered_chart):
     manifests = rendered_chart("http_route.yaml", "http_route_parent_refs.yaml")
     assert manifests["HTTPRoute"]["spec"]["parentRefs"] == [{"name": "ghga-gateway"}]
 
+    # rewritePath=false forwards the full path (services that build their own URLs)
+    manifests = rendered_chart("http_route.yaml", "http_route_no_rewrite.yaml")
+    rule = manifests["HTTPRoute"]["spec"]["rules"][0]
+    assert "filters" not in rule
+    assert rule["matches"][0]["path"]["value"] == "/api/test"
+
     # a root base path ("/") must not collapse to an empty match (SPA routes)
     manifests = rendered_chart("http_route_root.yaml")
     rule = manifests["HTTPRoute"]["spec"]["rules"][0]

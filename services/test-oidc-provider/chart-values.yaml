@@ -10,6 +10,12 @@ apiBasePath: /op.test/
 # from the distribution name the generator derives.
 configPrefix: top
 
+# The discovery document advertises absolute URLs that it reconstructs from the
+# incoming request, so the gateway must forward the full path rather than strip
+# the base path (api_root_path keeps routing correct).
+httpRoute:
+  rewritePath: false
+
 serviceName: test-oidc-provider
 
 config:

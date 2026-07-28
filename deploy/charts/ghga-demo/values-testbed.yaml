@@ -101,3 +101,14 @@ mass:
           name: Dataset title
         - key: alias
           name: Dataset alias
+
+# The suite's browser tests log in through the portal, which must therefore use
+# the same provider as the API fixtures (the compose environment did likewise).
+# Its /authorize authorizes the last user minted via POST /login without an
+# interactive form, which is what the UI flow expects.
+data-portal:
+  config:
+    oidc_authority_url: http://localhost/api/op.test
+    oidc_client_id: test-client
+    oidc_use_discovery: true
+    oidc_account_url: http://localhost/api/op.test

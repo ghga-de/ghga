@@ -207,6 +207,7 @@ cluster:
 httpRoute:
   enabled: false
   port: 8080
+  rewritePath: false
   rules: []
 probe:
   enabled: false
