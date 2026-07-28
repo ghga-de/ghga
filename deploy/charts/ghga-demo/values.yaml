@@ -246,6 +246,10 @@ auth-claims:
   ports:
     enabled: true
   config:
+    # also consumes dataset/user events: the claims repository revokes access
+    # grants when a dataset disappears (the reference deployment runs the
+    # users+access instance as a consumer too)
+    run_consumer: true
     provide_apis: ["claims", "access"]
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
