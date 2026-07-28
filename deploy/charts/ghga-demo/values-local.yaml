@@ -356,3 +356,25 @@ fis-consumer:
       cpu: 750m
       memory: 768Mi
 
+dhfs-primary:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+dhfs-secondary:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+

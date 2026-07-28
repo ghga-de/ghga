@@ -3,7 +3,7 @@
 #      import-values is not processed for aliased chart instances, so the
 #      defaults are baked in at generation time instead)
 #   2. facts derived from workspace metadata
-#   3. deployment values from services/datahub-file-service/chart-values.yaml (absent; library defaults only)
+#   3. deployment values from services/datahub-file-service/chart-values.yaml
 global:
   imageRegistry: ""
   imagePullSecrets: []
@@ -21,7 +21,9 @@ command: ["sh", "-c"]
 commandPrefix: ''
 commandStyle: exec
 executable: dhfs
-executableArgs: []
+executableArgs:
+- interrogate
+
 deployment:
   enabled: true
 
@@ -134,7 +136,7 @@ envVars: []
 envVarsConfigMap: ""
 envVarsSecret: ""
 service:
-  enabled: true
+  enabled: false
   type: ClusterIP
   ports:
   - name: http
@@ -190,7 +192,8 @@ configMap:
   envVar:
     enabled: true
 
-config: {}
+config:
+  client_reraise_from_retry_error: false
 configPrefix: dhfs
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

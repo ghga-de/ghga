@@ -1,0 +1,16 @@
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
+# DHFS runs at each data hub: it polls GHGA Central (FIS) for files to
+# interrogate and re-encrypts them into that hub's interrogation bucket.
+# One deployment per hub — the demo umbrella instantiates it twice.
+
+# long-running worker, no HTTP API
+executableArgs:
+  - interrogate
+
+service:
+  enabled: false
+
+config:
+  client_reraise_from_retry_error: false

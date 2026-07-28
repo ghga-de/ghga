@@ -408,7 +408,10 @@ fis:
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
     ekss_api_url: http://ghga-ekss:8080
-    dhfs_version_constraint: ">2.0.0"
+    # everything here is built from one commit (lockstep, ADR-0004) and carries
+    # the dev version stamp, which no ">2.0.0"-style gate accepts; the DHFS
+    # compatibility check is meaningful for real data-hub installs, not here
+    dhfs_version_constraint: ">=0.0.0"
 
 ifrs:
   enabled: true
@@ -821,3 +824,51 @@ fis-consumer:
     mongo_dsn: mongodb://ghga-mongodb:27017
     ekss_api_url: http://ghga-ekss:8080
     dhfs_version_constraint: '>2.0.0'
+
+# ---- data hubs: one DHFS per hub (re-encryption for interrogation) ----------------------
+
+dhfs-primary:
+  enabled: true
+  nameOverride: dhfs-primary
+  # DHFS_DATA_HUB_SIGNING_KEY + DHFS_CENTRAL_API_CRYPT4GH_PUBLIC_KEY
+  envVarsSecret: ghga-dhfs-keys
+  extraVolumes:
+    - name: c4gh
+      secret:
+        secretName: ghga-c4gh-files
+  extraVolumeMounts:
+    - name: c4gh
+      mountPath: /keys
+      readOnly: true
+  config:
+    service_instance_id: "1"
+    central_api_url: http://ghga-fis:8080
+    storage_alias: primary
+    s3_endpoint_url: http://ghga-minio:9000
+    s3_access_key_id: demo-access-key
+    s3_secret_access_key: demo-secret-key
+    data_hub_crypt4gh_private_key_path: /keys/crypt4gh.sec
+    interrogation_bucket_id: hub1-interrogations
+
+dhfs-secondary:
+  enabled: true
+  nameOverride: dhfs-secondary
+  # DHFS_DATA_HUB_SIGNING_KEY + DHFS_CENTRAL_API_CRYPT4GH_PUBLIC_KEY
+  envVarsSecret: ghga-dhfs-keys
+  extraVolumes:
+    - name: c4gh
+      secret:
+        secretName: ghga-c4gh-files
+  extraVolumeMounts:
+    - name: c4gh
+      mountPath: /keys
+      readOnly: true
+  config:
+    service_instance_id: "2"
+    central_api_url: http://ghga-fis:8080
+    storage_alias: secondary
+    s3_endpoint_url: http://ghga-minio:9000
+    s3_access_key_id: demo-access-key
+    s3_secret_access_key: demo-secret-key
+    data_hub_crypt4gh_private_key_path: /keys/crypt4gh.sec
+    interrogation_bucket_id: hub2-interrogations

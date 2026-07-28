@@ -67,6 +67,18 @@ dependencies:
     version: ">=0.0.0-0"
     repository: file://../fis
     condition: fis.enabled
+  # one DHFS per data hub: polls FIS for files to interrogate and re-encrypts
+  # them into that hub's interrogation bucket
+  - name: dhfs
+    alias: dhfs-primary
+    version: ">=0.0.0-0"
+    repository: file://../dhfs
+    condition: dhfs-primary.enabled
+  - name: dhfs
+    alias: dhfs-secondary
+    version: ">=0.0.0-0"
+    repository: file://../dhfs
+    condition: dhfs-secondary.enabled
   - name: ifrs
     version: ">=0.0.0-0"
     repository: file://../ifrs
