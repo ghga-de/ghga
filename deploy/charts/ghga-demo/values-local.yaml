@@ -16,6 +16,17 @@ auth-adapter:
       cpu: 750m
       memory: 768Mi
 
+auth-claims:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
 auth-rest:
   image:
     tag: local

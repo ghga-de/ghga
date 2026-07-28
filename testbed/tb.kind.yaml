@@ -18,6 +18,8 @@ lox24_mock_url: http://localhost:8080
 # route-name deltas vs the legacy compose paths
 dlq_url: dlqs
 wkvs_url: http://localhost/.well-known
+# dcs is routed at its prod GA4GH DRS base path here, not /api/dcs
+dcs_url: http://localhost/api/ga4gh/drs/v1
 
 # ucs and the auth adapter ARE gateway-routed here (as in the legacy compose envoy);
 # only ekss stays internal (its path falls through to the SPA, which the health

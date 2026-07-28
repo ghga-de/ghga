@@ -198,7 +198,7 @@ testbed-up:
 
 # One-time: virtualenv for the testbed suite (own requirements; not a workspace member).
 testbed-install:
-    uv venv .venv-testbed --allow-existing
+    uv venv .venv-testbed --allow-existing --python 3.12  # 3.13 breaks the pinned linkml (typing.re)
     VIRTUAL_ENV=$PWD/.venv-testbed uv pip install -r testbed/requirements.txt
 
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).

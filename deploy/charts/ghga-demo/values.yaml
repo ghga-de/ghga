@@ -193,7 +193,7 @@ auth-rest:
   ports:
     enabled: true
   config:
-    provide_apis: ["users", "claims", "access"]
+    provide_apis: ["users", "access"]
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
     mongo_dsn: mongodb://ghga-mongodb:27017
@@ -201,8 +201,26 @@ auth-rest:
     oidc_userinfo_endpoint: http://ghga-gateway/ghga/userinfo
     oidc_issuer: http://localhost/ghga
     oidc_client_id: ghga-client
-    # seed data steward (ADR-0006) — applied by the claims API at startup;
-    # log in via the aai with exactly this email-shaped subject
+
+# The claims repository API: deliberately NOT gateway-routed (prod topology —
+# the testbed asserts /users/{id}/claims is unreachable from outside). Owns the
+# data-steward seeding, which the claims API applies at startup.
+auth-claims:
+  enabled: true
+  nameOverride: auth-claims
+  envVarsSecret: ghga-auth-keys-pub
+  ports:
+    enabled: true
+  config:
+    provide_apis: ["claims"]
+    kafka_servers: ["ghga-kafka:9092"]
+    service_instance_id: "1"
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    oidc_authority_url: http://ghga-aai:8080/ghga/
+    oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
+    oidc_issuer: http://localhost/ghga
+    oidc_client_id: ghga-client
+    # seed data steward (ADR-0006) — log in via the aai with exactly this subject
     add_as_data_stewards:
       - ext_id: data.steward@ghga.dev
         name: Data Steward
@@ -588,3 +606,9 @@ sms:
       - "*.*:*"
     db_prefix: ""
     allow_empty_prefix: true
+    # sms fronts the vault-secrets API: same demo AppRole as ekss (its policy
+    # covers exactly the secret/*/testing subtree sms manages)
+    vault_url: http://ghga-vault:8200
+    vault_path: testing
+    vault_role_id: 9f03d595-c964-441c-a68e-2e1534f2bb56
+    vault_secret_id: a3e80b1d-86d3-4c23-85ee-589031ec2cba

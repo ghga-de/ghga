@@ -25,6 +25,9 @@ test-oidc-provider:
       - name: ghga
   ports:
     enabled: true
+  config:
+    # the issuer the testbed's sub-derivation and the auth stack expect
+    issuer: https://test-aai.ghga.dev
   resources:
     requests:
       cpu: 50m
@@ -48,3 +51,18 @@ auth-rest:
     oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
     oidc_issuer: https://test-aai.ghga.dev
     oidc_client_id: ""
+
+auth-claims:
+  config:
+    oidc_authority_url: http://ghga-test-oidc-provider:8080/
+    oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
+    oidc_issuer: https://test-aai.ghga.dev
+    oidc_client_id: ""
+    # the identity the BDD fixtures derive for "Data Steward"
+    # (sub = id-of-<name>@<issuer-domain>, email = <name dotted>@home.org)
+    add_as_data_stewards:
+      - ext_id: id-of-data-steward@ghga.dev
+        name: Data Steward
+        email: data.steward@home.org
+        iva_type: Phone
+        iva_value: "+4915112345678"
