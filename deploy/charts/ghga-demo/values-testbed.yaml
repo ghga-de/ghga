@@ -72,3 +72,35 @@ auth-claims:
         email: data.steward@home.org
         iva_type: Phone
         iva_value: "+4915112345678"
+
+# The suite asserts the exact search options; use the test bed's facet
+# configuration (from the compose environment) rather than the prod one.
+mass:
+  config:
+    searchable_classes:
+      EmbeddedDataset:
+        description: Dataset grouping files under controlled access
+        facetable_fields:
+        - key: study.types
+          name: Study type
+        - key: experiment_methods.instrument_model
+          name: Platform
+        - key: experiment_methods.type
+          name: Experiment
+        - key: experiment_methods.library_type
+          name: Analysis level
+        - key: experiment_methods.sequencing_layout
+          name: Sequencing mode
+        - key: individuals.diagnosis_terms
+          name: Diagnosis
+        - key: data_access_policy.alias
+          name: Access policy
+        - key: data_access_policy.data_access_committee.institute
+          name: Controller Institution
+        selected_fields:
+        - key: ega_accession
+          name: EGA accession
+        - key: title
+          name: Dataset title
+        - key: alias
+          name: Dataset alias

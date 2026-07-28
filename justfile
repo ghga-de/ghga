@@ -210,6 +210,26 @@ testbed-hosts:
     grep -q "ghga-minio" /etc/hosts || echo "127.0.0.1 ghga-minio" | sudo tee -a /etc/hosts > /dev/null
     echo "ghga-minio resolves locally"
 
+# Reset the identity state to a coherent cold start: the suite's clean slate
+# restores the data steward from its own snapshot, so leftovers from earlier runs
+# (or an out-of-band edit) can leave the claim, user, IVA and notification
+# projection disagreeing. Dropping both databases and restarting lets the
+# services re-seed and rebuild their projections from events.
+testbed-reset:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    K="kubectl --context kind-ghga"
+    MPOD=$($K get pods -o name | grep mongodb | head -1)
+    $K exec "$MPOD" -- mongosh --quiet --eval \
+      'db.getSiblingDB("auth-service").dropDatabase(); db.getSiblingDB("notification-orchestration").dropDatabase()' > /dev/null
+    $K rollout restart deploy/ghga-auth-adapter deploy/ghga-auth-rest \
+      deploy/ghga-auth-claims deploy/ghga-nos > /dev/null
+    for d in ghga-auth-adapter ghga-auth-rest ghga-auth-claims ghga-nos; do
+        $K rollout status "deploy/$d" --timeout=180s > /dev/null
+    done
+    sleep 15
+    echo "identity state reset (steward re-seeded, projections rebuilt)"
+
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
 # Harvests tokens/keys from the cluster secrets, port-forwards the services the suite
 # and the connector reach directly (mailhog, lox24, minio), runs pytest.
