@@ -70,7 +70,7 @@ kafka:
   enabled: true
   # single-node KRaft on the official image; PLAINTEXT + topic auto-create as in
   # the compose test bed (see templates/kafka.yaml)
-  image: apache/kafka:4.0.0
+  image: apache/kafka:3.9.1
   # fixed KRaft cluster id (any base64-ish 22 chars; fixed so restarts reuse storage)
   clusterId: GhgaDemoKafkaCluster00
 
@@ -606,6 +606,20 @@ sms:
       - "*.*:*"
     db_prefix: ""
     allow_empty_prefix: true
+    # sms fronts the objects API too: it resolves storage aliases itself
+    object_storages:
+      primary:
+        bucket: hub1-inbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+      secondary:
+        bucket: hub2-inbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
     # sms fronts the vault-secrets API: same demo AppRole as ekss (its policy
     # covers exactly the secret/*/testing subtree sms manages)
     vault_url: http://ghga-vault:8200

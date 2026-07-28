@@ -6,6 +6,10 @@
 # auth stack at it. values-artifacts.yaml (generated, gitignored) carries the
 # metldata artifact model — see `just testbed-artifacts`.
 
+# the mock-oauth2 aai is replaced by the test OP in this profile — save the JVM
+aai:
+  enabled: false
+
 # testbed-only state manipulation API (ADR-0008)
 sms:
   enabled: true

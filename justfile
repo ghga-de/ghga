@@ -217,6 +217,7 @@ testbed *args:
     export TB_FIS_PUBKEY=$(secret ghga-c4gh-files crypt4gh\\.pub | sed -n 2p)
     # per-run test-user crypt4gh keypair (any fresh pair works)
     eval "$(uv run --quiet --package auth-km-jobs python -c "from auth_km_jobs.c4gh import generate_crypt4gh_key_pair; k = generate_crypt4gh_key_pair(); print(f'export TB_USER_PRIVATE_CRYPT4GH_KEY={k.export_private()}'); print(f'export TB_USER_PUBLIC_CRYPT4GH_KEY={k.export_public()}')")"
+    mkdir -p /tmp/submission /tmp/connector
     $K port-forward svc/ghga-mailhog 8025:8025 > /dev/null 2>&1 &
     PF1=$!
     $K port-forward svc/ghga-lox24-mock 8080:8080 > /dev/null 2>&1 &

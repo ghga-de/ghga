@@ -45,3 +45,36 @@ external_apis:
   - rs
   - ucs
   - auth_adapter
+
+# our services use the prod chart-values database names, not the compose-era ones
+service_db_names:
+  - access-request
+  - auth-service
+  - download-controller
+  - internal-file-registry
+  - metadata-artifacts
+  - upload-controller
+  - work-package
+  - mass
+  - notification-orchestration
+  - notification
+  - file-ingest
+  - dataset-information
+  - purge-controller
+  - dlqs
+  - reverse-transpiler
+  - registry
+ums_db_name: auth-service
+dcs_db_name: download-controller
+fis_db_name: file-ingest
+metldata_db_name: metadata-artifacts
+ars_db_name: access-request
+wps_db_name: work-package
+ifrs_db_name: internal-file-registry
+pcs_db_name: purge-controller
+dins_db_name: dataset-information
+dlq_db_name: dlqs
+rts_db_name: reverse-transpiler
+ucs_db_name: upload-controller
+rs_db_name: registry
+nos_db_name: notification-orchestration
