@@ -3,7 +3,7 @@
 #      import-values is not processed for aliased chart instances, so the
 #      defaults are baked in at generation time instead)
 #   2. facts derived from workspace metadata
-#   3. deployment values from deploy/src/values/test-oidc-provider.yaml
+#   3. deployment values from services/test-oidc-provider/chart-values.yaml
 global:
   imageRegistry: ""
   imagePullSecrets: []
@@ -18,9 +18,9 @@ global:
 
     # This is the actual Kubernetes `command` field
 command: ["sh", "-c"]
-commandPrefix: /usr/local/bin/
-commandStyle: shell
-executable: top
+commandPrefix: ''
+commandStyle: exec
+executable: test-oidc-provider
 executableArgs: []
 deployment:
   enabled: true
@@ -40,8 +40,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: docker.io
-  repository: "ghga/test-oidc-provider"
+  registry: ghcr.io
+  repository: ghga-de/ghga/test-oidc-provider
   tag: ""
   digest: ""
   pullPolicy:
@@ -178,8 +178,8 @@ mongodb:
     name: mongodb
 
 
-apiBasePath: /test/op/
-serviceName: top
+apiBasePath: /op.test/
+serviceName: test-oidc-provider
 serviceInstanceId: ""
 serviceNameConsumer: ""
 serviceInstanceIdConsumer: ""

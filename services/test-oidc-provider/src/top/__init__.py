@@ -19,4 +19,5 @@ from importlib.metadata import version
 
 __all__ = ["__version__"]
 
-__version__ = version(__package__)
+# the distribution is named after the service, the package stays "top"
+__version__ = version("test-oidc-provider")

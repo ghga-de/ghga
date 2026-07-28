@@ -1,0 +1,18 @@
+# Chart values for this member (deployment knowledge only).
+# Derived facts — image, executable, configPrefix, command style — are stamped
+# by the chart generator from workspace metadata (deploy/src/create_charts.py).
+# Test-only: the integration test bed and the portal's UI tests authenticate
+# against this provider. Never enable it outside test environments.
+
+apiBasePath: /op.test/
+
+# The service reads its settings under its own prefix ("top"), which differs
+# from the distribution name the generator derives.
+configPrefix: top
+
+serviceName: test-oidc-provider
+
+config:
+  host: 0.0.0.0
+
+executableArgs: []

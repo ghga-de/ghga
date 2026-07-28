@@ -114,9 +114,15 @@ async def test_jwks_via_uri(client: AsyncTestClient):
 
 @mark.asyncio
 async def test_get_user_info_without_login(client: AsyncTestClient):
-    """Test getting user info without first logging in."""
+    """Test getting user info without first logging in.
+
+    Missing credentials are answered with 401 and invalid ones with 403
+    (the bearer security scheme in the current service-commons reports
+    Unauthorized for absent credentials where older versions reported
+    Forbidden; the invalid-token case is unchanged).
+    """
     response = await client.get("/userinfo")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     response = await client.get("/userinfo", headers=headers_for_token("foo.bar.baz"))
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -148,7 +154,7 @@ async def test_login_and_get_user_info(client: AsyncTestClient):
     }
 
     response = await client.get("/userinfo")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     response = await client.get("/userinfo", headers=headers_for_token(token))
     assert response.status_code == status.HTTP_200_OK

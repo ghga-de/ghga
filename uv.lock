@@ -36,6 +36,7 @@ members = [
     "rts",
     "schemapack",
     "sms",
+    "test-oidc-provider",
     "ucs",
     "wkvs",
     "wps",
@@ -3254,6 +3255,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-multipart"
+version = "0.0.32"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/42/55c32bb9b12693c092ad250a0e82edb5b31ddeda6eb772de5f308b3804ad/python_multipart-0.0.32.tar.gz", hash = "sha256:be54b7f3fa167bb83e4fcd936b887b708f4e57fe75911c02aebf53efaf8d938e", size = 46881, upload-time = "2026-06-04T16:18:58.647Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl", hash = "sha256:ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23", size = 30042, upload-time = "2026-06-04T16:18:57.319Z" },
+]
+
+[[package]]
 name = "pywin32"
 version = "312"
 source = { registry = "https://pypi.org/simple" }
@@ -3909,6 +3919,25 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
+]
+
+[[package]]
+name = "test-oidc-provider"
+version = "2.2.0"
+source = { editable = "services/test-oidc-provider" }
+dependencies = [
+    { name = "ghga-service-commons", extra = ["api", "auth"] },
+    { name = "hexkit" },
+    { name = "python-multipart" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ghga-service-commons", extras = ["api", "auth"], editable = "libs/ghga-service-commons" },
+    { name = "hexkit", editable = "libs/hexkit" },
+    { name = "python-multipart", specifier = ">=0.0.20" },
+    { name = "typer", specifier = ">=0.15" },
 ]
 
 [[package]]

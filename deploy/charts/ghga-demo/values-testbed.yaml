@@ -18,10 +18,7 @@ sms:
 # fixed issuer — no request-host coupling like the mock-oauth2 default aai
 test-oidc-provider:
   enabled: true
-  image:
-    tag: "2.2.0"
   apiBasePathPrefix: /api
-  apiBasePath: /op.test/
   httpRoute:
     enabled: true
     port: 8080
