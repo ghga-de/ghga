@@ -179,8 +179,18 @@ up: cluster
     just demo-template
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
-      --kube-context kind-ghga --timeout 10m
+      --kube-context kind-ghga --wait --timeout 15m
+    just wait-ready
     echo "gateway: http://localhost/  (portal at /, issuer at /ghga)"
+
+# Block until the platform is actually serving. `helm --wait` covers the release's own
+# workloads, but the gateway's pod is created by the Envoy operator from the Gateway
+# resource — outside the release — so it needs its own condition. Without both gates a
+# fresh cluster answers the first request before anything is listening: the services
+# fail fast when Kafka is not yet up (KafkaConnectionError), and though Kubernetes
+# restarts them, a suite that starts immediately runs against the crash-loop window.
+wait-ready:
+    kubectl --context kind-ghga wait --for=condition=Programmed gateway/ghga --timeout=5m
 
 down:
     kind delete cluster --name ghga
@@ -215,7 +225,8 @@ testbed-up: cluster
       -f deploy/charts/ghga-demo/values-local.yaml \
       -f deploy/charts/ghga-demo/values-artifacts.yaml \
       -f deploy/charts/ghga-demo/values-testbed.yaml \
-      --kube-context kind-ghga --timeout 10m
+      --kube-context kind-ghga --wait --timeout 15m
+    just wait-ready
 
 # One-time: virtualenv for the testbed suite (own requirements; not a workspace member).
 # The UI phase drives a real browser, so the matching chromium build comes with it
