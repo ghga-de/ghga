@@ -161,18 +161,20 @@ net-fix:
     done
     echo "nested-bridge egress exemptions in place"
 
-# Bring up (or update) the self-contained demo: cluster + charts. Build/load images
-# first with `just demo-images` (slow the first time; app pods crashloop until loaded).
-# Create the kind cluster if it isn't there yet (idempotent). Everything that loads
-# images into the node or installs into it depends on this: `kind load` fails with
-# "no nodes found for cluster" when the cluster is missing — easy to miss locally,
-# where a cluster is nearly always already up, and fatal in CI, where it never is.
+# Everything that loads images into the node or installs into it depends on this:
+# `kind load` fails with "no nodes found for cluster" when the cluster is missing —
+# easy to miss locally, where a cluster is nearly always already up, and fatal in CI,
+# where it never is.
+# Create the kind cluster if it isn't there yet (idempotent).
 cluster:
     #!/usr/bin/env bash
     set -euo pipefail
     just net-fix
     kind get clusters 2>/dev/null | grep -qx ghga || kind create cluster --config deploy/kind-config.yaml --wait 120s
 
+# Build/load the images first with `just demo-images` — slow the first time, and the
+# app pods crashloop until they are present.
+# Bring up (or update) the whole demo on kind and wait until it actually serves.
 up: cluster
     #!/usr/bin/env bash
     set -euo pipefail
@@ -183,12 +185,13 @@ up: cluster
     just wait-ready
     echo "gateway: http://localhost/  (portal at /, issuer at /ghga)"
 
-# Block until the platform is actually serving. `helm --wait` covers the release's own
-# workloads, but the gateway's pod is created by the Envoy operator from the Gateway
-# resource — outside the release — so it needs its own condition. Without both gates a
-# fresh cluster answers the first request before anything is listening: the services
-# fail fast when Kafka is not yet up (KafkaConnectionError), and though Kubernetes
-# restarts them, a suite that starts immediately runs against the crash-loop window.
+# `helm --wait` covers the release's own workloads, but the gateway's pod is created by
+# the Envoy operator from the Gateway resource — outside the release — so it needs its
+# own condition. Without both gates a fresh cluster answers the first request before
+# anything is listening: the services fail fast when Kafka is not yet up
+# (KafkaConnectionError), and though Kubernetes restarts them, a suite that starts
+# immediately runs against the crash-loop window.
+# Block until the gateway is programmed, i.e. the platform actually serves.
 wait-ready:
     kubectl --context kind-ghga wait --for=condition=Programmed gateway/ghga --timeout=5m
 
