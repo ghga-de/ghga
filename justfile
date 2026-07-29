@@ -175,15 +175,30 @@ cluster:
 # Build/load the images first with `just demo-images` — slow the first time, and the
 # app pods crashloop until they are present.
 # Bring up (or update) the whole demo on kind and wait until it actually serves.
-up: cluster
+up: cluster images-present
     #!/usr/bin/env bash
     set -euo pipefail
     just demo-template
+    echo "installing — this waits for every workload to become ready, a few minutes"
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
       --kube-context kind-ghga --wait --timeout 15m
     just wait-ready
     echo "gateway: http://localhost/  (portal at /, issuer at /ghga)"
+
+# The charts reference ghcr.io/ghga-de/ghga/*:local, which exists only in the local
+# docker and is never pushed — so without `just demo-images` the kubelet tries ghcr.io,
+# gets a 401, and every pod sits in ImagePullBackOff. helm blocks on its pre-install
+# hook the whole time and says nothing, so the failure looks like a hang and costs the
+# full --timeout before surfacing.
+# Fail in a second, not in fifteen minutes, when the node has no images.
+images-present:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! docker exec ghga-control-plane crictl images 2>/dev/null | grep -q "ghga-de/ghga"; then
+        echo "error: the kind node has no ghga images — run \`just demo-images\` first" >&2
+        exit 1
+    fi
 
 # `helm --wait` covers the release's own workloads, but the gateway's pod is created by
 # the Envoy operator from the Gateway resource — outside the release — so it needs its
@@ -218,7 +233,7 @@ testbed-artifacts:
     rm -rf artifact_models
 
 # Deploy/refresh the demo with the testbed profile (sms, test OP, artifact model).
-testbed-up: cluster
+testbed-up: cluster images-present
     #!/usr/bin/env bash
     set -euo pipefail
     [ -f deploy/charts/ghga-demo/values-artifacts.yaml ] || just testbed-artifacts
