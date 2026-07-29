@@ -1,0 +1,2 @@
+httpRoute:
+  rewritePath: false

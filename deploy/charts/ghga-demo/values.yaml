@@ -34,19 +34,19 @@ extAuth:
   # HTTPRoutes to protect, by subchart alias — resource names are derived as
   # <release>-<alias>. Prod scopes ext-authz to /api/* — that covers the two auth
   # routes; wkvs (/.well-known) and the data-portal SPA (/) stay unprotected.
+  # session-based APIs only: services doing their own bearer-token auth
+  # (metldata loader, fis, pcs, dlqs, sms) stay OUT of ext-auth — the adapter's
+  # allow-response scrubs Authorization/X-Authorization (empty value = header
+  # removal in envoy), so their tokens would never arrive
   targetRoutes:
     - auth-rest
     - dcs
     - ucs
-    - fis
     - rs
     - wps
-    - pcs
-    - metldata
     - ars
     - mass
     - dins
-    - dlqs
     - rts
   backend:
     # the auth adapter's ext-authz backend (subchart alias + service port)
@@ -70,7 +70,7 @@ kafka:
   enabled: true
   # single-node KRaft on the official image; PLAINTEXT + topic auto-create as in
   # the compose test bed (see templates/kafka.yaml)
-  image: apache/kafka:4.0.0
+  image: apache/kafka:3.9.1
   # fixed KRaft cluster id (any base64-ish 22 chars; fixed so restarts reuse storage)
   clusterId: GhgaDemoKafkaCluster00
 
@@ -117,6 +117,10 @@ vault:
   ekssRoleId: 9f03d595-c964-441c-a68e-2e1534f2bb56
   ekssSecretId: a3e80b1d-86d3-4c23-85ee-589031ec2cba
 
+# the original GHGA test OP — enabled only by the testbed profile
+test-oidc-provider:
+  enabled: false
+
 aai:
   enabled: true
   # expose the issuer through the gateway at /<issuerId> so browser and cluster
@@ -162,6 +166,36 @@ auth-adapter:
     enabled: true
   config:
     provide_apis: ["ext_auth"]
+    # Endpoints with their own auth (bearer work-package / work-order / service
+    # tokens) or no auth at all must reach the backend with their Authorization
+    # header INTACT — the ext-auth allow-response otherwise blanks it. Mirrors
+    # the production auth-adapter config (devops-kubernetes-hub).
+    allow_read_paths:
+      # services or endpoints with custom auth mechanisms
+      - /api/dlqs/*
+      - /api/pcs/*
+      - /api/wps/work-packages/*
+      - /api/sms/*
+      - /api/fis/storages/*
+      - /api/ucs/health
+      - /api/ucs/boxes/*
+      # services or endpoints that do not need auth
+      - /api/rts/*
+      - /api/dins/*
+      - /.well-known/*
+      - /service-logo.png
+      - /api/ga4gh/drs/v1/health
+      - /api/ga4gh/drs/v1/objects/*
+    allow_write_paths:
+      - /api/fis/federated/*
+      - /api/metldata/rpc/load-artifacts
+      - /api/wps/work-packages/*
+      - /api/sms/*
+      - /api/pcs/*
+      - /api/fis/legacy/*
+      - /api/dlqs/*
+      - /api/fis/storages/*
+      - /api/ucs/boxes/*
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
     mongo_dsn: mongodb://ghga-mongodb:27017
@@ -189,7 +223,11 @@ auth-rest:
   ports:
     enabled: true
   config:
-    provide_apis: ["users", "claims", "access"]
+    # users API only: the access API lives with the claims API on the internal
+    # instance, so exactly ONE instance seeds the data steward (two instances
+    # seeding concurrently on an empty database each create their own user for
+    # the same external ID)
+    provide_apis: ["users"]
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
     mongo_dsn: mongodb://ghga-mongodb:27017
@@ -197,8 +235,30 @@ auth-rest:
     oidc_userinfo_endpoint: http://ghga-gateway/ghga/userinfo
     oidc_issuer: http://localhost/ghga
     oidc_client_id: ghga-client
-    # seed data steward (ADR-0006) — applied by the claims API at startup;
-    # log in via the aai with exactly this email-shaped subject
+
+# The claims repository API: deliberately NOT gateway-routed (prod topology —
+# the testbed asserts /users/{id}/claims is unreachable from outside). Owns the
+# data-steward seeding, which the claims API applies at startup.
+auth-claims:
+  enabled: true
+  nameOverride: auth-claims
+  envVarsSecret: ghga-auth-keys-pub
+  ports:
+    enabled: true
+  config:
+    # also consumes dataset/user events: the claims repository revokes access
+    # grants when a dataset disappears (the reference deployment runs the
+    # users+access instance as a consumer too)
+    run_consumer: true
+    provide_apis: ["claims", "access"]
+    kafka_servers: ["ghga-kafka:9092"]
+    service_instance_id: "1"
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    oidc_authority_url: http://ghga-aai:8080/ghga/
+    oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
+    oidc_issuer: http://localhost/ghga
+    oidc_client_id: ghga-client
+    # seed data steward (ADR-0006) — log in via the aai with exactly this subject
     add_as_data_stewards:
       - ext_id: data.steward@ghga.dev
         name: Data Steward
@@ -211,6 +271,11 @@ wkvs:
   envVarsSecret: ghga-wkvs-keys
   config:
     service_instance_id: rest.1
+    # URLs wkvs SERVES to external clients (connector, DSKit): must be
+    # gateway-reachable, not in-cluster names
+    dcs_api_url: http://localhost/api/ga4gh/drs/v1
+    ucs_api_url: http://localhost/api/ucs
+    wps_api_url: http://localhost/api/wps
     storage_aliases:
       primary: http://ghga-minio:9000
       secondary: http://ghga-minio:9000
@@ -271,6 +336,7 @@ ekss:
       readOnly: true
 
 dcs:
+  serviceName: dcs
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-dcs-keys
@@ -303,6 +369,7 @@ dcs:
           s3_secret_access_key: demo-secret-key
 
 ucs:
+  serviceName: ucs
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-ucs-keys
@@ -332,6 +399,7 @@ ucs:
           s3_secret_access_key: demo-secret-key
 
 fis:
+  serviceName: fis
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-fis-keys
@@ -347,7 +415,10 @@ fis:
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
     ekss_api_url: http://ghga-ekss:8080
-    dhfs_version_constraint: ">2.0.0"
+    # everything here is built from one commit (lockstep, ADR-0004) and carries
+    # the dev version stamp, which no ">2.0.0"-style gate accepts; the DHFS
+    # compatibility check is meaningful for real data-hub installs, not here
+    dhfs_version_constraint: ">=0.0.0"
 
 ifrs:
   enabled: true
@@ -389,6 +460,7 @@ pcs:
     mongo_dsn: mongodb://ghga-mongodb:27017
 
 wps:
+  serviceName: wps
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-wps-keys
@@ -403,9 +475,10 @@ wps:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    access_url: http://ghga-auth-rest:8080
+    access_url: http://ghga-auth-claims:8080
 
 rs:
+  serviceName: rs
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-rs-keys
@@ -420,7 +493,7 @@ rs:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    access_url: http://ghga-auth-rest:8080
+    access_url: http://ghga-auth-claims:8080
     ucs_url: http://ghga-ucs:8080
 
 metldata:
@@ -445,6 +518,7 @@ metldata:
 # ---- access / metadata / notification path ----------------------------------------------
 
 rts:
+  serviceName: rts
   enabled: true
   apiBasePathPrefix: /api
   httpRoute:
@@ -461,6 +535,7 @@ rts:
 
 
 ars:
+  serviceName: ars
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-ars-keys
@@ -475,9 +550,10 @@ ars:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    download_access_url: http://ghga-auth-rest:8080/download-access
+    download_access_url: http://ghga-auth-claims:8080/download-access
 
 mass:
+  serviceName: mass
   enabled: true
   apiBasePathPrefix: /api
   httpRoute:
@@ -493,6 +569,7 @@ mass:
     mongo_dsn: mongodb://ghga-mongodb:27017
 
 dins:
+  serviceName: dins
   enabled: true
   apiBasePathPrefix: /api
   httpRoute:
@@ -509,6 +586,7 @@ dins:
 
 # consumers only — no routes
 ns:
+  serviceName: ns
   enabled: true
   # consumer only: no ports -> no Service (an empty Service is invalid)
   service:
@@ -520,9 +598,9 @@ ns:
     smtp_host: ghga-mailhog
     smtp_port: 1025
     use_starttls: false
-    from_address: central@ghga.dev
+    from_address: central@test.dev
     smtp_auth:
-      username: central@ghga.dev
+      username: central@test.dev
       password: demo
     lox24_base_url: http://ghga-lox24-mock:8080
     lox24_send_sms_path: sms
@@ -531,6 +609,7 @@ ns:
     lox24_token: demo-lox24-token
 
 nos:
+  serviceName: nos
   enabled: true
   # consumer only: no ports -> no Service (an empty Service is invalid)
   service:
@@ -539,10 +618,12 @@ nos:
     service_instance_id: consumer.1
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
-    central_data_stewardship_email: central@ghga.dev
-    helpdesk_email: helpdesk@ghga.dev
+    # the addresses the test bed (and its fixtures) expect
+    central_data_stewardship_email: central@test.dev
+    helpdesk_email: helpdesk@test.dev
 
 dlqs:
+  serviceName: dlqs
   enabled: true
   apiBasePathPrefix: /api
   envVarsSecret: ghga-dlqs-keys
@@ -579,3 +660,255 @@ sms:
       - "*.*:*"
     db_prefix: ""
     allow_empty_prefix: true
+    # sms fronts the objects API too: it resolves storage aliases itself
+    object_storages:
+      primary:
+        bucket: hub1-inbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+      secondary:
+        bucket: hub2-inbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+    # sms fronts the vault-secrets API: same demo AppRole as ekss (its policy
+    # covers exactly the secret/*/testing subtree sms manages)
+    vault_url: http://ghga-vault:8200
+    vault_path: testing
+    vault_role_id: 9f03d595-c964-441c-a68e-2e1534f2bb56
+    vault_secret_id: a3e80b1d-86d3-4c23-85ee-589031ec2cba
+
+# ---- consumer siblings (event pipeline; same config, consume-events mode) ---------------
+wps-consumer:
+  serviceName: wps
+  enabled: true
+  nameOverride: wps-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-wps-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    access_url: http://ghga-auth-claims:8080
+
+mass-consumer:
+  serviceName: mass
+  enabled: true
+  nameOverride: mass-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+ars-consumer:
+  serviceName: ars
+  enabled: true
+  nameOverride: ars-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-ars-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    download_access_url: http://ghga-auth-claims:8080/download-access
+
+dcs-consumer:
+  serviceName: dcs
+  enabled: true
+  nameOverride: dcs-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-dcs-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    ekss_base_url: http://ghga-ekss:8080
+    drs_server_uri: drs://localhost/
+    presigned_url_expires_after: 30
+    object_storages:
+      primary:
+        bucket: hub1-outbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+      secondary:
+        bucket: hub2-outbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+
+dins-consumer:
+  serviceName: dins
+  enabled: true
+  nameOverride: dins-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+rts-consumer:
+  serviceName: rts
+  enabled: true
+  nameOverride: rts-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+
+# ---- consumer siblings for the upload path (rs/ucs/fis track box state via events) ----
+rs-consumer:
+  serviceName: rs
+  enabled: true
+  nameOverride: rs-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-rs-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    access_url: http://ghga-auth-claims:8080
+    ucs_url: http://ghga-ucs:8080
+
+ucs-consumer:
+  serviceName: ucs
+  enabled: true
+  nameOverride: ucs-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-ucs-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    object_storages:
+      primary:
+        bucket: hub1-inbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+      secondary:
+        bucket: hub2-inbox
+        credentials:
+          s3_endpoint_url: http://ghga-minio:9000
+          s3_access_key_id: demo-access-key
+          s3_secret_access_key: demo-secret-key
+
+fis-consumer:
+  serviceName: fis
+  enabled: true
+  nameOverride: fis-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-fis-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017
+    ekss_api_url: http://ghga-ekss:8080
+    dhfs_version_constraint: '>2.0.0'
+
+# ---- data hubs: one DHFS per hub (re-encryption for interrogation) ----------------------
+
+dhfs-primary:
+  enabled: true
+  nameOverride: dhfs-primary
+  # DHFS_DATA_HUB_SIGNING_KEY + DHFS_CENTRAL_API_CRYPT4GH_PUBLIC_KEY
+  envVarsSecret: ghga-dhfs-keys
+  extraVolumes:
+    - name: c4gh
+      secret:
+        secretName: ghga-c4gh-files
+  extraVolumeMounts:
+    - name: c4gh
+      mountPath: /keys
+      readOnly: true
+  config:
+    service_instance_id: "1"
+    central_api_url: http://ghga-fis:8080
+    storage_alias: primary
+    s3_endpoint_url: http://ghga-minio:9000
+    s3_access_key_id: demo-access-key
+    s3_secret_access_key: demo-secret-key
+    data_hub_crypt4gh_private_key_path: /keys/crypt4gh.sec
+    interrogation_bucket_id: hub1-interrogations
+
+dhfs-secondary:
+  enabled: true
+  nameOverride: dhfs-secondary
+  # DHFS_DATA_HUB_SIGNING_KEY + DHFS_CENTRAL_API_CRYPT4GH_PUBLIC_KEY
+  envVarsSecret: ghga-dhfs-keys
+  extraVolumes:
+    - name: c4gh
+      secret:
+        secretName: ghga-c4gh-files
+  extraVolumeMounts:
+    - name: c4gh
+      mountPath: /keys
+      readOnly: true
+  config:
+    service_instance_id: "2"
+    central_api_url: http://ghga-fis:8080
+    storage_alias: secondary
+    s3_endpoint_url: http://ghga-minio:9000
+    s3_access_key_id: demo-access-key
+    s3_secret_access_key: demo-secret-key
+    data_hub_crypt4gh_private_key_path: /keys/crypt4gh.sec
+    interrogation_bucket_id: hub2-interrogations
+
+dlqs-consumer:
+  serviceName: dlqs
+  enabled: true
+  nameOverride: dlqs-consumer
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  envVarsSecret: ghga-dlqs-keys
+  config:
+    service_instance_id: consumer.1
+    kafka_servers:
+    - ghga-kafka:9092
+    mongo_dsn: mongodb://ghga-mongodb:27017

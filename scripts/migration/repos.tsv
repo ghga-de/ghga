@@ -54,6 +54,10 @@ tool	auth-km-jobs	.	tools/auth-km-jobs	main
 # Front end (JS toolchain, separate pnpm lockfile)
 frontend	data-portal	.	frontend/data-portal	main
 #
+# Test-only service: the OIDC provider the integration suite and the portal's UI
+# tests authenticate against (deployed by the testbed profile, never in prod)
+service	test-oidc-provider	.	services/test-oidc-provider	main
+#
 # Integration test bed (BDD + Playwright) -> runs against kind + helm
 testbed	archive-test-bed	.	testbed	main
 #

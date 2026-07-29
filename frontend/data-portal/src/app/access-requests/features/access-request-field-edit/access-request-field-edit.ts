@@ -6,10 +6,11 @@
 
 import {
   Component,
-  OnInit,
   computed,
+  effect,
   inject,
   input,
+  OnInit,
   output,
   signal,
 } from '@angular/core';
@@ -59,7 +60,6 @@ export class AccessRequestFieldEditComponent implements OnInit {
   edited = output<[keyof AccessRequest, boolean]>();
 
   isOpen = signal<boolean>(false);
-  isModified = signal<boolean>(false);
 
   protected formModel = signal({ field: '' });
 
@@ -82,23 +82,28 @@ export class AccessRequestFieldEditComponent implements OnInit {
 
   #defaultValue = computed<string>(() => this.request()[this.name()] || '');
 
-  changed = () => {
-    if (this.name() === 'ticket_id') {
-      // if the field is prefixed with (parts of) the base ticket URL, remove that prefix
-      const baseUrl = this.#baseTicketUrl;
-      const value = this.formModel().field;
-      const i = value.lastIndexOf('/');
-      if (baseUrl && i >= 0 && baseUrl.endsWith(value.substring(0, i + 1))) {
-        this.fieldForm.field().value.set(value.substring(i + 1));
-        return;
-      }
+  isModified = computed<boolean>(
+    () => this.isOpen() && this.formModel().field !== this.#defaultValue(),
+  );
+
+  /**
+   * If a ticket ID was entered prefixed with (parts of) the base ticket URL,
+   * remove that prefix.
+   */
+  #normalizeTicketIdEffect = effect(() => {
+    if (this.name() !== 'ticket_id') return;
+    const value = this.formModel().field;
+    const baseUrl = this.#baseTicketUrl;
+    const i = value.lastIndexOf('/');
+    if (baseUrl && i >= 0 && baseUrl.endsWith(value.substring(0, i + 1))) {
+      this.fieldForm.field().value.set(value.substring(i + 1));
     }
-    const isModified = this.formModel().field !== this.#defaultValue();
-    if (isModified !== this.isModified()) {
-      this.isModified.set(isModified);
-      this.edited.emit([this.name(), isModified]);
-    }
-  };
+  });
+
+  /**
+   * Notify the parent whenever the pending-edit state of this field changes.
+   */
+  #editedEffect = effect(() => this.edited.emit([this.name(), this.isModified()]));
 
   /**
    * Populate the editable field with the values from the access request on component init.
@@ -113,20 +118,14 @@ export class AccessRequestFieldEditComponent implements OnInit {
 
   cancel = () => {
     if (this.isModified()) {
-      this.isModified.set(false);
       this.formModel.set({ field: this.#defaultValue() });
-      this.edited.emit([this.name(), false]);
     }
     this.isOpen.set(false);
   };
 
   save = () => {
-    const field = this.formModel().field;
     if (this.isModified()) {
-      this.isModified.set(false);
-      const name = this.name();
-      this.saved.emit(new Map([[name, field]]));
-      this.edited.emit([name, false]);
+      this.saved.emit(new Map([[this.name(), this.formModel().field]]));
     }
     this.isOpen.set(false);
   };

@@ -1,32 +1,112 @@
-# Integration gate — install the self-reliant ghga-demo umbrella on kind and run the test bed.
-# This is what keeps HEAD always integrated (ADR-0009).
-# SCAFFOLD: the steps are still TODO; needs deploy/charts/ghga-demo + testbed wiring.
+# CI Stage 2 — the integration gate (runbook §5, ADR-0009).
 #
-# DORMANT: manual-run only. To enable automatic runs, restore:
-#   on:
-#     pull_request:
-#     push:
-#       branches: [main]
+# Installs the same self-reliant ghga-demo umbrella an outside user gets, plus the
+# test-bed profile (state-management service, the test OIDC provider, and the
+# generated metldata artifact model), onto a kind cluster — then runs the BDD +
+# Playwright suite against it. This is what keeps HEAD always integrated.
+#
+# No secrets are needed: the chart's secret-gen hook mints the whole key family
+# in-cluster and the test OP stands in for the identity provider — so once this
+# does run on pull requests, it will give a real verdict even on those from forks,
+# where secrets are withheld.
+#
+# Runner sizing is the open question this workflow exists to answer empirically.
+# Disk is settled: a stock ubuntu-latest reports ~145 G with ~88 G free — not the
+# 14 G the docs quote — against a platform needing ~17 G before a test runs (kind's
+# containerd stores images unpacked, ~2.8x compressed, and `kind load` leaves a
+# second copy in the docker store; demo-images drops that copy as it goes). What is
+# still unmeasured: build time for all 23 images on 4 vCPU, and memory once the
+# full fleet is up. Measure, don't assume — the documented specs were wrong.
 name: integration
 
+# Manual-run only while the runner question is open. To make it a gate, add:
+#   pull_request:
+#   push:
+#     branches: [main]
 on:
   workflow_dispatch:
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   testbed:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # chart versions and the affected-target diff want history
+
+      # A stock runner reports ~145 G with ~88 G free, against a platform that needs
+      # ~17 G before a test runs — so nothing is reclaimed here. This baseline and the
+      # Disk report at the end bracket what the run actually costs; if that delta ever
+      # approaches the free space, drop the unused toolchains (/usr/share/dotnet,
+      # /usr/local/lib/android, /opt/ghc, /opt/hostedtoolcache/CodeQL) to buy ~30 G.
+      - name: Disk baseline
+        run: df -h /
+
       - uses: astral-sh/setup-uv@v7
-      - uses: helm/kind-action@v1            # spin up kind (fast, image-loadable)
-      # 1) Build only AFFECTED images; pull last-released tags for the rest, then `kind load`.
-      #    TODO: drive from scripts/affected_targets.py + [tool.ghga].image members.
-      # 2) Install the SAME self-reliant umbrella users get (test-bed profile adds SMS):
-      #      helm install ghga ./deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-testbed.yaml
-      #    Envoy Gateway brings Gateway API CRDs; gateway Service is NodePort on kind (ADR-0012).
-      # 3) Run the BDD + Playwright suite against the cluster:
-      #      uv run pytest testbed/
-      - run: |
-          echo "TODO: implement once deploy/charts/ghga-demo + testbed/ are in place"
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v2
+      - uses: azure/setup-helm@v4
+      - uses: helm/kind-action@v1
+        with:
+          # only the CLI: the cluster is created by `just testbed-up` from
+          # deploy/kind-config.yaml, which publishes the gateway NodePort on port 80
+          install_only: true
+
+      - name: Sync the workspace
+        # needed by testbed-artifacts (ghga-datasteward-kit) and by the suite runner,
+        # which mints a per-run crypt4gh keypair via the auth-km-jobs package
+        run: uv sync --locked --all-packages --all-extras
+
+      - name: Install the test-bed suite
+        run: |
+          just testbed-install
+          sudo "$PWD/.venv-testbed/bin/playwright" install-deps chromium
+
+      # Images are loaded into the node, so the cluster has to exist first. The
+      # recipes depend on `cluster` themselves; this step just gives cluster
+      # creation its own boundary in the log, and is a no-op once it is up.
+      - name: Create the kind cluster
+        run: just cluster
+
+      # No published image tags exist to fall back on yet, so every member is built
+      # here. Once the release workflow publishes them, this should build only the
+      # affected members (scripts/affected_targets.py) and pull the rest — that change
+      # is what turns a ~40 min gate into a ~10 min one.
+      - name: Build and load images
+        run: just demo-images true
+
+      - name: Install the demo (test-bed profile)
+        # pulls the Envoy Gateway chart from Docker Hub (oci://docker.io/envoyproxy);
+        # if anonymous pulls ever rate-limit, authenticate here first
+        run: just testbed-up
+
+      - name: Run the test bed
+        run: just testbed
+
+      - name: Cluster state on failure
+        if: failure()
+        # diagnostics must not add a second red step when they can't run — e.g. a
+        # failure before the cluster exists
+        continue-on-error: true
+        run: |
+          K="kubectl --context kind-ghga"
+          kubectl config current-context > /dev/null 2>&1 || { echo "no cluster"; exit 0; }
+          echo "::group::pods"; $K get pods -o wide; echo "::endgroup::"
+          echo "::group::events"; $K get events --sort-by=.lastTimestamp | tail -60; echo "::endgroup::"
+          for p in $($K get pods -o name); do
+            echo "::group::logs $p"
+            $K logs "$p" --all-containers --tail=120 || true
+            echo "::endgroup::"
+          done
+
+      - name: Disk report
+        if: always()
+        run: |
+          df -h /
+          docker system df

@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { form, FormField, maxLength, pattern, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -64,25 +71,33 @@ export class VerificationDialogComponent {
       this.codeForm.code().value() === this.#previousSubmission(),
   );
 
-  protected verificationError = signal(false);
+  /**
+   * Whether the last submitted code was rejected. Resets itself as soon as the
+   * user changes the code again.
+   */
+  protected verificationError = linkedSignal<string, boolean>({
+    source: () => this.codeForm.code().value(),
+    computation: () => false,
+  });
 
   /**
-   * Input handler for the IVA verification code
-   * @param event The input event object
+   * Upper-case the entered code and keep only its first 6 alphanumeric characters.
    */
-  onInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const sanitized = target.value
+  #sanitizeCodeEffect = effect(() => {
+    const code = this.codeForm.code().value();
+    const sanitized = code
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '')
       .slice(0, 6);
-    target.value = sanitized;
-    this.codeForm.code().value.set(sanitized);
-    this.verificationError.set(false);
-    if (!this.#previousSubmission() && !this.disabled()) {
-      void this.onSubmit();
-    }
-  }
+    if (sanitized !== code) this.codeForm.code().value.set(sanitized);
+  });
+
+  /**
+   * Submit automatically, but only once, as soon as a complete code was entered.
+   */
+  #autoSubmitEffect = effect(() => {
+    if (!this.#previousSubmission() && !this.disabled()) void this.onSubmit();
+  });
 
   /**
    * Cancel the dialog

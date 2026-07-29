@@ -114,6 +114,8 @@ def check_all_files_state(
 ):
     """Check that every uploaded file for the given storage is in the expected state."""
     files = response.json()
+    if isinstance(files, dict):  # paginated: {"items": [...], "total_count": n}
+        files = files.get("items", files)
     assert isinstance(files, list), f"Expected a list of files, got {type(files)}"
 
     storage_config = fixtures.s3.get_storage_config(storage_name)

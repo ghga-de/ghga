@@ -10,6 +10,3 @@ charts:
     description: remotebackup
     appVersion: "3.2.7"
     version: "3.3.1"
-  test-oidc-provider:
-    description: A dummy OpenID Connect provider (OP) that can be used for testing purposes.
-    appVersion: "2.2.0-dhi"

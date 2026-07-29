@@ -4,12 +4,14 @@ matches:
 - path:
     type: PathPrefix
     value: {{ include "ghga-common.apiFullBasePath" . | default "/" }}
+{{- if .Values.httpRoute.rewritePath }}
 filters:
 - type: URLRewrite
   urlRewrite:
     path:
       type: ReplacePrefixMatch
       replacePrefixMatch: /
+{{- end }}
 backendRefs:
 - name:  {{ include "common.names.fullname" . }}
   port: {{ .Values.httpRoute.port }}
@@ -41,7 +43,7 @@ metadata:
     {{- end }}
 spec:
   rules: {{- include "common.tplvalues.render" ( dict "value" (append .Values.httpRoute.rules (include "ghga-common.default-rule" $ | fromYaml) | uniq) "context" $ ) | nindent 2 }}
-{{- $extraSpec := omit .Values.httpRoute "enabled" "rules" "port" }}
+{{- $extraSpec := omit .Values.httpRoute "enabled" "rules" "port" "rewritePath" }}
 {{- if $extraSpec }}
 {{- include "common.tplvalues.render" ( dict "value" $extraSpec "context" $ ) | nindent 2 }}
 {{- end }}

@@ -1,0 +1,97 @@
+# Testbed configuration for the kind-in-devcontainer demo cluster (ADR-0009/0017).
+# Use via:  TB_CONFIG_YAML=testbed/tb.kind.yaml  (the `just testbed` recipe does this
+# and supplies the secret-derived TB_* env vars from the cluster).
+#
+# The gateway serves everything on the Mac/VM port 80 with /api/<segment> routes;
+# see deploy/README.md. Tokens and crypt4gh keys come from env (TB_*), harvested
+# from the secret-gen secrets — never from this file.
+
+black_box_mode: true
+
+external_base_url: http://localhost/api
+data_portal_url: http://localhost
+
+# MailHog and the lox24 mock are not gateway-routed; the run recipe port-forwards them
+mail_url: http://localhost:8025
+lox24_mock_url: http://localhost:8080
+
+# route-name deltas vs the legacy compose paths
+dlq_url: dlqs
+wkvs_url: http://localhost/.well-known
+# dcs is routed at its prod GA4GH DRS base path here, not /api/dcs
+dcs_url: http://localhost/api/ga4gh/drs/v1
+
+# ucs and the auth adapter ARE gateway-routed here (as in the legacy compose envoy);
+# only ekss stays internal (its path falls through to the SPA, which the health
+# check counts as "not found")
+internal_apis:
+  - ekss
+external_apis:
+  - wkvs
+  - dcs
+  - fis
+  - metldata
+  - ars
+  - ums
+  - wps
+  - mass
+  - mail
+  - op
+  - sms
+  - dins
+  - pcs
+  - dlq
+  - rts
+  - rs
+  - ucs
+  - auth_adapter
+
+# our services use the prod chart-values database names, not the compose-era ones
+service_db_names:
+  - access-request
+  - auth-service
+  - download-controller
+  - internal-file-registry
+  - metadata-artifacts
+  - upload-controller
+  - work-package
+  - mass
+  - notification-orchestration
+  - notification
+  - file-ingest
+  - dataset-information
+  - purge-controller
+  - dlqs
+  - reverse-transpiler
+  - registry
+ums_db_name: auth-service
+dcs_db_name: download-controller
+fis_db_name: file-ingest
+metldata_db_name: metadata-artifacts
+ars_db_name: access-request
+wps_db_name: work-package
+ifrs_db_name: internal-file-registry
+pcs_db_name: purge-controller
+dins_db_name: dataset-information
+dlq_db_name: dlqs
+rts_db_name: reverse-transpiler
+ucs_db_name: upload-controller
+rs_db_name: registry
+nos_db_name: notification-orchestration
+
+# The wildcard wipe also drops each service's migration bookkeeping (the
+# *DbVersions collections). That is harmless while the services keep running,
+# but a pod restarting AFTER a wipe re-runs its migrations over data that is
+# already migrated and crash-loops. If that happens, drop the affected database
+# and restart the service (it migrates and re-seeds from scratch):
+#   kubectl exec deploy/ghga-mongodb -- mongosh --quiet \
+#     --eval 'db.getSiblingDB("auth-service").dropDatabase()'
+#   kubectl rollout restart deploy/ghga-auth-adapter deploy/ghga-auth-rest \
+#     deploy/ghga-auth-claims deploy/ghga-nos
+# (preserving the bookkeeping across the wipe is not possible through the state
+# manager: it cannot serialize those documents and answers 500 for them)
+
+# Event type names as the current services publish and consume them (the
+# suite's default predates the rename dataset_upserted -> dataset_created);
+# without this the DLQ test's synthetic event is ignored rather than rejected
+dataset_upserted_type: dataset_created

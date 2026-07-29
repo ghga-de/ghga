@@ -53,43 +53,53 @@ describe('ConfirmTotpComponent', () => {
     await fixture.whenStable();
   });
 
+  /**
+   * Enter the given text into the rendered code input, like a user would.
+   * @param text - the raw text to enter
+   * @returns the code input element, after the form has settled
+   */
+  async function enterCode(text: string): Promise<HTMLInputElement> {
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    return input;
+  }
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should auto-submit on first complete valid input', () => {
+  it('should auto-submit on first complete valid input', async () => {
     const onSubmitSpy = vitest
       .spyOn(component, 'onSubmit')
       .mockResolvedValue(undefined);
-    const inputElement = document.createElement('input');
-    inputElement.value = '123456';
 
-    component.onInput({ target: inputElement } as unknown as Event);
+    const inputElement = await enterCode('123456');
 
     expect(inputElement.value).toBe('123456');
     expect(onSubmitSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('should not auto-submit while first input is incomplete', () => {
+  it('should not auto-submit while first input is incomplete', async () => {
     const onSubmitSpy = vitest
       .spyOn(component, 'onSubmit')
       .mockResolvedValue(undefined);
-    const inputElement = document.createElement('input');
-    inputElement.value = '123';
 
-    component.onInput({ target: inputElement } as unknown as Event);
+    await enterCode('123');
 
     expect(onSubmitSpy).not.toHaveBeenCalled();
   });
 
-  it('should clear verification error on input', () => {
-    const inputElement = document.createElement('input');
-    inputElement.value = '12ab34';
+  it('should clear verification error on input', async () => {
     (component as unknown as ConfirmTotpComponentInternals).verificationError.set(true);
 
-    component.onInput({ target: inputElement } as unknown as Event);
+    const inputElement = await enterCode('12ab34');
 
     expect(inputElement.value).toBe('1234');
+    expect(
+      (component as unknown as ConfirmTotpComponentInternals).totpForm.code().value(),
+    ).toBe('1234');
     expect(
       (component as unknown as ConfirmTotpComponentInternals).verificationError(),
     ).toBe(false);
@@ -106,10 +116,8 @@ describe('ConfirmTotpComponent', () => {
     const onSubmitSpy = vitest
       .spyOn(component, 'onSubmit')
       .mockResolvedValue(undefined);
-    const inputElement = document.createElement('input');
-    inputElement.value = '654321';
 
-    component.onInput({ target: inputElement } as unknown as Event);
+    await enterCode('654321');
 
     expect(onSubmitSpy).not.toHaveBeenCalled();
   });

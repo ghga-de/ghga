@@ -1,0 +1,122 @@
+# Testbed profile (ADR-0006/0009): layered on top of values-local.yaml —
+#   helm upgrade --install ghga deploy/charts/ghga-demo \
+#     -f values-local.yaml -f values-artifacts.yaml -f values-testbed.yaml
+# Enables the state-management service, deploys the original GHGA test OP
+# (whose POST /login contract the BDD auth fixtures expect), and points the
+# auth stack at it. values-artifacts.yaml (generated, gitignored) carries the
+# metldata artifact model — see `just testbed-artifacts`.
+
+# the mock-oauth2 aai is replaced by the test OP in this profile — save the JVM
+aai:
+  enabled: false
+
+# testbed-only state manipulation API (ADR-0008)
+sms:
+  enabled: true
+
+# the original test OP at the path the testbed expects (/api/op.test);
+# fixed issuer — no request-host coupling like the mock-oauth2 default aai
+test-oidc-provider:
+  enabled: true
+  apiBasePathPrefix: /api
+  httpRoute:
+    enabled: true
+    port: 8080
+    parentRefs:
+      - name: ghga
+  ports:
+    enabled: true
+  config:
+    # the issuer the testbed's sub-derivation and the auth stack expect
+    issuer: https://test-aai.ghga.dev
+    # the browser flow: the provider validates the client's redirect URI and
+    # answers CORS preflights from the portal's origin
+    redirect_url: http://localhost/oauth/callback
+    cors_allowed_origins:
+      - http://localhost
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# auth stack trusts the test OP instead of the aai (in-cluster discovery;
+# issuer is the OP's fixed value, which also determines test user subs)
+auth-adapter:
+  config:
+    # the suite tests deactivation after 3 failed TOTP attempts
+    totp_max_failed_attempts: 3
+    oidc_authority_url: http://ghga-test-oidc-provider:8080/
+    oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
+    oidc_issuer: https://test-aai.ghga.dev
+    oidc_client_id: ""
+
+auth-rest:
+  config:
+    oidc_authority_url: http://ghga-test-oidc-provider:8080/
+    oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
+    oidc_issuer: https://test-aai.ghga.dev
+    oidc_client_id: ""
+
+auth-claims:
+  config:
+    oidc_authority_url: http://ghga-test-oidc-provider:8080/
+    oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo
+    oidc_issuer: https://test-aai.ghga.dev
+    oidc_client_id: ""
+    # the identity the BDD fixtures derive for "Data Steward"
+    # (sub = id-of-<name>@<issuer-domain>, email = <name dotted>@home.org)
+    add_as_data_stewards:
+      - ext_id: id-of-data-steward@ghga.dev
+        name: Data Steward
+        email: data.steward@home.org
+        iva_type: Phone
+        # deliberately the same number the suite gives its test user: one of its
+        # steps keeps only IVAs with that value, so a different one would delete
+        # the steward's and leave the portal's profile page empty
+        iva_value: "+491710000001"
+
+# The suite asserts the exact search options; use the test bed's facet
+# configuration (from the compose environment) rather than the prod one.
+mass:
+  config:
+    searchable_classes:
+      EmbeddedDataset:
+        description: Dataset grouping files under controlled access
+        facetable_fields:
+        - key: study.types
+          name: Study type
+        - key: experiment_methods.instrument_model
+          name: Platform
+        - key: experiment_methods.type
+          name: Experiment
+        - key: experiment_methods.library_type
+          name: Analysis level
+        - key: experiment_methods.sequencing_layout
+          name: Sequencing mode
+        - key: individuals.diagnosis_terms
+          name: Diagnosis
+        - key: data_access_policy.alias
+          name: Access policy
+        - key: data_access_policy.data_access_committee.institute
+          name: Controller Institution
+        selected_fields:
+        - key: ega_accession
+          name: EGA accession
+        - key: title
+          name: Dataset title
+        - key: alias
+          name: Dataset alias
+
+# The suite's browser tests log in through the portal, which must therefore use
+# the same provider as the API fixtures (the compose environment did likewise).
+# Its /authorize authorizes the last user minted via POST /login without an
+# interactive form, which is what the UI flow expects.
+data-portal:
+  config:
+    oidc_authority_url: http://localhost/api/op.test
+    oidc_client_id: test-client
+    oidc_use_discovery: true
+    oidc_account_url: http://localhost/api/op.test

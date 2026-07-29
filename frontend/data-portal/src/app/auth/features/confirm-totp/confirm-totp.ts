@@ -4,7 +4,14 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { form, FormField, maxLength, pattern, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -39,7 +46,14 @@ export class ConfirmTotpComponent {
 
   #isProcessing = signal(false);
 
-  protected verificationError = signal(false);
+  /**
+   * Whether the last submitted code was rejected. Resets itself as soon as the
+   * user changes the code again.
+   */
+  protected verificationError = linkedSignal<string, boolean>({
+    source: () => this.totpForm.code().value(),
+    computation: () => false,
+  });
 
   allowNavigation = false; // used by canDeactivate guard
 
@@ -52,21 +66,20 @@ export class ConfirmTotpComponent {
   );
 
   /**
-   * Input handler for the TOTP code
-   * @param event The input event object
+   * Keep only the first 6 digits of the entered code.
    */
-  onInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const sanitized = target.value.replace(/\D/g, '').slice(0, 6);
-    target.value = sanitized;
-    this.totpForm.code().value.set(sanitized);
-    // Reset error state when user starts typing
-    this.verificationError.set(false);
-    // Auto-submit only once
-    if (!this.#previousSubmission() && !this.disabled()) {
-      void this.onSubmit();
-    }
-  }
+  #sanitizeCodeEffect = effect(() => {
+    const code = this.totpForm.code().value();
+    const sanitized = code.replace(/\D/g, '').slice(0, 6);
+    if (sanitized !== code) this.totpForm.code().value.set(sanitized);
+  });
+
+  /**
+   * Submit automatically, but only once, as soon as a complete code was entered.
+   */
+  #autoSubmitEffect = effect(() => {
+    if (!this.#previousSubmission() && !this.disabled()) void this.onSubmit();
+  });
 
   /**
    * Submit authentication code

@@ -116,7 +116,7 @@ class MongoFixture(StateManager):
         if status_code == 404 and sloppy:
             return []  # treat non-existing collections as being empty
         assert False, (
-            "Failed to retrieve documents"
+            f"Failed to retrieve documents from {db_name}.{collection_name}"
             f" with status code {status_code}: {response.text}"
         )
 

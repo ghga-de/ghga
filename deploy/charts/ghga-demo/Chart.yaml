@@ -22,6 +22,12 @@ dependencies:
     version: 0.1.0
     repository: file://../aai
     condition: aai.enabled
+  # testbed profile only (values-testbed.yaml): the original GHGA test OP whose
+  # POST /login mints tokens non-interactively — the BDD auth fixtures use it as-is
+  - name: test-oidc-provider
+    version: ">=0.0.0-0"
+    repository: file://../test-oidc-provider
+    condition: test-oidc-provider.enabled
 
   # ---- app charts (generated; grow this list as demo config wiring lands) --------------
   # auth-service deploys twice, as in prod: the ext-authz adapter and the registry
@@ -36,6 +42,11 @@ dependencies:
     version: ">=0.0.0-0"
     repository: file://../auth-service
     condition: auth-rest.enabled
+  - name: auth-service
+    alias: auth-claims
+    version: ">=0.0.0-0"
+    repository: file://../auth-service
+    condition: auth-claims.enabled
   - name: wkvs
     version: ">=0.0.0-0"
     repository: file://../wkvs
@@ -56,6 +67,18 @@ dependencies:
     version: ">=0.0.0-0"
     repository: file://../fis
     condition: fis.enabled
+  # one DHFS per data hub: polls FIS for files to interrogate and re-encrypts
+  # them into that hub's interrogation bucket
+  - name: dhfs
+    alias: dhfs-primary
+    version: ">=0.0.0-0"
+    repository: file://../dhfs
+    condition: dhfs-primary.enabled
+  - name: dhfs
+    alias: dhfs-secondary
+    version: ">=0.0.0-0"
+    repository: file://../dhfs
+    condition: dhfs-secondary.enabled
   - name: ifrs
     version: ">=0.0.0-0"
     repository: file://../ifrs
@@ -80,6 +103,51 @@ dependencies:
     version: ">=0.0.0-0"
     repository: file://../rts
     condition: rts.enabled
+  - name: wps
+    alias: wps-consumer
+    version: ">=0.0.0-0"
+    repository: file://../wps
+    condition: wps-consumer.enabled
+  - name: mass
+    alias: mass-consumer
+    version: ">=0.0.0-0"
+    repository: file://../mass
+    condition: mass-consumer.enabled
+  - name: ars
+    alias: ars-consumer
+    version: ">=0.0.0-0"
+    repository: file://../ars
+    condition: ars-consumer.enabled
+  - name: dcs
+    alias: dcs-consumer
+    version: ">=0.0.0-0"
+    repository: file://../dcs
+    condition: dcs-consumer.enabled
+  - name: dins
+    alias: dins-consumer
+    version: ">=0.0.0-0"
+    repository: file://../dins
+    condition: dins-consumer.enabled
+  - name: rs
+    alias: rs-consumer
+    version: ">=0.0.0-0"
+    repository: file://../rs
+    condition: rs-consumer.enabled
+  - name: ucs
+    alias: ucs-consumer
+    version: ">=0.0.0-0"
+    repository: file://../ucs
+    condition: ucs-consumer.enabled
+  - name: fis
+    alias: fis-consumer
+    version: ">=0.0.0-0"
+    repository: file://../fis
+    condition: fis-consumer.enabled
+  - name: rts
+    alias: rts-consumer
+    version: ">=0.0.0-0"
+    repository: file://../rts
+    condition: rts-consumer.enabled
   - name: ars
     version: ">=0.0.0-0"
     repository: file://../ars
@@ -104,6 +172,12 @@ dependencies:
     version: ">=0.0.0-0"
     repository: file://../dlqs
     condition: dlqs.enabled
+  # consumes the dead-letter topic and stores the events for inspection
+  - name: dlqs
+    alias: dlqs-consumer
+    version: ">=0.0.0-0"
+    repository: file://../dlqs
+    condition: dlqs-consumer.enabled
   - name: sms
     version: ">=0.0.0-0"
     repository: file://../sms
