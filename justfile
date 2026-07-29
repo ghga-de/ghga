@@ -191,10 +191,17 @@ down:
 testbed-artifacts:
     #!/usr/bin/env bash
     set -euo pipefail
+    root=$PWD
     cd testbed/example_data/metadata
     rm -rf artifact_models && mkdir artifact_models
-    uv run ghga-datasteward-kit metadata generate-artifact-models --config-path=metadata_config.yaml
-    uv run --with pyyaml python ../../../scripts/artifact_values.py
+    # testbed/ carries its own pyproject.toml, so from here uv discovers *it* as the
+    # project and builds a venv holding none of the workspace tools. Point uv at the
+    # workspace root instead. --no-sync then leaves that root environment exactly as
+    # `just sync` built it (--all-packages --all-extras); a plain `uv run` would
+    # re-resolve it to the root defaults and drop members later recipes rely on.
+    uv run --no-sync --project "$root" \
+      ghga-datasteward-kit metadata generate-artifact-models --config-path=metadata_config.yaml
+    uv run --no-sync --project "$root" --with pyyaml python "$root/scripts/artifact_values.py"
     rm -rf artifact_models
 
 # Deploy/refresh the demo with the testbed profile (sms, test OP, artifact model).
