@@ -40,6 +40,16 @@
   "forwardPorts": [
     8080
   ],
+  // Share the host's network namespace. The demo cluster (kind, running in this
+  // container's own docker) publishes its gateway on port 80, and only host networking
+  // puts that port on the VM, where the Mac's browser reaches it as a bare
+  // http://localhost. The port-less authority is required rather than cosmetic: the OIDC
+  // issuer must be byte-identical seen from the browser and from inside the cluster, and
+  // the in-cluster path cannot carry a port (see deploy/kind-config.yaml). It is also why
+  // the nested bridges need `just net-fix` on hosts with a FORWARD DROP policy.
+  "runArgs": [
+    "--net=host"
+  ],
   // Persist uv's managed Python interpreters and its wheel cache across rebuilds.
   // The workspace .venv lives on the (surviving) bind mount but symlinks its interpreter
   // into ~/.local/share/uv/python/...; without this volume a rebuild wipes that target and
@@ -47,22 +57,17 @@
   // skips re-downloading/rebuilding every dependency wheel on each rebuild.
   // Persisted across rebuilds: uv interpreters + wheel cache (see above), and the Playwright
   // browser binaries (~100MB+ each) so E2E tests don't re-download them on every rebuild.
-  "runArgs": [
-    "--net=host"
-  ],
   "mounts": [
     "source=ghga-claude,target=/home/vscode/.claude,type=volume",
     "source=ghga-uv-data,target=/home/vscode/.local/share/uv,type=volume",
     "source=ghga-uv-cache,target=/home/vscode/.cache/uv,type=volume",
     "source=ghga-playwright,target=/home/vscode/.cache/ms-playwright,type=volume"
   ],
-  // Fresh named volumes mount root-owned, and Docker also creates their parent dirs
-  // (~/.local, ~/.local/share, ~/.cache) root-owned — which blocks `uv tool install` from
-  // creating ~/.local/bin and Playwright from creating ~/.cache/ms-playwright. The script
-  // chown the parents AND the volume contents to vscode, install the migration tooling 
-  // (git-filter-repo, also lost on rebuild), then provision BOTH stacks: the Python 
-  // workspace venv (uv), the front-end node_modules (pnpm), and the Playwright browsers 
-  // — so pytest discovery, the Angular tooling, and the E2E tests all work the moment 
-  // the window opens.
-  "postCreateCommand": ".devcontainer/post-create.sh"
+  // Repairs the root-owned volume mounts, installs the tooling a rebuild drops (just,
+  // kind, git-filter-repo), and provisions both stacks — so test discovery, the Angular
+  // tooling, and the E2E tests all work the moment the window opens. The script carries
+  // the details and the reasoning. Invoked through bash so a lost executable bit (a
+  // Windows checkout, core.fileMode=false) cannot turn provisioning into an opaque
+  // permission-denied at container create.
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
 }
