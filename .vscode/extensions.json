@@ -1,0 +1,12 @@
+{
+  // Mirrors the suppression in ghga.code-workspace, for when the repo is opened as a
+  // plain folder rather than through the multi-root workspace. vitest.explorer cannot
+  // drive our unit tests: Angular 22 runs them through the @angular/build:unit-test
+  // builder, which the plain-Vitest extension has no VS Code Testing integration for
+  // (use `pnpm test` / `pnpm test:ui`). The recommendation itself comes from
+  // frontend/data-portal/.vscode/extensions.json, which is synced from the data-portal
+  // repo — so it is suppressed here rather than deleted there, where it would return.
+  "unwantedRecommendations": [
+    "vitest.explorer"
+  ]
+}

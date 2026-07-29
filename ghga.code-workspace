@@ -148,5 +148,16 @@
         "source.organizeImports.ruff": "explicit"
       }
     }
+  },
+  "extensions": {
+    // frontend/data-portal/.vscode/extensions.json recommends vitest.explorer, and this
+    // multi-root workspace picks up every folder's recommendations. The extension cannot
+    // drive our unit tests: Angular 22 runs them through the @angular/build:unit-test
+    // builder, which the plain-Vitest extension has no VS Code Testing integration for
+    // (use `pnpm test` / `pnpm test:ui`). Suppressed here rather than deleted upstream,
+    // because that file is synced from the data-portal repo and would come back.
+    "unwantedRecommendations": [
+      "vitest.explorer"
+    ]
   }
 }
