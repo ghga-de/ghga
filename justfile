@@ -275,6 +275,12 @@ testbed-reset:
 testbed *args:
     #!/usr/bin/env bash
     set -euo pipefail
+    # The suite shells out to ghga-datasteward-kit and ghga-connector and expects them
+    # on PATH. Both are workspace members (tools/), so the gate has to exercise our
+    # build of them — testbed/requirements.txt also pins released versions from PyPI
+    # into .venv-testbed, and those would silently be tested instead. Locally this was
+    # only ever right by accident: the devcontainer happens to put .venv/bin on PATH.
+    export PATH="$PWD/.venv/bin:$PATH"
     K="kubectl --context kind-ghga"
     secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
     export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
