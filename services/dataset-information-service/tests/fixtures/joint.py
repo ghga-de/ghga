@@ -19,7 +19,7 @@ __all__ = ["JointFixture", "joint_fixture"]
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
-import httpx
+import httpx2
 import pytest
 import pytest_asyncio
 from ghga_event_schemas.pydantic_ import FileAccessionMapping
@@ -51,16 +51,16 @@ from dins.ports.inbound.dao import (
 from dins.ports.inbound.information_service import InformationServicePort
 from tests.fixtures.config import get_config
 
-InMemFileInformationDao: type[FileInformationDaoPort] = new_mock_dao_class(  # type: ignore
+InMemFileInformationDao: type[FileInformationDaoPort] = new_mock_dao_class(
     dto_model=FileInformation, id_field="accession"
 )
-InMemAccessionMapDao: type[FileAccessionMapDaoPort] = new_mock_dao_class(  # type: ignore
+InMemAccessionMapDao: type[FileAccessionMapDaoPort] = new_mock_dao_class(
     dto_model=FileAccessionMapping, id_field="accession"
 )
-InMemPendingFileInfoDao: type[PendingFileInfoDaoPort] = new_mock_dao_class(  # type: ignore
+InMemPendingFileInfoDao: type[PendingFileInfoDaoPort] = new_mock_dao_class(
     dto_model=PendingFileInfo, id_field="file_id"
 )
-InMemDatasetDao: type[DatasetDaoPort] = new_mock_dao_class(  # type: ignore
+InMemDatasetDao: type[DatasetDaoPort] = new_mock_dao_class(
     dto_model=DatasetFileAccessions, id_field="accession"
 )
 
@@ -73,7 +73,7 @@ class JointFixture:
     information_service: InformationServicePort
     dataset_dao: DatasetDaoPort
     file_information_dao: FileInformationDaoPort
-    rest_client: httpx.AsyncClient
+    rest_client: httpx2.AsyncClient
     event_subscriber: KafkaEventSubscriber
     mongodb: MongoDbFixture
     kafka: KafkaFixture

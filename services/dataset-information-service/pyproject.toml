@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dins"
-version = "7.0.1"
+version = "7.0.2"
 description = "Dataset Information Service - Providing public metadata about files registered with the Internal File Registry"
 dependencies = [
     "typer >= 0.19",
-    "ghga-service-commons[api] >= 7.0",
+    "ghga-service-commons[api] >= 8.0",
     "ghga-event-schemas ~= 12.0.0",
-    "hexkit[akafka,mongodb, opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi] >= 8.1",
+    "hexkit[akafka,mongodb, opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi] >= 9.0",
 ]
 
 [project.license]
@@ -72,6 +72,9 @@ ignore = [
     "E111",
     "E114",
     "E116",
+    "E117",
+    "E501",
+    "W191",
     "PLW",
     "RUF001",
     "RUF010",
@@ -100,6 +103,13 @@ select = [
     "RUF",
     "SIM",
     "D",
+    "E",
+    "W",
+    "ASYNC",
+    "LOG",
+    "PERF",
+    "RET",
+    "C4",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -111,6 +121,7 @@ max-complexity = 10
     "S",
     "SIM",
     "D",
+    "E402",
 ]
 "tests/*" = [
     "S",
