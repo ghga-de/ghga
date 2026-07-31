@@ -25,12 +25,13 @@ import pytest
 from fastapi import status
 from ghga_event_schemas.pydantic_ import FileDownloadServed, NonStagedFileRequested
 from hexkit.providers.akafka.testutils import ExpectedEvent
+from hexkit.providers.s3 import S3ObjectStorage
 from hexkit.providers.s3.testutils import FileObject, temp_file_object
 from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from dcs.core import models
-from dcs.core.errors import StorageAliasNotConfiguredError
+from dcs.core.errors import StorageAliasNotConfiguredError, StorageUnavailableError
 from tests_dcs.fixtures.joint import CleanupFixture, PopulatedFixture
 from tests_dcs.fixtures.mock_api.app import router
 from tests_dcs.fixtures.utils import generate_work_order_token
@@ -362,4 +363,183 @@ async def test_bucket_cleanup_dangling_objects(cleanup_fixture: CleanupFixture, 
     assert await s3.storage.does_object_exist(
         bucket_id=bucket_id,
         object_id=str(cached_object_id),
+    )
+
+
+class SimulatedConnectionError(Exception):
+    """Stand-in for the connection failures the S3 client raises.
+
+    Those derive from `Exception` rather than from `ObjectStorageProtocolError`, so
+    they pass straight through hexkit's error translation - which is precisely the
+    case the cleanup job has to survive.
+    """
+
+
+CONNECTION_ERRORS = [
+    SimulatedConnectionError(
+        'Could not connect to the endpoint URL: "https://localhost:1"'
+    ),
+    SimulatedConnectionError(
+        "SSL validation failed for https://localhost:1 certificate verify failed"
+    ),
+]
+CONNECTION_ERROR_IDS = ["endpoint_unreachable", "invalid_ssl"]
+
+
+@pytest.mark.parametrize(
+    "connection_error", CONNECTION_ERRORS, ids=CONNECTION_ERROR_IDS
+)
+async def test_bucket_cleanup_skips_unreachable_storage(
+    cleanup_fixture: CleanupFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog,
+    connection_error: Exception,
+):
+    """Test that a failed connection while listing the bucket contents skips the
+    storage alias with a warning instead of crashing the cleanup job.
+    """
+
+    async def failing_list(*args, **kwargs):
+        raise connection_error
+
+    monkeypatch.setattr(S3ObjectStorage, "list_all_object_ids", failing_list)
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="dcs.core.bucket_cleanup"):
+        await cleanup_fixture.bucket_cleaner.cleanup_download_buckets(
+            object_storages_config=cleanup_fixture.config
+        )
+
+    expected_warning = str(
+        StorageUnavailableError(
+            alias=cleanup_fixture.endpoint_aliases.valid_node,
+            reason=str(connection_error),
+        )
+    )
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert expected_warning in warnings[0].getMessage()
+
+    # Nothing was removed, since the bucket contents were never listed
+    expired_object = await cleanup_fixture.mongodb_dao.get_by_id(
+        cleanup_fixture.expired_file_id
+    )
+    assert await cleanup_fixture.s3.storage.does_object_exist(
+        bucket_id=cleanup_fixture.bucket_id,
+        object_id=str(expired_object.object_id),
+    )
+
+
+@pytest.mark.parametrize(
+    "connection_error", CONNECTION_ERRORS, ids=CONNECTION_ERROR_IDS
+)
+async def test_bucket_cleanup_continues_after_deletion_failure(
+    cleanup_fixture: CleanupFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog,
+    connection_error: Exception,
+):
+    """Test that a failed connection while deleting an object is logged as a warning
+    and does not stop the remaining deletion candidates from being attempted.
+
+    The bucket was reachable a moment earlier, so the failure is treated as potentially
+    transient rather than as a reason to abandon the storage alias.
+    """
+    # Backdate the second object as well, so there are two deletion candidates
+    cached_object = await cleanup_fixture.mongodb_dao.get_by_id(
+        cleanup_fixture.cached_file_id
+    )
+    cached_object.last_accessed = now_utc_ms_prec() - timedelta(
+        days=cleanup_fixture.config.download_bucket_cache_timeout + 1
+    )
+    await cleanup_fixture.mongodb_dao.update(cached_object)
+
+    call_count = 0
+
+    async def failing_delete(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        raise connection_error
+
+    monkeypatch.setattr(S3ObjectStorage, "delete_object", failing_delete)
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="dcs.core.bucket_cleanup"):
+        await cleanup_fixture.bucket_cleaner.cleanup_download_buckets(
+            object_storages_config=cleanup_fixture.config
+        )
+
+    # Both candidates were attempted despite the first failure
+    assert call_count == 2
+
+    expired_object = await cleanup_fixture.mongodb_dao.get_by_id(
+        cleanup_fixture.expired_file_id
+    )
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 2
+    for object_id in (cached_object.object_id, expired_object.object_id):
+        expected_warning = str(
+            cleanup_fixture.bucket_cleaner.CleanupError(
+                object_id=object_id,
+                storage_alias=cleanup_fixture.endpoint_aliases.valid_node,
+                reason=str(connection_error),
+            )
+        )
+        assert any(expected_warning in record.getMessage() for record in warnings)
+
+
+async def test_bucket_cleanup_continues_with_remaining_aliases(
+    cleanup_fixture: CleanupFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog,
+):
+    """Test that skipping an unreachable storage alias does not stop the cleanup job
+    from processing the remaining configured aliases.
+    """
+    unreachable_alias = cleanup_fixture.endpoint_aliases.valid_node
+    second_alias = f"{unreachable_alias}_2"
+    monkeypatch.setitem(
+        cleanup_fixture.config.object_storages,
+        second_alias,
+        cleanup_fixture.config.object_storages[unreachable_alias],
+    )
+
+    connection_error = SimulatedConnectionError(
+        'Could not connect to the endpoint URL: "https://localhost:1"'
+    )
+    real_list = S3ObjectStorage.list_all_object_ids
+    listed_buckets = 0
+
+    async def failing_first_list(self, *, bucket_id: str):
+        """Fail the listing for the first alias only, then behave normally."""
+        nonlocal listed_buckets
+        listed_buckets += 1
+        if listed_buckets == 1:
+            raise connection_error
+        return await real_list(self, bucket_id=bucket_id)
+
+    monkeypatch.setattr(S3ObjectStorage, "list_all_object_ids", failing_first_list)
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="dcs.core.bucket_cleanup"):
+        await cleanup_fixture.bucket_cleaner.cleanup_download_buckets(
+            object_storages_config=cleanup_fixture.config
+        )
+
+    expected_warning = str(
+        StorageUnavailableError(alias=unreachable_alias, reason=str(connection_error))
+    )
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert expected_warning in warnings[0].getMessage()
+
+    # The second alias was reached despite the first one being skipped
+    assert listed_buckets == 2
+
+    expired_object = await cleanup_fixture.mongodb_dao.get_by_id(
+        cleanup_fixture.expired_file_id
+    )
+    assert not await cleanup_fixture.s3.storage.does_object_exist(
+        bucket_id=cleanup_fixture.bucket_id,
+        object_id=str(expired_object.object_id),
     )
