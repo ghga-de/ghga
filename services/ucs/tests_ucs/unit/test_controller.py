@@ -2095,6 +2095,165 @@ async def test_orphaned_abort_failure_does_not_stop_cleanup(
     assert call_count == 2
 
 
+class SimulatedConnectionError(Exception):
+    """Stand-in for the connection failures the S3 client raises.
+
+    Those derive from `Exception` rather than from `ObjectStorageProtocolError`, so
+    they pass straight through hexkit's error translation - which is precisely the
+    case the cleanup job has to survive.
+    """
+
+
+@pytest.mark.parametrize(
+    "connection_error",
+    [
+        SimulatedConnectionError(
+            'Could not connect to the endpoint URL: "https://localhost:1"'
+        ),
+        SimulatedConnectionError(
+            "SSL validation failed for https://localhost:1 certificate verify failed"
+        ),
+    ],
+    ids=["endpoint_unreachable", "invalid_ssl"],
+)
+async def test_cleanup_skips_alias_when_s3_connection_fails(
+    rig: JointRig,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    connection_error: Exception,
+):
+    """Test that a failed connection on the first S3 call skips the storage alias with
+    a warning instead of crashing the cleanup job.
+    """
+
+    async def failing_list(**kwargs):
+        raise connection_error
+
+    orphan_cleanup_calls = 0
+
+    async def counting_orphan_cleanup(**kwargs):
+        nonlocal orphan_cleanup_calls
+        orphan_cleanup_calls += 1
+
+    monkeypatch.setattr(rig.s3_client, "list_all_multipart_uploads", failing_list)
+    monkeypatch.setattr(
+        rig.s3_client, "cleanup_orphaned_objects", counting_orphan_cleanup
+    )
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads()
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "Skipping stale upload cleanup for alias 'test'" in warnings[0].getMessage()
+
+    # The alias was abandoned before any further S3 work was attempted
+    assert orphan_cleanup_calls == 0
+
+
+async def test_cleanup_continues_with_remaining_aliases(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that skipping an unreachable storage alias does not stop the cleanup job
+    from processing the remaining configured aliases.
+    """
+    monkeypatch.setitem(
+        rig.config.object_storages, "test2", rig.config.object_storages["test"]
+    )
+
+    async def failing_for_first_alias(*, storage_alias: str):
+        if storage_alias == "test":
+            raise SimulatedConnectionError(
+                'Could not connect to the endpoint URL: "https://localhost:1"'
+            )
+        return {}
+
+    cleaned_aliases: list[str] = []
+
+    async def record_orphan_cleanup(*, storage_alias: str, known_object_ids: set[str]):
+        cleaned_aliases.append(storage_alias)
+
+    monkeypatch.setattr(
+        rig.s3_client, "list_all_multipart_uploads", failing_for_first_alias
+    )
+    monkeypatch.setattr(
+        rig.s3_client, "cleanup_orphaned_objects", record_orphan_cleanup
+    )
+
+    await rig.controller.cleanup_stale_uploads()
+
+    assert cleaned_aliases == ["test2"]
+
+
+async def test_cleanup_skips_unknown_storage_alias(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """Test that a storage alias unknown to the S3 client is skipped rather than
+    aborting cleanup for the remaining aliases.
+    """
+    monkeypatch.setitem(
+        rig.config.object_storages, "test2", rig.config.object_storages["test"]
+    )
+
+    async def failing_for_first_alias(*, storage_alias: str):
+        if storage_alias == "test":
+            raise rig.s3_client.UnknownStorageAliasError(storage_alias=storage_alias)
+        return {}
+
+    cleaned_aliases: list[str] = []
+
+    async def record_orphan_cleanup(*, storage_alias: str, known_object_ids: set[str]):
+        cleaned_aliases.append(storage_alias)
+
+    monkeypatch.setattr(
+        rig.s3_client, "list_all_multipart_uploads", failing_for_first_alias
+    )
+    monkeypatch.setattr(
+        rig.s3_client, "cleanup_orphaned_objects", record_orphan_cleanup
+    )
+
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads()
+
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 1
+    assert "Unknown storage alias 'test'" in errors[0].getMessage()
+    assert cleaned_aliases == ["test2"]
+
+
+async def test_cleanup_tolerates_orphaned_object_cleanup_failure(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """Test that a connection failure while removing orphaned objects is logged as a
+    warning instead of crashing the cleanup job.
+
+    This happens after the alias has already been reached successfully, so it is
+    treated as potentially transient rather than as a reason to skip the alias.
+    """
+
+    async def failing_orphan_cleanup(**kwargs):
+        raise SimulatedConnectionError(
+            "SSL validation failed for https://localhost:1 certificate verify failed"
+        )
+
+    monkeypatch.setattr(
+        rig.s3_client, "cleanup_orphaned_objects", failing_orphan_cleanup
+    )
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads()
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert (
+        "Could not clean up orphaned objects for alias 'test'"
+        in warnings[0].getMessage()
+    )
+
+
 async def test_refresh_activity_warns_and_recreates_when_missing(rig: JointRig):
     """Test that _refresh_upload_activity logs a warning and recreates the entry
     when the activity record is unexpectedly absent during a part URL request.

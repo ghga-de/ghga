@@ -1455,12 +1455,15 @@ class UploadController(UploadControllerPort):
     async def _cancel_stale_file_upload(
         self, *, upload: FileUpload, storage_alias: str
     ) -> None:
-        """Abort the S3 multipart upload and mark the FileUpload as 'cancelled'."""
+        """Abort the S3 multipart upload and mark the FileUpload as 'cancelled'.
+
+        S3 errors are logged instead of raised so cleanup can continue with the
+        remaining stale uploads. Anything left behind is picked up by the next round.
+        """
         try:
             await self._remove_incomplete_file_upload(file_upload=upload)
         except Exception:
-            # If there's a problem aborting the stale upload, log it but otherwise go on
-            log.error(
+            log.warning(
                 "Failed to abort S3 upload for stale file %s in alias '%s'.",
                 upload.id,
                 storage_alias,
@@ -1482,7 +1485,11 @@ class UploadController(UploadControllerPort):
         storage_alias: str,
         orphaned_s3_uploads: dict[str, str],
     ) -> None:
-        """Abort S3 multipart uploads that have no corresponding FileUpload record."""
+        """Abort S3 multipart uploads that have no corresponding FileUpload record.
+
+        Errors are logged instead of raised so cleanup can continue with the remaining
+        orphaned uploads. Anything left behind is picked up by the next cleanup round.
+        """
         for s3_upload_id, object_id in orphaned_s3_uploads.items():
             try:
                 await self._s3_client.abort_multipart_upload(
@@ -1491,11 +1498,12 @@ class UploadController(UploadControllerPort):
                     s3_upload_id=s3_upload_id,
                 )
             except Exception:
-                log.exception(
+                log.warning(
                     "Failed to abort orphaned S3 upload %s (object %s) for alias '%s'.",
                     s3_upload_id,
                     object_id,
                     storage_alias,
+                    exc_info=True,
                 )
 
     async def _cleanup_stale_uploads_for_alias(
@@ -1539,14 +1547,19 @@ class UploadController(UploadControllerPort):
             )
         except S3ClientPort.UnknownStorageAliasError:
             log.error(
-                "Unknown storage alias '%s' during stale upload cleanup.", storage_alias
+                "Unknown storage alias '%s' during stale upload cleanup. Skipping it.",
+                storage_alias,
             )
-            raise
+            return
         except Exception:
-            log.error(
-                "Failed to list S3 multipart uploads for alias '%s'.", storage_alias
+            # Assume S3 connection issues are persistent here and skip the alias
+            log.warning(
+                "Skipping stale upload cleanup for alias '%s': failed to list S3"
+                + " multipart uploads.",
+                storage_alias,
+                exc_info=True,
             )
-            raise
+            return
 
         # Find truly orphaned S3 uploads (object_id not matching any known init FileUpload)
         orphaned_s3_uploads = {
@@ -1568,6 +1581,14 @@ class UploadController(UploadControllerPort):
         # Get a set of all object_ids from init_and_inbox_uploads. Cast to str because
         #  S3Client does a set diff on the string object IDs returned by S3
         known_object_ids = {str(x.object_id) for x in init_and_inbox_uploads}
-        await self._s3_client.cleanup_orphaned_objects(
-            storage_alias=storage_alias, known_object_ids=known_object_ids
-        )
+        try:
+            await self._s3_client.cleanup_orphaned_objects(
+                storage_alias=storage_alias, known_object_ids=known_object_ids
+            )
+        except Exception:
+            # Treat all unhandled exceptions as potentially transient here and just log
+            log.warning(
+                "Could not clean up orphaned objects for alias '%s'.",
+                storage_alias,
+                exc_info=True,
+            )

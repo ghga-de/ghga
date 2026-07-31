@@ -456,21 +456,21 @@ class S3Client(S3ClientPort):
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
             `BucketNotFoundError` if the configured bucket does not exist in S3.
+            `S3OperationError` if S3 returns any other unexpected error.
         """
         bucket_id, object_storage = self._get_bucket_and_storage(storage_alias)
         extra: dict[str, Any] = {"storage_alias": storage_alias, "bucket_id": bucket_id}
-        try:
+        with handle_bucket_and_general_s3_errors(
+            op_name="list_all_object_ids", bucket_id=bucket_id, extra=extra
+        ):
             object_ids = await object_storage.list_all_object_ids(bucket_id=bucket_id)
-        except ObjectStorageProtocol.BucketNotFoundError as err:
-            error = S3ClientPort.BucketNotFoundError(bucket_id=bucket_id)
-            log.error(error, extra=extra)
-            raise error from err
 
         orphaned_object_ids = set(object_ids) - known_object_ids
 
         # Return early if no orphaned objects
         if not orphaned_object_ids:
             log.info("Did not detect any orphaned objects in the bucket %s.", bucket_id)
+            return
 
         # Deleting an already-gone object succeeds silently, so it counts as deleted.
         deleted_ids = []
