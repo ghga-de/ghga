@@ -5,10 +5,10 @@
  */
 
 import { HttpClient, HttpParams, httpResource } from '@angular/common/http';
-import { computed, inject, Service, signal } from '@angular/core';
+import { computed, inject, resource, Service, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
-import { map, Observable, tap } from 'rxjs';
+import { firstValueFrom, fromEvent, map, Observable, takeUntil, tap } from 'rxjs';
 import { AccessionMapRequest } from '../models/accession-map';
 import {
   BoxRetrievalResults,
@@ -18,7 +18,16 @@ import {
   UploadBoxFilter,
   UploadBoxState,
 } from '../models/box';
-import { FileUploadWithAccession } from '../models/file-upload';
+import {
+  BoxUploadsPage,
+  DEFAULT_UPLOADS_PAGE_SIZE,
+  emptyBoxUploadsPage,
+  FileUploadSortDirection,
+  fileUploadSortSpec,
+  fileUploadSortState,
+  FileUploadWithAccession,
+  MAX_UPLOADS_PAGE_SIZE,
+} from '../models/file-upload';
 import {
   GrantId,
   GrantWithBoxInfo,
@@ -46,7 +55,16 @@ export class UploadBoxService {
   #uploadBoxesFilter = signal<UploadBoxFilter | undefined>(undefined);
   #loadSingleBox = signal<string>('');
   #loadGrantsForBox = signal<string>('');
+
+  // Query state for the paginated file uploads of a single box. The RS serves
+  // this endpoint page by page, so skip, limit and sort are sent to the server
+  // instead of being applied to a fully loaded list in the browser.
   #loadFileUploadsForBox = signal<string>('');
+  #fileUploadsSkip = signal<number>(0);
+  #fileUploadsLimit = signal<number>(DEFAULT_UPLOADS_PAGE_SIZE);
+  #fileUploadsSort = signal<string | undefined>(undefined);
+
+  #loadAllFileUploadsForBox = signal<string>('');
 
   #emptyBoxResults: BoxRetrievalResults = {
     count: 0,
@@ -103,15 +121,106 @@ export class UploadBoxService {
   );
 
   /**
-   * Resource for loading file uploads for a specific box.
+   * Build the request for a page of file uploads of a box.
+   * @param boxId - the ID of the upload box
+   * @param skip - the number of file uploads to skip
+   * @param limit - the maximum number of file uploads to return
+   * @param sort - the comma-separated sort specification, if any
+   * @returns the HTTP resource request for the requested page
    */
-  boxFileUploads = httpResource<FileUploadWithAccession[]>(
+  #fileUploadsRequest(boxId: string, skip: number, limit: number, sort?: string) {
+    const params: Record<string, string | number> = { skip, limit };
+    if (sort) params['sort'] = sort;
+    return {
+      url: `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads`,
+      params,
+    };
+  }
+
+  /**
+   * Resource for loading one page of file uploads for a specific box.
+   *
+   * Pagination and sorting happen on the server: the current page and sort order
+   * are part of the request, so changing them refetches instead of reslicing a
+   * locally cached list.
+   */
+  boxFileUploads = httpResource<BoxUploadsPage>(
     () => {
       const boxId = this.#loadFileUploadsForBox();
       if (!boxId) return undefined;
-      return `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads`;
+      return this.#fileUploadsRequest(
+        boxId,
+        this.#fileUploadsSkip(),
+        this.#fileUploadsLimit(),
+        this.#fileUploadsSort(),
+      );
     },
-    { defaultValue: [] },
+    { defaultValue: emptyBoxUploadsPage },
+  );
+
+  /**
+   * Resource for loading the complete list of file uploads for a specific box.
+   *
+   * Used by consumers that must reason about all files at once (file mapping and
+   * metadata alignment) rather than showing them page by page. Since the RS caps
+   * the page size, this walks through as many pages as the box needs, so boxes of
+   * any size are covered in full. It is therefore a plain `resource` rather than
+   * an `httpResource`, which could only issue a single request.
+   */
+  allBoxFileUploads = resource<FileUploadWithAccession[], string | undefined>({
+    params: () => this.#loadAllFileUploadsForBox() || undefined,
+    loader: async ({ params: boxId, abortSignal }) => {
+      const files: FileUploadWithAccession[] = [];
+      let totalCount = 0;
+      do {
+        const { url, params } = this.#fileUploadsRequest(
+          boxId,
+          files.length,
+          MAX_UPLOADS_PAGE_SIZE,
+        );
+        // Unsubscribing on abort cancels the in-flight request, so navigating
+        // away mid-walk does not keep fetching pages nobody waits for.
+        const page = await firstValueFrom(
+          this.#http
+            .get<BoxUploadsPage>(url, { params })
+            .pipe(takeUntil(fromEvent(abortSignal, 'abort'))),
+        );
+        totalCount = page.total_count;
+        files.push(...page.items);
+        // Guard against a page that reports more files than it ever delivers,
+        // which would otherwise keep requesting the same offset forever.
+        if (!page.items.length) break;
+      } while (files.length < totalCount);
+      return files;
+    },
+    defaultValue: [],
+  });
+
+  /** The file uploads on the currently loaded page. */
+  boxFiles = computed<FileUploadWithAccession[]>(() =>
+    this.boxFileUploads.error() ? [] : this.boxFileUploads.value().items,
+  );
+
+  /** The total number of file uploads in the box the current page belongs to. */
+  boxFilesTotalCount = computed<number>(() =>
+    this.boxFileUploads.error() ? 0 : this.boxFileUploads.value().total_count,
+  );
+
+  /** The number of file uploads currently skipped for pagination. */
+  boxFilesSkip = computed<number>(() => this.#fileUploadsSkip());
+
+  /** The current page size for the paginated file uploads. */
+  boxFilesLimit = computed<number>(() => this.#fileUploadsLimit());
+
+  /** The current sort specification for the paginated file uploads, if any. */
+  boxFilesSort = computed<string | undefined>(() => this.#fileUploadsSort());
+
+  /** The sorted column and direction of the paginated file uploads. */
+  boxFilesSortState = computed(() => fileUploadSortState(this.#fileUploadsSort()));
+
+  /** The complete list of file uploads of the box loaded via `loadAllFileUploadsForBox`. */
+  allBoxFiles = computed<FileUploadWithAccession[]>(() =>
+    this.allBoxFileUploads.error() ? [] : this.allBoxFileUploads.value(),
   );
 
   /**
@@ -226,11 +335,57 @@ export class UploadBoxService {
   }
 
   /**
-   * Trigger loading of file uploads for a specific box.
+   * Trigger loading of the first page of file uploads for a specific box.
+   * Switching to a different box resets pagination and sorting, so the caller
+   * never inherits the page position of a previously inspected box.
    * @param boxId - the ID of the upload box
    */
   loadFileUploadsForBox(boxId: string): void {
+    if (this.#loadFileUploadsForBox() !== boxId) {
+      this.#fileUploadsSkip.set(0);
+      this.#fileUploadsLimit.set(DEFAULT_UPLOADS_PAGE_SIZE);
+      this.#fileUploadsSort.set(undefined);
+    }
     this.#loadFileUploadsForBox.set(boxId);
+  }
+
+  /**
+   * Request a different page of the file uploads of the currently loaded box.
+   * @param limit - the page size
+   * @param skip - the number of file uploads to skip
+   */
+  paginateFileUploads(limit: number, skip: number): void {
+    this.#fileUploadsLimit.set(Math.min(limit, MAX_UPLOADS_PAGE_SIZE));
+    this.#fileUploadsSkip.set(skip);
+  }
+
+  /**
+   * Change the sort order of the file uploads of the currently loaded box and
+   * jump back to the first page, since the previous offset is meaningless in the
+   * new order.
+   * @param sort - comma-separated `FileUpload` field names, each optionally
+   *   prefixed with "-" for descending order, or undefined for the default order
+   */
+  sortFileUploads(sort: string | undefined): void {
+    this.#fileUploadsSort.set(sort || undefined);
+    this.#fileUploadsSkip.set(0);
+  }
+
+  /**
+   * Sort the file uploads of the currently loaded box by a table column.
+   * @param column - the sorted column of the file uploads table
+   * @param direction - the direction the column is sorted in
+   */
+  sortFileUploadsByColumn(column: string, direction: FileUploadSortDirection): void {
+    this.sortFileUploads(fileUploadSortSpec(column, direction));
+  }
+
+  /**
+   * Trigger loading of the complete file upload list for a specific box.
+   * @param boxId - the ID of the upload box
+   */
+  loadAllFileUploadsForBox(boxId: string): void {
+    this.#loadAllFileUploadsForBox.set(boxId);
   }
 
   /**
@@ -543,12 +698,18 @@ export class UploadBoxService {
       ]),
     );
 
-    if (!this.boxFileUploads.error()) {
-      const updated = this.boxFileUploads.value().map((f) => {
+    const applyAccessions = (files: FileUploadWithAccession[]) =>
+      files.map((f) => {
         const accession = accessionByBoxFileId.get(f.id);
         return accession !== undefined ? { ...f, accession } : f;
       });
-      this.boxFileUploads.value.set(updated);
+
+    if (!this.boxFileUploads.error()) {
+      const page = this.boxFileUploads.value();
+      this.boxFileUploads.value.set({ ...page, items: applyAccessions(page.items) });
+    }
+    if (!this.allBoxFileUploads.error()) {
+      this.allBoxFileUploads.value.set(applyAccessions(this.allBoxFileUploads.value()));
     }
 
     this.#updateUploadBoxLocally(boxId, { version: request.box_version });
@@ -595,11 +756,21 @@ export class UploadBoxService {
    * @param file - the deleted file upload
    */
   #deleteFileUploadLocally(boxId: string, file: FileUploadWithAccession): void {
-    if (!this.boxFileUploads.error()) {
-      this.boxFileUploads.value.set(
-        this.boxFileUploads.value().filter((f) => f.id !== file.id),
-      );
+    // The file list is paginated on the server, so simply dropping the file from
+    // the cached page would leave that page short and shift all following pages
+    // by one, hiding a file. Refetch the affected pages instead. If the deleted
+    // file was the only one on the last page, step back so the paginator does not
+    // end up beyond the end of the list.
+    const totalCount = this.boxFilesTotalCount();
+    const limit = this.#fileUploadsLimit();
+    const skip = this.#fileUploadsSkip();
+    if (skip > 0 && skip >= totalCount - 1) {
+      this.#fileUploadsSkip.set(Math.max(0, skip - limit));
+    } else {
+      this.boxFileUploads.reload();
     }
+    this.allBoxFileUploads.reload();
+
     const apply = (box: ResearchDataUploadBox): ResearchDataUploadBox => ({
       ...box,
       file_count: Math.max(0, box.file_count - 1),

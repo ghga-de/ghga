@@ -4,11 +4,14 @@
  * @license Apache-2.0
  */
 
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
-import { FileUploadWithAccession } from '@app/upload/models/file-upload';
+import {
+  DEFAULT_UPLOADS_PAGE_SIZE,
+  FileUploadWithAccession,
+} from '@app/upload/models/file-upload';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
@@ -67,13 +70,20 @@ class MockUploadBoxService {
   };
 
   boxFileUploads = {
-    value: this.#files.asReadonly(),
     isLoading: this.#filesLoading.asReadonly(),
     error: () => undefined,
   };
 
+  boxFiles = this.#files.asReadonly();
+  boxFilesTotalCount = computed<number>(() => this.#files().length);
+  boxFilesSkip = signal<number>(0);
+  boxFilesLimit = signal<number>(DEFAULT_UPLOADS_PAGE_SIZE);
+  boxFilesSortState = signal({ column: 'alias', direction: 'asc' as const });
+
   loadUploadBox = vitest.fn();
   loadFileUploadsForBox = vitest.fn();
+  paginateFileUploads = vitest.fn();
+  sortFileUploadsByColumn = vitest.fn();
 
   /**
    * Test helper: set the loaded box.

@@ -38,6 +38,35 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 - `src/mocks`: MSW handlers with static API/auth responses
 - `tests`: end-to-end tests
 
+## API mocking philosophy
+
+The MSW layer in `src/mocks` serves **static, pre-made responses only**. Do not write
+mock handlers that contain backend logic.
+
+- Reimplementing backend behaviour (filtering, pagination, sorting, validation,
+  computed fields) duplicates work that already exists in the services, and the copy
+  inevitably drifts from the real implementation. Tests then pass against a fiction
+  and give a false sense of security. Real end-to-end coverage against actual backend
+  is done in the archive test bed.
+- Add fixtures to `src/mocks/data.ts` and map them to endpoints in
+  `src/mocks/responses.ts`. `createHandlersForResponses` in `src/mocks/handlers.ts` is
+  the only handler generator; keep it generic.
+- For endpoints that vary by query string, register one entry per request the app
+  actually makes, including the query parameters:
+  `'GET /api/ars/access-requests?dataset_id=<id>&*': someStaticResponse`. The handler
+  picks the entry matching the most parameters, so a parameterless entry acts as the
+  fallback.
+- Deriving one fixture from another at module load (slicing an array into pages, for
+  example) is fine — that is authoring data, not simulating a backend at request time.
+- Paginated list endpoints are the one exception, since sorting and pagination are a
+  convention shared by all of them rather than per-endpoint logic. A fixture with an
+  `items` array registered _without_ `skip`/`limit` in its key is treated as the
+  complete collection: the handler sorts it by `sort` (comma-separated fields, leading
+  `-` for descending) and then applies `skip`/`limit`. Register the whole collection,
+  not per-request pages — sorting must precede slicing, so an already-paged fixture
+  cannot be sorted correctly. Do not extend this to filtering, validation, or computed
+  fields.
+
 ## Repo commands (pnpm)
 
 This repo uses `pnpm` (not npm) for dependency installation and scripts.

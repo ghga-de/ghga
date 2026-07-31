@@ -37,9 +37,16 @@
         <p class="mb-2"><strong>Files:</strong></p>
         @if (box.file_count > 0) {
           <app-upload-box-files-table
-            [files]="files()"
+            [pageFiles]="pageFiles()"
             [boxState]="box.state"
             [loading]="filesLoading()"
+            [totalCount]="filesTotalCount()"
+            [pageIndex]="filesPageIndex()"
+            [pageSize]="filesPageSize()"
+            [sortActive]="filesSortState().column"
+            [sortDirection]="filesSortState().direction"
+            (page)="onFilesPage($event)"
+            (sortChange)="onFilesSort($event)"
           />
         } @else {
           <p class="text-warning">This upload box is still empty.</p>

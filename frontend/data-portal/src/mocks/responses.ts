@@ -21,11 +21,12 @@ import {
   searchResults,
   storageLabels,
   studyData,
-  uploadBox1FileUploads,
-  uploadBox2FileUploads,
-  uploadBox3FileUploads,
-  uploadBox4FileUploads,
-  uploadBox5FileUploads,
+  emptyUploadsCollection,
+  uploadBox1Uploads,
+  uploadBox2Uploads,
+  uploadBox3Uploads,
+  uploadBox4Uploads,
+  uploadBox5Uploads,
   uploadBoxes,
   pediatricLeukemiaDatasetDetails,
   pediatricLeukemiaFileIds,
@@ -273,18 +274,22 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Fetch all upload boxes
   'GET /api/rs/upload-boxes': uploadBoxes,
 
-  // Fetch file uploads for a specific box
+  // Fetch file uploads for a specific box. This endpoint is paginated and sorted
+  // by the RS, so the fixtures are the complete file list of each box and the
+  // handler derives the requested page and sort order from them (registering them
+  // without skip or limit is what opts them into that). Any page and any sort
+  // order therefore works without a fixture per request.
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001/uploads':
-    uploadBox1FileUploads,
+    uploadBox1Uploads,
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68002/uploads':
-    uploadBox2FileUploads,
+    uploadBox2Uploads,
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003/uploads':
-    uploadBox3FileUploads,
+    uploadBox3Uploads,
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68004/uploads':
-    uploadBox4FileUploads,
+    uploadBox4Uploads,
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005/uploads':
-    uploadBox5FileUploads,
-  'GET /api/rs/upload-boxes/*/uploads': [],
+    uploadBox5Uploads,
+  'GET /api/rs/upload-boxes/*/uploads': emptyUploadsCollection,
 
   // Delete a single file upload from a box
   'DELETE /api/rs/upload-boxes/*/uploads/*': 204,
