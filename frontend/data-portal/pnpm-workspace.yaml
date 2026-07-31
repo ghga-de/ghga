@@ -14,10 +14,15 @@ allowBuilds:
   msgpackr-extract: true
   msw: true
   unrs-resolver: true
+# Versions exempted from the default 24 hour minimumReleaseAge quarantine.
+# Entries can be dropped again once the versions are older than one day.
 minimumReleaseAgeExclude:
-  - ngx-mat-input-tel@22.0.1
-  - '@angular-devkit/architect@0.2200.3'
-  - '@angular-devkit/core@22.0.3'
-  - '@angular-devkit/schematics@22.0.3'
-  - '@angular/cli@22.0.3'
-  - '@schematics/angular@22.0.3'
+  - '@angular-devkit/architect@0.2201.2'
+  - '@angular-devkit/core@22.1.2'
+  - '@angular-devkit/schematics@22.1.2'
+  - '@angular/build@22.1.2'
+  - '@angular/cli@22.1.2'
+  - '@playwright/test@1.62.1'
+  - '@schematics/angular@22.1.2'
+  - playwright@1.62.1
+  - playwright-core@1.62.1
