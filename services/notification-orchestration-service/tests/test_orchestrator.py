@@ -381,15 +381,14 @@ async def test_iva_state_change(
         assert data_steward_notification.plaintext_body.startswith("\nThe 'fax' IVA")
 
     # Combine the two notifications into a list of expected events
-    expected_events = []
-    for notification in [user_notification, data_steward_notification]:
-        if notification:
-            expected_events.append(
-                ExpectedEvent(
-                    payload=notification.model_dump(),
-                    type_=joint_fixture.config.email_notification_type,
-                )
-            )
+    expected_events = [
+        ExpectedEvent(
+            payload=notification.model_dump(),
+            type_=joint_fixture.config.email_notification_type,
+        )
+        for notification in [user_notification, data_steward_notification]
+        if notification
+    ]
 
     # Consume the event and verify that the expected events are published
     async with joint_fixture.kafka.expect_events(
