@@ -157,7 +157,36 @@ MONO_HEADER = """\
 # than once — an aliased instance takes its values under the alias, not the chart name.
 # Members shipping their own Dockerfile (the frontend) keep their own image and are
 # deliberately absent here.
+#
+# Plus any image the UMBRELLA's own templates run (the secret-gen job and friends): those
+# are not dependencies, so the alias pass cannot see them, and missing one leaves a job in
+# ImagePullBackOff with helm blocked on its pre-install hook — a silent 15-minute hang.
 """
+
+
+def _member_image_paths(node, registry: str, packages: set, path: tuple = ()):
+    """Yield value paths in the umbrella values that point at a per-member image.
+
+    Only maps are traversed: a list index cannot be addressed from a values overlay.
+    """
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if (
+                key == "repository"
+                and isinstance(value, str)
+                and value.startswith(f"{registry}/")
+                and value.rsplit("/", 1)[-1] in packages
+            ):
+                yield (*path, key)
+            else:
+                yield from _member_image_paths(value, registry, packages, (*path, key))
+
+
+def _nest(path: tuple, value) -> dict:
+    """Build the nested mapping that sets `value` at `path`."""
+    for key in reversed(path):
+        value = {key: value}
+    return value
 
 
 def mono_overlay_text(registry: str) -> str:
@@ -179,6 +208,13 @@ def mono_overlay_text(registry: str) -> str:
             "no Python member instances found in the ghga-demo dependencies — "
             "the mono overlay would silently do nothing"
         )
+
+    # umbrella-level images (full reference, registry included — these do not go through
+    # the library chart's registry/repository split)
+    with (DEMO_CHART / "values.yaml").open("r", encoding="utf-8") as demo_values_file:
+        demo_values = YAML_PARSER.load(demo_values_file)
+    for path in _member_image_paths(demo_values, registry, python_packages):
+        overlay = deep_merge(overlay, _nest(path, f"{registry}/{MONO_IMAGE}"))
 
     buffer = StringIO()
     buffer.write(MONO_HEADER)

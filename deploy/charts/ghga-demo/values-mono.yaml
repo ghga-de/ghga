@@ -10,6 +10,10 @@
 # than once — an aliased instance takes its values under the alias, not the chart name.
 # Members shipping their own Dockerfile (the frontend) keep their own image and are
 # deliberately absent here.
+#
+# Plus any image the UMBRELLA's own templates run (the secret-gen job and friends): those
+# are not dependencies, so the alias pass cannot see them, and missing one leaves a job in
+# ImagePullBackOff with helm blocked on its pre-install hook — a silent 15-minute hang.
 test-oidc-provider:
   image:
     repository: ghga-de/ghga/platform
@@ -112,3 +116,6 @@ dlqs-consumer:
 sms:
   image:
     repository: ghga-de/ghga/platform
+secretGen:
+  image:
+    repository: ghcr.io/ghga-de/ghga/platform
