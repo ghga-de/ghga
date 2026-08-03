@@ -110,12 +110,19 @@ image target:
         docker build -f docker/Dockerfile --build-arg PACKAGE="$name" -t "ghcr.io/ghga-de/ghga/$name:local" .
     fi
 
-# Build every image member and load them into the kind cluster.
-# `reclaim=true` (CI) drops each image from the docker store once it is loaded and
-# trims the build cache as it goes: `kind load` copies into the node's containerd,
-# so holding the docker copy doubles the footprint for no gain on a one-shot runner.
-# Locally the default keeps both — rebuilds are far faster off the warm cache.
-demo-images reclaim="false": cluster
+# One build instead of ~22 — the demo/CI image step drops from ~15-20 min to ~1 min.
+# The charts start services with `command: [<executable>]`, so one image serves them all;
+# see the mono stage in docker/Dockerfile for why this is demo/CI only.
+# Build the mono image: EVERY Python member in one venv (docker/Dockerfile VARIANT=mono).
+image-mono:
+    docker build -f docker/Dockerfile --build-arg VARIANT=mono \
+      -t ghcr.io/ghga-de/ghga/platform:local .
+
+# Building and loading are deliberately SEPARATE (`just demo-load` does the loading): the
+# build survives `just down`, the load does not, and coupling them made a cluster teardown
+# cost a full rebuild of everything.
+# Build every image member into the local docker store (one image per member, as released).
+demo-images:
     #!/usr/bin/env bash
     set -euo pipefail
     python3 scripts/image_members.py | python3 -c "
@@ -125,18 +132,70 @@ demo-images reclaim="false": cluster
     " | while read -r path; do
         echo "== building $path =="
         just image "$path"
-        name=$(basename "$path")
-        if [ -f "$path/pyproject.toml" ]; then
-            name=$(python3 -c "import tomllib; print(tomllib.load(open('$path/pyproject.toml','rb'))['project']['name'])")
-        elif [ -f "$path/package.json" ]; then
-            name=$(python3 -c "import json; print(json.load(open('$path/package.json'))['name'])")
-        fi
-        kind load docker-image --name ghga "ghcr.io/ghga-de/ghga/$name:local"
+    done
+
+# Members shipping their own Dockerfile (the frontend) cannot be folded into the shared
+# venv, so they are still built one by one.
+# Build the mono profile: the single Python image plus the non-Python members.
+demo-images-mono: image-mono
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 scripts/image_members.py | python3 -c "
+    import json, sys
+    for m in json.load(sys.stdin):
+        if m['kind'] != 'python':
+            print(m['path'])
+    " | while read -r path; do
+        echo "== building $path =="
+        just image "$path"
+    done
+
+# Copy the built images from the docker store into the kind node. Safe to re-run, which is
+# why `up` can depend on it unconditionally — but not free: kind's "already present" check
+# compares the docker image ID against the node's, and with docker's containerd image store
+# those never match, so every image is re-copied on every run (~40 s for the full per-member
+# set, a couple of seconds for the mono profile). Measured, not assumed — do not "optimise"
+# this by skipping the load.
+# Loads the set the requested profile actually deploys, NOT everything in the docker store:
+# a store holding both profiles would otherwise load 24 images to run the 2 the mono profile
+# needs, throwing away most of what mono buys. `up`/`testbed-up` pass their profile through.
+# `reclaim=true` (CI) drops each docker copy once it is loaded: `kind load` copies into the
+# node's containerd, so keeping both doubles the footprint for no gain on a one-shot runner.
+# Locally the default keeps both — a later reload then costs no rebuild at all.
+# Copy the profile's built images from the docker store into the kind node.
+demo-load profile="" reclaim="false": cluster
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "{{profile}}" ] && [ "{{profile}}" != "mono" ]; then
+        echo "error: unknown profile '{{profile}}' (expected 'mono', or nothing)" >&2
+        exit 1
+    fi
+    loaded=0
+    while read -r name; do
+        ref="ghcr.io/ghga-de/ghga/$name:local"
+        docker image inspect "$ref" > /dev/null 2>&1 || continue
+        kind load docker-image --name ghga "$ref"
+        loaded=$((loaded + 1))
         if [ "{{reclaim}}" = "true" ]; then
-            docker image rm "ghcr.io/ghga-de/ghga/$name:local" > /dev/null
+            docker image rm "$ref" > /dev/null
             docker builder prune -f --keep-storage 4GB > /dev/null
         fi
-    done
+    done < <(python3 scripts/image_members.py | PROFILE="{{profile}}" python3 -c "
+    import json, os, sys
+    mono = os.environ['PROFILE'] == 'mono'
+    for m in json.load(sys.stdin):
+        # in the mono profile the Python members are all inside the one image; the
+        # members shipping their own Dockerfile still need theirs
+        if not (mono and m['kind'] == 'python'):
+            print(m['package'])
+    if mono:
+        print('platform')
+    ")
+    if [ "$loaded" -eq 0 ]; then
+        echo "error: no ghga images in the docker store — run \`just demo-images\` (or \`just demo-images-mono\`) first" >&2
+        exit 1
+    fi
+    echo "loaded $loaded image(s) into the kind node"
 
 # Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
 # the cache to ~17 GB within days, and a full disk breaks builds AND testcontainers.
@@ -152,7 +211,8 @@ net-fix:
     #!/usr/bin/env bash
     set -euo pipefail
     command -v iptables-nft > /dev/null || { echo "no iptables-nft; skipping"; exit 0; }
-    sudo iptables-nft -S FORWARD 2>/dev/null | grep -q '^-P FORWARD DROP' || { echo "FORWARD policy not DROP; skipping"; exit 0; }
+    # plain grep, not -q — see the SIGPIPE note in `images-present`
+    sudo iptables-nft -S FORWARD 2>/dev/null | grep '^-P FORWARD DROP' > /dev/null || { echo "FORWARD policy not DROP; skipping"; exit 0; }
     for subnet in 172.17.0.0/16 172.18.0.0/16; do
         for dir in -s -d; do
             sudo iptables-nft -C DOCKER-USER $dir "$subnet" -j ACCEPT 2>/dev/null \
@@ -170,35 +230,35 @@ cluster:
     #!/usr/bin/env bash
     set -euo pipefail
     just net-fix
-    kind get clusters 2>/dev/null | grep -qx ghga || kind create cluster --config deploy/kind-config.yaml --wait 120s
+    # plain grep, not -q — see the SIGPIPE note in `images-present`
+    kind get clusters 2>/dev/null | grep -x ghga > /dev/null || kind create cluster --config deploy/kind-config.yaml --wait 120s
 
-# Build/load the images first with `just demo-images` — slow the first time, and the
-# app pods crashloop until they are present.
+# Build the images first — `just demo-images` (one per member, as released) or
+# `just demo-images-mono` (a single Python image; far faster, demo/CI only). Loading them
+# into the node is handled here via `demo-load`, so re-running after a `just down` costs
+# a reload, not a rebuild.
+# `just up mono` installs against the mono image instead of the per-member ones.
 # Bring up (or update) the whole demo on kind and wait until it actually serves.
-up: cluster images-present
+up profile="": (demo-load profile)
     #!/usr/bin/env bash
     set -euo pipefail
+    extra=()
+    if [ "{{profile}}" = "mono" ]; then
+        [ -f deploy/charts/ghga-demo/values-mono.yaml ] \
+          || { echo "error: values-mono.yaml is missing — run \`just charts\`" >&2; exit 1; }
+        extra=(-f deploy/charts/ghga-demo/values-mono.yaml)
+    elif [ -n "{{profile}}" ]; then
+        echo "error: unknown profile '{{profile}}' (expected 'mono', or nothing)" >&2
+        exit 1
+    fi
     just demo-template
     echo "installing — this waits for every workload to become ready, a few minutes"
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
+      ${extra[@]+"${extra[@]}"} \
       --kube-context kind-ghga --wait --timeout 15m
     just wait-ready
     echo "gateway: http://localhost/  (portal at /, issuer at /ghga)"
-
-# The charts reference ghcr.io/ghga-de/ghga/*:local, which exists only in the local
-# docker and is never pushed — so without `just demo-images` the kubelet tries ghcr.io,
-# gets a 401, and every pod sits in ImagePullBackOff. helm blocks on its pre-install
-# hook the whole time and says nothing, so the failure looks like a hang and costs the
-# full --timeout before surfacing.
-# Fail in a second, not in fifteen minutes, when the node has no images.
-images-present:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if ! docker exec ghga-control-plane crictl images 2>/dev/null | grep -q "ghga-de/ghga"; then
-        echo "error: the kind node has no ghga images — run \`just demo-images\` first" >&2
-        exit 1
-    fi
 
 # `helm --wait` covers the release's own workloads, but the gateway's pod is created by
 # the Envoy operator from the Gateway resource — outside the release — so it needs its
@@ -210,8 +270,14 @@ images-present:
 wait-ready:
     kubectl --context kind-ghga wait --for=condition=Programmed gateway/ghga --timeout=5m
 
+# Delete the kind cluster (the images on its node go with it; the docker store keeps them).
 down:
+    #!/usr/bin/env bash
+    set -euo pipefail
     kind delete cluster --name ghga
+    # the node's containerd went with it; say so, because the docker store still holds
+    # the images and the next `just up` reloads them without rebuilding
+    echo "cluster deleted — the node's images went with it; \`just up\` reloads them (no rebuild)"
 
 # --- Integration testbed (BDD suite in testbed/; ADR-0009) -------------------------------
 # Generate the metldata artifact model from the testbed's example metadata model
@@ -232,10 +298,20 @@ testbed-artifacts:
     uv run --no-sync --project "$root" --with pyyaml python "$root/scripts/artifact_values.py"
     rm -rf artifact_models
 
+# `just testbed-up mono` adds the mono-image overlay, as `just up mono` does.
 # Deploy/refresh the demo with the testbed profile (sms, test OP, artifact model).
-testbed-up: cluster images-present
+testbed-up profile="": (demo-load profile)
     #!/usr/bin/env bash
     set -euo pipefail
+    extra=()
+    if [ "{{profile}}" = "mono" ]; then
+        [ -f deploy/charts/ghga-demo/values-mono.yaml ] \
+          || { echo "error: values-mono.yaml is missing — run \`just charts\`" >&2; exit 1; }
+        extra=(-f deploy/charts/ghga-demo/values-mono.yaml)
+    elif [ -n "{{profile}}" ]; then
+        echo "error: unknown profile '{{profile}}' (expected 'mono', or nothing)" >&2
+        exit 1
+    fi
     [ -f deploy/charts/ghga-demo/values-artifacts.yaml ] || just testbed-artifacts
     just demo-template
     docker manifest inspect ghga/test-oidc-provider:2.2.0 > /dev/null 2>&1 || true
@@ -243,6 +319,7 @@ testbed-up: cluster images-present
       -f deploy/charts/ghga-demo/values-local.yaml \
       -f deploy/charts/ghga-demo/values-artifacts.yaml \
       -f deploy/charts/ghga-demo/values-testbed.yaml \
+      ${extra[@]+"${extra[@]}"} \
       --kube-context kind-ghga --wait --timeout 15m
     just wait-ready
 
@@ -289,7 +366,8 @@ testbed-reset:
 
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
 # Harvests tokens/keys from the cluster secrets, port-forwards the services the suite
-# and the connector reach directly (mailhog, lox24, minio), runs pytest.
+# reaches directly (mailhog, lox24 — MinIO is published by kind), runs pytest.
+# Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
 testbed *args:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -317,9 +395,10 @@ testbed *args:
     PF1=$!
     $K port-forward svc/ghga-lox24-mock 8080:8080 > /dev/null 2>&1 &
     PF2=$!
+    # MinIO needs no forward: kind publishes its S3 node port on the host's 9000
+    # (deploy/kind-config.yaml), which is the authority the pre-signed URLs carry —
+    # forwarding here would collide with that published port and fail to bind.
     just testbed-hosts
-    $K port-forward svc/ghga-minio 9000:9000 > /dev/null 2>&1 &
-    PF3=$!
-    trap "kill $PF1 $PF2 $PF3 2>/dev/null || true" EXIT
+    trap "kill $PF1 $PF2 2>/dev/null || true" EXIT
     sleep 2
     cd testbed && ../.venv-testbed/bin/pytest -v {{args}}

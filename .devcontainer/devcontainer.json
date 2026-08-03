@@ -47,8 +47,15 @@
   // issuer must be byte-identical seen from the browser and from inside the cluster, and
   // the in-cluster path cannot carry a port (see deploy/kind-config.yaml). It is also why
   // the nested bridges need `just net-fix` on hosts with a FORWARD DROP policy.
+  // Map the in-cluster MinIO name to the loopback address kind publishes its S3 node
+  // port on (see deploy/kind-config.yaml). Docker regenerates /etc/hosts on every
+  // container start, so this is the only form that survives a restart — an in-container
+  // edit does not. `just testbed-hosts` does the same thing for non-devcontainer
+  // environments (CI), and is a no-op once the entry is present.
   "runArgs": [
-    "--net=host"
+    "--net=host",
+    "--add-host",
+    "ghga-minio:127.0.0.1"
   ],
   // Persist uv's managed Python interpreters and its wheel cache across rebuilds.
   // The workspace .venv lives on the (surviving) bind mount but symlinks its interpreter
@@ -69,5 +76,12 @@
   // the details and the reasoning. Invoked through bash so a lost executable bit (a
   // Windows checkout, core.fileMode=false) cannot turn provisioning into an opaque
   // permission-denied at container create.
-  "postCreateCommand": "bash .devcontainer/post-create.sh"
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  // The kernel default of 128 inotify instances is not enough with a kind cluster in
+  // the container: VS Code's file watchers and the node's kubelet/containerd exhaust it,
+  // and the next `kubectl logs -f` dies with "failed to create fsnotify watcher: too
+  // many open files". It has to run on every start, not just at create — the sysctl
+  // lives in the container's namespace and reverts to 128 each time. Docker's --sysctl
+  // allowlist covers only kernel.*, fs.mqueue.* and net.*, so runArgs cannot do it.
+  "postStartCommand": "sudo sysctl -w fs.inotify.max_user_instances=1024"
 }

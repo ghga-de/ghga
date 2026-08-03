@@ -15,3 +15,11 @@ nodes:
       - containerPort: 30080
         hostPort: 80
         protocol: TCP
+      # the MinIO S3 API. Published under the SAME authority the cluster uses
+      # internally ('ghga-minio:9000') so the connector and DSKit can follow the
+      # pre-signed URLs services hand out: the signature binds the host, so it
+      # cannot be rewritten to localhost on the way out. The name is mapped to
+      # 127.0.0.1 by the devcontainer (--add-host) or by `just testbed-hosts`.
+      - containerPort: 30900
+        hostPort: 9000
+        protocol: TCP

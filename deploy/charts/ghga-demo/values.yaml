@@ -84,6 +84,16 @@ minio:
   mcImage: minio/mc:latest
   rootUser: demo-access-key
   rootPassword: demo-secret-key
+  # The S3 API is published on a node port, which kind maps to the host's 9000
+  # (deploy/kind-config.yaml). Same constraint as the OIDC issuer: services hand the
+  # connector and DSKit PRE-SIGNED URLs built from s3_endpoint_url, and the signature
+  # binds the host — so an out-of-cluster client cannot substitute localhost, and
+  # 'ghga-minio:9000' has to be reachable under that exact authority on both sides.
+  # The name resolves via the devcontainer's --add-host, or `just testbed-hosts`
+  # elsewhere. Console (9001) has no fixed node port; reach it by port-forward.
+  service:
+    type: NodePort
+    nodePort: 30900
   # the compose test bed runs two localstack "hubs"; the demo collapses both onto
   # this one MinIO, keeping the hub1/hub2 bucket split
   buckets:

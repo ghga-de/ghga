@@ -14,8 +14,10 @@
 # Disk is settled: a stock ubuntu-latest reports ~145 G with ~88 G free — not the
 # 14 G the docs quote — against a platform needing ~17 G before a test runs (kind's
 # containerd stores images unpacked, ~2.8x compressed, and `kind load` leaves a
-# second copy in the docker store; demo-images drops that copy as it goes). What is
-# still unmeasured: build time for all 23 images on 4 vCPU, and memory once the
+# second copy in the docker store; demo-load drops that copy as it goes). The mono
+# profile should cut both figures sharply — locally it replaced ~22 images totalling
+# ~6 G with one of ~0.6 G — but that was measured warm; the cold cost here is exactly
+# what this run reports. Still unmeasured: build time on 4 vCPU, and memory once the
 # full fleet is up. Measure, don't assume — the documented specs were wrong.
 name: integration
 
@@ -74,17 +76,26 @@ jobs:
       - name: Create the kind cluster
         run: just cluster
 
-      # No published image tags exist to fall back on yet, so every member is built
-      # here. Once the release workflow publishes them, this should build only the
-      # affected members (scripts/affected_targets.py) and pull the rest — that change
-      # is what turns a ~40 min gate into a ~10 min one.
-      - name: Build and load images
-        run: just demo-images true
+      # No published image tags exist to fall back on yet, so everything is built here.
+      # The mono profile builds ONE Python image instead of ~22 — same lockfile, same base,
+      # same commands, only the packaging differs (docker/Dockerfile VARIANT=mono). What it
+      # does NOT cover is per-member packaging itself; the release workflow builds and
+      # publishes those, and this gate is deliberately not the place that validates them.
+      # Once the release workflow publishes tags, this should build only the affected
+      # members (scripts/affected_targets.py) and pull the rest.
+      - name: Build images (mono profile)
+        run: just demo-images-mono
+
+      # Separate from the build so a cluster teardown costs a reload, not a rebuild.
+      # reclaim=true drops each docker copy once it is on the node: `kind load` copies into
+      # the node's containerd, so keeping both doubles the footprint on a one-shot runner.
+      - name: Load images into the kind node
+        run: just demo-load mono true
 
       - name: Install the demo (test-bed profile)
         # pulls the Envoy Gateway chart from Docker Hub (oci://docker.io/envoyproxy);
         # if anonymous pulls ever rate-limit, authenticate here first
-        run: just testbed-up
+        run: just testbed-up mono
 
       - name: Run the test bed
         run: just testbed

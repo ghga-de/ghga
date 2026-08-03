@@ -60,6 +60,7 @@ metadata:
   name: {{ .Release.Name }}-minio
   namespace: {{ .Release.Namespace }}
 spec:
+  type: {{ .Values.minio.service.type }}
   selector:
     app.kubernetes.io/name: minio
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -67,6 +68,9 @@ spec:
     - name: api
       port: 9000
       targetPort: api
+      {{- if and (eq .Values.minio.service.type "NodePort") .Values.minio.service.nodePort }}
+      nodePort: {{ .Values.minio.service.nodePort }}
+      {{- end }}
     - name: console
       port: 9001
       targetPort: console
