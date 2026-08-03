@@ -170,10 +170,20 @@ demo-load profile="" reclaim="false": cluster
         echo "error: unknown profile '{{profile}}' (expected 'mono', or nothing)" >&2
         exit 1
     fi
+    # what the node already has, so a reclaimed docker store is not mistaken for
+    # "never built": reclaim=true deletes each docker copy after loading it, and
+    # `up`/`testbed-up` re-enter this recipe as a dependency afterwards
+    node_images=$(docker exec ghga-control-plane crictl images 2>/dev/null | awk 'NR>1 {print $1":"$2}' || true)
     loaded=0
+    already=0
     while read -r name; do
         ref="ghcr.io/ghga-de/ghga/$name:local"
-        docker image inspect "$ref" > /dev/null 2>&1 || continue
+        if ! docker image inspect "$ref" > /dev/null 2>&1; then
+            if printf '%s\n' "$node_images" | grep -Fx "$ref" > /dev/null; then
+                already=$((already + 1))
+            fi
+            continue
+        fi
         kind load docker-image --name ghga "$ref"
         loaded=$((loaded + 1))
         if [ "{{reclaim}}" = "true" ]; then
@@ -191,11 +201,11 @@ demo-load profile="" reclaim="false": cluster
     if mono:
         print('platform')
     ")
-    if [ "$loaded" -eq 0 ]; then
-        echo "error: no ghga images in the docker store — run \`just demo-images\` (or \`just demo-images-mono\`) first" >&2
+    if [ $((loaded + already)) -eq 0 ]; then
+        echo "error: no ghga images in the docker store or on the node — run \`just demo-images\` (or \`just demo-images-mono\`) first" >&2
         exit 1
     fi
-    echo "loaded $loaded image(s) into the kind node"
+    echo "loaded $loaded image(s) into the kind node ($already already there)"
 
 # Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
 # the cache to ~17 GB within days, and a full disk breaks builds AND testcontainers.
