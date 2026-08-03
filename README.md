@@ -47,14 +47,55 @@ just up mono            # create the cluster, load the images, install the umbre
 ```
 
 Then open <http://localhost/> — the data portal at `/`, the OIDC issuer at `/ghga`.
-Log in as the seeded data steward with the subject `data.steward@ghga.dev` and claims
-`{"name": "Data Steward", "email": "data.steward@ghga.dev"}`. The steward's role only
-becomes active once its IVA is verified, which currently has to be done by hand
-(`state: "Verified"` in the `ivas` collection of the `auth-service` database).
 
 `just up` is `helm upgrade --install`, so re-run it freely after chart or values edits.
 `just down` deletes the cluster; the built images survive it, so the next `just up`
 reloads rather than rebuilds.
+
+#### Logging in as the data steward
+
+The demo seeds one data steward ([ADR-0006](docs/adr/0006-self-contained-demo-lightweight-infra.md)),
+configured in the umbrella's `auth-claims.config.add_as_data_stewards`:
+
+| | |
+|---|---|
+| subject (`ext_id`) | `data.steward@ghga.dev` |
+| name | `Data Steward` |
+| email | `data.steward@ghga.dev` |
+| IVA | Phone `+4915112345678`, seeded **unverified** |
+
+**1. Verify the IVA first.** The steward role is only active while the IVA backing its
+claim is verified, and there is no self-service path to verify it — creating a verification
+code is itself a steward action. Roles are resolved when the session is created, so do this
+*before* logging in (or log out and back in afterwards):
+
+```bash
+kubectl --context kind-ghga exec deploy/ghga-mongodb -- mongosh --quiet --eval \
+  'db.getSiblingDB("auth-service").ivas.updateMany(
+     {"__metadata__.deleted": {$ne: true}}, {$set: {state: "Verified"}})'
+```
+
+This writes state directly, bypassing the event flow, so downstream projections never see
+an IVA-verified event. That is what the test bed does too, and it is fine for the demo.
+
+**2. Sign in at the mock issuer.** Click login in the portal; you land on the
+mock-oauth2-server form, which has exactly two fields:
+
+- **username** — the subject, `data.steward@ghga.dev` (must match `ext_id` exactly)
+- **claims** — a JSON object; `name` and `email` are required and must match the seeded
+  user, or the portal treats it as changed contact data:
+
+```json
+{"name": "Data Steward", "email": "data.steward@ghga.dev"}
+```
+
+**3. Set up the second factor.** The user is already registered, so you go straight to
+TOTP: add the offered secret to an authenticator app and enter the six-digit code.
+
+Any other subject you type into that form is simply a new user and goes through normal
+registration — that is how you get a non-steward account to test against. The test-bed
+profile swaps the issuer and the steward identity (`id-of-data-steward@ghga.dev` /
+`data.steward@home.org`, see `values-testbed.yaml`); the steps are otherwise identical.
 
 ### Run the test bed locally
 
