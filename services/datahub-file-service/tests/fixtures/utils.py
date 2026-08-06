@@ -22,7 +22,7 @@ from uuid import uuid4
 
 import crypt4gh.header
 import crypt4gh.lib
-import httpx
+import httpx2
 from crypt4gh.keys import get_private_key, get_public_key
 from ghga_service_commons.utils import jwt_helpers
 from ghga_service_commons.utils.crypt import encode_key, generate_key_pair
@@ -77,7 +77,7 @@ async def upload_dummy_data(
     url = await storage.get_part_upload_url(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id, part_number=1
     )
-    httpx.put(url, content=content)  # noqa: ASYNC210
+    httpx2.put(url, content=content)
     await storage.complete_multipart_upload(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
     )
@@ -164,7 +164,7 @@ async def upload_encrypted_object(
             object_id=object_id,
             part_number=i + 1,
         )
-        httpx.put(url, content=content)  # noqa: ASYNC210
+        httpx2.put(url, content=content)
     await storage.complete_multipart_upload(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
     )
