@@ -18,6 +18,12 @@ integration tests on Kubernetes.
 - **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the
   [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
 
+## Epics
+- **[epics/](epics/README.md)** — technical specifications for GHGA development epics, written
+  before each epic starts. Imported history-preserving from `ghga-de/epic-docs`
+  ([ADR-0010](adr/0010-history-preserving-migration.md)); authoring conventions and the two
+  templates (exploratory / implementation) live alongside them.
+
 ## Features
 - **[features/early-data-lifecycle.md](features/early-data-lifecycle.md)** — early rollout of the
   GHGA data lifecycle (study lifecycle PIDs + revisions, reuse-friendly file mapping) on the
