@@ -42,6 +42,13 @@ drop_paths_for_kind() {
       # tooling, not generated boilerplate) + its .gitignore (chart-dep .tgz patterns);
       # drop only per-repo CI, devcontainer and pre-commit (covered at the root).
       printf '%s\n' .github .devcontainer .pre-commit-config.yaml ;;
+    docs)
+      # Pure documentation repo: drop the per-repo devcontainer (VS Code offers nested
+      # devcontainer.json files, and this one references a compose service that does not
+      # exist here) and the pre-commit config (only the git-root one is ever read), plus
+      # a stray .DS_Store from early history. Keep create_toc.py, requirements.txt and
+      # .copilot/instructions.md — real tooling and real authoring conventions.
+      printf '%s\n' .devcontainer .pre-commit-config.yaml .DS_Store ;;
     *) : ;;
   esac
 }

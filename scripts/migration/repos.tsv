@@ -63,3 +63,7 @@ testbed	archive-test-bed	.	testbed	main
 #
 # Helm chart system (library chart + generator + per-service charts; ADR-0013)
 deploy	charts	.	deploy	main
+#
+# Epic technical specifications: planning docs, no code. Not a uv workspace member
+# (docs/epics is outside the libs/*, services/*, tools/* globs).
+docs	epic-docs	.	docs/epics	main
