@@ -19,8 +19,9 @@
 import json
 from uuid import uuid4
 
+import httpx2
 import pytest
-from pytest_httpx import HTTPXMock
+from ghga_service_commons.api.mock_router import MockRouter
 
 from metldata.load.client import upload_artifacts_via_http_api
 from metldata.load.collect import get_artifact_topic
@@ -70,7 +71,6 @@ EXAMPLE_ARTIFACTS: ArtifactResourceDict = {
 @pytest.mark.asyncio
 async def test_upload_artifacts_via_http_api(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
-    httpx_mock: HTTPXMock,
 ):
     """Test the happy path of using the upload_artifacts_via_http_api function."""
     token = "some-token"
@@ -102,18 +102,25 @@ async def test_upload_artifacts_via_http_api(
     await file_system_event_fixture.publish_events(artifact_events)
 
     # mock the api:
-    httpx_mock.add_response(
-        url=f"{config.loader_api_root}/rpc/load-artifacts",
-        method="POST",
-        status_code=204,
-    )
+    observed_requests: list[httpx2.Request] = []
+    router: MockRouter = MockRouter()
+
+    @router.post("/rpc/load-artifacts")
+    def load_artifacts(request: httpx2.Request) -> httpx2.Response:
+        """Record the request and acknowledge it."""
+        observed_requests.append(request)
+        return httpx2.Response(status_code=204)
 
     # upload to api:
-    upload_artifacts_via_http_api(token=token, config=config)
+    upload_artifacts_via_http_api(
+        token=token, config=config, transport=router.as_transport()
+    )
 
     # ensure that the api was called with the expected data:
-    observed_requests = httpx_mock.get_requests()
     assert len(observed_requests) == 1
+    assert (
+        str(observed_requests[0].url) == f"{config.loader_api_root}/rpc/load-artifacts"
+    )
     observed_artifacts = json.loads(observed_requests[0].content.decode("utf-8"))
     assert observed_artifacts == EXAMPLE_ARTIFACTS
     assert observed_requests[0].headers["Authorization"] == f"Bearer {token}"
