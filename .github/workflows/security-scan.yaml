@@ -249,10 +249,14 @@ jobs:
       - name: Update the lockfile
         id: update
         working-directory: frontend/data-portal
-        # --lockfile-only: within package.json ranges, no node_modules install;
-        # the workspace's minimumReleaseAge supply-chain policy applies as usual
+        # --lockfile-only: no node_modules install. --no-save: update within the
+        # package.json ranges WITHOUT rewriting them — pnpm's default rewrites the
+        # ranges in package.json and the lockfile's specifier fields, and since only
+        # the lockfile ships in the PR, `pnpm install --frozen-lockfile` would then
+        # reject the lockfile/manifest pair. The workspace's minimumReleaseAge
+        # supply-chain policy applies as usual.
         run: |
-          pnpm update --lockfile-only
+          pnpm update --no-save --lockfile-only
           if git diff --quiet pnpm-lock.yaml; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "pnpm-lock.yaml is already fully up to date." >> "$GITHUB_STEP_SUMMARY"
