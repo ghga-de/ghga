@@ -138,6 +138,7 @@ class SessionStore(SessionStorePort[Session]):
 
     def _create_session(  # noqa: PLR0913
         self,
+        *,
         ext_id: str,
         user_name: str,
         user_email: str,

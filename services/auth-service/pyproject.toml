@@ -21,15 +21,14 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "auth_service"
-version = "10.0.1"
+version = "10.0.2"
 description = "Authentication adapter and services used for the GHGA data portal"
 dependencies = [
     "ghga-event-schemas~=13.0.0",
-    "ghga-service-commons[api,auth]>=7,<8",
-    "hexkit[mongodb,akafka,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=8.4, <9",
+    "ghga-service-commons[api,auth]>=8,<9",
+    "hexkit[mongodb,akafka,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=9, <10",
     "pynacl>=1.6,<2",
     "pyotp>=2.9,<3",
-    "httpx>=0.28,<0.29",
     "phonenumbers>=9,<10",
 ]
 
@@ -75,6 +74,9 @@ ignore = [
     "E111",
     "E114",
     "E116",
+    "E117",
+    "E501",
+    "W191",
     "PLW",
     "RUF001",
     "RUF010",
@@ -103,6 +105,13 @@ select = [
     "RUF",
     "SIM",
     "D",
+    "E",
+    "W",
+    "ASYNC",
+    "LOG",
+    "PERF",
+    "RET",
+    "C4",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -114,6 +123,7 @@ max-complexity = 10
     "S",
     "SIM",
     "D",
+    "E402",
 ]
 "tests/*" = [
     "S",

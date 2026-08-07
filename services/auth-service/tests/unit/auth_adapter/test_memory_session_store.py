@@ -24,12 +24,16 @@ from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
 from auth_service.auth_adapter.core.session_store import Session, SessionConfig
 
-USER_KWARGS = dict(
-    ext_id="john@aai.org", user_name="John Doe", user_email="john@home.org"
-)
-USER2_KWARGS = dict(
-    ext_id="jane@aai.org", user_name="Jane Roe", user_email="jane@home.org"
-)
+USER_KWARGS = {
+    "ext_id": "john@aai.org",
+    "user_name": "John Doe",
+    "user_email": "john@home.org",
+}
+USER2_KWARGS = {
+    "ext_id": "jane@aai.org",
+    "user_name": "Jane Roe",
+    "user_email": "jane@home.org",
+}
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 

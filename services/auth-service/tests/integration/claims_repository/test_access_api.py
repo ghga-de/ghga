@@ -587,7 +587,9 @@ async def test_fetch_access_grants(full_client: FullClient):
     claim = claim_dao.claims[1]
     assert claim.visa_type == "ControlledAccessGrants"
     assert claim.user_id == user.id
-    dt_to_str = lambda dt: dt.isoformat().replace("+00:00", "Z")
+
+    def dt_to_str(dt):
+        return dt.isoformat().replace("+00:00", "Z")
 
     expected_grants = [
         {

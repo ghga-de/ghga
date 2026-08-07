@@ -103,9 +103,7 @@ async def test_deletion_handler(
             ]
 
             assert len(messages) == 2, messages
-            # TODO: Fix bug in hexkit - wrong logging message!
-            # assert messages[0].startswith("Consuming event of type 'dataset_deleted'")
-            assert messages[0].startswith("Ignored event")
+            assert messages[0].startswith("Consuming event")
             assert messages[1] == "Deleted 1 claims for dataset DS0815"
             with pytest.raises(NoHitsFoundError):
                 assert not await claim_dao.find_one(mapping={"user_id": SOME_USER_ID})
@@ -122,7 +120,5 @@ async def test_deletion_handler(
             ]
 
             assert len(messages) == 2, messages
-            # TODO: Fix bug in hexkit - wrong logging message!
-            # assert messages[0].startswith("Consuming event of type 'dataset_deleted'")
-            assert messages[0].startswith("Ignored event")
+            assert messages[0].startswith("Consuming event")
             assert messages[1] == "Deleted 0 claims for dataset DS0815"
