@@ -16,11 +16,10 @@
 """Tests typical user journeys"""
 
 import logging
-import re
 from datetime import timedelta
 from uuid import uuid4
 
-import httpx
+import httpx2
 import pytest
 from fastapi import status
 from ghga_event_schemas.pydantic_ import FileDownloadServed, NonStagedFileRequested
@@ -28,37 +27,21 @@ from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3 import S3ObjectStorage
 from hexkit.providers.s3.testutils import FileObject, temp_file_object
 from hexkit.utils import now_utc_ms_prec
-from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from dcs.core import models
 from dcs.core.errors import StorageAliasNotConfiguredError, StorageUnavailableError
 from tests_dcs.fixtures.joint import CleanupFixture, PopulatedFixture
-from tests_dcs.fixtures.mock_api.app import router
 from tests_dcs.fixtures.utils import generate_work_order_token
 
-unintercepted_hosts: list[str] = ["localhost", "docker"]
-
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.httpx_mock(
-        should_mock=lambda request: request.url.path.startswith("/ekss"),
-    ),
-]
+pytestmark = pytest.mark.asyncio
 
 
 async def test_happy_journey(
     populated_fixture: PopulatedFixture,
     tmp_file: FileObject,
-    httpx_mock: HTTPXMock,  # noqa: F811
 ):
     """Simulates a typical, successful API journey."""
     joint_fixture = populated_fixture.joint_fixture
-
-    # explicitly handle ekss API calls (and name unintercepted hosts above)
-    httpx_mock.add_callback(
-        callback=router.handle_request,
-        url=re.compile(rf"^{joint_fixture.config.ekss_base_url}.*"),
-    )
 
     example_file = populated_fixture.example_file
     endpoint_alias = joint_fixture.endpoint_aliases.valid_node
@@ -77,7 +60,7 @@ async def test_happy_journey(
     )
 
     # modify default headers:
-    joint_fixture.rest_client.headers = httpx.Headers(
+    joint_fixture.rest_client.headers = httpx2.Headers(
         {"Authorization": f"Bearer {work_order_token}"}
     )
 
@@ -153,8 +136,7 @@ async def test_happy_journey(
 
     # download file bytes:
     presigned_url = drs_object_response.json()["access_methods"][0]["access_url"]["url"]
-    unintercepted_hosts.append(httpx.URL(presigned_url).host)
-    async with httpx.AsyncClient() as client:
+    async with httpx2.AsyncClient() as client:
         downloaded_file = await client.get(presigned_url, timeout=5)
     downloaded_file.raise_for_status()
     assert downloaded_file.content == file_object.content
@@ -182,16 +164,9 @@ async def test_happy_journey(
 async def test_happy_deletion(
     populated_fixture: PopulatedFixture,
     tmp_file: FileObject,
-    httpx_mock: HTTPXMock,  # noqa: F811
 ):
     """Simulates a typical, successful journey for file deletion."""
     joint_fixture = populated_fixture.joint_fixture
-
-    # explicitly handle ekss API calls
-    httpx_mock.add_callback(
-        callback=router.handle_request,
-        url=re.compile(rf"^{joint_fixture.config.ekss_base_url}.*"),
-    )
 
     file_id = populated_fixture.example_file.file_id
     drs_object = await populated_fixture.mongodb_dao.get_by_id(file_id)

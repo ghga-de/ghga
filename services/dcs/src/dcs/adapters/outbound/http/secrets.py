@@ -18,7 +18,7 @@
 import base64
 import logging
 
-import httpx
+import httpx2
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -28,6 +28,10 @@ from dcs.constants import TRACER
 from dcs.ports.outbound.secrets import SecretsClientPort
 
 log = logging.getLogger(__name__)
+
+# Paths of the Secrets API endpoints, relative to the configured base URL.
+ENVELOPE_PATH = "/secrets/{secret_id}/envelopes/{receiver_public_key}"
+DELETION_PATH = "/secrets/{secret_id}"
 
 
 class SecretsClientConfig(BaseSettings):
@@ -47,10 +51,16 @@ class SecretsClientConfig(BaseSettings):
 class SecretsClient(SecretsClientPort):
     """A class to communicate with the Secrets API regarding file encryption secrets"""
 
-    def __init__(self, *, config: SecretsClientConfig, httpx_client: httpx.AsyncClient):
+    def __init__(
+        self, *, config: SecretsClientConfig, httpx_client: httpx2.AsyncClient
+    ):
         """Initialize the SecretsClient"""
         self._httpx_client = httpx_client
         self._api_base = config.ekss_base_url
+
+    def _url_for(self, path: str, **path_params: str) -> str:
+        """Build the full URL for one of the Secrets API path templates above."""
+        return self._api_base + path.format(**path_params)
 
     # The method name no longer references EKSS, but we'll leave it in the span name
     @TRACER.start_as_current_span("api_calls.get_envelope_from_ekss")
@@ -66,10 +76,14 @@ class SecretsClient(SecretsClientPort):
         receiver_public_key_base64 = base64.urlsafe_b64encode(
             base64.b64decode(receiver_public_key)
         ).decode()
-        api_url = f"{self._api_base}/secrets/{secret_id}/envelopes/{receiver_public_key_base64}"
+        api_url = self._url_for(
+            ENVELOPE_PATH,
+            secret_id=secret_id,
+            receiver_public_key=receiver_public_key_base64,
+        )
         try:
             response = await self._httpx_client.get(url=api_url)
-        except httpx.RequestError as err:
+        except httpx2.RequestError as err:
             request_failed_error = exceptions.RequestFailedError(url=api_url)
             log.error(
                 request_failed_error,
@@ -114,11 +128,11 @@ class SecretsClient(SecretsClientPort):
             BadResponseCodeError: if a response is received but the status code
                 indicates that the request was unsuccessful.
         """
-        api_url = f"{self._api_base}/secrets/{secret_id}"
+        api_url = self._url_for(DELETION_PATH, secret_id=secret_id)
 
         try:
             response = await self._httpx_client.delete(url=api_url)
-        except httpx.RequestError as err:
+        except httpx2.RequestError as err:
             request_failed_error = exceptions.RequestFailedError(url=api_url)
             log.error(
                 request_failed_error,
