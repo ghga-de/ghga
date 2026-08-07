@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
-import httpx
+import httpx2
 from ghga_service_commons.transports import CompositeConfig
 from hexkit.config import config_from_yaml
 from hexkit.utils import set_context_var
@@ -117,7 +117,7 @@ def get_config() -> Config:
 
 
 @asynccontextmanager
-async def set_runtime_config(client: httpx.AsyncClient):
+async def set_runtime_config(client: httpx2.AsyncClient):
     """Set runtime config as context vars to be accessed within a context manager.
 
     This sets the following values:
@@ -152,7 +152,7 @@ async def set_runtime_config(client: httpx.AsyncClient):
         yield
 
 
-async def _get_wkvs_values(client: httpx.AsyncClient) -> dict[str, Any]:
+async def _get_wkvs_values(client: httpx2.AsyncClient) -> dict[str, Any]:
     """Retrieve a value from the well-known-value-service using the supplied client.
 
     Raises:
@@ -164,7 +164,7 @@ async def _get_wkvs_values(client: httpx.AsyncClient) -> dict[str, Any]:
 
     try:
         response = await client.get(url)
-    except httpx.RequestError as request_error:
+    except httpx2.RequestError as request_error:
         exceptions.raise_if_connection_failed(request_error=request_error, url=url)
         raise exceptions.RequestFailedError(url=url) from request_error
 
