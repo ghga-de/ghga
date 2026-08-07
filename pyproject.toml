@@ -65,6 +65,7 @@ ignore = [
     "D205", "D400", "D401", "D107", "D206", "D300",  # pydocstyle relaxations
     "UP040",                  # `type` statement (mypy support pending)
     "PLC0206",                # dict value extraction without `.items()`
+    "PLR0917",                # too many positional arguments
 ]
 select = ["C90", "F", "I", "S", "B", "N", "UP", "PL", "RUF", "SIM", "D"]
 
