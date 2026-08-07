@@ -1,5 +1,8 @@
 # Copyright 2024 Kersten Henrik Breuer
 #
+# Modifications Copyright 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,8 +18,8 @@
 """Standard converters that come with this library."""
 
 import collections
-from collections.abc import Iterable, Mapping, Sequence
-from typing import Callable, Final
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import Final
 
 from arcticfreeze._internal._converters.base import (
     STANDARD_MUTABLE_PRIORITY,
@@ -36,17 +39,17 @@ STANDARD_PRIMITIVE_CONVERTERS: Final[Sequence[Converter]] = tuple(
 
 
 def convert_sequence(obj: Sequence, freeze_child: Callable) -> tuple:
-    """A convert a sequence object."""
+    """Convert a sequence object."""
     return tuple(freeze_child(child) for child in obj)
 
 
-def convert_set_like(obj: Iterable, freeze_child: Callable) -> set:
-    """A convert a set-like object."""
-    return set(freeze_child(child) for child in obj)
+def convert_set_like(obj: Iterable, freeze_child: Callable) -> frozenset:
+    """Convert a set-like object."""
+    return frozenset(freeze_child(child) for child in obj)
 
 
 def convert_mapping(obj: Mapping, freeze_child: Callable) -> FrozenDict:
-    """A convert a mapping object."""
+    """Convert a mapping object."""
     return FrozenDict(
         {freeze_child(key): freeze_child(value) for key, value in obj.items()}
     )

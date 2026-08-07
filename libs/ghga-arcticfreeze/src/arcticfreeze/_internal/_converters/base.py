@@ -1,5 +1,8 @@
 # Copyright 2024 Kersten Henrik Breuer
 #
+# Modifications Copyright 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,19 +17,18 @@
 
 """Classes, constants, and utils for defining converters."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Final, Generic, TypeVar
+from typing import Final
 
 DEFAULT_PRIORITY: Final = 0
 STANDARD_PRIMITIVE_PRIORITY: Final = 200
 STANDARD_NON_PRIMITIVE_IMMUTABLE_PRIORITY: Final = 100
 STANDARD_MUTABLE_PRIORITY: Final = -100
 
-InputObject = TypeVar("InputObject")
-
 
 @dataclass(frozen=True)
-class Converter(Generic[InputObject]):
+class Converter[InputObject]:
     """A class describing how to convert a (mutable) object to an immutable counterpart.
 
     Attributes:

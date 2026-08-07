@@ -1,5 +1,8 @@
 # Copyright 2024 Kersten Henrik Breuer
 #
+# Modifications Copyright 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,7 +18,6 @@
 """High-level functions for deep freezing mutable objects."""
 
 from collections.abc import Sequence
-from typing import Optional
 
 from arcticfreeze._internal._converters import (
     STANDARD_CONVERTERS,
@@ -73,7 +75,7 @@ def custom_freeze(
 def freeze(
     obj: object,
     *,
-    add_converters: Optional[Sequence[Converter]] = None,
+    add_converters: Sequence[Converter] | None = None,
     by_superclass: bool = False,
 ) -> object:
     """Deep freeze the provided object. If the provided object is a nested data
