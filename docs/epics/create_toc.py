@@ -15,16 +15,17 @@ def get_toc():
             if not 0 <= num < 1000:
                 raise ValueError
         except ValueError:
-            raise RuntimeError(f"Invalid directory name {epic_dir}")
+            raise RuntimeError(f"Invalid directory name {epic_dir}") from None
         spec_path = os.path.join(epic_dir, "technical_specification.md")
         if not os.path.exists(spec_path):
             raise RecursionError(f"No technical_specification.md found in {epic_dir}")
-        for line in open(spec_path):
-            if line.startswith("# "):
-                title = line[2:].strip()
-                break
-        else:
-            title = None
+        with open(spec_path) as spec_file:
+            for line in spec_file:
+                if line.startswith("# "):
+                    title = line[2:].strip()
+                    break
+            else:
+                title = None
         if not title:
             raise RuntimeError(f"No title found in {spec_path}")
         try:
