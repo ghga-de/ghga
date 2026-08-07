@@ -23,7 +23,7 @@ import pytest
 from fastapi import status
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import ExpectedEvent
-from httpx import Headers
+from httpx2 import Headers
 from pydantic import UUID4
 
 from pcs.config import Config

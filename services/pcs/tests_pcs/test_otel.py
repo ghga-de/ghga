@@ -24,7 +24,7 @@ from hexkit.opentelemetry.testutils import (  # noqa: F401
     otel_fixture,
     otel_provider_fixture,
 )
-from httpx import Headers
+from httpx2 import Headers
 
 from pcs import main
 from pcs.inject import get_persistent_publisher

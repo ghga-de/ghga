@@ -18,7 +18,7 @@
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
-import httpx
+import httpx2
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.simple_token import generate_token_and_hash
@@ -40,7 +40,7 @@ class JointFixture:
 
     config: Config
     file_deletion: FileDeletionPort
-    rest_client: httpx.AsyncClient
+    rest_client: httpx2.AsyncClient
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     token: str
