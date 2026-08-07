@@ -16,13 +16,4 @@ allowBuilds:
   unrs-resolver: true
 # Versions exempted from the default 24 hour minimumReleaseAge quarantine.
 # Entries can be dropped again once the versions are older than one day.
-minimumReleaseAgeExclude:
-  - '@angular-devkit/architect@0.2201.2'
-  - '@angular-devkit/core@22.1.2'
-  - '@angular-devkit/schematics@22.1.2'
-  - '@angular/build@22.1.2'
-  - '@angular/cli@22.1.2'
-  - '@playwright/test@1.62.1'
-  - '@schematics/angular@22.1.2'
-  - playwright@1.62.1
-  - playwright-core@1.62.1
+minimumReleaseAgeExclude: []
