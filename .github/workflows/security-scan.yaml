@@ -27,11 +27,16 @@
 # Requires:
 #   - DOCKERHUB_USERNAME / DOCKERHUB_TOKEN org secrets (DHI base pulls, as in
 #     release.yaml); the rebuild steps fail with a clear 401 without them.
-#   - SECURITY_PR_TOKEN repo secret: a fine-grained PAT (contents: write +
-#     pull-requests: write on this repo) so the opened PR triggers ci.yaml —
-#     GitHub deliberately withholds workflow triggers from GITHUB_TOKEN-created
-#     PRs. Falls back to GITHUB_TOKEN with a warning; the PR then needs a manual
-#     nudge (close/reopen or a push) to get checks.
+#   - PR identity, first match wins:
+#       1. SECURITY_PR_APP_CLIENT_ID + SECURITY_PR_APP_KEY — an org-owned GitHub App
+#          (permissions: contents + pull requests write, installed on this repo).
+#          The PR comes from "<app>[bot]" — no personal account — and still
+#          triggers ci.yaml. Preferred.
+#       2. SECURITY_PR_TOKEN — a fine-grained PAT (contents + pull-requests write);
+#          the PR is attributed to the PAT's owner.
+#       3. Neither — the ephemeral GITHUB_TOKEN: the PR comes from
+#          github-actions[bot], but GitHub deliberately withholds workflow triggers
+#          from it, so ci.yaml needs a manual nudge (close/reopen or a push).
 name: security-scan
 
 on:
@@ -308,19 +313,45 @@ jobs:
       contents: write # fallback path only — SECURITY_PR_TOKEN is preferred
       pull-requests: write
     env:
+      APP_CLIENT_ID: ${{ secrets.SECURITY_PR_APP_CLIENT_ID }}
       PR_TOKEN: ${{ secrets.SECURITY_PR_TOKEN }}
     steps:
       - name: Prepare scratch dir
         run: echo "IN=$RUNNER_TEMP/in" >> "$GITHUB_ENV"
-      - name: Warn about the GITHUB_TOKEN fallback
-        if: ${{ env.PR_TOKEN == '' }}
+      # Preferred identity: the PR comes from "<app>[bot]" instead of whoever owns
+      # a PAT, and app-token-created PRs still trigger ci.yaml.
+      - name: Mint an app token for the PR
+        id: app-token
+        if: ${{ env.APP_CLIENT_ID != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.SECURITY_PR_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SECURITY_PR_APP_KEY }}
+      # Commit identity follows the PR identity: the app's own bot user when an app
+      # token was minted (its user id is looked up live — the noreply address that
+      # links commits to the account needs it), else the generic github-actions[bot].
+      - name: Resolve the commit identity
+        id: identity
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          echo "::warning::SECURITY_PR_TOKEN is not set — falling back to GITHUB_TOKEN. \
-          The created PR will NOT trigger ci.yaml (a GitHub limitation on \
-          GITHUB_TOKEN-created PRs); close/reopen it or push to it to get checks."
+          if [ -n "$APP_TOKEN" ]; then
+            id=$(GH_TOKEN="$APP_TOKEN" gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
+            echo "bot=${APP_SLUG}[bot] <${id}+${APP_SLUG}[bot]@users.noreply.github.com>" >> "$GITHUB_OUTPUT"
+          else
+            echo "bot=github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Warn about the GITHUB_TOKEN fallback
+        if: ${{ env.APP_CLIENT_ID == '' && env.PR_TOKEN == '' }}
+        run: |
+          echo "::warning::Neither the SECURITY_PR_APP_* secrets nor SECURITY_PR_TOKEN \
+          are set — falling back to GITHUB_TOKEN. The created PR will NOT trigger \
+          ci.yaml (a GitHub limitation on GITHUB_TOKEN-created PRs); close/reopen \
+          it or push to it to get checks."
       - uses: actions/checkout@v5
         with:
-          token: ${{ secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v4
         with:
           pattern: "*-update"
@@ -378,7 +409,11 @@ jobs:
         if: ${{ steps.verdict.outputs.fixed > 0 }}
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          # set explicitly: the author otherwise defaults to github.actor — a
+          # personal account even when an app token opens the PR
+          committer: ${{ steps.identity.outputs.bot }}
+          author: ${{ steps.identity.outputs.bot }}
           branch: automated/lockfile-security-update
           base: main
           title: "Security: lockfile update resolving ${{ steps.verdict.outputs.fixed }} known vulnerabilities"
