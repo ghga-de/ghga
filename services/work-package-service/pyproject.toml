@@ -21,13 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wps"
-version = "11.1.0"
+version = "11.1.1"
 description = "Work Package Service"
 dependencies = [
     "ghga-event-schemas~=13.0.0",
-    "ghga-service-commons[api,auth,crypt]>=7.0",
+    "ghga-service-commons[api,auth,crypt]>=8.0",
     "hexkit[akafka,mongodb,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=8.4",
-    "httpx>=0.28",
     "typer>=0.26",
 ]
 
@@ -73,6 +72,9 @@ ignore = [
     "E111",
     "E114",
     "E116",
+    "E117",
+    "E501",
+    "W191",
     "PLW",
     "RUF001",
     "RUF010",
@@ -101,6 +103,13 @@ select = [
     "RUF",
     "SIM",
     "D",
+    "E",
+    "W",
+    "ASYNC",
+    "LOG",
+    "PERF",
+    "RET",
+    "C4",
 ]
 
 [tool.ruff.lint.mccabe]
@@ -112,6 +121,7 @@ max-complexity = 10
     "S",
     "SIM",
     "D",
+    "E402",
 ]
 "tests/*" = [
     "S",

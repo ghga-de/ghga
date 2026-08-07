@@ -23,9 +23,10 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 from ghga_service_commons.utils.utc_dates import utc_datetime
-from pytest_httpx import HTTPXMock
 
 from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
+
+from .fixtures.access_api import AccessApiMock, respond
 
 pytestmark = pytest.mark.asyncio
 
@@ -39,45 +40,46 @@ VALID_UNTIL1 = utc_datetime(2025, 12, 31, 23, 59, 59)
 VALID_UNTIL2 = VALID_UNTIL1 + timedelta(days=180)
 
 
+@pytest.fixture(name="access_api")
+def fixture_access_api() -> AccessApiMock:
+    """Get a mock of the access API that the adapter talks to."""
+    config = AccessCheckConfig(access_url=BASE_ACCESS_URL)  # type: ignore
+    return AccessApiMock(config=config)
+
+
 @pytest_asyncio.fixture(name="access_check", scope="function")
-async def fixture_access_check() -> AsyncGenerator[AccessCheckAdapter]:
+async def fixture_access_check(
+    access_api: AccessApiMock,
+) -> AsyncGenerator[AccessCheckAdapter]:
     """Get configured access test adapter."""
     config = AccessCheckConfig(access_url=BASE_ACCESS_URL)  # type: ignore
-    async with AccessCheckAdapter.construct(config=config) as adapter:
+    async with AccessCheckAdapter.construct(
+        config=config, transport=access_api.as_transport()
+    ) as adapter:
         yield adapter
 
 
 async def test_check_download_access(
-    access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
+    access_check: AccessCheckAdapter, access_api: AccessApiMock
 ):
     """Test checking the download access"""
     check_access = access_check.check_download_access
 
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/some-data-id",
-        json=VALID_UNTIL1.isoformat(),
-    )
+    access_api.on_check_download_access = respond(json=VALID_UNTIL1.isoformat())
     assert await check_access(TEST_USER_ID, "some-data-id") == VALID_UNTIL1
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/other-data-id",
-        text="null",
+    assert (
+        access_api.last_url
+        == f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/some-data-id"
     )
+
+    access_api.on_check_download_access = respond(json=None)
     assert await check_access(TEST_USER_ID, "other-data-id") is None
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/no-data-id",
-        status_code=404,
-    )
+
+    access_api.on_check_download_access = respond(404)
     assert await check_access(TEST_USER_ID, "no-data-id") is None
 
     # Test other error status codes
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/some-data-id",
-        status_code=500,
-    )
+    access_api.on_check_download_access = respond(500)
     with pytest.raises(
         AccessCheckAdapter.AccessCheckError,
         match="Unexpected response when checking download access for a dataset:"
@@ -86,11 +88,7 @@ async def test_check_download_access(
         await check_access(TEST_USER_ID, "some-data-id")
 
     # Test invalid datetime as retrieved value
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets/some-data-id",
-        json="Not a valid date",
-    )
+    access_api.on_check_download_access = respond(json="Not a valid date")
     with pytest.raises(
         AccessCheckAdapter.AccessCheckError,
         match="Invalid date in response when checking download access for a dataset",
@@ -99,37 +97,29 @@ async def test_check_download_access(
 
 
 async def test_get_download_datasets(
-    access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
+    access_check: AccessCheckAdapter, access_api: AccessApiMock
 ):
     """Test getting the datasets for download access"""
     get_datasets = access_check.get_accessible_datasets_with_expiration
 
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets",
+    access_api.on_get_accessible_datasets = respond(
         json={
             "data-id-1": VALID_UNTIL1.isoformat(),
             "data-id-2": VALID_UNTIL2.isoformat(),
-        },
+        }
     )
     assert await get_datasets(TEST_USER_ID) == {
         "data-id-1": VALID_UNTIL1,
         "data-id-2": VALID_UNTIL2,
     }
+    assert access_api.last_url == f"{DOWNLOAD_ACCESS_URL}/users/{TEST_USER_ID}/datasets"
+
     no_user_id = uuid4()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{no_user_id}/datasets",
-        status_code=404,
-    )
+    access_api.on_get_accessible_datasets = respond(404)
     assert await get_datasets(no_user_id) == {}
 
     # Test for other status translation
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{no_user_id}/datasets",
-        status_code=500,
-    )
+    access_api.on_get_accessible_datasets = respond(500)
     with pytest.raises(
         AccessCheckAdapter.AccessCheckError,
         match="Unexpected response when fetching download access list:"
@@ -139,19 +129,17 @@ async def test_get_download_datasets(
 
 
 async def test_get_accessible_boxes_with_expiration(
-    access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
+    access_check: AccessCheckAdapter, access_api: AccessApiMock
 ):
     """Test retrieving a list of boxes to which the user has access"""
     get_boxes = access_check.get_accessible_boxes_with_expiration
 
     # Test successful response with multiple boxes
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes",
+    access_api.on_get_accessible_boxes = respond(
         json={
             str(BOX_ID1): VALID_UNTIL1.isoformat(),
             str(BOX_ID2): VALID_UNTIL2.isoformat(),
-        },
+        }
     )
     result = await get_boxes(TEST_USER_ID)
     expected = {
@@ -159,22 +147,15 @@ async def test_get_accessible_boxes_with_expiration(
         BOX_ID2: VALID_UNTIL2,
     }
     assert result == expected
+    assert access_api.last_url == f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes"
 
     # Test user with no accessible boxes (404 response)
     no_user_id = uuid4()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{no_user_id}/boxes",
-        status_code=404,
-    )
+    access_api.on_get_accessible_boxes = respond(404)
     assert await get_boxes(no_user_id) == {}
 
     # Test for other status translation
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{no_user_id}/boxes",
-        status_code=500,
-    )
+    access_api.on_get_accessible_boxes = respond(500)
     with pytest.raises(
         AccessCheckAdapter.AccessCheckError,
         match="Unexpected response when fetching upload access list:"
@@ -184,19 +165,17 @@ async def test_get_accessible_boxes_with_expiration(
 
 
 async def test_get_accessible_boxes_invalid_response_id(
-    access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
+    access_check: AccessCheckAdapter, access_api: AccessApiMock
 ):
     """Test the `get_accessible_boxes_with_expiration` method when the Access API
     returns an invalid box ID.
     """
     get_boxes = access_check.get_accessible_boxes_with_expiration
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes",
+    access_api.on_get_accessible_boxes = respond(
         json={
             str(BOX_ID1): VALID_UNTIL1.isoformat(),
             "invalid-id": VALID_UNTIL2.isoformat(),
-        },
+        }
     )
     with pytest.raises(
         AccessCheckAdapter.AccessCheckError,
@@ -206,63 +185,49 @@ async def test_get_accessible_boxes_invalid_response_id(
 
 
 async def test_get_accessible_boxes_invalid_response_datetime(
-    access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
+    access_check: AccessCheckAdapter, access_api: AccessApiMock
 ):
     """Test the `get_accessible_boxes_with_expiration` method when the Access API
     returns an invalid datetime.
     """
     get_boxes = access_check.get_accessible_boxes_with_expiration
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes",
+    access_api.on_get_accessible_boxes = respond(
         json={
             str(BOX_ID1): VALID_UNTIL1.isoformat(),
             str(BOX_ID2): "Invalid Datetime",
-        },
+        }
     )
     with pytest.raises(AccessCheckAdapter.AccessCheckError):
         await get_boxes(TEST_USER_ID)
 
 
 async def test_check_upload_access(
-    access_check: AccessCheckAdapter, httpx_mock: HTTPXMock
+    access_check: AccessCheckAdapter, access_api: AccessApiMock
 ):
     """Test checking the upload access"""
     check_access = access_check.check_upload_access
 
     # Test successful access check
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes/{BOX_ID1}",
-        json=VALID_UNTIL1.isoformat(),
-    )
+    access_api.on_check_upload_access = respond(json=VALID_UNTIL1.isoformat())
     assert await check_access(TEST_USER_ID, BOX_ID1) == VALID_UNTIL1
+    assert (
+        access_api.last_url
+        == f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes/{BOX_ID1}"
+    )
 
     # Test null response (no access)
     other_box_id = uuid4()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes/{other_box_id}",
-        text="null",
-    )
+    access_api.on_check_upload_access = respond(json=None)
     assert await check_access(TEST_USER_ID, other_box_id) is None
 
     # Test 404 response (box not found)
     no_box_id = uuid4()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes/{no_box_id}",
-        status_code=404,
-    )
+    access_api.on_check_upload_access = respond(404)
     assert await check_access(TEST_USER_ID, no_box_id) is None
 
     # Test other error status codes
     error_box_id = uuid4()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes/{error_box_id}",
-        status_code=500,
-    )
+    access_api.on_check_upload_access = respond(500)
     with pytest.raises(
         AccessCheckAdapter.AccessCheckError,
         match="Unexpected response when checking upload access to a box:"
@@ -271,11 +236,7 @@ async def test_check_upload_access(
         await check_access(TEST_USER_ID, error_box_id)
 
     # Test invalid datetime as retrieved value
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{TEST_USER_ID}/boxes/{BOX_ID2}",
-        json="Not a valid date",
-    )
+    access_api.on_check_upload_access = respond(json="Not a valid date")
     with pytest.raises(
         AccessCheckAdapter.AccessCheckError,
         match="Invalid date in response when checking upload access to a box",

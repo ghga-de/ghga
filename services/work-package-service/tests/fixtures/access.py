@@ -95,4 +95,4 @@ class AccessCheckMock(AccessCheckPort):
         if user_id not in USERS_WITH_UPLOAD_ACCESS:
             return {}
         expires = now_utc_ms_prec() + self.validity_period
-        return {box_id: expires for box_id in BOXES_WITH_UPLOAD_ACCESS}
+        return dict.fromkeys(BOXES_WITH_UPLOAD_ACCESS, expires)
