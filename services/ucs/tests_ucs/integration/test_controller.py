@@ -23,7 +23,7 @@ from typing import Any
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
-import httpx
+import httpx2
 import pytest
 from ghga_event_schemas.pydantic_ import FileDeletionRequested, InterrogationSuccess
 from hexkit.correlation import set_correlation_id
@@ -53,12 +53,12 @@ def calc_expected_encrypted_checksum(content: str) -> str:
     return object_md5 + "-1"  # only one part
 
 
-async def upload_to_s3(url: str, content: str | bytes) -> httpx.Response:
+async def upload_to_s3(url: str, content: str | bytes) -> httpx2.Response:
     """Upload content to a pre-signed S3 URL.
 
-    Uses httpx directly instead of the test client in order to bypass routing.
+    Uses httpx2 directly instead of the test client in order to bypass routing.
     """
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx2.AsyncClient(timeout=30) as client:
         return await client.put(url, content=content)
 
 

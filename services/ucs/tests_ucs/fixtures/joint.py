@@ -20,7 +20,7 @@ __all__ = ["JointFixture", "joint_fixture"]
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
-import httpx
+import httpx2
 import pytest
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -83,7 +83,7 @@ class JointFixture:
 
     config: Config
     upload_controller: UploadControllerPort
-    rest_client: httpx.AsyncClient
+    rest_client: httpx2.AsyncClient
     mongodb: MongoDbFixture
     event_subscriber: KafkaEventSubscriber
     kafka: KafkaFixture
