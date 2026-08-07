@@ -17,7 +17,7 @@
 
 import logging
 
-import httpx
+import httpx2
 import tenacity
 from pydantic import Field, HttpUrl, SecretBytes
 from pydantic_settings import BaseSettings
@@ -25,6 +25,10 @@ from pydantic_settings import BaseSettings
 from fis.ports.outbound.secrets import SecretsClientPort
 
 log = logging.getLogger(__name__)
+
+# Paths of the Secrets API endpoints, relative to the configured base URL.
+DEPOSIT_PATH = "/secrets"
+DELETION_PATH = "/secrets/{secret_id}"
 
 
 class SecretsClientConfig(BaseSettings):
@@ -40,10 +44,16 @@ class SecretsClientConfig(BaseSettings):
 class SecretsClient(SecretsClientPort):
     """A class that interfaces with the Secrets API"""
 
-    def __init__(self, *, config: SecretsClientConfig, httpx_client: httpx.AsyncClient):
+    def __init__(
+        self, *, config: SecretsClientConfig, httpx_client: httpx2.AsyncClient
+    ):
         """Initialize the SecretsClient"""
         self._api_base_url = str(config.ekss_api_url).rstrip("/")
         self._httpx_client = httpx_client
+
+    def _url_for(self, path: str, **path_params: str) -> str:
+        """Build the full URL for one of the Secrets API path templates above."""
+        return self._api_base_url + path.format(**path_params)
 
     async def deposit_secret(self, *, secret: SecretBytes) -> str:
         """Deposit an encrypted file encryption secret with the Secrets API
@@ -52,7 +62,7 @@ class SecretsClient(SecretsClientPort):
         """
         try:
             response = await self._httpx_client.post(
-                f"{self._api_base_url}/secrets",
+                self._url_for(DEPOSIT_PATH),
                 content=secret.get_secret_value(),  # still encrypted
             )
         except tenacity.RetryError as err:
@@ -64,8 +74,8 @@ class SecretsClient(SecretsClientPort):
                 "Failed to deposit secret because of the following reason: %s", reason
             )
             raise self.SecretsApiError() from err
-        except httpx.HTTPError as err:
-            # Catch any httpx errors that weren't wrapped in RetryError
+        except httpx2.HTTPError as err:
+            # Catch any httpx2 errors that weren't wrapped in RetryError
             reason = str(err.args[0]) if err.args else str(err)
             log.error(
                 "Failed to deposit secret because of the following reason: %s", reason
@@ -90,7 +100,7 @@ class SecretsClient(SecretsClientPort):
         """Delete a file encryption secret from the Secrets API"""
         try:
             response = await self._httpx_client.delete(
-                f"{self._api_base_url}/secrets/{secret_id}",
+                self._url_for(DELETION_PATH, secret_id=secret_id),
             )
         except tenacity.RetryError as err:
             exception = err.last_attempt.exception()
@@ -101,7 +111,7 @@ class SecretsClient(SecretsClientPort):
                 "Failed to delete secret because of the following reason: %s", reason
             )
             raise self.SecretsApiError() from err
-        except httpx.HTTPError as err:
+        except httpx2.HTTPError as err:
             reason = str(err.args[0]) if err.args else str(err)
             log.error(
                 "Failed to delete secret because of the following reason: %s", reason

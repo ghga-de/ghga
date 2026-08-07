@@ -19,6 +19,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
+import httpx2
 from fastapi import FastAPI
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
 from hexkit.providers.akafka import (
@@ -64,14 +65,29 @@ async def get_persistent_publisher(
 
 
 @asynccontextmanager
-async def prepare_core(*, config: Config) -> AsyncGenerator[InterrogationHandlerPort]:
-    """Constructs and initializes all core components and their outbound dependencies."""
+async def prepare_core(
+    *,
+    config: Config,
+    http_base_transport: httpx2.AsyncBaseTransport | None = None,
+    http_mount_env_proxies: bool = True,
+) -> AsyncGenerator[InterrogationHandlerPort]:
+    """Constructs and initializes all core components and their outbound dependencies.
+
+    `http_base_transport` is handed to the outbound HTTP client, which lets tests
+    serve the Secrets API from a mock instead of the network. Replacing the network
+    layer rules out the env proxies, so such callers also pass
+    `http_mount_env_proxies=False`.
+    """
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
         get_persistent_publisher(
             config=config, dao_factory=dao_factory
         ) as persistent_publisher,
-        get_configured_httpx_client(config=config) as httpx_client,
+        get_configured_httpx_client(
+            config=config,
+            base_transport=http_base_transport,
+            mount_env_proxies=http_mount_env_proxies,
+        ) as httpx_client,
     ):
         file_dao = await get_file_dao(dao_factory=dao_factory)
         interrogation_report_dao = await get_interrogation_report_dao(

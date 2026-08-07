@@ -19,7 +19,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from unittest.mock import AsyncMock
 
-import httpx
+import httpx2
 import pytest
 import pytest_asyncio
 from ghga_service_commons.api.testing import AsyncTestClient
@@ -39,6 +39,7 @@ from fis.ports.outbound.dao import FileDao, InterrogationReportDao
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.secrets import SecretsClientPort
 from tests_fis.fixtures.config import get_config
+from tests_fis.fixtures.ekss_api import EkssApiMock
 
 __all__ = ["JointFixture", "joint_fixture"]
 
@@ -58,9 +59,10 @@ class JointFixture:
     config: Config
     kafka: KafkaFixture
     file_dao: FileDao
-    rest_client: httpx.AsyncClient
+    rest_client: httpx2.AsyncClient
     outbox_consumer: KafkaEventSubscriber
     interrogation_handler: InterrogationHandlerPort
+    ekss: EkssApiMock
 
 
 @pytest_asyncio.fixture
@@ -70,8 +72,15 @@ async def joint_fixture(
     """Set up fixture with testcontainer config spliced in"""
     config = get_config(sources=[kafka.config, mongodb.config])
 
+    # the EKSS API is served from the mock instead of the network (the retry and
+    # rate limiting layers stay in place above it)
+    ekss = EkssApiMock(config=config)
     async with (
-        prepare_core(config=config) as interrogation_handler,
+        prepare_core(
+            config=config,
+            http_base_transport=ekss.as_transport(),
+            http_mount_env_proxies=False,
+        ) as interrogation_handler,
         prepare_rest_app(config=config, core_override=interrogation_handler) as app,
         prepare_event_subscriber(
             config=config, core_override=interrogation_handler
@@ -85,6 +94,7 @@ async def joint_fixture(
             rest_client=rest_client,
             outbox_consumer=outbox_consumer,
             interrogation_handler=interrogation_handler,
+            ekss=ekss,
         )
 
 
