@@ -20,7 +20,6 @@ from datetime import timedelta
 from typing import Any
 
 import pytest
-from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 
 from auth_service.auth_adapter.core.session_store import (
     Session,
@@ -33,6 +32,7 @@ from auth_service.user_registry.models.users import (
     User,
     UserStatus,
 )
+from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from tests.fixtures.constants import EXT_ID_OF_JOHN, SOME_USER_ID
 
 pytestmark = pytest.mark.asyncio(loop_scope="module")

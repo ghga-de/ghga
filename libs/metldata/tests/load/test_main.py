@@ -20,9 +20,9 @@ import json
 from copy import deepcopy
 
 import pytest
+
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
-
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.load_resources import (
     convert_file_information,

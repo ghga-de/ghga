@@ -17,9 +17,10 @@
 
 from typing import Any
 
+from pydantic import UUID4, BaseModel, Field
+
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4, BaseModel, Field
 
 
 class EventHeaders(BaseModel):

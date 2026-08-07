@@ -21,12 +21,12 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
+from pytest_httpx import HTTPXMock
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
-from pytest_httpx import HTTPXMock
-
 from wps.config import Config
 from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
 from wps.core.models import DatasetWithExpiration

@@ -21,11 +21,11 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any
 
+from pytest_asyncio import fixture
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from pytest_asyncio import fixture
-
 from metldata.artifacts_rest.artifact_info import ArtifactInfo, load_artifact_info
 from metldata.custom_types import Json
 from metldata.load.auth import generate_token_and_hash

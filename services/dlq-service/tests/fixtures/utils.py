@@ -20,9 +20,8 @@ helper functions and constants for testing purposes.
 from typing import Literal
 from uuid import UUID, uuid4
 
-from hexkit.providers.akafka.provider.eventsub import HeaderNames
-
 from dlqs.models import DLQInfo, RawDLQEvent, StoredDLQEvent
+from hexkit.providers.akafka.provider.eventsub import HeaderNames
 from tests.fixtures.config import DEFAULT_CONFIG
 
 # Service names

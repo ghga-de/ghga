@@ -18,7 +18,6 @@
 from ghga_event_schemas.configs import AuditEventsConfig
 from ghga_event_schemas.pydantic_ import AuditRecord
 from hexkit.protocols.eventpub import EventPublisherProtocol
-
 from rs.ports.outbound.event_pub import EventPublisherPort
 
 

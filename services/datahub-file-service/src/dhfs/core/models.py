@@ -22,10 +22,10 @@ from functools import cached_property
 from math import ceil
 
 import crypt4gh.lib
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4, BaseModel, Field, SecretBytes, computed_field
 
 from dhfs.constants import AUTH_TAG_LENGTH, NONCE_LENGTH
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 __all__ = ["FileUpload", "InterrogationReport", "PartRange"]
 

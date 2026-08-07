@@ -23,9 +23,6 @@ from typing import NamedTuple
 
 import pytest_asyncio
 from fastapi import status
-from ghga_service_commons.api.testing import AsyncTestClient as BareClient
-from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.providers.akafka.testutils import KafkaFixture
 from httpx import Response
 from pydantic import SecretStr
 from pytest_httpx import HTTPXMock
@@ -44,6 +41,9 @@ from auth_service.user_registry.deps import (
     get_user_dao,
     get_user_registry,
 )
+from ghga_service_commons.api.testing import AsyncTestClient as BareClient
+from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.providers.akafka.testutils import KafkaFixture
 
 from ...fixtures.utils import (
     RE_USER_INFO_URL,

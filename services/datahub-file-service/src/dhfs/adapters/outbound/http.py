@@ -19,15 +19,15 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
+from pydantic import Field
+from tenacity import RetryError
+
+from dhfs import __version__
 from ghga_service_commons.transports import (
     CompositeCacheConfig,
     CompositeTransportFactory,
     ratelimiting_retry_proxies,
 )
-from pydantic import Field
-from tenacity import RetryError
-
-from dhfs import __version__
 
 __all__ = [
     "ConnectionFailedError",

@@ -17,13 +17,13 @@
 
 import logging
 
+from pydantic import UUID4
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs.stateful import ArtifactEventsConfig
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
 from rts.models import StudyMetadata
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 

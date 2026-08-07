@@ -21,8 +21,8 @@ replaced at runtime by actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
+from ghga_service_commons.api.di import DependencyDummy
 from mass.config import Config
 from mass.ports.inbound.query_handler import QueryHandlerPort
 

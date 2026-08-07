@@ -21,9 +21,9 @@ from unittest.mock import AsyncMock
 import pytest
 from aiokafka import AIOKafkaConsumer
 from aiokafka.admin import NewTopic
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka.testutils import KafkaFixture
-
 from sms.core.events_handler import EventsHandler
 from sms.inject import prepare_rest_app
 from tests.fixtures.config import get_config

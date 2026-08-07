@@ -20,9 +20,10 @@ An IVA is an "independent verification address" used to verify a user's identity
 
 from uuid import uuid4
 
+from pydantic import UUID4, ConfigDict, Field, ValidationInfo, field_validator
+
 from ghga_event_schemas.pydantic_ import IvaState, IvaType
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from pydantic import UUID4, ConfigDict, Field, ValidationInfo, field_validator
 
 from ..core.validation import validate_phone_number
 from . import BaseDto

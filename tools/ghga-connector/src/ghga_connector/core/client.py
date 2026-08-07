@@ -17,15 +17,15 @@
 from contextlib import asynccontextmanager
 
 import httpx
+
+from ghga_connector.config import get_config
+from ghga_connector.constants import TIMEOUT
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from ghga_service_commons.transports import (
     AsyncRetryTransport,
     CompositeTransportFactory,
     ratelimiting_retry_proxies,
 )
-
-from ghga_connector.config import get_config
-from ghga_connector.constants import TIMEOUT
 
 
 def get_ratelimiting_retry_transport(

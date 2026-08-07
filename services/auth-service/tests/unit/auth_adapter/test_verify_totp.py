@@ -22,7 +22,6 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi import HTTPException, status
-from hexkit.utils import now_utc_ms_prec
 from pydantic import SecretStr
 
 from auth_service.auth_adapter.adapters.memory_session_store import MemorySessionStore
@@ -33,6 +32,7 @@ from auth_service.auth_adapter.ports.dao import UserToken, UserTokenDao
 from auth_service.config import Config
 from auth_service.user_registry.models.ivas import IvaState
 from auth_service.user_registry.models.users import UserStatus
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import ID_OF_JOHN
 
 from ...fixtures.utils import (

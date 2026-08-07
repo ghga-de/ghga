@@ -17,12 +17,12 @@
 
 from contextlib import asynccontextmanager
 
-from hexkit.custom_types import JsonObject
-from hexkit.providers.mongodb import ConfiguredMongoClient, MongoDbConfig
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import OperationFailure
 
+from hexkit.custom_types import JsonObject
+from hexkit.providers.mongodb import ConfiguredMongoClient, MongoDbConfig
 from mass.adapters.outbound import utils
 from mass.config import SearchableClassesConfig
 from mass.core import models

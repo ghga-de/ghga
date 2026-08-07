@@ -17,10 +17,9 @@
 
 from pathlib import Path
 
+from ghga_datasteward_kit.utils import STEWARD_TOKEN, load_config_yaml
 from metldata.load.client import upload_artifacts_via_http_api as upload_metadata
 from metldata.load.config import ArtifactLoaderClientConfig
-
-from ghga_datasteward_kit.utils import STEWARD_TOKEN, load_config_yaml
 
 
 class LoadConfig(ArtifactLoaderClientConfig):

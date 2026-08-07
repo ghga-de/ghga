@@ -20,11 +20,11 @@ from uuid import UUID
 
 import pytest
 from fastapi import status
-from ghga_service_commons.api.testing import AsyncTestClient
 
 from dlqs.adapters.inbound.fastapi_ import http_exceptions as http_exc
 from dlqs.inject import prepare_rest_app
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
+from ghga_service_commons.api.testing import AsyncTestClient
 from tests.fixtures import utils
 from tests.fixtures.config import DEFAULT_CONFIG
 

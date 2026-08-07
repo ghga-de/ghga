@@ -21,7 +21,6 @@ from hexkit.providers.mongodb.migrations import (
     Reversible,
 )
 from hexkit.providers.mongodb.migrations.helpers import convert_uuids_and_datetimes_v6
-
 from wps.core.models import WorkPackage
 
 WORK_PACKAGES = "workPackages"

@@ -20,6 +20,8 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 import pytest_asyncio
+from jwcrypto.jwk import JWK
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils import jwt_helpers
 from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
@@ -32,8 +34,6 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_container_fixture,
     mongodb_fixture,
 )
-from jwcrypto.jwk import JWK
-
 from rs.config import Config
 from rs.inject import prepare_rest_app
 from tests.fixtures import AppFixture

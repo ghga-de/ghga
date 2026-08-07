@@ -19,9 +19,9 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.utils import now_utc_ms_prec
-
 from rs.config import Config
 from rs.core.models import (
     BoxRetrievalResults,

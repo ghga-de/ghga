@@ -20,9 +20,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 from gridfs import GridFS, GridFSBucket
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 from openpyxl import Workbook
 
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from rts.adapters.outbound.dao import GridFSDaoFactory
 from rts.core.rev_tran import ReverseTranspiler
 from rts.migrations.entry import run_db_migrations

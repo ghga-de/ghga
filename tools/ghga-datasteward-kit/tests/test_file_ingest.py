@@ -19,6 +19,13 @@ import json
 
 import pytest
 import yaml
+from pytest_httpx import HTTPXMock
+
+from ghga_datasteward_kit import models
+from ghga_datasteward_kit.cli.file import ingest_upload_metadata
+from ghga_datasteward_kit.exceptions import UnknownStorageAliasError
+from ghga_datasteward_kit.file_ingest import alias_to_accession, file_ingest
+from ghga_datasteward_kit.utils import path_join
 from ghga_service_commons.utils.simple_token import generate_token
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.submission_registry.models import (
@@ -27,13 +34,6 @@ from metldata.submission_registry.models import (
     SubmissionStatus,
 )
 from metldata.submission_registry.submission_store import SubmissionStore
-from pytest_httpx import HTTPXMock
-
-from ghga_datasteward_kit import models
-from ghga_datasteward_kit.cli.file import ingest_upload_metadata
-from ghga_datasteward_kit.exceptions import UnknownStorageAliasError
-from ghga_datasteward_kit.file_ingest import alias_to_accession, file_ingest
-from ghga_datasteward_kit.utils import path_join
 from tests.fixtures.ingest import (  # noqa: F401
     EXAMPLE_SUBMISSION,
     IngestFixture,

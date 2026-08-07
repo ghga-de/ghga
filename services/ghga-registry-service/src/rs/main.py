@@ -26,7 +26,6 @@ from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-
 from rs.adapters.outbound.dao import get_box_dao, get_file_accession_dao
 from rs.config import Config
 from rs.inject import (

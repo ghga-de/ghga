@@ -19,8 +19,8 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from rs.constants import (
     FILE_ACCESSION_COLLECTION,
     RESEARCH_DATA_UPLOAD_BOX_COLLECTION,

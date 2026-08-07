@@ -14,10 +14,6 @@
 # limitations under the License.
 """DAO translators for database access."""
 
-from ghga_event_schemas.pydantic_ import FileAccessionMapping
-from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb import MongoDbIndex
-
 from dins.core import models
 from dins.ports.inbound.dao import (
     DatasetDaoPort,
@@ -25,6 +21,9 @@ from dins.ports.inbound.dao import (
     FileInformationDaoPort,
     PendingFileInfoDaoPort,
 )
+from ghga_event_schemas.pydantic_ import FileAccessionMapping
+from hexkit.protocols.dao import DaoFactoryProtocol
+from hexkit.providers.mongodb import MongoDbIndex
 
 
 async def get_file_information_dao(

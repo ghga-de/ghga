@@ -23,11 +23,11 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
+
 from ghga_service_commons.auth.context import AuthContext
 from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.utils import now_utc_ms_prec
-
 from rs.config import Config
 from rs.core import models
 from rs.core.files import FileController

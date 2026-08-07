@@ -18,8 +18,8 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from ghga_service_commons.api.testing import AsyncTestClient
 
+from ghga_service_commons.api.testing import AsyncTestClient
 from rts.inject import prepare_rest_app
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 from tests.fixtures.config import get_config

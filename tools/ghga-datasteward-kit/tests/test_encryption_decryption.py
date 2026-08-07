@@ -19,11 +19,11 @@ from io import BytesIO
 
 import crypt4gh.lib
 import pytest
-from ghga_service_commons.utils.temp_files import big_temp_file
 
 from ghga_datasteward_kit.s3_upload.exceptions import ChecksumValidationError
 from ghga_datasteward_kit.s3_upload.file_decryption import Decryptor
 from ghga_datasteward_kit.s3_upload.file_encryption import Encryptor
+from ghga_service_commons.utils.temp_files import big_temp_file
 
 
 def test_process_file_yields_sequential_part_numbers():

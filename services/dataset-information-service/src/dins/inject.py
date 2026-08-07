@@ -20,12 +20,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from hexkit.providers.akafka import (
-    ComboTranslator,
-    KafkaEventPublisher,
-    KafkaEventSubscriber,
-)
-from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from dins.adapters.inbound.event_sub import (
     AccessionMapOutboxTranslator,
@@ -37,6 +31,12 @@ from dins.adapters.outbound import dao
 from dins.config import Config
 from dins.core.information_service import InformationService
 from dins.ports.inbound.information_service import InformationServicePort
+from hexkit.providers.akafka import (
+    ComboTranslator,
+    KafkaEventPublisher,
+    KafkaEventSubscriber,
+)
+from hexkit.providers.mongodb import MongoDbDaoFactory
 
 
 @asynccontextmanager

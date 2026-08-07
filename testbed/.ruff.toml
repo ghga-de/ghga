@@ -42,6 +42,7 @@ ignore = [
     "S101", # Use of `assert` detected
     "D102", # Missing docstring in function
     "D103", # Missing docstring in method
+    "PLR0917", # too many positional arguments (stable since ruff 0.16)
 ]
 
 fixable = [

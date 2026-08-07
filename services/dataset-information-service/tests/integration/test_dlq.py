@@ -18,9 +18,9 @@
 from uuid import uuid4
 
 import pytest
-from ghga_event_schemas import pydantic_ as event_schemas
 
 from dins.inject import prepare_event_subscriber
+from ghga_event_schemas import pydantic_ as event_schemas
 from tests.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio()

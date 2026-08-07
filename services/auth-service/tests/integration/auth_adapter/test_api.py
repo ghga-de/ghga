@@ -24,7 +24,6 @@ from uuid import UUID
 
 import pytest
 from fastapi import status
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.core.session_store import SessionState
@@ -32,6 +31,7 @@ from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.auth_adapter.rest.headers import get_bearer_token
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.deps import get_user_dao
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
 
 from ...fixtures.utils import (

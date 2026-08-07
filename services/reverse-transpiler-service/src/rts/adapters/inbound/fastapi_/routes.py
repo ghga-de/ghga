@@ -16,8 +16,8 @@
 """FastAPI endpoint function definitions"""
 
 from fastapi import APIRouter, Response, status
-from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 
+from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 from rts.adapters.inbound.fastapi_.dummies import ReverseTranspilerDummy
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 

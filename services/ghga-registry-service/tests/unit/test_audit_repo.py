@@ -21,6 +21,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+
 from hexkit.correlation import get_correlation_id
 from hexkit.providers.testing.eventpub import (
     Event,
@@ -29,7 +30,6 @@ from hexkit.providers.testing.eventpub import (
     TopicExhaustedError,
 )
 from hexkit.utils import now_utc_ms_prec
-
 from rs.adapters.outbound.audit import AuditRepository
 from rs.adapters.outbound.event_pub import EventPubTranslator
 from rs.config import Config

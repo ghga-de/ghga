@@ -16,8 +16,8 @@
 """Utils to configure the FastAPI app"""
 
 from fastapi import FastAPI
-from ghga_service_commons.api import configure_app
 
+from ghga_service_commons.api import configure_app
 from mass import metadata
 from mass.adapters.inbound.fastapi_.routes import router
 from mass.config import Config

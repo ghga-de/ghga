@@ -16,14 +16,14 @@
 
 """Event subscriber for dataset deletion events."""
 
+from pydantic import UUID4
+
+from auth_service.constants import TRACER
 from ghga_event_schemas.configs import DatasetEventsConfig
 from ghga_event_schemas.pydantic_ import MetadataDatasetID
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
-from auth_service.constants import TRACER
 
 from ..ports.deletion import DatasetDeletionPort
 

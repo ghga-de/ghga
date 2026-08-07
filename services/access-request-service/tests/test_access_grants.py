@@ -23,12 +23,12 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from hexkit.utils import now_utc_ms_prec
 from pytest_asyncio import fixture as async_fixture
 from pytest_httpx import HTTPXMock
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
 from ars.core.models import BaseAccessGrant
+from hexkit.utils import now_utc_ms_prec
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 

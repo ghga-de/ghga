@@ -17,7 +17,6 @@
 from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.providers.s3 import S3ObjectStorage
-
 from sms.config import Config
 from sms.ports.inbound.objects_handler import ObjectsHandlerPort, S3ObjectStoragesPort
 

@@ -18,8 +18,8 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from ghga_service_commons.api.testing import AsyncTestClient
 
+from ghga_service_commons.api.testing import AsyncTestClient
 from sms.inject import prepare_rest_app
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import VALID_BEARER_TOKEN

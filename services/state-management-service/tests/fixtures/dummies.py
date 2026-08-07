@@ -17,7 +17,6 @@
 from dataclasses import dataclass
 
 from hexkit.custom_types import JsonObject
-
 from sms.models import Criteria, UpsertionDetails
 from sms.ports.inbound.docs_handler import DocsHandlerPort
 from sms.ports.inbound.objects_handler import ObjectsHandlerPort, S3ObjectStoragesPort

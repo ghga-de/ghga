@@ -21,9 +21,9 @@ from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from sms.inject import prepare_rest_app
 from sms.models import DocumentType
 from tests.fixtures.config import get_config

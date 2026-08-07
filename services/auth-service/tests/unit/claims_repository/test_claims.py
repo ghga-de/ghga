@@ -18,8 +18,6 @@
 
 from datetime import datetime
 
-from ghga_service_commons.utils.utc_dates import now_as_utc, utc_datetime
-
 from auth_service.claims_repository.core.claims import (
     Role,
     create_controlled_access_claim,
@@ -37,6 +35,7 @@ from auth_service.claims_repository.models.claims import (
     VisaType,
 )
 from auth_service.config import CONFIG
+from ghga_service_commons.utils.utc_dates import now_as_utc, utc_datetime
 from tests.fixtures.constants import SOME_CLAIM_ID, SOME_IVA_ID, SOME_USER_ID
 
 ORG_URL = str(CONFIG.organization_url).rstrip("/")

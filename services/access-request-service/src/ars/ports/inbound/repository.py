@@ -18,7 +18,6 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_service_commons.auth.ghga import AuthContext
 from pydantic import UUID4
 
 from ars.core.models import (
@@ -29,6 +28,7 @@ from ars.core.models import (
     AccessRequestStatus,
     Dataset,
 )
+from ghga_service_commons.auth.ghga import AuthContext
 
 
 class AccessRequestRepositoryPort(ABC):

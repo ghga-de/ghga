@@ -22,12 +22,12 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4, Field, ValidationError
 from pydantic_settings import BaseSettings
 
 from ars.core.models import BaseAccessGrant, GrantValidity
 from ars.ports.outbound.access_grants import AccessGrantsPort
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 __all__ = ["AccessGrantsAdapter", "AccessGrantsConfig"]
 

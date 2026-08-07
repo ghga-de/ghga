@@ -19,11 +19,11 @@
 import httpx
 import pytest
 from fastapi import FastAPI
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from metldata.artifacts_rest.api_factory import rest_api_factory
 from metldata.artifacts_rest.artifact_info import ArtifactInfo, get_artifact_info_dict
 from metldata.load.aggregator import MongoDbAggregator

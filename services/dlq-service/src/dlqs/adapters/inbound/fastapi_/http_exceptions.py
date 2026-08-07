@@ -18,9 +18,9 @@
 from uuid import UUID
 
 from fastapi import status
-from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 
 from dlqs.models import EventCore
+from ghga_service_commons.httpyexpect.server.exceptions import HttpCustomExceptionBase
 
 
 class HttpInternalServerError(HttpCustomExceptionBase):

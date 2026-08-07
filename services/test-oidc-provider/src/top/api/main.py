@@ -30,8 +30,9 @@ from fastapi import (
 )
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from ghga_service_commons.api import configure_app
 from pydantic import AnyHttpUrl
+
+from ghga_service_commons.api import configure_app
 
 from ..config import CONFIG
 from ..core.http_utils import get_original_url

@@ -21,9 +21,9 @@ from contextlib import suppress
 
 import pytest
 from fastapi import FastAPI
-from hexkit.log import LoggingConfig, configure_logging
 
 from ghga_service_commons.api.api import ApiConfigBase, configure_app, run_server
+from hexkit.log import LoggingConfig, configure_logging
 
 EXPECTED_FIELDS = {
     "timestamp",

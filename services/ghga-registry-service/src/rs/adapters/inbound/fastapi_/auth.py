@@ -20,9 +20,9 @@ from typing import Annotated
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from ghga_service_commons.auth.ghga import AuthContext, has_role
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
-
 from rs.adapters.inbound.fastapi_ import dummies
 
 __all__ = ["StewardAuthContext", "UserAuthContext"]

@@ -18,10 +18,10 @@ from contextlib import nullcontext
 from unittest.mock import AsyncMock
 
 import pytest
+
 from ghga_service_commons.utils.multinode_storage import S3ObjectStoragesConfig
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.providers.s3 import S3ObjectStorage
-
 from sms.core.objects_handler import ObjectsHandler
 from sms.ports.inbound.objects_handler import S3ObjectStoragesPort
 from tests.fixtures.config import DEFAULT_TEST_CONFIG

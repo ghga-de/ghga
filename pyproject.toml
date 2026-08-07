@@ -41,13 +41,19 @@ dev = [
 # ----------------------------------------------------------------------------------------
 [tool.ruff]
 line-length = 88
-target-version = "py313"
+# monorepo: NO explicit target-version — members have different Python floors (libs
+# published to PyPI reach down to 3.9). Left unset, ruff infers the target per file
+# from the nearest [project] requires-python, so pyupgrade never suggests syntax a
+# member's floor cannot run.
 # monorepo: point first-party detection at each member's src/ (was a single "src" per repo)
 src = ["libs/*/src", "services/*/src", "tools/*/src", "scripts"]
 exclude = [
     ".git", ".devcontainer", "__pycache__", "build", "dist",
     # monorepo: never lint migration sources/scratch or the JS front end
     ".legacy_repos", ".migration-work", "frontend",
+    # imported epic docs are historical artifacts; their ```python fences are not all
+    # real Python, and ruff >= 0.16 would otherwise format code blocks in markdown
+    "docs/epics",
 ]
 
 [tool.ruff.lint]
@@ -65,6 +71,7 @@ ignore = [
     "D205", "D400", "D401", "D107", "D206", "D300",  # pydocstyle relaxations
     "UP040",                  # `type` statement (mypy support pending)
     "PLC0206",                # dict value extraction without `.items()`
+    "PLR0917",                # too many positional arguments (stable since ruff 0.16)
 ]
 select = ["C90", "F", "I", "S", "B", "N", "UP", "PL", "RUF", "SIM", "D"]
 

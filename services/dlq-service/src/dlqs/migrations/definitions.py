@@ -15,14 +15,13 @@
 
 """Database migration logic for DLQS"""
 
+from dlqs.models import StoredDLQEvent
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
     Reversible,
 )
 from hexkit.providers.mongodb.migrations.helpers import convert_uuids_and_datetimes_v6
-
-from dlqs.models import StoredDLQEvent
 
 DLQ_EVENTS_COLLECTION = "dlqEvents"
 

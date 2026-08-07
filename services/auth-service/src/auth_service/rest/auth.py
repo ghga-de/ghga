@@ -21,6 +21,8 @@ from typing import Annotated
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from auth_service.config import CONFIG
 from ghga_service_commons.auth.ghga import (
     AuthContext,
     GHGAAuthContextProvider,
@@ -29,8 +31,6 @@ from ghga_service_commons.auth.ghga import (
 from ghga_service_commons.auth.policies import (
     require_auth_context_using_credentials,
 )
-
-from auth_service.config import CONFIG
 
 __all__ = ["StewardAuthContext", "UserAuthContext"]
 

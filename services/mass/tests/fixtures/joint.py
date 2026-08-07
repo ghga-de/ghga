@@ -23,12 +23,12 @@ from dataclasses import dataclass
 from typing import TypeAlias
 
 import pytest_asyncio
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoClient, MongoDbFixture
-
 from mass.config import Config
 from mass.core import models
 from mass.inject import prepare_core, prepare_event_subscriber, prepare_rest_app

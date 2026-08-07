@@ -18,6 +18,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+from auth_service.config import Config
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
@@ -25,8 +26,6 @@ from hexkit.providers.mongodb.migrations import (
 )
 from hexkit.providers.mongodb.migrations.helpers import convert_uuids_and_datetimes_v6
 from hexkit.utils import round_datetime_to_ms
-
-from auth_service.config import Config
 
 
 class V2Migration(MigrationDefinition, Reversible):

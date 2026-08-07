@@ -19,14 +19,14 @@ from json import loads
 from uuid import uuid4
 
 import pytest
+
+from dlqs.inject import prepare_rest_app
+from dlqs.models import DLQInfo, StoredDLQEvent
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.log import configure_logging
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.provider import dto_to_document
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
-from dlqs.inject import prepare_rest_app
-from dlqs.models import DLQInfo, StoredDLQEvent
 from tests.fixtures import utils
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture

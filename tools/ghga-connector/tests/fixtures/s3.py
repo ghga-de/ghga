@@ -20,6 +20,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest_asyncio
+from pydantic import PrivateAttr, SecretStr
+from testcontainers.localstack import LocalStackContainer
+
 from ghga_service_commons.utils.temp_files import big_temp_file
 from hexkit.providers.s3 import S3Config, S3ObjectStorage
 from hexkit.providers.s3.testutils import (
@@ -27,8 +30,6 @@ from hexkit.providers.s3.testutils import (
     FileObject,
     upload_file,
 )
-from pydantic import PrivateAttr, SecretStr
-from testcontainers.localstack import LocalStackContainer
 
 from . import state
 

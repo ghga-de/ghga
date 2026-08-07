@@ -23,8 +23,9 @@ from typing import TypeVar
 
 import httpx
 import yaml
-from ghga_service_commons.utils.simple_token import generate_token_and_hash
 from pydantic_settings import BaseSettings
+
+from ghga_service_commons.utils.simple_token import generate_token_and_hash
 
 DELETION_TOKEN_PATH = Path.home() / ".ghga_file_deletion_token.txt"
 DELETION_TOKEN_HASH_PATH = Path.home() / ".ghga_file_deletion_token_hash.txt"

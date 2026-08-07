@@ -24,10 +24,6 @@ import crypt4gh.header
 import crypt4gh.lib
 import httpx
 from crypt4gh.keys import get_private_key, get_public_key
-from ghga_service_commons.utils import jwt_helpers
-from ghga_service_commons.utils.crypt import encode_key, generate_key_pair
-from ghga_service_commons.utils.temp_files import big_temp_file
-from hexkit.providers.s3.provider import S3ObjectStorage
 from nacl.bindings import (
     crypto_aead_chacha20poly1305_ietf_encrypt as encrypt_algo,
 )
@@ -36,6 +32,10 @@ from pydantic import SecretBytes, SecretStr
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH
 from dhfs.core.checksums import Checksums
 from dhfs.core.models import FileUpload
+from ghga_service_commons.utils import jwt_helpers
+from ghga_service_commons.utils.crypt import encode_key, generate_key_pair
+from ghga_service_commons.utils.temp_files import big_temp_file
+from hexkit.providers.s3.provider import S3ObjectStorage
 
 BASE_DIR = Path(__file__).parent.resolve()
 DHFS_CRYPT4GH_PRIVATE_KEY_PATH = BASE_DIR / "keys/dhfs_key.sec"
@@ -77,7 +77,7 @@ async def upload_dummy_data(
     url = await storage.get_part_upload_url(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id, part_number=1
     )
-    httpx.put(url, content=content)  # noqa: ASYNC210
+    httpx.put(url, content=content)
     await storage.complete_multipart_upload(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
     )
@@ -164,7 +164,7 @@ async def upload_encrypted_object(
             object_id=object_id,
             part_number=i + 1,
         )
-        httpx.put(url, content=content)  # noqa: ASYNC210
+        httpx.put(url, content=content)
     await storage.complete_multipart_upload(
         upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
     )

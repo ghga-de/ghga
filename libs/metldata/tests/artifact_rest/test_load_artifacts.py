@@ -17,9 +17,9 @@
 """Test the load_artifacts module"""
 
 import pytest
+
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.load_resources import load_artifact_resources
 from metldata.artifacts_rest.models import ArtifactResource

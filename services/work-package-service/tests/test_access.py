@@ -22,9 +22,9 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from ghga_service_commons.utils.utc_dates import utc_datetime
 from pytest_httpx import HTTPXMock
 
+from ghga_service_commons.utils.utc_dates import utc_datetime
 from wps.adapters.outbound.http import AccessCheckAdapter, AccessCheckConfig
 
 pytestmark = pytest.mark.asyncio

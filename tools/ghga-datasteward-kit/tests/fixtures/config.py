@@ -20,7 +20,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from ghga_service_commons.utils.crypt import encode_key, generate_key_pair
 from pydantic import SecretStr
 
 from ghga_datasteward_kit.s3_upload import Config, LegacyConfig
@@ -30,6 +29,7 @@ from ghga_datasteward_kit.s3_upload.config import (
 )
 from ghga_datasteward_kit.s3_upload.http_client import RequestConfigurator
 from ghga_datasteward_kit.utils import TOKEN_PATH
+from ghga_service_commons.utils.crypt import encode_key, generate_key_pair
 
 
 def storage_config(

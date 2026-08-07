@@ -21,9 +21,9 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from dlqs.migrations import run_db_migrations
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from tests.fixtures.config import get_config
 
 pytestmark = pytest.mark.asyncio()

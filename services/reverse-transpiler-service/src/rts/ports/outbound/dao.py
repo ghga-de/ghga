@@ -22,10 +22,10 @@ from contextlib import suppress
 from typing import Any
 
 from gridfs import AsyncGridFSBucket, NoFile
-from hexkit.protocols.dao import ResourceNotFoundError
 from openpyxl import Workbook
 from pymongo.asynchronous.database import AsyncDatabase
 
+from hexkit.protocols.dao import ResourceNotFoundError
 from rts.models import StudyMetadata
 
 __all__ = [

@@ -21,7 +21,6 @@ from uuid import UUID
 
 import httpx
 import pytest
-from ghga_service_commons.utils.temp_files import big_temp_file
 from pytest_httpx import HTTPXMock
 
 from ghga_connector import exceptions
@@ -30,6 +29,7 @@ from ghga_connector.core.client import async_client
 from ghga_connector.core.main import upload_files
 from ghga_connector.core.uploading.structs import CoreFileInfo
 from ghga_connector.core.utils import modify_for_debug
+from ghga_service_commons.utils.temp_files import big_temp_file
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.app import mock_external_calls  # noqa: F401
 from tests.fixtures.s3 import S3Fixture, s3_fixture  # noqa: F401

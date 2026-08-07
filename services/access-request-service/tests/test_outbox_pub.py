@@ -19,11 +19,6 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from hexkit.correlation import set_new_correlation_id
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-from hexkit.utils import now_utc_ms_prec
 
 from ars.adapters.outbound.daos import get_access_request_dao, get_dataset_dao
 from ars.core.models import (
@@ -33,6 +28,11 @@ from ars.core.models import (
     Dataset,
 )
 from ars.core.repository import AccessRequestRepository
+from hexkit.correlation import set_new_correlation_id
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.utils import now_utc_ms_prec
 from tests.test_repository import AccessGrantsDummy
 
 pytestmark = pytest.mark.asyncio()

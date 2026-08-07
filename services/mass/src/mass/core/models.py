@@ -17,8 +17,9 @@
 
 from enum import Enum
 
-from hexkit.custom_types import JsonObject
 from pydantic import BaseModel, Field
+
+from hexkit.custom_types import JsonObject
 
 
 class FieldLabel(BaseModel):

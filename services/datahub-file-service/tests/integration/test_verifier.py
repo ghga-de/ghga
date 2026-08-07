@@ -26,11 +26,11 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
-from hexkit.providers.s3.testutils import S3Fixture
 
 from dhfs.adapters.outbound.central import CentralClient
 from dhfs.config import Config
 from dhfs.core.verifier import OBJECT_ID_UUID, run_dhfs_verification
+from hexkit.providers.s3.testutils import S3Fixture
 from tests.fixtures.utils import DHFS_CRYPT4GH_PUBLIC_KEY_PATH
 
 pytestmark = pytest.mark.asyncio

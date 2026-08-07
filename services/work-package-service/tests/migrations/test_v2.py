@@ -21,9 +21,9 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
-
 from tests.fixtures import fixture_config  # noqa: F401
 from wps.core.models import WorkPackage, WorkPackageType
 from wps.core.tokens import generate_work_package_access_token, hash_token

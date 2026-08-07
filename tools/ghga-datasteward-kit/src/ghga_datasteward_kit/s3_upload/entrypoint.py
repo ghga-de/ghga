@@ -22,7 +22,6 @@ import logging
 from pathlib import Path
 
 import typer
-from ghga_service_commons.utils.crypt import encrypt
 
 from ghga_datasteward_kit import models
 from ghga_datasteward_kit.s3_upload.config import Config, LegacyConfig
@@ -40,6 +39,7 @@ from ghga_datasteward_kit.s3_upload.utils import (
     handle_superficial_error,
 )
 from ghga_datasteward_kit.utils import STEWARD_TOKEN, load_config_yaml, path_join
+from ghga_service_commons.utils.crypt import encrypt
 
 
 def main(

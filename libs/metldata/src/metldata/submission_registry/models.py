@@ -20,9 +20,9 @@ from enum import Enum
 from operator import attrgetter
 from typing import TypeAlias
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import BaseModel, Field, field_validator
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from metldata.custom_types import SubmissionContent
 
 AccessionMap: TypeAlias = dict[str, dict[str, str]]

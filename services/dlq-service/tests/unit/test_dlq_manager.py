@@ -21,15 +21,15 @@ from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
 import pytest
-from hexkit.protocols.dao import Dao
-from hexkit.providers.akafka.provider.eventsub import HeaderNames
-from hexkit.providers.testing.dao import new_mock_dao_class
 
 from dlqs.core.dlq_manager import stored_event_from_raw_event
 from dlqs.inject import prepare_core
 from dlqs.models import EventCore, PublishableEventData, StoredDLQEvent
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
 from dlqs.ports.outbound.dao import ResourceNotFoundError
+from hexkit.protocols.dao import Dao
+from hexkit.providers.akafka.provider.eventsub import HeaderNames
+from hexkit.providers.testing.dao import new_mock_dao_class
 from tests.fixtures import utils
 from tests.fixtures.config import DEFAULT_CONFIG
 

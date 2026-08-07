@@ -20,8 +20,6 @@ import logging
 from json import JSONDecodeError
 
 import httpx
-from ghga_service_commons.utils.crypt import encrypt
-from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto.jwk import JWK
 from pydantic import Field, HttpUrl, SecretStr, ValidationError
 from pydantic_settings import BaseSettings
@@ -31,6 +29,8 @@ from dhfs.adapters.outbound.http import check_for_request_errors
 from dhfs.constants import AUTH_TOKEN_VALID_SECONDS, JWT_AUD, JWT_ISS
 from dhfs.core import models
 from dhfs.ports.outbound.central import CentralClientPort
+from ghga_service_commons.utils.crypt import encrypt
+from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 
 log = logging.getLogger(__name__)
 

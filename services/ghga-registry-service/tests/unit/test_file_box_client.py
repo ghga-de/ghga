@@ -20,11 +20,11 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
-from hexkit.utils import now_utc_ms_prec
 from jwcrypto.jwk import JWK
 from pytest_httpx import HTTPXMock
 
+from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
+from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import FileBoxClient
 from rs.config import Config
 from rs.core.models import FileUploadWithAccession

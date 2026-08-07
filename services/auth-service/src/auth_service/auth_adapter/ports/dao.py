@@ -19,8 +19,9 @@
 from abc import ABC, abstractmethod
 from typing import TypeAlias
 
-from hexkit.protocols.dao import Dao
 from pydantic import UUID4, BaseModel, ConfigDict, Field
+
+from hexkit.protocols.dao import Dao
 
 from ..core.totp import TOTPToken
 

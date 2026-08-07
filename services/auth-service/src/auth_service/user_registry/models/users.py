@@ -18,8 +18,9 @@
 from enum import StrEnum
 from uuid import uuid4
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4, EmailStr, Field
+
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 from . import BaseDto
 

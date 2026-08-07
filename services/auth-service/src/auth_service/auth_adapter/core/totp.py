@@ -29,9 +29,10 @@ import nacl.utils
 # pyotp is used for TOTP code generation and verification
 # this library is very simple and could also implemented directly if necessary
 import pyotp
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings
+
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 from ..ports.totp import TOTPHandlerPort
 

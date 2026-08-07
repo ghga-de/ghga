@@ -19,10 +19,10 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from ns.config import Config
 from ns.inject import prepare_core, prepare_event_subscriber
 from ns.ports.inbound.notifier import NotifierPort

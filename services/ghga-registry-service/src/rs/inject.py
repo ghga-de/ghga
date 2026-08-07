@@ -20,6 +20,7 @@ from contextlib import asynccontextmanager, nullcontext
 
 import httpx
 from fastapi import FastAPI
+
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from hexkit.providers.akafka.provider import (
     ComboTranslator,
@@ -31,7 +32,6 @@ from hexkit.providers.mongokafka import (
     MongoKafkaDaoPublisherFactory,
     PersistentKafkaPublisher,
 )
-
 from rs.adapters.inbound.event_sub import OutboxSubTranslator, ResourceSubTranslator
 from rs.adapters.inbound.fastapi_ import dummies
 from rs.adapters.inbound.fastapi_.configure import get_configured_app

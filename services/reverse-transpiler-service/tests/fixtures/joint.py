@@ -20,11 +20,11 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from rts.config import Config
 from rts.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort

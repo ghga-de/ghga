@@ -16,13 +16,11 @@
 
 """Utils for LinkML schema"""
 
-from typing import Optional
-
 from linkml.utils.datautils import infer_root_class
 from linkml_runtime.utils.schemaview import SchemaView, SlotDefinition
 
 
-def get_range_class(schema_view, slot_def: SlotDefinition) -> Optional[str]:
+def get_range_class(schema_view, slot_def: SlotDefinition) -> str | None:
     """Return the range class for a slot
 
     Args:
@@ -34,7 +32,7 @@ def get_range_class(schema_view, slot_def: SlotDefinition) -> Optional[str]:
     return slot_def.range if slot_def.range in schema_view.all_classes() else None
 
 
-def get_target_class(schema: str) -> Optional[str]:
+def get_target_class(schema: str) -> str | None:
     """
     Infer the root class from schema
     Args:

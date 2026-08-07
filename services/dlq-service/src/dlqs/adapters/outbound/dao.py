@@ -16,11 +16,10 @@
 
 import logging
 
-from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb.provider import MongoDbIndex
-
 from dlqs.models import StoredDLQEvent
 from dlqs.ports.outbound.dao import EventDaoPort
+from hexkit.protocols.dao import DaoFactoryProtocol
+from hexkit.providers.mongodb.provider import MongoDbIndex
 
 log = logging.getLogger(__name__)
 

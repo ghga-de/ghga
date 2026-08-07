@@ -18,10 +18,10 @@
 from uuid import uuid4
 
 import pytest
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import ExpectedEvent
-
 from nos.core import notifications
 from tests.conftest import TEST_USER
 from tests.fixtures.joint import JointFixture

@@ -16,7 +16,6 @@
 """Config Parameter Modeling and Parsing"""
 
 from hexkit.config import config_from_yaml
-
 from metldata.accession_registry.config import Config as AccessionRegistryConfig
 from metldata.artifacts_rest.config import ArtifactsRestConfig
 from metldata.load.config import ArtifactLoaderAPIConfig

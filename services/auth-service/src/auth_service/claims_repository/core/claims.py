@@ -21,9 +21,10 @@ from datetime import timedelta
 from enum import StrEnum
 from uuid import UUID
 
+from pydantic import UUID4
+
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4
 
 from ...config import CONFIG
 from ..models.claims import AuthorityLevel, Claim, VisaType

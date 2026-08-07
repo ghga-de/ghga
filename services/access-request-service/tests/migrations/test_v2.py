@@ -18,11 +18,11 @@
 from uuid import UUID
 
 import pytest
-from hexkit.providers.mongodb.migrations import MigrationConfig
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from ars.core.models import AccessRequestStatus
 from ars.migrations import V2Migration, run_db_migrations
+from hexkit.providers.mongodb.migrations import MigrationConfig
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 pytestmark = pytest.mark.asyncio()
 

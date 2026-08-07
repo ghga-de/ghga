@@ -18,8 +18,9 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_event_schemas import pydantic_ as event_schemas
 from pydantic import UUID4
+
+from ghga_event_schemas import pydantic_ as event_schemas
 
 
 class OrchestratorPort(ABC):
