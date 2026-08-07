@@ -1,0 +1,116 @@
+- input: ghga_uemim_2.0.0
+  output: ghga_stats
+  operations:
+
+  # Create the DatasetSummary class
+  - name: duplicate_class
+    description: "Add DatasetSummary class"
+    args:
+      class_name: Dataset
+      new_class_name: DatasetSummary
+
+  - name: infer_relation
+    description: "Infer {{ item.relation_name }} for each DatasetSummary"
+    args:
+      class_name: DatasetSummary
+      relation_name: "{{ item.relation_name }}"
+      path: "{{ item.path }}"
+    loop:
+    - relation_name: samples_via_research_data_files
+      path: "DatasetSummary(research_data_files)>ResearchDataFile(experiments)>Experiment(samples)>Sample"
+    - relation_name: samples_via_process_data_files
+      path: "DatasetSummary(process_data_files)>ProcessDataFile(analysis)>Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment(samples)>Sample"
+    - relation_name: experiments_via_research_data_files
+      path: "DatasetSummary(research_data_files)>ResearchDataFile(experiments)>Experiment"
+    - relation_name: experiments_via_process_data_files
+      path: "DatasetSummary(process_data_files)>ProcessDataFile(analysis)>Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment"
+    - relation_name: individuals_via_research_data_files
+      path: "DatasetSummary(research_data_files)>ResearchDataFile(experiments)>Experiment(samples)>Sample(individual)>Individual"
+    - relation_name: individuals_via_process_data_files
+      path: "DatasetSummary(process_data_files)>ProcessDataFile(analysis)>Analysis(research_data_files)>ResearchDataFile(experiments)>Experiment(samples)>Sample(individual)>Individual"
+
+  - name: merge_relations
+    description: "Create {{ item.target_relation }} relation for each DatasetSummary"
+    args:
+      class_name: DatasetSummary
+      source_relations: "{{ item.source_relations }}"
+      target_relation: "{{ item.target_relation }}"
+      description: "The {{ item.target_relation }} related to the dataset."
+      mandatory:
+        source: false
+        target: false
+      multiple:
+        source: true
+        target: true
+    loop:
+    - source_relations: [samples_via_research_data_files, samples_via_process_data_files]
+      target_relation: samples
+    - source_relations: [experiments_via_research_data_files, experiments_via_process_data_files]
+      target_relation: experiments
+    - source_relations: [individuals_via_research_data_files, individuals_via_process_data_files]
+      target_relation: individuals
+
+  - name: transform_content
+    description: "Add stats content"
+    args:
+      class_name: DatasetSummary
+      embedding_profile: {} # embedding profile to be used in denormalization
+      schema: {} # Content schema
+      data_template: |
+        title: "{{ original.title }}"
+        dac_email: "{{ original.data_access_policy.data_access_committee.email }}"
+        description: "{{ original.description }}"
+        types: "{{ original.types }}"
+        samples_summary:
+          count: "{{ original.samples | length }}"
+          stats:
+            sex:
+            {% for sex, matches in original.individuals | groupby("sex")%}
+              value: "{{ sex }}"
+              count: {{ matches| length }}
+            {% endfor %}
+            tissues:
+            {% for tissue, matches in original.samples | groupby("biospecimen_tissue_term")%}
+              value: "{{ tissue }}"
+              count: {{ matches| length }}
+            {% endfor %}
+            phenotypic_features:
+            {% for feature, matches in original.individuals | groupby("phenotypic_feature_terms")%}
+              value: "{{ feature }}"
+              count: {{ matches| length }}
+            {% endfor %}
+        experiments_summary:
+          count: "{{ original.experiments | length }}"
+          stats:
+            experiment_methods:
+            {% for method, matches in original.experiments | groupby("experiment_method.instrument_model")%}
+              value: "{{ method }}"
+              count: {{ matches| length }}
+            {% endfor %}
+        files_summary:
+          count: {{ original.research_data_files | length + original.process_data_files | length + original.analysis_method_supporting_files | length + original.individual_supporting_files | length + original.experiment_method_supporting_files | length }}
+          stats:
+            format:
+            {% for format, matches in (original.research_data_files + original.process_data_files + original.analysis_method_supporting_files + original.individual_supporting_files + original.experiment_method_supporting_files  | groupby("format")%}
+              value: "{{ format }}"
+              count: {{ matches| length }}
+            {% endfor %}
+
+# Delete classes - this will automatically delete the obsolete relations
+- name: delete_class
+  description: "Delete class {{ item }}"
+  args:
+    class_name: "{{ item }}"
+  loop: # Delete all classes except DatasetSummary and Study (for embedding)
+  - Dataset
+  - Sample
+  - Experiment
+  - Individual
+  - ResearchDataFile
+  - ProcessDataFile
+  - Analysis
+  - SupportingFile
+  - AnalysisMethodSupportingFile
+  - IndividualSupportingFile
+  - ExperimentMethodSupportingFile
+  - Publication
