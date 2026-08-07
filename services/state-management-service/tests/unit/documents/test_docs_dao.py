@@ -15,8 +15,8 @@
 """Test mongodb state management."""
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from sms.adapters.outbound.docs_dao import DEFAULT_DBS, DocsDao
 from sms.models import DocumentType
 from tests.fixtures.config import get_config

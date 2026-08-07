@@ -17,7 +17,6 @@
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
-
 from mass.config import Config
 from mass.inject import prepare_event_subscriber, prepare_rest_app
 

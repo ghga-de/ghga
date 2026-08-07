@@ -24,10 +24,10 @@ from datetime import datetime
 from uuid import UUID
 
 import httpx
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4, Field, HttpUrl
 from pydantic_settings import BaseSettings
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from wps.constants import TRACER
 from wps.ports.outbound.access import AccessCheckPort
 

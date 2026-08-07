@@ -19,11 +19,11 @@
 from uuid import UUID, uuid4
 
 import pytest
+
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
     generate_jwk,
 )
-
 from wps.core.models import (
     BaseWorkOrderToken,
     CreateFileWorkOrder,

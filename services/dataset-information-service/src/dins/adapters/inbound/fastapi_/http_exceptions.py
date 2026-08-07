@@ -15,8 +15,9 @@
 
 """A collection of http exceptions."""
 
-from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import BaseModel
+
+from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 
 
 class HttpDatasetNotFoundError(HttpCustomExceptionBase):

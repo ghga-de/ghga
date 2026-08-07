@@ -20,8 +20,8 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
-from ghga_service_commons.api.testing import AsyncTestClient
 
+from ghga_service_commons.api.testing import AsyncTestClient
 from tests.fixtures.config import get_config
 from wkvs.config import Config
 from wkvs.inject import prepare_rest_app

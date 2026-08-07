@@ -15,13 +15,12 @@
 
 """Module containing controller function for DB migrations"""
 
+from ars.migrations.definitions import V2Migration, V3Migration
 from hexkit.providers.mongodb.migrations import (
     MigrationConfig,
     MigrationManager,
     MigrationMap,
 )
-
-from ars.migrations.definitions import V2Migration, V3Migration
 
 MIGRATION_MAP: MigrationMap = {2: V2Migration, 3: V3Migration}
 

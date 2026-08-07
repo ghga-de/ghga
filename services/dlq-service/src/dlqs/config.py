@@ -15,12 +15,13 @@
 
 """Config Parameter Modeling and Parsing."""
 
+from pydantic import Field
+
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka.config import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
-from pydantic import Field
 
 SERVICE_NAME: str = "dlqs"
 

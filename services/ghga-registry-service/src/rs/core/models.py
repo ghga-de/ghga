@@ -18,14 +18,6 @@
 from enum import StrEnum
 from typing import Annotated, Literal, Self
 
-from ghga_event_schemas.pydantic_ import (
-    FileUpload,
-    FileUploadBox,
-    ResearchDataUploadBox,
-    UploadBoxState,
-)
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.utils import now_utc_ms_prec
 from pydantic import (
     UUID4,
     AfterValidator,
@@ -40,6 +32,15 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+
+from ghga_event_schemas.pydantic_ import (
+    FileUpload,
+    FileUploadBox,
+    ResearchDataUploadBox,
+    UploadBoxState,
+)
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.utils import now_utc_ms_prec
 
 # Note: shared classes re-exported to avoid importing from ghga_event_schemas everywhere
 __all__ = [

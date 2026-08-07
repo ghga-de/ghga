@@ -16,8 +16,8 @@
 """Test to make sure that the DLQ is correctly set up for this service."""
 
 import pytest
-from ghga_event_schemas import pydantic_ as event_schemas
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from tests.conftest import TEST_USER
 from tests.fixtures.joint import JointFixture
 

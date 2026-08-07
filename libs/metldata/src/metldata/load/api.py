@@ -19,12 +19,12 @@
 from fastapi import Depends, HTTPException, Response, Security
 from fastapi.routing import APIRouter
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
+
 from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.policies import require_auth_context_using_credentials
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.akafka import KafkaEventPublisher
-from pydantic import BaseModel, Field
-
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
 from metldata.artifacts_rest.models import ArtifactInfo

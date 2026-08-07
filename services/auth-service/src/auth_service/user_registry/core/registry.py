@@ -23,13 +23,14 @@ from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
+from pydantic import UUID4
+
 from hexkit.protocols.dao import (
     Dao,
     NoHitsFoundError,
     ResourceNotFoundError,
 )
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4
 
 from ...claims_repository.core.utils import get_active_roles, with_added_roles
 from ...claims_repository.ports.dao import ClaimDto

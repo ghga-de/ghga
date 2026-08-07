@@ -19,8 +19,8 @@ from io import BytesIO
 from unittest.mock import Mock
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from rts.adapters.outbound.dao import GridFSDaoFactory
 from rts.models import StudyMetadata
 from rts.ports.outbound.dao import GridFSDao, ResourceNotFoundError

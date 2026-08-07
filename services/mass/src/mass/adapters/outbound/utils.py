@@ -20,7 +20,6 @@ from collections import defaultdict
 from typing import Any
 
 from hexkit.custom_types import JsonObject
-
 from mass.core import models
 
 SORT_ORDER_CONVERSION: JsonObject = {

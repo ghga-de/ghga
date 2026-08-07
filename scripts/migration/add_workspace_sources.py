@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import re
 import sys
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 REPO = Path(__file__).resolve().parents[2]
 MEMBER_GLOBS = ("libs/*", "services/*", "tools/*")

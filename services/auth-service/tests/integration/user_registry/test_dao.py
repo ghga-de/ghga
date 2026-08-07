@@ -20,12 +20,6 @@ from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
-from ghga_service_commons.utils.utc_dates import utc_datetime
-from hexkit.correlation import set_new_correlation_id
-from hexkit.protocols.dao import ResourceNotFoundError
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from auth_service.config import Config
 from auth_service.user_registry.models.ivas import Iva, IvaType
@@ -41,6 +35,12 @@ from auth_service.user_registry.ports.dao import (
 from auth_service.user_registry.translators.dao import (
     UserDaoPublisherFactory,
 )
+from ghga_service_commons.utils.utc_dates import utc_datetime
+from hexkit.correlation import set_new_correlation_id
+from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 from tests.fixtures.constants import (
     PHONE_OF_JAMES,
     PHONE_OF_JOHN,

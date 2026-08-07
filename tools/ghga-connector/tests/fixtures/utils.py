@@ -22,9 +22,9 @@ from uuid import UUID
 import crypt4gh.keys
 import httpx
 import pytest
-from ghga_service_commons.utils import crypt
 
 from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
+from ghga_service_commons.utils import crypt
 
 BASE_DIR = Path(__file__).parent.resolve()
 KEY_DIR = BASE_DIR / "keypair"

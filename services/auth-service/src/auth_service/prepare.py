@@ -19,14 +19,14 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
+
+from auth_service.auth_adapter.deps import get_user_token_dao
+from auth_service.auth_adapter.translators.dao import UserTokenDaoFactory
 from ghga_service_commons.api import configure_app
 from hexkit.providers.akafka import KafkaEventPublisher
 from hexkit.providers.akafka.provider import KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-
-from auth_service.auth_adapter.deps import get_user_token_dao
-from auth_service.auth_adapter.translators.dao import UserTokenDaoFactory
 
 from . import (
     CONTACT,

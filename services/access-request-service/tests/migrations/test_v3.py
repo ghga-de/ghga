@@ -21,10 +21,10 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from hexkit.providers.mongodb.migrations import MigrationConfig
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from ars.migrations.entry import run_db_migrations
+from hexkit.providers.mongodb.migrations import MigrationConfig
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 pytestmark = pytest.mark.asyncio()
 

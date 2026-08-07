@@ -20,9 +20,9 @@ from unittest.mock import AsyncMock
 import pytest
 from aiokafka import TopicPartition
 from aiokafka.admin import AIOKafkaAdminClient, RecordsToDelete
-from ghga_service_commons.utils.context import asyncnullcontext
 from tests.fixtures.config import DEFAULT_TEST_CONFIG
 
+from ghga_service_commons.utils.context import asyncnullcontext
 from sms.core.events_handler import EventsHandler
 
 pytestmark = pytest.mark.asyncio()

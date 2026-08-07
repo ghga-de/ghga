@@ -18,11 +18,11 @@
 from uuid import UUID
 
 import pytest
-from hexkit.utils import now_utc_ms_prec
 from pydantic import ValidationError
 
 from auth_service.user_registry.models.ivas import Iva, IvaState, IvaType
 from auth_service.user_registry.models.users import AcademicTitle, User, UserStatus
+from hexkit.utils import now_utc_ms_prec
 
 from ...fixtures.constants import EXT_ID_OF_JOHN, ID_OF_JOHN
 

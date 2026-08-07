@@ -20,8 +20,6 @@ in the API.
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.protocols.dao import UUID4Field
 from pydantic import (
     UUID4,
     BaseModel,
@@ -33,6 +31,8 @@ from pydantic import (
     model_validator,
 )
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.protocols.dao import UUID4Field
 from wps.core.crypt import validate_public_key
 
 __all__ = [

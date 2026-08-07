@@ -20,6 +20,11 @@ from typing import NamedTuple
 
 import pytest
 import pytest_asyncio
+from pytest import fixture
+
+from ars.config import Config
+from ars.ports.inbound.repository import AccessRequestRepositoryPort
+from ars.prepare import prepare_consumer, prepare_core, prepare_rest_app
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
@@ -28,11 +33,6 @@ from ghga_service_commons.utils.jwt_helpers import (
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from pytest import fixture
-
-from ars.config import Config
-from ars.ports.inbound.repository import AccessRequestRepositoryPort
-from ars.prepare import prepare_consumer, prepare_core, prepare_rest_app
 
 __all__ = [
     "AUTH_CLAIMS_DOE",

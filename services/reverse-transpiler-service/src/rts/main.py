@@ -22,7 +22,6 @@ Additional endpoints might be structured in dedicated modules
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
-
 from rts.config import Config
 from rts.inject import prepare_event_subscriber, prepare_rest_app
 from rts.migrations.entry import run_db_migrations

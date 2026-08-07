@@ -21,11 +21,11 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from pytest_httpx import HTTPXMock
+
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
-from pytest_httpx import HTTPXMock
-
 from tests.fixtures import RestFixture
 from tests.test_access_grants import GRANT_ID
 

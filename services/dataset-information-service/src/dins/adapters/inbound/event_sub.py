@@ -17,6 +17,10 @@
 
 import logging
 
+from pydantic import UUID4
+
+from dins.constants import TRACER
+from dins.ports.inbound.information_service import InformationServicePort
 from ghga_event_schemas.configs import (
     DatasetEventsConfig,
     FileAccessionMappingEventsConfig,
@@ -34,10 +38,6 @@ from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
-from dins.constants import TRACER
-from dins.ports.inbound.information_service import InformationServicePort
 
 log = logging.getLogger(__name__)
 

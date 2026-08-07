@@ -19,11 +19,11 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from ghga_event_schemas import pydantic_ as event_schemas
-from hexkit.providers.akafka.testutils import ExpectedEvent
 from logot import Logot, logged
 from pydantic import UUID4
 
+from ghga_event_schemas import pydantic_ as event_schemas
+from hexkit.providers.akafka.testutils import ExpectedEvent
 from nos.core import notifications
 from tests.conftest import TEST_USER
 from tests.fixtures.joint import JointFixture

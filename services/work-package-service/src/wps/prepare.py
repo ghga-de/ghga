@@ -20,6 +20,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager, nullcon
 from typing import NamedTuple
 
 from fastapi import FastAPI
+
 from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
 from hexkit.providers.akafka import (
     ComboTranslator,
@@ -27,7 +28,6 @@ from hexkit.providers.akafka import (
     KafkaEventSubscriber,
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
-
 from wps.adapters.inbound.event_sub import (
     AccessionMapOutboxTranslator,
     EventSubTranslator,

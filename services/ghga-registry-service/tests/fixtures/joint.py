@@ -19,12 +19,12 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+from jwcrypto.jwk import JWK
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from jwcrypto.jwk import JWK
-
 from rs.config import Config
 from rs.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from rs.ports.inbound.registry import RegistryPort

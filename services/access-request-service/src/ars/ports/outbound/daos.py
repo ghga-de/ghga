@@ -16,10 +16,9 @@
 
 """DAO interface for accessing the database."""
 
+from ars.core import models
 from hexkit.protocols.dao import Dao, ResourceNotFoundError
 from hexkit.protocols.daopub import DaoPublisher
-
-from ars.core import models
 
 __all__ = ["AccessRequestDaoPort", "DatasetDaoPort", "ResourceNotFoundError"]
 

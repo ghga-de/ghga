@@ -17,7 +17,6 @@
 """Test Claims models and show some usage examples."""
 
 import pytest
-from ghga_service_commons.utils.utc_dates import utc_datetime
 
 from auth_service.claims_repository.models.claims import (
     AuthorityLevel,
@@ -29,6 +28,7 @@ from auth_service.claims_repository.models.claims import (
     MatchType,
     VisaType,
 )
+from ghga_service_commons.utils.utc_dates import utc_datetime
 
 
 def test_good_visa_type():

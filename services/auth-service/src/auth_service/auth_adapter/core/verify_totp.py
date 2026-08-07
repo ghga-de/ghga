@@ -19,13 +19,13 @@
 import logging
 
 from fastapi import HTTPException, status
-from hexkit.protocols.dao import ResourceNotFoundError
 
 from auth_service.user_registry.models.users import (
     UserModifiableData,
     UserStatus,
 )
 from auth_service.user_registry.ports.registry import UserRegistryPort
+from hexkit.protocols.dao import ResourceNotFoundError
 
 from ..ports.dao import UserToken, UserTokenDao
 from ..ports.session_store import SessionStorePort

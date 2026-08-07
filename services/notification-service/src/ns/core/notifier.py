@@ -21,10 +21,10 @@ from email.message import EmailMessage
 from enum import StrEnum
 from string import Template
 
-from ghga_event_schemas import pydantic_ as event_schemas
 from pydantic import EmailStr, Field
 from pydantic_settings import BaseSettings
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from ns.ports.inbound.notifier import NotifierPort
 from ns.ports.outbound.sms_client import SmsClientPort
 from ns.ports.outbound.smtp_client import SmtpClientPort

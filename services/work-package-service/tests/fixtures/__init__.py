@@ -20,6 +20,7 @@ from datetime import timedelta
 
 import pytest
 import pytest_asyncio
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import (
@@ -29,7 +30,6 @@ from ghga_service_commons.utils.jwt_helpers import (
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
-
 from wps.adapters.outbound.dao import (
     get_accession_map_dao,
     get_dataset_dao,

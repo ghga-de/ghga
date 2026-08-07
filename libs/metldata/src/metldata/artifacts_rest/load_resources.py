@@ -26,7 +26,6 @@ from ghga_event_schemas.pydantic_ import (
     SearchableResource,
 )
 from ghga_service_commons.utils.files import get_file_extension
-
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.models import (
     ArtifactInfo,

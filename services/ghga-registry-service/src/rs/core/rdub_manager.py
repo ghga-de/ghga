@@ -20,6 +20,8 @@ from collections import Counter
 from typing import Any
 from uuid import UUID
 
+from pydantic import UUID4, PositiveInt
+
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import (
@@ -28,8 +30,6 @@ from hexkit.protocols.dao import (
     UniqueConstraintViolationError,
 )
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4, PositiveInt
-
 from rs.constants import VALID_STATE_TRANSITIONS
 from rs.core.models import (
     PID,

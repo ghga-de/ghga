@@ -17,6 +17,8 @@
 
 import logging
 
+from pydantic import UUID4
+
 import ghga_event_schemas.pydantic_ as event_schemas
 from ghga_event_schemas.configs import ResourceEventsConfig
 from ghga_event_schemas.validation import (
@@ -25,8 +27,6 @@ from ghga_event_schemas.validation import (
 )
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
 from mass.core.models import Resource
 from mass.ports.inbound.query_handler import QueryHandlerPort
 

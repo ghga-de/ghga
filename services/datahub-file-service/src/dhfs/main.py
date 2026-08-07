@@ -17,14 +17,13 @@
 import logging
 from asyncio import sleep
 
-from hexkit.log import configure_logging
-from hexkit.utils import now_utc_ms_prec
-
 from dhfs import __version__
 from dhfs.config import Config
 from dhfs.core.interrogator import InterrogatorPort
 from dhfs.core.verifier import run_dhfs_verification
 from dhfs.inject import prepare_interrogation_bucket_cleaner, prepare_interrogator
+from hexkit.log import configure_logging
+from hexkit.utils import now_utc_ms_prec
 
 log = logging.getLogger(__name__)
 

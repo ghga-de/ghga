@@ -19,10 +19,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from ghga_service_commons.api import configure_app
-from hexkit.providers.akafka import KafkaEventPublisher
-from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.claims_repository.translators.dao import ClaimDaoFactory
@@ -30,6 +26,10 @@ from auth_service.user_registry.core.registry import UserRegistry
 from auth_service.user_registry.deps import get_iva_dao, get_user_dao, get_user_registry
 from auth_service.user_registry.translators.dao import UserDaoPublisherFactory
 from auth_service.user_registry.translators.event_pub import EventPubTranslator
+from ghga_service_commons.api import configure_app
+from hexkit.providers.akafka import KafkaEventPublisher
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from ..config import Config
 from . import DESCRIPTION, TITLE, VERSION

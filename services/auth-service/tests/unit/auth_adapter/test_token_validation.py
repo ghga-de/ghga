@@ -17,11 +17,11 @@
 """Unit tests for the auth adapter core token validation feature"""
 
 import pytest
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from jwcrypto import jwk
 
 from auth_service.auth_adapter.core import auth
 from auth_service.config import CONFIG
+from ghga_service_commons.utils.utc_dates import now_as_utc
 
 from ...fixtures.utils import create_access_token
 

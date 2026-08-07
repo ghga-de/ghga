@@ -20,8 +20,8 @@ import logging
 
 import httpx
 import pytest
-from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 from mass.core import models
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture, QueryParams

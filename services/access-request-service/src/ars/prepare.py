@@ -21,10 +21,6 @@ from contextlib import asynccontextmanager, nullcontext
 from typing import NamedTuple
 
 from fastapi import FastAPI
-from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
-from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from ars.adapters.inbound.event_sub import EventSubTranslator
 from ars.adapters.inbound.fastapi_ import dummies
@@ -35,6 +31,10 @@ from ars.config import Config
 from ars.core.repository import AccessRequestRepository
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
 from ars.ports.outbound.daos import AccessRequestDaoPort
+from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 
 @asynccontextmanager

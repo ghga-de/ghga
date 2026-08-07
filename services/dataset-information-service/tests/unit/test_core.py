@@ -18,9 +18,9 @@
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
-import ghga_event_schemas.pydantic_ as event_schemas
 import pytest
 
+import ghga_event_schemas.pydantic_ as event_schemas
 from dins.core.models import DatasetFileAccessions, PendingFileInfo
 from tests.fixtures.joint import JointRig
 from tests.fixtures.utils import (

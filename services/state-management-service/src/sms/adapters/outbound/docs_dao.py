@@ -16,9 +16,9 @@
 
 from contextlib import asynccontextmanager
 
-from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 from pymongo import AsyncMongoClient
 
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 from sms.config import Config
 from sms.models import Criteria, DocumentType
 from sms.ports.outbound.docs_dao import DocsDaoPort

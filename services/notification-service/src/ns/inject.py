@@ -21,7 +21,6 @@ from contextlib import asynccontextmanager, nullcontext
 
 from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
-
 from ns.adapters.inbound.event_sub import EventSubTranslator
 from ns.adapters.outbound.dao import get_event_id_dao
 from ns.adapters.outbound.lox24_client import Lox24Client

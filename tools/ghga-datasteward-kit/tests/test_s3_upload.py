@@ -31,10 +31,6 @@ import pytest
 import requests
 import uvicorn
 from fastapi import FastAPI
-from ghga_service_commons.api.api import ApiConfigBase
-from ghga_service_commons.api.testing import get_free_port
-from ghga_service_commons.utils.temp_files import big_temp_file
-from hexkit.providers.s3.testutils import S3ContainerFixture
 from pytest_httpx import HTTPXMock
 
 from ghga_datasteward_kit.batch_s3_upload import FileMetadata
@@ -51,6 +47,10 @@ from ghga_datasteward_kit.s3_upload.utils import (
     get_object_storage,
 )
 from ghga_datasteward_kit.utils import path_join
+from ghga_service_commons.api.api import ApiConfigBase
+from ghga_service_commons.api.testing import get_free_port
+from ghga_service_commons.utils.temp_files import big_temp_file
+from hexkit.providers.s3.testutils import S3ContainerFixture
 from tests.fixtures.config import (  # noqa: F401
     config_fixture,
     legacy_config_fixture,

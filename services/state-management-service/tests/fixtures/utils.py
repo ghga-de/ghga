@@ -20,7 +20,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 from ghga_service_commons.api.testing import AsyncTestClient
-
 from sms.config import Config
 from sms.inject import prepare_rest_app
 from sms.ports.inbound.docs_handler import DocsHandlerPort

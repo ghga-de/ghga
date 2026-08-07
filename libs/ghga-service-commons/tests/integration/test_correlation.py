@@ -22,13 +22,6 @@ from uuid import UUID
 import httpx
 import pytest
 from fastapi import FastAPI, Request, Response
-from hexkit.correlation import (
-    CorrelationIdContextError,
-    correlation_id_from_str,
-    get_correlation_id,
-    new_correlation_id,
-    set_new_correlation_id,
-)
 
 from ghga_service_commons.api.api import (
     CORRELATION_ID_HEADER_NAME,
@@ -40,6 +33,13 @@ from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.http.correlation import (
     AsyncClient,
     attach_correlation_id_to_requests,
+)
+from hexkit.correlation import (
+    CorrelationIdContextError,
+    correlation_id_from_str,
+    get_correlation_id,
+    new_correlation_id,
+    set_new_correlation_id,
 )
 
 pytestmark = pytest.mark.asyncio()

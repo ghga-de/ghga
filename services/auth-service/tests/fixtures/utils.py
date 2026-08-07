@@ -26,17 +26,6 @@ from typing import Any, cast
 from uuid import UUID
 
 from fastapi import Request
-from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
-from hexkit.config import config_from_yaml
-from hexkit.protocols.dao import (
-    Dao,
-    FindResult,
-    MultipleHitsFoundError,
-    NoHitsFoundError,
-    ResourceNotFoundError,
-)
-from hexkit.utils import now_utc_ms_prec
 from jwcrypto import jwk, jwt
 from pydantic import UUID4
 
@@ -65,6 +54,17 @@ from auth_service.user_registry.models.users import PeriodCounter, User
 from auth_service.user_registry.ports.event_pub import (
     EventPublisherPort,
 )
+from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
+from hexkit.config import config_from_yaml
+from hexkit.protocols.dao import (
+    Dao,
+    FindResult,
+    MultipleHitsFoundError,
+    NoHitsFoundError,
+    ResourceNotFoundError,
+)
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import (
     DATA_ACCESS_CLAIM_ID,
     DATA_ACCESS_IVA_ID,
@@ -124,7 +124,7 @@ signing_keys = SigningKeys()
 def create_access_token(
     key: jwk.JWK | None = None,
     expired: bool = False,
-    **kwargs: None | int | str,
+    **kwargs: int | str | None,
 ) -> str:
     """Create an external access token that can be used for testing.
 
@@ -136,7 +136,7 @@ def create_access_token(
     kty = key["kty"]
     assert kty in ("EC", "RSA")
     header = {"alg": "ES256" if kty == "EC" else "RS256", "typ": "JWT"}
-    claims: dict[str, None | str | int] = {
+    claims: dict[str, str | int | None] = {
         "jti": "123-456-789-0",
         "sub": EXT_ID_OF_JOHN,
         "iss": str(CONFIG.oidc_authority_url),

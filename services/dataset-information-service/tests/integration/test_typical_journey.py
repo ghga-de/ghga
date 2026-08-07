@@ -17,12 +17,12 @@
 
 import logging
 
-import ghga_event_schemas.pydantic_ as event_schemas
 import pytest
-from hexkit.protocols.dao import ResourceNotFoundError
 
+import ghga_event_schemas.pydantic_ as event_schemas
 from dins.adapters.outbound.dao import get_file_accession_map_dao
 from dins.core import models
+from hexkit.protocols.dao import ResourceNotFoundError
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
     ACCESSION1,

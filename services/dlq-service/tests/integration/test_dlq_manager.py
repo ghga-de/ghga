@@ -18,10 +18,10 @@
 from uuid import uuid4
 
 import pytest
-from hexkit.providers.mongodb.provider import document_to_dto
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from dlqs.models import StoredDLQEvent
+from hexkit.providers.mongodb.provider import document_to_dto
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from tests.fixtures import utils
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.prepop import ReferenceEventsDict

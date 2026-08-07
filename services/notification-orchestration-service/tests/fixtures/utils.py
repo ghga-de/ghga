@@ -19,9 +19,10 @@ from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
+from pydantic import UUID4
+
 from ghga_event_schemas.pydantic_ import AccessRequestDetails
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4
 
 BASE_DIR = Path(__file__).parent.resolve()
 

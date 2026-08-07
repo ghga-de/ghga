@@ -18,10 +18,10 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_event_schemas import pydantic_ as event_schemas
-from ghga_service_commons.auth.ghga import AuthContext
 from pydantic import UUID4
 
+from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_service_commons.auth.ghga import AuthContext
 from wps.core.models import (
     BoxWithExpiration,
     Dataset,

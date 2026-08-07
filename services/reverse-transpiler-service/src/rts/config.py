@@ -15,13 +15,13 @@
 
 """Config Parameter Modeling and Parsing."""
 
+from pydantic import Field
+
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
-from pydantic import Field
-
 from rts.adapters.inbound.event_sub import EventSubTranslatorConfig
 from rts.core.rev_tran import SheetNameConfig
 

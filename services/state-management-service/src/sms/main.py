@@ -17,7 +17,6 @@
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
-
 from sms.config import Config
 from sms.inject import prepare_rest_app
 

@@ -22,8 +22,6 @@ from uuid import UUID
 
 import httpx
 from async_lru import alru_cache
-from ghga_service_commons.utils import crypt
-from ghga_service_commons.utils.crypt import decrypt
 from pydantic import UUID4, SecretBytes
 from tenacity import RetryError
 
@@ -34,6 +32,8 @@ from ghga_connector.constants import (
     UPLOAD_WOT_CACHE_TIME,
 )
 from ghga_connector.core.utils import get_work_package_token
+from ghga_service_commons.utils import crypt
+from ghga_service_commons.utils.crypt import decrypt
 
 from .. import exceptions
 

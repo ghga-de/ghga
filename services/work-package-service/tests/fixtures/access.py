@@ -19,10 +19,10 @@
 from datetime import timedelta
 from uuid import UUID
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.utils import now_utc_ms_prec
 from wps.ports.outbound.access import AccessCheckPort
 
 USERS_WITH_DOWNLOAD_ACCESS = [UUID("a86f8281-e18a-429e-88a9-a5c8ea0cf754")]

@@ -25,7 +25,6 @@ from ghga_event_schemas.pydantic_ import (
     MetadataDatasetOverview,
     MetadataDatasetStage,
 )
-
 from wps.core.models import (
     Dataset,
     DatasetFile,

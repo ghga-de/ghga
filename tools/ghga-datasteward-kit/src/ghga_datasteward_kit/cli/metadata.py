@@ -19,9 +19,9 @@ import logging
 from pathlib import Path
 
 import typer
-from ghga_transpiler.cli import transpile
 
 from ghga_datasteward_kit import metadata
+from ghga_transpiler.cli import transpile
 
 cli = typer.Typer(no_args_is_help=True)
 

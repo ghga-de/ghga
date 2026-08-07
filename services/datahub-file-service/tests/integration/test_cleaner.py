@@ -18,10 +18,10 @@ import unittest.mock
 
 import httpx
 import pytest
-from hexkit.providers.s3.testutils import temp_file_object
 from pytest_httpx import HTTPXMock
 
 from dhfs.ports.outbound.s3 import S3ClientPort
+from hexkit.providers.s3.testutils import temp_file_object
 from tests.fixtures.joint import JointFixture
 
 pytestmark = [

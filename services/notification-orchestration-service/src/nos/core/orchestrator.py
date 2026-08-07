@@ -21,9 +21,9 @@ from collections.abc import Callable
 from contextlib import suppress
 from functools import partial
 
-from ghga_event_schemas import pydantic_ as event_schemas
 from pydantic import UUID4
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from nos.config import Config
 from nos.core import notifications
 from nos.ports.inbound.orchestrator import OrchestratorPort

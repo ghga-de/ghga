@@ -34,14 +34,14 @@ import httpx
 import pytest
 from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from ghga_connector.core.client import get_ratelimiting_retry_transport
 from ghga_service_commons.api.api import ApiConfigBase, configure_app
 from ghga_service_commons.api.di import DependencyDummy
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 from ghga_service_commons.transports import CompositeCacheConfig
 from ghga_service_commons.utils.utc_dates import now_as_utc
-from pydantic import BaseModel
-
-from ghga_connector.core.client import get_ratelimiting_retry_transport
 from tests.fixtures.utils import TEST_PUBLIC_KEYS, TEST_STORAGE_ALIAS1
 
 WORK = "/work"

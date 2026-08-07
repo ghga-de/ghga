@@ -18,14 +18,14 @@ import logging
 from contextlib import asynccontextmanager
 
 import httpx
+
+from ghga_datasteward_kit import __version__
+from ghga_datasteward_kit.s3_upload.config import LegacyConfig
 from ghga_service_commons.transports import (
     AsyncRetryTransport,
     CompositeTransportFactory,
     ratelimiting_retry_proxies,
 )
-
-from ghga_datasteward_kit import __version__
-from ghga_datasteward_kit.s3_upload.config import LegacyConfig
 
 USER_AGENT = f"GHGADatastewardKit/{__version__}"
 

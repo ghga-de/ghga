@@ -18,8 +18,8 @@
 from copy import deepcopy
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from tests.fixtures import fixture_config  # noqa: F401
 from wps.migrations import run_db_migrations
 

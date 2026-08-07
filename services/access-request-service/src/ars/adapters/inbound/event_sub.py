@@ -19,15 +19,15 @@
 import logging
 from contextlib import suppress
 
+from pydantic import UUID4
+
+from ars.core.models import Dataset
+from ars.ports.inbound.repository import AccessRequestRepositoryPort
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import DatasetEventsConfig
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
-from ars.core.models import Dataset
-from ars.ports.inbound.repository import AccessRequestRepositoryPort
 
 __all__ = ["EventSubTranslator", "EventSubTranslatorConfig"]
 

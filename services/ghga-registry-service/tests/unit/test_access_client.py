@@ -20,9 +20,9 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock
 
+from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import AccessClient
 from rs.config import Config
 from rs.core.models import GrantId

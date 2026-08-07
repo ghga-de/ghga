@@ -23,8 +23,6 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
-from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from auth_service.claims_repository.core.claims import Role, create_internal_role_claim
@@ -32,6 +30,8 @@ from auth_service.claims_repository.translators.dao import ClaimDaoFactory
 from auth_service.config import Config
 from auth_service.user_registry.core import registry as user_registry_registry
 from auth_service.user_registry.core.registry import UserRegistry
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import (
     ID_OF_JOHN,
     ID_OF_MAX,

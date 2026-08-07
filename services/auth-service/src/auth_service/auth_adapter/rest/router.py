@@ -32,7 +32,6 @@ from fastapi import (
     Response,
     status,
 )
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import UUID4, SecretStr
 
 from auth_service.claims_repository.core.utils import get_active_roles
@@ -48,6 +47,7 @@ from auth_service.user_registry.models.users import (
     User,
     UserStatus,
 )
+from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 
 from ..core.auth import (
     UserInfoError,

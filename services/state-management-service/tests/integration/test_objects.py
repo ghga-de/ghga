@@ -17,9 +17,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from hexkit.providers.s3 import S3Config
 from hexkit.providers.s3.testutils import FederatedS3Fixture
-
 from tests.fixtures.config import DEFAULT_TEST_CONFIG, Config
 from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client
 

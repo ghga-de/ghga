@@ -21,7 +21,6 @@ from typing import Any, cast
 from uuid import uuid4
 
 import pytest
-from hexkit.utils import now_utc_ms_prec
 
 from auth_service.claims_repository.core.utils import (
     get_active_roles,
@@ -39,6 +38,7 @@ from auth_service.user_registry.models.ivas import (
 )
 from auth_service.user_registry.models.users import UserStatus, UserWithRoles
 from auth_service.user_registry.ports.dao import IvaDao, UserDao
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import (
     DATA_STEWARD_CLAIM_ID,
     DATA_STEWARD_IVA_ID,

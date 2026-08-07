@@ -22,7 +22,6 @@ from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
-
 from wps.adapters.inbound.event_sub import (
     EventSubTranslatorConfig,
     OutboxSubConfig,

@@ -20,11 +20,11 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from pytest_httpx import HTTPXMock
+
 from ghga_event_schemas.pydantic_ import SearchableResource
 from ghga_service_commons.auth.ghga import AuthContext
 from hexkit.utils import now_utc_ms_prec
-from pytest_httpx import HTTPXMock
-
 from rs.core.models import GrantId
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.http import FileBoxClientPort

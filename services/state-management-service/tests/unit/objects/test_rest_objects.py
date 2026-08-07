@@ -16,8 +16,8 @@
 """Test the objects-related REST API endpoints' behavior."""
 
 import pytest
-from hexkit.custom_types import JsonObject
 
+from hexkit.custom_types import JsonObject
 from tests.fixtures.config import DEFAULT_TEST_CONFIG
 from tests.fixtures.dummies import DummyObjectsHandler
 from tests.fixtures.utils import VALID_BEARER_TOKEN, get_rest_client_with_mocks

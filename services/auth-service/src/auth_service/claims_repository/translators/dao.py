@@ -16,9 +16,10 @@
 
 """Translation between general and claims specific DAOs."""
 
-from hexkit.protocols.dao import DaoFactoryProtocol
 from pydantic import Field
 from pydantic_settings import BaseSettings
+
+from hexkit.protocols.dao import DaoFactoryProtocol
 
 from ..models.claims import Claim as ClaimDto
 from ..ports.dao import ClaimDao, ClaimDaoFactoryPort

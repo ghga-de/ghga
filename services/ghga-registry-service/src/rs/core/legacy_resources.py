@@ -24,10 +24,10 @@ import logging
 from typing import Any
 from uuid import UUID
 
-import ghga_event_schemas.pydantic_ as event_schemas
-from hexkit.protocols.dao import ResourceAlreadyExistsError
 from pydantic import BaseModel, Field, ValidationError
 
+import ghga_event_schemas.pydantic_ as event_schemas
+from hexkit.protocols.dao import ResourceAlreadyExistsError
 from rs.core.models import Study, StudyStatus
 from rs.ports.inbound.files import FileControllerPort
 from rs.ports.inbound.legacy_resources import LegacyResourceManagerPort

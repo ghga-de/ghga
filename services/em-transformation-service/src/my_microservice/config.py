@@ -15,10 +15,11 @@
 
 """Config Parameter Modeling and Parsing."""
 
+from pydantic import Field
+
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from pydantic import Field
 
 from .models import SupportedLanguages
 

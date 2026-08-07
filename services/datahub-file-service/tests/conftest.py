@@ -16,12 +16,12 @@
 """Import necessary test fixtures."""
 
 import pytest
+
+from dhfs.config import Config
 from hexkit.providers.s3.testutils import (  # noqa: F401
     s3_container_fixture,
     s3_fixture,
 )
-
-from dhfs.config import Config
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import joint_fixture  # noqa: F401
 from tests.fixtures.utils import (

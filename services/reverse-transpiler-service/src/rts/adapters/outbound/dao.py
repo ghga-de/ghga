@@ -21,10 +21,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from io import BytesIO
 
-from hexkit.providers.mongodb import ConfiguredMongoClient, MongoDbConfig
 from openpyxl import Workbook
 from pymongo.asynchronous.database import AsyncDatabase
 
+from hexkit.providers.mongodb import ConfiguredMongoClient, MongoDbConfig
 from rts.models import StudyMetadata
 from rts.ports.outbound.dao import (
     GridFSDao,

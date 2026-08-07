@@ -17,14 +17,14 @@
 """Test user specific DAOs."""
 
 import pytest
-from ghga_service_commons.utils.utc_dates import utc_datetime
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.claims_repository.models.claims import Claim, VisaType
 from auth_service.claims_repository.translators.dao import (
     ClaimDaoFactory,
 )
 from auth_service.config import get_config
+from ghga_service_commons.utils.utc_dates import utc_datetime
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from tests.fixtures.constants import SOME_USER_ID
 
 

@@ -20,11 +20,6 @@ from collections import Counter, defaultdict
 from contextlib import suppress
 from uuid import UUID
 
-from hexkit.correlation import set_correlation_id
-from hexkit.protocols.dao import ResourceAlreadyExistsError
-from hexkit.protocols.eventpub import EventPublisherProtocol
-from hexkit.providers.akafka.provider.eventsub import HeaderNames
-
 from dlqs.config import Config
 from dlqs.models import (
     DLQInfo,
@@ -35,6 +30,10 @@ from dlqs.models import (
 )
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
 from dlqs.ports.outbound.dao import EventDaoPort, ResourceNotFoundError
+from hexkit.correlation import set_correlation_id
+from hexkit.protocols.dao import ResourceAlreadyExistsError
+from hexkit.protocols.eventpub import EventPublisherProtocol
+from hexkit.providers.akafka.provider.eventsub import HeaderNames
 
 log = logging.getLogger(__name__)
 

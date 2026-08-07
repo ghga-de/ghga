@@ -46,7 +46,7 @@ Config = TypeVar("Config", bound=BaseModel)
 
 
 @dataclass(frozen=True)
-class TransformationTestCase(Generic[Config]):  # noqa: UP046
+class TransformationTestCase(Generic[Config]):
     """A test case for a transformation."""
 
     transformation_name: str

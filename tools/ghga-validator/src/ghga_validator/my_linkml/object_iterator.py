@@ -20,7 +20,6 @@ from collections.abc import Iterable, Iterator
 from copy import deepcopy
 from itertools import chain
 from numbers import Number
-from typing import Optional, Union
 
 from linkml_runtime.linkml_model.meta import ClassDefinitionName, SlotDefinition
 from linkml_runtime.utils.schemaview import SchemaView
@@ -42,9 +41,9 @@ class ObjectIterator:
     """
 
     _schema: SchemaView
-    _root: Union[ClassDefinitionName, str]
+    _root: ClassDefinitionName | str
     _data: dict
-    _recursion_iterator: Optional[Iterator]
+    _recursion_iterator: Iterator | None
     _enumerate_non_identifiable: bool
     _inline_non_identifiable: bool
     _path: list
@@ -53,10 +52,10 @@ class ObjectIterator:
         self,
         schema: SchemaView,
         data: dict,
-        root: Optional[str] = None,
+        root: str | None = None,
         enumerate_non_identifiable=False,
         inline_non_identifiable=True,
-        path: Optional[list] = None,
+        path: list | None = None,
     ):  # pylint: disable=too-many-arguments
         """Creates a new IdentifiedObjectIterator."""
         self._schema = schema
@@ -107,7 +106,7 @@ class ObjectIterator:
     def _re_serialize_element(
         data: dict,
         schema: SchemaView,
-        root: Union[str, ClassDefinitionName],
+        root: str | ClassDefinitionName,
         inline_non_identifiable: bool,
     ):
         """Re-serializes the element serialized in the passed data such that all
@@ -120,7 +119,7 @@ class ObjectIterator:
             # If the slot has an inlined class range, transform the inlined
             # value into a reference if it has an identifier slot
             if slot_def.range in schema.all_classes() and slot_def.inlined is not False:
-                id_slot: Optional[SlotDefinition] = schema.get_identifier_slot(
+                id_slot: SlotDefinition | None = schema.get_identifier_slot(
                     slot_def.range
                 )
                 # If the slot class has no identifier, recursively serialize it
@@ -267,10 +266,10 @@ class ObjectIterator:
     def __next__(
         self,
     ) -> tuple[
-        Union[str, ClassDefinitionName],
-        Optional[Union[str, Number]],
+        str | ClassDefinitionName,
+        str | Number | None,
         dict,
-        list[Union[str, Number]],
+        list[str | Number],
     ]:
         """Select the next element"""
         if self._recursion_iterator is None:

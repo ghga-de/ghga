@@ -24,10 +24,10 @@ from time import time
 from typing import Any
 
 import httpx
-from hexkit.providers.s3 import S3ObjectStorage
 from httpx import Response
 
 from ghga_datasteward_kit.models import UploadParameters
+from hexkit.providers.s3 import S3ObjectStorage
 
 from .config import LegacyConfig
 from .exceptions import PartUploadError

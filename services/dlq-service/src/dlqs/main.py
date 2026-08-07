@@ -22,12 +22,11 @@ Additional endpoints might be structured in dedicated modules
 
 import logging
 
-from ghga_service_commons.api import run_server
-from hexkit.log import configure_logging
-
 from dlqs.config import Config
 from dlqs.inject import prepare_dlq_subscriber, prepare_rest_app
 from dlqs.migrations import run_db_migrations
+from ghga_service_commons.api import run_server
+from hexkit.log import configure_logging
 
 log = logging.getLogger(__name__)
 

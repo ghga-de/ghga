@@ -99,7 +99,7 @@ def convert_rows(header, rows) -> list[dict]:
     return [
         {
             key: value
-            for key, value in zip(header, row)
+            for key, value in zip(header, row, strict=False)
             if value is not None and value != ""
         }
         for row in rows

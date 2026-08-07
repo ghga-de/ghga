@@ -20,7 +20,6 @@ from typing import TypeAlias
 
 from ghga_event_schemas.pydantic_ import Artifact
 from hexkit.protocols.dao import Dao, DaoFactoryProtocol
-
 from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
 from metldata.artifacts_rest.models import ArtifactInfo, ArtifactResource
 

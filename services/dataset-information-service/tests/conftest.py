@@ -23,7 +23,6 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_container_fixture,
     mongodb_fixture,
 )
-
 from tests.fixtures.joint import (
     joint_fixture,  # noqa: F401
     rig,  # noqa: F401

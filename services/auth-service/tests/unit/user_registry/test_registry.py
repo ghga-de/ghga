@@ -20,7 +20,6 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
-from hexkit.utils import now_utc_ms_prec
 
 from auth_service.user_registry.core.registry import UserRegistry
 from auth_service.user_registry.core.verification_codes import (
@@ -45,6 +44,7 @@ from auth_service.user_registry.models.users import (
     UserStatus,
     UserWithRoles,
 )
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import (
     ID_OF_JANE,
     ID_OF_JOHN,

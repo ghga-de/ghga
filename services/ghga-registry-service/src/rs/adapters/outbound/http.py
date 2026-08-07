@@ -20,11 +20,11 @@ from typing import Any, Literal
 from uuid import UUID
 
 import httpx
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from jwcrypto import jwk
 from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr
 from pydantic_settings import BaseSettings
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from rs.constants import HTTPX_TIMEOUT, UCS_UPLOADS_PAGE_SIZE
 from rs.core.models import (
     BaseWorkOrderToken,

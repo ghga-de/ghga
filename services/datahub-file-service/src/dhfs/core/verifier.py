@@ -27,10 +27,6 @@ from uuid import UUID
 import crypt4gh.header
 import crypt4gh.lib
 from crypt4gh.keys import get_private_key, get_public_key
-from ghga_service_commons.utils.crypt import generate_key_pair
-from ghga_service_commons.utils.temp_files import big_temp_file
-from hexkit.providers.s3 import S3Config
-from hexkit.providers.s3.provider import S3ObjectStorage
 from nacl.bindings import (
     crypto_aead_chacha20poly1305_ietf_encrypt as encrypt_algo,
 )
@@ -43,6 +39,10 @@ from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH
 from dhfs.core import models
 from dhfs.core.checksums import Checksums
 from dhfs.inject import prepare_interrogator
+from ghga_service_commons.utils.crypt import generate_key_pair
+from ghga_service_commons.utils.temp_files import big_temp_file
+from hexkit.providers.s3 import S3Config
+from hexkit.providers.s3.provider import S3ObjectStorage
 
 __all__ = ["run_dhfs_verification"]
 

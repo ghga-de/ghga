@@ -22,6 +22,7 @@ The dummies are overridden by the actual dependencies when preparing the applica
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
+
 from ghga_service_commons.api.di import DependencyDummy
 
 from .core.session_store import Session

@@ -19,6 +19,8 @@
 import json
 from abc import ABC, abstractmethod
 
+from pydantic import Field
+
 from ghga_event_schemas.configs import DatasetEventsConfig, ResourceEventsConfig
 from ghga_event_schemas.configs.stateful import ArtifactEventsConfig
 from ghga_event_schemas.pydantic_ import (
@@ -30,7 +32,6 @@ from ghga_event_schemas.pydantic_ import (
     SearchableResourceInfo,
 )
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import Field
 
 
 class EventPubTranslatorConfig(

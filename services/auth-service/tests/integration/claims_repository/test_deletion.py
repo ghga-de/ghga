@@ -21,11 +21,6 @@ from datetime import timedelta
 from uuid import uuid4
 
 import pytest
-from hexkit.protocols.dao import NoHitsFoundError
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.utils import now_utc_ms_prec
 
 from auth_service.claims_repository.models.claims import (
     AuthorityLevel,
@@ -37,6 +32,11 @@ from auth_service.claims_repository.translators.dao import (
 )
 from auth_service.config import Config
 from auth_service.prepare import prepare_event_subscriber
+from hexkit.protocols.dao import NoHitsFoundError
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import SOME_USER_ID
 
 

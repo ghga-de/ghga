@@ -18,10 +18,10 @@
 from uuid import uuid4
 
 import pytest
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-from hexkit.utils import now_utc_ms_prec
 from pytest_httpx import HTTPXMock
 
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.dao import get_file_accession_dao
 from rs.core.models import (
     AccessionMapRequest,

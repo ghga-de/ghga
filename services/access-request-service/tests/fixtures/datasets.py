@@ -16,13 +16,12 @@
 
 """Sample datasets for testing."""
 
+from ars.core.models import Dataset
 from ghga_event_schemas.pydantic_ import (
     MetadataDatasetID,
     MetadataDatasetOverview,
     MetadataDatasetStage,
 )
-
-from ars.core.models import Dataset
 
 __all__ = ["DATASET", "DATASET_DELETION_EVENT", "DATASET_UPSERTION_EVENT"]
 

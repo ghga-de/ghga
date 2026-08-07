@@ -16,7 +16,6 @@
 """Top-level functions for the service"""
 
 from hexkit.log import configure_logging
-
 from nos.config import Config
 from nos.inject import prepare_event_subscriber
 from nos.migrations import run_db_migrations

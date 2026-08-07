@@ -26,10 +26,6 @@ from uuid import uuid4
 import httpx
 import pytest
 import pytest_asyncio
-from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
-from ghga_service_commons.utils.crypt import decrypt
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.utils import now_utc_ms_prec
 from pydantic import BaseModel, SecretBytes
 from pytest_httpx import HTTPXMock
 
@@ -41,6 +37,10 @@ from dhfs.adapters.outbound.http import (
 )
 from dhfs.config import Config
 from dhfs.core.models import InterrogationReport
+from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
+from ghga_service_commons.utils.crypt import decrypt
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.utils import CENTRAL_CRYPT4GH_PRIVATE_KEY, DHFS_JWK
 
 pytestmark = pytest.mark.asyncio()

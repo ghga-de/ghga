@@ -20,7 +20,6 @@ import logging
 
 import httpx
 from async_lru import alru_cache
-from hexkit.protocols.objstorage import ObjectStorageProtocol
 from tenacity import RetryError
 
 from dhfs.adapters.outbound.http import check_for_request_errors
@@ -32,6 +31,7 @@ from dhfs.constants import (
 )
 from dhfs.core.models import FileUpload
 from dhfs.ports.outbound.s3 import S3ClientPort
+from hexkit.protocols.objstorage import ObjectStorageProtocol
 
 log = logging.getLogger(__name__)
 

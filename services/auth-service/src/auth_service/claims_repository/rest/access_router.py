@@ -24,9 +24,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response, status
 from fastapi.exceptions import HTTPException
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from auth_service.constants import TRACER
@@ -34,6 +31,9 @@ from auth_service.user_registry.deps import (
     IvaDaoDependency,
     UserDaoDependency,
 )
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
+from hexkit.utils import now_utc_ms_prec
 
 from ...user_registry.models.users import User
 from ..core.claims import (

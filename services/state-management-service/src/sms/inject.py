@@ -18,8 +18,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from hexkit.providers.akafka import KafkaEventPublisher
 
+from hexkit.providers.akafka import KafkaEventPublisher
 from sms.adapters.inbound.fastapi_ import dummies
 from sms.adapters.inbound.fastapi_.configure import get_configured_app
 from sms.adapters.outbound.docs_dao import DocsDao
