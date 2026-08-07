@@ -322,7 +322,7 @@ components:
 info:
   description: A service managing access requests for the GHGA Data Portal
   title: Access Request Service
-  version: 8.0.1
+  version: 8.0.2
 openapi: 3.1.0
 paths:
   /access-grants:
