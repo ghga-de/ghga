@@ -1,0 +1,79 @@
+# Dev images — every merge to main rebuilds the mono Python image and the front-end
+# image and publishes them to the interim registry (release.yaml's REGISTRY) under the
+# mutable :dev tag.
+#
+# :dev is NOT a release artifact. The mono variant packs every Python member into one
+# venv (docker/Dockerfile VARIANT=mono — demo/CI only), and the tag simply tracks main.
+# Its consumers are the daily security-scan workflow (which pulls these images as its
+# published-exposure baseline) and anyone wanting "latest main" without a release.
+# Release images remain per-member and version-stamped (release.yaml, ADR-0004).
+#
+# Publishing is deliberately independent of ci.yaml: merges are already gated by PR CI,
+# and :dev makes no greenness promise beyond that. PLATFORM_VERSION is left at its
+# default (0.0.0+dev / the frontend's package.json version) — the revision label and
+# GIT_SHA build-arg carry the traceability.
+name: dev-images
+
+on:
+  push:
+    branches: [main]
+
+# Newest merge wins the tag; a superseded in-flight build has nothing to offer.
+concurrency:
+  group: dev-images-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io/ghga-de/ghga
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write # GHCR push via the ephemeral GITHUB_TOKEN
+    strategy:
+      fail-fast: false
+      matrix:
+        # `build` = just recipe (+ target); the justfile owns the dockerfile/context/
+        # registry-name mapping, so the workflow never duplicates it
+        include:
+          - image: platform
+            build: image-mono
+          - image: data-portal
+            build: image frontend/data-portal
+    env:
+      DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: extractions/setup-just@v2
+      # The hardened bases (dhi.io) are auth-gated — same pattern as release.yaml:
+      # skipped when the org secrets are absent, failing the base pull with a clear 401.
+      - name: Login to DHI registry
+        if: ${{ env.DHI_USER != '' }}
+        uses: docker/login-action@v4
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # --pull refreshes the floating base tags; the revision label is set on the CLI
+      # so the frontend Dockerfile (which stamps nothing) carries it too. A build-arg
+      # a member's Dockerfile does not declare only produces a warning.
+      - name: Build
+        run: |
+          just ${{ matrix.build }} dev \
+            --pull \
+            --build-arg GIT_SHA="${GITHUB_SHA::12}" \
+            --label org.opencontainers.image.revision="${GITHUB_SHA::12}"
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push
+        run: docker push "${REGISTRY}/${{ matrix.image }}:dev"

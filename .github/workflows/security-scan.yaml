@@ -1,0 +1,395 @@
+# Daily security scan + lockfile-update proposal.
+#
+# Answers two questions every morning:
+#   1. What known vulnerabilities do the published :dev images (dev-images.yaml)
+#      carry right now? (pull + Trivy scan; reported in the job summary)
+#   2. Would a lockfile update fix any of them? If yes, a PR is opened with the
+#      updated lockfiles, enumerating exactly the CVEs it fixes — and any it
+#      introduces.
+#
+# Attribution design: the DHI base tags float, so a naive "published vs
+# rebuilt-with-updated-lock" comparison would credit the lockfile PR with fixes
+# that any rebuild picks up for free. Each ecosystem therefore builds TWICE from
+# fresh bases — baseline (current lockfile) and updated (after `uv lock --upgrade`
+# / `pnpm update --lockfile-only`) — and the PR claims only the baseline→updated
+# delta. The published→baseline delta ("rebuild-only drift") goes to the job
+# summary instead: it needs no repo change, and the next merge to main refreshes
+# :dev anyway.
+#
+# Image scans alone are blind to the front end's real dependency surface: its
+# runner image ships bundled JS (plus one copied js-yaml), so app-dependency CVEs
+# are only visible to Trivy in pnpm-lock.yaml. Both ecosystems therefore scan
+# images AND lockfiles (trivy fs), and the comparison covers both. The mono image
+# is the Python proxy on purpose — its venv is the union of every member's
+# dependencies, so one scan covers all services (per-member attribution is a
+# release-lane concern, not a watch concern).
+#
+# Requires:
+#   - DOCKERHUB_USERNAME / DOCKERHUB_TOKEN org secrets (DHI base pulls, as in
+#     release.yaml); the rebuild steps fail with a clear 401 without them.
+#   - SECURITY_PR_TOKEN repo secret: a fine-grained PAT (contents: write +
+#     pull-requests: write on this repo) so the opened PR triggers ci.yaml —
+#     GitHub deliberately withholds workflow triggers from GITHUB_TOKEN-created
+#     PRs. Falls back to GITHUB_TOKEN with a warning; the PR then needs a manual
+#     nudge (close/reopen or a push) to get checks.
+name: security-scan
+
+on:
+  schedule:
+    - cron: "17 4 * * *" # daily, off the top of the hour (GitHub's own advice)
+  workflow_dispatch:
+
+# A manual run during the scheduled one would race on the PR branch: queue, don't kill.
+concurrency:
+  group: security-scan
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io/ghga-de/ghga
+  # Fallback mirror for the vulnerability DB — ghcr.io rate-limits anonymous
+  # trivy-db pulls hard enough that scheduled scans are known to hit it.
+  TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2,public.ecr.aws/aquasecurity/trivy-db:2
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read # pull :dev from GHCR
+    env:
+      DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - uses: actions/checkout@v5
+      # Reports live OUTSIDE the checkout — the tree must stay clean except for the
+      # lockfile. ($RUNNER_TEMP is step-level only, hence GITHUB_ENV, not job env.)
+      - name: Prepare scratch dirs
+        run: |
+          echo "SCAN=$RUNNER_TEMP/scan" >> "$GITHUB_ENV"
+          echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/scan" "$RUNNER_TEMP/out"
+      - uses: extractions/setup-just@v2
+      - uses: aquasecurity/setup-trivy@v0.2.3
+        with:
+          cache: true
+      - name: Login to DHI registry
+        if: ${{ env.DHI_USER != '' }}
+        uses: docker/login-action@v4
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Tolerates a missing tag (bootstrap: no merge to main since dev-images.yaml
+      # landed) — the published scan is informational; the compare works without it.
+      - name: Scan the published platform:dev image
+        run: |
+          if docker pull "$REGISTRY/platform:dev"; then
+            trivy image --scanners vuln -f json -o "$SCAN/published-image.json" \
+              "$REGISTRY/platform:dev"
+            {
+              echo "## platform:dev — current exposure"
+              echo '```'
+              trivy convert --format table "$SCAN/published-image.json"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## platform:dev not found — skipping the published-image scan" \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Baseline — scan uv.lock and a fresh rebuild
+        run: |
+          trivy fs --scanners vuln -f json -o "$SCAN/baseline-lock.json" uv.lock
+          just image-mono baseline --pull
+          trivy image --scanners vuln -f json -o "$SCAN/baseline-image.json" \
+            "$REGISTRY/platform:baseline"
+
+      - name: Report rebuild-only drift (fixes a plain rebuild would pick up)
+        run: |
+          if [ -f "$SCAN/published-image.json" ]; then
+            python3 scripts/diff_trivy.py diff \
+              --label "platform image — rebuild-only drift (fresh base, unchanged lockfile)" \
+              --before "$SCAN/published-image.json" \
+              --after "$SCAN/baseline-image.json" \
+              --out "$SCAN/drift.json"
+            python3 scripts/diff_trivy.py render "$SCAN/drift.json" \
+              --out "$SCAN/drift.md" > /dev/null
+            cat "$SCAN/drift.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Update the lockfile
+        id: update
+        run: |
+          uv lock --upgrade
+          if git diff --quiet uv.lock; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "uv.lock is already fully up to date." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The rebuild doubles as a gate: an updated lockfile that no longer builds
+      # never reaches a PR.
+      - name: Updated — scan uv.lock and a fresh rebuild
+        if: ${{ steps.update.outputs.changed == 'true' }}
+        run: |
+          trivy fs --scanners vuln -f json -o "$SCAN/updated-lock.json" uv.lock
+          just image-mono updated --pull
+          trivy image --scanners vuln -f json -o "$SCAN/updated-image.json" \
+            "$REGISTRY/platform:updated"
+
+      - name: Diff baseline vs updated
+        if: ${{ steps.update.outputs.changed == 'true' }}
+        run: |
+          python3 scripts/diff_trivy.py diff \
+            --label "platform image (all Python services, mono build)" \
+            --before "$SCAN/baseline-image.json" \
+            --after "$SCAN/updated-image.json" \
+            --out "$OUT/python-frag-image.json"
+          python3 scripts/diff_trivy.py diff \
+            --label "uv.lock (full Python dependency graph)" \
+            --before "$SCAN/baseline-lock.json" \
+            --after "$SCAN/updated-lock.json" \
+            --out "$OUT/python-frag-lock.json"
+          cp uv.lock "$OUT/uv.lock"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-update
+          path: ${{ env.OUT }}
+          if-no-files-found: ignore # unchanged lockfile → nothing to hand over
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Prepare scratch dirs
+        run: |
+          echo "SCAN=$RUNNER_TEMP/scan" >> "$GITHUB_ENV"
+          echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/scan" "$RUNNER_TEMP/out"
+      - uses: extractions/setup-just@v2
+      - uses: aquasecurity/setup-trivy@v0.2.3
+        with:
+          cache: true
+      - name: Login to DHI registry
+        if: ${{ env.DHI_USER != '' }}
+        uses: docker/login-action@v4
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan the published data-portal:dev image
+        run: |
+          if docker pull "$REGISTRY/data-portal:dev"; then
+            trivy image --scanners vuln -f json -o "$SCAN/published-image.json" \
+              "$REGISTRY/data-portal:dev"
+            {
+              echo "## data-portal:dev — current exposure"
+              echo '```'
+              trivy convert --format table "$SCAN/published-image.json"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## data-portal:dev not found — skipping the published-image scan" \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Baseline — scan pnpm-lock.yaml and a fresh rebuild
+        run: |
+          trivy fs --scanners vuln -f json -o "$SCAN/baseline-lock.json" \
+            frontend/data-portal/pnpm-lock.yaml
+          just image frontend/data-portal baseline --pull
+          trivy image --scanners vuln -f json -o "$SCAN/baseline-image.json" \
+            "$REGISTRY/data-portal:baseline"
+
+      - name: Report rebuild-only drift (fixes a plain rebuild would pick up)
+        run: |
+          if [ -f "$SCAN/published-image.json" ]; then
+            python3 scripts/diff_trivy.py diff \
+              --label "data-portal image — rebuild-only drift (fresh base, unchanged lockfile)" \
+              --before "$SCAN/published-image.json" \
+              --after "$SCAN/baseline-image.json" \
+              --out "$SCAN/drift.json"
+            python3 scripts/diff_trivy.py render "$SCAN/drift.json" \
+              --out "$SCAN/drift.md" > /dev/null
+            cat "$SCAN/drift.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: pnpm/action-setup@v5
+        with:
+          package_json_file: frontend/data-portal/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Update the lockfile
+        id: update
+        working-directory: frontend/data-portal
+        # --lockfile-only: within package.json ranges, no node_modules install;
+        # the workspace's minimumReleaseAge supply-chain policy applies as usual
+        run: |
+          pnpm update --lockfile-only
+          if git diff --quiet pnpm-lock.yaml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "pnpm-lock.yaml is already fully up to date." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Updated — scan pnpm-lock.yaml and a fresh rebuild
+        if: ${{ steps.update.outputs.changed == 'true' }}
+        run: |
+          trivy fs --scanners vuln -f json -o "$SCAN/updated-lock.json" \
+            frontend/data-portal/pnpm-lock.yaml
+          just image frontend/data-portal updated --pull
+          trivy image --scanners vuln -f json -o "$SCAN/updated-image.json" \
+            "$REGISTRY/data-portal:updated"
+
+      - name: Diff baseline vs updated
+        if: ${{ steps.update.outputs.changed == 'true' }}
+        run: |
+          python3 scripts/diff_trivy.py diff \
+            --label "data-portal image" \
+            --before "$SCAN/baseline-image.json" \
+            --after "$SCAN/updated-image.json" \
+            --out "$OUT/frontend-frag-image.json"
+          python3 scripts/diff_trivy.py diff \
+            --label "pnpm-lock.yaml (front-end dependency graph)" \
+            --before "$SCAN/baseline-lock.json" \
+            --after "$SCAN/updated-lock.json" \
+            --out "$OUT/frontend-frag-lock.json"
+          cp frontend/data-portal/pnpm-lock.yaml "$OUT/pnpm-lock.yaml"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-update
+          path: ${{ env.OUT }}
+          if-no-files-found: ignore
+
+  # Combines whatever the scan jobs handed over and opens ONE PR when the update
+  # fixes anything. A fixed branch, updated in place, so daily runs never stack
+  # PRs. If a previously opened PR goes stale (main already got the fixes), it
+  # stays open for a human verdict — this job only ever rewrites the branch.
+  propose-update:
+    needs: [python, frontend]
+    # one ecosystem failing must not discard the other's verdict
+    if: ${{ !cancelled() && (needs.python.result == 'success' || needs.frontend.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # fallback path only — SECURITY_PR_TOKEN is preferred
+      pull-requests: write
+    env:
+      PR_TOKEN: ${{ secrets.SECURITY_PR_TOKEN }}
+    steps:
+      - name: Prepare scratch dir
+        run: echo "IN=$RUNNER_TEMP/in" >> "$GITHUB_ENV"
+      - name: Warn about the GITHUB_TOKEN fallback
+        if: ${{ env.PR_TOKEN == '' }}
+        run: |
+          echo "::warning::SECURITY_PR_TOKEN is not set — falling back to GITHUB_TOKEN. \
+          The created PR will NOT trigger ci.yaml (a GitHub limitation on \
+          GITHUB_TOKEN-created PRs); close/reopen it or push to it to get checks."
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*-update"
+          path: ${{ env.IN }}
+          merge-multiple: true
+
+      - name: Apply the updated lockfiles
+        id: apply
+        run: |
+          applied=false
+          if [ -f "$IN/uv.lock" ]; then
+            cp "$IN/uv.lock" uv.lock
+            applied=true
+          fi
+          if [ -f "$IN/pnpm-lock.yaml" ]; then
+            cp "$IN/pnpm-lock.yaml" frontend/data-portal/pnpm-lock.yaml
+            applied=true
+          fi
+          echo "applied=$applied" >> "$GITHUB_OUTPUT"
+
+      - name: Evaluate the scan comparison
+        id: verdict
+        if: ${{ steps.apply.outputs.applied == 'true' }}
+        run: |
+          shopt -s nullglob
+          frags=("$IN"/*-frag-*.json)
+          if [ ${#frags[@]} -eq 0 ]; then
+            echo "fixed=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          fixed=$(python3 scripts/diff_trivy.py render "${frags[@]}" \
+            --out "$RUNNER_TEMP/report.md")
+          echo "fixed=$fixed" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compose the PR body
+        if: ${{ steps.verdict.outputs.fixed > 0 }}
+        run: |
+          {
+            echo "Automated dependency-lock update from the daily security scan."
+            echo
+            echo "Each image was rebuilt twice from fresh bases — with the current"
+            echo "lockfiles (baseline) and after \`uv lock --upgrade\` /"
+            echo "\`pnpm update --lockfile-only\` — and both states were scanned with"
+            echo "Trivy (images and lockfiles). The tables below list only differences"
+            echo "attributable to the lockfile update; base-image-driven fixes are"
+            echo "excluded, since any rebuild picks those up without a repo change."
+            echo
+            cat "$RUNNER_TEMP/report.md"
+            echo
+            echo "Generated by [security-scan run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
+          } > "$RUNNER_TEMP/body.md"
+
+      - name: Open or update the PR
+        if: ${{ steps.verdict.outputs.fixed > 0 }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: automated/lockfile-security-update
+          base: main
+          title: "Security: lockfile update resolving ${{ steps.verdict.outputs.fixed }} known vulnerabilities"
+          body-path: ${{ runner.temp }}/body.md
+          commit-message: |
+            Update dependency lockfiles to resolve ${{ steps.verdict.outputs.fixed }} known vulnerabilities
+
+            Automated by the security-scan workflow.
+          add-paths: |
+            uv.lock
+            frontend/data-portal/pnpm-lock.yaml
+          delete-branch: true
+
+      - name: Summary when no PR is warranted
+        if: ${{ steps.verdict.outcome == 'skipped' || steps.verdict.outputs.fixed == '0' }}
+        run: |
+          echo "Lockfiles are up to date, or the available update fixes no known" \
+            "vulnerabilities — no PR opened." >> "$GITHUB_STEP_SUMMARY"
