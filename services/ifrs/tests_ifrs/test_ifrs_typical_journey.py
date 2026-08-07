@@ -17,7 +17,7 @@
 
 from uuid import uuid4
 
-import httpx
+import httpx2
 import pytest
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import ExpectedEvent
@@ -138,7 +138,7 @@ async def test_happy_journey(
         bucket_id=DOWNLOAD_BUCKET,
         object_id=str(download_object_id),
     )
-    async with httpx.AsyncClient() as client:
+    async with httpx2.AsyncClient() as client:
         response = await client.get(download_url, timeout=60)
     response.raise_for_status()
     assert response.content == file_object.content
