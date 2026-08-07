@@ -1,5 +1,8 @@
 # Copyright 2024 Kersten Henrik Breuer
 #
+# Modifications Copyright 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,8 +18,8 @@
 """Test the freeze function."""
 
 import pytest
-from arcticfreeze import freeze
 
+from arcticfreeze import freeze
 from tests.cases import INVALID_CASES, VALID_CASES, InvalidTestCase, ValidTestCase
 
 
@@ -27,7 +30,12 @@ from tests.cases import INVALID_CASES, VALID_CASES, InvalidTestCase, ValidTestCa
 )
 def test_valid_inputs(test_case: ValidTestCase):
     """Test the arctic freeze function with valid inputs."""
-    assert freeze(test_case.inputs) == test_case.expected_outputs
+    observed_outputs = freeze(test_case.inputs)
+
+    assert observed_outputs == test_case.expected_outputs
+    # Equality alone is not enough, as e.g. `set(...) == frozenset(...)` holds even
+    # though only the latter is immutable:
+    assert type(observed_outputs) is type(test_case.expected_outputs)
 
 
 @pytest.mark.parametrize(

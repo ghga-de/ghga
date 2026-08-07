@@ -1,5 +1,8 @@
 # Copyright 2024 Kersten Henrik Breuer
 #
+# Modifications Copyright 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at

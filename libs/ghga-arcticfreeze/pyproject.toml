@@ -1,94 +1,148 @@
 [build-system]
 requires = [
-    "setuptools>=67.7.2",
+    "setuptools>=82",
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 readme = "README.md"
 authors = [
-    { name = "KerstenBreuer", email = "kersten-breuer@outlook.com" },
+    { name = "Kersten Henrik Breuer", email = "kersten-breuer@outlook.com" },
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 classifiers = [
-    "Development Status :: 1 - Planning",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "arcticfreeze"
-version = "0.1.1"
+name = "ghga-arcticfreeze"
+version = "1.0.0"
 description = "Enjoy Python on the rocks with deeply (recursively) frozen data structures."
-dependencies = [
-    "immutabledict >=4, <5"
+maintainers = [
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
 ]
-
-[project.optional-dependencies]
-pydantic = [
-    "pydantic >=2, <3",
+dependencies = [
+    "immutabledict >= 4.3.1, <5",
 ]
 
 [project.license]
 text = "Apache 2.0"
 
+[project.optional-dependencies]
+pydantic = [
+    "pydantic >= 2.13.0, <3",
+]
+
 [project.urls]
-Repository = "https://github.com/kerstenbreuer/arcticfreeze"
+Repository = "https://github.com/ghga-de/ghga-arcticfreeze"
 
 [tool.setuptools.packages.find]
 where = [
     "src",
 ]
 
+[tool.ruff]
+exclude = [
+    ".git",
+    ".devcontainer",
+    "__pycache__",
+    "build",
+    "dist",
+]
+line-length = 88
+src = [
+    "src",
+    "tests",
+    "examples",
+    "scripts",
+]
+target-version = "py313"
+
 [tool.ruff.lint]
 fixable = [
-    "UP", # e.g. List -> list
-    "I", # sort imports
-    "D", # pydocstyle
+    "UP",
+    "I",
+    "D",
+    "RUF022",
 ]
 ignore = [
-    "E", # pycodestyle errors
-    "W", # pycodestyle warnings - pycodestyle covered by ruff
-    "PLW", # pylint warnings
-    "RUF001", # ambiguous unicode character strings
-    "RUF010", # explicit conversion to string or repr: !s or !r
-    "RUF012", # mutable class variables need typing.ClassVar annotation
-    "N818", # Errors need to have Error suffix
-    "B008", # function call in arg defaults,
-    "PLR2004", # magic numbers should be constants
-    "D205", # blank-line-after-summary
-    "D400", # first doc line ends in period
-    "D401", # non-imperative-mood
-    "D107", # missing docstring in __init__
-    "D206", # indent-with-spaces (ignored for formatter)
-    "D300", # triple-single-quotes (ignored for formatter)
+    "E111",
+    "E114",
+    "E116",
+    "E117",
+    "E501",
+    "W191",
+    "PLW",
+    "RUF001",
+    "RUF010",
+    "RUF012",
+    "N818",
+    "B008",
+    "PLR2004",
+    "D205",
+    "D400",
+    "D401",
+    "D107",
+    "D206",
+    "D300",
+    "UP040",
+    "PLC0206",
 ]
 select = [
-    "C90", # McCabe Complexity
-    "F", # pyflakes codes
-    "I", # isort
-    "S", # flake8-bandit
-    "B", # flake8-bugbear
-    "N", # pep8-naming
-    "UP", # pyupgrade
-    "PL", # pylint
-    "RUF", # ruff
-    "SIM", # flake8-simplify
-    "D", # pydocstyle
+    "C90",
+    "F",
+    "I",
+    "S",
+    "B",
+    "N",
+    "UP",
+    "PL",
+    "RUF",
+    "SIM",
+    "D",
+    "E",
+    "W",
+    "ASYNC",
+    "LOG",
+    "PERF",
+    "RET",
+    "C4",
 ]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/*" = ["PL", "S", "SIM", "D"]
-"tests/*" = ["S", "SIM", "PLR", "B011"]
-".devcontainer/*" = ["S", "SIM", "D"]
-"examples/*" = ["S", "D"]
-"__init__.py" = ["D"]
+"scripts/*" = [
+    "PL",
+    "S",
+    "SIM",
+    "D",
+    "E402",
+]
+"tests/*" = [
+    "S",
+    "SIM",
+    "PLR",
+    "B011",
+]
+".devcontainer/*" = [
+    "S",
+    "SIM",
+    "D",
+]
+"examples/*" = [
+    "S",
+    "D",
+]
+"__init__.py" = [
+    "D",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
@@ -97,7 +151,7 @@ convention = "pep257"
 disable_error_code = "import"
 show_error_codes = true
 exclude = [
-    'build/lib/',
+    "build/lib/",
 ]
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -105,12 +159,13 @@ check_untyped_defs = true
 no_site_packages = false
 
 [tool.pytest.ini_options]
-minversion = "7.1"
+minversion = "9.0"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [
-  "src",
-  "/workspace/src",
-  "**/lib/python*/site-packages",
+    "src",
+    "/workspace/src",
+    "**/lib/python*/site-packages",
 ]
