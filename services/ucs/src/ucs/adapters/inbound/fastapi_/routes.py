@@ -18,7 +18,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Query, status
+from fastapi import APIRouter, BackgroundTasks, Path, Query, status
 from pydantic import UUID4
 
 from ucs.adapters.inbound.fastapi_ import (
@@ -27,7 +27,7 @@ from ucs.adapters.inbound.fastapi_ import (
     http_exceptions,
     rest_models,
 )
-from ucs.constants import TRACER
+from ucs.constants import MAX_PART_COUNT, TRACER
 from ucs.ports.inbound.controller import UploadControllerPort
 
 router = APIRouter(tags=["UploadControllerService"])
@@ -325,7 +325,7 @@ async def update_box(  # noqa: C901, PLR0912
     },
 )
 @TRACER.start_as_current_span("routes.get_box_uploads")
-async def get_box_uploads(  # noqa: PLR0913
+async def get_box_uploads(  # noqa: PLR0913, PLR0917
     box_id: UUID4,
     work_order: Annotated[
         rest_models.ViewFileBoxWorkOrder,
@@ -468,10 +468,9 @@ async def create_file_upload(  # noqa: C901
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
 
-    response_payload = rest_models.FileUploadCreationResponse(
+    return rest_models.FileUploadCreationResponse(
         file_id=file_id, alias=file_alias, storage_alias=storage_alias
     )
-    return response_payload
 
 
 @router.get(
@@ -488,10 +487,10 @@ async def create_file_upload(  # noqa: C901
     },
 )
 @TRACER.start_as_current_span("routes.get_part_upload_url")
-async def get_part_upload_url(  # noqa: PLR0913
+async def get_part_upload_url(  # noqa: PLR0913, PLR0917
     box_id: UUID4,
     file_id: UUID4,
-    part_no: int,
+    part_no: Annotated[int, Path(ge=1, le=MAX_PART_COUNT)],
     work_order: Annotated[
         rest_models.UploadFileWorkOrder,
         http_authorization.require_upload_file_work_order,
@@ -507,7 +506,7 @@ async def get_part_upload_url(  # noqa: PLR0913
     """
     if work_order.box_id != box_id or work_order.file_id != file_id:
         raise http_exceptions.HttpNotAuthorizedError()
-    elif work_order.work_type != "upload":
+    if work_order.work_type != "upload":
         raise http_exceptions.HttpNotAuthorizedError(status_code=401)
 
     try:

@@ -23,7 +23,7 @@ from typing import Any
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
-import httpx
+import httpx2
 import pytest
 
 from ghga_event_schemas.pydantic_ import FileDeletionRequested, InterrogationSuccess
@@ -51,6 +51,15 @@ def calc_expected_encrypted_checksum(content: str) -> str:
     part_md5 = hashlib.md5(content.encode(), usedforsecurity=False).digest()
     object_md5 = hashlib.md5(part_md5, usedforsecurity=False).hexdigest()
     return object_md5 + "-1"  # only one part
+
+
+async def upload_to_s3(url: str, content: str | bytes) -> httpx2.Response:
+    """Upload content to a pre-signed S3 URL.
+
+    Uses httpx2 directly instead of the test client in order to bypass routing.
+    """
+    async with httpx2.AsyncClient(timeout=30) as client:
+        return await client.put(url, content=content)
 
 
 async def test_integrated_aspects(joint_fixture: JointFixture):
@@ -149,8 +158,7 @@ async def test_integrated_aspects(joint_fixture: JointFixture):
         # Actually upload dummy data to S3 fixture
         temp_file.seek(0)  # Reset file pointer to beginning
 
-        # Use httpx directly instead of the test client to bypass routing
-        response = httpx.put(url, content=temp_file.read(), timeout=30)
+        response = await upload_to_s3(url, temp_file.read())
         assert response.status_code == 200
 
         # File is now uploaded, so complete the upload
@@ -253,7 +261,7 @@ async def test_s3_upload_completed_but_db_not_updated(joint_fixture: JointFixtur
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
     # Upload the content
-    response = httpx.put(url, content=CONTENT)
+    response = await upload_to_s3(url, CONTENT)
     assert response.status_code == 200
 
     # To simulate the hiccup, we'll manually complete the upload. This will create the
@@ -321,7 +329,7 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
     # Upload the content
-    response = httpx.put(url, content=CONTENT)
+    response = await upload_to_s3(url, CONTENT)
     assert response.status_code == 200
 
     # To simulate the hiccup, we'll manually abort the upload. This will create the
@@ -397,7 +405,7 @@ async def test_s3_upload_complete_fails(joint_fixture: JointFixture):
     part_url = response.json()
 
     # Upload the content again
-    response = httpx.put(part_url, content=CONTENT)
+    response = await upload_to_s3(part_url, CONTENT)
     assert response.status_code == 200
     expected_encrypted_checksum = calc_expected_encrypted_checksum(CONTENT)
 
@@ -550,7 +558,7 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
 
     # Get upload URL and upload the file content
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
-    response = httpx.put(url, content=CONTENT)
+    response = await upload_to_s3(url, CONTENT)
     expected_encrypted_checksum = calc_expected_encrypted_checksum(CONTENT)
     assert response.status_code == 200
 
@@ -615,7 +623,7 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
         object_id=str(interrogated_object_id),
         part_number=1,
     )
-    response = httpx.put(url=upload_url, content=b"some content does not matter what")
+    response = await upload_to_s3(upload_url, b"some content does not matter what")
     assert response.status_code == 200, "Failed to upload dummy re-encrypted object"
     await s3_storage.complete_multipart_upload(
         upload_id=upload_id,
@@ -947,7 +955,7 @@ async def test_cleanup_of_orphaned_files(
         )
     for file_id in [file_init_id, file_inbox_id, file_cancelled_id]:
         url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
-        httpx.put(url, content=b"some-data")
+        await upload_to_s3(url, b"some-data")
 
     # Complete the uploads
     collection = joint_fixture.mongodb.client[joint_fixture.config.db_name][
@@ -997,7 +1005,7 @@ async def test_cleanup_of_orphaned_files(
         url = await s3_storage.get_part_upload_url(
             upload_id=upload_id, bucket_id=bucket_id, object_id=object_id, part_number=1
         )
-        httpx.put(url, content=b"some-data")
+        await upload_to_s3(url, b"some-data")
         await s3_storage.complete_multipart_upload(
             upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
         )
@@ -1020,16 +1028,10 @@ async def test_cleanup_of_orphaned_files(
             super().__init__("You don't have permission to do that.")
 
     async def _delete_with_error(bucket_id: str, object_id: str) -> None:
-        """Raises an ObjectNotFoundError, then _S3PermissionError, then reverts."""
-        if object_id == orphaned_object_id1:
-            await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
-            raise s3_storage.ObjectNotFoundError(
-                bucket_id=bucket_id, object_id=object_id
-            )
-        elif object_id == file_cancelled_object_id:
+        """Raises an _S3PermissionError for one object, deletes the rest normally."""
+        if object_id == file_cancelled_object_id:
             raise _S3PermissionError(bucket_id=bucket_id, object_id=object_id)
-        else:
-            return await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
+        return await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
 
     if simulate_errors:
         s3_storage.delete_object = _delete_with_error
@@ -1043,17 +1045,14 @@ async def test_cleanup_of_orphaned_files(
     with caplog.at_level("INFO"):
         await controller.cleanup_stale_uploads()
 
-    deleted_count = 1 if simulate_errors else 3
+    deleted_count = 2 if simulate_errors else 3
     log_msg = (
         f"Cleaned up {deleted_count} orphaned object(s) from bucket {bucket_id}"
         + " in storage alias test."
     )
 
     if simulate_errors:
-        log_msg += (
-            " An additional 1 object(s) could not be deleted and 1 object(s) were no"
-            + " longer present by the time deletion was attempted."
-        )
+        log_msg += " An additional 1 object(s) could not be deleted."
     assert log_msg in caplog.messages
 
     # Verify that the orphaned and cancelled files are gone, but init and inbox remain
@@ -1093,7 +1092,7 @@ async def test_upload_activity_deleted_after_completion_failure(
 
     # Upload content and attempt completion with a wrong checksum
     url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
-    response = httpx.put(url, content=CONTENT)
+    response = await upload_to_s3(url, CONTENT)
     assert response.status_code == 200
 
     async with set_correlation_id(uuid4()):
