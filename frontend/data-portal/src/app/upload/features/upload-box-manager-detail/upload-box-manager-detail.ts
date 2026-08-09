@@ -19,6 +19,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
+import { PageEvent } from '@angular/material/paginator';
+import { Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
@@ -192,15 +194,50 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     }));
   });
 
-  /** The file uploads contained in this box. */
-  fileUploads = computed<FileUploadWithAccession[]>(() =>
-    this.#uploadBoxService.boxFileUploads.value(),
+  /** The file uploads on the currently shown page of this box. */
+  pageFiles = computed<FileUploadWithAccession[]>(() =>
+    this.#uploadBoxService.boxFiles(),
   );
+
+  /** The total number of file uploads in this box, across all pages. */
+  filesTotalCount = this.#uploadBoxService.boxFilesTotalCount;
+
+  /** The number of file uploads shown per page. */
+  filesPageSize = this.#uploadBoxService.boxFilesLimit;
+
+  /** The zero-based index of the currently shown page of file uploads. */
+  filesPageIndex = computed<number>(() => {
+    const pageSize = this.filesPageSize();
+    if (!pageSize) return 0;
+    return Math.floor(this.#uploadBoxService.boxFilesSkip() / pageSize);
+  });
+
+  /** The column and direction the file uploads are currently sorted by. */
+  filesSortState = this.#uploadBoxService.boxFilesSortState;
 
   /** Whether the box's file list is still being loaded. */
   filesLoading = computed<boolean>(() =>
     this.#uploadBoxService.boxFileUploads.isLoading(),
   );
+
+  /**
+   * Request a different page of file uploads from the server.
+   * @param event - the page event emitted by the paginator
+   */
+  onFilesPage(event: PageEvent): void {
+    this.#uploadBoxService.paginateFileUploads(
+      event.pageSize,
+      event.pageIndex * event.pageSize,
+    );
+  }
+
+  /**
+   * Request the file uploads in a different order from the server.
+   * @param sort - the sort event emitted by the table headers
+   */
+  onFilesSort(sort: Sort): void {
+    this.#uploadBoxService.sortFileUploadsByColumn(sort.active, sort.direction);
+  }
 
   /** Whether a box state change (lock or reopen) is currently in flight. */
   isChangingState = signal<boolean>(false);

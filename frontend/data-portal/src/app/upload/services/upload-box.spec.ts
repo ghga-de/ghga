@@ -19,6 +19,12 @@ import {
   UploadBoxState,
   UploadBoxVirtualFilter,
 } from '../models/box';
+import {
+  BoxUploadsPage,
+  DEFAULT_UPLOADS_PAGE_SIZE,
+  FileUploadWithAccession,
+  MAX_UPLOADS_PAGE_SIZE,
+} from '../models/file-upload';
 import { GrantWithBoxInfo, UploadGrant } from '../models/grant';
 import { UploadBoxService } from './upload-box';
 
@@ -817,26 +823,243 @@ describe('UploadBoxService', () => {
 
   describe('loadFileUploadsForBox', () => {
     const BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
+    const UPLOADS_URL = `http://mock.dev/rs/upload-boxes/${encodeURIComponent(BOX_ID)}/uploads`;
 
-    it('should request file uploads filtered by box id', async () => {
+    const FILE: FileUploadWithAccession = {
+      id: 'file-1',
+      box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
+      alias: 'alpha.txt',
+      state: 'interrogated',
+      state_updated: '2026-01-01T00:00:00Z',
+      storage_alias: 'TUE01',
+      bucket_id: 'inbox-tue01',
+      decrypted_sha256: null,
+      decrypted_size: 1024,
+      encrypted_size: 2048,
+      part_size: 512,
+      accession: null,
+    };
+
+    /**
+     * Flush the pending request for a page of file uploads.
+     * @param page - the page to respond with
+     * @returns the query parameters of the flushed request
+     */
+    async function flushUploads(page: BoxUploadsPage): Promise<URLSearchParams> {
+      const req = httpMock.expectOne((request) => request.url === UPLOADS_URL);
+      expect(req.request.method).toBe('GET');
+      const params = new URLSearchParams(req.request.params.toString());
+      req.flush(page);
+      await Promise.resolve();
+      return params;
+    }
+
+    it('should request the first page of file uploads for the box', async () => {
       service.loadFileUploadsForBox(BOX_ID);
       testBed.tick();
 
-      const req = httpMock.expectOne(
-        `http://mock.dev/rs/upload-boxes/${encodeURIComponent(BOX_ID)}/uploads`,
-      );
-      expect(req.request.method).toBe('GET');
-      req.flush([]);
+      const params = await flushUploads({ items: [FILE], total_count: 42 });
 
+      expect(params.get('skip')).toBe('0');
+      expect(params.get('limit')).toBe(String(DEFAULT_UPLOADS_PAGE_SIZE));
+      expect(params.has('sort')).toBe(false);
+
+      expect(service.boxFiles()).toEqual([FILE]);
+      expect(service.boxFilesTotalCount()).toBe(42);
+    });
+
+    it('should request another page when paginated', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [FILE], total_count: 42 });
+
+      service.paginateFileUploads(25, 50);
+      testBed.tick();
+      const params = await flushUploads({ items: [], total_count: 42 });
+
+      expect(params.get('skip')).toBe('50');
+      expect(params.get('limit')).toBe('25');
+      expect(service.boxFilesSkip()).toBe(50);
+      expect(service.boxFilesLimit()).toBe(25);
+    });
+
+    it('should cap the page size at the maximum the backend accepts', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 0 });
+
+      service.paginateFileUploads(5000, 0);
+      testBed.tick();
+      const params = await flushUploads({ items: [], total_count: 0 });
+
+      expect(params.get('limit')).toBe(String(MAX_UPLOADS_PAGE_SIZE));
+    });
+
+    it('should send the sort order and return to the first page when sorting', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      service.paginateFileUploads(DEFAULT_UPLOADS_PAGE_SIZE, 20);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      service.sortFileUploadsByColumn('size', 'desc');
+      testBed.tick();
+      const params = await flushUploads({ items: [], total_count: 42 });
+
+      expect(params.get('sort')).toBe('-decrypted_size');
+      expect(params.get('skip')).toBe('0');
+      expect(service.boxFilesSortState()).toEqual({
+        column: 'size',
+        direction: 'desc',
+      });
+    });
+
+    it('should sort by the accession shown for archived boxes', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      service.sortFileUploadsByColumn('accession', 'asc');
+      testBed.tick();
+      const params = await flushUploads({ items: [], total_count: 42 });
+
+      expect(params.get('sort')).toBe('accession');
+      expect(service.boxFilesSortState()).toEqual({
+        column: 'accession',
+        direction: 'asc',
+      });
+    });
+
+    it('should reset pagination and sorting when switching to another box', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      service.paginateFileUploads(25, 50);
+      service.sortFileUploadsByColumn('alias', 'desc');
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      const OTHER_BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68002';
+      service.loadFileUploadsForBox(OTHER_BOX_ID);
+      testBed.tick();
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url ===
+          `http://mock.dev/rs/upload-boxes/${encodeURIComponent(OTHER_BOX_ID)}/uploads`,
+      );
+      const params = new URLSearchParams(req.request.params.toString());
+      req.flush({ items: [], total_count: 0 });
       await Promise.resolve();
 
-      expect(service.boxFileUploads.value()).toEqual([]);
+      expect(params.get('skip')).toBe('0');
+      expect(params.get('limit')).toBe(String(DEFAULT_UPLOADS_PAGE_SIZE));
+      expect(params.has('sort')).toBe(false);
     });
 
     it('should not request file uploads when no box id has been set', () => {
       testBed.tick();
       // httpMock.verify() in afterEach ensures no unexpected requests were made
-      expect(service.boxFileUploads.value()).toEqual([]);
+      expect(service.boxFiles()).toEqual([]);
+      expect(service.boxFilesTotalCount()).toBe(0);
+    });
+  });
+
+  describe('loadAllFileUploadsForBox', () => {
+    const BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
+    const UPLOADS_URL = `http://mock.dev/rs/upload-boxes/${encodeURIComponent(BOX_ID)}/uploads`;
+
+    /**
+     * Build a page of distinct file uploads.
+     * @param count - the number of file uploads on the page
+     * @param offset - the index the aliases and IDs start at
+     * @returns the file uploads of the page
+     */
+    function makeFiles(count: number, offset = 0): FileUploadWithAccession[] {
+      return Array.from({ length: count }, (_, index) => ({
+        id: `file-${offset + index}`,
+        box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
+        alias: `file-${offset + index}.txt`,
+        state: 'interrogated' as const,
+        state_updated: '2026-01-01T00:00:00Z',
+        storage_alias: 'TUE01',
+        bucket_id: 'inbox-tue01',
+        decrypted_sha256: null,
+        decrypted_size: 1024,
+        encrypted_size: 2048,
+        part_size: 512,
+        accession: null,
+      }));
+    }
+
+    /**
+     * Flush the pending request for a page of the complete file list.
+     * @param page - the page to respond with
+     * @returns the query parameters of the flushed request
+     */
+    async function flushPage(page: BoxUploadsPage): Promise<URLSearchParams> {
+      const req = httpMock.expectOne((request) => request.url === UPLOADS_URL);
+      const params = new URLSearchParams(req.request.params.toString());
+      req.flush(page);
+      // Two microtask turns: one for the HTTP promise, one for the loader loop.
+      await Promise.resolve();
+      await Promise.resolve();
+      return params;
+    }
+
+    it('should request the complete file list with the maximum page size', async () => {
+      service.loadAllFileUploadsForBox(BOX_ID);
+      testBed.tick();
+
+      const files = makeFiles(3);
+      const params = await flushPage({ items: files, total_count: 3 });
+
+      expect(params.get('skip')).toBe('0');
+      expect(params.get('limit')).toBe(String(MAX_UPLOADS_PAGE_SIZE));
+      expect(service.allBoxFiles()).toEqual(files);
+    });
+
+    it('should walk through all pages of a box larger than one page', async () => {
+      service.loadAllFileUploadsForBox(BOX_ID);
+      testBed.tick();
+
+      const totalCount = 2 * MAX_UPLOADS_PAGE_SIZE + 5;
+      const firstPage = makeFiles(MAX_UPLOADS_PAGE_SIZE);
+      const secondPage = makeFiles(MAX_UPLOADS_PAGE_SIZE, MAX_UPLOADS_PAGE_SIZE);
+      const thirdPage = makeFiles(5, 2 * MAX_UPLOADS_PAGE_SIZE);
+
+      const first = await flushPage({ items: firstPage, total_count: totalCount });
+      expect(first.get('skip')).toBe('0');
+
+      const second = await flushPage({ items: secondPage, total_count: totalCount });
+      expect(second.get('skip')).toBe(String(MAX_UPLOADS_PAGE_SIZE));
+
+      const third = await flushPage({ items: thirdPage, total_count: totalCount });
+      expect(third.get('skip')).toBe(String(2 * MAX_UPLOADS_PAGE_SIZE));
+
+      // httpMock.verify() in afterEach ensures no further page was requested.
+      expect(service.allBoxFiles()).toHaveLength(totalCount);
+      expect(service.allBoxFiles()).toEqual([
+        ...firstPage,
+        ...secondPage,
+        ...thirdPage,
+      ]);
+    });
+
+    it('should stop walking when a page comes back empty despite a higher count', async () => {
+      service.loadAllFileUploadsForBox(BOX_ID);
+      testBed.tick();
+
+      const files = makeFiles(2);
+      await flushPage({ items: files, total_count: 99 });
+      // The backend claims more files than it delivers; the walk must not loop
+      // forever on the same offset.
+      await flushPage({ items: [], total_count: 99 });
+
+      expect(service.allBoxFiles()).toEqual(files);
     });
   });
 });

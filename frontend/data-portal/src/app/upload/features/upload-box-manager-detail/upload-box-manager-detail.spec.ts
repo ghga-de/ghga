@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, provideRouter } from '@angular/router';
@@ -15,7 +15,10 @@ import { MetadataService } from '@app/metadata/services/metadata';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
-import { FileUploadWithAccession } from '@app/upload/models/file-upload';
+import {
+  DEFAULT_UPLOADS_PAGE_SIZE,
+  FileUploadWithAccession,
+} from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
 import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
@@ -52,10 +55,22 @@ class MockUploadBoxService {
   };
 
   boxFileUploads = {
-    value: this.#fileUploadsList.asReadonly(),
     isLoading: () => false,
     error: () => undefined,
   };
+
+  allBoxFileUploads = {
+    isLoading: () => false,
+    error: () => undefined,
+  };
+
+  boxFiles = this.#fileUploadsList.asReadonly();
+  boxFilesTotalCount = computed<number>(() => this.#fileUploadsList().length);
+  boxFilesSkip = signal<number>(0);
+  boxFilesLimit = signal<number>(DEFAULT_UPLOADS_PAGE_SIZE);
+  boxFilesSortState = signal({ column: 'alias', direction: 'asc' as const });
+
+  allBoxFiles = this.#fileUploadsList.asReadonly();
 
   storageLabels = {
     value: () => ({ TUE01: 'Tübingen 1' }) as Record<string, string>,
@@ -66,6 +81,9 @@ class MockUploadBoxService {
   loadStorageLabels = vitest.fn();
   loadBoxGrants = vitest.fn();
   loadFileUploadsForBox = vitest.fn();
+  loadAllFileUploadsForBox = vitest.fn();
+  paginateFileUploads = vitest.fn();
+  sortFileUploadsByColumn = vitest.fn();
   addUploadGrant = vitest.fn();
   submitFileMapping = vitest.fn(() => of(undefined));
   archiveUploadBox = vitest.fn(() => of(undefined));

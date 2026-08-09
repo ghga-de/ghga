@@ -14,10 +14,6 @@ allowBuilds:
   msgpackr-extract: true
   msw: true
   unrs-resolver: true
-minimumReleaseAgeExclude:
-  - ngx-mat-input-tel@22.0.1
-  - '@angular-devkit/architect@0.2200.3'
-  - '@angular-devkit/core@22.0.3'
-  - '@angular-devkit/schematics@22.0.3'
-  - '@angular/cli@22.0.3'
-  - '@schematics/angular@22.0.3'
+# Versions exempted from the default 24 hour minimumReleaseAge quarantine.
+# Entries can be dropped again once the versions are older than one day.
+minimumReleaseAgeExclude: []

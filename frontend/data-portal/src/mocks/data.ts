@@ -15,7 +15,10 @@ import { SearchResults } from '@app/metadata/models/search-results';
 import { Study } from '@app/metadata/models/study';
 import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { BoxRetrievalResults, UploadBoxState } from '@app/upload/models/box';
-import { FileUploadWithAccession } from '@app/upload/models/file-upload';
+import {
+  BoxUploadsPage,
+  FileUploadWithAccession,
+} from '@app/upload/models/file-upload';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { FileIdMap, Study as RsStudy } from '@app/upload/models/study';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
@@ -1549,6 +1552,27 @@ export const uploadBox2FileUploads: FileUploadWithAccession[] = [
 ];
 
 /**
+ * Build the upload timestamp for one of the generated file uploads of a box.
+ *
+ * The uploads of a box are spread over two consecutive days, and deliberately not
+ * in the same order as the file aliases, so that sorting the file table by upload
+ * time gives a visibly different order than sorting it by file name.
+ * @param index - the index of the file within the box
+ * @param count - the number of files in the box
+ * @param firstDay - the ISO date (YYYY-MM-DD) of the first of the two days
+ * @returns the ISO timestamp at which the file finished uploading
+ */
+function uploadedAt(index: number, count: number, firstDay: string): string {
+  // 11 is coprime with both box sizes, so this permutes the files without repeats.
+  const slot = (index * 11) % count;
+  const perDay = Math.ceil(count / 2);
+  const uploaded = new Date(`${firstDay}T08:00:00Z`);
+  uploaded.setUTCDate(uploaded.getUTCDate() + Math.floor(slot / perDay));
+  uploaded.setUTCMinutes(uploaded.getUTCMinutes() + (slot % perDay) * 25);
+  return `${uploaded.toISOString().slice(0, 19)}Z`;
+}
+
+/**
  * RS file uploads for box 3 (archived, 28 files)
  */
 export const uploadBox3FileUploads: FileUploadWithAccession[] = Array.from(
@@ -1558,7 +1582,7 @@ export const uploadBox3FileUploads: FileUploadWithAccession[] = Array.from(
     box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68003',
     alias: `archived_sample_${String(i + 1).padStart(3, '0')}.fastq.gz`,
     state: 'archived' as FileUploadWithAccession['state'],
-    state_updated: '2025-06-01T10:00:00Z',
+    state_updated: uploadedAt(i, 28, '2025-06-01'),
     storage_alias: 'TUE03',
     bucket_id: 'inbox-tue03',
     decrypted_sha256: (i % 10).toString().repeat(64),
@@ -1582,7 +1606,7 @@ export const uploadBox4FileUploads: FileUploadWithAccession[] = Array.from(
       box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68004',
       alias: `sample_proteome_${String(i + 1).padStart(3, '0')}.raw`,
       state,
-      state_updated: '2026-02-04T08:00:00Z',
+      state_updated: uploadedAt(i, 15, '2026-02-04'),
       storage_alias: 'HD02',
       bucket_id: 'inbox-hd02',
       decrypted_sha256:
@@ -1625,6 +1649,39 @@ export const uploadBox5FileUploads: FileUploadWithAccession[] = [
     accession: null,
   },
 ];
+
+/**
+ * Build the complete file upload collection of an upload box.
+ *
+ * The `/upload-boxes/{id}/uploads` endpoint is paginated and sorted by the RS, so
+ * these fixtures hold every file of a box in the RS default order (by alias). The
+ * mock handler derives whatever page and sort order a request asks for from them,
+ * which is why there is one fixture per box rather than one per request.
+ * @param files - all file uploads of the box
+ * @returns the complete collection response for that box
+ */
+function uploadsCollection(files: FileUploadWithAccession[]): BoxUploadsPage {
+  const items = [...files].sort((left, right) => left.alias.localeCompare(right.alias));
+  return { items, total_count: items.length };
+}
+
+/** The response for upload boxes without any file uploads */
+export const emptyUploadsCollection: BoxUploadsPage = { items: [], total_count: 0 };
+
+/** File uploads of box 1 (open, 4 files) */
+export const uploadBox1Uploads = uploadsCollection(uploadBox1FileUploads);
+
+/** File uploads of box 2 (locked, 15 files, used by the mapping tool) */
+export const uploadBox2Uploads = uploadsCollection(uploadBox2FileUploads);
+
+/** File uploads of box 3 (archived, 28 files, i.e. three pages) */
+export const uploadBox3Uploads = uploadsCollection(uploadBox3FileUploads);
+
+/** File uploads of box 4 (open, 15 files) */
+export const uploadBox4Uploads = uploadsCollection(uploadBox4FileUploads);
+
+/** File uploads of box 5 (open, 2 files) */
+export const uploadBox5Uploads = uploadsCollection(uploadBox5FileUploads);
 
 /**
  * WPS API
