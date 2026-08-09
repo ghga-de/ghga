@@ -152,7 +152,7 @@ def export_mermaid(schemapack: SchemaPack, content_properties: bool = True) -> s
     Returns:
         A string representing the SchemaPack in mermaid format.
     """
-    erd_str = "erDiagram\n\n" + "\n\n".join(
+    return "erDiagram\n\n" + "\n\n".join(
         export_class(
             class_name=class_name,
             class_def=class_def,
@@ -160,5 +160,3 @@ def export_mermaid(schemapack: SchemaPack, content_properties: bool = True) -> s
         )
         for class_name, class_def in schemapack.classes.items()
     )
-
-    return erd_str

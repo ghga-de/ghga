@@ -20,6 +20,7 @@ from schemapack._internals.spec.datapack import (
     SUPPORTED_DATA_PACK_VERSIONS,
     DataPack,
     Resource,
+    ResourceRelation,
     SupportedDataPackVersions,
 )
 
@@ -27,5 +28,6 @@ __all__ = [
     "SUPPORTED_DATA_PACK_VERSIONS",
     "DataPack",
     "Resource",
+    "ResourceRelation",
     "SupportedDataPackVersions",
 ]
