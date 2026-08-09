@@ -17,15 +17,15 @@
 
 from uuid import uuid4
 
+import httpx2
 import pytest
-import requests
-
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3.testutils import (
     FileObject,
     tmp_file,  # noqa: F401
 )
+
 from tests_ifrs.fixtures.example_data import EXAMPLE_ARCHIVABLE_FILE
 from tests_ifrs.fixtures.joint import JointFixture
 from tests_ifrs.fixtures.utils import (
@@ -138,7 +138,8 @@ async def test_happy_journey(
         bucket_id=DOWNLOAD_BUCKET,
         object_id=str(download_object_id),
     )
-    response = requests.get(download_url, timeout=60)
+    async with httpx2.AsyncClient() as client:
+        response = await client.get(download_url, timeout=60)
     response.raise_for_status()
     assert response.content == file_object.content
 
