@@ -16,7 +16,7 @@
 
 """Test the api_factory module."""
 
-import httpx
+import httpx2
 import pytest
 from fastapi import FastAPI
 
@@ -37,7 +37,7 @@ pytestmark = pytest.mark.asyncio()
 async def get_example_app_client(
     dao_factory: DaoFactoryProtocol,
     artifact_infos: list[ArtifactInfo] = EXAMPLE_ARTIFACT_INFOS,
-) -> httpx.AsyncClient:
+) -> httpx2.AsyncClient:
     """Return a test client for a FastAPI generated using the artifact_rest_factory."""
     router = await rest_api_factory(
         artifact_infos=artifact_infos, dao_factory=dao_factory
