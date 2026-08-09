@@ -30,8 +30,23 @@ exports:
     job:
       enabled: false
     
-    cronjob:
-      enabled: false
+    # A map of CronJobs to render alongside (or instead of) the Deployment. It's a
+    # map rather than a list so downstream values files can override a single
+    # cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to
+    # redefine the whole list - Helm only deep-merges maps, not lists.
+    # The map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`),
+    # except for the reserved key `default`, which renders with no suffix - use that
+    # key for the common case of a single cronjob.
+    # Each entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`,
+    # and `executableArgs` independently of the Deployment/other cronjobs; unset
+    # fields fall back to the top-level values.
+    # `podAnnotations` on an entry are added on top of the top-level `podAnnotations`
+    # (and any vault agent annotations), taking precedence on conflicting keys - e.g.
+    # to set `vault.hashicorp.com/agent-pre-populate-only: "true"` only for a cronjob
+    # while the Deployment keeps the vault agent sidecar running.
+    cronjobs:
+      default:
+        enabled: false
     
     nameOverride: ""
 

@@ -1,0 +1,11 @@
+deployment:
+  enabled: true
+
+cronSchedule: "0 * * * *"
+
+cronjobs:
+  default:
+    enabled: true
+    podAnnotations:
+      vault.hashicorp.com/agent-pre-populate-only: "true"
+      backup.example.com/note: "cronjob-only"

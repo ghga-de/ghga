@@ -181,3 +181,137 @@ def test_command_style_exec(rendered_chart):
     container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
     assert container["command"] == ["myexe"]
     assert container["args"] == ["run-rest"]
+
+
+def test_cronjob_single_backward_compatible(rendered_chart, expected):
+    # A single, unnamed cronjobs[] entry keeps the pre-array naming (no suffix)
+    # and inherits schedule/command/history-limit from the top-level values.
+    manifests = rendered_chart("common.yaml", "cronjob_single.yaml")
+
+    assert "Deployment" not in manifests
+
+    cronjob = manifests["CronJob"]
+    assert cronjob["metadata"]["name"] == expected("cronjob_single", "metadata")["name"]
+    assert cronjob["spec"]["schedule"] == expected("cronjob_single", "spec")["schedule"]
+    assert (
+        cronjob["spec"]["successfulJobsHistoryLimit"]
+        == expected("cronjob_single", "spec")["successfulJobsHistoryLimit"]
+    )
+
+    container = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["command"] == expected("cronjob_single", "command")
+    assert container["args"] == expected("cronjob_single", "args")
+
+
+def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
+    # Deployment and multiple cronjobs can be shipped side by side; each cronjob
+    # entry can override its own schedule/history-limit/entrypoint/resources, an
+    # entry with `enabled: false` is skipped, and entries without overrides fall
+    # back to the top-level values (same as the Deployment uses).
+    objects = rendered_objects("common.yaml", "cronjobs_multiple.yaml")
+
+    deployment_expected = expected("cronjobs_multiple", "deployment")
+    deployments = [obj for obj in objects if obj["kind"] == "Deployment"]
+    assert len(deployments) == 1
+    deployment = deployments[0]
+    assert deployment["metadata"]["name"] == deployment_expected["name"]
+
+    deployment_container = deployment["spec"]["template"]["spec"]["containers"][0]
+    assert deployment_container["command"] == deployment_expected["command"]
+    assert deployment_container["args"] == deployment_expected["args"]
+
+    cronjobs = {
+        obj["metadata"]["name"]: obj for obj in objects if obj["kind"] == "CronJob"
+    }
+    cleanup_expected = expected("cronjobs_multiple", "cleanup")
+    report_expected = expected("cronjobs_multiple", "report")
+    assert set(cronjobs) == {cleanup_expected["name"], report_expected["name"]}
+
+    for exp in (cleanup_expected, report_expected):
+        job = cronjobs[exp["name"]]
+        assert job["spec"]["schedule"] == exp["schedule"]
+        assert job["spec"]["successfulJobsHistoryLimit"] == exp["successfulJobsHistoryLimit"]
+        container = job["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]
+        assert container["name"] == exp["containerName"]
+        assert container["command"] == exp["command"]
+        assert container["args"] == exp["args"]
+        assert container["resources"] == exp["resources"]
+
+
+def test_cronjob_pod_annotations_override(rendered_objects, expected):
+    # A cronjob entry can add/override pod annotations (e.g. to run the vault
+    # agent as an init-only container for a short-lived Job) without affecting
+    # the Deployment or other cronjobs, which keep the shared/vault annotations.
+    objects = rendered_objects("common.yaml", "vault_enabled.yaml", "cronjob_pod_annotations.yaml")
+
+    deployment = next(obj for obj in objects if obj["kind"] == "Deployment")
+    deployment_annotations = deployment["spec"]["template"]["metadata"]["annotations"]
+    deployment_expected = expected("cronjob_pod_annotations", "deployment")
+    assert (
+        deployment_annotations["vault.hashicorp.com/agent-pre-populate-only"]
+        == deployment_expected["agentPrePopulateOnly"]
+    )
+    assert "backup.example.com/note" not in deployment_annotations
+
+    cronjob = next(obj for obj in objects if obj["kind"] == "CronJob")
+    cronjob_annotations = cronjob["spec"]["jobTemplate"]["spec"]["template"]["metadata"]["annotations"]
+    cronjob_expected = expected("cronjob_pod_annotations", "cronjob")
+    assert (
+        cronjob_annotations["vault.hashicorp.com/agent-pre-populate-only"]
+        == cronjob_expected["agentPrePopulateOnly"]
+    )
+    assert cronjob_annotations["backup.example.com/note"] == cronjob_expected["note"]
+
+
+def test_cronjob_pod_annotations_override_no_duplicate_key(rendered_text):
+    # Regression test: annotations used to be built by concatenating three raw YAML
+    # blocks (top-level podAnnotations, vaultAgent-generated annotations, per-cronjob
+    # podAnnotations) with no deduplication. A cronjob overriding a key the vaultAgent
+    # block already sets (e.g. agent-pre-populate-only, to run a one-shot job without
+    # the agent as a long-lived sidecar) produced a literal duplicate YAML key. That
+    # happened to "work" under yaml.safe_load (last occurrence wins) but is invalid
+    # under stricter YAML consumers, so assert directly against the rendered text.
+    text = rendered_text("common.yaml", "vault_enabled.yaml", "cronjob_pod_annotations.yaml")
+    cronjob_section = text.split("kind: CronJob", 1)[1]
+    assert cronjob_section.count("vault.hashicorp.com/agent-pre-populate-only:") == 1
+
+
+def test_vault_single_template_applies_to_job_and_cronjob(rendered_chart, expected):
+    # singleTemplate mode must fold vault secrets into one combined annotation set for
+    # every workload kind (Deployment, Job, CronJob), not just the Deployment. Job and
+    # CronJob previously always used the old per-secret annotations regardless of the
+    # singleTemplate flag, while the command/args template dropped the vault-secrets
+    # sourcing wrapper for *every* kind once singleTemplate was set -- silently leaving
+    # Job/CronJob with no way to load their secrets at all.
+    manifests = rendered_chart(
+        "common.yaml", "vault_single_template.yaml", "vault_single_template_cronjob.yaml"
+    )
+
+    deployment_annotations = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+    deployment_command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["command"]
+    deployment_args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
+
+    exp = expected("vault_single_template", "podAnnotations")
+    assert exp.items() <= deployment_annotations.items()
+    assert deployment_command == expected("vault_single_template", "command")
+    assert deployment_args == expected("vault_single_template", "args")
+
+    def strip(annotations):
+        return {
+            k: v
+            for k, v in annotations.items()
+            if k not in ("helm.sh/revision", "configmap-hash")
+        }
+
+    job = manifests["Job"]
+    job_container = job["spec"]["template"]["spec"]["containers"][0]
+    assert strip(job["spec"]["template"]["metadata"]["annotations"]) == strip(deployment_annotations)
+    assert job_container["command"] == deployment_command
+    assert job_container["args"] == deployment_args
+
+    cronjob = manifests["CronJob"]
+    cronjob_container = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]
+    cronjob_annotations = cronjob["spec"]["jobTemplate"]["spec"]["template"]["metadata"]["annotations"]
+    assert strip(cronjob_annotations) == strip(deployment_annotations)
+    assert cronjob_container["command"] == deployment_command
+    assert cronjob_container["args"] == deployment_args
