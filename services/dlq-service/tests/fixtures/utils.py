@@ -50,7 +50,7 @@ def dlq_to_db(event: RawDLQEvent) -> StoredDLQEvent:
         exc_msg=event.headers.pop(HeaderNames.EXC_MSG, ""),
     )
 
-    db_event = StoredDLQEvent(
+    return StoredDLQEvent(
         dlq_id=event.dlq_id,
         topic=event.headers.pop(HeaderNames.ORIGINAL_TOPIC),
         type_=event.type_,
@@ -60,7 +60,6 @@ def dlq_to_db(event: RawDLQEvent) -> StoredDLQEvent:
         headers=event.headers,
         dlq_info=dlq_info,
     )
-    return db_event
 
 
 def user_event(*, service: Literal["ufs", "fss"], user_no: int = 0) -> RawDLQEvent:
@@ -78,7 +77,7 @@ def user_event(*, service: Literal["ufs", "fss"], user_no: int = 0) -> RawDLQEve
         HeaderNames.CORRELATION_ID: TEST_CID,
     }
 
-    dlq_user_event = RawDLQEvent(
+    return RawDLQEvent(
         topic=DEFAULT_CONFIG.kafka_dlq_topic,
         type_="registration",
         payload={"user_id": user_id, "name": "John Doe"},
@@ -86,7 +85,6 @@ def user_event(*, service: Literal["ufs", "fss"], user_no: int = 0) -> RawDLQEve
         headers=headers,
         dlq_id=uuid4(),
     )
-    return dlq_user_event
 
 
 def notifications_event(*, user_no: int = 0) -> RawDLQEvent:
@@ -105,7 +103,7 @@ def notifications_event(*, user_no: int = 0) -> RawDLQEvent:
         HeaderNames.CORRELATION_ID: TEST_CID,
     }
 
-    notifications_event = RawDLQEvent(
+    return RawDLQEvent(
         topic=DEFAULT_CONFIG.kafka_dlq_topic,
         type_="tagged_in_photo",
         payload={
@@ -118,7 +116,6 @@ def notifications_event(*, user_no: int = 0) -> RawDLQEvent:
         headers=headers,
         dlq_id=uuid4(),
     )
-    return notifications_event
 
 
 def graph_event(*, user_no: int = 0) -> RawDLQEvent:
@@ -137,7 +134,7 @@ def graph_event(*, user_no: int = 0) -> RawDLQEvent:
         HeaderNames.CORRELATION_ID: TEST_CID,
     }
 
-    graph_event = RawDLQEvent(
+    return RawDLQEvent(
         topic=DEFAULT_CONFIG.kafka_dlq_topic,
         type_="connection_added",
         payload={"source_id": user_id1, "dest_id": user_id2},
@@ -145,4 +142,3 @@ def graph_event(*, user_no: int = 0) -> RawDLQEvent:
         headers=headers,
         dlq_id=uuid4(),
     )
-    return graph_event
