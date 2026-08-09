@@ -18,7 +18,7 @@
 
 import logging
 
-from httpx import URL, HTTPStatusError, Response, post
+from httpx2 import URL, BaseTransport, Client, HTTPStatusError, Response
 from pydantic import Field, HttpUrl, PositiveFloat, SecretStr
 from pydantic_settings import BaseSettings
 
@@ -56,22 +56,35 @@ class Lox24ClientConfig(BaseSettings):
     def lox24_send_url(self) -> URL:
         """Full URL for sending SMS."""
         url = URL(str(self.lox24_base_url))
-        url = url.join(self.lox24_send_sms_path)
-        return url
+        return url.join(self.lox24_send_sms_path)
 
 
 class Lox24Client(SmsClientPort):
     """Concrete implementation of an SmsClientPort for the LOX24 SMS gateway."""
 
-    def __init__(self, *, config: Lox24ClientConfig):
-        """Assign config, which should contain all needed info"""
+    def __init__(
+        self, *, config: Lox24ClientConfig, transport: BaseTransport | None = None
+    ):
+        """Assign config, which should contain all needed info.
+
+        A `transport` can be provided to route the requests somewhere other than the
+        network, e.g. to a `MockRouter` in tests. If omitted, the httpx2 default
+        transport is used.
+        """
         self._config = config
-        self._response: Response | None = None
         self._sender_id: str = self._config.lox24_sender_id
         self._send_url: URL = self._config.lox24_send_url
-        self._headers: dict[str, str] = {
-            self._config.lox24_auth_token_header: self._config.lox24_token.get_secret_value()
-        }
+        self._client = Client(
+            headers={
+                self._config.lox24_auth_token_header: self._config.lox24_token.get_secret_value()
+            },
+            timeout=self._config.lox24_timeout,
+            transport=transport,
+        )
+
+    def close(self):
+        """Close the underlying HTTP client and its connection pool."""
+        self._client.close()
 
     def _raise_for_status(self, response: Response):
         """Raise an exception if the response indicates an error."""
@@ -99,12 +112,7 @@ class Lox24Client(SmsClientPort):
             "sender_id": self._sender_id,
         }
         log.info(f"Sending SMS to {phone}.")
-        response = post(
-            self._send_url,
-            headers=self._headers,
-            json=json_data,
-            timeout=self._config.lox24_timeout,
-        )
+        response = self._client.post(self._send_url, json=json_data)
         try:
             if response.status_code != 201:
                 self._raise_for_status(response)
