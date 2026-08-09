@@ -21,7 +21,7 @@ from functools import reduce
 from pathlib import Path
 from typing import TypeVar
 
-import httpx
+import httpx2
 import yaml
 from pydantic_settings import BaseSettings
 
@@ -101,8 +101,8 @@ def retrieve_well_known_values(wkvs_api_url: str, value_name: str = "storage_ali
     url = path_join(wkvs_api_url, "values", value_name)
 
     try:
-        response = httpx.get(url)
-    except httpx.RequestError:
+        response = httpx2.get(url)
+    except httpx2.RequestError:
         LOG.error(f"Could not retrieve data from {url} due to connection issues.")
         raise
 
