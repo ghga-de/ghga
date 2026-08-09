@@ -23,8 +23,8 @@ from typing import Any
 
 import pytest
 from fastapi import FastAPI, status
-from httpx import Response
-from pytest_httpx import HTTPXMock
+from ghga_service_commons.api.mock_router import MockRouter
+from httpx2 import Response
 
 from auth_service.auth_adapter.deps import (
     SESSION_COOKIE,
@@ -37,7 +37,6 @@ from auth_service.user_registry.models.users import UserStatus
 from tests.fixtures.constants import ID_OF_JAMES, ID_OF_JOHN
 
 from ...fixtures.utils import (
-    RE_USER_INFO_URL,
     USER_INFO,
     IvaState,
     MockClaimDao,
@@ -46,6 +45,7 @@ from ...fixtures.utils import (
     MockUserTokenDao,
     create_access_token,
     headers_for_session,
+    mock_userinfo,
 )
 from .fixtures import (
     AUTH_PATH,
@@ -161,10 +161,10 @@ async def test_logout_with_invalid_csrf_token(bare_client: BareClient):
 
 
 async def test_login_with_unregistered_user(
-    bare_client: BareClient, httpx_mock: HTTPXMock
+    bare_client: BareClient, mock_router: MockRouter
 ):
     """Test that a login request can create a new session for an unregistered user."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
 
     setup_daos(bare_client.app, ext_id="not.john@aai.org")
 
@@ -191,11 +191,11 @@ async def test_login_with_unregistered_user(
 
 
 async def test_login_with_invalid_userinfo(
-    bare_client: BareClient, httpx_mock: HTTPXMock
+    bare_client: BareClient, mock_router: MockRouter
 ):
     """Test that a login request fails when user info cannot be retrieved."""
     bad_user_info = {**USER_INFO, "sub": "not.john@aai.org"}
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=bad_user_info)
+    mock_userinfo(mock_router, bad_user_info)
 
     setup_daos(bare_client.app, ext_id="not.john@aai.org")
 
@@ -211,10 +211,10 @@ async def test_login_with_invalid_userinfo(
 
 
 async def test_login_with_registered_user(
-    bare_client: BareClient, httpx_mock: HTTPXMock
+    bare_client: BareClient, mock_router: MockRouter
 ):
     """Test that a login request can create a new session for a registered user."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
 
     setup_daos(bare_client.app)
 
@@ -242,11 +242,11 @@ async def test_login_with_registered_user(
 
 
 async def test_login_with_registered_user_and_name_change(
-    bare_client: BareClient, httpx_mock: HTTPXMock
+    bare_client: BareClient, mock_router: MockRouter
 ):
     """Test a login request for a user when the name was changed."""
     changed_user_info = {**USER_INFO, "name": "John Doe Jr."}
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=changed_user_info)
+    mock_userinfo(mock_router, changed_user_info)
 
     setup_daos(bare_client.app)
 
@@ -274,10 +274,10 @@ async def test_login_with_registered_user_and_name_change(
 
 
 async def test_login_with_registered_user_with_title(
-    bare_client: BareClient, httpx_mock: HTTPXMock
+    bare_client: BareClient, mock_router: MockRouter
 ):
     """Test a login request for a user when a title was entered."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
 
     setup_daos(bare_client.app, title="Dr.")
 
@@ -306,10 +306,10 @@ async def test_login_with_registered_user_with_title(
 
 
 async def test_login_with_deactivated_user(
-    bare_client: BareClient, httpx_mock: HTTPXMock
+    bare_client: BareClient, mock_router: MockRouter
 ):
     """Test that a login request for a registered deactivated user fails."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
 
     setup_daos(bare_client.app, status=UserStatus.INACTIVE)
 

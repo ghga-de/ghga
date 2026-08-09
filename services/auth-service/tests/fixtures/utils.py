@@ -16,7 +16,6 @@
 """Utils for testing"""
 
 import json
-import re
 from collections.abc import AsyncIterator, Mapping
 from contextlib import suppress
 from datetime import timedelta
@@ -25,7 +24,20 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
+import httpx2
 from fastapi import Request
+from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
+from hexkit.config import config_from_yaml
+from hexkit.protocols.dao import (
+    Dao,
+    FindResult,
+    MultipleHitsFoundError,
+    NoHitsFoundError,
+    ResourceNotFoundError,
+)
+from hexkit.utils import now_utc_ms_prec
 from jwcrypto import jwk, jwt
 from pydantic import UUID4
 
@@ -54,17 +66,6 @@ from auth_service.user_registry.models.users import PeriodCounter, User
 from auth_service.user_registry.ports.event_pub import (
     EventPublisherPort,
 )
-from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
-from hexkit.config import config_from_yaml
-from hexkit.protocols.dao import (
-    Dao,
-    FindResult,
-    MultipleHitsFoundError,
-    NoHitsFoundError,
-    ResourceNotFoundError,
-)
-from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import (
     DATA_ACCESS_CLAIM_ID,
     DATA_ACCESS_IVA_ID,
@@ -80,13 +81,19 @@ from tests.fixtures.constants import (
 
 BASE_DIR = Path(__file__).parent.resolve()
 
-RE_USER_INFO_URL = re.compile(".*/userinfo$")
-
 USER_INFO = {
     "name": "John Doe",
     "email": "john@home.org",
     "sub": EXT_ID_OF_JOHN,
 }
+
+
+def mock_userinfo(router: MockRouter, user_info: Mapping[str, Any] = USER_INFO) -> None:
+    """Register a response for the OIDC userinfo endpoint on the given mock router."""
+
+    @router.get("/userinfo")
+    def _userinfo() -> httpx2.Response:
+        return httpx2.Response(200, json=dict(user_info))
 
 
 @config_from_yaml(prefix="test_auth_service")
@@ -523,9 +530,7 @@ class MockClaimDao:
 
     async def find_one(self, *, mapping: Mapping[str, Any]) -> Claim:
         """Find a dummy user claim."""
-        claims = []
-        async for claim in self.find_all(mapping=mapping):
-            claims.append(claim)
+        claims = [claim async for claim in self.find_all(mapping=mapping)]
         if not claims:
             raise NoHitsFoundError(mapping=mapping)
         if len(claims) > 1:

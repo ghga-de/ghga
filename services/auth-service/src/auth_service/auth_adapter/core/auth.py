@@ -22,7 +22,7 @@ import time
 from functools import cached_property, lru_cache
 from typing import Any, NamedTuple
 
-import httpx
+import httpx2
 from fastapi import Request, status
 from jwcrypto import jwk, jwt
 from jwcrypto.common import JWException
@@ -84,7 +84,7 @@ class OIDCDiscovery:
     @cached_property
     def config(self) -> dict[str, Any]:
         """Fetch the OIDC configuration directory."""
-        response = httpx.get(self.config_url, timeout=TIMEOUT)
+        response = httpx2.get(self.config_url, timeout=TIMEOUT)
         try:
             config = response.json()
         except json.JSONDecodeError as error:
@@ -112,7 +112,7 @@ class OIDCDiscovery:
         if not jwks_uri.startswith(self.authority_url):
             raise ConfigurationDiscoveryError("Unexpected JWKS URI")
         log.info("Discovered JWKS URI: %s", jwks_uri)
-        jwks_response = httpx.get(jwks_uri, timeout=TIMEOUT)
+        jwks_response = httpx2.get(jwks_uri, timeout=TIMEOUT)
         try:
             jwks_dict = jwks_response.json()
         except json.JSONDecodeError:
@@ -234,7 +234,7 @@ def get_jwt_config() -> JWTConfig:
 @lru_cache(maxsize=1024)
 def _fetch_user_info(access_token: str) -> dict[str, Any]:
     """Fetch info for the given access token from the userinfo endpoint."""
-    response = httpx.get(
+    response = httpx2.get(
         get_jwt_config().userinfo_endpoint,
         headers={"Authorization": f"Bearer {access_token}"},
         timeout=TIMEOUT,
