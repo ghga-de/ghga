@@ -52,8 +52,8 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - uses: extractions/setup-just@v2
-      - uses: azure/setup-helm@v4
+      - uses: extractions/setup-just@v4
+      - uses: azure/setup-helm@v5
       - uses: helm/kind-action@v1
         with:
           # only the CLI: the cluster is created by `just testbed-up` from

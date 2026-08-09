@@ -50,7 +50,7 @@ jobs:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v5
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       # The hardened bases (dhi.io) are auth-gated — same pattern as release.yaml:
       # skipped when the org secrets are absent, failing the base pull with a clear 401.
       - name: Login to DHI registry
