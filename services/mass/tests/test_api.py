@@ -154,7 +154,7 @@ async def test_search_invalid_class(joint_fixture: JointFixture):
     """Verify that searching with a bad class name results in a 422"""
     params: QueryParams = {"class_name": "InvalidClassName", "limit": 1}
 
-    with pytest.raises(httpx2.HTTPStatusError, match="422 Unprocessable Entity"):
+    with pytest.raises(httpx2.HTTPStatusError, match="422 Unprocessable"):
         await joint_fixture.call_search_endpoint(params)
 
 
