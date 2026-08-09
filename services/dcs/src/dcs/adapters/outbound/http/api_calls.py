@@ -18,7 +18,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-import httpx
+import httpx2
 from pydantic import Field
 
 from ghga_service_commons.transports import (
@@ -40,14 +40,33 @@ class HttpClientConfig(CompositeConfig):
 
 @asynccontextmanager
 async def get_configured_httpx_client(
-    *, config: HttpClientConfig
-) -> AsyncGenerator[httpx.AsyncClient]:
-    """Produce an httpx AsyncClient with configured rate limiting behavior"""
+    *,
+    config: HttpClientConfig,
+    base_transport: httpx2.AsyncBaseTransport | None = None,
+    mount_env_proxies: bool = True,
+) -> AsyncGenerator[httpx2.AsyncClient]:
+    """Produce an httpx2 AsyncClient with configured rate limiting behavior
+
+    `base_transport` replaces the network transport at the bottom of the stack. Tests
+    use it to route requests to a `MockRouter` while keeping the retry and rate
+    limiting layers in place.
+
+    `mount_env_proxies` controls whether proxies from the environment are mounted.
+    It cannot be combined with a `base_transport`: mounts take precedence over
+    `transport` for every URL they match, env proxies match everything, and each
+    proxy mount builds its own network transport. Callers that replace the network
+    layer therefore have to pass `False` here to keep their transport reachable.
+    """
+    if base_transport is not None and mount_env_proxies:
+        raise ValueError(
+            "`base_transport` would be bypassed by the env proxy mounts; pass"
+            " `mount_env_proxies=False` to route all traffic through it."
+        )
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        config=config
+        config=config, base_transport=base_transport
     )
-    proxies = ratelimiting_retry_proxies(config=config)
-    async with httpx.AsyncClient(
+    proxies = ratelimiting_retry_proxies(config=config) if mount_env_proxies else {}
+    async with httpx2.AsyncClient(
         timeout=config.http_request_timeout_seconds, transport=transport, mounts=proxies
     ) as client:
         yield client
