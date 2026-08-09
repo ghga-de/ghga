@@ -28,6 +28,10 @@ from hexkit.opentelemetry import configure_opentelemetry
 DB_VERSION = 3
 
 
+# `configure_opentelemetry()` sets up autoinstrumentation and needs to be called before
+# any FastAPI and pymongo objects are created for those to be instrumented correctly
+
+
 async def run_rest():
     """Run the HTTP REST API."""
     config = Config()
@@ -43,6 +47,7 @@ async def consume_events(run_forever: bool = True):
     config = Config()
 
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)

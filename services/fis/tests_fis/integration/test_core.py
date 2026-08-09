@@ -18,18 +18,18 @@
 import logging
 
 import pytest
-from pytest_httpx import HTTPXMock
+from hexkit.utils import now_utc_ms_prec
 
 from fis.core import models
 from fis.ports.outbound.dao import ResourceNotFoundError
-from hexkit.utils import now_utc_ms_prec
+from tests_fis.fixtures.ekss_api import DEPOSITED_SECRET_ID
 from tests_fis.fixtures.joint import JointFixture
 from tests_fis.fixtures.utils import create_file_under_interrogation
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMock):
+async def test_typical_journey(joint_fixture: JointFixture):
     """Test the typical path of receiving a FileUpload event through archival."""
     # Create a FileUnderInterrogation and publish it to the file uploads topic
     file = create_file_under_interrogation("HUB1")
@@ -57,14 +57,8 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert len(files_to_interrogate) == 1
     assert files_to_interrogate[0].id == file.id
 
-    # Prepare mock response for EKSS call
-    ekss_url = f"{joint_fixture.config.ekss_api_url}/secrets"
-    secret_id = "some-secret-id"
-    httpx_mock.add_response(
-        url=ekss_url, method="POST", status_code=201, json={"secret_id": secret_id}
-    )
-
     # Submit a successful interrogation report and check for the published event
+    # (the EKSS call is served by the mock router mounted in the joint fixture)
     interrogation_topic = joint_fixture.config.file_interrogations_topic
     async with joint_fixture.kafka.record_events(
         in_topic=interrogation_topic
@@ -90,7 +84,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     event = recorder.recorded_events[0]
     assert event.type_ == "interrogation_success"
     assert event.payload["file_id"] == str(file.id)
-    assert event.payload["secret_id"] == secret_id
+    assert event.payload["secret_id"] == DEPOSITED_SECRET_ID
 
     # Verify that the file in the database now says "interrogated"
     file_in_db = await joint_fixture.file_dao.get_by_id(file.id)

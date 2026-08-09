@@ -1,10 +1,5 @@
 api_root_path: ''
 auto_reload: false
-client_cache_capacity: 128
-client_cache_ttl: 60
-client_cacheable_methods:
-- POST
-- GET
 client_exponential_backoff_max: 60
 client_num_retries: 3
 client_reraise_from_retry_error: true
