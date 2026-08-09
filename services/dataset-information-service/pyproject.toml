@@ -21,13 +21,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dins"
-version = "7.0.1"
+version = "7.0.2"
 description = "Dataset Information Service - Providing public metadata about files registered with the Internal File Registry"
 dependencies = [
     "typer >= 0.19",
-    "ghga-service-commons[api] >= 7.0",
+    "ghga-service-commons[api] >= 8.0",
     "ghga-event-schemas ~= 12.0.0",
-    "hexkit[akafka,mongodb, opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi] >= 8.1",
+    "hexkit[akafka,mongodb, opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi] >= 9.0",
 ]
 
 [project.license]
