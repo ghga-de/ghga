@@ -18,9 +18,9 @@ import unittest.mock
 
 import httpx2
 import pytest
-from hexkit.providers.s3.testutils import temp_file_object
 
 from dhfs.ports.outbound.s3 import S3ClientPort
+from hexkit.providers.s3.testutils import temp_file_object
 from tests.fixtures.central_api import fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 

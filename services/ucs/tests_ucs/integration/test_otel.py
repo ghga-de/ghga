@@ -20,6 +20,7 @@ from collections import Counter
 from uuid import UUID
 
 import pytest
+
 from ghga_event_schemas.pydantic_ import FileDeletionRequested
 from hexkit.correlation import new_correlation_id, set_correlation_id
 from hexkit.opentelemetry.testutils import (  # noqa: F401
@@ -27,7 +28,6 @@ from hexkit.opentelemetry.testutils import (  # noqa: F401
     otel_provider_fixture,
 )
 from hexkit.utils import now_utc_ms_prec
-
 from tests_ucs.fixtures import utils
 from tests_ucs.fixtures.joint import JointFixture
 from ucs import main

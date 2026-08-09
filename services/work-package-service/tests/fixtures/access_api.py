@@ -21,8 +21,8 @@ from json import dumps as json_dumps
 from typing import Any
 
 import httpx2
-from ghga_service_commons.api.mock_router import MockRouter
 
+from ghga_service_commons.api.mock_router import MockRouter
 from wps.adapters.outbound.http import AccessCheckConfig
 
 __all__ = ["AccessApiMock", "ResponseHandler", "respond"]

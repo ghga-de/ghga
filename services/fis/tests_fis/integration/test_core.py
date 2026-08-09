@@ -18,10 +18,10 @@
 import logging
 
 import pytest
-from hexkit.utils import now_utc_ms_prec
 
 from fis.core import models
 from fis.ports.outbound.dao import ResourceNotFoundError
+from hexkit.utils import now_utc_ms_prec
 from tests_fis.fixtures.ekss_api import DEPOSITED_SECRET_ID
 from tests_fis.fixtures.joint import JointFixture
 from tests_fis.fixtures.utils import create_file_under_interrogation

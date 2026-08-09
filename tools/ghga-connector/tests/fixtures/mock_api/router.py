@@ -27,9 +27,9 @@ from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
 import httpx2
-from ghga_service_commons.api.mock_router import HttpException, MockRouter
 
 from ghga_connector.core.client import get_ratelimiting_retry_transport
+from ghga_service_commons.api.mock_router import HttpException, MockRouter
 
 __all__ = [
     "MOCK_API_HOST",

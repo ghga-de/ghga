@@ -23,7 +23,6 @@ from typing import Any
 
 import pytest
 from fastapi import FastAPI, status
-from ghga_service_commons.api.mock_router import MockRouter
 from httpx2 import Response
 
 from auth_service.auth_adapter.deps import (
@@ -34,6 +33,7 @@ from auth_service.auth_adapter.deps import (
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_registry.models.users import UserStatus
+from ghga_service_commons.api.mock_router import MockRouter
 from tests.fixtures.constants import ID_OF_JAMES, ID_OF_JOHN
 
 from ...fixtures.utils import (

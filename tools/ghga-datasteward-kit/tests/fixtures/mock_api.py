@@ -33,6 +33,7 @@ from typing import Any
 
 import httpx2
 import pytest
+
 from ghga_service_commons.api.mock_router import MockRouter
 
 ResponseHandler = Callable[[httpx2.Request], httpx2.Response]

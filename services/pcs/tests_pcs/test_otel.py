@@ -20,12 +20,12 @@ from collections import Counter
 from uuid import UUID
 
 import pytest
+from httpx2 import Headers
+
 from hexkit.opentelemetry.testutils import (  # noqa: F401
     otel_fixture,
     otel_provider_fixture,
 )
-from httpx2 import Headers
-
 from pcs import main
 from pcs.inject import get_persistent_publisher
 from tests_pcs.fixtures.joint import JointFixture

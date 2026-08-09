@@ -140,7 +140,7 @@ class AsyncRetryTransport(httpx2.AsyncBaseTransport):
     so their retry-after header can be dealt with correctly, if present.
     """
 
-    def __init__(  # noqa: PLR0913, PLR0917
+    def __init__(  # noqa: PLR0913
         self,
         config: RetryTransportConfig,
         transport: httpx2.AsyncBaseTransport,

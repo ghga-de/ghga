@@ -30,13 +30,13 @@ from typing import Any
 
 import httpx2
 from fastapi import status
-from ghga_service_commons.api.mock_router import MockRouter
 
 from dcs.adapters.outbound.http.secrets import (
     DELETION_PATH,
     ENVELOPE_PATH,
     SecretsClientConfig,
 )
+from ghga_service_commons.api.mock_router import MockRouter
 
 ResponseHandler = Callable[[httpx2.Request], httpx2.Response]
 

@@ -21,8 +21,8 @@ from uuid import uuid4
 
 import httpx2
 import pytest
-from ghga_service_commons.api.mock_router import MockRouter
 
+from ghga_service_commons.api.mock_router import MockRouter
 from metldata.load.client import upload_artifacts_via_http_api
 from metldata.load.collect import get_artifact_topic
 from metldata.load.config import ArtifactLoaderClientConfig

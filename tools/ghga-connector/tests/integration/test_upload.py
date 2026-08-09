@@ -22,7 +22,6 @@ from uuid import UUID, uuid4
 
 import httpx2
 import pytest
-from ghga_service_commons.utils.temp_files import big_temp_file
 
 from ghga_connector import exceptions
 from ghga_connector.config import set_runtime_config
@@ -30,6 +29,7 @@ from ghga_connector.core.client import async_client
 from ghga_connector.core.main import upload_files
 from ghga_connector.core.uploading.structs import CoreFileInfo
 from ghga_connector.core.utils import modify_for_debug
+from ghga_service_commons.utils.temp_files import big_temp_file
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.apis import (
     MockApis,

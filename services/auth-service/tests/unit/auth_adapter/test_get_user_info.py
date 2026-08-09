@@ -17,9 +17,9 @@
 """Unit tests for the auth adapter user info retrieval feature"""
 
 import pytest
-from ghga_service_commons.api.mock_router import MockRouter
 
 from auth_service.auth_adapter.core import auth
+from ghga_service_commons.api.mock_router import MockRouter
 
 from ...fixtures.utils import create_access_token, mock_userinfo
 

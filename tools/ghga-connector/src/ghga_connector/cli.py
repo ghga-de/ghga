@@ -47,7 +47,7 @@ def _catch_cancellations(coroutine) -> None:
 
 
 @cli.command(name="batch-upload", no_args_is_help=True)
-def batch_upload(  # noqa: PLR0913, PLR0917
+def batch_upload(  # noqa: PLR0913
     tsv: Path = typer.Option(
         ...,
         help=(

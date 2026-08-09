@@ -20,10 +20,10 @@ from unittest.mock import Mock
 from uuid import UUID
 
 import pytest
+
 from hexkit.correlation import correlation_id_var
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from ns.adapters.outbound.lox24_client import Lox24Client
 from ns.adapters.outbound.smtp_client import SmtpClient
 from ns.core.notifier import Notifier

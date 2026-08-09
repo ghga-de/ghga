@@ -43,9 +43,9 @@ from uuid import UUID
 
 import httpx2
 import pytest
+
 from ghga_service_commons.api.mock_router import HttpException, MockRouter
 from ghga_service_commons.utils.utc_dates import now_as_utc
-
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.router import (
     MOCK_API_HOST,

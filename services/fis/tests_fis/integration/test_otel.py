@@ -22,6 +22,16 @@ from dataclasses import dataclass
 
 import pytest
 import pytest_asyncio
+
+from fis import main
+from fis.config import Config
+from fis.constants import DHFS_USER_AGENT_PREFIX, GHGA
+from fis.inject import (
+    get_persistent_publisher,
+    prepare_core,
+    prepare_event_subscriber,
+    prepare_rest_app,
+)
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
@@ -33,16 +43,6 @@ from hexkit.opentelemetry.testutils import (  # noqa: F401
 )
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
-from fis import main
-from fis.config import Config
-from fis.constants import DHFS_USER_AGENT_PREFIX, GHGA
-from fis.inject import (
-    get_persistent_publisher,
-    prepare_core,
-    prepare_event_subscriber,
-    prepare_rest_app,
-)
 from tests_fis.fixtures.config import get_config
 from tests_fis.fixtures.utils import create_file_under_interrogation
 

@@ -101,7 +101,7 @@ def _mongodb_container_fixture() -> Generator[MongoDbContainerFixture, None, Non
     """Fixture function for getting a running MongoDB test container."""
     with MongoDbContainerFixture(image=MONGODB_IMAGE) as mongodb_container:
         mongodb_config = MongoDbConfig(
-            mongo_dsn=mongodb_container.get_connection_url(),  # type: ignore
+            mongo_dsn=mongodb_container.get_connection_url(),
             db_name="test",
         )
         mongodb_container.mongodb_config = mongodb_config

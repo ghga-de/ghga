@@ -19,8 +19,9 @@ from typing import Any
 from uuid import UUID
 
 import httpx2
-from ghga_service_commons.api.mock_router import MockRouter
 from pytest import fixture
+
+from ghga_service_commons.api.mock_router import MockRouter
 
 __all__ = ["GRANT_ID", "AccessGrantsMock", "access_grants_mock_fixture"]
 

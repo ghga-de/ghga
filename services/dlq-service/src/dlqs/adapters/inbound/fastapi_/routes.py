@@ -145,7 +145,7 @@ async def get_events(
         status.HTTP_500_INTERNAL_SERVER_ERROR: RESPONSES["internalServerError"],
     },
 )
-async def process_event(  # noqa: PLR0913, PLR0917
+async def process_event(  # noqa: PLR0913
     service: str,
     topic: str,
     dlq_manager: DLQManagerDummy,

@@ -20,6 +20,7 @@ from collections import Counter
 from uuid import uuid4
 
 import pytest
+
 from ghga_event_schemas.pydantic_ import NonStagedFileRequested
 from hexkit.opentelemetry.testutils import (  # noqa: F401
     otel_fixture,
@@ -29,7 +30,6 @@ from hexkit.providers.s3.testutils import (
     FileObject,
     tmp_file,  # noqa: F401
 )
-
 from ifrs import main
 from ifrs.inject import get_persistent_publisher
 from tests_ifrs.fixtures.example_data import EXAMPLE_ARCHIVABLE_FILE

@@ -23,13 +23,6 @@ from uuid import uuid4
 
 import httpx2
 import pytest
-from ghga_event_schemas.pydantic_ import FileInternallyRegistered
-from hexkit.opentelemetry.testutils import (  # noqa: F401
-    otel_fixture,
-    otel_provider_fixture,
-)
-from hexkit.providers.s3.testutils import FileObject, tmp_file  # noqa: F401
-from hexkit.utils import now_utc_ms_prec
 from opentelemetry.instrumentation.httpx import HTTPX2ClientInstrumentor
 from opentelemetry.trace import SpanKind
 
@@ -37,6 +30,13 @@ from dcs import main
 from dcs.adapters.outbound.http.api_calls import get_configured_httpx_client
 from dcs.adapters.outbound.http.secrets import SecretsClient
 from dcs.inject import get_persistent_publisher
+from ghga_event_schemas.pydantic_ import FileInternallyRegistered
+from hexkit.opentelemetry.testutils import (  # noqa: F401
+    otel_fixture,
+    otel_provider_fixture,
+)
+from hexkit.providers.s3.testutils import FileObject, tmp_file  # noqa: F401
+from hexkit.utils import now_utc_ms_prec
 from tests_dcs.fixtures.ekss_api import SECRET_ID, EkssApiMock
 from tests_dcs.fixtures.joint import CleanupFixture, JointFixture, PopulatedFixture
 from tests_dcs.fixtures.utils import generate_work_order_token

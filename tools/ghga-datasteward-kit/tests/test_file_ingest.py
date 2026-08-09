@@ -19,14 +19,6 @@ import json
 
 import pytest
 import yaml
-from ghga_service_commons.utils.simple_token import generate_token
-from ghga_service_commons.utils.utc_dates import now_as_utc
-from metldata.submission_registry.models import (
-    StatusChange,
-    Submission,
-    SubmissionStatus,
-)
-from metldata.submission_registry.submission_store import SubmissionStore
 
 from ghga_datasteward_kit import models
 from ghga_datasteward_kit.cli.file import ingest_upload_metadata
@@ -36,6 +28,14 @@ from ghga_datasteward_kit.file_ingest import (
     alias_to_accession,
     file_ingest,
 )
+from ghga_service_commons.utils.simple_token import generate_token
+from ghga_service_commons.utils.utc_dates import now_as_utc
+from metldata.submission_registry.models import (
+    StatusChange,
+    Submission,
+    SubmissionStatus,
+)
+from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.ingest import (  # noqa: F401
     EXAMPLE_SUBMISSION,
     IngestFixture,

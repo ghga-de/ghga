@@ -22,14 +22,14 @@ from uuid import uuid4
 import httpx2
 import pytest
 from fastapi import status
+
+from dcs.core import models
+from dcs.core.errors import StorageAliasNotConfiguredError, StorageUnavailableError
 from ghga_event_schemas.pydantic_ import FileDownloadServed, NonStagedFileRequested
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3 import S3ObjectStorage
 from hexkit.providers.s3.testutils import FileObject, temp_file_object
 from hexkit.utils import now_utc_ms_prec
-
-from dcs.core import models
-from dcs.core.errors import StorageAliasNotConfiguredError, StorageUnavailableError
 from tests_dcs.fixtures.joint import CleanupFixture, PopulatedFixture
 from tests_dcs.fixtures.utils import generate_work_order_token
 

@@ -18,7 +18,6 @@
 import json
 
 import pytest
-from ghga_service_commons.api.mock_router import MockRouter
 from httpx2 import BaseTransport, Request, Response
 from jsonschema_path import SchemaPath
 from openapi_core.contrib.requests import RequestsOpenAPIRequest
@@ -26,6 +25,7 @@ from openapi_core.validation.request.validators import V30RequestValidator
 from requests import PreparedRequest
 from requests import Request as RequestsRequest
 
+from ghga_service_commons.api.mock_router import MockRouter
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import BASE_DIR
 

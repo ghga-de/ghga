@@ -325,7 +325,7 @@ async def update_box(  # noqa: C901, PLR0912
     },
 )
 @TRACER.start_as_current_span("routes.get_box_uploads")
-async def get_box_uploads(  # noqa: PLR0913, PLR0917
+async def get_box_uploads(  # noqa: PLR0913
     box_id: UUID4,
     work_order: Annotated[
         rest_models.ViewFileBoxWorkOrder,
@@ -487,7 +487,7 @@ async def create_file_upload(  # noqa: C901
     },
 )
 @TRACER.start_as_current_span("routes.get_part_upload_url")
-async def get_part_upload_url(  # noqa: PLR0913, PLR0917
+async def get_part_upload_url(  # noqa: PLR0913
     box_id: UUID4,
     file_id: UUID4,
     part_no: Annotated[int, Path(ge=1, le=MAX_PART_COUNT)],

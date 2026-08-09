@@ -22,11 +22,11 @@ from uuid import uuid4
 import httpx2
 import pytest
 import pytest_asyncio
-from hexkit.providers.s3 import S3ObjectStorage
-from hexkit.providers.s3.testutils import temp_file_object
 
 from dhfs.adapters.outbound.http import get_configured_httpx_client
 from dhfs.adapters.outbound.s3 import S3Client
+from hexkit.providers.s3 import S3ObjectStorage
+from hexkit.providers.s3.testutils import temp_file_object
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import INBOX, make_file_upload, upload_dummy_data
 

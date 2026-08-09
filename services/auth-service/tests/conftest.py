@@ -17,6 +17,7 @@
 
 import httpx2
 import pytest
+
 from ghga_service_commons.api.mock_router import MockRouter
 
 

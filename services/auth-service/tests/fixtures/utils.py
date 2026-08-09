@@ -26,18 +26,6 @@ from uuid import UUID
 
 import httpx2
 from fastapi import Request
-from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.api.mock_router import MockRouter
-from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
-from hexkit.config import config_from_yaml
-from hexkit.protocols.dao import (
-    Dao,
-    FindResult,
-    MultipleHitsFoundError,
-    NoHitsFoundError,
-    ResourceNotFoundError,
-)
-from hexkit.utils import now_utc_ms_prec
 from jwcrypto import jwk, jwt
 from pydantic import UUID4
 
@@ -66,6 +54,18 @@ from auth_service.user_registry.models.users import PeriodCounter, User
 from auth_service.user_registry.ports.event_pub import (
     EventPublisherPort,
 )
+from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
+from hexkit.config import config_from_yaml
+from hexkit.protocols.dao import (
+    Dao,
+    FindResult,
+    MultipleHitsFoundError,
+    NoHitsFoundError,
+    ResourceNotFoundError,
+)
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import (
     DATA_ACCESS_CLAIM_ID,
     DATA_ACCESS_IVA_ID,

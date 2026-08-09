@@ -22,12 +22,12 @@ import httpx2
 import pytest
 import pytest_asyncio
 from fastapi import status
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from dcs.core import models
 from dcs.core.errors import StorageAliasNotConfiguredError
 from dcs.ports.outbound.dao import DrsObjectDaoPort
+from hexkit.utils import now_utc_ms_prec
 from tests_dcs.fixtures.ekss_api import (
     ResponseHandler,
     fail_to_connect,

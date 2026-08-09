@@ -19,13 +19,13 @@ from uuid import uuid4
 
 import httpx2
 import pytest
+
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import ExpectedEvent
 from hexkit.providers.s3.testutils import (
     FileObject,
     tmp_file,  # noqa: F401
 )
-
 from tests_ifrs.fixtures.example_data import EXAMPLE_ARCHIVABLE_FILE
 from tests_ifrs.fixtures.joint import JointFixture
 from tests_ifrs.fixtures.utils import (

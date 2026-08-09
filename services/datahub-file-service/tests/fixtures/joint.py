@@ -23,12 +23,12 @@ from functools import partial
 from unittest.mock import patch
 
 import pytest_asyncio
-from hexkit.providers.s3.testutils import S3Fixture
 
 from dhfs.config import Config
 from dhfs.inject import prepare_interrogation_bucket_cleaner, prepare_interrogator
 from dhfs.ports.outbound.cleaner import S3CleanerPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
+from hexkit.providers.s3.testutils import S3Fixture
 from tests.fixtures.central_api import CentralApiMock, get_mocked_httpx_client
 
 

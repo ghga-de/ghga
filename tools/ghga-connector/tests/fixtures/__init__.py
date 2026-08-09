@@ -16,7 +16,6 @@
 """Fixtures that are used in both integration and unit tests"""
 
 import pytest_asyncio
-from hexkit.utils import set_context_var
 
 from ghga_connector.config import (
     crypt4gh_public_keys,
@@ -24,6 +23,7 @@ from ghga_connector.config import (
     upload_api_url_var,
     work_package_api_url_var,
 )
+from hexkit.utils import set_context_var
 from tests.fixtures.mock_api.apis import (
     DOWNLOAD_API_URL,
     UPLOAD_API_URL,

@@ -24,14 +24,14 @@ from urllib.parse import parse_qs, urlparse
 import pyotp
 import pytest
 from fastapi import status
-from ghga_service_commons.api.mock_router import MockRouter
-from hexkit.utils import now_utc_ms_prec
 
 from auth_service.auth_adapter.core.session_store import Session, SessionState
 from auth_service.auth_adapter.deps import get_session_store
 from auth_service.auth_adapter.ports.session_store import SessionStorePort
 from auth_service.user_registry.models.ivas import IvaState
 from auth_service.user_registry.models.users import UserStatus
+from ghga_service_commons.api.mock_router import MockRouter
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
 
 from ...fixtures.utils import (

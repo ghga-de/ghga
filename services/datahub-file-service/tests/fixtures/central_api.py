@@ -28,7 +28,6 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx2
-from ghga_service_commons.api.mock_router import MockRouter
 
 from dhfs.adapters.outbound.central import (
     INTERROGATION_REPORTS_PATH,
@@ -37,6 +36,7 @@ from dhfs.adapters.outbound.central import (
     CentralClientConfig,
 )
 from dhfs.adapters.outbound.http import HttpClientConfig, get_configured_httpx_client
+from ghga_service_commons.api.mock_router import MockRouter
 
 ResponseHandler = Callable[[httpx2.Request], httpx2.Response]
 

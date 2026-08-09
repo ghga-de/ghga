@@ -21,13 +21,13 @@ from contextvars import ContextVar
 from typing import Any
 
 import httpx2
-from ghga_service_commons.transports import CompositeConfig
-from hexkit.config import config_from_yaml
-from hexkit.utils import set_context_var
 from pydantic import Field, PositiveInt
 
 from ghga_connector import exceptions
 from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_WAIT_TIME
+from ghga_service_commons.transports import CompositeConfig
+from hexkit.config import config_from_yaml
+from hexkit.utils import set_context_var
 
 __all__ = [
     "Config",
