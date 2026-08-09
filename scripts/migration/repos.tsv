@@ -11,6 +11,19 @@
 # Excluded on purpose:
 #   datahub-test-bed                  -> different audience (data hubs verifying their own S3); stays its own repo
 #   microservice-repository-template  -> RETIRED; its conventions become root scaffolding, not imported
+#   upload-orchestration-service      -> DEPRECATED upstream; never imported
+#   em-transformation-service         -> imported as the template scaffold, REMOVED again 2026-08: upstream
+#                                        builds against metldata 5.x (the schemapack line, released from the
+#                                        `schemapack` branch), which cannot co-resolve with the workspace's
+#                                        integrated metldata 4.x line (DSKit caps `<5`). Upstream development
+#                                        continues standalone; re-import (history-preserving) when the
+#                                        workspace moves to the schemapack line.
+#   charts                            -> imported once (deploy/), then REMOVED from the sync: the monorepo
+#                                        restructured deploy/ to the ADR-0013 layout (base/ -> charts/ghga-common,
+#                                        per-service charts generated), so upstream commits no longer apply as
+#                                        patches. Upstream library changes are ported SEMANTICALLY into
+#                                        deploy/charts/ghga-common + the generator instead — see
+#                                        docs/migration/runbook.md.
 #
 # Libraries (source-coupled, consumed via [tool.uv.sources] workspace = true)
 lib	hexkit	.	libs/hexkit	main
@@ -40,7 +53,6 @@ service	dlq-service	.	services/dlq-service	main
 service	state-management-service	.	services/state-management-service	main
 service	ghga-registry-service	.	services/ghga-registry-service	main
 service	reverse-transpiler-service	.	services/reverse-transpiler-service	main
-service	em-transformation-service	.	services/em-transformation-service	main
 service	datahub-file-service	.	services/datahub-file-service	main
 #
 # CLIs and jobs
@@ -60,9 +72,6 @@ service	test-oidc-provider	.	services/test-oidc-provider	main
 #
 # Integration test bed (BDD + Playwright) -> runs against kind + helm
 testbed	archive-test-bed	.	testbed	main
-#
-# Helm chart system (library chart + generator + per-service charts; ADR-0013)
-deploy	charts	.	deploy	main
 #
 # Epic technical specifications: planning docs, no code. Not a uv workspace member
 # (docs/epics is outside the libs/*, services/*, tools/* globs).

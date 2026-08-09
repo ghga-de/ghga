@@ -28,7 +28,6 @@ members = [
     "ifrs",
     "mass",
     "metldata",
-    "my-microservice",
     "nos",
     "ns",
     "pcs",
@@ -2279,25 +2278,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2f/e1/aab6c946570496b78e67804721f3d5e2d62a93081b9b37df77764ef56347/msgpack-1.2.1-cp314-cp314t-win32.whl", hash = "sha256:c1c79a604a2969a868a78b6ebd27a887e00c624f14f66b3038e0590cb23332d1", size = 70914, upload-time = "2026-06-18T16:13:49.385Z" },
     { url = "https://files.pythonhosted.org/packages/13/0a/e608956488a2af014cfe6e3d665e090b8ee42aa14b07f8f95b8880d66b09/msgpack-1.2.1-cp314-cp314t-win_amd64.whl", hash = "sha256:f12038a35fabd52e56a3547bab42401af49a45caa6dd00b34c44de235bc93ee2", size = 77999, upload-time = "2026-06-18T16:13:50.467Z" },
     { url = "https://files.pythonhosted.org/packages/d2/8a/27e2e57055176e366a46b85d02d68e7a5bcfbdd8474c9706375d965f24d3/msgpack-1.2.1-cp314-cp314t-win_arm64.whl", hash = "sha256:0adcf06ffde0777c0e1a9b771a2b1c4226ba1bbf748c8efcc02fcdeca3299107", size = 71160, upload-time = "2026-06-18T16:13:51.498Z" },
-]
-
-[[package]]
-name = "my-microservice"
-version = "0.1.0"
-source = { editable = "services/em-transformation-service" }
-dependencies = [
-    { name = "ghga-event-schemas" },
-    { name = "ghga-service-commons", extra = ["api"] },
-    { name = "hexkit", extra = ["akafka", "mongodb", "s3"] },
-    { name = "typer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "ghga-event-schemas", editable = "libs/ghga-event-schemas" },
-    { name = "ghga-service-commons", extras = ["api"], editable = "libs/ghga-service-commons" },
-    { name = "hexkit", extras = ["akafka", "s3", "mongodb"], editable = "libs/hexkit" },
-    { name = "typer", specifier = ">=0.19.1" },
 ]
 
 [[package]]
