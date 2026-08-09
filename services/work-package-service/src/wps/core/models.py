@@ -357,6 +357,6 @@ class UploadWorkOrderTokenRequest(BaseModel):
             return self
         if self.work_type == "create" and not self.alias:
             raise ValueError("File alias is required for CREATE work type")
-        elif self.work_type != "create" and not self.file_id:
+        if self.work_type != "create" and not self.file_id:
             raise ValueError("File ID is required for UPLOAD, CLOSE, DELETE work types")
         return self

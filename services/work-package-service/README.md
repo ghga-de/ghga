@@ -52,13 +52,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/work-package-service):
 ```bash
-docker pull ghga/work-package-service:11.1.0
+docker pull ghga/work-package-service:11.1.1
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/work-package-service:11.1.0 .
+docker build -t ghga/work-package-service:11.1.1 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -66,7 +66,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/work-package-service:11.1.0 --help
+docker run -p 8080:8080 ghga/work-package-service:11.1.1 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -83,7 +83,7 @@ wps --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- <a id="properties/enable_opentelemetry"></a>**`enable_opentelemetry`** *(boolean)*: If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation. Default: `false`.
+- <a id="properties/enable_opentelemetry"></a>**`enable_opentelemetry`** *(boolean)*: If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. Default: `false`.
 - <a id="properties/otel_trace_sampling_rate"></a>**`otel_trace_sampling_rate`** *(number)*: Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. Minimum: `0`. Maximum: `1`. Default: `1.0`.
 - <a id="properties/log_level"></a>**`log_level`** *(string)*: The minimum log level to capture. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"INFO"`.
 - <a id="properties/service_name"></a>**`service_name`** *(string)*: Default: `"wps"`.
