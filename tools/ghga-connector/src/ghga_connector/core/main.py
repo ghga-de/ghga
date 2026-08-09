@@ -18,7 +18,7 @@
 
 from pathlib import Path
 
-import httpx
+import httpx2
 
 from ghga_connector.config import get_config, set_runtime_config
 from ghga_connector.constants import DEFAULT_BATCH_MAX_RETRIES
@@ -85,7 +85,7 @@ async def async_batch_upload(  # noqa: PLR0913
 
 async def upload_files(  # noqa: PLR0913
     *,
-    client: httpx.AsyncClient,
+    client: httpx2.AsyncClient,
     core_file_info_list: list[CoreFileInfo],
     my_public_key_path: Path,
     my_private_key_path: Path,

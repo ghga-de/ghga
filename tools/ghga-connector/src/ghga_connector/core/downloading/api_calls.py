@@ -18,7 +18,7 @@
 import base64
 from typing import Any
 
-import httpx
+import httpx2
 from async_lru import alru_cache
 from tenacity import RetryError
 
@@ -46,7 +46,7 @@ class DownloadClient:
     """
 
     def __init__(
-        self, *, client: httpx.AsyncClient, work_package_client: WorkPackageClient
+        self, *, client: httpx2.AsyncClient, work_package_client: WorkPackageClient
     ):
         self._client = client
         self._work_package_client = work_package_client
@@ -59,7 +59,7 @@ class DownloadClient:
 
     async def _get_drs_object_retrieval_auth_headers(
         self, *, file_id: str
-    ) -> httpx.Headers:
+    ) -> httpx2.Headers:
         """Fetch work order token and headers to get object storage URL for file download"""
         decrypted_wot = await self._work_package_client.get_download_wot(
             file_id=file_id
@@ -70,7 +70,7 @@ class DownloadClient:
         self,
         *,
         url: str,
-        headers: httpx.Headers,
+        headers: httpx2.Headers,
     ) -> RetryResponse | DrsObject:
         """
         Perform a RESTful API call to retrieve a DRS Object from the Download API.
@@ -81,14 +81,14 @@ class DownloadClient:
         returned.
         """
         try:
-            response: httpx.Response = await self._client.get(
+            response: httpx2.Response = await self._client.get(
                 url=url,
                 headers=headers,
                 timeout=TIMEOUT_LONG,
             )
         except RetryError as retry_error:
             wrapped_exception = retry_error.last_attempt.exception()
-            if isinstance(wrapped_exception, httpx.RequestError):
+            if isinstance(wrapped_exception, httpx2.RequestError):
                 exceptions.raise_if_connection_failed(
                     request_error=wrapped_exception, url=url
                 )
@@ -112,7 +112,7 @@ class DownloadClient:
 
     async def get_envelope_authorization_headers(
         self, *, file_id: str
-    ) -> httpx.Headers:
+    ) -> httpx2.Headers:
         """
         Fetch download WOT and build the auth headers needed to retrieve the Crypt4GH
         envelope for the specified file.
@@ -136,10 +136,10 @@ class DownloadClient:
 
         # Make function call to get file header envelope
         try:
-            response: httpx.Response = await self._client.get(
+            response: httpx2.Response = await self._client.get(
                 headers=auth_headers, url=url
             )
-        except httpx.RequestError as request_error:
+        except httpx2.RequestError as request_error:
             raise exceptions.RequestFailedError(url=url) from request_error
 
         status_code = response.status_code
@@ -207,18 +207,18 @@ class DownloadClient:
 
         Returns a tuple containing the starting position and bytes.
         """
-        headers = httpx.Headers(
+        headers = httpx2.Headers(
             {
                 "Range": f"bytes={start}-{end}",
                 "Cache-Control": "no-store",  # don't cache part downloads
             }
         )
         try:
-            response: httpx.Response = await self._client.get(url=url, headers=headers)
+            response: httpx2.Response = await self._client.get(url=url, headers=headers)
         except RetryError as retry_error:
             wrapped_exception = retry_error.last_attempt.exception()
 
-            if isinstance(wrapped_exception, httpx.RequestError):
+            if isinstance(wrapped_exception, httpx2.RequestError):
                 exceptions.raise_if_connection_failed(
                     request_error=wrapped_exception, url=url
                 )
@@ -245,7 +245,7 @@ class DownloadClient:
 
 
 def _handle_drs_object_response(
-    *, url: str, response: httpx.Response
+    *, url: str, response: httpx2.Response
 ) -> DrsObject | RetryResponse:
     """Handle DRS object endpoint response from Download API.
 

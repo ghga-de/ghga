@@ -15,7 +15,7 @@
 
 """Unit tests for custom exceptions and exception helpers."""
 
-import httpx
+import httpx2
 
 from ghga_connector import exceptions
 
@@ -27,7 +27,7 @@ def test_reason_from_exception_uses_message_when_present():
 
 def test_reason_from_exception_falls_back_to_type_for_blank_message():
     """Ensure an exception with an empty message falls back to its qualified type name."""
-    reason = exceptions.extract_reason(httpx.ReadError(""))
+    reason = exceptions.extract_reason(httpx2.ReadError(""))
 
     assert reason  # assert not empty
-    assert "httpx.ReadError" in reason
+    assert "httpx2.ReadError" in reason

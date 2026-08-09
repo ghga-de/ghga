@@ -24,19 +24,23 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
-import httpx
 import pytest
-from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from ghga_connector import exceptions
 from ghga_connector.constants import C4GH, DEFAULT_PART_SIZE
 from ghga_connector.core.main import async_download
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
-from tests.fixtures.mock_api.app import (
-    mock_external_app,
-    mock_external_calls,  # noqa: F401
-    url_expires_after,
+from tests.fixtures.mock_api.apis import (
+    WORK_ORDER_TOKEN,
+    MockApis,
+    StagedObject,
+    mock_apis,  # noqa: F401
+)
+from tests.fixtures.mock_api.router import (
+    httpyexpect_error,
+    mock_health_checks,
+    respond,
 )
 from tests.fixtures.s3 import (  # noqa: F401
     S3Fixture,
@@ -53,31 +57,9 @@ from tests.fixtures.utils import (
 GET_PACKAGE_FILES_ATTR = (
     "ghga_connector.core.work_package.WorkPackageClient.get_package_files"
 )
-ENVIRON_DEFAULTS = {
-    "DEFAULT_PART_SIZE": str(16 * 1024 * 1024),
-    "S3_DOWNLOAD_URL": "test://download.url",
-    "S3_DOWNLOAD_FIELD_SIZE": str(146),
-    "FAKE_ENVELOPE": "Fake_envelope",
-}
-FAKE_ENVELOPE = "Thisisafakeenvelope"
-SHORT_LIFESPAN = 10
+FAKE_ENVELOPE = b"Thisisafakeenvelope"
 
-pytestmark = [
-    pytest.mark.asyncio(loop_scope="session"),
-    pytest.mark.httpx_mock(
-        assert_all_responses_were_requested=False,
-        assert_all_requests_were_expected=False,
-        can_send_already_matched_responses=True,
-        should_mock=lambda request: str(request.url).endswith("/health"),
-    ),
-]
-
-
-@pytest.fixture(scope="function", autouse=True)
-def set_env_vars(monkeypatch):
-    """Set environment variables"""
-    for name, value in ENVIRON_DEFAULTS.items():
-        monkeypatch.setenv(name, value)
+pytestmark = [pytest.mark.asyncio(loop_scope="session")]
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -87,47 +69,25 @@ def apply_test_config():
         yield
 
 
-@pytest.fixture(scope="function")
-def apply_common_download_mocks(
-    monkeypatch,
-    patch_work_package_functions,  # noqa: F811
-):
-    """Monkeypatch download-specific functions and values"""
-    monkeypatch.setenv("FAKE_ENVELOPE", FAKE_ENVELOPE)
-
-
-def set_presigned_url_update_endpoint(
-    monkeypatch,
+def stage(
     s3_fixture: S3Fixture,  # noqa: F811
     *,
+    file_id: str,
     bucket_id: str,
-    object_id: str,
-    expires_after: int,
-):
-    """Temporarily assign the S3 download URL update endpoint in the mock app.
+    size: int,
+    envelope: bytes | None = FAKE_ENVELOPE,
+) -> StagedObject:
+    """Describe an S3 object as staged, presigning its URL fresh on every request."""
 
-    Since creating the URL requires access to the S3 fixture, this behavior is
-    defined here instead of with the rest of the mock api.
-    """
-
-    async def update_presigned_url_actual():
-        """Create a new presigned download URL for S3."""
-        download_url = await s3_fixture.storage.get_object_download_url(
-            bucket_id=bucket_id,
-            object_id=object_id,
-            expires_after=expires_after,
+    def presign(expires_after: int):
+        """Presign a download URL for the object."""
+        return s3_fixture.storage.get_object_download_url(
+            bucket_id=bucket_id, object_id=file_id, expires_after=expires_after
         )
 
-        monkeypatch.setenv("S3_DOWNLOAD_URL", download_url)
-
-    # Monkeypatch the placeholder endpoint function with the above
-    monkeypatch.setattr(
-        "tests.fixtures.mock_api.app.update_presigned_url_placeholder",
-        update_presigned_url_actual,
+    return StagedObject(
+        file_id=file_id, size=size, presign_download_url=presign, envelope=envelope
     )
-
-    # Override the app dependency so it uses the new cache lifespan
-    mock_external_app.dependency_overrides[url_expires_after] = lambda: expires_after
 
 
 @pytest.mark.parametrize(
@@ -152,12 +112,11 @@ def set_presigned_url_update_endpoint(
 async def test_multipart_download(
     file_size: int,
     part_size: int,
-    httpx_mock: HTTPXMock,  # noqa: F811
     s3_fixture: S3Fixture,  # noqa F811
     tmp_path: pathlib.Path,
     monkeypatch,
-    mock_external_calls,  # noqa: F811
-    apply_common_download_mocks,
+    mock_apis: MockApis,  # noqa: F811
+    patch_work_package_functions,  # noqa: F811
 ):
     """Test the multipart download of a file"""
     # override the default config fixture with updated part size
@@ -167,8 +126,7 @@ async def test_multipart_download(
 
     big_object = await get_big_s3_object(s3_fixture, object_size=file_size)
 
-    # The intercepted health check API calls will return the following mock response
-    httpx_mock.add_response(json={"status": "OK"})
+    mock_health_checks(monkeypatch)
 
     # Patch get_package_files
     monkeypatch.setattr(
@@ -179,18 +137,15 @@ async def test_multipart_download(
     # right now the desired file size is only
     # approximately met by the provided big file:
     actual_file_size = len(big_object.content)
-    monkeypatch.setenv("S3_DOWNLOAD_FIELD_SIZE", str(actual_file_size))
 
-    set_presigned_url_update_endpoint(
-        monkeypatch,
+    mock_apis.download.staged = stage(
         s3_fixture,
+        file_id=big_object.object_id,
         bucket_id=big_object.bucket_id,
-        object_id=big_object.object_id,
-        expires_after=SHORT_LIFESPAN,
+        size=actual_file_size,
     )
 
-    big_file_content = str.encode(FAKE_ENVELOPE)
-    big_file_content += big_object.content
+    big_file_content = FAKE_ENVELOPE + big_object.content
 
     await async_download(
         output_dir=tmp_path,
@@ -222,12 +177,11 @@ async def test_download(
     bad_outdir: bool,
     file_name: str,
     expected_exception: Any,
-    httpx_mock: HTTPXMock,  # noqa: F811
     s3_fixture: S3Fixture,  # noqa: F811
     tmp_path: pathlib.Path,
     monkeypatch,
-    mock_external_calls,  # noqa: F811
-    apply_common_download_mocks,
+    mock_apis: MockApis,  # noqa: F811
+    patch_work_package_functions,  # noqa: F811
 ):
     """Test the download of a file"""
     output_dir = Path("/non/existing/path") if bad_outdir else tmp_path
@@ -239,21 +193,25 @@ async def test_download(
         AsyncMock(return_value={file.file_id: ""}),
     )
 
+    # The envelope is only served for files that have one - "file_envelope_missing"
+    # doesn't.
     if file.populate_storage:
-        set_presigned_url_update_endpoint(
-            monkeypatch,
+        mock_apis.download.staged = stage(
             s3_fixture,
+            file_id=file.file_id,
             bucket_id=file.grouping_label,
-            object_id=file.file_id,
-            expires_after=SHORT_LIFESPAN,
+            size=os.path.getsize(file.file_path),
+            envelope=None if file_name == "file_envelope_missing" else FAKE_ENVELOPE,
         )
-    else:
-        monkeypatch.setenv("S3_DOWNLOAD_URL", "")
 
-    monkeypatch.setenv("S3_DOWNLOAD_FIELD_SIZE", str(os.path.getsize(file.file_path)))
+    # "file_retry" is never staged - the API keeps reporting it as still being staged
+    # until the connector gives up waiting.
+    if file_name == "file_retry":
+        mock_apis.download.on_get_drs_object = respond(
+            202, headers={"Retry-After": "10"}
+        )
 
-    # The intercepted health check API calls will return the following mock response
-    httpx_mock.add_response(json={"status": "OK"})
+    mock_health_checks(monkeypatch)
 
     with expected_exception:
         await async_download(
@@ -268,7 +226,7 @@ async def test_download(
     with tmp_file.open("wb") as file_write:
         with file.file_path.open("rb") as file_read:
             buffer = file_read.read()
-            file_write.write(str.encode(FAKE_ENVELOPE))
+            file_write.write(FAKE_ENVELOPE)
             file_write.write(buffer)
 
     if not expected_exception:
@@ -276,12 +234,11 @@ async def test_download(
 
 
 async def test_file_not_downloadable(
-    httpx_mock: HTTPXMock,  # noqa: F811
     s3_fixture: S3Fixture,  # noqa: F811
     tmp_path: pathlib.Path,
     monkeypatch,
-    mock_external_calls,  # noqa: F811
-    apply_common_download_mocks,
+    mock_apis: MockApis,  # noqa: F811
+    patch_work_package_functions,  # noqa: F811
 ):
     """Test to try downloading a file that isn't in storage.
 
@@ -291,8 +248,7 @@ async def test_file_not_downloadable(
     """
     output_dir = tmp_path
 
-    # The intercepted health check API calls will return the following mock response
-    httpx_mock.add_response(json={"status": "OK"})
+    mock_health_checks(monkeypatch)
 
     # Patch get_package_files
     file = state.FILES["file_not_downloadable"]
@@ -301,42 +257,53 @@ async def test_file_not_downloadable(
         AsyncMock(return_value={file.file_id: ""}),
     )
 
-    monkeypatch.setenv("S3_DOWNLOAD_FIELD_SIZE", str(os.path.getsize(file.file_path)))
+    # Nothing is staged, so the Download API reports the file as unknown
+    describe_drs_object = mock_apis.download.on_get_drs_object
 
-    # 403 caused by an invalid auth token
-    with (
-        patch(
-            "ghga_connector.core.work_package._decrypt",
-            lambda data, key: "authfail_normal",
-        ),
-        pytest.raises(
-            exceptions.UnauthorizedAPICallError,
-            match=r"This is not the token you're looking for\.",
-        ),
+    # 403 caused by an invalid auth token. A plain 403 explains itself in `detail`, an
+    # httpyexpect one in `description`, and the connector reads whichever is there - so
+    # the two refusals below exercise both flavors.
+    mock_apis.download.on_get_drs_object = respond(
+        403, json={"detail": "This is not the token you're looking for."}
+    )
+    with pytest.raises(
+        exceptions.UnauthorizedAPICallError,
+        match=r"This is not the token you're looking for\.",
     ):
         await async_download(
             output_dir=output_dir,
             my_public_key_path=Path(PUBLIC_KEY_FILE),
             my_private_key_path=Path(PRIVATE_KEY_FILE),
         )
+
+    # The work order token the connector fetched has to have reached the Download API as
+    # the bearer token - `patch_work_package_functions` leaves `_decrypt` as the identity.
+    assert (
+        mock_apis.download.last_request.headers["authorization"]
+        == f"Bearer {WORK_ORDER_TOKEN}"
+    )
 
     # 403 caused by requesting file ID that's not part of the work order token
-    with (
-        patch(
-            "ghga_connector.core.work_package._decrypt",
-            lambda data, key: "file_id_mismatch",
-        ),
-        pytest.raises(
-            exceptions.UnauthorizedAPICallError,
-            match="Endpoint file ID did not match file ID"
-            " announced in work order token",
-        ),
+    mock_apis.download.on_get_drs_object = lambda request, **path_variables: (
+        httpyexpect_error(
+            403,
+            "wrongFileAuthorizationError",
+            "Endpoint file ID did not match file ID announced in work order token.",
+            {},
+        )
+    )
+    with pytest.raises(
+        exceptions.UnauthorizedAPICallError,
+        match="Endpoint file ID did not match file ID announced in work order token",
     ):
         await async_download(
             output_dir=output_dir,
             my_public_key_path=Path(PUBLIC_KEY_FILE),
             my_private_key_path=Path(PRIVATE_KEY_FILE),
         )
+
+    # Restore the default handler for the "file is unknown" case below
+    mock_apis.download.on_get_drs_object = describe_drs_object
 
     # Exception arising when the file ID is valid, but not found in the Download API (and the
     #  user inputs 'no' instead of 'yes' when prompted if they want to continue anyway)
@@ -355,14 +322,13 @@ async def test_file_not_downloadable(
 
 
 async def test_download_bad_url(
-    httpx_mock: HTTPXMock,  # noqa: F811
     tmp_path: pathlib.Path,
     monkeypatch,
-    mock_external_calls,  # noqa: F811
-    apply_common_download_mocks,
+    mock_apis: MockApis,  # noqa: F811
+    patch_work_package_functions,  # noqa: F811
 ):
     """Check that the right error is raised for a bad URL in the download logic."""
-    httpx_mock.add_exception(httpx.RequestError(""))
+    mock_health_checks(monkeypatch, reachable=False)
 
     # Patch get_package_files
     file = state.FILES["file_downloadable"]

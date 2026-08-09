@@ -21,7 +21,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
-import httpx
+import httpx2
 import pytest
 
 from ghga_connector import exceptions
@@ -200,7 +200,7 @@ async def test_upload_file_part_wraps_generic_exception():
 async def test_upload_file_part_wraps_exception_with_blank_message(caplog):
     """Make sure _upload_file_part handles exceptions with empty messages correctly."""
     upload_client = AsyncMock()
-    upload_client.upload_file_part.side_effect = httpx.ReadError("")
+    upload_client.upload_file_part.side_effect = httpx2.ReadError("")
     file_processor = make_dummy_file_processor(part_count=1)
 
     with NamedTemporaryFile() as f:
@@ -217,7 +217,7 @@ async def test_upload_file_part_wraps_exception_with_blank_message(caplog):
             await asyncio.sleep(0)  # let the finalize done-callback run and log
 
         assert (
-            "an exception of type 'httpx.ReadError' was raised without a message"
+            "an exception of type 'httpx2.ReadError' was raised without a message"
             in caplog.text
         )
 

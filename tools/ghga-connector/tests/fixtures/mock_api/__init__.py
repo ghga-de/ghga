@@ -14,6 +14,4 @@
 # limitations under the License.
 #
 
-"""Code to start a mock API server in the background of a test."""
-
-from .app import UploadStatus  # noqa: F401
+"""Mocks of the GHGA APIs the connector talks to, served from a `MockRouter`."""

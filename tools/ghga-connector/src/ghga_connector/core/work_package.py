@@ -20,7 +20,7 @@ from collections.abc import Callable
 from typing import Any, Literal
 from uuid import UUID
 
-import httpx
+import httpx2
 from async_lru import alru_cache
 from pydantic import UUID4, SecretBytes
 from tenacity import RetryError
@@ -45,7 +45,7 @@ class WorkPackageClient:
 
     def __init__(
         self,
-        client: httpx.AsyncClient,
+        client: httpx2.AsyncClient,
         my_private_key: SecretBytes,
         my_public_key: bytes,
     ) -> None:
@@ -71,10 +71,10 @@ class WorkPackageClient:
         self,
         *,
         fn: Callable,
-        headers: httpx.Headers,
+        headers: httpx2.Headers,
         url: str,
         body: dict[str, Any] | None = None,
-    ) -> httpx.Response:
+    ) -> httpx2.Response:
         """Call url with provided headers and client method passed as callable."""
         try:
             args = {  # we don't always want to supply 'json' kwarg, so do it like this
@@ -83,11 +83,11 @@ class WorkPackageClient:
             }
             if body is not None:
                 args["json"] = body
-            response: httpx.Response = await fn(**args)
+            response: httpx2.Response = await fn(**args)
         except RetryError as retry_error:
             wrapped_exception = retry_error.last_attempt.exception()
 
-            if isinstance(wrapped_exception, httpx.RequestError):
+            if isinstance(wrapped_exception, httpx2.RequestError):
                 raise exceptions.RequestFailedError(url=url) from retry_error
             elif wrapped_exception:
                 raise wrapped_exception from retry_error
@@ -110,7 +110,7 @@ class WorkPackageClient:
         url = f"{self.work_package_api_url}/work-packages/{self.package_id}"
 
         # send authorization header as bearer token
-        headers = httpx.Headers({"Authorization": f"Bearer {self.access_token}"})
+        headers = httpx2.Headers({"Authorization": f"Bearer {self.access_token}"})
         response = await self._call_url(fn=self.client.get, headers=headers, url=url)
 
         status_code = response.status_code
@@ -196,7 +196,7 @@ class WorkPackageClient:
                 code other than 403 or 201, OR the response doesn't contain a WOT.
         """
         # send authorization header as bearer token
-        headers = httpx.Headers(
+        headers = httpx2.Headers(
             {
                 "Authorization": f"Bearer {self.access_token}",
                 "Cache-Control": f"min-fresh={CACHE_MIN_FRESH}",
@@ -246,7 +246,7 @@ class WorkPackageClient:
         if mismatch:
             raise exceptions.PubKeyMismatchError()
 
-    async def make_auth_headers(self, decrypted_token: str) -> httpx.Headers:
+    async def make_auth_headers(self, decrypted_token: str) -> httpx2.Headers:
         """
         Prepare headers for calling Upload or Download API with a decrypted work order
         token.
@@ -255,7 +255,7 @@ class WorkPackageClient:
         fresh for at least another `CACHE_MIN_FRESH` seconds.
         """
         # build headers
-        headers = httpx.Headers(
+        headers = httpx2.Headers(
             {
                 "Accept": "application/json",
                 "Authorization": f"Bearer {decrypted_token}",

@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock
 from uuid import UUID
 
 import crypt4gh.keys
-import httpx
+import httpx2
 import pytest
 
 from ghga_connector.core.uploading.structs import CoreFileInfo, FileInfoForUpload
@@ -86,26 +86,26 @@ def mock_work_package_token(max_tries: int) -> list[str]:
     return work_package_parts
 
 
-class RecordingClient(httpx.AsyncClient):
+class RecordingClient(httpx2.AsyncClient):
     """An `AsyncClient` wrapper that records responses."""
 
-    calls: list[httpx.Response]
+    calls: list[httpx2.Response]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.calls = []
 
-    async def _do_request(self, method: str, *args, **kwargs) -> httpx.Response:
+    async def _do_request(self, method: str, *args, **kwargs) -> httpx2.Response:
         """Wrap actual client calls so we can see which calls were cached vs not."""
         method_func = getattr(super(), method)
         response = await method_func(*args, **kwargs)
         self.calls.append(response)
         return response
 
-    async def get(self, *args, **kwargs) -> httpx.Response:
+    async def get(self, *args, **kwargs) -> httpx2.Response:
         """Record GET calls."""
         return await self._do_request("get", *args, **kwargs)
 
-    async def post(self, *args, **kwargs) -> httpx.Response:
+    async def post(self, *args, **kwargs) -> httpx2.Response:
         """Record POST calls."""
         return await self._do_request("post", *args, **kwargs)
