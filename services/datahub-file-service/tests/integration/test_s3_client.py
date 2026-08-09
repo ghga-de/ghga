@@ -19,14 +19,14 @@ import hashlib
 from collections.abc import AsyncGenerator
 from uuid import uuid4
 
-import httpx
+import httpx2
 import pytest
 import pytest_asyncio
+from hexkit.providers.s3 import S3ObjectStorage
+from hexkit.providers.s3.testutils import temp_file_object
 
 from dhfs.adapters.outbound.http import get_configured_httpx_client
 from dhfs.adapters.outbound.s3 import S3Client
-from hexkit.providers.s3 import S3ObjectStorage
-from hexkit.providers.s3.testutils import temp_file_object
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import INBOX, make_file_upload, upload_dummy_data
 
@@ -177,7 +177,7 @@ async def test_init_interrogation_bucket_upload(
     url = await joint_fixture.s3.storage.get_part_upload_url(
         upload_id=upload_id, bucket_id=interrogation, object_id=object_id, part_number=1
     )
-    response = httpx.put(url, content=b"some content but not too much")
+    response = httpx2.put(url, content=b"some content but not too much")
     assert response.status_code == 200
 
 
@@ -243,7 +243,7 @@ async def test_upload_file_part(joint_fixture: JointFixture, s3_client: S3Client
     url = await joint_fixture.s3.storage.get_object_download_url(
         bucket_id=interrogation, object_id=object_id
     )
-    uploaded_data = httpx.get(url)
+    uploaded_data = httpx2.get(url)
     assert uploaded_data.content == part
 
 

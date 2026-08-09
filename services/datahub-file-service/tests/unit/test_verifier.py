@@ -16,12 +16,13 @@
 """Unit tests for the check (verifier) setup/teardown logic."""
 
 import logging
+from functools import partial
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pytest_httpx import HTTPXMock
 
+from dhfs.adapters.outbound.central import UPLOADS_PATH
 from dhfs.config import Config
 from dhfs.core.verifier import (
     INTERROGATION_OBJECT_ID,
@@ -31,6 +32,7 @@ from dhfs.core.verifier import (
     _validate_config_for_verifier,
     run_dhfs_verification,
 )
+from tests.fixtures.central_api import CentralApiMock, get_mocked_httpx_client
 
 
 @pytest.mark.parametrize(
@@ -82,9 +84,7 @@ async def test_run_dhfs_verification_raises_when_required_bucket_missing(
 
 
 @pytest.mark.asyncio
-async def test_run_dhfs_verification_pings_central_new_uploads_endpoint(
-    config: Config, httpx_mock: HTTPXMock
-):
+async def test_run_dhfs_verification_pings_central_new_uploads_endpoint(config: Config):
     """Make sure that verification pings Central's 'new uploads' endpoint to confirm
     the DHFS version is good to go.
     """
@@ -96,11 +96,11 @@ async def test_run_dhfs_verification_pings_central_new_uploads_endpoint(
             "data_hub_crypt4gh_public_key_path": Path("/fake/key.pub"),
         }
     )
-    expected_url = (
-        f"{str(verifier_config.central_api_url).rstrip('/')}"
-        f"/storages/{verifier_config.storage_alias}/uploads"
+    base_url = str(verifier_config.central_api_url).rstrip("/")
+    expected_url = base_url + UPLOADS_PATH.format(
+        storage_alias=verifier_config.storage_alias
     )
-    httpx_mock.add_response(method="GET", url=expected_url, json=[])
+    central_api = CentralApiMock(config=verifier_config)
 
     storage = AsyncMock()
     storage.does_bucket_exist.return_value = True
@@ -116,10 +116,16 @@ async def test_run_dhfs_verification_pings_central_new_uploads_endpoint(
             "dhfs.core.verifier._clean_buckets",
             new=AsyncMock(side_effect=RuntimeError),
         ),
+        patch(
+            "dhfs.core.verifier.get_configured_httpx_client",
+            partial(get_mocked_httpx_client, central_api=central_api),
+        ),
     ):
         await run_dhfs_verification(verifier_config, file_size=1024)
 
-    assert httpx_mock.get_request(method="GET", url=expected_url) is not None
+    assert [(request.method, str(request.url)) for request in central_api.requests] == [
+        ("GET", expected_url)
+    ]
 
 
 @pytest.mark.asyncio

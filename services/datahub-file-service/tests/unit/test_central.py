@@ -20,14 +20,17 @@ import json
 import os
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
-from typing import Literal, cast
+from typing import Literal
 from uuid import uuid4
 
-import httpx
+import httpx2
 import pytest
 import pytest_asyncio
+from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
+from ghga_service_commons.utils.crypt import decrypt
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.utils import now_utc_ms_prec
 from pydantic import BaseModel, SecretBytes
-from pytest_httpx import HTTPXMock
 
 from dhfs import __version__
 from dhfs.adapters.outbound.central import CentralClient
@@ -37,10 +40,7 @@ from dhfs.adapters.outbound.http import (
 )
 from dhfs.config import Config
 from dhfs.core.models import InterrogationReport
-from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
-from ghga_service_commons.utils.crypt import decrypt
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.utils import now_utc_ms_prec
+from tests.fixtures.central_api import CentralApiMock, respond
 from tests.fixtures.utils import CENTRAL_CRYPT4GH_PRIVATE_KEY, DHFS_JWK
 
 pytestmark = pytest.mark.asyncio()
@@ -83,31 +83,46 @@ class JWTClaimsModel(BaseModel):
     exp: UTCDatetime
 
 
+@pytest.fixture(name="central_api")
+def central_api_fixture(config: Config) -> CentralApiMock:
+    """Yields a mock of the GHGA Central API"""
+    return CentralApiMock(config=config)
+
+
 @pytest_asyncio.fixture(name="central_client")
-async def configured_central_client(config: Config) -> AsyncGenerator[CentralClient]:
-    """Yields a configured CentralClient instance"""
-    async with get_configured_httpx_client(config=config) as httpx_client:
+async def configured_central_client(
+    config: Config, central_api: CentralApiMock
+) -> AsyncGenerator[CentralClient]:
+    """Yields a CentralClient instance talking to the mocked Central API"""
+    async with get_configured_httpx_client(
+        config=config, base_transport=central_api.as_transport()
+    ) as httpx_client:
         yield CentralClient(config=config, httpx_client=httpx_client)
 
 
-async def test_central_api_unavailable(config: Config, central_client):
+async def test_central_api_unavailable(config: Config):
     """Ensure a ConnectionFailedError gets raised if the central api is unavailable"""
-    # Test the different public methods exposed by the CentralClient
-    with pytest.raises(ConnectionFailedError):
-        await central_client.fetch_new_uploads()
+    # Use an unmocked client so the requests actually fail to connect
+    async with get_configured_httpx_client(config=config) as httpx_client:
+        central_client = CentralClient(config=config, httpx_client=httpx_client)
 
-    with pytest.raises(ConnectionFailedError):
-        await central_client.get_removable_files(object_ids=["abc123"])
+        # Test the different public methods exposed by the CentralClient
+        with pytest.raises(ConnectionFailedError):
+            await central_client.fetch_new_uploads()
 
-    with pytest.raises(ConnectionFailedError):
-        report = make_interrogation_success_report(config.storage_alias)
-        await central_client.submit_interrogation_report(report=report)
+        with pytest.raises(ConnectionFailedError):
+            await central_client.get_removable_files(object_ids=["abc123"])
+
+        with pytest.raises(ConnectionFailedError):
+            report = make_interrogation_success_report(config.storage_alias)
+            await central_client.submit_interrogation_report(report=report)
 
 
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
-async def test_jwt_formation(config: Config, httpx_mock: HTTPXMock):
+async def test_jwt_formation(
+    config: Config, central_client: CentralClient, central_api: CentralApiMock
+):
     """Test that the CentralClient class makes proper JWTs in its requests"""
-    # Create a mock JWTAuthContextProvider so we can inspect the JWT sent by this service
+    # Create a JWTAuthContextProvider so we can inspect the JWTs sent by this service
     central_auth_config = JWTAuthConfig(
         auth_key=DHFS_JWK.export_public(),
         auth_check_claims=dict.fromkeys(["iss", "iat", "sub", "aud", "exp"]),
@@ -116,54 +131,46 @@ async def test_jwt_formation(config: Config, httpx_mock: HTTPXMock):
         config=central_auth_config, context_class=JWTClaimsModel
     )
 
-    # Define a callback that can inspect the request from the central client
-    callback_return_value = httpx.Response(200, json=[])
+    # Exercise the different methods from the CentralClient
+    await central_client.fetch_new_uploads()
+    await central_client.get_removable_files(object_ids=[])
+    report = make_interrogation_success_report(config.storage_alias)
+    await central_client.submit_interrogation_report(report=report)
 
-    async def callback(request: httpx.Request):
-        """Callback function that decrypts the JWT in the bearer token"""
-        token = cast(str, request.headers.get("Authorization"))
-        token = token.removeprefix("Bearer ")
+    # Inspect the bearer token of every request that reached the Central API
+    assert len(central_api.requests) == 3
+    for request in central_api.requests:
+        token = request.headers["Authorization"].removeprefix("Bearer ")
         context = await auth_context_provider.get_context(token)
         assert context
         assert context.sub == config.storage_alias
         assert context.iat - now_utc_ms_prec() < timedelta(seconds=3)
-        return callback_return_value
-
-    # Register the callback (see callback_return_value defined above for the response)
-    httpx_mock.add_callback(callback=callback)
-
-    # Test the different methods from the CentralClient
-    async with get_configured_httpx_client(config=config) as httpx_client:
-        central_client = CentralClient(config=config, httpx_client=httpx_client)
-        await central_client.fetch_new_uploads()
-        await central_client.get_removable_files(object_ids=[])
-
-        # Update the return value for this other call
-        callback_return_value = httpx.Response(201)
-        report = make_interrogation_success_report(config.storage_alias)
-        await central_client.submit_interrogation_report(report=report)
 
 
-async def test_responses_with_bad_format(central_client, httpx_mock: HTTPXMock):
+async def test_responses_with_bad_format(
+    central_client: CentralClient, central_api: CentralApiMock
+):
     """Test how the CentralClient handles responses that don't have the proper format.
 
     This affects the .fetch_new_uploads() and .get_removable_files() methods.
     """
-    httpx_mock.add_response(status_code=200, json={"Not correct": "At all"})
+    central_api.on_fetch_new_uploads = respond(200, json={"Not correct": "At all"})
     with pytest.raises(CentralClient.ResponseFormatError):
         await central_client.fetch_new_uploads()
 
-    httpx_mock.add_response(status_code=200, json={"Not correct": "At all"})
+    central_api.on_get_removable_files = respond(200, json={"Not correct": "At all"})
     with pytest.raises(CentralClient.ResponseFormatError):
         await central_client.get_removable_files(object_ids=[])
 
 
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_500_response_handling(
-    config: Config, central_client, httpx_mock: HTTPXMock
+    config: Config, central_client: CentralClient, central_api: CentralApiMock
 ):
     """Test that "500" status codes trigger a `CentralAPIError`"""
-    httpx_mock.add_response(status_code=500)
+    central_api.on_fetch_new_uploads = respond(500)
+    central_api.on_get_removable_files = respond(500)
+    central_api.on_submit_report = respond(500)
+
     with pytest.raises(CentralClient.CentralAPIError):
         await central_client.fetch_new_uploads()
 
@@ -175,12 +182,13 @@ async def test_500_response_handling(
         await central_client.submit_interrogation_report(report=report)
 
 
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_426_response_handling(
-    config: Config, central_client, httpx_mock: HTTPXMock
+    config: Config, central_client: CentralClient, central_api: CentralApiMock
 ):
     """Test that 426 responses trigger a CentralAPIError and log the upgrade message."""
-    httpx_mock.add_response(status_code=426)
+    central_api.on_fetch_new_uploads = respond(426)
+    central_api.on_get_removable_files = respond(426)
+    central_api.on_submit_report = respond(426)
 
     with pytest.raises(CentralClient.UpgradeRequiredError):
         await central_client.fetch_new_uploads()
@@ -193,7 +201,9 @@ async def test_426_response_handling(
         await central_client.submit_interrogation_report(report=report)
 
 
-async def test_report_submission(config: Config, central_client, httpx_mock: HTTPXMock):
+async def test_report_submission(
+    config: Config, central_client: CentralClient, central_api: CentralApiMock
+):
     """Test that the secret submitted inside the InterrogationReport is encrypted
     with the Central API public key, as well as that other fields are submitted.
     """
@@ -201,11 +211,11 @@ async def test_report_submission(config: Config, central_client, httpx_mock: HTT
     success_report = make_interrogation_success_report(config.storage_alias)
     fail_report = make_interrogation_failure_report(config.storage_alias)
 
-    # Define an httpx_mock callback to let us inspect the request body
-    def callback(request: httpx.Request):
+    # Define a handler to let us inspect the request body
+    def inspect_report(request: httpx2.Request) -> httpx2.Response:
         user_agent = request.headers.get("User-Agent")
         assert user_agent == f"GHGA DataHubFileService/{__version__}"
-        body = json.load(request)  # type: ignore
+        body = json.loads(request.content)
         interrogated_at = datetime.fromisoformat(body["interrogated_at"])
         assert interrogated_at - now_utc_ms_prec() < timedelta(seconds=3)
         if body["passed"]:
@@ -225,10 +235,11 @@ async def test_report_submission(config: Config, central_client, httpx_mock: HTT
             assert not body["encrypted_parts_sha256"]
             assert not body["encrypted_size"]
             assert body["reason"] == fail_report.reason
-        return httpx.Response(201)
+        return httpx2.Response(201)
 
     # Now make the calls
-    httpx_mock.add_callback(callback)
+    central_api.on_submit_report = inspect_report
     await central_client.submit_interrogation_report(report=success_report)
-    httpx_mock.add_callback(callback)
     await central_client.submit_interrogation_report(report=fail_report)
+
+    assert len(central_api.requests) == 2
