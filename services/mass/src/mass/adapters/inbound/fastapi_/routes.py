@@ -65,7 +65,7 @@ async def search_options(
     summary="Perform a search using query string and filter parameters",
     response_model=models.QueryResults,
 )
-async def search(  # noqa: PLR0913
+async def search(  # noqa: PLR0913, PLR0917
     query_handler: QueryHandlerDummy,
     class_name: Annotated[str, Query(description="The class name to search")],
     query: Annotated[str, Query(description="The keyword search for the query")] = "",
