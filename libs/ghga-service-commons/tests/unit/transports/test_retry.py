@@ -19,7 +19,7 @@ import logging
 from collections.abc import Callable
 from unittest.mock import AsyncMock
 
-import httpx
+import httpx2
 import pytest
 from tenacity import AsyncRetrying, RetryCallState, RetryError
 
@@ -33,10 +33,10 @@ from ghga_service_commons.transports.retry import (
 
 LOGGER_NAME = "ghga_service_commons.transports.retry"
 RETRYABLE_STATUS_CODE = 503
-_REQUEST = httpx.Request("GET", "http://test")
+_REQUEST = httpx2.Request("GET", "http://test")
 
 
-class _TrackedResponse(httpx.Response):
+class _TrackedResponse(httpx2.Response):
     """Response that records whether it was closed, to detect leaked connections."""
 
     def __init__(self, status_code: int) -> None:
@@ -48,7 +48,7 @@ class _TrackedResponse(httpx.Response):
         await super().aclose()
 
 
-class _FailingCloseResponse(httpx.Response):
+class _FailingCloseResponse(httpx2.Response):
     """Response whose aclose() always raises, to exercise cleanup error handling.
 
     Counts close calls so tests can assert the same response is not closed twice.
@@ -70,7 +70,7 @@ def _no_wait(config: RetryTransportConfig) -> Callable[[RetryCallState], float]:
 
 def _mock_transport(side_effect: list[object]) -> AsyncMock:
     """Build a transport mock whose calls yield the given responses/exceptions in turn."""
-    transport = AsyncMock(spec=httpx.AsyncBaseTransport)
+    transport = AsyncMock(spec=httpx2.AsyncBaseTransport)
     transport.handle_async_request = AsyncMock(side_effect=side_effect)
     return transport
 
@@ -91,7 +91,7 @@ def _retry_transport(
 
 def _retry_state(
     *,
-    result: httpx.Response | None = None,
+    result: httpx2.Response | None = None,
     exception: BaseException | None = None,
     attempt_number: int = 1,
     fn: Callable[..., object] | None = None,
@@ -113,7 +113,7 @@ def _named_function() -> None:
 @pytest.mark.asyncio
 async def test_returns_first_successful_response():
     """Ensure a non-retryable success is returned immediately without a second attempt."""
-    response = _TrackedResponse(httpx.codes.OK)
+    response = _TrackedResponse(httpx2.codes.OK)
     transport = _mock_transport([response])
 
     result = await _retry_transport(transport).handle_async_request(_REQUEST)
@@ -129,7 +129,7 @@ async def test_retries_retryable_status_until_success():
     responses = [
         _TrackedResponse(RETRYABLE_STATUS_CODE),
         _TrackedResponse(RETRYABLE_STATUS_CODE),
-        _TrackedResponse(httpx.codes.OK),
+        _TrackedResponse(httpx2.codes.OK),
     ]
     transport = _mock_transport(responses)  # type: ignore[arg-type]
 
@@ -142,7 +142,7 @@ async def test_retries_retryable_status_until_success():
 @pytest.mark.asyncio
 async def test_does_not_retry_non_retryable_status():
     """Ensure a non-retryable status code is returned as-is after a single attempt."""
-    response = _TrackedResponse(httpx.codes.NOT_FOUND)
+    response = _TrackedResponse(httpx2.codes.NOT_FOUND)
     transport = _mock_transport([response])
 
     result = await _retry_transport(transport).handle_async_request(_REQUEST)
@@ -155,16 +155,16 @@ async def test_does_not_retry_non_retryable_status():
 @pytest.mark.parametrize(
     "exception",
     [
-        httpx.ConnectTimeout("timeout"),
-        httpx.ConnectError("network"),
-        httpx.RemoteProtocolError("protocol"),
-        httpx.ProxyError("proxy"),
+        httpx2.ConnectTimeout("timeout"),
+        httpx2.ConnectError("network"),
+        httpx2.RemoteProtocolError("protocol"),
+        httpx2.ProxyError("proxy"),
     ],
 )
 @pytest.mark.asyncio
 async def test_retries_on_retryable_exception(exception: Exception):
     """Ensure configured retryable exception types trigger a retry that can then succeed."""
-    response = _TrackedResponse(httpx.codes.OK)
+    response = _TrackedResponse(httpx2.codes.OK)
     transport = _mock_transport([exception, response])
 
     result = await _retry_transport(transport).handle_async_request(_REQUEST)
@@ -187,9 +187,9 @@ async def test_does_not_retry_unlisted_exception():
 @pytest.mark.asyncio
 async def test_reraises_original_exception_when_configured():
     """Ensure with reraise enabled the original exception surfaces after retries are exhausted."""
-    transport = _mock_transport([httpx.ConnectError("c")] * 3)
+    transport = _mock_transport([httpx2.ConnectError("c")] * 3)
 
-    with pytest.raises(httpx.ConnectError):
+    with pytest.raises(httpx2.ConnectError):
         await _retry_transport(
             transport, num_retries=3, reraise=True
         ).handle_async_request(_REQUEST)
@@ -200,7 +200,7 @@ async def test_reraises_original_exception_when_configured():
 @pytest.mark.asyncio
 async def test_raises_retry_error_when_not_reraising():
     """Ensure with reraise disabled the exhausted exception is wrapped in a RetryError."""
-    exception = httpx.ConnectError("c")
+    exception = httpx2.ConnectError("c")
     transport = _mock_transport([exception] * 3)
 
     with pytest.raises(RetryError) as exc_info:
@@ -223,7 +223,7 @@ async def test_retried_responses_are_closed():
     responses = [
         _TrackedResponse(RETRYABLE_STATUS_CODE),
         _TrackedResponse(RETRYABLE_STATUS_CODE),
-        _TrackedResponse(httpx.codes.OK),
+        _TrackedResponse(httpx2.codes.OK),
     ]
     transport = _mock_transport(responses)  # type: ignore[arg-type]
 
@@ -297,7 +297,7 @@ async def test_async_context_manager_closes_transport():
 def test_wait_strategy_ignores_429_without_should_wait():
     """Ensure a 429 lacking the Should-Wait header skips the backoff entirely."""
     wait = wait_exponential_ignore_429(max=60)
-    state = _retry_state(result=httpx.Response(429), attempt_number=3)
+    state = _retry_state(result=httpx2.Response(429), attempt_number=3)
 
     assert wait(state) == 0
 
@@ -306,7 +306,7 @@ def test_wait_strategy_backs_off_for_429_with_should_wait():
     """Ensure a 429 carrying the Should-Wait header falls back to exponential backoff."""
     wait = wait_exponential_ignore_429(max=60)
     state = _retry_state(
-        result=httpx.Response(429, headers={"Should-Wait": "true"}), attempt_number=2
+        result=httpx2.Response(429, headers={"Should-Wait": "true"}), attempt_number=2
     )
 
     assert wait(state) == 2
@@ -315,7 +315,7 @@ def test_wait_strategy_backs_off_for_429_with_should_wait():
 def test_wait_strategy_backs_off_for_other_status():
     """Ensure non-429 responses use the regular exponential backoff."""
     wait = wait_exponential_ignore_429(max=60)
-    state = _retry_state(result=httpx.Response(503), attempt_number=3)
+    state = _retry_state(result=httpx2.Response(503), attempt_number=3)
 
     assert wait(state) == 4
 
@@ -323,7 +323,7 @@ def test_wait_strategy_backs_off_for_other_status():
 def test_wait_strategy_caps_at_max():
     """Ensure the computed backoff never exceeds the configured maximum."""
     wait = wait_exponential_ignore_429(max=5)
-    state = _retry_state(result=httpx.Response(503), attempt_number=10)
+    state = _retry_state(result=httpx2.Response(503), attempt_number=10)
 
     assert wait(state) == 5
 
@@ -331,7 +331,7 @@ def test_wait_strategy_caps_at_max():
 def test_wait_strategy_handles_failed_outcome():
     """Ensure a failed outcome is backed off without inspecting a result."""
     wait = wait_exponential_ignore_429(max=60)
-    state = _retry_state(exception=httpx.ConnectError("boom"), attempt_number=1)
+    state = _retry_state(exception=httpx2.ConnectError("boom"), attempt_number=1)
 
     assert wait(state) == 1
 
@@ -351,7 +351,7 @@ def test_log_before_attempt_records_attempt(caplog: pytest.LogCaptureFixture):
 
 def test_log_retry_stats_includes_response_status(caplog: pytest.LogCaptureFixture):
     """Ensure that for a response outcome the stats logger records the status code."""
-    state = _retry_state(fn=_named_function, result=httpx.Response(503))
+    state = _retry_state(fn=_named_function, result=httpx2.Response(503))
 
     with caplog.at_level(logging.INFO, logger=LOGGER_NAME):
         _log_retry_stats(state)
@@ -361,11 +361,11 @@ def test_log_retry_stats_includes_response_status(caplog: pytest.LogCaptureFixtu
 
 def test_log_retry_stats_includes_exception_details(caplog: pytest.LogCaptureFixture):
     """Ensure that for a failed outcome the stats logger records the exception type and message."""
-    state = _retry_state(fn=_named_function, exception=httpx.ConnectError("boom"))
+    state = _retry_state(fn=_named_function, exception=httpx2.ConnectError("boom"))
 
     with caplog.at_level(logging.INFO, logger=LOGGER_NAME):
         _log_retry_stats(state)
 
     record = caplog.records[0]
-    assert record.exception_type is httpx.ConnectError  # type: ignore[attr-defined]
+    assert record.exception_type is httpx2.ConnectError  # type: ignore[attr-defined]
     assert "boom" in record.exception_message  # type: ignore[attr-defined]

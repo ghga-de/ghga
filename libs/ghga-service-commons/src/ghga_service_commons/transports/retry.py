@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Provides an httpx.AsyncTransport that handles retrying requests on failure."""
+"""Provides an httpx2.AsyncTransport that handles retrying requests on failure."""
 
 import time
 from collections.abc import Callable
@@ -21,7 +21,7 @@ from logging import getLogger
 from types import TracebackType
 from typing import Any
 
-import httpx
+import httpx2
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
@@ -71,7 +71,7 @@ def _log_retry_stats(retry_state: RetryCallState):
             exc = outcome.exception()
             stats["exception_type"] = type(exc)
             stats["exception_message"] = str(exc)
-        elif isinstance(result := outcome.result(), httpx.Response):
+        elif isinstance(result := outcome.result(), httpx2.Response):
             stats["response_status_code"] = result.status_code
             stats["response_headers"] = result.headers
 
@@ -118,7 +118,7 @@ class wait_exponential_ignore_429(wait_exponential):  # noqa: N801
         if outcome is not None and not outcome.failed:
             result = outcome.result()
             if (
-                isinstance(result, httpx.Response)
+                isinstance(result, httpx2.Response)
                 and result.status_code == 429
                 and not result.headers.get("Should-Wait")
             ):
@@ -131,7 +131,7 @@ class wait_exponential_ignore_429(wait_exponential):  # noqa: N801
         return max(max(0, self.min), min(result, self.max))
 
 
-class AsyncRetryTransport(httpx.AsyncBaseTransport):
+class AsyncRetryTransport(httpx2.AsyncBaseTransport):
     """Custom async Transport adding retry logic on top of AsyncHTTPTransport.
 
     This adds tenacity based retry logic around HTTP calls.
@@ -140,10 +140,10 @@ class AsyncRetryTransport(httpx.AsyncBaseTransport):
     so their retry-after header can be dealt with correctly, if present.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         config: RetryTransportConfig,
-        transport: httpx.AsyncBaseTransport,
+        transport: httpx2.AsyncBaseTransport,
         wait_strategy: Callable[[RetryTransportConfig], Any] = _default_wait_strategy,
         stop_strategy: Callable[[RetryTransportConfig], Any] = _default_stop_strategy,
         stats_logger: Callable[[RetryCallState], Any] = _log_retry_stats,
@@ -158,13 +158,13 @@ class AsyncRetryTransport(httpx.AsyncBaseTransport):
             before_logger=before_logger,
         )
 
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Handles HTTP requests and adds retry logic around calls."""
         # Track the latest response and close it before issuing the next attempt, leaving
         # only the final response open to consume by the caller.
-        latest_response: httpx.Response | None = None
+        latest_response: httpx2.Response | None = None
 
-        async def _attempt() -> httpx.Response:
+        async def _attempt() -> httpx2.Response:
             nonlocal latest_response
             if latest_response is not None:
                 # Always clear the reference so a later cleanup doesn't try to close the same response again.
@@ -219,10 +219,10 @@ def _configure_retry_handler(
         retry=(
             retry_if_exception_type(
                 (
-                    httpx.TimeoutException,
-                    httpx.NetworkError,
-                    httpx.RemoteProtocolError,
-                    httpx.ProxyError,
+                    httpx2.TimeoutException,
+                    httpx2.NetworkError,
+                    httpx2.RemoteProtocolError,
+                    httpx2.ProxyError,
                 )
             )
             | retry_if_result(

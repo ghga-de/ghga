@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""A class for mocking API endpoints when testing with the httpx_mock fixture."""
+"""A class for mocking API endpoints, mounted via ``MockRouter.as_transport()``."""
 
 from __future__ import annotations
 
@@ -23,8 +23,7 @@ from functools import partial
 from inspect import signature
 from typing import Any, Generic, TypeVar, cast, get_type_hints
 
-import httpx
-import pytest
+import httpx2
 from pydantic import BaseModel
 
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
@@ -32,7 +31,6 @@ from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 __all__ = [
     "HttpException",
     "MockRouter",
-    "assert_all_responses_were_requested",
 ]
 
 BRACKET_PATTERN = re.compile(r"{.*?}")
@@ -68,16 +66,6 @@ def _get_signature_info(endpoint_function: Callable) -> dict[str, Any]:
     return signature_parameters
 
 
-@pytest.fixture
-def assert_all_responses_were_requested() -> bool:
-    """Whether httpx checks that all registered responses are sent back.
-    This is set to false because the registered endpoints are considered mocked even if
-    they aren't used in a given test. If this is True (default), pytest_httpx will raise
-    an error if a given test doesn't hit every mocked endpoint.
-    """
-    return False
-
-
 class RegisteredEndpoint(BaseModel):
     """Endpoint data with the url turned into regex string to get parameters in path."""
 
@@ -106,7 +94,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
 
     def __init__(
         self,
-        exception_handler: Callable[[httpx.Request, ExpectedExceptionTypes], Any]
+        exception_handler: Callable[[httpx2.Request, ExpectedExceptionTypes], Any]
         | None = None,
         exceptions_to_handle: tuple[type[Exception], ...] | None = None,
         handle_exception_subclasses: bool = False,
@@ -116,7 +104,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         Args:
             `exception_handler`:
                 custom exception handler function that takes the request and exception
-                as arguments, in that order. It must take an httpx.Request object as
+                as arguments, in that order. It must take an httpx2.Request object as
                 the first argument and any subclass of Exception as the second argument.
                 This allows your exception handler signature to be more specifically typed.
 
@@ -263,7 +251,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
     def _convert_parameter_types(
         parsed_url_parameters: dict[str, str],
         signature_parameters: dict[str, Any],
-        request: httpx.Request,
+        request: httpx2.Request,
     ) -> dict[str, Any]:
         """Get type info for function parameters.
 
@@ -357,7 +345,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
             data={"url": url, "method": method},
         )
 
-    def _build_loaded_endpoint_function(self, request: httpx.Request) -> partial:
+    def _build_loaded_endpoint_function(self, request: httpx2.Request) -> partial:
         """Match a request to the correct endpoint.
 
         Based on the endpoint matched, build the typed parameter dictionary and
@@ -395,14 +383,9 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
                 pass_to_handler = True
         return pass_to_handler
 
-    def handle_request(self, request: httpx.Request):
+    def handle_request(self, request: httpx2.Request) -> httpx2.Response:
         """Route intercepted request to the registered endpoint and return response.
 
-        If using this with httpx_mock, then this function should be the callback.
-        e.g.:
-        ```
-        httpx_mock.add_callback(callback=mock_router.handle_request)
-        ```
         If self.exception_handler is specified, any errors matching self.exceptions_to_handle
         will be passed to the handler. In all other cases, the exception will be
         re-raised.
@@ -417,3 +400,22 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
                 )  # satisfy type-checker by making exc type 'E'
                 return self.exception_handler(request, exc)
             raise
+
+    def as_transport(self) -> httpx2.MockTransport:
+        """Return a transport routing through this router, for Client or AsyncClient.
+
+        For simple use cases this can be mounted directly on the client:
+        ```
+        httpx2.Client(base_url=BASE_URL, transport=router.as_transport())
+        ```
+
+        For more complex use cases, provide it as the innermost layer of a custom
+        transport stack, so the requests are still routed here after passing through
+        the wrapping transports:
+        ```
+        CompositeTransportFactory.create_ratelimiting_retry_transport(
+            config, base_transport=router.as_transport()
+        )
+        ```
+        """
+        return httpx2.MockTransport(self.handle_request)
