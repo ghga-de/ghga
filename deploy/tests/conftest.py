@@ -150,7 +150,8 @@ def expected():
 @pytest.fixture
 def rendered_objects(_dependency_update, release_name):
     """Factory keeping every rendered object — unlike rendered_chart, which errors
-    on duplicate kinds (e.g. multiple CronJobs)."""
+    on duplicate kinds (e.g. multiple CronJobs).
+    """
 
     def _factory(*filenames: str):
         composed_values = compose_values(*filenames)
@@ -164,7 +165,8 @@ def rendered_objects(_dependency_update, release_name):
 @pytest.fixture
 def rendered_text(_dependency_update, release_name):
     """Raw manifest text, for assertions parsed objects can't make (e.g. a literal
-    duplicate YAML key, which yaml.safe_load silently resolves to the last value)."""
+    duplicate YAML key, which yaml.safe_load silently resolves to the last value).
+    """
 
     def _factory(*filenames: str):
         composed_values = compose_values(*filenames)
