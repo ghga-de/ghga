@@ -70,6 +70,7 @@ async def health():
     status_code=201,
 )
 async def create_access_request(
+    *,
     creation_data: AccessRequestCreationData,
     repository: dummies.AccessRequestRepoDummy,
     auth_context: UserAuthContext,
@@ -111,6 +112,7 @@ async def create_access_request(
     status_code=200,
 )
 async def get_access_requests(
+    *,
     repository: dummies.AccessRequestRepoDummy,
     auth_context: UserAuthContext,
     user_id: Annotated[
@@ -174,6 +176,7 @@ async def get_access_requests(
     status_code=200,
 )
 async def get_access_request(
+    *,
     repository: dummies.AccessRequestRepoDummy,
     auth_context: UserAuthContext,
     access_request_id: Annotated[
@@ -214,6 +217,7 @@ async def get_access_request(
     status_code=204,
 )
 async def patch_access_request(
+    *,
     access_request_id: Annotated[
         UUID4,
         Path(..., alias="access_request_id", description="ID of the access request"),
@@ -266,6 +270,7 @@ async def patch_access_request(
     status_code=200,
 )
 async def get_access_grants(  # noqa: PLR0913
+    *,
     repository: dummies.AccessRequestRepoDummy,
     auth_context: UserAuthContext,
     user_id: Annotated[
@@ -341,6 +346,7 @@ async def get_access_grants(  # noqa: PLR0913
     status_code=204,
 )
 async def revoke_access_grant(
+    *,
     grant_id: Annotated[
         UUID4,
         Path(

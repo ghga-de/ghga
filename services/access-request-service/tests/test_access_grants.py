@@ -21,14 +21,15 @@ from collections.abc import AsyncGenerator
 from datetime import timedelta
 from uuid import UUID, uuid4
 
-import httpx
+import httpx2
 import pytest
 from pytest_asyncio import fixture as async_fixture
-from pytest_httpx import HTTPXMock
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
 from ars.core.models import BaseAccessGrant
 from hexkit.utils import now_utc_ms_prec
+
+from .fixtures.access_grants import GRANT_ID, AccessGrantsMock
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -42,7 +43,6 @@ DATE_NOW = now_utc_ms_prec()
 VALID_FROM = DATE_NOW - timedelta(days=7)
 VALID_UNTIL = DATE_NOW + timedelta(days=30)
 
-GRANT_ID = UUID("49be6738-f328-49e9-a7fb-3d266e1cabe9")
 GRANT = BaseAccessGrant(
     id=GRANT_ID,
     user_id=USER_ID,
@@ -59,22 +59,28 @@ GRANT_URL = f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/ivas/{IVA_ID}/datasets/{DATA
 GRANTS_URL = f"{DOWNLOAD_ACCESS_URL}/grants"
 
 
-@async_fixture(name="grants_adapter", scope="session", loop_scope="session")
-async def fixture_grants_adapter() -> AsyncGenerator[AccessGrantsAdapter]:
-    """Get configured access grants test adapter."""
+def as_json(grant: BaseAccessGrant, **kwargs) -> dict:
+    """Get the given access grant as it is returned by the download access API."""
+    return json.loads(grant.model_dump_json(**kwargs))
+
+
+@async_fixture(name="grants_adapter", loop_scope="session")
+async def fixture_grants_adapter(
+    access_grants: AccessGrantsMock,
+) -> AsyncGenerator[AccessGrantsAdapter]:
+    """Get access grants test adapter talking to the mocked download access API."""
     config = AccessGrantsConfig(download_access_url=DOWNLOAD_ACCESS_URL)
-    async with AccessGrantsAdapter.construct(config=config) as adapter:
+    async with AccessGrantsAdapter.construct(
+        config=config, transport=access_grants.as_transport()
+    ) as adapter:
         yield adapter
 
 
 async def test_grant_download_access(
-    grants_adapter: AccessGrantsAdapter, httpx_mock: HTTPXMock
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test granting download access"""
     grant_access = grants_adapter.grant_download_access
-    httpx_mock.add_response(
-        method="POST", url=GRANT_URL, status_code=201, json={"id": str(GRANT_ID)}
-    )
 
     assert (
         await grant_access(
@@ -87,8 +93,9 @@ async def test_grant_download_access(
         == GRANT_ID
     )
 
-    request = httpx_mock.get_request()
-    assert request
+    request = access_grants.last_request
+    assert request.method == "POST"
+    assert str(request.url) == GRANT_URL
     assert json.loads(request.content) == {
         "valid_from": VALID_FROM.isoformat().replace("+00:00", "Z"),
         "valid_until": VALID_UNTIL.isoformat().replace("+00:00", "Z"),
@@ -96,7 +103,7 @@ async def test_grant_download_access(
 
 
 async def test_grant_download_access_with_invalid_dates(
-    grants_adapter: AccessGrantsAdapter,
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test granting download access for invalid dates"""
     grant_access = grants_adapter.grant_download_access
@@ -112,13 +119,15 @@ async def test_grant_download_access_with_invalid_dates(
             valid_until=VALID_FROM,
         )
 
+    assert not access_grants.requests
+
 
 async def test_grant_download_access_with_server_error(
-    grants_adapter: AccessGrantsAdapter, httpx_mock: HTTPXMock
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test granting download access when there is a server error"""
     grant_access = grants_adapter.grant_download_access
-    httpx_mock.add_response(method="POST", url=GRANT_URL, status_code=500)
+    access_grants.grant_access_status_code = 500
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
@@ -134,11 +143,11 @@ async def test_grant_download_access_with_server_error(
 
 
 async def test_grant_download_access_with_timeout(
-    grants_adapter: AccessGrantsAdapter, httpx_mock: HTTPXMock
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test granting download access when there is a network timeout"""
     grant_access = grants_adapter.grant_download_access
-    httpx_mock.add_exception(httpx.ReadTimeout("Simulated network problem"))
+    access_grants.error = httpx2.ReadTimeout("Simulated network problem")
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"
@@ -158,19 +167,11 @@ async def test_get_access_grants(
     with_params: bool,
     returned_grants: list[BaseAccessGrant],
     grants_adapter: AccessGrantsAdapter,
-    httpx_mock: HTTPXMock,
+    access_grants: AccessGrantsMock,
 ):
     """Test fetching download access grants"""
     get_grants = grants_adapter.get_download_access_grants
-
-    url = GRANTS_URL
-    if with_params:
-        url += f"?user_id={USER_ID}&iva_id={IVA_ID}&dataset_id={DATASET_ID}&valid=true"
-
-    text = ",".join(grant.model_dump_json() for grant in returned_grants)
-    text = f"[{text}]"
-
-    httpx_mock.add_response(method="GET", url=url, status_code=200, text=text)
+    access_grants.grants = [as_json(grant) for grant in returned_grants]
 
     params = (
         {"user_id": USER_ID, "iva_id": IVA_ID, "dataset_id": DATASET_ID, "valid": True}
@@ -179,6 +180,21 @@ async def test_get_access_grants(
     )
     grants = await get_grants(**params)  # type: ignore[arg-type]
 
+    request = access_grants.last_request
+    assert request.method == "GET"
+    assert str(request.url).startswith(GRANTS_URL)
+    expected_query = (
+        {
+            "user_id": str(USER_ID),
+            "iva_id": str(IVA_ID),
+            "dataset_id": DATASET_ID,
+            "valid": "true",
+        }
+        if with_params
+        else {}
+    )
+    assert dict(request.url.params) == expected_query
+
     assert isinstance(grants, list)
     assert all(isinstance(grant, BaseAccessGrant) for grant in grants)
     assert len(grants) == len(returned_grants)
@@ -186,22 +202,13 @@ async def test_get_access_grants(
 
 
 async def test_get_access_grants_with_data_error(
-    grants_adapter: AccessGrantsAdapter,
-    httpx_mock: HTTPXMock,
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test fetching download access grants with data errors"""
     get_grants = grants_adapter.get_download_access_grants
 
     # Simulate a server response with missing user name
-    text = GRANT.model_dump_json(exclude={"user_name"})
-    text = f"[{text}]"
-
-    httpx_mock.add_response(
-        method="GET",
-        url=GRANTS_URL,
-        status_code=200,
-        text=text,
-    )
+    access_grants.grants = [as_json(GRANT, exclude={"user_name"})]
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
@@ -211,12 +218,11 @@ async def test_get_access_grants_with_data_error(
 
 
 async def test_get_access_grants_with_server_error(
-    grants_adapter: AccessGrantsAdapter,
-    httpx_mock: HTTPXMock,
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test fetching download access grants with server error"""
     get_grants = grants_adapter.get_download_access_grants
-    httpx_mock.add_response(method="GET", url=GRANTS_URL, status_code=500)
+    access_grants.get_grants_status_code = 500
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
@@ -226,12 +232,11 @@ async def test_get_access_grants_with_server_error(
 
 
 async def test_get_access_grants_with_timeout(
-    grants_adapter: AccessGrantsAdapter,
-    httpx_mock: HTTPXMock,
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test fetching download access grants when there is a network timeout"""
     get_grants = grants_adapter.get_download_access_grants
-    httpx_mock.add_exception(httpx.ReadTimeout("Simulated network problem"))
+    access_grants.error = httpx2.ReadTimeout("Simulated network problem")
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"
@@ -240,34 +245,27 @@ async def test_get_access_grants_with_timeout(
 
 
 async def test_revoke_existing_access_grants(
-    grants_adapter: AccessGrantsAdapter,
-    httpx_mock: HTTPXMock,
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test revoking an existing download access grant"""
     revoke_grant = grants_adapter.revoke_download_access_grant
 
-    url = f"{GRANTS_URL}/{GRANT_ID}"
-    httpx_mock.add_response(method="DELETE", url=url, status_code=204)
-
     await revoke_grant(GRANT_ID)
 
     # make sure the request was sent
-    request = httpx_mock.get_request()
-    assert request
+    request = access_grants.last_request
     assert request.method == "DELETE"
-    assert str(request.url) == url
+    assert str(request.url) == f"{GRANTS_URL}/{GRANT_ID}"
     assert not request.content
 
 
 async def test_revoke_non_existing_access_grants(
-    grants_adapter: AccessGrantsAdapter,
-    httpx_mock: HTTPXMock,
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test deleting a non-existing download access grant"""
     revoke_grant = grants_adapter.revoke_download_access_grant
     random_grant_id = uuid4()
-    url = f"{GRANTS_URL}/{random_grant_id}"
-    httpx_mock.add_response(method="DELETE", url=url, status_code=404)
+    access_grants.revoke_grant_status_code = 404
 
     with pytest.raises(
         grants_adapter.AccessGrantNotFoundError,
@@ -275,16 +273,15 @@ async def test_revoke_non_existing_access_grants(
     ):
         await revoke_grant(random_grant_id)
 
+    assert str(access_grants.last_request.url) == f"{GRANTS_URL}/{random_grant_id}"
+
 
 async def test_revoke_access_grants_with_server_error(
-    grants_adapter: AccessGrantsAdapter,
-    httpx_mock: HTTPXMock,
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test deleting a download access grant when there is a server error"""
     revoke_grant = grants_adapter.revoke_download_access_grant
-
-    url = f"{GRANTS_URL}/{GRANT_ID}"
-    httpx_mock.add_response(method="DELETE", url=url, status_code=500)
+    access_grants.revoke_grant_status_code = 500
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
@@ -294,12 +291,11 @@ async def test_revoke_access_grants_with_server_error(
 
 
 async def test_revoke_access_grants_with_timeout(
-    grants_adapter: AccessGrantsAdapter,
-    httpx_mock: HTTPXMock,
+    grants_adapter: AccessGrantsAdapter, access_grants: AccessGrantsMock
 ):
     """Test deleting a download access grants when there is a network timeout"""
     revoke_grant = grants_adapter.revoke_download_access_grant
-    httpx_mock.add_exception(httpx.ReadTimeout("Simulated network problem"))
+    access_grants.error = httpx2.ReadTimeout("Simulated network problem")
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"
