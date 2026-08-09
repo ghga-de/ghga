@@ -18,16 +18,16 @@
 import json
 from uuid import UUID, uuid4
 
-import httpx
+import httpx2
 import pytest
 from jwcrypto.jwk import JWK
-from pytest_httpx import HTTPXMock
 
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import FileBoxClient
 from rs.config import Config
 from rs.core.models import FileUploadWithAccession
+from tests.fixtures.external_apis import FileBoxApiMock, in_sequence, respond
 from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
@@ -36,25 +36,25 @@ TEST_BOX_ID = UUID("2735c960-5e15-45dc-b27a-59162fbb2fd7")
 
 
 async def test_create_file_upload_box(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test the create_file_upload_box function"""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
-    httpx_mock.add_response(201, json=str(TEST_BOX_ID))
+    file_box_api.on_create_file_upload_box = respond(201, json=str(TEST_BOX_ID))
     box_id = await file_upload_box_client.create_file_upload_box(
         storage_alias="HD01", max_size=TEST_MAX_SIZE
     )
     assert box_id == TEST_BOX_ID, "Failed happy path"
 
     # Check off-normal status code
-    httpx_mock.add_response(500, json="Some error occurred.")
+    file_box_api.on_create_file_upload_box = respond(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.create_file_upload_box(
             storage_alias="HD01", max_size=TEST_MAX_SIZE
         )
 
     # Check with successful status code but garbled response body
-    httpx_mock.add_response(201, json="id123")
+    file_box_api.on_create_file_upload_box = respond(201, json="id123")
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.create_file_upload_box(
             storage_alias="HD01", max_size=TEST_MAX_SIZE
@@ -62,35 +62,36 @@ async def test_create_file_upload_box(
 
 
 async def test_lock_file_upload_box(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test the lock_file_upload_box function"""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
 
     # Happy path - force defaults to False
-    httpx_mock.add_response(204)
+    file_box_api.on_update_file_upload_box = respond(204)
     await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
-    assert json.loads(httpx_mock.get_requests()[0].content) == {
+    assert json.loads(file_box_api.requests[0].content) == {
         "version": 0,
         "state": "locked",
         "force": False,
     }
 
     # Make sure force=True is forwarded in the request body
-    httpx_mock.add_response(204)
     await file_upload_box_client.lock_file_upload_box(
         box_id=TEST_BOX_ID, version=0, force=True
     )
 
-    # Inspect the request body intercepted by httpx_mock
-    assert json.loads(httpx_mock.get_requests()[1].content) == {
+    # Inspect the request body recorded by the mock
+    assert json.loads(file_box_api.requests[1].content) == {
         "version": 0,
         "state": "locked",
         "force": True,
     }
 
     # 409 "boxVersionOutdated" -> FUBVersionError
-    httpx_mock.add_response(409, json={"exception_id": "boxVersionOutdated"})
+    file_box_api.on_update_file_upload_box = respond(
+        409, json={"exception_id": "boxVersionOutdated"}
+    )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
     assert str(fub_version_err.value) == str(
@@ -98,7 +99,9 @@ async def test_lock_file_upload_box(
     )
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
-    httpx_mock.add_response(409, json={"exception_id": "boxStateError"})
+    file_box_api.on_update_file_upload_box = respond(
+        409, json={"exception_id": "boxStateError"}
+    )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
     fub_state_err_msg = (
@@ -109,7 +112,7 @@ async def test_lock_file_upload_box(
 
     # 409 "incompleteUploads" -> FUBIncompleteUploadsError with list of file IDs
     incomplete_file_ids = [uuid4(), uuid4()]
-    httpx_mock.add_response(
+    file_box_api.on_update_file_upload_box = respond(
         409,
         json={
             "exception_id": "incompleteUploads",
@@ -126,27 +129,29 @@ async def test_lock_file_upload_box(
     assert fub_uploads_err.value.incomplete_file_ids == incomplete_file_ids
 
     # Non-409, non-204 -> OperationError
-    httpx_mock.add_response(500, json="Some error occurred.")
+    file_box_api.on_update_file_upload_box = respond(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
 
 
 async def test_unlock_file_upload_box(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test the unlock_file_upload_box function"""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
-    httpx_mock.add_response(204)
+    file_box_api.on_update_file_upload_box = respond(204)
     await file_upload_box_client.unlock_file_upload_box(
         box_id=TEST_BOX_ID, version=0
     )  # no error == success
-    assert json.loads(httpx_mock.get_requests()[0].content) == {
+    assert json.loads(file_box_api.requests[0].content) == {
         "version": 0,
         "state": "open",
     }
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
-    httpx_mock.add_response(409, json={"exception_id": "boxVersionOutdated"})
+    file_box_api.on_update_file_upload_box = respond(
+        409, json={"exception_id": "boxVersionOutdated"}
+    )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.unlock_file_upload_box(
             box_id=TEST_BOX_ID, version=0
@@ -156,7 +161,9 @@ async def test_unlock_file_upload_box(
     )
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
-    httpx_mock.add_response(409, json={"exception_id": "boxStateError"})
+    file_box_api.on_update_file_upload_box = respond(
+        409, json={"exception_id": "boxStateError"}
+    )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.unlock_file_upload_box(
             box_id=TEST_BOX_ID, version=0
@@ -168,7 +175,7 @@ async def test_unlock_file_upload_box(
     assert str(fub_state_err.value) == fub_state_err_msg
 
     # Check off-normal status code
-    httpx_mock.add_response(500, json="Some error occurred.")
+    file_box_api.on_update_file_upload_box = respond(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.unlock_file_upload_box(
             box_id=TEST_BOX_ID, version=0
@@ -197,12 +204,12 @@ def _make_file_uploads(count: int) -> list[FileUploadWithAccession]:
 
 
 async def test_get_file_upload_list(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test the get_file_upload_list function returns a single page and total count."""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     file_list_response = _make_file_uploads(3)
-    httpx_mock.add_response(
+    file_box_api.on_get_file_upload_list = respond(
         200,
         json={
             "items": [x.model_dump(mode="json") for x in file_list_response],
@@ -217,7 +224,7 @@ async def test_get_file_upload_list(
 
     # Confirm skip/limit/sort were forwarded to the endpoint as query parameters.
     # sort must be forwarded as a single, non-exploded comma-separated value.
-    request = httpx_mock.get_requests()[-1]
+    request = file_box_api.requests[-1]
     assert request.url.params.get("skip") == "5"
     assert request.url.params.get("limit") == "10"
     assert request.url.params.get_list("sort") == ["alias,-state"]
@@ -227,32 +234,27 @@ async def test_get_file_upload_list(
 
     # Confirm sort is omitted entirely when not provided, and that with_checksums=True
     # is forwarded when requested.
-    httpx_mock.add_response(
-        200,
-        json={
-            "items": [x.model_dump(mode="json") for x in file_list_response],
-            "total_count": len(file_list_response),
-        },
-    )
     await file_upload_box_client.get_file_upload_list(
         box_id=TEST_BOX_ID, with_checksums=True
     )
-    request = httpx_mock.get_requests()[-1]
+    request = file_box_api.requests[-1]
     assert "sort" not in request.url.params
     assert request.url.params.get("with_checksums") == "true"
 
     # Check off-normal status code
-    httpx_mock.add_response(500, json="Some error occurred.")
+    file_box_api.on_get_file_upload_list = respond(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
 
     # Check with successful status code but garbled response body
-    httpx_mock.add_response(200, json="id123")
+    file_box_api.on_get_file_upload_list = respond(200, json="id123")
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
 
     # Check with empty page response
-    httpx_mock.add_response(200, json={"items": [], "total_count": 0})
+    file_box_api.on_get_file_upload_list = respond(
+        200, json={"items": [], "total_count": 0}
+    )
     file_list, total_count = await file_upload_box_client.get_file_upload_list(
         box_id=TEST_BOX_ID
     )
@@ -262,12 +264,14 @@ async def test_get_file_upload_list(
 
 async def test_get_file_upload_list_missing_box(
     config: Config,
-    httpx_mock: HTTPXMock,
-    httpx_client: httpx.AsyncClient,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
 ):
     """Test that a 404 is softened to an empty list when missing_box_ok is set."""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
-    httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
+    file_box_api.on_get_file_upload_list = respond(
+        404, json={"exception_id": "boxNotFound"}
+    )
     file_list, total_count = await file_upload_box_client.get_file_upload_list(
         box_id=TEST_BOX_ID, missing_box_ok=True
     )
@@ -276,13 +280,12 @@ async def test_get_file_upload_list_missing_box(
 
     # Verify that 404 results in OperationError if missing_box_ok is set to False
     # (default)
-    httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.get_file_upload_list(box_id=TEST_BOX_ID)
 
 
 async def test_get_file_upload_list_with_none_checksums(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Verify the client parses file uploads when the owning service omits the per-part
     checksum lists.
@@ -303,7 +306,9 @@ async def test_get_file_upload_list_with_none_checksums(
         item["encrypted_parts_sha256"] = None
         items.append(item)
 
-    httpx_mock.add_response(200, json={"items": items, "total_count": len(items)})
+    file_box_api.on_get_file_upload_list = respond(
+        200, json={"items": items, "total_count": len(items)}
+    )
     file_list, total_count = await file_upload_box_client.get_file_upload_list(
         box_id=TEST_BOX_ID
     )
@@ -317,7 +322,7 @@ async def test_get_file_upload_list_with_none_checksums(
 
 
 async def test_get_file_upload_list_with_populated_checksums(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Verify the client parses file uploads when the owning service includes the
     per-part checksum lists. This is a regression test to verify that the old behavior,
@@ -339,7 +344,9 @@ async def test_get_file_upload_list_with_populated_checksums(
         item["encrypted_parts_sha256"] = sha256
         items.append(item)
 
-    httpx_mock.add_response(200, json={"items": items, "total_count": len(items)})
+    file_box_api.on_get_file_upload_list = respond(
+        200, json={"items": items, "total_count": len(items)}
+    )
     file_list, total_count = await file_upload_box_client.get_file_upload_list(
         box_id=TEST_BOX_ID, with_checksums=True
     )
@@ -354,8 +361,8 @@ async def test_get_file_upload_list_with_populated_checksums(
 
 async def test_get_all_file_uploads(
     config: Config,
-    httpx_mock: HTTPXMock,
-    httpx_client: httpx.AsyncClient,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ):
     """Verify that get_all_file_uploads pages through the endpoint and concatenates
@@ -367,17 +374,21 @@ async def test_get_all_file_uploads(
     file_list_response = _make_file_uploads(5)
     total_count = len(file_list_response)
     # Three pages: [0, 1], [2, 3], [4]
-    for start in range(0, total_count, 2):
-        httpx_mock.add_response(
-            200,
-            json={
-                "items": [
-                    x.model_dump(mode="json")
-                    for x in file_list_response[start : start + 2]
-                ],
-                "total_count": total_count,
-            },
+    file_box_api.on_get_file_upload_list = in_sequence(
+        *(
+            respond(
+                200,
+                json={
+                    "items": [
+                        x.model_dump(mode="json")
+                        for x in file_list_response[start : start + 2]
+                    ],
+                    "total_count": total_count,
+                },
+            )
+            for start in range(0, total_count, 2)
         )
+    )
     file_list = await file_upload_box_client.get_all_file_uploads(
         box_id=TEST_BOX_ID, with_checksums=True
     )
@@ -385,7 +396,7 @@ async def test_get_all_file_uploads(
 
     # Confirm each page was requested with the expected skip/limit query params and that
     # with_checksums was forwarded on every page request.
-    requests = httpx_mock.get_requests()
+    requests = file_box_api.requests
     assert [
         (r.url.params.get("skip"), r.url.params.get("limit")) for r in requests
     ] == [("0", "2"), ("2", "2"), ("4", "2")]
@@ -393,17 +404,18 @@ async def test_get_all_file_uploads(
 
 
 async def test_get_all_file_uploads_missing_box(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test that a 404 is softened to an empty list when missing_box_ok is set."""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
-    httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
+    file_box_api.on_get_file_upload_list = respond(
+        404, json={"exception_id": "boxNotFound"}
+    )
     file_list = await file_upload_box_client.get_all_file_uploads(
         box_id=TEST_BOX_ID, missing_box_ok=True
     )
     assert file_list == []
 
-    httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
     with pytest.raises(FileBoxClient.OperationError):
         file_list = await file_upload_box_client.get_all_file_uploads(
             box_id=TEST_BOX_ID, missing_box_ok=False
@@ -411,21 +423,23 @@ async def test_get_all_file_uploads_missing_box(
 
 
 async def test_archive_file_upload_box(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test the archive_file_upload_box function"""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
-    httpx_mock.add_response(204)
+    file_box_api.on_update_file_upload_box = respond(204)
     await file_upload_box_client.archive_file_upload_box(
         box_id=TEST_BOX_ID, version=0
     )  # no error == success
-    assert json.loads(httpx_mock.get_requests()[0].content) == {
+    assert json.loads(file_box_api.requests[0].content) == {
         "version": 0,
         "state": "archived",
     }
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
-    httpx_mock.add_response(409, json={"exception_id": "boxVersionOutdated"})
+    file_box_api.on_update_file_upload_box = respond(
+        409, json={"exception_id": "boxVersionOutdated"}
+    )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.archive_file_upload_box(
             box_id=TEST_BOX_ID, version=0
@@ -435,7 +449,9 @@ async def test_archive_file_upload_box(
     )
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
-    httpx_mock.add_response(409, json={"exception_id": "boxStateError"})
+    file_box_api.on_update_file_upload_box = respond(
+        409, json={"exception_id": "boxStateError"}
+    )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.archive_file_upload_box(
             box_id=TEST_BOX_ID, version=0
@@ -447,7 +463,7 @@ async def test_archive_file_upload_box(
     assert str(fub_state_err.value) == fub_state_err_msg
 
     # Check off-normal status code
-    httpx_mock.add_response(500, json="Some error occurred.")
+    file_box_api.on_update_file_upload_box = respond(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.archive_file_upload_box(
             box_id=TEST_BOX_ID, version=0
@@ -456,19 +472,19 @@ async def test_archive_file_upload_box(
 
 async def test_resize_file_upload_box(
     config: Config,
-    httpx_mock: HTTPXMock,
-    httpx_client: httpx.AsyncClient,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
     work_order_jwk: JWK,
 ):
     """Test the resize_file_upload_box function"""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
 
     # Happy path - verify request body and WOT work_type/box_id
-    httpx_mock.add_response(204)
+    file_box_api.on_update_file_upload_box = respond(204)
     await file_upload_box_client.resize_file_upload_box(
         box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
     )
-    request = httpx_mock.get_requests()[0]
+    request = file_box_api.requests[0]
     assert json.loads(request.content) == {"version": 0, "max_size": TEST_MAX_SIZE}
 
     raw_token = request.headers["authorization"].removeprefix("Bearer ")
@@ -477,7 +493,9 @@ async def test_resize_file_upload_box(
     assert wot_claims["box_id"] == str(TEST_BOX_ID)
 
     # Make sure 409 "boxVersionOutdated" is translated as FUBVersionError
-    httpx_mock.add_response(409, json={"exception_id": "boxVersionOutdated"})
+    file_box_api.on_update_file_upload_box = respond(
+        409, json={"exception_id": "boxVersionOutdated"}
+    )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.resize_file_upload_box(
             box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
@@ -487,14 +505,18 @@ async def test_resize_file_upload_box(
     )
 
     # Make sure 409 "boxMaxSizeTooLow" is translated as FUBMaxSizeTooLowError
-    httpx_mock.add_response(409, json={"exception_id": "boxMaxSizeTooLow"})
+    file_box_api.on_update_file_upload_box = respond(
+        409, json={"exception_id": "boxMaxSizeTooLow"}
+    )
     with pytest.raises(FileBoxClient.FUBMaxSizeTooLowError):
         await file_upload_box_client.resize_file_upload_box(
             box_id=TEST_BOX_ID, version=0, max_size=1
         )
 
     # Make sure any other non-204 response is translated as OperationError
-    httpx_mock.add_response(500, json={"exception_id": "miscError"})
+    file_box_api.on_update_file_upload_box = respond(
+        500, json={"exception_id": "miscError"}
+    )
     with pytest.raises(FileBoxClient.OperationError):
         await file_upload_box_client.resize_file_upload_box(
             box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
@@ -503,8 +525,8 @@ async def test_resize_file_upload_box(
 
 async def test_delete_file_upload(
     config: Config,
-    httpx_mock: HTTPXMock,
-    httpx_client: httpx.AsyncClient,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
     work_order_jwk: JWK,
 ):
     """Test the delete_file_upload function"""
@@ -512,11 +534,11 @@ async def test_delete_file_upload(
     test_file_id = uuid4()
 
     # Happy path - verify WOT work_type/box_id/file_id
-    httpx_mock.add_response(204)
+    file_box_api.on_delete_file_upload = respond(204)
     await file_upload_box_client.delete_file_upload(
         box_id=TEST_BOX_ID, file_id=test_file_id
     )  # no error == success
-    request = httpx_mock.get_requests()[0]
+    request = file_box_api.requests[0]
     raw_token = request.headers["authorization"].removeprefix("Bearer ")
     wot_claims = decode_and_validate_token(raw_token, work_order_jwk)
     assert wot_claims["work_type"] == "delete"
@@ -524,7 +546,9 @@ async def test_delete_file_upload(
     assert wot_claims["file_id"] == str(test_file_id)
 
     # Make sure 409/boxStateError is translated as FUBStateError
-    httpx_mock.add_response(409, json={"exception_id": "boxStateError"})
+    file_box_api.on_delete_file_upload = respond(
+        409, json={"exception_id": "boxStateError"}
+    )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.delete_file_upload(
             box_id=TEST_BOX_ID, file_id=test_file_id
@@ -537,7 +561,9 @@ async def test_delete_file_upload(
 
     # Make sure 400, 404, and 500 are translated as OperationError
     for status_code in (400, 404, 500):
-        httpx_mock.add_response(status_code, json="Some error occurred.")
+        file_box_api.on_delete_file_upload = respond(
+            status_code, json="Some error occurred."
+        )
         with pytest.raises(FileBoxClient.OperationError):
             await file_upload_box_client.delete_file_upload(
                 box_id=TEST_BOX_ID, file_id=test_file_id
@@ -546,17 +572,17 @@ async def test_delete_file_upload(
 
 async def test_delete_file_upload_box(
     config: Config,
-    httpx_mock: HTTPXMock,
-    httpx_client: httpx.AsyncClient,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
     work_order_jwk: JWK,
 ):
     """Test the delete_file_upload_box function"""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
 
     # Set the UCS response to be 204
-    httpx_mock.add_response(204)
+    file_box_api.on_delete_file_upload_box = respond(204)
     await file_upload_box_client.delete_file_upload_box(box_id=TEST_BOX_ID, version=0)
-    request = httpx_mock.get_requests()[0]
+    request = file_box_api.requests[0]
 
     # Verify basic request details
     assert request.method == "DELETE"
@@ -573,11 +599,15 @@ async def test_delete_file_upload_box(
     assert "file_id" not in wot_claims
 
     # Verify that 404 (boxNotFound) is treated as success so retries are idempotent
-    httpx_mock.add_response(404, json={"exception_id": "boxNotFound"})
+    file_box_api.on_delete_file_upload_box = respond(
+        404, json={"exception_id": "boxNotFound"}
+    )
     await file_upload_box_client.delete_file_upload_box(box_id=TEST_BOX_ID, version=0)
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
-    httpx_mock.add_response(409, json={"exception_id": "boxVersionOutdated"})
+    file_box_api.on_delete_file_upload_box = respond(
+        409, json={"exception_id": "boxVersionOutdated"}
+    )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.delete_file_upload_box(
             box_id=TEST_BOX_ID, version=0
@@ -587,7 +617,9 @@ async def test_delete_file_upload_box(
     )
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
-    httpx_mock.add_response(409, json={"exception_id": "boxStateError"})
+    file_box_api.on_delete_file_upload_box = respond(
+        409, json={"exception_id": "boxStateError"}
+    )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.delete_file_upload_box(
             box_id=TEST_BOX_ID, version=0
@@ -600,7 +632,9 @@ async def test_delete_file_upload_box(
 
     # Make sure other status codes result in an OperationError
     for status_code in (400, 500):
-        httpx_mock.add_response(status_code, json="Some error occurred.")
+        file_box_api.on_delete_file_upload_box = respond(
+            status_code, json="Some error occurred."
+        )
         with pytest.raises(FileBoxClient.OperationError):
             await file_upload_box_client.delete_file_upload_box(
                 box_id=TEST_BOX_ID, version=0
