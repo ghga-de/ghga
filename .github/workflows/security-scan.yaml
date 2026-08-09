@@ -76,7 +76,7 @@ jobs:
           echo "SCAN=$RUNNER_TEMP/scan" >> "$GITHUB_ENV"
           echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/scan" "$RUNNER_TEMP/out"
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       - uses: aquasecurity/setup-trivy@v0.3.1
         with:
           cache: true
@@ -170,7 +170,7 @@ jobs:
             --out "$OUT/python-frag-lock.json"
           cp uv.lock "$OUT/uv.lock"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: python-update
           path: ${{ env.OUT }}
@@ -191,7 +191,7 @@ jobs:
           echo "SCAN=$RUNNER_TEMP/scan" >> "$GITHUB_ENV"
           echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/scan" "$RUNNER_TEMP/out"
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       - uses: aquasecurity/setup-trivy@v0.3.1
         with:
           cache: true
@@ -293,7 +293,7 @@ jobs:
             --out "$OUT/frontend-frag-lock.json"
           cp frontend/data-portal/pnpm-lock.yaml "$OUT/pnpm-lock.yaml"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: frontend-update
           path: ${{ env.OUT }}
@@ -352,7 +352,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           token: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: "*-update"
           path: ${{ env.IN }}
@@ -407,7 +407,7 @@ jobs:
 
       - name: Open or update the PR
         if: ${{ steps.verdict.outputs.fixed > 0 }}
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
           # set explicitly: the author otherwise defaults to github.actor — a

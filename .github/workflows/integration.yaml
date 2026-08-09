@@ -26,7 +26,9 @@ name: integration
 #   push:
 #     branches: [main]
 on:
-  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
 
 concurrency:
   group: integration-${{ github.ref }}
@@ -52,8 +54,8 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - uses: extractions/setup-just@v2
-      - uses: azure/setup-helm@v4
+      - uses: extractions/setup-just@v4
+      - uses: azure/setup-helm@v5
       - uses: helm/kind-action@v1
         with:
           # only the CLI: the cluster is created by `just testbed-up` from
