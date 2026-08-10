@@ -1,28 +1,32 @@
-# Daily security scan + lockfile-update proposal.
+# Daily security scan + dependency-update proposal.
 #
 # Answers two questions every morning:
 #   1. What known vulnerabilities do the published :dev images (dev-images.yaml)
 #      carry right now? (pull + Trivy scan; reported in the job summary)
-#   2. Would a lockfile update fix any of them? If yes, a PR is opened with the
-#      updated lockfiles, enumerating exactly the CVEs it fixes — and any it
-#      introduces.
+#   2. Would updating the lockfiles and rebuilding improve on that? If yes, a PR
+#      is opened with the updated lockfiles, enumerating the delta.
 #
-# Attribution design: the DHI base tags float, so a naive "published vs
-# rebuilt-with-updated-lock" comparison would credit the lockfile PR with fixes
-# that any rebuild picks up for free. Each ecosystem therefore builds TWICE from
-# fresh bases — baseline (current lockfile) and updated (after `uv lock --upgrade`
-# / `pnpm update --lockfile-only`) — and the PR claims only the baseline→updated
-# delta. The published→baseline delta ("rebuild-only drift") goes to the job
-# summary instead: it needs no repo change, and the next merge to main refreshes
-# :dev anyway.
+# Comparison design: each ecosystem rebuilds ONCE — updated lockfiles, freshly
+# pulled bases — and the published :dev image is diffed directly against that
+# rebuild. Merging the PR is what triggers dev-images to rebuild and republish,
+# so this delta is precisely "what merging delivers". It deliberately includes
+# fixes (and regressions) that stem from refreshed base images or from commits
+# merged since the last publish, not only from the lockfile diff itself; the PR
+# body carries each published image's revision label so the reader can judge how
+# much of the delta is staleness. The front end's dependency graph is
+# additionally compared at lockfile level (current vs updated pnpm-lock.yaml),
+# since its image ships only bundled JS that Trivy cannot see.
 #
-# Image scans alone are blind to the front end's real dependency surface: its
-# runner image ships bundled JS (plus one copied js-yaml), so app-dependency CVEs
-# are only visible to Trivy in pnpm-lock.yaml. Both ecosystems therefore scan
-# images AND lockfiles (trivy fs), and the comparison covers both. The mono image
-# is the Python proxy on purpose — its venv is the union of every member's
-# dependencies, so one scan covers all services (per-member attribution is a
-# release-lane concern, not a watch concern).
+# Deliberate scanning gaps:
+#   - uv.lock is NOT fs-scanned: Trivy cannot parse a virtual-workspace-root
+#     lock (no [project] at the root -> zero packages inventoried; verified).
+#     The mono image scan subsumes it — its venv holds every member's runtime
+#     dependencies as installed dist-infos.
+#   - The mono venv is built --no-dev, so CVEs in the dev toolchain (ruff,
+#     pytest, mypy, ...) are out of scope on purpose: they never ship.
+#   - A PR needs content: on a day where the lockfile update is a no-op, no PR
+#     opens even if a rebuild alone would fix things. Base-digest pinning is the
+#     planned answer for that case.
 #
 # Requires:
 #   - DOCKERHUB_USERNAME / DOCKERHUB_TOKEN org secrets (DHI base pulls, as in
@@ -61,7 +65,7 @@ env:
 jobs:
   python:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: read # pull :dev from GHCR
@@ -93,8 +97,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # Tolerates a missing tag (bootstrap: no merge to main since dev-images.yaml
-      # landed) — the published scan is informational; the compare works without it.
+      # Tolerates a missing tag (bootstrap: no publish yet) — the comparison is then
+      # skipped, but the lockfile update still runs and the rebuild still gates.
+      # The context file records the published image's revision label so the PR can
+      # state which commit the delta is measured against.
       - name: Scan the published platform:dev image
         run: |
           if docker pull "$REGISTRY/platform:dev"; then
@@ -106,34 +112,26 @@ jobs:
               trivy convert --format table "$SCAN/published-image.json"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+            rev=$(docker inspect \
+              --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' \
+              "$REGISTRY/platform:dev" || true)
+            jq -n --arg image platform --arg revision "$rev" \
+              --arg head "${GITHUB_SHA::12}" \
+              '{image: $image, published: true, revision: $revision, head: $head}' \
+              > "$OUT/python-context.json"
           else
-            echo "## platform:dev not found — skipping the published-image scan" \
+            echo "## platform:dev not found — image comparison skipped" \
               >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Baseline — scan uv.lock and a fresh rebuild
-        run: |
-          trivy fs --scanners vuln -f json -o "$SCAN/baseline-lock.json" uv.lock
-          just image-mono baseline --pull
-          trivy image --scanners vuln -f json -o "$SCAN/baseline-image.json" \
-            "$REGISTRY/platform:baseline"
-
-      - name: Report rebuild-only drift (fixes a plain rebuild would pick up)
-        run: |
-          if [ -f "$SCAN/published-image.json" ]; then
-            python3 scripts/diff_trivy.py diff \
-              --label "platform image — rebuild-only drift (fresh base, unchanged lockfile)" \
-              --before "$SCAN/published-image.json" \
-              --after "$SCAN/baseline-image.json" \
-              --out "$SCAN/drift.json"
-            python3 scripts/diff_trivy.py render "$SCAN/drift.json" \
-              --out "$SCAN/drift.md" > /dev/null
-            cat "$SCAN/drift.md" >> "$GITHUB_STEP_SUMMARY"
+            jq -n --arg image platform --arg head "${GITHUB_SHA::12}" \
+              '{image: $image, published: false, revision: "", head: $head}' \
+              > "$OUT/python-context.json"
           fi
 
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+      # No fs scan of uv.lock here: Trivy inventories NOTHING from a virtual-
+      # workspace-root lock, so the image scan below is the real Python signal.
       - name: Update the lockfile
         id: update
         run: |
@@ -147,38 +145,29 @@ jobs:
 
       # The rebuild doubles as a gate: an updated lockfile that no longer builds
       # never reaches a PR.
-      - name: Updated — scan uv.lock and a fresh rebuild
+      - name: Rebuild with the updated lockfile and diff against published
         if: ${{ steps.update.outputs.changed == 'true' }}
         run: |
-          trivy fs --scanners vuln -f json -o "$SCAN/updated-lock.json" uv.lock
           just image-mono updated --pull
-          trivy image --scanners vuln -f json -o "$SCAN/updated-image.json" \
-            "$REGISTRY/platform:updated"
-
-      - name: Diff baseline vs updated
-        if: ${{ steps.update.outputs.changed == 'true' }}
-        run: |
-          python3 scripts/diff_trivy.py diff \
-            --label "platform image (all Python services, mono build)" \
-            --before "$SCAN/baseline-image.json" \
-            --after "$SCAN/updated-image.json" \
-            --out "$OUT/python-frag-image.json"
-          python3 scripts/diff_trivy.py diff \
-            --label "uv.lock (full Python dependency graph)" \
-            --before "$SCAN/baseline-lock.json" \
-            --after "$SCAN/updated-lock.json" \
-            --out "$OUT/python-frag-lock.json"
+          if [ -f "$SCAN/published-image.json" ]; then
+            trivy image --scanners vuln -f json -o "$SCAN/updated-image.json" \
+              "$REGISTRY/platform:updated"
+            python3 scripts/diff_trivy.py diff \
+              --label "platform image (all Python services, mono build) — published :dev vs updated rebuild" \
+              --before "$SCAN/published-image.json" \
+              --after "$SCAN/updated-image.json" \
+              --out "$OUT/python-frag-image.json"
+          fi
           cp uv.lock "$OUT/uv.lock"
 
       - uses: actions/upload-artifact@v6
         with:
           name: python-update
-          path: ${{ env.OUT }}
-          if-no-files-found: ignore # unchanged lockfile → nothing to hand over
+          path: ${{ env.OUT }} # always at least the context file
 
   frontend:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
     permissions:
       contents: read
       packages: read
@@ -219,31 +208,28 @@ jobs:
               trivy convert --format table "$SCAN/published-image.json"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+            rev=$(docker inspect \
+              --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' \
+              "$REGISTRY/data-portal:dev" || true)
+            jq -n --arg image data-portal --arg revision "$rev" \
+              --arg head "${GITHUB_SHA::12}" \
+              '{image: $image, published: true, revision: $revision, head: $head}' \
+              > "$OUT/frontend-context.json"
           else
-            echo "## data-portal:dev not found — skipping the published-image scan" \
+            echo "## data-portal:dev not found — image comparison skipped" \
               >> "$GITHUB_STEP_SUMMARY"
+            jq -n --arg image data-portal --arg head "${GITHUB_SHA::12}" \
+              '{image: $image, published: false, revision: "", head: $head}' \
+              > "$OUT/frontend-context.json"
           fi
 
-      - name: Baseline — scan pnpm-lock.yaml and a fresh rebuild
+      # The image is blind to the app's dependency graph (bundled JS), so the
+      # lockfile itself is scanned before and after the update — this is the
+      # front end's only real dependency signal.
+      - name: Scan the current pnpm-lock.yaml
         run: |
-          trivy fs --scanners vuln -f json -o "$SCAN/baseline-lock.json" \
+          trivy fs --scanners vuln -f json -o "$SCAN/lock-before.json" \
             frontend/data-portal/pnpm-lock.yaml
-          just image frontend/data-portal baseline --pull
-          trivy image --scanners vuln -f json -o "$SCAN/baseline-image.json" \
-            "$REGISTRY/data-portal:baseline"
-
-      - name: Report rebuild-only drift (fixes a plain rebuild would pick up)
-        run: |
-          if [ -f "$SCAN/published-image.json" ]; then
-            python3 scripts/diff_trivy.py diff \
-              --label "data-portal image — rebuild-only drift (fresh base, unchanged lockfile)" \
-              --before "$SCAN/published-image.json" \
-              --after "$SCAN/baseline-image.json" \
-              --out "$SCAN/drift.json"
-            python3 scripts/diff_trivy.py render "$SCAN/drift.json" \
-              --out "$SCAN/drift.md" > /dev/null
-            cat "$SCAN/drift.md" >> "$GITHUB_STEP_SUMMARY"
-          fi
 
       - uses: pnpm/action-setup@v5
         with:
@@ -269,40 +255,38 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Updated — scan pnpm-lock.yaml and a fresh rebuild
+      - name: Rebuild with the updated lockfile and diff against published
         if: ${{ steps.update.outputs.changed == 'true' }}
         run: |
-          trivy fs --scanners vuln -f json -o "$SCAN/updated-lock.json" \
+          trivy fs --scanners vuln -f json -o "$SCAN/lock-after.json" \
             frontend/data-portal/pnpm-lock.yaml
-          just image frontend/data-portal updated --pull
-          trivy image --scanners vuln -f json -o "$SCAN/updated-image.json" \
-            "$REGISTRY/data-portal:updated"
-
-      - name: Diff baseline vs updated
-        if: ${{ steps.update.outputs.changed == 'true' }}
-        run: |
           python3 scripts/diff_trivy.py diff \
-            --label "data-portal image" \
-            --before "$SCAN/baseline-image.json" \
-            --after "$SCAN/updated-image.json" \
-            --out "$OUT/frontend-frag-image.json"
-          python3 scripts/diff_trivy.py diff \
-            --label "pnpm-lock.yaml (front-end dependency graph)" \
-            --before "$SCAN/baseline-lock.json" \
-            --after "$SCAN/updated-lock.json" \
+            --label "pnpm-lock.yaml (front-end dependency graph) — current vs updated" \
+            --before "$SCAN/lock-before.json" \
+            --after "$SCAN/lock-after.json" \
             --out "$OUT/frontend-frag-lock.json"
+          just image frontend/data-portal updated --pull
+          if [ -f "$SCAN/published-image.json" ]; then
+            trivy image --scanners vuln -f json -o "$SCAN/updated-image.json" \
+              "$REGISTRY/data-portal:updated"
+            python3 scripts/diff_trivy.py diff \
+              --label "data-portal image — published :dev vs updated rebuild" \
+              --before "$SCAN/published-image.json" \
+              --after "$SCAN/updated-image.json" \
+              --out "$OUT/frontend-frag-image.json"
+          fi
           cp frontend/data-portal/pnpm-lock.yaml "$OUT/pnpm-lock.yaml"
 
       - uses: actions/upload-artifact@v6
         with:
           name: frontend-update
-          path: ${{ env.OUT }}
-          if-no-files-found: ignore
+          path: ${{ env.OUT }} # always at least the context file
 
-  # Combines whatever the scan jobs handed over and opens ONE PR when the update
-  # fixes anything. A fixed branch, updated in place, so daily runs never stack
-  # PRs. If a previously opened PR goes stale (main already got the fixes), it
-  # stays open for a human verdict — this job only ever rewrites the branch.
+  # Combines whatever the scan jobs handed over and opens ONE PR when the proposed
+  # state improves on the published images. A fixed branch, updated in place, so
+  # daily runs never stack PRs. If a previously opened PR goes stale (main already
+  # got the fixes), it stays open for a human verdict — this job only ever
+  # rewrites the branch.
   propose-update:
     needs: [python, frontend]
     # one ecosystem failing must not discard the other's verdict
@@ -387,18 +371,44 @@ jobs:
           echo "fixed=$fixed" >> "$GITHUB_OUTPUT"
           cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
 
+      # The delta is measured against the PUBLISHED images (see the workflow
+      # header); the context lines below tell the reader which commit each
+      # published image was built from, so staleness-driven entries — fixed OR
+      # introduced — are attributable at a glance.
       - name: Compose the PR body
         if: ${{ steps.verdict.outputs.fixed > 0 }}
         run: |
           {
-            echo "Automated dependency-lock update from the daily security scan."
+            echo "Automated dependency update from the daily security scan."
             echo
-            echo "Each image was rebuilt twice from fresh bases — with the current"
-            echo "lockfiles (baseline) and after \`uv lock --upgrade\` /"
-            echo "\`pnpm update --lockfile-only\` — and both states were scanned with"
-            echo "Trivy (images and lockfiles). The tables below list only differences"
-            echo "attributable to the lockfile update; base-image-driven fixes are"
-            echo "excluded, since any rebuild picks those up without a repo change."
+            echo "The tables compare the currently published \`:dev\` images against"
+            echo "images rebuilt from this branch (updated lockfiles, freshly pulled"
+            echo "bases) — i.e. what merging this PR delivers once dev-images"
+            echo "republishes. Fixed and introduced entries can therefore stem from"
+            echo "the lockfile update, refreshed base images, or commits merged since"
+            echo "the published build:"
+            echo
+            for ctx in "$IN"/*-context.json; do
+              [ -f "$ctx" ] || continue
+              image=$(jq -r .image "$ctx")
+              pub=$(jq -r .published "$ctx")
+              rev=$(jq -r .revision "$ctx")
+              head=$(jq -r .head "$ctx")
+              if [ "$pub" != "true" ]; then
+                echo "- \`$image:dev\` was not published at scan time; its image comparison was skipped."
+              elif [ -z "$rev" ]; then
+                echo "- \`$image:dev\` carries no revision label; its build commit is unknown."
+              elif [ "$rev" = "$head" ]; then
+                echo "- \`$image:dev\` was built from this branch's base commit (\`$rev\`) — its delta is lockfile- and base-image-driven only."
+              else
+                echo "- \`$image:dev\` was built from commit \`$rev\` (branch base: \`$head\`) — its delta also includes changes merged in between."
+              fi
+            done
+            echo
+            echo "The front-end dependency graph is additionally compared at lockfile"
+            echo "level, since the data-portal image ships only bundled JS; the Python"
+            echo "graph is covered by the platform image scan (the mono venv holds"
+            echo "every service's runtime dependencies)."
             echo
             cat "$RUNNER_TEMP/report.md"
             echo
@@ -416,12 +426,13 @@ jobs:
           author: ${{ steps.identity.outputs.bot }}
           branch: automated/lockfile-security-update
           base: main
-          title: "Security: lockfile update resolving ${{ steps.verdict.outputs.fixed }} known vulnerabilities"
+          title: "Security: dependency update resolving ${{ steps.verdict.outputs.fixed }} known vulnerabilities"
           body-path: ${{ runner.temp }}/body.md
           commit-message: |
-            Update dependency lockfiles to resolve ${{ steps.verdict.outputs.fixed }} known vulnerabilities
+            Update dependency lockfiles — resolves ${{ steps.verdict.outputs.fixed }} known vulnerabilities
 
-            Automated by the security-scan workflow.
+            Measured against the currently published :dev images; automated by the
+            security-scan workflow.
           add-paths: |
             uv.lock
             frontend/data-portal/pnpm-lock.yaml
@@ -430,5 +441,5 @@ jobs:
       - name: Summary when no PR is warranted
         if: ${{ steps.verdict.outcome == 'skipped' || steps.verdict.outputs.fixed == '0' }}
         run: |
-          echo "Lockfiles are up to date, or the available update fixes no known" \
-            "vulnerabilities — no PR opened." >> "$GITHUB_STEP_SUMMARY"
+          echo "Lockfiles are up to date, or the updated rebuild does not improve" \
+            "on the published images — no PR opened." >> "$GITHUB_STEP_SUMMARY"
