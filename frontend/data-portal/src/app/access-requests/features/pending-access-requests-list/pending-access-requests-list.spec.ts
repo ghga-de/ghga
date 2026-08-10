@@ -15,6 +15,7 @@ import { PendingAccessRequestsListComponent } from './pending-access-requests-li
 describe('PendingAccessRequestsListComponent', () => {
   let component: PendingAccessRequestsListComponent;
   let fixture: ComponentFixture<PendingAccessRequestsListComponent>;
+  let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -25,6 +26,7 @@ describe('PendingAccessRequestsListComponent', () => {
       ],
     }).compileComponents();
 
+    accessRequestService = TestBed.inject(AccessRequestService);
     fixture = TestBed.createComponent(PendingAccessRequestsListComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -32,5 +34,11 @@ describe('PendingAccessRequestsListComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should fetch the access requests again when refreshed', () => {
+    const reload = vitest.spyOn(accessRequestService, 'reloadUserAccessRequests');
+    component.refresh();
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

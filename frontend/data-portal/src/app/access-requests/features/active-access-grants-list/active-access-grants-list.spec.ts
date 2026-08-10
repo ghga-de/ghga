@@ -19,6 +19,7 @@ const MockConfigService = {
 describe('ActiveAccessGrantsListComponent', () => {
   let component: ActiveAccessGrantsListComponent;
   let fixture: ComponentFixture<ActiveAccessGrantsListComponent>;
+  let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -31,6 +32,7 @@ describe('ActiveAccessGrantsListComponent', () => {
       ],
     }).compileComponents();
 
+    accessRequestService = TestBed.inject(AccessRequestService);
     fixture = TestBed.createComponent(ActiveAccessGrantsListComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -38,5 +40,11 @@ describe('ActiveAccessGrantsListComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should fetch the access grants again when refreshed', () => {
+    const reload = vitest.spyOn(accessRequestService, 'reloadUserAccessGrants');
+    component.refresh();
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

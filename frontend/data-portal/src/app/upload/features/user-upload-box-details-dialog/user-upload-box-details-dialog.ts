@@ -11,6 +11,7 @@ import { PageEvent } from '@angular/material/paginator';
 import { Sort } from '@angular/material/sort';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
+import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
 import { ResearchDataUploadBox, UploadBoxStateClass } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
@@ -30,6 +31,7 @@ import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-b
     MatDialogModule,
     Capitalise,
     ParseBytes,
+    RefreshButtonComponent,
     StencilComponent,
     UploadBoxFilesTableComponent,
   ],
@@ -101,6 +103,15 @@ export class UserUploadBoxDetailsDialogComponent {
   );
 
   /**
+   * Fetch the box and its files again on request. Uploads run through the GHGA
+   * Connector, so file states advance while this dialog stays open.
+   */
+  protected refreshFiles(): void {
+    this.#uploadBoxService.reloadUploadBox(this.boxId);
+    this.#uploadBoxService.reloadFileUploadsForBox(this.boxId);
+  }
+
+  /**
    * Request a different page of files from the server.
    * @param event - the page event emitted by the paginator
    */
@@ -119,18 +130,32 @@ export class UserUploadBoxDetailsDialogComponent {
     this.#uploadBoxService.sortFileUploadsByColumn(sort.active, sort.direction);
   }
 
-  /** Load the box files once the box is available and known to be non-empty. */
+  /** Whether the files of this box have already been requested for this dialog. */
+  #filesRequested = false;
+
+  /**
+   * Load the box files once the box is available and known to be non-empty.
+   * The dialog is created anew every time it is opened, so the flag limits this
+   * to one fetch per opening: the box signal keeps changing afterwards (for
+   * instance while paging through the files), and refetching on each of those
+   * changes would be pointless.
+   */
   #loadFilesEffect = effect(() => {
     const box = this.box();
-    if (box && box.file_count > 0) {
-      this.#uploadBoxService.loadFileUploadsForBox(box.id);
+    if (box && box.file_count > 0 && !this.#filesRequested) {
+      this.#filesRequested = true;
+      this.#uploadBoxService.reloadFileUploadsForBox(box.id);
     }
   });
 
   /**
-   * Trigger loading of the single box when the dialog is opened.
+   * Fetch the box again whenever the dialog is opened. Files are uploaded with
+   * the GHGA Connector outside the portal, so the box contents and its file
+   * list change without anything happening here. Merely loading the box would
+   * not issue a request at all when the same box was inspected before, since
+   * the request of the underlying resource would be unchanged.
    */
   constructor() {
-    this.#uploadBoxService.loadUploadBox(this.boxId);
+    this.#uploadBoxService.reloadUploadBox(this.boxId);
   }
 }

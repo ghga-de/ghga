@@ -34,7 +34,15 @@
       </div>
 
       <div>
-        <p class="mb-2"><strong>Files:</strong></p>
+        <div class="mb-2 flex items-center justify-between">
+          <p><strong>Files:</strong></p>
+          <app-refresh-button
+            what="the file list"
+            [loading]="filesLoading()"
+            umamiEvent="User Upload Box Details Refresh Files Clicked"
+            (refresh)="refreshFiles()"
+          />
+        </div>
         @if (box.file_count > 0) {
           <app-upload-box-files-table
             [pageFiles]="pageFiles()"

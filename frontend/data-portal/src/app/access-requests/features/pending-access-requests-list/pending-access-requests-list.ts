@@ -26,4 +26,12 @@ export class PendingAccessRequestsListComponent {
   pendingRequests = this.#ars.pendingUserAccessRequests;
   isLoading = this.#ars.userAccessRequests.isLoading;
   hasError = this.#ars.userAccessRequests.error;
+
+  /**
+   * Fetch the access requests again on request, since data access committees
+   * process them while the account page is open.
+   */
+  refresh(): void {
+    this.#ars.reloadUserAccessRequests();
+  }
 }
