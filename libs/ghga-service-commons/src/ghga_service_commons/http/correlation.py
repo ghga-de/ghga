@@ -17,7 +17,6 @@
 from functools import partial
 
 import httpx2
-
 from hexkit.correlation import (
     CorrelationIdContextError,
     get_correlation_id,
