@@ -1,7 +1,7 @@
 # Early Data Lifecycle Rollout — Developer Guide
 
 > **Audience.** Developers implementing the feature across dskit, metldata, the registry
-> service, MASS, and the data portal.
+> service, MASS, dins and the data portal.
 >
 > **Read first.** [`docs/architecture/metadata-and-file-journeys.md`](../architecture/metadata-and-file-journeys.md)
 > — the current-state map this document builds on. RDUB, FUB, primary dataset source,
@@ -67,15 +67,15 @@ Consequences:
 - `XXX` collisions are resolved by retry against a per-year uniqueness check, i.e. only against
   other `XXX` minted in the same `YY`. `.DS.xxx` collisions are resolved by retry within the
   lineage.
-- **"Identical file set"** is compared over the reuse-slot accessions the steward wrote into the
-  dataset's file entities — not over physical files, which dskit cannot see (§2.3), and not over the
+- **"Identical file set"** is compared over the reuse-slot accessions provided in the metadata-spreadsheet
+ — not over physical files, which dskit cannot see (§2.3), and not over the
   entities' own accessions, which change every revision. The comparison only arises when a successor
   continues a new-scheme lineage: a legacy predecessor forces a fresh root at `V = 1` (§2.2), so
   there is no predecessor dataset to compare against.
 
 #### Existing studies keep their legacy identifiers
 
-The new scheme is **not** applied retroactively. Studies already accessioned under the current flat
+The new scheme is not applied retroactively. Studies already accessioned under the current flat
 scheme (`GHGAS` + 14 random digits, and their `GHGAD`/`GHGAF`/… children) keep those accessions.
 There is no re-accessioning migration, and their URLs stay valid.
 
@@ -130,10 +130,8 @@ resolve ancestors for the file-reuse warnings (§2.3).
 
 This is metldata's **existing** submission store, not a new one: with one study per submission
 (§2.6) every prior study is already in it, and the declared replacement is added to the record.
-It holds submitted metadata only — it knows nothing about physical file uploads or archived
-files, which live in ucs/rs (dskit's old S3-upload + FIS-ingest path is deprecated and unused). The
-store lives on the data steward VM, which is the trusted source of truth and is backed up as a VM,
-so its durability is not a lifecycle concern.
+It holds submitted metadata only. The store lives on the data steward VM, which is the trusted
+source of truth and is backed up as a VM, so its durability is not a lifecycle concern.
 
 **Why offline mints the accessions.** Child accessions embed the study PID (`{study_pid}.{alias}`),
 so the study's PID must be fixed *before* accessions are minted and the metadata is transformed.
@@ -187,8 +185,7 @@ and DAC for each archived file (§4.5).
 
 IFRS announces a file's size, checksum and storage alias **once**, at archival. dins treats that as
 a one-time hand-off: it parks the payload keyed by `file_id`, merges it into the first accession that
-claims it, and **deletes it**
-([`dins/core/information_service.py`](../../services/dataset-information-service/src/dins/core/information_service.py)).
+claims it, and **deletes it**.
 Under reuse a second accession is mapped much later (§2.5), IFRS never re-announces, and nothing is
 left to merge — so the dataset page shows blank size and checksum indefinitely, with only a "still
 waiting for `FileInternallyRegistered`" log line to explain it.
@@ -207,8 +204,7 @@ to that file however late it appears, and clear all such accessions when the fil
   successor, so following the chain from a legacy study always terminates at a unique newest study.
   This is what makes the portal hint well-defined even under merges.
 - **metldata is the single source of truth for supersede status** as served. rs, MASS and the portal
-  are consumers: rs's `Study.superseded_by_id`/`status`
-  ([`rs/core/models.py`](../../services/ghga-registry-service/src/rs/core/models.py)) are populated
+  are consumers: rs's `Study.superseded_by_id`/`status` are populated
   from the signal metldata emits, not computed by rs.
 - **Legacy means a successor has been declared for this study.** Legacy studies' datasets are hidden
   from search but remain reachable by URL/PID (`/dataset/{id}`, `/study/{id}`). The portal shows an
@@ -240,8 +236,7 @@ Every child accession is derived from *the* study PID (§2.1), replacement is de
 submission.
 
 It also fixes a latent defect. The current loader takes `content["studies"][0]["accession"]` for
-publishable artifacts
-([`load/collect.py:91`](../../libs/metldata/src/metldata/load/collect.py)) and **silently discards
+publishable artifacts and **silently discards
 any further studies** — a two-study submission loads today without error while only the first study
 is attributed. Enforcing one study at submit turns that silent truncation into an up-front rejection.
 
@@ -265,7 +260,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 
 **Submitting a successor study (offline, dskit):**
 
-1. Steward prepares the submission's spreadsheet as usual — **exactly one study** (§2.6). For any
+1. Submitter prepares the submission's spreadsheet as usual — **exactly one study** (§2.6). For any
    file being reused from an earlier study, they put its **prior GHGA file accession (PID)** in that
    file entity's reuse slot instead of providing a new upload.
 2. `dskit metadata submit --replaces GHGA.24.ABC.1 …` (repeat the flag to merge several
@@ -278,7 +273,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
    - **runs the three reuse warnings** (§2.3) for the steward to confirm;
    - **carries reuse slots through untouched** — no resolution to physical files;
    - **records the declared replacement** so it travels with the submission.
-3. `dskit metadata transform` — unchanged; the accessions now carry lifecycle structure.
+3. `dskit metadata transform` — unchanged.
 4. `dskit load` — pushes artifacts **together with the declared replacement**.
 
    *Or, for two studies already submitted:* `dskit metadata replace-study <old PID> <new PID>`
@@ -316,9 +311,9 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 ### 4.1 `tools/ghga-datasteward-kit` (dskit)
 
 - **Reject multi-study submissions (§2.6).** Validate at `submit` that the metadata contains exactly
-  one study; error out naming the studies found. Everything downstream derives from *the* study.
+  one study; error out naming the studies found.
 - **Read prior studies from the submission store.** dskit needs, per previously submitted study, its
-  PID, the studies it declares it **replaces**, and its **submitted metadata** (datasets with their
+  PID, the studies it declares it replaces, and its submitted metadata (datasets with their
   file-reference sets, entity accessions, and the `data_access_policy`/`data_access_committee`
   attributes needed by warning 3). This is metldata's existing submission store extended with the
   declared replacement (§4.2), not a second store; it is already written on every `submit`, and
