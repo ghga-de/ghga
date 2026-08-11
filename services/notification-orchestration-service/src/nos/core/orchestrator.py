@@ -130,7 +130,7 @@ class Orchestrator(OrchestratorPort):
             user.email,
         )
 
-        request_url = f"{self._config.portal_url}access-requests/{access_request.id}"
+        request_url = f"{self._config.portal_url}access-request-manager/{access_request.id}"
 
         # Send a notification to the data steward
         await self._notification_emitter.email_notify(
