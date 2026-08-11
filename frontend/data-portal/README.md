@@ -15,6 +15,7 @@ This repository contains the front-end application for the GHGA data portal.
 - [Linter, Commits, and Documentation](#linter-commits-and-documentation)
   - [Ease of use](#ease-of-use)
 - [Automated tests](#automated-tests)
+  - [Test levels](#test-levels)
   - [Unit-tests](#unit-tests)
   - [End-to-End tests](#end-to-end-tests)
     - [Issues relating to headed execution](#issues-relating-to-headed-execution)
@@ -50,6 +51,8 @@ Once the server is running, open your browser and navigate to `http://localhost:
 By default, this will not use a proxy configuration; the API will be provided via the mock service worker, and the authentication will be faked as well.
 
 The MSW handlers in `src/mocks` intentionally return static responses. We avoid adding complex backend logic to mocks to prevent duplicating server behaviors in the frontend codebase, which can differ or drift over time and produce misleading local test results.
+
+The same mock layer also serves the Playwright tests, so this decision shapes what those tests are able to prove. See [Automated tests](#automated-tests) for the consequences.
 
 ### API requests & the backend
 
@@ -171,6 +174,18 @@ For comfort, we are adding these shorthands: `pnpm lint`, `pnpm lf` (for `lint -
 
 ## Automated tests
 
+### Test levels
+
+Two levels of automated tests live in this repository, and a third lives elsewhere. They can prove quite different things, so it is worth choosing deliberately:
+
+| Level                    | Runs against                                                                               | Answers                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| Unit tests (Vitest)      | mocked services, mocked HTTP backend                                                       | does this service or component behave correctly?  |
+| "E2E" tests (Playwright) | the real app in a real browser, with the API served by the [MSW mocks](#local-development) | is the application assembled and wired correctly? |
+| GHGA archive test bed    | the real backend and database, in a separate repository                                    | does this flow actually work end to end?          |
+
+Unit tests are the default and carry most of the coverage: request shapes, state transitions, cache invalidation, rendering and event wiring all belong there. The two other levels each add something the level above cannot see, and each costs more to run.
+
 ### Unit-tests
 
 We are using [Vitest](https://vitest.dev/) for unit testing in this project. If possible, the queries and matchers from the [Testing Library](https://testing-library.com/) should be used. See the documentation for the [Angular Testing Library](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/). Note that jest-dom also supports Vitest, not just Jest.
@@ -187,7 +202,20 @@ Note: the VS Code Vitest extension runs plain `vitest` directly, which does not 
 
 We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/intro) for details.
 
-Comprehensive end-to-end tests for real backend behavior are maintained in the separate GHGA archive test bed repository. The e2e tests in this repository focus on frontend behavior and expected API contracts.
+"End-to-end" is admittedly a misnomer here. These tests do not reach the actual backend and database: the API is served by the same [MSW mocks](#local-development) that back the development server, and those return static responses by design. What is covered is the frontend from the browser inwards — everything above the network boundary. Comprehensive end-to-end tests for real backend behavior are maintained in the separate GHGA archive test bed repository.
+
+Within that boundary, however, these tests are considerably more real than unit tests, and catch a class of problems unit tests structurally cannot:
+
+- **The application really boots.** It starts from `app.config.ts` with the actual providers, routes lazy-load their real chunks, and guards run. Unit tests assemble a `TestBed` per spec and never exercise that configuration.
+- **Requests are really issued.** They travel the whole `HttpClient` chain, including the caching and CSRF interceptors. Unit tests use `HttpTestingController`, which replaces the backend and only sees the interceptors a spec explicitly provides, so an interceptor misconfiguration is invisible there.
+- **The real services run.** Unit tests replace services with hand-written mocks, which can silently drift from the API of the service they stand in for. Here the actual implementations are used, against each other.
+- **It is a real browser.** Layout, focus handling, Angular Material overlays (dialogs, menus, snack bars) and view transitions all behave as they do for users, none of which jsdom reproduces. `pnpm e2e:all` additionally runs across the configured browsers.
+- **Journeys span components and pages.** Navigation, shared services and cross-page state are exercised together rather than one unit at a time.
+- **The expected API contract is checked.** Mock handlers are registered per URL and query parameters, so a request the application makes that no handler matches surfaces immediately.
+
+What they cannot show is anything that depends on the backend actually changing state, because the mocks answer identically before and after a mutation. Do not write a test here that performs a change and then asserts that the change is reflected — it could only assert that a request was sent, which a unit test does more precisely and far more cheaply. Such flows belong in the archive test bed, which is more expensive to run.
+
+Treat the tests in this repository as a fast smoke layer: keep them few and cheap, so they stay useful for quick feedback during frontend development.
 
 - `pnpm e2e` - run e2e-tests in headless mode on Chromium (fast local default)
 - `pnpm e2e:all` - run e2e-tests in headless mode on all configured browsers using `--workers=2`
@@ -200,6 +228,16 @@ Worker configuration:
 - Default is `1` worker for stability.
 - For faster local runs with the same command, do `export PLAYWRIGHT_WORKERS=<number of workers>`.
 - If tests get flaky, lower the value (or return to `1`).
+
+Stopping early:
+
+- A local run stops at the first failure, which is usually what you want while fixing something.
+- CI stops after 5, so that a single broken test can be reported for each of the three browsers rather than aborting the remaining tests after the first of them. Beyond that the suite is broken enough that stopping saves more than it hides.
+
+Timeouts:
+
+- The per-test timeout is raised to 60s and the `expect` timeout to 10s, well above the Playwright defaults. CI runners are far slower than a local machine: logging in and reaching an admin page alone costs around 15 seconds there, and even a mocked request can take more than a second, which used to exhaust the default 30s budget mid-test.
+- These are upper bounds for tests that are genuinely stuck, not targets. A test that only passes because of them is telling you something — check the Playwright trace before raising them further.
 
 Recommendations for writing stable e2e tests:
 

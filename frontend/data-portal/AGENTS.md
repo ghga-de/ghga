@@ -41,7 +41,9 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 ## API mocking philosophy
 
 The MSW layer in `src/mocks` serves **static, pre-made responses only**. Do not write
-mock handlers that contain backend logic.
+mock handlers that contain backend logic. It backs both the dev server and the
+Playwright tests, so this is also what bounds what those tests can prove — see
+[Test levels](#test-levels) below.
 
 - Reimplementing backend behaviour (filtering, pagination, sorting, validation,
   computed fields) duplicates work that already exists in the services, and the copy
@@ -66,6 +68,28 @@ mock handlers that contain backend logic.
   not per-request pages — sorting must precede slicing, so an already-paged fixture
   cannot be sorted correctly. Do not extend this to filtering, validation, or computed
   fields.
+
+## Test levels
+
+Follows directly from the mocking philosophy above; see
+[Automated tests](README.md#automated-tests) for the full rationale.
+
+- **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most
+  coverage belongs — request shapes, cache invalidation, state transitions, rendering
+  and event wiring. Services are tested against `HttpTestingController`, components
+  against mocked services.
+- **E2E tests in this repo** (Playwright, `tests`): a **smoke layer**, despite the name.
+  They stop at the network boundary, since the MSW mocks serve them too, but they boot
+  the real app in a real browser with the real services and interceptors. Use them for
+  assembly and wiring, not for behaviour. Keep them few and cheap.
+- **Archive test bed** (separate repository): real backend and database, and the only
+  level that can verify a flow whose outcome depends on the backend changing state.
+
+The practical consequence: do **not** try to cover a "change something, then see the
+change reflected" flow with a Playwright test here. The mocks answer identically before
+and after the mutation, so such a test could only assert that a request was made — which
+a unit test already does more precisely and far more cheaply. Leave those flows to the
+archive test bed, which is more expensive to run.
 
 ## Repo commands (pnpm)
 

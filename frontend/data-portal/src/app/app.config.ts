@@ -46,7 +46,13 @@ export const appConfig: ApplicationConfig = {
       withFetch(),
       withInterceptors([withHttpCacheInterceptor(), csrfInterceptor]),
     ),
-    // cache all GET requests by default
+    // Cache all GET requests by default, for an hour (cashew's default). Most
+    // of what is cached is metadata that only changes with an archive release,
+    // so a long time to live is what makes the cache worthwhile. Endpoints whose
+    // data changes on its own opt into a much shorter one via
+    // `volatileCacheContext`; their services also drop the affected cache
+    // entries whenever they change data or fetch it again on request, which is
+    // the primary mechanism for keeping those views up to date.
     provideHttpCache({ strategy: 'implicit' }),
     { provide: MAT_DATE_LOCALE, useValue: DEFAULT_DATE_LOCALE },
     {

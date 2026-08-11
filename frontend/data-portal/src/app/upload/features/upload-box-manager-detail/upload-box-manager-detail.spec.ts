@@ -78,9 +78,12 @@ class MockUploadBoxService {
   };
 
   loadUploadBox = vitest.fn();
+  reloadUploadBox = vitest.fn();
   loadStorageLabels = vitest.fn();
   loadBoxGrants = vitest.fn();
+  reloadBoxGrants = vitest.fn();
   loadFileUploadsForBox = vitest.fn();
+  reloadFileUploadsForBox = vitest.fn();
   loadAllFileUploadsForBox = vitest.fn();
   paginateFileUploads = vitest.fn();
   sortFileUploadsByColumn = vitest.fn();
@@ -243,12 +246,21 @@ describe('UploadBoxManagerDetailComponent', () => {
       expect(screen.getByText('Tübingen 1')).toBeVisible();
     });
 
-    it('should call loadUploadBox to keep detail state synchronized', () => {
-      expect(uploadBoxService.loadUploadBox).toHaveBeenCalledWith(TEST_BOX.id);
+    it('should call reloadUploadBox to keep detail state synchronized', () => {
+      expect(uploadBoxService.reloadUploadBox).toHaveBeenCalledWith(TEST_BOX.id);
     });
 
-    it('should call loadBoxGrants with the box id', () => {
-      expect(uploadBoxService.loadBoxGrants).toHaveBeenCalledWith(TEST_BOX.id);
+    it('should call reloadBoxGrants with the box id', () => {
+      expect(uploadBoxService.reloadBoxGrants).toHaveBeenCalledWith(TEST_BOX.id);
+    });
+
+    it('should fetch the box, its grants and its files again when the refresh button is used', () => {
+      screen.getByRole('button', { name: 'Refresh the upload box details' }).click();
+      expect(uploadBoxService.reloadUploadBox).toHaveBeenLastCalledWith(TEST_BOX.id);
+      expect(uploadBoxService.reloadBoxGrants).toHaveBeenLastCalledWith(TEST_BOX.id);
+      expect(uploadBoxService.reloadFileUploadsForBox).toHaveBeenLastCalledWith(
+        TEST_BOX.id,
+      );
     });
 
     it('should display upload grants when available', async () => {
@@ -291,8 +303,8 @@ describe('UploadBoxManagerDetailComponent', () => {
       await fixture.whenStable();
     });
 
-    it('should call loadUploadBox with the correct id', () => {
-      expect(uploadBoxService.loadUploadBox).toHaveBeenCalledWith(TEST_BOX.id);
+    it('should call reloadUploadBox with the correct id', () => {
+      expect(uploadBoxService.reloadUploadBox).toHaveBeenCalledWith(TEST_BOX.id);
     });
 
     it('should show loading indicator while fetching', async () => {

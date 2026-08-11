@@ -28,8 +28,16 @@ export class ActiveAccessGrantsListComponent {
   #dialog = inject(MatDialog);
 
   protected activeGrants = computed(() => this.#ars.activeUserAccessGrants());
-  protected isLoading = this.#ars.userAccessGrants.isLoading;
+  isLoading = this.#ars.userAccessGrants.isLoading;
   protected hasError = this.#ars.userAccessGrants.error;
+
+  /**
+   * Fetch the access grants again on request, since grants are issued and
+   * revoked by data stewards while the account page is open.
+   */
+  refresh(): void {
+    this.#ars.reloadUserAccessGrants();
+  }
 
   /**
    * Open the download work package dialog for a specific grant.

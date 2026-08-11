@@ -7,6 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { provideHttpClient } from '@angular/common/http';
+import { provideHttpCache } from '@ngneat/cashew';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { users } from '@app/../mocks/data';
 import { UserService } from '@app/auth/services/user';
@@ -40,6 +41,7 @@ describe('DeletionConfirmationDialogComponent', () => {
         { provide: UserService, useValue: MockUserService },
         { provide: ConfigService, useValue: MockConfigService },
         provideHttpClient(),
+        provideHttpCache(),
       ],
       teardown: { destroyAfterEach: false },
     }).compileComponents();

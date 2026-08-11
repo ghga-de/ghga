@@ -16,6 +16,14 @@
       </button>
       <h1>Upload Box Details</h1>
     </header>
+    <div class="mt-1 inline-block text-end">
+      <app-refresh-button
+        what="the upload box details"
+        [loading]="isLoading() || filesLoading()"
+        umamiEvent="Upload Box Manager Detail Refresh Clicked"
+        (refresh)="refresh()"
+      />
+    </div>
     @if (uploadBox(); as box) {
       <!-- The tooltip lives on the wrapper so it still shows when the button is
         disabled (a disabled Material button has pointer-events: none). -->
