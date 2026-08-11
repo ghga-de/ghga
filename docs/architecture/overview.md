@@ -16,9 +16,9 @@
   of internal libraries make this true by construction (see §3.2).
 - **Helm charts are a product of this repo.** `helm install ghga` yields a working GHGA,
   including a local AAI (Life Science Login replacement).
-- **Integration testing on Kubernetes** (kind in CI; a host-level OrbStack-k8s/minikube
-  cluster locally — no DinD/DooD in the devcontainer, ADR-0017) using the same
-  charts, replacing the docker-compose test bed.
+- **Integration testing on Kubernetes** (kind in CI; a host-level cluster locally — no
+  DinD/DooD in the devcontainer, ADR-0017) using the same charts, replacing the
+  docker-compose test bed.
 - **CI/CD keeps `main` green** by running the integration tests on proposed changes.
 - **Independent component lifecycle** preserved: tagging `name/version` releases just that
   component.
@@ -159,11 +159,12 @@ GitOps/platform layer.
 
 - The ex-`archive-test-bed` BDD + Playwright suite moves to `testbed/` and runs **the same
   self-reliant `ghga-demo` umbrella** a user installs (test-bed profile) against a **kind**
-  cluster (CI) / a **host-level cluster** locally (OrbStack k8s on macOS, minikube on
-  Linux/WSL2 — [ADR-0017](../adr/0017-local-integration-host-cluster.md)). The devcontainer
-  stays unprivileged: no DinD/DooD, it only talks to the cluster via a namespace-scoped
-  kubeconfig; images are built next to the cluster (OrbStack shared image store /
-  `minikube image build`) — no local registry needed. "What you install == what CI tests."
+  cluster (CI) / a **host-level cluster** locally (minikube on Linux/WSL2, or a container
+  runtime's built-in Kubernetes — [ADR-0017](../adr/0017-local-integration-host-cluster.md)).
+  The devcontainer stays unprivileged: no DinD/DooD, it only talks to the cluster via a
+  namespace-scoped kubeconfig; images are built next to the cluster (the runtime's shared
+  image store / `minikube image build`) — no local registry needed. "What you install ==
+  what CI tests."
 - Because the demo edge is **Envoy Gateway**, the gate exercises the **real** Gateway-API
   routing + Envoy ext_authz path against the real auth-adapter — not a stand-in.
 - **`state-management-service` is testbed-only** ([ADR-0008](../adr/0008-state-management-service-testbed-only.md)):

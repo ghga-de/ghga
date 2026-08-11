@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.13, <4"
+requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.15'",
     "python_full_version == '3.14.*'",
@@ -1443,7 +1443,7 @@ all = [
     { name = "opentelemetry-instrumentation-pymongo" },
     { name = "opentelemetry-sdk" },
     { name = "pymongo" },
-    { name = "testcontainers" },
+    { name = "testcontainers", extra = ["mongodb"] },
 ]
 mongodb = [
     { name = "pymongo" },
@@ -1531,7 +1531,7 @@ test = [
     { name = "hvac" },
     { name = "jsonschema" },
     { name = "pymongo" },
-    { name = "testcontainers" },
+    { name = "testcontainers", extra = ["mongodb"] },
 ]
 test-akafka = [
     { name = "aiokafka", extra = ["lz4", "snappy", "zstd"] },
@@ -1540,7 +1540,7 @@ test-akafka = [
 ]
 test-mongodb = [
     { name = "pymongo" },
-    { name = "testcontainers" },
+    { name = "testcontainers", extra = ["mongodb"] },
 ]
 test-redis = [
     { name = "redis" },
@@ -1606,7 +1606,7 @@ requires-dist = [
     { name = "testcontainers", marker = "extra == 'test-s3'", specifier = ">=4.14,<5" },
     { name = "testcontainers", marker = "extra == 'test-vault'", specifier = ">=4.14,<5" },
     { name = "testcontainers", extras = ["kafka"], marker = "extra == 'test-akafka'", specifier = ">=4.14,<5" },
-    { name = "testcontainers", extras = ["mongo"], marker = "extra == 'test-mongodb'", specifier = ">=4.14,<5" },
+    { name = "testcontainers", extras = ["mongodb"], marker = "extra == 'test-mongodb'", specifier = ">=4.14,<5" },
     { name = "testcontainers", extras = ["redis"], marker = "extra == 'test-redis'", specifier = ">=4.14,<5" },
 ]
 provides-extras = ["akafka", "s3", "mongodb", "redis", "vault", "opentelemetry-base", "opentelemetry-akafka", "opentelemetry-mongodb", "opentelemetry-fastapi", "opentelemetry-s3", "opentelemetry-redis", "opentelemetry", "test-akafka", "test-s3", "test-mongodb", "test-redis", "test-vault", "test", "all"]
@@ -3898,6 +3898,9 @@ wheels = [
 ]
 
 [package.optional-dependencies]
+mongodb = [
+    { name = "pymongo" },
+]
 redis = [
     { name = "redis" },
 ]

@@ -7,6 +7,7 @@
  */
 
 import { spawnSync } from 'child_process';
+import { Resolver } from 'dns/promises';
 import fs from 'fs';
 import * as yaml from 'js-yaml';
 import path from 'path';
@@ -205,16 +206,22 @@ function addRootFiles(rootFiles) {
 /**
  * Find the IP address for a given hostname
  */
-function getIpAddress(hostname) {
-  const result = spawnSync('dig', ['+short', hostname, '@8.8.8.8'], {
-    encoding: 'utf8',
-  });
-  const address = result.error ? null : result.stdout.trim();
-  if (!address) {
+async function getIpAddress(hostname) {
+  // Query a public resolver directly rather than the system one, so that the
+  // /etc/hosts entry we are about to add cannot shadow the real answer.
+  const resolver = new Resolver();
+  resolver.setServers(['8.8.8.8']);
+  let addresses;
+  try {
+    addresses = await resolver.resolve4(hostname);
+  } catch {
+    addresses = [];
+  }
+  if (!addresses.length) {
     console.error(`Cannot resolve ${hostname}`);
     process.exit(1);
   }
-  return address;
+  return addresses[0];
 }
 
 /**
@@ -236,7 +243,16 @@ function addHostEntry(name, ip) {
 /**
  * Run the development server on the specified host and port.
  */
-function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basicAuth) {
+async function runDevServer(
+  host,
+  port,
+  ssl,
+  sslCert,
+  sslKey,
+  logLevel,
+  baseUrl,
+  basicAuth,
+) {
   console.log('Running the development server...');
 
   const { hostname } = new URL(baseUrl);
@@ -265,7 +281,7 @@ function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basic
   }
 
   if (WITH_OIDC && host != hostname) {
-    const ipAddress = getIpAddress(hostname);
+    const ipAddress = await getIpAddress(hostname);
     addHostEntry(hostname, ipAddress);
     console.log(`Your host computer should resolve ${hostname} to ${host}.`);
     console.log(`Please point your browser to: ${baseUrl}`);
@@ -356,7 +372,7 @@ function runProdServer(host, port, ssl, sslCert, sslKey, logLevel) {
 /**
  * Main entry point.
  */
-function main() {
+async function main() {
   process.chdir(__dirname);
 
   const settings = readSettings();
@@ -439,7 +455,7 @@ function main() {
 
   addRootFiles(rootFiles);
 
-  (DEV ? runDevServer : runProdServer)(
+  await (DEV ? runDevServer : runProdServer)(
     host,
     port,
     ssl,
@@ -451,4 +467,4 @@ function main() {
   );
 }
 
-main();
+await main();

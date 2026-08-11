@@ -1,18 +1,31 @@
 # ADR-0017 — Local integration runs on a host-level cluster; no DinD/DooD in the devcontainer
 
 - **Status:** Accepted (amends [ADR-0009](0009-testbed-kind-minikube.md)'s local story;
-  amended 2026-07-27 — see below)
+  amended 2026-07-27 and 2026-08-11 — see below)
 - **Date:** 2026-07-10
 - **Deciders:** Leon Kuchenbecker
 
-> **Amendment (2026-07-27):** on OrbStack single-user hosts, the *fast iteration loop*
+> **Amendment (2026-08-11) — naming only, no decision changed.** The 2026-07-27
+> amendment described its loop in terms of OrbStack on macOS. Nothing about it is
+> specific to that runtime, so the product names are gone from this ADR and from the
+> deployment comments; OrbStack is supported, not required. What the loop does require is
+> that the devcontainer's host networking reaches the browser on the host computer:
+> Docker Engine on Linux provides that directly, since the container shares the host's
+> namespace; Docker Desktop (whatever the host OS) needs Settings > Resources > Network >
+> "Enable host networking", because its VM otherwise forwards only published ports and
+> port 80 never leaves it; OrbStack forwards host-network ports unprompted. Getting this
+> wrong presents as a connection refused in the browser while the port listens correctly
+> inside the container — see `.devcontainer/devcontainer.json`. The scope of the
+> 2026-07-27 amendment and every constraint in the Decision section below stand unchanged.
+
+> **Amendment (2026-07-27):** on single-user hosts, the *fast iteration loop*
 > runs **kind inside the devcontainer's inner docker daemon** instead: with the
-> devcontainer on host networking, the kind-published gateway NodePort binds in the
-> OrbStack VM's namespace and is forwarded to the Mac's localhost (verified
+> devcontainer on host networking, the kind-published gateway NodePort binds where the
+> browser on the host computer reaches it as a bare localhost (verified
 > empirically, browser included), image visibility is solved by `kind load` from the
 > same daemon, and the loop is identical to CI's kind path. This trades the
 > rebuild-persistence and resource-isolation goals of the host cluster for a
-> zero-host-setup, fully in-container loop; the host OrbStack cluster remains the
+> zero-host-setup, fully in-container loop; the host-level cluster remains the
 > target for persistent, closer-to-real local use once the demo stabilises. The
 > DinD disk/memory pressure caveats apply (see the docker-prune tooling).
 
@@ -30,8 +43,9 @@ interim setup ran Docker-in-Docker inside the devcontainer, which has two proble
 
 ## Decision
 
-- **The local integration cluster runs on the host, outside the devcontainer**: OrbStack
-  Kubernetes on macOS, minikube on Linux/WSL2 (rootless podman driver where it works). CI keeps
+- **The local integration cluster runs on the host, outside the devcontainer**: minikube, or
+  whatever single-node Kubernetes the host's container runtime offers (rootless podman driver
+  where it works). CI keeps
   kind on the runner (unchanged from ADR-0009).
 - **No DinD/DooD for the integration path.** The devcontainer stays unprivileged and mounts no
   docker socket; it interacts with the cluster only as an API client (`kubectl`, `helm`, the
@@ -47,7 +61,7 @@ interim setup ran Docker-in-Docker inside the devcontainer, which has two proble
 
   | Platform | Cluster | Image path |
   |---|---|---|
-  | macOS + OrbStack | OrbStack k8s | shared image store — OrbStack-built images are directly visible to its k8s |
+  | Runtime with built-in k8s (e.g. OrbStack) | that runtime's k8s | shared image store — locally built images are directly visible to it |
   | Linux / WSL2 | minikube | `minikube image build` / `minikube image load` |
   | CI | kind | runner `docker build` + `kind load image-archive` |
 

@@ -2,7 +2,7 @@
 # Use via:  TB_CONFIG_YAML=testbed/tb.kind.yaml  (the `just testbed` recipe does this
 # and supplies the secret-derived TB_* env vars from the cluster).
 #
-# The gateway serves everything on the Mac/VM port 80 with /api/<segment> routes;
+# The gateway serves everything on the host computer's port 80 with /api/<segment> routes;
 # see deploy/README.md. Tokens and crypt4gh keys come from env (TB_*), harvested
 # from the secret-gen secrets — never from this file.
 

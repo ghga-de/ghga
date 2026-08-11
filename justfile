@@ -102,7 +102,7 @@ demo-template:
 # `tag` and trailing docker-build flags are overridable so CI reuses these recipes
 # instead of duplicating the build commands — e.g. dev-images.yaml / security-scan.yaml
 # run `just image-mono dev --pull --label org.opencontainers.image.revision=<sha>`.
-image target tag='local' *flags:
+image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
     if [ -f "{{target}}/Dockerfile.dhi" ]; then
@@ -117,9 +117,32 @@ image target tag='local' *flags:
 # The charts start services with `command: [<executable>]`, so one image serves them all;
 # see the mono stage in docker/Dockerfile for why this is demo/CI only.
 # Build the mono image: EVERY Python member in one venv (docker/Dockerfile VARIANT=mono).
-image-mono tag='local' *flags:
+image-mono tag='local' *flags: check-members
     docker build -f docker/Dockerfile --build-arg VARIANT=mono {{flags}} \
       -t ghcr.io/ghga-de/ghga/platform:{{tag}} .
+
+# uv finds workspace members by glob (`libs/*`, `services/*`, `tools/*`) and refuses any
+# match without a pyproject.toml. In a working tree it consults git first and skips matches
+# whose contents are all ignored, so a directory left behind by a removed member -- tracked
+# files gone, an ignored build artifact such as *.egg-info keeping the directory alive --
+# resolves fine here. The build context has no .git (see .dockerignore), so uv there sees a
+# real member with no manifest and fails several minutes into the build, far from the cause.
+# .dockerignore cannot prevent it: excluding the residue still leaves the empty directory in
+# the context. So check up front, where the message can name the directory and the fix.
+check-members:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    orphans=()
+    for d in libs/*/ services/*/ tools/*/; do
+        [ -f "$d/pyproject.toml" ] || orphans+=("${d%/}")
+    done
+    if [ ${#orphans[@]} -gt 0 ]; then
+        printf 'error: workspace member directory without a pyproject.toml:\n' >&2
+        printf '  %s\n' "${orphans[@]}" >&2
+        printf 'Left over from a removed member? Its tracked files are gone, but ignored\n' >&2
+        printf 'build residue keeps the directory alive. Remove it: git clean -fdx <dir>\n' >&2
+        exit 1
+    fi
 
 # Building and loading are deliberately SEPARATE (`just demo-load` does the loading): the
 # build survives `just down`, the load does not, and coupling them made a cluster teardown

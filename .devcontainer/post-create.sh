@@ -10,7 +10,7 @@ sudo chown -R vscode:vscode ~/.claude ~/.local/share/uv ~/.cache/uv ~/.cache/ms-
 # volumes — so a rebuild loses them and every justfile recipe stops working, including
 # the whole local cluster and test-bed flow. Pinned to the versions the demo and the
 # integration gate are verified against. The arch split is not hypothetical: this runs
-# on an arm64 Mac as readily as on an x86 runner.
+# on arm64 workstations as readily as on an x86 runner.
 JUST_VERSION=1.57.0
 KIND_VERSION=0.30.0
 case "$(uname -m)" in
