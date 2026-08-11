@@ -17,6 +17,8 @@
 
 from collections.abc import AsyncGenerator
 from datetime import timedelta
+from functools import partial
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -36,17 +38,20 @@ from wps.adapters.outbound.dao import (
     get_upload_box_dao,
     get_work_package_dao,
 )
+from wps.adapters.outbound.http import AccessCheckAdapter
 from wps.config import Config
 from wps.core.repository import WorkPackageRepository
 from wps.prepare import Consumer, prepare_rest_app
 
 from .access import AccessCheckMock
+from .access_api import AccessApiMock
 
 __all__ = [
     "AUTH_CLAIMS",
     "AUTH_KEY_PAIR",
     "SIGNING_KEY_PAIR",
     "Consumer",
+    "fixture_access_api",
     "fixture_auth_context",
     "fixture_auth_headers",
     "fixture_bad_auth_headers",
@@ -54,7 +59,6 @@ __all__ = [
     "fixture_config",
     "fixture_repository",
     "headers_for_token",
-    "non_mocked_hosts",
 ]
 
 AUTH_KEY_PAIR = generate_jwk()
@@ -139,15 +143,27 @@ async def fixture_repository(
     )
 
 
+@pytest.fixture(name="access_api")
+def fixture_access_api(config: Config) -> AccessApiMock:
+    """Fixture for getting a mock of the access API."""
+    return AccessApiMock(config=config)
+
+
 @pytest_asyncio.fixture(name="client")
-async def fixture_client(config: Config) -> AsyncGenerator[AsyncTestClient]:
-    """Get test client for the work package service."""
-    async with prepare_rest_app(config=config) as app:
-        async with AsyncTestClient(app=app) as client:
+async def fixture_client(
+    config: Config, access_api: AccessApiMock
+) -> AsyncGenerator[AsyncTestClient]:
+    """Get test client for the work package service.
+
+    The access check adapter of the app talks to the `access_api` mock instead of
+    sending its requests over the network.
+    """
+    mocked_construct = partial(
+        AccessCheckAdapter.construct, transport=access_api.as_transport()
+    )
+    with patch("wps.prepare.AccessCheckAdapter.construct", mocked_construct):
+        async with (
+            prepare_rest_app(config=config) as app,
+            AsyncTestClient(app=app) as client,
+        ):
             yield client
-
-
-@pytest.fixture
-def non_mocked_hosts() -> list[str]:
-    """Get hosts that are not mocked by pytest-httpx."""
-    return ["test", "localhost"]

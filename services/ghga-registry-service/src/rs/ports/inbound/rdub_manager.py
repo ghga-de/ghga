@@ -253,14 +253,17 @@ class RDUBManagerPort(ABC):
     ) -> BoxUploadsPage:
         """Get a page of file uploads for a research data upload box.
 
-        `skip`, `limit`, and `sort` are forwarded to the file box service's paginated
-        endpoint. `sort` is a list of FileUpload field names to sort by, each optionally
-        prefixed with a dash to denote descending order; when omitted, the file box
-        service's default ordering (by alias) is used.
+        `skip`, `limit`, and `sort` are normally forwarded to the file box service's
+        paginated endpoint. `sort` is a list of FileUpload field names to sort by, each
+        optionally prefixed with a dash to denote descending order; when omitted, the
+        file box service's default ordering (by alias) is used.
         Returns a BoxUploadsPage with the page's file uploads and the total unpaginated
         count.
         It is assumed that `skip`, `limit`, and `sort` are validated beforehand - they
         are not validated in this method.
+
+        A sort order involving the accession is applied by the implementation itself,
+        since accessions are unknown to the file box service.
 
         `with_checksums` determines whether the per-part checksum lists
         (`encrypted_parts_md5` and `encrypted_parts_sha256`) are populated or null.

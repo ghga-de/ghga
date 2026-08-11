@@ -63,13 +63,12 @@ def multi_column_sort(
         return sorted(
             sorted_list, key=lambda result: result[parameter.field], reverse=reverse
         )
-    else:
-        # the only top-level fields are "_id" and "score" -- all else is in "content"
-        return sorted(
-            sorted_list,
-            key=lambda result: result["content"][parameter.field],
-            reverse=reverse,
-        )
+    # the only top-level fields are "_id" and "score" -- all else is in "content"
+    return sorted(
+        sorted_list,
+        key=lambda result: result["content"][parameter.field],
+        reverse=reverse,
+    )
 
 
 def sorted_reference_results(
@@ -86,7 +85,7 @@ def sorted_reference_results(
     results = joint_fixture.mongodb_client[joint_fixture.config.db_name][
         CLASS_NAME
     ].find({"$text": {"$search": query}}, {"score": {"$meta": "textScore"}})
-    results = [x for x in results]  # type: ignore
+    results = list(results)  # type: ignore
 
     for f in filters or []:
         # the only top-level fields are "_id" and "score" -- all else is in "content"

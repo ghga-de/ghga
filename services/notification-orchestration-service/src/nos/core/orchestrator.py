@@ -437,10 +437,11 @@ class Orchestrator(OrchestratorPort):
 
         Critical information includes the user's email address and name.
         """
-        changed = []
-        for field in ["email", "name"]:
-            if getattr(existing_user, field) != getattr(new_user, field):
-                changed.append(field)
+        changed = [
+            field
+            for field in ["email", "name"]
+            if getattr(existing_user, field) != getattr(new_user, field)
+        ]
         return " and ".join(changed)
 
     async def upsert_access_request(

@@ -7,6 +7,8 @@
 import { Component, computed, effect, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { PageEvent } from '@angular/material/paginator';
+import { Sort } from '@angular/material/sort';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
@@ -63,23 +65,59 @@ export class UserUploadBoxDetailsDialogComponent {
   protected hasError = computed<boolean>(() => !this.box() && !!this.#box.error());
 
   /**
-   * The files contained in the box. Filtered by the box's file upload box ID so
-   * files left over from a previously opened box are never shown while the fresh
-   * list is loading. Each file references the underlying file upload box via its
-   * `box_id`, which is the `file_upload_box_id` of the research box, not its `id`.
+   * The files on the currently shown page of the box. Filtered by the box's file
+   * upload box ID so files left over from a previously opened box are never shown
+   * while the fresh page is loading. Each file references the underlying file
+   * upload box via its `box_id`, which is the `file_upload_box_id` of the research
+   * box, not its `id`.
    */
-  protected files = computed<FileUploadWithAccession[]>(() => {
+  protected pageFiles = computed<FileUploadWithAccession[]>(() => {
     const fileUploadBoxId = this.box()?.file_upload_box_id;
     if (!fileUploadBoxId) return [];
-    return this.#uploadBoxService.boxFileUploads
-      .value()
+    return this.#uploadBoxService
+      .boxFiles()
       .filter((file) => file.box_id === fileUploadBoxId);
   });
+
+  /** The total number of files in the box, across all pages. */
+  protected filesTotalCount = this.#uploadBoxService.boxFilesTotalCount;
+
+  /** The number of files shown per page. */
+  protected filesPageSize = this.#uploadBoxService.boxFilesLimit;
+
+  /** The zero-based index of the currently shown page of files. */
+  protected filesPageIndex = computed<number>(() => {
+    const pageSize = this.filesPageSize();
+    if (!pageSize) return 0;
+    return Math.floor(this.#uploadBoxService.boxFilesSkip() / pageSize);
+  });
+
+  /** The column and direction the files are currently sorted by. */
+  protected filesSortState = this.#uploadBoxService.boxFilesSortState;
 
   /** Whether the box's file list is still being loaded. */
   protected filesLoading = computed<boolean>(() =>
     this.#uploadBoxService.boxFileUploads.isLoading(),
   );
+
+  /**
+   * Request a different page of files from the server.
+   * @param event - the page event emitted by the paginator
+   */
+  protected onFilesPage(event: PageEvent): void {
+    this.#uploadBoxService.paginateFileUploads(
+      event.pageSize,
+      event.pageIndex * event.pageSize,
+    );
+  }
+
+  /**
+   * Request the files in a different order from the server.
+   * @param sort - the sort event emitted by the table headers
+   */
+  protected onFilesSort(sort: Sort): void {
+    this.#uploadBoxService.sortFileUploadsByColumn(sort.active, sort.direction);
+  }
 
   /** Load the box files once the box is available and known to be non-empty. */
   #loadFilesEffect = effect(() => {

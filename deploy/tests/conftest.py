@@ -110,6 +110,11 @@ def _load_objects_from_yaml(yaml_str: str) -> dict[str, Any]:
     return objects_dict
 
 
+def _load_object_list_from_yaml(yaml_str: str) -> list[dict[str, Any]]:
+    """Every rendered object, in order — kinds may repeat (e.g. multiple CronJobs)."""
+    return [obj for obj in yaml.safe_load_all(yaml_str) if obj]
+
+
 def compose_values(*filenames: str) -> dict[str, Any]:
     """Deep-merge the named values files in order (helm-style)."""
     composed: dict[str, Any] = {}
@@ -138,5 +143,33 @@ def expected():
     def _factory(case: str, key: str):
         expected = _load_yaml(CASES_DIR / "expected" / f"{case}.yaml")
         return expected[key]
+
+    return _factory
+
+
+@pytest.fixture
+def rendered_objects(_dependency_update, release_name):
+    """Factory keeping every rendered object — unlike rendered_chart, which errors
+    on duplicate kinds (e.g. multiple CronJobs).
+    """
+
+    def _factory(*filenames: str):
+        composed_values = compose_values(*filenames)
+        return _load_object_list_from_yaml(
+            _render_chart_case(composed_values, release_name)
+        )
+
+    return _factory
+
+
+@pytest.fixture
+def rendered_text(_dependency_update, release_name):
+    """Raw manifest text, for assertions parsed objects can't make (e.g. a literal
+    duplicate YAML key, which yaml.safe_load silently resolves to the last value).
+    """
+
+    def _factory(*filenames: str):
+        composed_values = compose_values(*filenames)
+        return _render_chart_case(composed_values, release_name)
 
     return _factory

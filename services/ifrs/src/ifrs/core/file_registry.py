@@ -283,7 +283,7 @@ class FileRegistry(FileRegistryPort):
             return
         except object_storage.ObjectNotFoundError as exc:
             # file does not exist in permanent storage
-            # copy_object fetches the source object size, which checks for existence first
+            # copy_object fetches the source object size, which 404s for a missing object
             not_in_storage_error = self.FileInRegistryButNotInStorageError(
                 file_id=file_id
             )
@@ -354,12 +354,10 @@ class FileRegistry(FileRegistryPort):
         # Get object ID and storage instance
         bucket_id, object_storage = self._object_storages.for_alias(file.storage_alias)
 
-        # Try to remove file from S3
-        with suppress(object_storage.ObjectNotFoundError):
-            # If file does not exist anyways, we are done.
-            await object_storage.delete_object(
-                bucket_id=bucket_id, object_id=str(file.object_id)
-            )
+        # Deleting an object that is already gone succeeds silently.
+        await object_storage.delete_object(
+            bucket_id=bucket_id, object_id=str(file.object_id)
+        )
 
         # Try to remove file from database
         with suppress(ResourceNotFoundError):

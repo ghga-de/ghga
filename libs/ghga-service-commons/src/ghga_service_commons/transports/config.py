@@ -13,30 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Contains common configuration for different composite async httpx Transports."""
+"""Contains common configuration for different composite async httpx2 Transports."""
 
 from pydantic import Field, NonNegativeFloat, NonNegativeInt, PositiveInt
 from pydantic_settings import BaseSettings
-
-
-class CacheTransportConfig(BaseSettings):
-    """Configuration options for the storage used in the caching transport.
-
-    Currently only in memory storage is available.
-    """
-
-    client_cache_capacity: PositiveInt = Field(
-        default=128,
-        description="Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached.",
-    )
-    client_cache_ttl: NonNegativeInt = Field(
-        default=60,
-        description="Number of seconds after which a stored response is considered stale.",
-    )
-    client_cacheable_methods: list[str] = Field(
-        default=["POST", "GET"],
-        description="HTTP methods for which responses are allowed to be cached.",
-    )
 
 
 class RateLimitingTransportConfig(BaseSettings):
@@ -77,7 +57,3 @@ class RetryTransportConfig(BaseSettings):
 
 class CompositeConfig(RateLimitingTransportConfig, RetryTransportConfig):
     """Configuration for a transport providing both retry and rate limiting logic."""
-
-
-class CompositeCacheConfig(CompositeConfig, CacheTransportConfig):
-    """Configuration for a transport providing retry, rate limiting and caching logic."""

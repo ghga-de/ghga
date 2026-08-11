@@ -132,7 +132,7 @@ async def test_process_override_different_dlq_id():
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=dao,  # type: ignore[arg-type]
+        dao_override=dao,
         publisher_override=AsyncMock(),
     ) as dlq_manager:
         with pytest.raises(dlq_manager.DLQSequenceError):
@@ -165,7 +165,7 @@ async def test_process_override_forbidden_topic(topic: str):
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=dao,  # type: ignore[arg-type]
+        dao_override=dao,
         publisher_override=AsyncMock(),
     ) as dlq_manager:
         with pytest.raises(dlq_manager.DLQValidationError):
@@ -191,7 +191,7 @@ async def test_process_dry_run():
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=dao,  # type: ignore[arg-type]
+        dao_override=dao,
         publisher_override=mock_publisher,
     ) as dlq_manager:
         await dlq_manager.process_event(
@@ -238,7 +238,7 @@ async def test_process_override_success():
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=dao,  # type: ignore[arg-type]
+        dao_override=dao,
         publisher_override=mock_publisher,
     ) as dlq_manager:
         result = await dlq_manager.process_event(
@@ -283,7 +283,7 @@ async def test_process_with_empty_dlq(override: EventCore | None):
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=mock_dao,  # type: ignore[arg-type]
+        dao_override=mock_dao,
         publisher_override=mock_publisher,
     ) as dlq_manager:
         with pytest.raises(dlq_manager.DLQEmptyError):
@@ -343,7 +343,7 @@ async def test_value_error_propagation(skip: int, limit: int):
 
     async with prepare_core(
         config=DEFAULT_CONFIG,
-        dao_override=dao,  # type: ignore[arg-type]
+        dao_override=dao,
         publisher_override=AsyncMock(),
     ) as dlq_manager:
         with pytest.raises(DLQManagerPort.DLQPaginationError):

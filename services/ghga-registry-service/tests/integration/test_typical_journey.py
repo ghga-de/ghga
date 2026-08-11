@@ -20,7 +20,6 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from pytest_httpx import HTTPXMock
 
 from ghga_event_schemas.pydantic_ import SearchableResource
 from ghga_service_commons.auth.ghga import AuthContext
@@ -28,14 +27,14 @@ from hexkit.utils import now_utc_ms_prec
 from rs.core.models import GrantId
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.http import FileBoxClientPort
+from tests.fixtures.external_apis import respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
-async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMock):
+async def test_typical_journey(joint_fixture: JointFixture):
     """Test the path that involves:
     - Creating a box
     - Granting a user access to said box
@@ -46,8 +45,8 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     - Setting the state to LOCKED
     """
     # Test data
-    file_box_service_url = joint_fixture.config.ucs_url
-    access_url = joint_fixture.config.access_url
+    access_api = joint_fixture.access_api
+    file_box_api = joint_fixture.file_box_api
     ds_user_id = uuid4()
     regular_user_id = uuid4()
     iva_id = uuid4()
@@ -79,12 +78,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     )
 
     # Create a box (requires data steward)
-    httpx_mock.add_response(
-        method="POST",
-        url=f"{file_box_service_url}/boxes",
-        status_code=201,
-        json=str(file_upload_box_id),
-    )
+    file_box_api.on_create_file_upload_box = respond(201, json=str(file_upload_box_id))
     async with (
         joint_fixture.kafka.record_events(in_topic=audit_topic) as audit_event_recorder,
         joint_fixture.kafka.record_events(
@@ -107,11 +101,8 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert box_event_recorder.recorded_events[0].payload["id"] == str(box_id)
 
     # Brief detour: Ensure getting files list raises an error if the FUB doesn't exist
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{file_box_service_url}/boxes/{file_upload_box_id}/uploads?skip=0&with_checksums=false",
-        status_code=404,
-        json={"exception_id": "boxNotFound"},
+    file_box_api.on_get_file_upload_list = respond(
+        404, json={"exception_id": "boxNotFound"}
     )
     with pytest.raises(FileBoxClientPort.OperationError):
         await rdub_manager.get_upload_box_files(
@@ -120,12 +111,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
 
     # Grant a user access to said box
     test_grant_id = uuid4()
-    httpx_mock.add_response(
-        method="POST",
-        url=f"{access_url}/upload-access/users/{regular_user_id}/ivas/{iva_id}/boxes/{box_id}",
-        status_code=201,
-        json={"id": str(test_grant_id)},
-    )
+    access_api.on_grant_upload_access = respond(201, json={"id": str(test_grant_id)})
     valid_from = now_utc_ms_prec()
     valid_until = now_utc_ms_prec() + timedelta(days=7)
     grant_id = await rdub_manager.grant_upload_access(
@@ -189,11 +175,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert recorder.recorded_events[0].payload["file_count"] == 1  # check one property
 
     # Query the box (should show updated file count and size)
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{access_url}/upload-access/users/{regular_user_id}/boxes/{box_id}",
-        status_code=200,
-    )
+    access_api.on_check_box_access = respond(200)
     updated_box = await rdub_manager.get_research_data_upload_box(
         box_id=box_id,
         auth_context=user_auth_context,
@@ -206,11 +188,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert updated_box.size == 1024000
 
     # Set the state to LOCKED
-    httpx_mock.add_response(
-        method="PATCH",
-        url=f"{file_box_service_url}/boxes/{file_upload_box_id}",
-        status_code=204,
-    )
+    file_box_api.on_update_file_upload_box = respond(204)
     await rdub_manager.update_research_data_upload_box(
         box_id=box_id,
         version=updated_box.version,
@@ -234,10 +212,8 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     file_id_3 = uuid4()
 
     # Mock the file box service to return the list of files
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{file_box_service_url}/boxes/{file_upload_box_id}/uploads?skip=0&limit=100&with_checksums=false",
-        status_code=200,
+    file_box_api.on_get_file_upload_list = respond(
+        200,
         json={
             "items": [
                 {
@@ -333,11 +309,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert box_after_mapping.version == 4
 
     # Mock the archive endpoint of the UCS
-    httpx_mock.add_response(
-        method="PATCH",
-        url=f"{file_box_service_url}/boxes/{file_upload_box_id}",
-        status_code=204,
-    )
+    file_box_api.on_update_file_upload_box = respond(204)
 
     # Archive the box via update
     async with (
@@ -373,7 +345,7 @@ async def test_typical_journey(joint_fixture: JointFixture, httpx_mock: HTTPXMoc
     assert archived_box.version == box_after_mapping.version + 1
 
 
-async def test_duplicate_box_title(joint_fixture: JointFixture, httpx_mock: HTTPXMock):
+async def test_duplicate_box_title(joint_fixture: JointFixture):
     """Test that we get an error when trying to create a new RDUB with a title that
     already exists.
     """
@@ -382,11 +354,8 @@ async def test_duplicate_box_title(joint_fixture: JointFixture, httpx_mock: HTTP
     ds_user_id = uuid4()
 
     # Create a box (requires data steward)
-    httpx_mock.add_response(
-        method="POST",
-        url=f"{config.ucs_url}/boxes",
-        status_code=201,
-        json=str(uuid4()),
+    joint_fixture.file_box_api.on_create_file_upload_box = respond(
+        201, json=str(uuid4())
     )
     async with (
         joint_fixture.kafka.record_events(

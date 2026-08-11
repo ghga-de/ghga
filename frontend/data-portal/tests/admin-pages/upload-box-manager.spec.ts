@@ -121,6 +121,37 @@ test('displays error message when upload box not found', async ({
   await expect(page).toHaveURL('/upload-box-manager');
 });
 
+test('paginates and sorts the file list on the server', async ({ adminPage: page }) => {
+  // An archived box holding 28 files, i.e. three pages of ten.
+  await page.goto('/upload-box-manager/0a36607a-b53f-49ed-bf3e-a5f2dbc68003');
+  await expectTitle(page, 'Upload Box Details');
+
+  const filesTable = page.locator('app-upload-box-files-table table');
+  const firstFile = () => filesTable.locator('tbody tr td').first();
+
+  await expect(firstFile()).toHaveText('archived_sample_001.fastq.gz');
+  await expect(filesTable.locator('tbody tr')).toHaveCount(10);
+
+  const paginator = page.getByLabel('Select page of files');
+  await expect(paginator).toContainText('1 – 10 of 28');
+
+  // Only the requested page is fetched, so the next page must come from the server.
+  await paginator.getByRole('button', { name: 'Next page' }).click();
+  await expect(firstFile()).toHaveText('archived_sample_011.fastq.gz');
+  await expect(paginator).toContainText('11 – 20 of 28');
+
+  // Sorting is applied across the whole box, not just within the current page,
+  // and returns to the first page.
+  await filesTable.getByRole('columnheader', { name: 'Filename' }).click();
+  await expect(firstFile()).toHaveText('archived_sample_028.fastq.gz');
+  await expect(paginator).toContainText('1 – 10 of 28');
+
+  // Archived boxes show the accession instead of the upload status, and it is
+  // sorted by the backend like any other column.
+  await filesTable.getByRole('columnheader', { name: 'Accession' }).click();
+  await expect(firstFile()).toHaveText('archived_sample_001.fastq.gz');
+});
+
 test('validates required fields in the create upload box dialog', async ({
   adminPage: page,
 }) => {

@@ -16,7 +16,7 @@
 
 """Client functionality to drop artifacts onto the endpoint for uploading them."""
 
-import httpx
+import httpx2
 
 from metldata.event_handling.event_handling import FileSystemEventCollector
 from metldata.load.collect import collect_artifacts
@@ -28,10 +28,16 @@ class ArtifactUploadException(Exception):
 
 
 def upload_artifacts_via_http_api(
-    *, token: str, config: ArtifactLoaderClientConfig
+    *,
+    token: str,
+    config: ArtifactLoaderClientConfig,
+    transport: httpx2.BaseTransport | None = None,
 ) -> None:
     """Upload artifacts via the HTTP API specified in the config using the provided
     token for authorization.
+
+    An alternative `transport` can be provided to route the requests elsewhere,
+    e.g. to a mock transport in tests.
 
     Raises:
         ArtifactUploadException: If uploading artifacts fails.
@@ -39,7 +45,7 @@ def upload_artifacts_via_http_api(
     event_collector = FileSystemEventCollector(config=config)
     artifacts = collect_artifacts(config=config, event_collector=event_collector)
 
-    with httpx.Client() as client:
+    with httpx2.Client(transport=transport) as client:
         response = client.post(
             f"{config.loader_api_root}/rpc/load-artifacts",
             json=artifacts,

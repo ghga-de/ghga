@@ -16,10 +16,12 @@
 """Outbound HTTP calls"""
 
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from typing import Any, Literal
 from uuid import UUID
 
-import httpx
+import httpx2
 from jwcrypto import jwk
 from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr
 from pydantic_settings import BaseSettings
@@ -47,7 +49,22 @@ from rs.ports.outbound.http import (
 log = logging.getLogger(__name__)
 
 
-def _extract_exception_id(response: httpx.Response) -> str | None:
+@asynccontextmanager
+async def get_configured_httpx_client(
+    *, base_transport: httpx2.AsyncBaseTransport | None = None
+) -> AsyncGenerator[httpx2.AsyncClient]:
+    """Produce the httpx2 AsyncClient used for all outbound HTTP calls.
+
+    `base_transport` replaces the transport that actually performs the request. It is
+    meant for tests, which can supply a mock transport in its place.
+    """
+    async with httpx2.AsyncClient(
+        timeout=HTTPX_TIMEOUT, transport=base_transport
+    ) as client:
+        yield client
+
+
+def _extract_exception_id(response: httpx2.Response) -> str | None:
     """Safely pull the ``exception_id`` out of a (possibly malformed) error response.
 
     Returns ``None`` when the body isn't valid JSON, isn't a JSON object, or has no
@@ -83,7 +100,7 @@ class AccessApiConfig(BaseSettings):
 class AccessClient(AccessClientPort):
     """An adapter for interacting with the access API to manage upload access grants"""
 
-    def __init__(self, *, config: AccessApiConfig, httpx_client: httpx.AsyncClient):
+    def __init__(self, *, config: AccessApiConfig, httpx_client: httpx2.AsyncClient):
         self._access_url = str(config.access_url).rstrip("/")
         self._client = httpx_client
 
@@ -215,9 +232,9 @@ class AccessClient(AccessClientPort):
         url = f"{self._access_url}/upload-access/users/{user_id}/boxes"
         response = await self._client.get(url, timeout=HTTPX_TIMEOUT)
         status_code = response.status_code
-        if status_code == httpx.codes.NOT_FOUND:
+        if status_code == httpx2.codes.NOT_FOUND:
             return []
-        if status_code != httpx.codes.OK:
+        if status_code != httpx2.codes.OK:
             log.error(
                 "Failed to retrieve list of research data upload boxes accessible to"
                 + " user %s from the access API.",
@@ -265,7 +282,7 @@ class AccessClient(AccessClientPort):
             )
             raise self.AccessAPIError("Failed to check box access.")
 
-        except httpx.RequestError as err:
+        except httpx2.RequestError as err:
             log.error(
                 "Request failed when checking box access for user %s and box %s.",
                 user_id,
@@ -295,7 +312,9 @@ class FileBoxClient(FileBoxClientPort):
     This class is responsible for WOT generation and all pertinent error handling.
     """
 
-    def __init__(self, *, config: FileBoxClientConfig, httpx_client: httpx.AsyncClient):
+    def __init__(
+        self, *, config: FileBoxClientConfig, httpx_client: httpx2.AsyncClient
+    ):
         self._ucs_url = str(config.ucs_url).rstrip("/")
         self._client = httpx_client
         self._signing_key = jwk.JWK.from_json(
@@ -313,7 +332,7 @@ class FileBoxClient(FileBoxClientPort):
     def _raise_for_409(
         self,
         *,
-        response: httpx.Response,
+        response: httpx2.Response,
         body: dict[str, Any],
         operation: Literal[
             "lock", "unlock", "archive", "resize", "delete file from", "delete"
@@ -524,7 +543,7 @@ class FileBoxClient(FileBoxClientPort):
         if sort:
             # Forward as a single comma-separated value (non-exploded) to match the
             # owning service's query-param convention. Passing the list directly would
-            # make httpx emit repeated `sort=...` params instead.
+            # make httpx2 emit repeated `sort=...` params instead.
             params["sort"] = ",".join(sort)
         response = await self._client.get(
             f"{self._ucs_url}/boxes/{box_id}/uploads",

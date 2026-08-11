@@ -16,7 +16,7 @@
 
 from functools import partial
 
-import httpx
+import httpx2
 
 from hexkit.correlation import (
     CorrelationIdContextError,
@@ -50,11 +50,11 @@ async def _cid_request_hook(request, generate_correlation_id: bool):
 
 
 def attach_correlation_id_to_requests(
-    client: httpx.AsyncClient,
+    client: httpx2.AsyncClient,
     *,
     generate_correlation_id: bool = True,
 ):
-    """Add an event hook to an httpx Client that includes the correlation ID header."""
+    """Add an event hook to an httpx2 Client that includes the correlation ID header."""
     event_hook = partial(
         _cid_request_hook,
         generate_correlation_id=generate_correlation_id,
@@ -62,8 +62,8 @@ def attach_correlation_id_to_requests(
     client.event_hooks.setdefault("request", []).append(event_hook)
 
 
-class AsyncClient(httpx.AsyncClient):
-    """A version of httpx.AsyncClient that attaches the correlation ID header in requests.
+class AsyncClient(httpx2.AsyncClient):
+    """A version of httpx2.AsyncClient that attaches the correlation ID header in requests.
 
     If no correlation ID is found in the current context, a new one will be generated
     OR an error will be raised based on the value of `generate_correlation_id`.

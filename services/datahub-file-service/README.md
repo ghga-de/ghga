@@ -14,6 +14,7 @@ Within GHGA Central services, file upload activity is tracked and broadcasted th
 Example for JWK generation with Python and the `jwcrypto` library:
 ```python
 from jwcrypto.jwk import JWK
+
 jwk = JWK.generate(kid="HD01-DHFS-2026-04", kty="EC", crv="P-256")
 with open("jwk.pub", "w") as pk, open("jwk.sec", "w") as sk:
     pk.write(jwk.export_public())
@@ -32,13 +33,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/datahub-file-service):
 ```bash
-docker pull ghga/datahub-file-service:3.1.0
+docker pull ghga/datahub-file-service:4.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/datahub-file-service:3.1.0 .
+docker build -t ghga/datahub-file-service:4.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -46,7 +47,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/datahub-file-service:3.1.0 --help
+docker run -p 8080:8080 ghga/datahub-file-service:4.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -63,10 +64,6 @@ dhfs --help
 ### Parameters
 
 The service requires the following configuration parameters:
-- <a id="properties/client_cache_capacity"></a>**`client_cache_capacity`** *(integer)*: Maximum number of entries to store in the cache. Older entries are evicted once this limit is reached. Exclusive minimum: `0`. Default: `128`.
-- <a id="properties/client_cache_ttl"></a>**`client_cache_ttl`** *(integer)*: Number of seconds after which a stored response is considered stale. Minimum: `0`. Default: `60`.
-- <a id="properties/client_cacheable_methods"></a>**`client_cacheable_methods`** *(array)*: HTTP methods for which responses are allowed to be cached. Default: `["POST", "GET"]`.
-  - <a id="properties/client_cacheable_methods/items"></a>**Items** *(string)*
 - <a id="properties/client_exponential_backoff_max"></a>**`client_exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. Minimum: `0`. Default: `60`.
 - <a id="properties/client_num_retries"></a>**`client_num_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `3`.
 - <a id="properties/client_retry_status_codes"></a>**`client_retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 429, 500, 502, 503, 504]`.
@@ -220,7 +217,7 @@ The service requires the following configuration parameters:
 - <a id="properties/min_run_interval_seconds"></a>**`min_run_interval_seconds`** *(integer)*: The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation. Default: `60`.
 - <a id="properties/interrogation_bucket_id"></a>**`interrogation_bucket_id`** *(string, required)*: The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS.
 - <a id="properties/library_log_level"></a>**`library_log_level`** *(string)*: The log level to use for libraries. This option can be used in tandem with log_level to view DEBUG logs from DHFS without the noise of third-party libraries. Will be overridden by log_level if log_level is higher. By default, this is set to CRITICAL, which will suppress all logs with a log level lower than CRITICAL. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"CRITICAL"`.
-- <a id="properties/library_logger_names"></a>**`library_logger_names`** *(array)*: The list of logger names to target with library_log_level. Default: `["httpx", "crypt4gh", "hexkit", "ghga_service_commons", "boto3", "botocore", "httpcore", "urllib3"]`.
+- <a id="properties/library_logger_names"></a>**`library_logger_names`** *(array)*: The list of logger names to target with library_log_level. Default: `["httpx2", "crypt4gh", "hexkit", "ghga_service_commons", "boto3", "botocore", "httpcore2", "urllib3"]`.
   - <a id="properties/library_logger_names/items"></a>**Items** *(string)*
 
 ### Usage:

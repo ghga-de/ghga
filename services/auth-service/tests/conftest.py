@@ -1,4 +1,4 @@
-# Copyright 2021 - 2025 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
 # for the German Human Genome-Phenome Archive (GHGA)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Short description of package."""  # Please adapt to package
+"""Fixtures that are shared between all unit and integration tests"""
 
-from importlib.metadata import version
+import httpx2
+import pytest
 
-__version__ = version(__package__)
+from ghga_service_commons.api.mock_router import MockRouter
+
+
+@pytest.fixture
+def mock_router(monkeypatch: pytest.MonkeyPatch) -> MockRouter:
+    """Provide a MockRouter that intercepts the requests made with httpx2."""
+    router: MockRouter = MockRouter()
+    client = httpx2.Client(transport=router.as_transport())
+    monkeypatch.setattr(httpx2, "get", client.get)
+    return router

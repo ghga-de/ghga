@@ -1,11 +1,6 @@
 aws_config_ini: null
 central_api_crypt4gh_public_key: dWoWghAEVPcpHILEb5drJx59nF+of6YKuAOhKRpmegY=
 central_api_url: http://127.0.0.1:8000/central
-client_cache_capacity: 128
-client_cache_ttl: 60
-client_cacheable_methods:
-- POST
-- GET
 client_exponential_backoff_max: 60
 client_num_retries: 3
 client_reraise_from_retry_error: false
@@ -27,13 +22,13 @@ inbox_write_s3_session_token: null
 interrogation_bucket_id: hub1-interrogation
 library_log_level: CRITICAL
 library_logger_names:
-- httpx
+- httpx2
 - crypt4gh
 - hexkit
 - ghga_service_commons
 - boto3
 - botocore
-- httpcore
+- httpcore2
 - urllib3
 log_format: null
 log_level: INFO

@@ -19,15 +19,11 @@
 from collections.abc import Callable
 from unittest.mock import AsyncMock, patch
 
-import httpx
+import httpx2
 import pytest
-from hishel.httpx import AsyncCacheTransport
 
-from ghga_service_commons.transports.config import CompositeCacheConfig, CompositeConfig
-from ghga_service_commons.transports.proxy_handling import (
-    cached_ratelimiting_retry_proxies,
-    ratelimiting_retry_proxies,
-)
+from ghga_service_commons.transports.config import CompositeConfig
+from ghga_service_commons.transports.proxy_handling import ratelimiting_retry_proxies
 from ghga_service_commons.transports.retry import AsyncRetryTransport
 
 # Protocol keys used in proxy configuration
@@ -62,11 +58,6 @@ MULTI_PROXY_CONFIG = {
     "config_class,proxy_fn,expected_transport",
     [
         (CompositeConfig, ratelimiting_retry_proxies, AsyncRetryTransport),
-        (
-            CompositeCacheConfig,
-            cached_ratelimiting_retry_proxies,
-            AsyncCacheTransport,
-        ),
     ],
 )
 @pytest.mark.parametrize(
@@ -74,9 +65,9 @@ MULTI_PROXY_CONFIG = {
     [*MULTI_PROXY_CONFIG.items()],
 )
 def test_with_single_proxy(
-    config_class: type[CompositeConfig | CompositeCacheConfig],
+    config_class: type[CompositeConfig],
     proxy_fn: Callable,
-    expected_transport: type[AsyncRetryTransport | AsyncCacheTransport],
+    expected_transport: type[AsyncRetryTransport],
     protocol_key: str,
     proxy_url: str,
 ):
@@ -97,17 +88,12 @@ def test_with_single_proxy(
     "config_class,proxy_fn,expected_transport",
     [
         (CompositeConfig, ratelimiting_retry_proxies, AsyncRetryTransport),
-        (
-            CompositeCacheConfig,
-            cached_ratelimiting_retry_proxies,
-            AsyncCacheTransport,
-        ),
     ],
 )
 def test_with_multiple_proxies(
-    config_class: type[CompositeConfig | CompositeCacheConfig],
+    config_class: type[CompositeConfig],
     proxy_fn: Callable,
-    expected_transport: type[AsyncRetryTransport | AsyncCacheTransport],
+    expected_transport: type[AsyncRetryTransport],
 ):
     """Test that multiple proxy protocols are configured together."""
     config = config_class()
@@ -131,11 +117,10 @@ def test_with_multiple_proxies(
     "config_class,proxy_fn",
     [
         (CompositeConfig, ratelimiting_retry_proxies),
-        (CompositeCacheConfig, cached_ratelimiting_retry_proxies),
     ],
 )
 def test_with_no_proxies(
-    config_class: type[CompositeConfig | CompositeCacheConfig],
+    config_class: type[CompositeConfig],
     proxy_fn: Callable,
 ):
     """Test that empty dict is returned when no proxies are configured."""
@@ -154,17 +139,16 @@ def test_with_no_proxies(
     "config_class,proxy_fn",
     [
         (CompositeConfig, ratelimiting_retry_proxies),
-        (CompositeCacheConfig, cached_ratelimiting_retry_proxies),
     ],
 )
 def test_preserves_no_proxy_values(
-    config_class: type[CompositeConfig | CompositeCacheConfig],
+    config_class: type[CompositeConfig],
     proxy_fn: Callable,
 ):
     """NO_PROXY hosts (None values) are preserved as ``None`` mounts.
 
-    httpx's built-in NO_PROXY handling is bypassed when ``mounts`` are supplied, so
-    the ``None`` entries are what tell httpx to connect directly for those hosts.
+    httpx2's built-in NO_PROXY handling is bypassed when ``mounts`` are supplied, so
+    the ``None`` entries are what tell httpx2 to connect directly for those hosts.
     They must be kept as keys with ``None`` values, not dropped and not wrapped in
     a transport.
     """
@@ -192,7 +176,6 @@ def test_preserves_no_proxy_values(
     "config_class,proxy_fn",
     [
         (CompositeConfig, ratelimiting_retry_proxies),
-        (CompositeCacheConfig, cached_ratelimiting_retry_proxies),
     ],
 )
 @pytest.mark.parametrize(
@@ -220,7 +203,7 @@ def test_preserves_no_proxy_values(
 )
 @pytest.mark.asyncio
 async def test_with_proxy_mount(
-    config_class: type[CompositeConfig | CompositeCacheConfig],
+    config_class: type[CompositeConfig],
     proxy_fn: Callable,
     protocol_key: str,
     proxy_url: str,
@@ -236,7 +219,7 @@ async def test_with_proxy_mount(
     ):
         mounts = proxy_fn(config)
 
-        mock_response = httpx.Response(
+        mock_response = httpx2.Response(
             status_code=200,
             content=expected_response,
         )
@@ -247,7 +230,7 @@ async def test_with_proxy_mount(
             new_callable=AsyncMock,
             return_value=mock_response,
         ):
-            async with httpx.AsyncClient(mounts=mounts) as client:
+            async with httpx2.AsyncClient(mounts=mounts) as client:
                 response = await client.get(request_url)
 
                 assert response.status_code == 200
@@ -256,14 +239,13 @@ async def test_with_proxy_mount(
                 transport = mounts[protocol_key]
                 transport.handle_async_request.assert_called()
                 # check the proxy base transports were wrapped
-                assert isinstance(transport, (AsyncRetryTransport, AsyncCacheTransport))
+                assert isinstance(transport, AsyncRetryTransport)
 
 
 @pytest.mark.parametrize(
     "config_class,proxy_fn",
     [
         (CompositeConfig, ratelimiting_retry_proxies),
-        (CompositeCacheConfig, cached_ratelimiting_retry_proxies),
     ],
 )
 @pytest.mark.parametrize(
@@ -279,7 +261,7 @@ async def test_with_proxy_mount(
 )
 @pytest.mark.asyncio
 async def test_not_hitting_proxy_mount(
-    config_class: type[CompositeConfig | CompositeCacheConfig],
+    config_class: type[CompositeConfig],
     proxy_fn: Callable,
     protocol_key: str,
     proxy_url: str,
@@ -295,7 +277,7 @@ async def test_not_hitting_proxy_mount(
     ):
         mounts = proxy_fn(config)
 
-        mock_response = httpx.Response(
+        mock_response = httpx2.Response(
             status_code=200,
             content=expected_response,
         )
@@ -306,6 +288,6 @@ async def test_not_hitting_proxy_mount(
             new_callable=AsyncMock,
             return_value=mock_response,
         ):
-            async with httpx.AsyncClient(mounts=mounts) as client:
+            async with httpx2.AsyncClient(mounts=mounts) as client:
                 await client.get(request_url)
                 mounts[protocol_key].handle_async_request.assert_not_called()

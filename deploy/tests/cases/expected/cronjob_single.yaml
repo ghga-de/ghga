@@ -1,0 +1,13 @@
+metadata:
+  name: test-my-app
+
+spec:
+  schedule: "0 * * * *"
+  successfulJobsHistoryLimit: 5
+
+command:
+- sh
+- -c
+
+args:
+- /usr/local/bin/sleep 100000000

@@ -36,7 +36,7 @@ FILE_SIZES = [1024**2, 64 * 1024**2, 1000**2, 64 * 1000**2]
 
 
 @pytest.mark.parametrize(
-    "file_size, use_path", zip(FILE_SIZES[:2], [True, False], strict=True)
+    "file_size, use_path", list(zip(FILE_SIZES[:2], [True, False], strict=True))
 )
 def test_crypt4gh_utilities_bytes(file_size: int, use_path: bool):
     """Test Crypt4GH functionality wrappers in sequence with bytes type arguments."""
@@ -83,7 +83,7 @@ def test_crypt4gh_utilities_bytes(file_size: int, use_path: bool):
 
 
 @pytest.mark.parametrize(
-    "file_size, use_path", zip(FILE_SIZES[2:], [True, False], strict=True)
+    "file_size, use_path", list(zip(FILE_SIZES[2:], [True, False], strict=True))
 )
 def test_crypt4gh_utilities_str(file_size: int, use_path: bool):
     """Test Crypt4GH functionality wrappers in sequence with str type arguments."""

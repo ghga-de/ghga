@@ -17,7 +17,7 @@
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock
 
-import httpx
+import httpx2
 import pytest
 import pytest_asyncio
 from jwcrypto.jwk import JWK
@@ -38,6 +38,11 @@ from rs.config import Config
 from rs.inject import prepare_rest_app
 from tests.fixtures import AppFixture
 from tests.fixtures.config import get_config
+from tests.fixtures.external_apis import (
+    AccessApiMock,
+    FileBoxApiMock,
+    get_mocked_httpx_client,
+)
 from tests.fixtures.joint import joint_fixture
 from tests.fixtures.utils import DS_AUTH_CLAIMS, USER_AUTH_CLAIMS, headers_for_token
 
@@ -93,10 +98,26 @@ async def app_fixture(config: Config) -> AsyncGenerator[AppFixture]:
         yield AppFixture(rest_client=rest_client, core_mock=core_mock)
 
 
+@pytest.fixture(name="access_api")
+def access_api_fixture(config: Config) -> AccessApiMock:
+    """A mock of the access API, without any responses configured yet"""
+    return AccessApiMock(config=config)
+
+
+@pytest.fixture(name="file_box_api")
+def file_box_api_fixture(config: Config) -> FileBoxApiMock:
+    """A mock of the FileUploadBox API, without any responses configured yet"""
+    return FileBoxApiMock(config=config)
+
+
 @pytest_asyncio.fixture()
-async def httpx_client() -> AsyncGenerator[httpx.AsyncClient]:
-    """Yields an AsyncClient"""
-    async with httpx.AsyncClient() as client:
+async def httpx_client(
+    access_api: AccessApiMock, file_box_api: FileBoxApiMock
+) -> AsyncGenerator[httpx2.AsyncClient]:
+    """Yields an AsyncClient whose requests are answered by the API mocks"""
+    async with get_mocked_httpx_client(
+        access_api=access_api, file_box_api=file_box_api
+    ) as client:
         yield client
 
 

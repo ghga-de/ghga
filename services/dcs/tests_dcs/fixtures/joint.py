@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from uuid import UUID, uuid4
 
-import httpx
+import httpx2
 import pytest_asyncio
 from jwcrypto.jwk import JWK
 from pydantic import UUID4
@@ -64,6 +64,7 @@ from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.providers.s3.testutils import S3Fixture, temp_file_object
 from hexkit.utils import now_utc_ms_prec
 from tests_dcs.fixtures.config import get_config
+from tests_dcs.fixtures.ekss_api import SECRET_ID, EkssApiMock
 from tests_dcs.fixtures.utils import (
     generate_token_signing_keys,
     generate_work_order_token,
@@ -81,7 +82,7 @@ EXAMPLE_FILE = models.AccessTimeDrsObject(
     decrypted_sha256="0677de3685577a06862f226bb1bfa8f889e96e59439d915543929fb4f011d096",
     creation_date=now_utc_ms_prec(),
     decrypted_size=12345,
-    secret_id="some-secret",
+    secret_id=SECRET_ID,
     encrypted_size=23456,
     storage_alias=STORAGE_ALIAS,
     last_accessed=now_utc_ms_prec(),
@@ -101,13 +102,14 @@ class JointFixture:
     config: Config
     bucket_id: str
     data_repository: DataRepositoryPort
-    rest_client: httpx.AsyncClient
+    rest_client: httpx2.AsyncClient
     event_subscriber: KafkaEventSubscriber
     mongodb: MongoDbFixture
     s3: S3Fixture
     kafka: KafkaFixture
     jwk: JWK
     endpoint_aliases: EndpointAliases
+    ekss: EkssApiMock
 
 
 @pytest_asyncio.fixture
@@ -141,9 +143,15 @@ async def joint_fixture(
     # create storage entities:
     await s3.populate_buckets(buckets=[bucket_id])
 
-    # prepare everything
+    # prepare everything, serving the EKSS API from the mock instead of the network
+    # (the retry and rate limiting layers stay in place above it)
+    ekss = EkssApiMock(config=config)
     async with (
-        prepare_core(config=config) as data_repository,
+        prepare_core(
+            config=config,
+            http_base_transport=ekss.as_transport(),
+            http_mount_env_proxies=False,
+        ) as data_repository,
         prepare_rest_app(config=config, data_repo_override=data_repository) as app,
         prepare_event_subscriber(
             config=config, data_repo_override=data_repository
@@ -161,6 +169,7 @@ async def joint_fixture(
             kafka=kafka,
             jwk=jwk,
             endpoint_aliases=endpoint_aliases,
+            ekss=ekss,
         )
 
 
@@ -192,7 +201,7 @@ async def populated_fixture(
         part_size=1,
         encrypted_parts_md5=["some", "checksum"],
         encrypted_parts_sha256=["some", "checksum"],
-        secret_id="some-secret",
+        secret_id=SECRET_ID,
     )
 
     await joint_fixture.kafka.publish_event(

@@ -18,14 +18,14 @@
 from datetime import timedelta
 from uuid import UUID, uuid4
 
-import httpx
+import httpx2
 import pytest
-from pytest_httpx import HTTPXMock
 
 from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import AccessClient
 from rs.config import Config
 from rs.core.models import GrantId
+from tests.fixtures.external_apis import AccessApiMock, fail_to_connect, respond
 
 pytestmark = pytest.mark.asyncio
 
@@ -37,14 +37,14 @@ VALID_UNTIL = VALID_FROM + timedelta(minutes=5)
 
 
 async def test_grant_upload_access(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, access_api: AccessApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test the grant_upload_access function"""
     access_client = AccessClient(config=config, httpx_client=httpx_client)
 
     # Happy path
     test_grant_id = uuid4()
-    httpx_mock.add_response(201, json={"id": str(test_grant_id)})
+    access_api.on_grant_upload_access = respond(201, json={"id": str(test_grant_id)})
     result = await access_client.grant_upload_access(
         user_id=TEST_USER_ID,
         iva_id=TEST_IVA_ID,
@@ -55,7 +55,7 @@ async def test_grant_upload_access(
     assert result == GrantId(id=test_grant_id)
 
     # Check bad response body (not a valid UUID)
-    httpx_mock.add_response(201, json={"id": "not-a-uuid"})
+    access_api.on_grant_upload_access = respond(201, json={"id": "not-a-uuid"})
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.grant_upload_access(
             user_id=TEST_USER_ID,
@@ -66,7 +66,9 @@ async def test_grant_upload_access(
         )
 
     # Check off-normal status code
-    httpx_mock.add_response(500, json={"error": "Some error occurred."})
+    access_api.on_grant_upload_access = respond(
+        500, json={"error": "Some error occurred."}
+    )
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.grant_upload_access(
             user_id=TEST_USER_ID,
@@ -77,7 +79,7 @@ async def test_grant_upload_access(
         )
 
     # Check 403 status code
-    httpx_mock.add_response(403, json={"error": "Forbidden"})
+    access_api.on_grant_upload_access = respond(403, json={"error": "Forbidden"})
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.grant_upload_access(
             user_id=TEST_USER_ID,
@@ -88,7 +90,7 @@ async def test_grant_upload_access(
         )
 
     # Check 404 status code
-    httpx_mock.add_response(404, json={"error": "Not found"})
+    access_api.on_grant_upload_access = respond(404, json={"error": "Not found"})
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.grant_upload_access(
             user_id=TEST_USER_ID,
@@ -100,7 +102,7 @@ async def test_grant_upload_access(
 
 
 async def test_get_accessible_upload_boxes(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, access_api: AccessApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test the get_accessible_upload_boxes function"""
     access_client = AccessClient(config=config, httpx_client=httpx_client)
@@ -108,92 +110,106 @@ async def test_get_accessible_upload_boxes(
     # Happy path with multiple boxes
     some_datetime = now_utc_ms_prec().isoformat()
     box_to_expiration: dict[UUID, str] = {uuid4(): some_datetime for _ in range(3)}
-    httpx_mock.add_response(200, json=[str(box_id) for box_id in box_to_expiration])
+    access_api.on_get_accessible_upload_boxes = respond(
+        200, json=[str(box_id) for box_id in box_to_expiration]
+    )
     result = await access_client.get_accessible_upload_boxes(user_id=TEST_USER_ID)
     assert result == list(box_to_expiration.keys())
 
     # Happy path with empty list
-    httpx_mock.add_response(200, json=[])
+    access_api.on_get_accessible_upload_boxes = respond(200, json=[])
     result = await access_client.get_accessible_upload_boxes(user_id=TEST_USER_ID)
     assert result == []
 
     # Check off-normal status code
-    httpx_mock.add_response(500, json={"error": "Some error occurred."})
+    access_api.on_get_accessible_upload_boxes = respond(
+        500, json={"error": "Some error occurred."}
+    )
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.get_accessible_upload_boxes(user_id=TEST_USER_ID)
 
     # Check 403 status code
-    httpx_mock.add_response(403, json={"error": "Forbidden"})
+    access_api.on_get_accessible_upload_boxes = respond(
+        403, json={"error": "Forbidden"}
+    )
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.get_accessible_upload_boxes(user_id=TEST_USER_ID)
 
     # Check 404 status code
-    httpx_mock.add_response(404, json={"error": "Not found"})
+    access_api.on_get_accessible_upload_boxes = respond(
+        404, json={"error": "Not found"}
+    )
     result = await access_client.get_accessible_upload_boxes(user_id=TEST_USER_ID)
     assert result == []
 
     # Check with successful status code but garbled response body (not a list)
-    httpx_mock.add_response(200, json={"not": "a list"})
+    access_api.on_get_accessible_upload_boxes = respond(200, json={"not": "a list"})
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.get_accessible_upload_boxes(user_id=TEST_USER_ID)
 
     # Check with successful status code but invalid UUID strings
-    httpx_mock.add_response(200, json=["invalid-uuid", "another-invalid"])
+    access_api.on_get_accessible_upload_boxes = respond(
+        200, json=["invalid-uuid", "another-invalid"]
+    )
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.get_accessible_upload_boxes(user_id=TEST_USER_ID)
 
 
 async def test_check_box_access(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, access_api: AccessApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Test the check_box_access function"""
     access_client = AccessClient(config=config, httpx_client=httpx_client)
 
     # Happy path - user has access
-    httpx_mock.add_response(200)
+    access_api.on_check_box_access = respond(200)
     result = await access_client.check_box_access(
         user_id=TEST_USER_ID, box_id=TEST_BOX_ID
     )
     assert result is True
 
     # Happy path - user does not have access (403)
-    httpx_mock.add_response(403, json={"error": "Forbidden"})
+    access_api.on_check_box_access = respond(403, json={"error": "Forbidden"})
     result = await access_client.check_box_access(
         user_id=TEST_USER_ID, box_id=TEST_BOX_ID
     )
     assert result is False
 
     # Happy path - user does not have access (404)
-    httpx_mock.add_response(404, json={"error": "Not found"})
+    access_api.on_check_box_access = respond(404, json={"error": "Not found"})
     result = await access_client.check_box_access(
         user_id=TEST_USER_ID, box_id=TEST_BOX_ID
     )
     assert result is False
 
     # Check unexpected status code
-    httpx_mock.add_response(500, json={"error": "Internal server error"})
+    access_api.on_check_box_access = respond(
+        500, json={"error": "Internal server error"}
+    )
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.check_box_access(user_id=TEST_USER_ID, box_id=TEST_BOX_ID)
 
     # Check unexpected status code (different one)
-    httpx_mock.add_response(422, json={"error": "Unprocessable entity"})
+    access_api.on_check_box_access = respond(
+        422, json={"error": "Unprocessable entity"}
+    )
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.check_box_access(user_id=TEST_USER_ID, box_id=TEST_BOX_ID)
 
-    httpx_mock.add_exception(httpx.RequestError("Network error"))
+    access_api.on_check_box_access = fail_to_connect("Network error")
     with pytest.raises(AccessClient.AccessAPIError):
         await access_client.check_box_access(user_id=TEST_USER_ID, box_id=TEST_BOX_ID)
 
 
 async def test_get_upload_access_grants_omits_none_query_params(
-    config: Config, httpx_mock: HTTPXMock, httpx_client: httpx.AsyncClient
+    config: Config, access_api: AccessApiMock, httpx_client: httpx2.AsyncClient
 ):
     """Ensure unset filters are omitted from query params while False is preserved."""
     access_client = AccessClient(config=config, httpx_client=httpx_client)
 
-    httpx_mock.add_response(200, json=[])
+    access_api.on_get_upload_access_grants = respond(200, json=[])
     grants = await access_client.get_upload_access_grants(valid=False)
     assert grants == []
 
-    request = httpx_mock.get_requests()[0]
+    request = access_api.requests[0]
     assert dict(request.url.params) == {"valid": "false"}

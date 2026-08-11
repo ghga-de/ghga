@@ -347,15 +347,14 @@ class DataRepository(DataRepositoryPort):
             log.critical(storage_alias_not_configured)
             raise storage_alias_not_configured from exc
 
-        # Try to remove file from S3
-        with contextlib.suppress(object_storage.ObjectNotFoundError):
-            await object_storage.delete_object(
-                bucket_id=bucket_id, object_id=str(drs_object.object_id)
-            )
-            log.debug(
-                "Successfully deleted object corresponding to file ID %s.",
-                drs_object.object_id,
-            )
+        # Deleting an object that is already gone succeeds silently.
+        await object_storage.delete_object(
+            bucket_id=bucket_id, object_id=str(drs_object.object_id)
+        )
+        log.debug(
+            "Successfully deleted object corresponding to file ID %s.",
+            drs_object.object_id,
+        )
 
         # Remove file from database and send success event
         # Should not fail as we got the DRS object by the same ID

@@ -41,16 +41,22 @@ export class UploadBoxMetadataAlignmentComponent {
   /** The name of the currently loaded metadata file, if any */
   fileName = signal<string | undefined>(undefined);
 
-  /** Files in the upload box (excluding deleted and failed ones) */
+  /**
+   * Files in the upload box (excluding deleted and failed ones).
+   *
+   * The alignment is computed against the whole box, so this reads the complete
+   * file list loaded by the parent mapping component rather than the paginated
+   * one backing the file table.
+   */
   boxFiles = computed<FileUploadWithAccession[]>(() =>
-    this.#uploadBoxService.boxFileUploads
-      .value()
+    this.#uploadBoxService
+      .allBoxFiles()
       .filter((file) => file.state !== 'cancelled' && file.state !== 'failed'),
   );
 
   /** Whether upload box files are still loading */
   boxFilesLoading = computed<boolean>(() =>
-    this.#uploadBoxService.boxFileUploads.isLoading(),
+    this.#uploadBoxService.allBoxFileUploads.isLoading(),
   );
 
   /** The alignment result for the currently loaded metadata, if any */

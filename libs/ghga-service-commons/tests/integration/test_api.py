@@ -16,10 +16,11 @@
 """Test api module."""
 
 import asyncio
-import multiprocessing
 import re
+import time
+from contextlib import suppress
 
-import httpx
+import httpx2
 import pytest
 from fastapi import FastAPI
 
@@ -36,27 +37,48 @@ from tests.integration.fixtures.utils import find_free_port
 pytestmark = pytest.mark.asyncio()
 
 
+SERVER_STARTUP_TIMEOUT = 30.0
+SERVER_POLL_INTERVAL = 0.05
+
+
+async def _get_when_ready(url: str, server: asyncio.Task) -> httpx2.Response:
+    """Poll `url` until the server answers, so slow startup doesn't fail the test."""
+    deadline = time.monotonic() + SERVER_STARTUP_TIMEOUT
+    last_error: Exception | None = None
+
+    async with httpx2.AsyncClient() as client:
+        while time.monotonic() < deadline:
+            if server.done():
+                server.result()  # re-raise whatever stopped the server
+                raise AssertionError("Server stopped before becoming ready")
+            try:
+                return await client.get(url)
+            except httpx2.TransportError as error:
+                last_error = error
+                await asyncio.sleep(SERVER_POLL_INTERVAL)
+
+    raise AssertionError(
+        f"Server did not become ready within {SERVER_STARTUP_TIMEOUT}s"
+    ) from last_error
+
+
 async def test_run_server():
     """Test the run_server wrapper function."""
     config = ApiConfigBase()
     config.port = find_free_port()
 
-    process = multiprocessing.Process(
-        target=lambda: asyncio.run(run_server(app=app, config=config))
-    )
-    process.start()
-
-    # give server time to come up:
-    await asyncio.sleep(2)
-
-    # run test query:
+    # run_server deliberately serves on the caller's event loop, so run it as a task
+    # here; cancelling it also exercises its graceful-shutdown path.
+    server = asyncio.create_task(run_server(app=app, config=config))
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"http://{config.host}:{config.port}/greet")
-    except Exception as exc:
-        raise exc
+        response = await _get_when_ready(
+            f"http://{config.host}:{config.port}/greet", server
+        )
     finally:
-        process.kill()
+        server.cancel()
+        with suppress(asyncio.CancelledError):
+            await server
+
     assert response.status_code == 200
     assert response.json() == GREETING
 

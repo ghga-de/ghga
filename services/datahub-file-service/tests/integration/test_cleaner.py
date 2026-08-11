@@ -16,21 +16,15 @@
 
 import unittest.mock
 
-import httpx
+import httpx2
 import pytest
-from pytest_httpx import HTTPXMock
 
 from dhfs.ports.outbound.s3 import S3ClientPort
 from hexkit.providers.s3.testutils import temp_file_object
+from tests.fixtures.central_api import fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 
-pytestmark = [
-    pytest.mark.asyncio(),
-    pytest.mark.httpx_mock(
-        should_mock=lambda request: request.url.path.startswith("/central"),
-        assert_all_responses_were_requested=False,
-    ),
-]
+pytestmark = pytest.mark.asyncio()
 
 
 @pytest.mark.parametrize(
@@ -51,7 +45,6 @@ pytestmark = [
 )
 async def test_cleaner_successful(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     removable_files: list[str],
     caplog,
 ):
@@ -73,15 +66,8 @@ async def test_cleaner_successful(
     ) == set(file_ids)
 
     # Create a mock response from the central API
-    url = (
-        f"{joint_fixture.config.central_api_url}/storages/{joint_fixture.config.storage_alias}"
-        + "/uploads/can_remove"
-    )
-    httpx_mock.add_response(
-        status_code=200,
-        json=removable_files,
-        url=url,
-        method="POST",
+    joint_fixture.central_api.on_get_removable_files = respond(
+        200, json=removable_files
     )
 
     # Run the scan and clean operation
@@ -105,7 +91,6 @@ async def test_cleaner_successful(
 
 async def test_cleaner_some_files_failed(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     caplog,
 ):
     """Test behavior and logs of cleaner when some files aren't cleaned up properly"""
@@ -127,16 +112,7 @@ async def test_cleaner_some_files_failed(
     ) == set(file_ids)
 
     # Mock central API to mark all files as removable
-    url = (
-        f"{joint_fixture.config.central_api_url}/storages/{joint_fixture.config.storage_alias}"
-        + "/uploads/can_remove"
-    )
-    httpx_mock.add_response(
-        status_code=200,
-        json=file_ids,
-        url=url,
-        method="POST",
-    )
+    joint_fixture.central_api.on_get_removable_files = respond(200, json=file_ids)
 
     # Patch remove_file to raise an error for one specific file, letting the others succeed
     original_remove_file = joint_fixture.s3_cleaner._s3_client.remove_file  # type: ignore
@@ -169,7 +145,6 @@ async def test_cleaner_some_files_failed(
 
 async def test_no_files_in_interrogation_bucket(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     caplog,
 ):
     """Test that the cleaner handles an empty interrogation bucket gracefully."""
@@ -181,15 +156,10 @@ async def test_no_files_in_interrogation_bucket(
     assert await joint_fixture.s3.storage.list_all_object_ids(interrogation) == []
 
     # Verify that the Central API isn't called (should quit)
-    url = (
-        f"{joint_fixture.config.central_api_url}/storages/"
-        + f"{joint_fixture.config.storage_alias}/uploads/can_remove"
-    )
-
-    def callback(request: httpx.Request) -> httpx.Response:
+    def should_not_be_called(request: httpx2.Request) -> httpx2.Response:
         raise RuntimeError("Was not supposed to call Central API!")
 
-    httpx_mock.add_callback(callback, url=url)
+    joint_fixture.central_api.on_get_removable_files = should_not_be_called
 
     # Run the scan and clean operation - should complete without errors
     with caplog.at_level("INFO"):
@@ -201,7 +171,6 @@ async def test_no_files_in_interrogation_bucket(
 
 async def test_central_api_error_during_cleanup(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     caplog,
 ):
     """Test that a non-200 response from get_removable_files is logged explicitly."""
@@ -210,11 +179,7 @@ async def test_central_api_error_during_cleanup(
     with temp_file_object(bucket_id=interrogation, object_id=file_id) as file:
         await joint_fixture.s3.populate_file_objects([file])
 
-    url = (
-        f"{joint_fixture.config.central_api_url}/storages/{joint_fixture.config.storage_alias}"
-        + "/uploads/can_remove"
-    )
-    httpx_mock.add_response(status_code=500, url=url, method="POST")
+    joint_fixture.central_api.on_get_removable_files = respond(500)
 
     with caplog.at_level("ERROR"):
         await joint_fixture.s3_cleaner.scan_and_clean()
@@ -226,7 +191,6 @@ async def test_central_api_error_during_cleanup(
 
 async def test_central_api_bad_format_during_cleanup(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     caplog,
 ):
     """Test that an unparseable response from get_removable_files is logged explicitly."""
@@ -235,12 +199,8 @@ async def test_central_api_bad_format_during_cleanup(
     with temp_file_object(bucket_id=interrogation, object_id=file_id) as file:
         await joint_fixture.s3.populate_file_objects([file])
 
-    url = (
-        f"{joint_fixture.config.central_api_url}/storages/{joint_fixture.config.storage_alias}"
-        + "/uploads/can_remove"
-    )
-    httpx_mock.add_response(
-        status_code=200, json={"not": "a list"}, url=url, method="POST"
+    joint_fixture.central_api.on_get_removable_files = respond(
+        200, json={"not": "a list"}
     )
 
     with caplog.at_level("ERROR"):
@@ -264,6 +224,8 @@ async def test_central_api_unreachable(joint_fixture: JointFixture, caplog):
     for file_id in file_ids:
         with temp_file_object(bucket_id=interrogation, object_id=str(file_id)) as file:
             await joint_fixture.s3.populate_file_objects([file])
+
+    joint_fixture.central_api.on_get_removable_files = fail_to_connect()
 
     with caplog.at_level("ERROR"):
         await joint_fixture.s3_cleaner.scan_and_clean()

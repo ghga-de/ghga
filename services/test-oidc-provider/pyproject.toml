@@ -25,8 +25,10 @@ version = "2.2.0"
 description = "Test OpenID Connect provider"
 dependencies = [
     "typer >= 0.15",
-    "ghga-service-commons[api,auth] >= 7, < 8",
-    "hexkit >= 8, < 9",
+    # caps relaxed monorepo-locally: upstream is dormant (2025) while the workspace
+    # moved to commons 8 / hexkit 9 (httpx2 wave); verified by this member's tests
+    "ghga-service-commons[api,auth] >= 7, < 9",
+    "hexkit >= 8, < 10",
     "python-multipart >= 0.0.20",
 ]
 

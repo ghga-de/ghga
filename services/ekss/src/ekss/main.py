@@ -21,6 +21,9 @@ from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 
+# `configure_opentelemetry()` sets up autoinstrumentation and needs to be called before
+# any FastAPI objects are created for those to be instrumented correctly
+
 
 async def run_rest_app():
     """Run the HTTP REST API."""

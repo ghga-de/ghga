@@ -127,14 +127,16 @@ const TEST_BOX_FILES: FileUploadWithAccession[] = [
  * Minimal mock of UploadBoxService for mapping component tests.
  */
 class MockUploadBoxService {
-  #boxFileUploads = signal<FileUploadWithAccession[]>([]);
+  #allBoxFiles = signal<FileUploadWithAccession[]>([]);
 
-  boxFileUploads = {
-    value: this.#boxFileUploads.asReadonly(),
+  allBoxFileUploads = {
     isLoading: () => false,
     error: () => undefined,
   };
 
+  allBoxFiles = this.#allBoxFiles.asReadonly();
+
+  loadAllFileUploadsForBox = vitest.fn();
   submitFileMapping = vitest.fn();
   archiveUploadBox = vitest.fn();
 
@@ -143,7 +145,7 @@ class MockUploadBoxService {
    * @param files - file uploads for the current box
    */
   setBoxFileUploads(files: FileUploadWithAccession[]): void {
-    this.#boxFileUploads.set(files);
+    this.#allBoxFiles.set(files);
   }
 }
 

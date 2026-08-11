@@ -19,6 +19,8 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
+from httpx2 import BaseTransport
+
 from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb import MongoDbDaoFactory
 from ns.adapters.inbound.event_sub import EventSubTranslator
@@ -31,13 +33,22 @@ from ns.ports.inbound.notifier import NotifierPort
 
 
 @asynccontextmanager
-async def prepare_core(*, config: Config) -> AsyncGenerator[NotifierPort]:
-    """Constructs and initializes all core components and their outbound dependencies."""
+async def prepare_core(
+    *, config: Config, sms_transport_override: BaseTransport | None = None
+) -> AsyncGenerator[NotifierPort]:
+    """Constructs and initializes all core components and their outbound dependencies.
+
+    The HTTP transport used to talk to the SMS gateway can be replaced through the
+    sms_transport_override parameter, e.g. with a mocked one in tests.
+    """
     smtp_client = SmtpClient(config=config)
-    sms_client = Lox24Client(config=config)
+    sms_client = Lox24Client(config=config, transport=sms_transport_override)
 
     notifier = Notifier(config=config, smtp_client=smtp_client, sms_client=sms_client)
-    yield notifier
+    try:
+        yield notifier
+    finally:
+        sms_client.close()
 
 
 def prepare_core_with_override(

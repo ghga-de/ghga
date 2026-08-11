@@ -36,6 +36,7 @@ from rs.core.models import (
     BoxRetrievalResults,
     BoxUploadsPage,
     FileUploadBox,
+    FileUploadWithAccession,
     GrantId,
     GrantWithBoxInfo,
     HubStorageSummary,
@@ -56,6 +57,31 @@ __all__ = ["RDUBManager"]
 def is_data_steward(auth_context: AuthContext) -> bool:
     """Returns a bool indicating if the auth context is for a Data Steward"""
     return "data_steward" in auth_context.roles
+
+
+def _sort_file_uploads(
+    file_uploads: list[FileUploadWithAccession], sort: list[str]
+) -> None:
+    """Sort file uploads in place according to the given sort specs.
+
+    Each spec is a field name, optionally prefixed with a dash to denote descending
+    order. Unset values sort below all other values, mirroring the way MongoDB orders
+    null, so that this ordering matches the one of the delegated sorts.
+
+    This is only used for sort orders that the file box service cannot provide itself
+    (i.e. those involving the accession, which is not known to that service).
+    """
+    # Sort by the least significant key first, relying on the sort being stable
+    for spec in reversed(sort):
+        descending = spec.startswith("-")
+        field_name = spec.removeprefix("-")
+
+        def key(file_upload: FileUploadWithAccession, field_name=field_name):
+            value = getattr(file_upload, field_name, None)
+            # Unset values compare as smaller than any other value of the field
+            return value is not None, value
+
+        file_uploads.sort(key=key, reverse=descending)
 
 
 class RDUBManager(RDUBManagerPort):
@@ -611,14 +637,19 @@ class RDUBManager(RDUBManagerPort):
     ) -> BoxUploadsPage:
         """Get a page of file uploads for a research data upload box.
 
-        `skip`, `limit`, and `sort` are forwarded to the file box service's paginated
-        endpoint. `sort` is a list of FileUpload field names to sort by, each optionally
-        prefixed with a dash to denote descending order; when omitted, the file box
-        service's default ordering (by alias) is used.
+        `skip`, `limit`, and `sort` are normally forwarded to the file box service's
+        paginated endpoint. `sort` is a list of FileUpload field names to sort by, each
+        optionally prefixed with a dash to denote descending order; when omitted, the
+        file box service's default ordering (by alias) is used.
         Returns a BoxUploadsPage with the page's file uploads and the total unpaginated
         count.
         It is assumed that `skip`, `limit`, and `sort` are validated beforehand - they
         are not validated in this method.
+
+        Sorting by accession is handled here instead, since accessions are stored in
+        this service and unknown to the file box service. In that case every upload of
+        the box is fetched, sorted, and paginated locally, which is more expensive than
+        the delegated path - hence it is only done when the sort order requires it.
 
         `with_checksums` determines whether the per-part checksum lists
         (`encrypted_parts_md5` and `encrypted_parts_sha256`) are populated or null.
@@ -634,22 +665,46 @@ class RDUBManager(RDUBManagerPort):
             box_id=box_id, auth_context=auth_context
         )
 
-        # Get the requested page of file uploads from the file box service
-        file_uploads, total = await self._file_upload_box_client.get_file_upload_list(
-            box_id=upload_box.file_upload_box_id,
-            skip=skip,
-            limit=limit,
-            sort=sort,
-            with_checksums=with_checksums,
+        # The file box service cannot sort by accession, so such a sort is applied here
+        local_sort = (
+            sort
+            if sort and any(spec.removeprefix("-") == "accession" for spec in sort)
+            else None
         )
 
-        # Get accessions from database and attach them to the page's file uploads
+        if local_sort:
+            # Sorting by accession requires knowing the accession of every upload
+            file_uploads = await self._file_upload_box_client.get_all_file_uploads(
+                box_id=upload_box.file_upload_box_id,
+                with_checksums=with_checksums,
+            )
+            total = len(file_uploads)
+        else:
+            # Get the requested page of file uploads from the file box service
+            (
+                file_uploads,
+                total,
+            ) = await self._file_upload_box_client.get_file_upload_list(
+                box_id=upload_box.file_upload_box_id,
+                skip=skip,
+                limit=limit,
+                sort=sort,
+                with_checksums=with_checksums,
+            )
+
+        # Get accessions from database and attach them to the file uploads
         accession_map = await self._file_controller.get_accessions_by_file_ids(
             file_ids={f.id for f in file_uploads}
         )
         for file_upload in file_uploads:
             if file_upload.id in accession_map:
                 file_upload.accession = accession_map[file_upload.id]
+
+        if local_sort:
+            # Only now that the accessions are attached can the page be determined
+            _sort_file_uploads(file_uploads, local_sort)
+            end = None if limit is None else skip + limit
+            file_uploads = file_uploads[skip:end]
 
         return BoxUploadsPage(items=file_uploads, total_count=total)
 

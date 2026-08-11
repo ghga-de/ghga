@@ -18,13 +18,13 @@
 import json
 from uuid import UUID, uuid4
 
-import httpx
+import httpx2
 import pytest
 from pydantic import SecretBytes
-from pytest_httpx import HTTPXMock
 
 from dhfs.adapters.outbound.s3 import S3Client
 from dhfs.core.models import FileUpload
+from tests.fixtures.central_api import fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
     EncryptedObject,
@@ -36,20 +36,10 @@ PART_SIZE = 6 * (1024**2)  # 6291456 bytes
 INBOX = "inbox1"
 
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.httpx_mock(
-        assert_all_responses_were_requested=False,
-        assert_all_requests_were_expected=False,
-        can_send_already_matched_responses=True,
-        should_mock=lambda request: request.url.path.startswith("/central"),
-    ),
-]
+pytestmark = pytest.mark.asyncio
 
 
-async def test_interrogate_new_files(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock, caplog
-):
+async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
     """Test the interrogation process for a single file"""
     # Create the inbox bucket
     config = joint_fixture.config
@@ -88,26 +78,21 @@ async def test_interrogate_new_files(
     # Serialize the file uploads we prepared in advance to JSON
     serialized_file_uploads = [x.model_dump(mode="json") for x in file_uploads]
 
-    # Add callback for when we request the list of new files that need interrogation
-    url_for_new_files = (
-        f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
-    )
-    httpx_mock.add_response(
-        url=url_for_new_files, status_code=200, json=serialized_file_uploads
+    # Mock the endpoint that returns the list of new files that need interrogation
+    joint_fixture.central_api.on_fetch_new_uploads = respond(
+        200, json=serialized_file_uploads
     )
 
     # Track the interrogation reports received
     received_reports = []
 
-    def capture_report(request: httpx.Request) -> httpx.Response:
-        """Callback to capture interrogation reports sent to the API"""
-        payload = json.loads(request.read().decode("utf-8"))
-        received_reports.append(payload)
-        return httpx.Response(status_code=201, json={})
+    def capture_report(request: httpx2.Request) -> httpx2.Response:
+        """Handler to capture interrogation reports sent to the API"""
+        received_reports.append(json.loads(request.content))
+        return httpx2.Response(status_code=201, json={})
 
-    # Add callback for when we upload the file interrogation report
-    url_for_reports = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-    httpx_mock.add_callback(capture_report, url=url_for_reports)
+    # Mock the endpoint we upload the file interrogation report to
+    joint_fixture.central_api.on_submit_report = capture_report
 
     # Process all files
     with caplog.at_level("INFO"):
@@ -174,7 +159,7 @@ async def test_interrogate_new_files(
             assert isinstance(getattr(log_record, field), int)
 
 
-async def test_report_failure(joint_fixture: JointFixture, httpx_mock: HTTPXMock):
+async def test_report_failure(joint_fixture: JointFixture):
     """Test the content sent by .report_failure()"""
     config = joint_fixture.config
 
@@ -182,18 +167,17 @@ async def test_report_failure(joint_fixture: JointFixture, httpx_mock: HTTPXMock
     file_id = uuid4()
     failure_reason = "Test failure: File decryption failed"
 
-    # Track the payload received by the callback
+    # Track the payload received by the handler
     received_payload = None
 
-    def capture_payload(request: httpx.Request) -> httpx.Response:
-        """Callback to capture the payload sent to the API"""
+    def capture_payload(request: httpx2.Request) -> httpx2.Response:
+        """Handler to capture the payload sent to the API"""
         nonlocal received_payload
-        received_payload = request.read().decode("utf-8")
-        return httpx.Response(status_code=201, json={})
+        received_payload = request.content.decode("utf-8")
+        return httpx2.Response(status_code=201, json={})
 
-    # Mock the interrogation report submission endpoint with the callback
-    url_for_reports = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-    httpx_mock.add_callback(capture_payload, url=url_for_reports)
+    # Mock the interrogation report submission endpoint with the handler
+    joint_fixture.central_api.on_submit_report = capture_payload
 
     # Call report_failure
     await joint_fixture.interrogator.report_failure(
@@ -218,7 +202,7 @@ async def test_report_failure(joint_fixture: JointFixture, httpx_mock: HTTPXMock
 
 
 async def test_api_down_during_report_submission(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock, monkeypatch
+    joint_fixture: JointFixture, monkeypatch
 ):
     """Test that a failed report submission does not raise and leaves the
     re-encrypted file in the interrogation bucket so it is not re-processed
@@ -255,18 +239,12 @@ async def test_api_down_during_report_submission(
     await joint_fixture.s3.storage.create_bucket(interrogation)
 
     # Mock the endpoint that returns new files to interrogate
-    url_for_new_files = (
-        f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
-    )
-    httpx_mock.add_response(
-        url=url_for_new_files,
-        status_code=200,
-        json=[file_upload.model_dump(mode="json")],
+    joint_fixture.central_api.on_fetch_new_uploads = respond(
+        200, json=[file_upload.model_dump(mode="json")]
     )
 
     # Mock the report submission endpoint to fail (simulating API down)
-    url_for_reports = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-    httpx_mock.add_response(url=url_for_reports, status_code=503)
+    joint_fixture.central_api.on_submit_report = respond(503)
 
     # Generate a known value for the reencrypted object ID so we can check it later
     interrogation_object_id = uuid4()
@@ -287,9 +265,7 @@ async def test_api_down_during_report_submission(
     )
 
 
-async def test_file_not_in_inbox(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock, caplog
-):
+async def test_file_not_in_inbox(joint_fixture: JointFixture, caplog):
     """Make sure we abort the interrogation without reporting failure if an
     expected file isn't found in the inbox.
     """
@@ -309,13 +285,8 @@ async def test_file_not_in_inbox(
     )
 
     # Mock the endpoint that returns new files to interrogate
-    url_for_new_files = (
-        f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
-    )
-    httpx_mock.add_response(
-        url=url_for_new_files,
-        status_code=200,
-        json=[file_upload.model_dump(mode="json")],
+    joint_fixture.central_api.on_fetch_new_uploads = respond(
+        200, json=[file_upload.model_dump(mode="json")]
     )
 
     # Try to interrogate - will get a log about it but no error (so dhfs can continue)
@@ -330,9 +301,7 @@ async def test_file_not_in_inbox(
     assert err_msg in caplog.text
 
 
-async def test_file_decryption_error(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock
-):
+async def test_file_decryption_error(joint_fixture: JointFixture):
     """Make sure that after a decryption problem we stop interrogation, abort the
     active upload, and report failure to the central API.
     """
@@ -387,27 +356,20 @@ async def test_file_decryption_error(
     await joint_fixture.s3.storage.create_bucket(interrogation)
 
     # Mock the endpoint that returns new files to interrogate
-    url_for_new_files = (
-        f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
-    )
-    httpx_mock.add_response(
-        url=url_for_new_files,
-        status_code=200,
-        json=[file_upload.model_dump(mode="json")],
+    joint_fixture.central_api.on_fetch_new_uploads = respond(
+        200, json=[file_upload.model_dump(mode="json")]
     )
 
     # Track the failure reports received
     received_reports = []
 
-    def capture_report(request: httpx.Request) -> httpx.Response:
-        """Callback to capture failure reports sent to the API"""
-        payload = json.loads(request.read().decode("utf-8"))
-        received_reports.append(payload)
-        return httpx.Response(status_code=201, json={})
+    def capture_report(request: httpx2.Request) -> httpx2.Response:
+        """Handler to capture failure reports sent to the API"""
+        received_reports.append(json.loads(request.content))
+        return httpx2.Response(status_code=201, json={})
 
     # Mock the report submission endpoint
-    url_for_reports = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-    httpx_mock.add_callback(capture_report, url=url_for_reports)
+    joint_fixture.central_api.on_submit_report = capture_report
 
     # Process files - should handle the decryption error gracefully
     await joint_fixture.interrogator.interrogate_new_files()
@@ -430,7 +392,7 @@ async def test_file_decryption_error(
 
 
 async def test_etag_doesnt_match_local_md5(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock, monkeypatch, caplog
+    joint_fixture: JointFixture, monkeypatch, caplog
 ):
     """Make sure that an ETag mismatch is treated as an inconclusive error.
 
@@ -470,22 +432,15 @@ async def test_etag_doesnt_match_local_md5(
     await joint_fixture.s3.storage.create_bucket(interrogation)
 
     # Mock the endpoint that returns new files to interrogate
-    url_for_new_files = (
-        f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
-    )
-    httpx_mock.add_response(
-        url=url_for_new_files,
-        status_code=200,
-        json=[file_upload.model_dump(mode="json")],
+    joint_fixture.central_api.on_fetch_new_uploads = respond(
+        200, json=[file_upload.model_dump(mode="json")]
     )
 
     # Guard: if any report is submitted, the test should fail immediately
-    url_for_reports = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-
-    def report_should_not_be_called(request: httpx.Request) -> httpx.Response:
+    def report_should_not_be_called(request: httpx2.Request) -> httpx2.Response:
         raise RuntimeError("No interrogation report should have been submitted!")
 
-    httpx_mock.add_callback(report_should_not_be_called, url=url_for_reports)
+    joint_fixture.central_api.on_submit_report = report_should_not_be_called
 
     # Patch complete_upload to return a wrong ETag, simulating an S3 integrity mismatch
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
@@ -528,14 +483,11 @@ async def test_etag_doesnt_match_local_md5(
 @pytest.mark.parametrize("status_code", [400, 404, 409, 500])
 async def test_central_api_error_on_fetch_new_files(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     status_code: int,
     caplog,
 ):
     """Test that a non-200 response from fetch_new_uploads is logged explicitly."""
-    config = joint_fixture.config
-    url = f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
-    httpx_mock.add_response(url=url, status_code=status_code)
+    joint_fixture.central_api.on_fetch_new_uploads = respond(status_code)
 
     with caplog.at_level("ERROR"):
         await joint_fixture.interrogator.interrogate_new_files()
@@ -545,14 +497,11 @@ async def test_central_api_error_on_fetch_new_files(
 
 async def test_central_api_bad_format_on_fetch_new_files(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     caplog,
 ):
     """Test that an unparseable response from fetch_new_uploads is logged explicitly."""
-    config = joint_fixture.config
-    url = f"{config.central_api_url}/storages/{config.storage_alias}/uploads"
-    httpx_mock.add_response(
-        url=url, status_code=200, json={"not": "a list of file uploads"}
+    joint_fixture.central_api.on_fetch_new_uploads = respond(
+        200, json={"not": "a list of file uploads"}
     )
 
     with caplog.at_level("ERROR"):
@@ -566,7 +515,6 @@ async def test_central_api_bad_format_on_fetch_new_files(
 @pytest.mark.parametrize("status_code", [400, 404, 409, 500])
 async def test_central_api_error_on_report_success(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     status_code: int,
     caplog,
 ):
@@ -574,8 +522,7 @@ async def test_central_api_error_on_report_success(
     report_success() is logged explicitly without raising.
     """
     config = joint_fixture.config
-    url = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-    httpx_mock.add_response(url=url, status_code=status_code)
+    joint_fixture.central_api.on_submit_report = respond(status_code)
 
     with caplog.at_level("ERROR"):
         await joint_fixture.interrogator.report_success(
@@ -597,16 +544,13 @@ async def test_central_api_error_on_report_success(
 @pytest.mark.parametrize("status_code", [400, 404, 409, 500])
 async def test_central_api_error_on_report_failure(
     joint_fixture: JointFixture,
-    httpx_mock: HTTPXMock,
     status_code: int,
     caplog,
 ):
     """Test that a non-201 response from submit_interrogation_report in
     report_failure is logged explicitly without raising.
     """
-    config = joint_fixture.config
-    url = f"{config.central_api_url}/storages/{config.storage_alias}/interrogation-reports"
-    httpx_mock.add_response(url=url, status_code=status_code)
+    joint_fixture.central_api.on_submit_report = respond(status_code)
 
     with caplog.at_level("ERROR"):
         await joint_fixture.interrogator.report_failure(
@@ -624,8 +568,10 @@ async def test_connection_failed_on_report_failure(
     caplog,
 ):
     """Test that a connection failure during report_failure is logged explicitly
-    without raising. Does not use httpx_mock so the request fails to connect.
+    without raising.
     """
+    joint_fixture.central_api.on_submit_report = fail_to_connect()
+
     with caplog.at_level("ERROR"):
         await joint_fixture.interrogator.report_failure(
             file_id=uuid4(), reason="test failure"

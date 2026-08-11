@@ -43,6 +43,7 @@ from ucs.core.models import (
     FileUpload,
     FileUploadBasics,
     FileUploadBox,
+    ObjectMetadata,
     UploadActivity,
 )
 from ucs.ports.inbound.controller import UploadControllerPort
@@ -203,15 +204,14 @@ class UploadController(UploadControllerPort):
                         extra=extra,
                     )
                     raise mark_failed_err
-                else:
-                    log.warning(
-                        "While marking FileUpload %s as 'failed', encountered another error."
-                        + " If it's from Kafka, this is fine - just fix Kafka and run"
-                        + " the publish-all job. If it's not related to Kafka at all,"
-                        + " then this warrants further investigation. Error: %s",
-                        file_upload.id,
-                        mark_failed_err,
-                    )
+                log.warning(
+                    "While marking FileUpload %s as 'failed', encountered another error."
+                    + " If it's from Kafka, this is fine - just fix Kafka and run"
+                    + " the publish-all job. If it's not related to Kafka at all,"
+                    + " then this warrants further investigation. Error: %s",
+                    file_upload.id,
+                    mark_failed_err,
+                )
 
             # This is INFO level because it's normal procedure for cleanup.
             log.info(
@@ -574,22 +574,11 @@ class UploadController(UploadControllerPort):
                 "Failed to refresh activity entry for file %s.", file_id, exc_info=True
             )
 
-    async def _compare_checksums(
-        self,
-        file_upload: FileUpload,
-        expected_checksum: str,
-    ) -> None:
-        """Verify that the S3-calculated object ETag (MD5) matches the submitted MD5
-        checksum of the encrypted file content. This is effectively an integrity check
-        for the file upload itself.
-
-        If the checksums don't match, this function marks the FileUpload as failed and
-        raises a ChecksumMismatchError.
-        """
-        file_id = file_upload.id
+    async def _get_object_metadata(self, *, file_upload: FileUpload) -> ObjectMetadata:
+        """Fetch the ETag and size of the uploaded object with a single S3 request."""
         object_id = file_upload.object_id
         try:
-            actual_checksum = await self._s3_client.get_object_etag(
+            return await self._s3_client.get_object_metadata(
                 file_upload=file_upload, object_id=object_id
             )
         except S3ClientPort.UnknownStorageAliasError as err:
@@ -604,6 +593,22 @@ class UploadController(UploadControllerPort):
             ) from err
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
+
+    async def _compare_checksums(
+        self,
+        file_upload: FileUpload,
+        actual_checksum: str,
+        expected_checksum: str,
+    ) -> None:
+        """Verify that the S3-calculated object ETag (MD5) matches the submitted MD5
+        checksum of the encrypted file content. This is effectively an integrity check
+        for the file upload itself.
+
+        If the checksums don't match, this function marks the FileUpload as failed and
+        raises a ChecksumMismatchError.
+        """
+        file_id = file_upload.id
+        object_id = file_upload.object_id
 
         if actual_checksum != expected_checksum:
             # Mark upload as failed, then raise an error
@@ -623,7 +628,9 @@ class UploadController(UploadControllerPort):
             log.info(error, extra=extra)
             raise error
 
-    async def _verify_object_size(self, *, file_upload: FileUpload) -> None:
+    async def _verify_object_size(
+        self, *, file_upload: FileUpload, actual_size: int
+    ) -> None:
         """Verify that the S3 object size matches the declared encrypted_size.
 
         If the sizes don't match, marks the FileUpload as failed and raises
@@ -631,22 +638,6 @@ class UploadController(UploadControllerPort):
         """
         file_id = file_upload.id
         object_id = file_upload.object_id
-        try:
-            actual_size = await self._s3_client.get_object_size(
-                file_upload=file_upload, object_id=object_id
-            )
-        except S3ClientPort.UnknownStorageAliasError as err:
-            raise self.UnknownStorageAliasError(
-                storage_alias=file_upload.storage_alias
-            ) from err
-        except S3ClientPort.BucketNotFoundError as err:
-            raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
-        except S3ClientPort.S3ObjectNotFoundError as err:
-            raise self.S3ObjectMissingError(
-                bucket_id=file_upload.bucket_id, object_id=str(object_id)
-            ) from err
-        except S3ClientPort.S3OperationError as err:
-            raise self.S3OperationError(details=str(err)) from err
 
         if actual_size != file_upload.encrypted_size:
             file_upload.state = "failed"
@@ -734,14 +725,20 @@ class UploadController(UploadControllerPort):
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
 
+        # One S3 request for both the etag and the size
+        object_metadata = await self._get_object_metadata(file_upload=file_upload)
+
         # Verify that the md5 checksum calculated by the connector matches the S3 etag
         await self._compare_checksums(
             file_upload=file_upload,
+            actual_checksum=object_metadata.etag,
             expected_checksum=encrypted_checksum,
         )
 
         # Verify that the actual object size matches the declared encrypted_size
-        await self._verify_object_size(file_upload=file_upload)
+        await self._verify_object_size(
+            file_upload=file_upload, actual_size=object_metadata.size
+        )
 
         # Update local collections now that S3 upload is successfully completed
         file_upload.state = "inbox"
@@ -1123,7 +1120,7 @@ class UploadController(UploadControllerPort):
         if box.state == "archived":
             log.info("Box with ID %s is already archived", box_id)
             return
-        elif box.state == "open":
+        if box.state == "open":
             log.info("Can't unlock box %s because it's still open.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
 
@@ -1158,7 +1155,7 @@ class UploadController(UploadControllerPort):
                 raise self.FileArchivalError(
                     f"File part checksums appear corrupted for file {file.id}."
                 )
-            elif file.failure_reason:
+            if file.failure_reason:
                 raise self.FileArchivalError(
                     f"The 'failure_reason' for file {file.id} is unexpectedly filled out."
                 )
@@ -1458,12 +1455,15 @@ class UploadController(UploadControllerPort):
     async def _cancel_stale_file_upload(
         self, *, upload: FileUpload, storage_alias: str
     ) -> None:
-        """Abort the S3 multipart upload and mark the FileUpload as 'cancelled'."""
+        """Abort the S3 multipart upload and mark the FileUpload as 'cancelled'.
+
+        S3 errors are logged instead of raised so cleanup can continue with the
+        remaining stale uploads. Anything left behind is picked up by the next round.
+        """
         try:
             await self._remove_incomplete_file_upload(file_upload=upload)
         except Exception:
-            # If there's a problem aborting the stale upload, log it but otherwise go on
-            log.error(
+            log.warning(
                 "Failed to abort S3 upload for stale file %s in alias '%s'.",
                 upload.id,
                 storage_alias,
@@ -1485,7 +1485,11 @@ class UploadController(UploadControllerPort):
         storage_alias: str,
         orphaned_s3_uploads: dict[str, str],
     ) -> None:
-        """Abort S3 multipart uploads that have no corresponding FileUpload record."""
+        """Abort S3 multipart uploads that have no corresponding FileUpload record.
+
+        Errors are logged instead of raised so cleanup can continue with the remaining
+        orphaned uploads. Anything left behind is picked up by the next cleanup round.
+        """
         for s3_upload_id, object_id in orphaned_s3_uploads.items():
             try:
                 await self._s3_client.abort_multipart_upload(
@@ -1494,11 +1498,12 @@ class UploadController(UploadControllerPort):
                     s3_upload_id=s3_upload_id,
                 )
             except Exception:
-                log.exception(
+                log.warning(
                     "Failed to abort orphaned S3 upload %s (object %s) for alias '%s'.",
                     s3_upload_id,
                     object_id,
                     storage_alias,
+                    exc_info=True,
                 )
 
     async def _cleanup_stale_uploads_for_alias(
@@ -1542,14 +1547,19 @@ class UploadController(UploadControllerPort):
             )
         except S3ClientPort.UnknownStorageAliasError:
             log.error(
-                "Unknown storage alias '%s' during stale upload cleanup.", storage_alias
+                "Unknown storage alias '%s' during stale upload cleanup. Skipping it.",
+                storage_alias,
             )
-            raise
+            return
         except Exception:
-            log.error(
-                "Failed to list S3 multipart uploads for alias '%s'.", storage_alias
+            # Assume S3 connection issues are persistent here and skip the alias
+            log.warning(
+                "Skipping stale upload cleanup for alias '%s': failed to list S3"
+                + " multipart uploads.",
+                storage_alias,
+                exc_info=True,
             )
-            raise
+            return
 
         # Find truly orphaned S3 uploads (object_id not matching any known init FileUpload)
         orphaned_s3_uploads = {
@@ -1571,6 +1581,14 @@ class UploadController(UploadControllerPort):
         # Get a set of all object_ids from init_and_inbox_uploads. Cast to str because
         #  S3Client does a set diff on the string object IDs returned by S3
         known_object_ids = {str(x.object_id) for x in init_and_inbox_uploads}
-        await self._s3_client.cleanup_orphaned_objects(
-            storage_alias=storage_alias, known_object_ids=known_object_ids
-        )
+        try:
+            await self._s3_client.cleanup_orphaned_objects(
+                storage_alias=storage_alias, known_object_ids=known_object_ids
+            )
+        except Exception:
+            # Treat all unhandled exceptions as potentially transient here and just log
+            log.warning(
+                "Could not clean up orphaned objects for alias '%s'.",
+                storage_alias,
+                exc_info=True,
+            )

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pcs"
-version = "6.2.2"
+version = "6.4.0"
 description = "Purge Controller Service - a service to commission file deletions"
 readme = "README.md"
 authors = [
@@ -18,7 +18,7 @@ dependencies = [
     "hexkit[akafka, s3, mongodb, opentelemetry] >= 8.3.0",
     "crypt4gh >= 1.7",
     "hvac >= 2",
-    "httpx >= 0.28",
+    "httpx2 >= 2.9",
     "packaging >= 26",
 ]
 classifiers = [

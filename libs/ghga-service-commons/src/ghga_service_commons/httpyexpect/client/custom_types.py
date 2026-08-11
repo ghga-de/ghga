@@ -35,7 +35,7 @@ ExceptionMappingSpec = Mapping[StatusCode, object]
 
 
 class Response(Protocol):
-    """Any Response that is compatible with httpx and requests."""
+    """Any Response that is compatible with httpx2 and requests."""
 
     status_code: int
     """Status code of the Response"""
