@@ -5,6 +5,7 @@
  */
 
 import { provideHttpClient } from '@angular/common/http';
+import { provideHttpCache } from '@ngneat/cashew';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { accessGrants } from '@app/../mocks/data';
@@ -40,6 +41,7 @@ describe('AccessGrantRevocationDialogComponent', () => {
         },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
+        provideHttpCache(),
         { provide: ConfigService, useValue: MockConfigService },
         provideHttpClient(),
       ],

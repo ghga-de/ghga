@@ -8,6 +8,8 @@ import { HttpClient, HttpParams, httpResource } from '@angular/common/http';
 import { computed, inject, resource, Service, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
+import { volatileCacheContext } from '@app/shared/utils/http-cache';
+import { CacheBucket, HttpCacheManager } from '@ngneat/cashew';
 import { firstValueFrom, fromEvent, map, Observable, takeUntil, tap } from 'rxjs';
 import { AccessionMapRequest } from '../models/accession-map';
 import {
@@ -43,12 +45,31 @@ export class UploadBoxService {
   #auth = inject(AuthService);
   #config = inject(ConfigService);
   #http = inject(HttpClient);
+  #httpCache = inject(HttpCacheManager);
   #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #rsUrl = this.#config.rsUrl;
   #boxesUrl = `${this.#rsUrl}/upload-boxes`;
   #grantsUrl = `${this.#rsUrl}/upload-grants`;
   #wkvsUrl = this.#config.wkvsUrl;
   #storageLabelsUrl = `${this.#wkvsUrl}/values/storage_labels`;
+
+  // All GET requests are cached by the cashew interceptor (see app.config.ts),
+  // keyed by their URL including query parameters. Reloading a resource without
+  // dropping its cache entry first would simply replay the cached body, so every
+  // resource below collects its cache keys in a bucket. Deleting a bucket
+  // invalidates all variants of that endpoint at once, which matters for the
+  // paginated and sorted file uploads, where the keys are not known upfront.
+  #boxesBucket = new CacheBucket();
+  #boxBucket = new CacheBucket();
+  #boxGrantsBucket = new CacheBucket();
+  #userGrantsBucket = new CacheBucket();
+  #fileUploadsBucket = new CacheBucket();
+
+  #boxesContext = volatileCacheContext(this.#boxesBucket);
+  #boxContext = volatileCacheContext(this.#boxBucket);
+  #boxGrantsContext = volatileCacheContext(this.#boxGrantsBucket);
+  #userGrantsContext = volatileCacheContext(this.#userGrantsBucket);
+  #fileUploadsContext = volatileCacheContext(this.#fileUploadsBucket);
 
   #loadAllUploadBoxes = signal<boolean>(false);
   #loadStorageLabels = signal<boolean>(false);
@@ -75,7 +96,10 @@ export class UploadBoxService {
    * Resource for loading all upload boxes.
    */
   boxRetrievalResults = httpResource<BoxRetrievalResults>(
-    () => (this.#loadAllUploadBoxes() ? this.#boxesUrl : undefined),
+    () =>
+      this.#loadAllUploadBoxes()
+        ? { url: this.#boxesUrl, context: this.#boxesContext }
+        : undefined,
     {
       defaultValue: this.#emptyBoxResults,
     },
@@ -103,7 +127,10 @@ export class UploadBoxService {
     () => {
       const boxId = this.#loadGrantsForBox();
       if (!boxId) return undefined;
-      return `${this.#grantsUrl}?box_id=${encodeURIComponent(boxId)}`;
+      return {
+        url: `${this.#grantsUrl}?box_id=${encodeURIComponent(boxId)}`,
+        context: this.#boxGrantsContext,
+      };
     },
     { defaultValue: [] },
   );
@@ -115,7 +142,10 @@ export class UploadBoxService {
     () => {
       const userId = this.#userId();
       if (!userId) return undefined;
-      return `${this.#grantsUrl}?user_id=${encodeURIComponent(userId)}&valid=true`;
+      return {
+        url: `${this.#grantsUrl}?user_id=${encodeURIComponent(userId)}&valid=true`,
+        context: this.#userGrantsContext,
+      };
     },
     { defaultValue: [] },
   );
@@ -134,6 +164,7 @@ export class UploadBoxService {
     return {
       url: `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads`,
       params,
+      context: this.#fileUploadsContext,
     };
   }
 
@@ -173,7 +204,7 @@ export class UploadBoxService {
       const files: FileUploadWithAccession[] = [];
       let totalCount = 0;
       do {
-        const { url, params } = this.#fileUploadsRequest(
+        const { url, params, context } = this.#fileUploadsRequest(
           boxId,
           files.length,
           MAX_UPLOADS_PAGE_SIZE,
@@ -182,7 +213,7 @@ export class UploadBoxService {
         // away mid-walk does not keep fetching pages nobody waits for.
         const page = await firstValueFrom(
           this.#http
-            .get<BoxUploadsPage>(url, { params })
+            .get<BoxUploadsPage>(url, { params, context })
             .pipe(takeUntil(fromEvent(abortSignal, 'abort'))),
         );
         totalCount = page.total_count;
@@ -230,7 +261,7 @@ export class UploadBoxService {
     () => {
       const id = this.#loadSingleBox();
       if (!id) return undefined;
-      return `${this.#boxesUrl}/${id}`;
+      return { url: `${this.#boxesUrl}/${id}`, context: this.#boxContext };
     },
     {
       defaultValue: undefined,
@@ -319,6 +350,20 @@ export class UploadBoxService {
   }
 
   /**
+   * Fetch all upload boxes again, bypassing the HTTP cache.
+   * Boxes change outside the portal (files are uploaded with the GHGA Connector),
+   * so entering the box list must not rely on what was fetched earlier.
+   */
+  reloadAllUploadBoxes(): void {
+    this.#httpCache.delete(this.#boxesBucket);
+    if (this.#loadAllUploadBoxes()) {
+      this.boxRetrievalResults.reload();
+    } else {
+      this.loadAllUploadBoxes();
+    }
+  }
+
+  /**
    * Trigger loading of a single upload box by ID.
    * @param id - the ID of the upload box to load
    */
@@ -327,11 +372,50 @@ export class UploadBoxService {
   }
 
   /**
+   * Fetch a single upload box again, bypassing the HTTP cache.
+   * Requesting the box that is already loaded would otherwise not issue any
+   * request at all, since the resource request would remain unchanged.
+   * @param id - the ID of the upload box to load
+   */
+  reloadUploadBox(id: string): void {
+    this.#httpCache.delete(this.#boxBucket);
+    if (this.#loadSingleBox() === id) {
+      this.uploadBox.reload();
+    } else {
+      this.loadUploadBox(id);
+    }
+  }
+
+  /**
    * Trigger loading of upload grants for a specific box.
    * @param boxId - the ID of the upload box
    */
   loadBoxGrants(boxId: string): void {
     this.#loadGrantsForBox.set(boxId);
+  }
+
+  /**
+   * Fetch the upload grants of a specific box again, bypassing the HTTP cache.
+   * @param boxId - the ID of the upload box
+   */
+  reloadBoxGrants(boxId: string): void {
+    this.#httpCache.delete(this.#boxGrantsBucket);
+    if (this.#loadGrantsForBox() === boxId) {
+      this.boxGrants.reload();
+    } else {
+      this.loadBoxGrants(boxId);
+    }
+  }
+
+  /**
+   * Fetch the current user's upload grants again, bypassing the HTTP cache.
+   * This resource has no explicit load trigger: it starts as soon as the user
+   * is known and would otherwise never be fetched again during the session,
+   * so grants created in the meantime would stay invisible on the account page.
+   */
+  reloadUserGrants(): void {
+    this.#httpCache.delete(this.#userGrantsBucket);
+    this.userGrants.reload();
   }
 
   /**
@@ -347,6 +431,25 @@ export class UploadBoxService {
       this.#fileUploadsSort.set(undefined);
     }
     this.#loadFileUploadsForBox.set(boxId);
+  }
+
+  /**
+   * Fetch the file uploads of a box again, bypassing the HTTP cache.
+   * Files are uploaded with the GHGA Connector rather than through the portal,
+   * so the file list changes without any action taken here and can only be kept
+   * up to date by fetching it again.
+   * @param boxId - the ID of the upload box
+   */
+  reloadFileUploadsForBox(boxId: string): void {
+    this.#httpCache.delete(this.#fileUploadsBucket);
+    if (this.#loadFileUploadsForBox() === boxId) {
+      this.boxFileUploads.reload();
+    } else {
+      this.loadFileUploadsForBox(boxId);
+    }
+    if (this.#loadAllFileUploadsForBox() === boxId) {
+      this.allBoxFileUploads.reload();
+    }
   }
 
   /**
@@ -408,6 +511,7 @@ export class UploadBoxService {
    * @param id - server-generated upload box ID
    */
   #addUploadBoxLocally(data: ResearchDataUploadBoxBase, id: string): void {
+    this.#invalidateBoxes();
     if (
       this.boxRetrievalResults.error() ||
       typeof this.boxRetrievalResults.value.set !== 'function'
@@ -442,6 +546,7 @@ export class UploadBoxService {
    * @param changes - the changes to the upload box which may be partial
    */
   #updateUploadBoxLocally(id: string, changes: Partial<ResearchDataUploadBox>): void {
+    this.#invalidateBoxes();
     const expectedVersion = changes.version;
     if (expectedVersion === undefined) {
       return;
@@ -564,6 +669,7 @@ export class UploadBoxService {
    * @param boxId - the ID of the deleted upload box
    */
   #removeUploadBoxLocally(boxId: string): void {
+    this.#invalidateBoxes();
     if (this.boxRetrievalResults.error()) return;
     const current = this.boxRetrievalResults.value();
     if (!current.boxes.some((b) => b.id === boxId)) return;
@@ -625,6 +731,28 @@ export class UploadBoxService {
   }
 
   /**
+   * Drop the cached grant responses after a grant has been created or revoked.
+   * Only the per-box grant list is patched locally; the current user's grants
+   * are served under a different URL and carry denormalised box information,
+   * so they have to be fetched again rather than reconstructed here.
+   */
+  #invalidateGrants(): void {
+    this.#httpCache.delete(this.#boxGrantsBucket);
+    this.#httpCache.delete(this.#userGrantsBucket);
+  }
+
+  /**
+   * Drop the cached box responses after a box has been created, changed or
+   * deleted. The user's grants are dropped as well because they carry the box
+   * title, description, state and version alongside the grant itself.
+   */
+  #invalidateBoxes(): void {
+    this.#httpCache.delete(this.#boxesBucket);
+    this.#httpCache.delete(this.#boxBucket);
+    this.#httpCache.delete(this.#userGrantsBucket);
+  }
+
+  /**
    * Remove an upload grant locally to avoid re-fetching from backend.
    * @param id - the id of the grant to remove
    */
@@ -655,6 +783,7 @@ export class UploadBoxService {
   ): Observable<GrantId> {
     return this.#http.post<GrantId>(this.#grantsUrl, data).pipe(
       map((grantId) => {
+        this.#invalidateGrants();
         if (user) {
           this.#addGrantLocally({
             ...data,
@@ -761,6 +890,10 @@ export class UploadBoxService {
     // by one, hiding a file. Refetch the affected pages instead. If the deleted
     // file was the only one on the last page, step back so the paginator does not
     // end up beyond the end of the list.
+    // The cached pages must go first, otherwise both the reload and the request
+    // for the previous page would just replay the responses from before the
+    // deletion.
+    this.#httpCache.delete(this.#fileUploadsBucket);
     const totalCount = this.boxFilesTotalCount();
     const limit = this.#fileUploadsLimit();
     const skip = this.#fileUploadsSkip();
@@ -799,6 +932,7 @@ export class UploadBoxService {
   revokeUploadGrant(id: string): Observable<void> {
     return this.#http.delete<void>(`${this.#grantsUrl}/${id}`).pipe(
       map((response) => {
+        this.#invalidateGrants();
         try {
           this.#revokeGrantLocally(id);
         } catch {

@@ -1,4 +1,12 @@
-<header><h1>Upload Box Manager</h1></header>
+<header class="flex items-center justify-between gap-2">
+  <h1>Upload Box Manager</h1>
+  <app-refresh-button
+    what="the upload boxes"
+    [loading]="isLoading()"
+    umamiEvent="Upload Box Manager Refresh Clicked"
+    (refresh)="refresh()"
+  />
+</header>
 
 <div class="flex flex-col gap-4">
   <app-upload-box-manager-filter></app-upload-box-manager-filter>

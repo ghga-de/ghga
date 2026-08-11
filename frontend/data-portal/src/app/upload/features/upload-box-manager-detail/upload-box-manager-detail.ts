@@ -32,6 +32,7 @@ import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { NotificationService } from '@app/shared/services/notification';
+import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
 import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
@@ -72,6 +73,7 @@ interface GrantWithStatus extends UploadGrant {
     RouterLink,
     Capitalise,
     ParseBytes,
+    RefreshButtonComponent,
     UploadBoxFilesTableComponent,
     UploadBoxMappingComponent,
   ],
@@ -162,10 +164,27 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     this.#changedByFetcher.load(changedById);
   });
 
+  /** Whether the file uploads have already been requested for this visit. */
+  #filesRequested = false;
+
+  /**
+   * Fetch the file uploads of the box, at most once per visit of this view.
+   * Files are uploaded with the GHGA Connector outside the portal, so the list
+   * has to be fetched again on every visit; but the box signal keeps changing
+   * afterwards (deleting a file adjusts its count and size, for instance), and
+   * refetching on each of those changes would be pointless.
+   * @param id - the ID of the upload box
+   */
+  #requestFileUploads(id: string): void {
+    if (this.#filesRequested) return;
+    this.#filesRequested = true;
+    this.#uploadBoxService.reloadFileUploadsForBox(id);
+  }
+
   #loadFileUploadsEffect = effect(() => {
     const box = this.uploadBox();
     if (box && box.file_count > 0 && !this.#cachedBox()) {
-      this.#uploadBoxService.loadFileUploadsForBox(box.id);
+      this.#requestFileUploads(box.id);
     }
   });
 
@@ -446,6 +465,9 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   onBoxArchived(): void {
     this.#cachedBox.set(undefined);
     const id = this.id();
+    // Archiving is a portal action, so the box has already been updated locally
+    // and no fetch is needed here; the service has dropped its cache entry, so
+    // the next visit picks up the change from the backend.
     if (id) this.#uploadBoxService.loadUploadBox(id);
   }
 
@@ -557,14 +579,14 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     const id = this.id();
     this.#uploadBoxService.loadStorageLabels();
     if (id) {
-      this.#uploadBoxService.loadBoxGrants(id);
+      this.#uploadBoxService.reloadBoxGrants(id);
       // Has the single box already been fetched individually?
       const single = this.#singleBox.error() ? undefined : this.#singleBox.value();
       if (single && single.id === id) {
         this.#cachedBox.set(single);
         // Load file uploads if the box has files
         if (single.file_count > 0) {
-          this.#uploadBoxService.loadFileUploadsForBox(id);
+          this.#requestFileUploads(id);
         }
       } else {
         // Has it been loaded as part of the full list?
@@ -573,18 +595,31 @@ export class UploadBoxManagerDetailComponent implements OnInit {
           this.#cachedBox.set(fromList);
           // Load file uploads if the box has files
           if (fromList.file_count > 0) {
-            this.#uploadBoxService.loadFileUploadsForBox(id);
+            this.#requestFileUploads(id);
           }
-        } else {
-          // Neither — fetch it individually
-          this.#uploadBoxService.loadUploadBox(id);
         }
       }
 
-      // Always load the single-box resource as source of truth so local state
-      // updates (e.g. archived transition) are reflected in this detail view.
-      this.#uploadBoxService.loadUploadBox(id);
+      // Always fetch the single-box resource as source of truth so local state
+      // updates (e.g. archived transition) are reflected in this detail view,
+      // and so changes made outside the portal are picked up on every visit.
+      this.#uploadBoxService.reloadUploadBox(id);
     }
+  }
+
+  /**
+   * Fetch the box, its grants and its files again on request. Uploads run
+   * through the GHGA Connector and other data stewards work on the same box, so
+   * all three change without this view being involved.
+   */
+  refresh(): void {
+    const id = this.id();
+    if (!id) return;
+    this.#cachedBox.set(undefined);
+    this.#uploadBoxService.reloadUploadBox(id);
+    this.#uploadBoxService.reloadBoxGrants(id);
+    this.#filesRequested = false;
+    this.#requestFileUploads(id);
   }
 
   /**

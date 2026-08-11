@@ -7,6 +7,7 @@
 import { HttpClient, httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { ConfigService } from '@app/shared/services/config';
+import { HttpCacheManager } from '@ngneat/cashew';
 import { Observable, tap } from 'rxjs';
 import {
   RegisteredUser,
@@ -32,6 +33,7 @@ export interface DisplayUser extends RegisteredUser {
 export class UserService {
   #config = inject(ConfigService);
   #http = inject(HttpClient);
+  #httpCache = inject(HttpCacheManager);
 
   #authUrl = this.#config.authUrl;
   #usersUrl = `${this.#authUrl}/users`;
@@ -111,9 +113,10 @@ export class UserService {
   }
 
   /**
-   * Reload all users' IVAs
+   * Fetch all users again, bypassing the HTTP cache.
    */
   reloadUsers(): void {
+    this.#httpCache.delete(this.#usersUrl);
     this.users.reload();
   }
 
@@ -254,11 +257,23 @@ export class UserService {
   );
 
   /**
+   * Drop the cached responses for a user after they have been changed or
+   * deleted, so that the user list and the user itself are fetched from the
+   * backend again rather than replayed from the cache.
+   * @param id - the ID of the changed user
+   */
+  #invalidateUser(id: string): void {
+    this.#httpCache.delete(this.#usersUrl);
+    this.#httpCache.delete(`${this.#usersUrl}/${id}`);
+  }
+
+  /**
    * Update the user locally.
    * @param id - the ID of the updated user
    * @param changes - the changes to the user which may be partial
    */
   #updateUserLocally(id: string, changes: Partial<DisplayUser>): void {
+    this.#invalidateUser(id);
     if (!this.user.error()) {
       const oldUser = this.user.value();
       if (oldUser && oldUser.id === id) {
@@ -296,6 +311,7 @@ export class UserService {
    * @param id - the ID of the user to remove
    */
   #removeUserLocally(id: string): void {
+    this.#invalidateUser(id);
     if (this.users.error()) return;
     const newUsers = this.users.value().filter((user) => user.id !== id);
     this.users.value.set(newUsers);

@@ -12,10 +12,12 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { AccessGrantManagerComponent } from './access-grant-manager';
 
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { screen } from '@testing-library/angular';
 
 describe('AccessGrantManagerComponent', () => {
   let component: AccessGrantManagerComponent;
   let fixture: ComponentFixture<AccessGrantManagerComponent>;
+  let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -26,6 +28,8 @@ describe('AccessGrantManagerComponent', () => {
       ],
     }).compileComponents();
 
+    accessRequestService = TestBed.inject(AccessRequestService);
+    accessRequestService.reloadAllAccessGrants = vitest.fn();
     fixture = TestBed.createComponent(AccessGrantManagerComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -33,5 +37,14 @@ describe('AccessGrantManagerComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should fetch all the access grants again upon initialization', () => {
+    expect(accessRequestService.reloadAllAccessGrants).toHaveBeenCalled();
+  });
+
+  it('should fetch all the access grants again when the refresh button is used', () => {
+    screen.getByRole('button', { name: 'Refresh the access grants' }).click();
+    expect(accessRequestService.reloadAllAccessGrants).toHaveBeenCalledTimes(2);
   });
 });

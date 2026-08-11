@@ -87,6 +87,7 @@ export class IvaService {
    * Reload all users' IVAs
    */
   reloadAllIvas(): void {
+    this.#httpCache.delete(this.#ivasUrl);
     this.allIvas.reload();
   }
 

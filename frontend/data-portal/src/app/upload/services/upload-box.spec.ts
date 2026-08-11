@@ -4,7 +4,11 @@
  * @license Apache-2.0
  */
 
-import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
@@ -12,6 +16,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
+import { provideHttpCache, withHttpCacheInterceptor } from '@ngneat/cashew';
 import {
   BoxRetrievalResults,
   ResearchDataUploadBoxBase,
@@ -98,6 +103,9 @@ describe('UploadBoxService', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        // The service drops cached responses when reloading; the cache itself is
+        // never exercised here, since the testing backend bypasses the interceptor.
+        provideHttpCache(),
         { provide: AuthService, useClass: MockAuthService },
         { provide: ConfigService, useClass: MockConfigService },
       ],
@@ -1061,5 +1069,187 @@ describe('UploadBoxService', () => {
 
       expect(service.allBoxFiles()).toEqual(files);
     });
+  });
+});
+
+describe('UploadBoxService with the HTTP cache in place', () => {
+  let service: UploadBoxService;
+  let httpMock: HttpTestingController;
+  let testBed: TestBed;
+
+  const BOX = TEST_BOX_RETRIEVAL_RESULTS.boxes[0];
+  const BOX_URL = `http://mock.dev/rs/upload-boxes/${BOX.id}`;
+  const UPLOADS_URL = `${BOX_URL}/uploads`;
+  const USER_GRANTS_URL =
+    'http://mock.dev/rs/upload-grants?user_id=doe%40test.dev&valid=true';
+
+  beforeEach(() => {
+    testBed = TestBed.configureTestingModule({
+      providers: [
+        // The cache interceptor is part of the chain here, as it is in the app,
+        // so a request that is served from the cache never reaches the backend.
+        provideHttpClient(withInterceptors([withHttpCacheInterceptor()])),
+        provideHttpClientTesting(),
+        provideHttpCache({ strategy: 'implicit' }),
+        { provide: AuthService, useClass: MockAuthService },
+        { provide: ConfigService, useClass: MockConfigService },
+      ],
+    });
+    service = TestBed.inject(UploadBoxService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  /**
+   * Answer the request for the current user's grants, which starts as soon as
+   * the user is known and is not the subject of most tests here.
+   * @param grants - the grants to respond with
+   */
+  async function flushUserGrants(grants: GrantWithBoxInfo[] = []): Promise<void> {
+    testBed.tick();
+    httpMock.expectOne(USER_GRANTS_URL).flush(grants);
+    await Promise.resolve();
+  }
+
+  /**
+   * Load the single box resource and answer the resulting request.
+   * @param box - the box to respond with
+   */
+  async function loadBox(box = BOX): Promise<void> {
+    service.loadUploadBox(BOX.id);
+    testBed.tick();
+    httpMock.expectOne(BOX_URL).flush(box);
+    await Promise.resolve();
+  }
+
+  it('should serve a plain reload of a box from the cache', async () => {
+    await flushUserGrants();
+    await loadBox();
+
+    // Requesting the box that is already loaded leaves the request unchanged,
+    // so no request is issued at all ...
+    service.loadUploadBox(BOX.id);
+    testBed.tick();
+    httpMock.expectNone(BOX_URL);
+
+    // ... and reloading without dropping the cache entry replays the response.
+    service.uploadBox.reload();
+    testBed.tick();
+    await Promise.resolve();
+    httpMock.expectNone(BOX_URL);
+    expect(service.uploadBox.value()).toEqual(BOX);
+  });
+
+  it('should fetch a box again when reloaded', async () => {
+    await flushUserGrants();
+    await loadBox();
+
+    service.reloadUploadBox(BOX.id);
+    testBed.tick();
+    const changed = { ...BOX, file_count: 7, size: 700 };
+    httpMock.expectOne(BOX_URL).flush(changed);
+    await Promise.resolve();
+
+    expect(service.uploadBox.value()).toEqual(changed);
+  });
+
+  it('should fetch the file uploads of a box again when reloaded', async () => {
+    await flushUserGrants();
+
+    service.loadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    const firstFiles = [{ id: 'file-1' }] as unknown as FileUploadWithAccession[];
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: firstFiles, total_count: 1 });
+    await Promise.resolve();
+    expect(service.boxFiles()).toEqual(firstFiles);
+
+    // Files arrive through the GHGA Connector, so the same page must be fetched
+    // again rather than replayed from the cache.
+    service.reloadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    const moreFiles = [
+      { id: 'file-1' },
+      { id: 'file-2' },
+    ] as unknown as FileUploadWithAccession[];
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: moreFiles, total_count: 2 });
+    await Promise.resolve();
+
+    expect(service.boxFiles()).toEqual(moreFiles);
+    expect(service.boxFilesTotalCount()).toBe(2);
+  });
+
+  it('should drop all cached pages of the file uploads, not just the current one', async () => {
+    await flushUserGrants();
+
+    service.loadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [], total_count: 100 });
+    await Promise.resolve();
+
+    service.paginateFileUploads(10, 10);
+    testBed.tick();
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [], total_count: 100 });
+    await Promise.resolve();
+
+    // Back to the first page, which is still cached under its own key.
+    service.reloadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [], total_count: 100 });
+    await Promise.resolve();
+
+    service.paginateFileUploads(10, 0);
+    testBed.tick();
+    const req = httpMock.expectOne((req) => req.url === UPLOADS_URL);
+    expect(new URLSearchParams(req.request.params.toString()).get('skip')).toBe('0');
+    req.flush({ items: [], total_count: 100 });
+    await Promise.resolve();
+  });
+
+  it('should fetch the user grants again when reloaded', async () => {
+    await flushUserGrants();
+
+    service.reloadUserGrants();
+    testBed.tick();
+    const grants = [{ id: 'grant-1' }] as unknown as GrantWithBoxInfo[];
+    httpMock.expectOne(USER_GRANTS_URL).flush(grants);
+    await Promise.resolve();
+
+    expect(service.userGrants.value()).toEqual(grants);
+  });
+
+  it('should drop the cached user grants when a grant is created', async () => {
+    await flushUserGrants();
+
+    service
+      .createUploadGrant({
+        user_id: 'doe@test.dev',
+        iva_id: null,
+        box_id: BOX.id,
+        valid_from: '2026-01-01T00:00:00Z',
+        valid_until: '2026-07-01T00:00:00Z',
+      })
+      .subscribe();
+    httpMock.expectOne('http://mock.dev/rs/upload-grants').flush({ id: 'grant-1' });
+    await Promise.resolve();
+
+    // The new grant is only visible on the account page once the grants are
+    // fetched again, which the dropped cache entry now allows.
+    service.userGrants.reload();
+    testBed.tick();
+    httpMock.expectOne(USER_GRANTS_URL).flush([]);
+    await Promise.resolve();
   });
 });
