@@ -104,32 +104,30 @@ relation, written by the loader and read by the data portal.
   studies already using it; entities without one are matched by alias/filename against a pool of
   archived boxes with manual corrections.
 - **File admin panel.** A steward-only, paginated, filterable listing over every archived file in
-  GHGA — including files archived but never mapped, which no existing surface can reach once
-  archival stops requiring mapping.
+  GHGA — including files archived but never mapped, a population that only comes into existence
+  once archival stops requiring mapping.
 - **dins must key file information by file, not consume it.** Retain the per-file registration data
   instead of deleting it on first merge, serve it to any accession bound to that file however late
   it arrives, and clear all such accessions when the file is deleted.
 
 ### Optional:
 
-- **"This study replaced A, B and C" affordance.** The reverse direction of the portal's "updated
+- **"This study replaced A, B and C" view.** The reverse direction of the portal's "updated
   version available" hint. Merges make it meaningful, but nothing depends on it and the forward
   hint is the user-visible outcome this epic promises.
-- **Local persistence of an in-progress mapping session.** Only matters when a steward must make
-  many manual corrections, which should be rare.
 
 ### Not included:
 
 - **The schemapack services** — resource-registry, resource-search, `em-transformation-service` —
   and the schemapack migration itself. This epic is deliberately confined to the LinkML plus
-  offline-dskit stack. See [Question Mark Chrysalis](../83-question-mark-chrysalis/technical_specification.md)
-  and [Mermaid's Purse](../87-mermaids-purse/technical_specification.md) for that track.
+  offline-dskit stack.
 - **Re-accessioning existing studies.** Legacy identifiers are never rewritten.
 - **Entity-level deprecation.** Deprecation is tracked study-level only.
-- **Populating rs's `Study.superseded_by_id`.** The portal resolves the successor from metldata's
-  ancestry collection, so nothing reads the field in this rollout; propagating it would mean adding
-  a supersede pointer to the events rs consumes to serve no reader. It stays in the model, unset,
-  for when rs takes ownership of study metadata.
+- **Populating rs's `Study.superseded_by_id`.** This is a pre-existing, currently unused attribute
+  on rs's `Study` model — it is not introduced by this epic. Since the portal resolves the successor from
+  metldata's ancestry collection, nothing reads the field in this rollout; propagating it would
+  mean adding a supersede pointer to the events rs consumes to serve no reader. Therefore it stays in the
+  model, unset, for when rs takes ownership of study metadata.
 - **Changes to `libs/ghga-event-schemas`.** See the API section — the design avoids needing any.
 - **Changes to `services/mass`.** Hiding superseded datasets rides the existing deletion event.
 - **A steward search that can still see superseded datasets.** There is no retained "hidden" flag;
@@ -151,7 +149,7 @@ This epic covers the following user journeys.
    warnings for the steward to confirm, carries reuse slots through untouched, and records the
    declared replacement.
 3. `dskit metadata transform` — unchanged.
-4. `dskit load` — pushes the artifacts together with the declared replacement.
+4. `dskit load` — unchanged.
 
    *Or, for two studies already submitted:* `dskit metadata replace-study <old PID> <new PID>`.
 
@@ -227,8 +225,7 @@ This epic covers the following user journeys.
 
 ### Payload Schemas for Events:
 
-**No changes to `libs/ghga-event-schemas` are required.** This is a deliberate design outcome and
-worth stating explicitly, because both halves of the epic look at first like they need one:
+**No changes to `libs/ghga-event-schemas` are required.** 
 
 - *The declared replacement* stays inside metldata — recorded on the submission record and in the
   ancestry collection, read from there by the portal. No supersede pointer is added to
@@ -265,8 +262,8 @@ changing it would invalidate previously minted PIDs.
 
 ## Additional Implementation Details:
 
-The suggested landing order is: one-study enforcement first (everything else assumes it), then the
-PID scheme and submission-store extensions, then the reuse slot, then the rs cardinality and
+The suggested landing order is: one-study enforcement first (everything else assumes it), then the reuse slot, then the
+PID scheme and submission-store extensions, then the rs cardinality and
 archival changes, then declared replacement end to end, then the rs mapping surface and admin panel
 API, then the portal. Steps after the PID scheme are largely independent. The file admin panel
 strand depends only on the archival/mapping inversion, not on PIDs or replacement.
@@ -449,8 +446,13 @@ boxes with `error_type="archived"`; that guard inverts to *require* the box be a
   alias/filename with manual corrections, against the post-archival box/file inventory.
 
 **File admin panel API.** Because files can now be archived without ever being mapped, no existing
-surface lists them: the box view is per-box and the study view only shows mapped accessions. The
-new listing carries:
+surface is keyed to find them. `GET /upload-boxes/{box_id}/uploads` is file-first but scoped to one
+named box, and returns ucs `FileUpload` records that carry no accession, so it cannot say whether a
+file is mapped. `GET /studies/{study_id}/file-ids` is accession-first, so a file with no accession
+never appears — that endpoint surfaces the opposite population, accessions still awaiting a file.
+A steward can in principle reach such a file by listing archived boxes and paging through each
+one's uploads, but that is an N+1 walk with no filter for the thing being looked for. The new
+listing carries:
 
 | field | source |
 |---|---|
@@ -563,10 +565,10 @@ to them once they leave the index.
 - **File admin panel.** A browsable table over every archived file, backed by the rs listing, with
   the governing `data_access_policy` and nested `data_access_committee` composed per accession from
   metldata's artifacts. Box columns are empty for legacy files that never came through a box. This
-  is the only place an archived-but-unmapped file becomes visible, which is why it belongs to this
-  epic rather than a follow-up: decoupling archival from mapping is what creates files no other view
-  can reach. Expect it to be used to *find* the files a later mapping pass needs, so filtering by
-  mapped/unmapped and by box matters more than presentation.
+  is the only place an archived-but-unmapped file becomes findable, which is why it belongs to this
+  epic rather than a follow-up: decoupling archival from mapping is what creates that population in
+  the first place. Expect it to be used to *find* the files a later mapping pass needs, so filtering
+  by mapped/unmapped and by box matters more than presentation.
 
 #### Work to be performed:
 - [ ] Resolve and render the "updated version available" hint on `dataset/:id` and `study/:id`
