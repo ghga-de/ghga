@@ -100,8 +100,12 @@ This repository is part of the [Epic Planning and Marathon SOP](https://ghga.pag
 - (81) [Laotian Rock Rat](./81-laotian-rock-rat/technical_specification.md): Client Retry Logic Refactoring for Ratelimiting
 - (82) [Scissor Grinder Cicada](./82-scissor-grinder-cicada/technical_specification.md): Notification Service Update
 - (83) [Question Mark Chrysalis](./83-question-mark-chrysalis/technical_specification.md): Preliminary Experimental Metadata (EM) Transformation Service
-- (84) [Sarcastic Fringehead](./84-sarcastic-fringehead/technical_specification.md): File Upload Path Part 2
+- (84) [Sarcastic Fringehead](./84-sarcastic-fringehead/technical_specification.md): File Upload Path Pt. 2
 - (85) [Tasselled Wobbegong](./85-tasselled-wobbegong/technical_specification.md): Support for Key-Value-Store in Hexkit
 - (86) [Archaeopteryx](./86-archaeopteryx/technical_specification.md): Basic Research Data Upload Box Frontend
 - (87) [Mermaid'S Purse](./87-mermaids-purse/technical_specification.md): Global Unique IDs, Aggregate Transformations, and Workflow API
+- (88) [Pistol Shrimp](./88-pistol-shrimp/technical_specification.md): UCS Upload Permission Guardrails
+- (89) [Apollo](./89-apollo/technical_specification.md): Initial Version of the GHGA Registry Service
+- (90) [Red-Billed Quelea](./90-red-billed-quelea/technical_specification.md): Support for Batch DAO Operations in Hexkit
 - (91) [Army Ant](./91-army-ant/technical_specification.md): Parallelize DHFS File Interrogation
+
