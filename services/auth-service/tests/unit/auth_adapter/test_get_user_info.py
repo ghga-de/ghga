@@ -16,21 +16,18 @@
 
 """Unit tests for the auth adapter user info retrieval feature"""
 
-import re
-
 import pytest
-from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.core import auth
+from ghga_service_commons.api.mock_router import MockRouter
 
-from ...fixtures.utils import create_access_token
+from ...fixtures.utils import create_access_token, mock_userinfo
 
 USER_INFO = {
     "name": "John Doe",
     "email": "john@home.org",
     "sub": "john@aai.org",
 }
-RE_USER_INFO_URL = re.compile(".*/userinfo$")
 
 
 def test_needs_an_access_token():
@@ -56,11 +53,9 @@ def test_rejects_an_access_token_without_mandatory_claim(claim: str):
         auth.get_user_info(access_token)
 
 
-def test_rejects_user_info_with_mismatch_in_sub(httpx_mock: HTTPXMock):
+def test_rejects_user_info_with_mismatch_in_sub(mock_router: MockRouter):
     """Test that you cannot get user info with a mismatch in subject claims."""
-    httpx_mock.add_response(
-        url=RE_USER_INFO_URL, json={**USER_INFO, "sub": "not.john@aai.org"}
-    )
+    mock_userinfo(mock_router, {**USER_INFO, "sub": "not.john@aai.org"})
     access_token = create_access_token()
     with pytest.raises(
         auth.UserInfoError,
@@ -69,25 +64,25 @@ def test_rejects_user_info_with_mismatch_in_sub(httpx_mock: HTTPXMock):
         auth.get_user_info(access_token)
 
 
-def test_rejects_user_info_with_missing_name(httpx_mock: HTTPXMock):
+def test_rejects_user_info_with_missing_name(mock_router: MockRouter):
     """Test that you cannot get user info with a missing name in user info."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json={**USER_INFO, "name": None})
+    mock_userinfo(mock_router, {**USER_INFO, "name": None})
     access_token = create_access_token()
     with pytest.raises(auth.UserInfoError, match="Missing value for name claim"):
         auth.get_user_info(access_token)
 
 
-def test_rejects_user_info_with_missing_email(httpx_mock: HTTPXMock):
+def test_rejects_user_info_with_missing_email(mock_router: MockRouter):
     """Test that you cannot get user info with missing email in user info."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json={**USER_INFO, "email": None})
+    mock_userinfo(mock_router, {**USER_INFO, "email": None})
     access_token = create_access_token()
     with pytest.raises(auth.UserInfoError, match="Missing value for email claim"):
         auth.get_user_info(access_token)
 
 
-def test_user_info_for_valid_token(httpx_mock: HTTPXMock):
+def test_user_info_for_valid_token(mock_router: MockRouter):
     """Test that you can get user info with a valid token."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
     access_token = create_access_token()
     user_info = auth.get_user_info(access_token)
     assert user_info is not None

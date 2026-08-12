@@ -16,7 +16,6 @@
 """Test the api module"""
 
 import logging
-import re
 from base64 import b64encode
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -24,14 +23,14 @@ from uuid import UUID
 
 import pytest
 from fastapi import status
-from ghga_service_commons.utils.utc_dates import now_as_utc
-from pytest_httpx import HTTPXMock
 
 from auth_service.auth_adapter.core.session_store import SessionState
 from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.auth_adapter.rest.headers import get_bearer_token
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.deps import get_user_dao
+from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
 
 from ...fixtures.utils import (
@@ -40,6 +39,7 @@ from ...fixtures.utils import (
     MockUserTokenDao,
     get_claims_from_token,
     headers_for_session,
+    mock_userinfo,
 )
 from .fixtures import (
     AUTH_PATH,
@@ -60,13 +60,6 @@ USER_INFO = {
     "email": "john@home.org",
     "sub": "john@aai.org",
 }
-RE_USER_INFO_URL = re.compile(".*/userinfo$")
-
-
-@pytest.fixture
-def non_mocked_hosts() -> list:
-    """Do not mock requests to the test server."""
-    return ["testserver"]
 
 
 def assert_no_authorization_header(response):
@@ -314,9 +307,9 @@ async def test_post_user_with_session_and_invalid_csrf(
     assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
 
 
-async def test_post_user_with_session(bare_client: BareClient, httpx_mock: HTTPXMock):
+async def test_post_user_with_session(bare_client: BareClient, mock_router: MockRouter):
     """Test user registration with session and valid CSRF token."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao(ext_id="not.john@aai.org")
@@ -387,10 +380,10 @@ async def test_put_user_with_session_and_invalid_csrf(
 
 async def test_put_unregistered_user_with_session(
     bare_client: BareClient,
-    httpx_mock: HTTPXMock,
+    mock_router: MockRouter,
 ):
     """Test updating an unregistered user with session."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao(ext_id="not.john@aai.org")
@@ -406,10 +399,10 @@ async def test_put_unregistered_user_with_session(
 
 
 async def test_put_registered_user_with_session(
-    bare_client: BareClient, httpx_mock: HTTPXMock
+    bare_client: BareClient, mock_router: MockRouter
 ):
     """Test updating a registered user with session."""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao()

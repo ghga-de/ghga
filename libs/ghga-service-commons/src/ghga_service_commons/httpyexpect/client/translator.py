@@ -43,7 +43,7 @@ class ResponseTranslator:
 
         Args:
             response:
-                A response to an HTTP call performed e.g. with the `httpx` or `requests`
+                A response to an HTTP call performed e.g. with the `httpx2` or `requests`
                 library.
             exception_map:
                 An exception mapping specifying translations between status codes plus

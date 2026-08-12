@@ -20,8 +20,6 @@ in the API.
 from typing import Annotated
 from uuid import uuid4
 
-from ghga_event_schemas.pydantic_ import AccessRequestStatus
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
     UUID4,
     BaseModel,
@@ -31,6 +29,9 @@ from pydantic import (
     StringConstraints,
     model_validator,
 )
+
+from ghga_event_schemas.pydantic_ import AccessRequestStatus
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 __all__ = [
     "AccessRequest",

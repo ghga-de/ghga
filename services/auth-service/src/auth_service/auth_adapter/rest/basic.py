@@ -88,10 +88,10 @@ def add_basic_auth_exception_handler(app: FastAPI, config: Config):
     """Add an exception handler if needed for Basic authentication."""
     allowed_credentials = get_allowed_credentials(config)
     if not allowed_credentials:
-        return None
+        return
     realm = config.basic_auth_realm
     if not realm:
-        return None
+        return
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request, exc):

@@ -16,14 +16,13 @@
 
 """DAO translators for accessing the database."""
 
+from ars.core import models
+from ars.ports.outbound.daos import AccessRequestDaoPort, DatasetDaoPort
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs.stateful import AccessRequestEventsConfig
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.protocols.daopub import DaoPublisherFactoryProtocol
-
-from ars.core import models
-from ars.ports.outbound.daos import AccessRequestDaoPort, DatasetDaoPort
 
 __all__ = ["AccessRequestDaoConfig", "get_access_request_dao", "get_dataset_dao"]
 

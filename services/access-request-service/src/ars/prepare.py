@@ -20,11 +20,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 from typing import NamedTuple
 
+import httpx2
 from fastapi import FastAPI
-from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
-from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
-from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 from ars.adapters.inbound.event_sub import EventSubTranslator
 from ars.adapters.inbound.fastapi_ import dummies
@@ -35,6 +32,10 @@ from ars.config import Config
 from ars.core.repository import AccessRequestRepository
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
 from ars.ports.outbound.daos import AccessRequestDaoPort
+from ghga_service_commons.auth.ghga import AuthContext, GHGAAuthContextProvider
+from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
 
 @asynccontextmanager
@@ -55,12 +56,20 @@ async def prepare_access_request_dao(
 async def prepare_core(
     *,
     config: Config,
+    access_grants_transport: httpx2.AsyncBaseTransport | None = None,
 ) -> AsyncGenerator[AccessRequestRepositoryPort]:
-    """Constructs and initializes all core components and their outbound dependencies."""
+    """Constructs and initializes all core components and their outbound dependencies.
+
+    By default, the access grants adapter talks to the download access API over the
+    network, but you can intercept its requests using the access_grants_transport
+    parameter.
+    """
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
         prepare_access_request_dao(config=config) as access_request_dao,
-        AccessGrantsAdapter.construct(config=config) as access_grants,
+        AccessGrantsAdapter.construct(
+            config=config, transport=access_grants_transport
+        ) as access_grants,
     ):
         dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
         yield AccessRequestRepository(

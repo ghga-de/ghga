@@ -16,8 +16,8 @@
 """Tests for NS DB migrations."""
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from ns.migrations import run_db_migrations
 from tests.fixtures.config import get_config
 

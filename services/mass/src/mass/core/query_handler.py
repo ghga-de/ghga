@@ -17,10 +17,10 @@
 
 import logging
 
-from hexkit.custom_types import JsonObject
-from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import ValidationError
 
+from hexkit.custom_types import JsonObject
+from hexkit.protocols.dao import ResourceNotFoundError
 from mass.config import SearchableClassesConfig
 from mass.core import models
 from mass.ports.inbound.query_handler import QueryHandlerPort

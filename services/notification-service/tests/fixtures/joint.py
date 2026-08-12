@@ -19,14 +19,15 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from ns.config import Config
 from ns.inject import prepare_core, prepare_event_subscriber
 from ns.ports.inbound.notifier import NotifierPort
 from tests.fixtures.config import SMTP_TEST_CONFIG, get_config
+from tests.fixtures.lox24 import Lox24Mock
 
 
 @dataclass
@@ -38,6 +39,7 @@ class JointFixture:
     mongodb: MongoDbFixture
     event_subscriber: KafkaEventSubscriber
     notifier: NotifierPort
+    lox24: Lox24Mock
 
 
 @pytest_asyncio.fixture()
@@ -45,13 +47,16 @@ async def joint_fixture(
     request,
     kafka: KafkaFixture,
     mongodb: MongoDbFixture,
+    lox24: Lox24Mock,
 ) -> AsyncGenerator[JointFixture]:
     """A fixture that embeds all other fixtures for integration testing"""
     # merge configs from different sources with the default one:
     config = get_config(sources=[kafka.config, mongodb.config, SMTP_TEST_CONFIG])
-    # prepare the core and the event subscriber
+    # prepare the core and the event subscriber, with the SMS gateway mocked out
     async with (
-        prepare_core(config=config) as notifier,
+        prepare_core(
+            config=config, sms_transport_override=lox24.as_transport()
+        ) as notifier,
         prepare_event_subscriber(
             config=config, notifier_override=notifier
         ) as event_subscriber,
@@ -62,4 +67,5 @@ async def joint_fixture(
             mongodb=mongodb,
             event_subscriber=event_subscriber,
             notifier=notifier,
+            lox24=lox24,
         )

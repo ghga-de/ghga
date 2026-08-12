@@ -23,11 +23,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from uuid import UUID
 
-import httpx
-from ghga_service_commons.utils.utc_dates import UTCDatetime
+import httpx2
 from pydantic import UUID4, Field, HttpUrl
 from pydantic_settings import BaseSettings
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from wps.constants import TRACER
 from wps.ports.outbound.access import AccessCheckPort
 
@@ -53,7 +53,7 @@ class AccessCheckConfig(BaseSettings):
 class AccessCheckAdapter(AccessCheckPort):
     """An adapter for checking access permissions for datasets."""
 
-    def __init__(self, *, config: AccessCheckConfig, client: httpx.AsyncClient):
+    def __init__(self, *, config: AccessCheckConfig, client: httpx2.AsyncClient):
         """Configure the access grant adapter."""
         base_url = str(config.access_url).rstrip("/")
         self._download_url = f"{base_url}/download-access"
@@ -63,10 +63,17 @@ class AccessCheckAdapter(AccessCheckPort):
     @classmethod
     @asynccontextmanager
     async def construct(
-        cls, *, config: AccessCheckConfig
+        cls,
+        *,
+        config: AccessCheckConfig,
+        transport: httpx2.AsyncBaseTransport | None = None,
     ) -> AsyncGenerator["AccessCheckAdapter"]:
-        """Setup AccessGrantsAdapter with the given config."""
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        """Setup AccessGrantsAdapter with the given config.
+
+        `transport` replaces the transport that actually performs the requests.
+        It is meant for tests, which can supply a mock transport instead.
+        """
+        async with httpx2.AsyncClient(timeout=TIMEOUT, transport=transport) as client:
             yield cls(config=config, client=client)
 
     @TRACER.start_as_current_span("AccessCheckAdapter.check_download_access")
@@ -80,9 +87,9 @@ class AccessCheckAdapter(AccessCheckPort):
         url = f"{self._download_url}/users/{user_id}/datasets/{dataset_id}"
         response = await self._client.get(url)
         status_code = response.status_code
-        if status_code == httpx.codes.NOT_FOUND:
+        if status_code == httpx2.codes.NOT_FOUND:
             return None
-        if status_code != httpx.codes.OK:
+        if status_code != httpx2.codes.OK:
             reason_phrase = response.reason_phrase
             msg = "Unexpected response when checking download access for a dataset"
             log.error(
@@ -134,9 +141,9 @@ class AccessCheckAdapter(AccessCheckPort):
         url = f"{self._download_url}/users/{user_id}/datasets"
         response = await self._client.get(url)
         status_code = response.status_code
-        if status_code == httpx.codes.NOT_FOUND:
+        if status_code == httpx2.codes.NOT_FOUND:
             return {}
-        if status_code != httpx.codes.OK:
+        if status_code != httpx2.codes.OK:
             reason_phrase = response.reason_phrase
             msg = "Unexpected response when fetching download access list"
             log.error(
@@ -192,9 +199,9 @@ class AccessCheckAdapter(AccessCheckPort):
         url = f"{self._upload_url}/users/{user_id}/boxes/{research_data_upload_box_id}"
         response = await self._client.get(url)
         status_code = response.status_code
-        if status_code == httpx.codes.NOT_FOUND:
+        if status_code == httpx2.codes.NOT_FOUND:
             return None
-        if status_code != httpx.codes.OK:
+        if status_code != httpx2.codes.OK:
             reason_phrase = response.reason_phrase
             msg = "Unexpected response when checking upload access to a box"
             log.error(
@@ -252,9 +259,9 @@ class AccessCheckAdapter(AccessCheckPort):
         url = f"{self._upload_url}/users/{user_id}/boxes"
         response = await self._client.get(url)
         status_code = response.status_code
-        if status_code == httpx.codes.NOT_FOUND:
+        if status_code == httpx2.codes.NOT_FOUND:
             return {}
-        if status_code != httpx.codes.OK:
+        if status_code != httpx2.codes.OK:
             reason_phrase = response.reason_phrase
             msg = "Unexpected response when fetching upload access list"
             log.error(

@@ -22,10 +22,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ghga_service_commons.utils.crypt import encrypt
 from pydantic import BaseModel
 
 from ghga_datasteward_kit.exceptions import UnknownStorageAliasError
+from ghga_service_commons.utils.crypt import encrypt
 
 LOG = logging.getLogger(__name__)
 

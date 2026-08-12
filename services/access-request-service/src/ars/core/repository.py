@@ -22,8 +22,6 @@ from operator import attrgetter
 from typing import Any, cast
 from uuid import UUID
 
-from ghga_service_commons.auth.ghga import AuthContext, has_role
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4, Field
 from pydantic_settings import BaseSettings
 
@@ -43,6 +41,8 @@ from ars.ports.outbound.daos import (
     DatasetDaoPort,
     ResourceNotFoundError,
 )
+from ghga_service_commons.auth.ghga import AuthContext, has_role
+from hexkit.utils import now_utc_ms_prec
 
 __all__ = ["AccessRequestConfig", "AccessRequestRepository"]
 

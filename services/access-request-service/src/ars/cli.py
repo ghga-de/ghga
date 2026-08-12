@@ -19,9 +19,9 @@ import asyncio
 from typing import Annotated
 
 import typer
-from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 
 from ars.main import consume_events, publish_events, run_rest_app
+from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 
 cli = typer.Typer()
 

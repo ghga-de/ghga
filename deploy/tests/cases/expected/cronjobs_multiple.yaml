@@ -1,0 +1,43 @@
+deployment:
+  name: test-my-app
+  command:
+  - sh
+  - -c
+  args:
+  - /usr/local/bin/sleep 100000000
+
+cleanup:
+  name: test-my-app-cleanup
+  containerName: test-my-app-cleanup
+  schedule: "0 3 * * *"
+  successfulJobsHistoryLimit: 2
+  command:
+  - sh
+  - -c
+  args:
+  - /usr/local/bin/cleanup-tool --dry-run
+  resources:
+    limits:
+      cpu: "250m"
+      memory: "256M"
+    requests:
+      cpu: "100m"
+      memory: "128M"
+
+report:
+  name: test-my-app-report
+  containerName: test-my-app-report
+  schedule: "0 * * * *"
+  successfulJobsHistoryLimit: 5
+  command:
+  - sh
+  - -c
+  args:
+  - /usr/local/bin/sleep 100000000
+  resources:
+    limits:
+      cpu: "1500m"
+      memory: "2048M"
+    requests:
+      cpu: "1000m"
+      memory: "1024M"

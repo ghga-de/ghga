@@ -19,7 +19,6 @@
 from datetime import timedelta
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
-
 from metldata.submission_registry.models import (
     StatusChange,
     Submission,

@@ -23,11 +23,11 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
+
 from ghga_service_commons.auth.context import AuthContext
 from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.utils import now_utc_ms_prec
-
 from rs.config import Config
 from rs.core import models
 from rs.core.files import FileController
@@ -466,6 +466,110 @@ async def test_get_upload_box_files_happy(rig: JointRig, populated_boxes: list[U
     assert result.items == test_file_uploads
     _, kwargs = rig.file_upload_box_client.get_file_upload_list.call_args  # type: ignore
     assert kwargs["with_checksums"] is True
+
+
+async def test_get_upload_box_files_sorted_by_accession(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test sorting a box's file uploads by accession.
+
+    The file box service doesn't know the accessions, so the whole box has to be
+    fetched, sorted, and paginated locally.
+    """
+    # Four files, of which only the middle two have been assigned an accession
+    file_ids = [uuid4() for _ in range(4)]
+    test_file_uploads = [
+        _make_file_upload(file_id, i) for i, file_id in enumerate(file_ids)
+    ]
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF002", file_id=file_ids[1])
+    )
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=file_ids[2])
+    )
+
+    box_id = populated_boxes[0]
+    rig.access_client.check_box_access.return_value = [box_id]  # type: ignore
+
+    result = await rig.rdub_manager.get_upload_box_files(
+        box_id=box_id, auth_context=USER1_AUTH_CONTEXT, sort=["accession"]
+    )
+
+    # Like in MongoDB, the unmapped files sort below the ones with an accession,
+    # and they keep their relative order
+    assert [f.accession for f in result.items] == [None, None, "GHGAF001", "GHGAF002"]
+    assert [f.alias for f in result.items] == ["test0", "test3", "test2", "test1"]
+    assert result.total_count == 4
+
+    # The box was fetched in its entirety instead of page by page
+    rig.file_upload_box_client.get_all_file_uploads.assert_called_once()  # type: ignore
+    rig.file_upload_box_client.get_file_upload_list.assert_not_called()  # type: ignore
+
+    # Descending order puts the unmapped files last
+    result = await rig.rdub_manager.get_upload_box_files(
+        box_id=box_id, auth_context=USER1_AUTH_CONTEXT, sort=["-accession"]
+    )
+    assert [f.accession for f in result.items] == ["GHGAF002", "GHGAF001", None, None]
+    assert [f.alias for f in result.items] == ["test1", "test2", "test0", "test3"]
+
+    # Pagination is applied after sorting, the total count stays unpaginated
+    result = await rig.rdub_manager.get_upload_box_files(
+        box_id=box_id,
+        auth_context=USER1_AUTH_CONTEXT,
+        skip=1,
+        limit=2,
+        sort=["accession"],
+    )
+    assert [f.accession for f in result.items] == [None, "GHGAF001"]
+    assert result.total_count == 4
+
+    # with_checksums is forwarded when the box is fetched in its entirety
+    await rig.rdub_manager.get_upload_box_files(
+        box_id=box_id,
+        auth_context=USER1_AUTH_CONTEXT,
+        sort=["accession"],
+        with_checksums=True,
+    )
+    _, kwargs = rig.file_upload_box_client.get_all_file_uploads.call_args  # type: ignore
+    assert kwargs["with_checksums"] is True
+
+
+async def test_get_upload_box_files_sorted_by_accession_and_other_fields(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that the accession can be combined with other fields in the sort order."""
+    # Two files per state, with one accession assigned in each state
+    file_ids = [uuid4() for _ in range(4)]
+    test_file_uploads = [
+        _make_file_upload(file_id, i) for i, file_id in enumerate(file_ids)
+    ]
+    for file_upload in test_file_uploads[2:]:
+        file_upload.state = "archived"
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=file_ids[1])
+    )
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF002", file_id=file_ids[2])
+    )
+
+    box_id = populated_boxes[0]
+    rig.access_client.check_box_access.return_value = [box_id]  # type: ignore
+
+    result = await rig.rdub_manager.get_upload_box_files(
+        box_id=box_id, auth_context=USER1_AUTH_CONTEXT, sort=["state", "accession"]
+    )
+
+    # The states are ordered first ("archived" before "inbox"), and within each state
+    # the file without an accession comes first
+    assert [(f.state, f.accession) for f in result.items] == [
+        ("archived", None),
+        ("archived", "GHGAF002"),
+        ("inbox", None),
+        ("inbox", "GHGAF001"),
+    ]
+    assert [f.alias for f in result.items] == ["test3", "test2", "test0", "test1"]
 
 
 async def test_get_upload_box_files_access_error(

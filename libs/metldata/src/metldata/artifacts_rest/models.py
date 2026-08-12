@@ -16,10 +16,10 @@
 
 """Data models."""
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from metldata.custom_types import Json
 from metldata.model_utils.anchors import AnchorPoint
 

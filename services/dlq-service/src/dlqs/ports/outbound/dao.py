@@ -14,8 +14,7 @@
 # limitations under the License.
 """DAO definition"""
 
-from hexkit.protocols.dao import Dao, ResourceNotFoundError  # noqa: F401
-
 from dlqs.models import StoredDLQEvent
+from hexkit.protocols.dao import Dao, ResourceNotFoundError  # noqa: F401
 
 EventDaoPort = Dao[StoredDLQEvent]

@@ -36,6 +36,7 @@ const testIva: Iva = {
  */
 class MockIvaService {
   loadUserIvas = () => undefined;
+  reloadUserIvas = vitest.fn();
   userIvas = { value: () => [], isLoading: () => false, error: () => undefined };
   requestCodeForIva = vitest.fn();
 }
@@ -64,6 +65,11 @@ describe('UserIvaListComponent', () => {
     fixture = TestBed.createComponent(UserIvaListComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
+  });
+
+  it('should fetch the IVAs again when refreshed', () => {
+    component.reload();
+    expect(ivaService.reloadUserIvas).toHaveBeenCalledTimes(1);
   });
 
   it('should create', () => {

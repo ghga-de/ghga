@@ -18,9 +18,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
-from hexkit.protocols.eventpub import EventPublisherProtocol
-from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
-from hexkit.providers.mongodb import MongoDbDaoFactory
 
 from dlqs.adapters.inbound.event_sub import DLQSubTranslator
 from dlqs.adapters.inbound.fastapi_ import dummies
@@ -29,6 +26,9 @@ from dlqs.adapters.outbound.dao import EventDaoPort, get_event_dao
 from dlqs.config import Config
 from dlqs.core.dlq_manager import DLQManager
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
+from hexkit.protocols.eventpub import EventPublisherProtocol
+from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
+from hexkit.providers.mongodb import MongoDbDaoFactory
 
 
 @asynccontextmanager

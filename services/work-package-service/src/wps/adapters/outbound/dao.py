@@ -17,7 +17,6 @@
 
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import DaoFactoryProtocol
-
 from wps.core import models
 from wps.core.repository import WorkPackageConfig
 from wps.ports.outbound.dao import (

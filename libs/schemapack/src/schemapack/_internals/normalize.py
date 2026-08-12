@@ -240,14 +240,14 @@ def _process_recursion(
             )
             for target_id in sorted(resource_ids)
         ]
-    elif isinstance(resource_ids, str):
+    if isinstance(resource_ids, str):
         return _recursive_denormalize(
             context,
             class_name,
             resource_ids,
         )
-    else:
-        return None
+
+    return None
 
 
 def _recursive_denormalize(

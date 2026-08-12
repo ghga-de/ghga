@@ -19,7 +19,6 @@
 from typing import TypeAlias
 
 from hexkit.protocols.dao import Dao, ResourceAlreadyExistsError, ResourceNotFoundError
-
 from ns.models import EventId
 
 __all__ = ["EventIdDaoPort", "ResourceAlreadyExistsError", "ResourceNotFoundError"]

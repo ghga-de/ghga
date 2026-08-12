@@ -21,9 +21,6 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from hexkit.custom_types import Ascii, JsonObject
-from hexkit.protocols.eventpub import EventPublisherProtocol
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from auth_service.user_registry.models.ivas import Iva, IvaState, IvaType
@@ -31,6 +28,9 @@ from auth_service.user_registry.translators.event_pub import (
     EventPubTranslator,
     EventPubTranslatorConfig,
 )
+from hexkit.custom_types import Ascii, JsonObject
+from hexkit.protocols.eventpub import EventPublisherProtocol
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import PHONE_OF_JOHN
 
 default_config = EventPubTranslatorConfig(

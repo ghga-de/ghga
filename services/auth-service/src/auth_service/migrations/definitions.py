@@ -18,6 +18,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+from auth_service.config import Config
 from hexkit.providers.mongodb.migrations import (
     Document,
     MigrationDefinition,
@@ -25,8 +26,6 @@ from hexkit.providers.mongodb.migrations import (
 )
 from hexkit.providers.mongodb.migrations.helpers import convert_uuids_and_datetimes_v6
 from hexkit.utils import round_datetime_to_ms
-
-from auth_service.config import Config
 
 
 class V2Migration(MigrationDefinition, Reversible):
@@ -97,7 +96,7 @@ class V2Migration(MigrationDefinition, Reversible):
 
         async def _convert_claim(doc: Document) -> Document:
             """Convert a claims doc"""
-            doc = _convert_fields(
+            return _convert_fields(
                 doc=doc,
                 uuid_fields=["_id", "iva_id", "user_id"],
                 date_fields=[
@@ -108,7 +107,6 @@ class V2Migration(MigrationDefinition, Reversible):
                     "revocation_date",
                 ],
             )
-            return doc
 
         _convert_core_iva_fields = convert_uuids_and_datetimes_v6(
             uuid_fields=["user_id"],

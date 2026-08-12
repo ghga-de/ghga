@@ -55,6 +55,7 @@ class MockUploadBoxService {
   };
 
   lockUploadBox = vitest.fn();
+  reloadUserGrants = vitest.fn();
 
   /**
    * Test helper: set the loaded grants.
@@ -122,6 +123,15 @@ describe('UserUploadGrantsListComponent', () => {
   });
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should fetch the user grants again when the account page is opened', () => {
+    expect(uploadBoxService.reloadUserGrants).toHaveBeenCalledTimes(1);
+  });
+
+  it('should fetch the user grants again when refreshed', () => {
+    component.refresh();
+    expect(uploadBoxService.reloadUserGrants).toHaveBeenCalledTimes(2);
   });
 
   it('should show a loading indicator while grants are loading', async () => {

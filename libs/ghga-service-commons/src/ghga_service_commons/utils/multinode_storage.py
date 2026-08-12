@@ -17,9 +17,10 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic_settings import BaseSettings
+
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.providers.s3 import S3Config, S3ObjectStorage
-from pydantic_settings import BaseSettings
 
 __all__ = [
     "ObjectStorages",

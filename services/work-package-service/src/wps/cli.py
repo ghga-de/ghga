@@ -18,8 +18,8 @@
 import asyncio
 
 import typer
-from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 
+from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from wps.main import consume_events, migrate_db, run_rest_app
 
 cli = typer.Typer()

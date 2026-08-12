@@ -17,12 +17,6 @@
 import logging
 from contextlib import suppress
 
-from ghga_event_schemas.pydantic_ import (
-    FileAccessionMapping,
-    FileInternallyRegistered,
-    MetadataDatasetOverview,
-)
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import UUID4
 
 from dins.core.models import (
@@ -39,6 +33,12 @@ from dins.ports.inbound.dao import (
     PendingFileInfoDaoPort,
 )
 from dins.ports.inbound.information_service import InformationServicePort
+from ghga_event_schemas.pydantic_ import (
+    FileAccessionMapping,
+    FileInternallyRegistered,
+    MetadataDatasetOverview,
+)
+from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 
 log = logging.getLogger(__name__)
 

@@ -22,7 +22,6 @@ from datetime import timedelta
 from random import randint
 
 import pytest
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import AnyHttpUrl, SecretStr
 
 from auth_service.auth_adapter.core.totp import (
@@ -31,6 +30,7 @@ from auth_service.auth_adapter.core.totp import (
     TOTPHandler,
     TOTPToken,
 )
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 
 @pytest.fixture(name="totp_handler")

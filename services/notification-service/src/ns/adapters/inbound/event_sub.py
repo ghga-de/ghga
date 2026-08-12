@@ -24,7 +24,6 @@ from ghga_event_schemas.pydantic_ import EmailNotification, SmsNotification
 from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-
 from ns.models import EventId
 from ns.ports.inbound.notifier import NotifierPort
 from ns.ports.outbound.dao import EventIdDaoPort, ResourceNotFoundError

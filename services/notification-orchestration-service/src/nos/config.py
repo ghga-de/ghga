@@ -15,12 +15,12 @@
 
 """Config Parameter Modeling and Parsing."""
 
+from pydantic import Field, HttpUrl
+
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb.migrations import MigrationConfig
-from pydantic import Field, HttpUrl
-
 from nos.adapters.inbound.event_sub import (
     EventSubTranslatorConfig,
     OutboxSubTranslatorConfig,

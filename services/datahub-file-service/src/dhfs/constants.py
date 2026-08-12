@@ -37,12 +37,12 @@ DOWNLOAD_URL_LIFESPAN = 300  # five minutes
 DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - 5
 URL_CACHE_SIZE = 250
 SQUASHED_LOGGERS = [
-    "httpx",
+    "httpx2",
     "crypt4gh",
     "hexkit",
     "ghga_service_commons",
     "boto3",
     "botocore",
-    "httpcore",
+    "httpcore2",
     "urllib3",
 ]

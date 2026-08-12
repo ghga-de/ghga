@@ -17,8 +17,8 @@
 """Test the query_resource module."""
 
 import pytest
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 from metldata.artifacts_rest.query_resources import query_artifact_resource
 from tests.artifact_rest.test_load_artifacts import load_example_artifact_resources
 from tests.fixtures.artifact_info import MINIMAL_ARTIFACT_INFO

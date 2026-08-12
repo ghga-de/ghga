@@ -20,10 +20,10 @@ from collections.abc import AsyncGenerator
 from urllib.parse import parse_qs, urlparse
 
 from fastapi import status
-from ghga_service_commons.api.testing import AsyncTestClient
 from pytest import mark
 from pytest_asyncio import fixture as async_fixture
 
+from ghga_service_commons.api.testing import AsyncTestClient
 from top import __version__
 from top.api.main import app, oidc_provider
 

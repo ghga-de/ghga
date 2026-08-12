@@ -22,7 +22,6 @@ from hexkit.providers.mongodb.migrations import (
     MigrationDefinition,
     Reversible,
 )
-
 from wps.config import Config
 from wps.core.models import Dataset
 

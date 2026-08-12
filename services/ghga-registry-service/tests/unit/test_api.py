@@ -19,9 +19,9 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.utils import now_utc_ms_prec
-
 from rs.config import Config
 from rs.core.models import (
     BoxRetrievalResults,
@@ -533,6 +533,19 @@ async def test_list_upload_box_files(
         _, kwargs = rdub_manager.rdub_manager.get_upload_box_files.call_args
         assert kwargs["sort"] == ["alias", "-state"]
         assert kwargs["with_checksums"] is True
+
+        # Verify that the accession is accepted as a sort field, even though it is not
+        # a field of the file uploads as provided by the file box service
+        rdub_manager.reset_mock()
+        rdub_manager.rdub_manager.get_upload_box_files.return_value = BoxUploadsPage(
+            items=file_list, total_count=len(file_list)
+        )
+        response = await rest_client.get(
+            url, headers=user_auth_headers, params={"sort": "-accession,alias"}
+        )
+        assert response.status_code == 200
+        _, kwargs = rdub_manager.rdub_manager.get_upload_box_files.call_args
+        assert kwargs["sort"] == ["-accession", "alias"]
 
         # handle box access error from core
         rdub_manager.reset_mock()

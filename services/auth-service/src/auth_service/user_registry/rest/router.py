@@ -23,11 +23,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, Path, Query, Response
 from fastapi.exceptions import HTTPException
-from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import UUID4
 
 from auth_service.auth_adapter.deps import UserTokenDaoDependency
 from auth_service.constants import TRACER
+from hexkit.protocols.dao import ResourceNotFoundError
 
 from ...auth_adapter.rest.dto import TOTPTokenResponse
 from ...rest.auth import (

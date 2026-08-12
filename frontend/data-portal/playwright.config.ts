@@ -32,8 +32,16 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   /* Default to 1 worker for stability; override with PLAYWRIGHT_WORKERS. */
   workers: workerCount,
-  /* Stop after first failure */
-  maxFailures: 1,
+  /* Generous budgets, since the tests are much slower on CI runners than locally:
+     logging in and reaching an admin page alone takes about 15 seconds there, and
+     even a mocked request can take well over a second. These are upper bounds for
+     tests that are stuck, not targets — do not treat a passing slow test as fine. */
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
+  /* Stop early, but on CI leave room for one broken test to be reported for each
+     browser (plus a little headroom) instead of aborting the rest of the run
+     after the first of them. Locally, failing on the first one is quicker. */
+  maxFailures: process.env.CI ? 5 : 1,
   /* Reporter to use. Keep HTML report generation, but never auto-open it. */
   reporter: [['html', { open: 'never' }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */

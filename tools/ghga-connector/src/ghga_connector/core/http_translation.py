@@ -19,7 +19,8 @@ Adds wrapper classes to translate httpyexpect errors and check against
 provided exception specs for all API endpoints
 """
 
-import httpx
+import httpx2
+
 from ghga_service_commons.httpyexpect.client import ExceptionMapping, ResponseTranslator
 
 
@@ -30,7 +31,7 @@ class ResponseExceptionTranslator:
     def __init__(self, *, spec: dict[int, object]) -> None:
         self._exception_map = ExceptionMapping(spec)
 
-    def handle(self, response: httpx.Response):
+    def handle(self, response: httpx2.Response):
         """Translate and raise error, if defined by spec"""
         translator = ResponseTranslator(response, exception_map=self._exception_map)
         translator.raise_for_error()

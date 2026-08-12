@@ -16,10 +16,10 @@
 
 """Contains the ResourceDaoCollection, which houses a DAO for each resource class"""
 
-from hexkit.protocols.dao import DaoFactoryProtocol
-from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 from pymongo import TEXT
 
+from hexkit.protocols.dao import DaoFactoryProtocol
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 from mass.config import Config
 from mass.core import models
 from mass.ports.outbound.dao import DaoCollectionPort, ResourceDao

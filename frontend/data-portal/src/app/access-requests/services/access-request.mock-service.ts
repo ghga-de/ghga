@@ -43,6 +43,11 @@ export class MockAccessRequestService {
   loadUserAccessGrants = () => undefined;
   loadAllAccessRequests = () => undefined;
   loadAllAccessGrants = () => undefined;
+  reloadUserAccessRequests = () => undefined;
+  reloadUserAccessGrants = () => undefined;
+  reloadAllAccessRequests = () => undefined;
+  reloadAllAccessGrants = () => undefined;
+  reloadAccessRequest = () => undefined;
   allAccessRequestsFilter = () => ({
     ticketId: '',
     dataset: '',

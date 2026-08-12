@@ -9,6 +9,8 @@ import { computed, inject, Service, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
 import { NotificationService } from '@app/shared/services/notification';
+import { volatileCacheContext } from '@app/shared/utils/http-cache';
+import { CacheBucket, HttpCacheManager } from '@ngneat/cashew';
 import { Observable, tap } from 'rxjs';
 import {
   AccessGrant,
@@ -27,6 +29,7 @@ import {
 export class AccessRequestService {
   #http = inject(HttpClient);
   #auth = inject(AuthService);
+  #httpCache = inject(HttpCacheManager);
   #notification = inject(NotificationService);
   #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #config = inject(ConfigService);
@@ -38,6 +41,22 @@ export class AccessRequestService {
   #userAccessRequestsUrl = (userId: string) =>
     `${this.#arsRequestsUrl}?user_id=${userId}`;
   #userAccessGrantsUrl = (userId: string) => `${this.#arsGrantUrl}?user_id=${userId}`;
+
+  // GET responses are cached by the cashew interceptor (see app.config.ts), so
+  // reloading a resource replays the cached body unless the corresponding cache
+  // entries are dropped first. Each resource collects its keys in a bucket that
+  // the reload methods below invalidate.
+  #userRequestsBucket = new CacheBucket();
+  #allRequestsBucket = new CacheBucket();
+  #requestBucket = new CacheBucket();
+  #userGrantsBucket = new CacheBucket();
+  #allGrantsBucket = new CacheBucket();
+
+  #userRequestsContext = volatileCacheContext(this.#userRequestsBucket);
+  #allRequestsContext = volatileCacheContext(this.#allRequestsBucket);
+  #requestContext = volatileCacheContext(this.#requestBucket);
+  #userGrantsContext = volatileCacheContext(this.#userGrantsBucket);
+  #allGrantsContext = volatileCacheContext(this.#allGrantsBucket);
 
   performAccessRequest = (data: AccessRequestDetailData) => {
     this.#http
@@ -51,7 +70,7 @@ export class AccessRequestService {
       })
       .subscribe({
         next: () => {
-          this.userAccessRequests.reload();
+          this.reloadUserAccessRequests();
           this.#notification.showSuccess(
             'Your access request has been submitted successfully.',
           );
@@ -71,7 +90,11 @@ export class AccessRequestService {
   userAccessRequests = httpResource<AccessRequest[]>(
     () => {
       const userId = this.#userId();
-      return userId ? this.#userAccessRequestsUrl(userId) : undefined;
+      if (!userId) return undefined;
+      return {
+        url: this.#userAccessRequestsUrl(userId),
+        context: this.#userRequestsContext,
+      };
     },
     {
       parse: (raw) =>
@@ -81,6 +104,35 @@ export class AccessRequestService {
       defaultValue: [],
     },
   );
+
+  /**
+   * Drop all cached access request and grant responses after one of them has
+   * been changed. Only some of the lists are patched locally, and allowing a
+   * request creates a grant, so the two are always invalidated together.
+   */
+  #invalidateRequestsAndGrants(): void {
+    this.#httpCache.delete(this.#userRequestsBucket);
+    this.#httpCache.delete(this.#allRequestsBucket);
+    this.#httpCache.delete(this.#requestBucket);
+    this.#httpCache.delete(this.#userGrantsBucket);
+    this.#httpCache.delete(this.#allGrantsBucket);
+  }
+
+  /**
+   * Fetch the current user's access requests again, bypassing the HTTP cache.
+   */
+  reloadUserAccessRequests(): void {
+    this.#httpCache.delete(this.#userRequestsBucket);
+    this.userAccessRequests.reload();
+  }
+
+  /**
+   * Fetch the current user's access grants again, bypassing the HTTP cache.
+   */
+  reloadUserAccessGrants(): void {
+    this.#httpCache.delete(this.#userGrantsBucket);
+    this.userAccessGrants.reload();
+  }
 
   /**
    * This function computes the number of full days between now and the date provided
@@ -112,6 +164,20 @@ export class AccessRequestService {
    */
   loadAllAccessRequests(): void {
     this.#loadAllAccessRequests.set(true);
+  }
+
+  /**
+   * Fetch all users' access requests again, bypassing the HTTP cache.
+   * Requests are created and processed by others while the manager is open, so
+   * entering it must not show what was fetched earlier in the session.
+   */
+  reloadAllAccessRequests(): void {
+    this.#httpCache.delete(this.#allRequestsBucket);
+    if (this.#loadAllAccessRequests()) {
+      this.allAccessRequests.reload();
+    } else {
+      this.loadAllAccessRequests();
+    }
   }
 
   /**
@@ -147,7 +213,10 @@ export class AccessRequestService {
    * but in principle we can also do some filtering on the sever.
    */
   allAccessRequests = httpResource<AccessRequest[]>(
-    () => (this.#loadAllAccessRequests() ? this.#arsRequestsUrl : undefined),
+    () =>
+      this.#loadAllAccessRequests()
+        ? { url: this.#arsRequestsUrl, context: this.#allRequestsContext }
+        : undefined,
     {
       defaultValue: [],
     },
@@ -234,12 +303,30 @@ export class AccessRequestService {
     this.#loadSingle.set(id);
   }
 
+  /**
+   * Fetch an individual access request again, bypassing the HTTP cache.
+   * Requesting the one that is already loaded would otherwise not issue any
+   * request at all, since the resource request would remain unchanged.
+   * @param id - the ID of the access request to load
+   */
+  reloadAccessRequest(id: string): void {
+    this.#httpCache.delete(this.#requestBucket);
+    if (this.#loadSingle() === id) {
+      this.accessRequest.reload();
+    } else {
+      this.loadAccessRequest(id);
+    }
+  }
+
   /** Resource for loading an individual access request. */
   accessRequest = httpResource<AccessRequest>(
     () => {
       const id = this.#loadSingle();
       if (!id) return undefined;
-      return `${this.#arsRequestsUrl}/${id}`;
+      return {
+        url: `${this.#arsRequestsUrl}/${id}`,
+        context: this.#requestContext,
+      };
     },
     {
       defaultValue: undefined,
@@ -252,6 +339,7 @@ export class AccessRequestService {
    * @param changes - the changes to the access request which may be partial
    */
   #updateAccessRequestLocally(id: string, changes: Partial<AccessRequest>): void {
+    this.#invalidateRequestsAndGrants();
     const withStatusChange = (
       request: AccessRequest,
       changes: Partial<AccessRequest>,
@@ -314,8 +402,16 @@ export class AccessRequestService {
   loadAllAccessGrants(force?: boolean): void {
     this.#loadAllAccessGrants.set(true);
     if (force) {
+      this.#httpCache.delete(this.#allGrantsBucket);
       this.allAccessGrantsResource.reload();
     }
+  }
+
+  /**
+   * Fetch all users' access grants again, bypassing the HTTP cache.
+   */
+  reloadAllAccessGrants(): void {
+    this.loadAllAccessGrants(this.#loadAllAccessGrants());
   }
 
   // Similar structure to what we do for access requests but for access grants
@@ -338,7 +434,10 @@ export class AccessRequestService {
   }
 
   allAccessGrantsResource = httpResource<AccessGrant[]>(
-    () => (this.#loadAllAccessGrants() ? this.#arsGrantUrl : undefined),
+    () =>
+      this.#loadAllAccessGrants()
+        ? { url: this.#arsGrantUrl, context: this.#allGrantsContext }
+        : undefined,
     {
       defaultValue: [],
     },
@@ -488,7 +587,11 @@ export class AccessRequestService {
   userAccessGrants = httpResource<AccessGrant[]>(
     () => {
       const userId = this.#userId();
-      return userId ? this.#userAccessGrantsUrl(userId) : undefined;
+      if (!userId) return undefined;
+      return {
+        url: this.#userAccessGrantsUrl(userId),
+        context: this.#userGrantsContext,
+      };
     },
     {
       parse: (raw) =>
@@ -518,6 +621,7 @@ export class AccessRequestService {
    * @param id - the ID of the grant to remove
    */
   #removeGrantLocally(id: string): void {
+    this.#invalidateRequestsAndGrants();
     if (this.allAccessGrantsResource.error()) return;
     const newGrants = this.allAccessGrantsResource
       .value()

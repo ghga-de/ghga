@@ -19,16 +19,9 @@
 from contextlib import nullcontext
 from uuid import UUID
 
-import httpx
+import httpx2
 import pytest
 from fastapi import FastAPI, Request, Response
-from hexkit.correlation import (
-    CorrelationIdContextError,
-    correlation_id_from_str,
-    get_correlation_id,
-    new_correlation_id,
-    set_new_correlation_id,
-)
 
 from ghga_service_commons.api.api import (
     CORRELATION_ID_HEADER_NAME,
@@ -40,6 +33,13 @@ from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.http.correlation import (
     AsyncClient,
     attach_correlation_id_to_requests,
+)
+from hexkit.correlation import (
+    CorrelationIdContextError,
+    correlation_id_from_str,
+    get_correlation_id,
+    new_correlation_id,
+    set_new_correlation_id,
 )
 
 pytestmark = pytest.mark.asyncio()
@@ -209,7 +209,7 @@ async def test_async_client(generate_correlation_id: bool):
     # Create an AsyncClient instance (NOT AsyncTestClient!)
     async with AsyncClient(
         generate_correlation_id=generate_correlation_id,
-        transport=httpx.ASGITransport(app=app),
+        transport=httpx2.ASGITransport(app=app),
         base_url="http://localhost:8080",
     ) as client:
         # Verify behavior outside of a CID context

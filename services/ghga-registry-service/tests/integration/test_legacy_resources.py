@@ -24,8 +24,8 @@ and experimental metadata itself.
 from uuid import UUID, uuid4
 
 import pytest
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 from rs.adapters.outbound.dao import get_file_accession_dao
 from rs.constants import FILE_ACCESSION_COLLECTION, STUDY_COLLECTION
 from rs.core.legacy_resources import _LEGACY_CREATED_BY

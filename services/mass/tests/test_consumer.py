@@ -18,9 +18,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import KafkaFixture
-
 from mass.core import models
 from mass.inject import prepare_event_subscriber
 from tests.fixtures.config import get_config

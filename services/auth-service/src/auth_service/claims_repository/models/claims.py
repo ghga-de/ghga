@@ -19,7 +19,6 @@ from enum import StrEnum
 from typing import Annotated, Any
 from uuid import uuid4
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import (
     UUID4,
     EmailStr,
@@ -30,6 +29,8 @@ from pydantic import (
     field_serializer,
     field_validator,
 )
+
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 from . import BaseDto
 

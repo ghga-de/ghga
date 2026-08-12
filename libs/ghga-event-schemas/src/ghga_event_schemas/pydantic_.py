@@ -23,8 +23,9 @@ from enum import StrEnum
 from typing import Any, Literal
 from uuid import uuid4
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, Field
+
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 
 class MetadataDatasetStage(StrEnum):

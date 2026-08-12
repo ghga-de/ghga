@@ -22,15 +22,15 @@ from datetime import timedelta
 from typing import cast
 from uuid import UUID
 
+from jwcrypto import jwk
+from pydantic import UUID4, Field, SecretStr
+from pydantic_settings import BaseSettings
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.crypt import encrypt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
-from jwcrypto import jwk
-from pydantic import UUID4, Field, SecretStr
-from pydantic_settings import BaseSettings
-
 from wps.core.models import (
     BoxWithExpiration,
     CloseFileWorkOrder,

@@ -21,8 +21,8 @@ from typing import Any
 from aiokafka import TopicPartition
 from aiokafka.admin import AIOKafkaAdminClient, RecordsToDelete
 from aiokafka.admin.config_resource import ConfigResource, ConfigResourceType
-from hexkit.protocols.eventpub import EventPublisherProtocol
 
+from hexkit.protocols.eventpub import EventPublisherProtocol
 from sms.config import Config
 from sms.models import EventDetails
 from sms.ports.inbound.events_handler import EventsHandlerPort

@@ -24,9 +24,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response, status
 from fastapi.exceptions import HTTPException
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from auth_service.constants import TRACER
@@ -34,6 +31,9 @@ from auth_service.user_registry.deps import (
     IvaDaoDependency,
     UserDaoDependency,
 )
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
+from hexkit.utils import now_utc_ms_prec
 
 from ...user_registry.models.users import User
 from ..core.claims import (
@@ -97,6 +97,7 @@ TAGS: list[str | Enum] = ["access"]
 )
 @TRACER.start_as_current_span("access_router.get_download_access_grants")
 async def get_download_access_grants(  # noqa: PLR0913
+    *,
     claim_dao: ClaimDaoDependency,
     user_dao: UserDaoDependency,
     user_id: Annotated[
@@ -244,6 +245,7 @@ async def revoke_download_access_grant(
 )
 @TRACER.start_as_current_span("access_router.grant_download_access")
 async def grant_download_access(  # noqa: PLR0913
+    *,
     validity: ClaimValidity,
     user_id: Annotated[
         UUID4,
@@ -463,6 +465,7 @@ upload_grant_not_found_error = HTTPException(
 )
 @TRACER.start_as_current_span("access_router.get_upload_access_grants")
 async def get_upload_access_grants(  # noqa: PLR0913
+    *,
     claim_dao: ClaimDaoDependency,
     user_dao: UserDaoDependency,
     user_id: Annotated[
@@ -608,6 +611,7 @@ async def revoke_upload_access_grant(
 )
 @TRACER.start_as_current_span("access_router.grant_upload_access")
 async def grant_upload_access(  # noqa: PLR0913
+    *,
     validity: ClaimValidity,
     user_id: Annotated[
         UUID4,

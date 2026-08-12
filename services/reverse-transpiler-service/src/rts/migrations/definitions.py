@@ -18,8 +18,8 @@
 from contextlib import suppress
 
 from gridfs import AsyncGridFSBucket, NoFile
-from hexkit.providers.mongodb.migrations import MigrationDefinition, Reversible
 
+from hexkit.providers.mongodb.migrations import MigrationDefinition, Reversible
 from rts.adapters.outbound.dao import GridFSDaoFactory
 from rts.models import StudyMetadata
 

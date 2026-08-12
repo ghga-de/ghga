@@ -24,6 +24,12 @@ Import **all repositories except `datahub-test-bed`**. Also exclude the retired
   surface and depend on internal libs, so in-repo keeps them skew-free and tested against HEAD.
 - `datahub-test-bed` stays its own repo: different audience (data hubs verifying *their own* S3
   setup), zero coupling to the cluster.
+- **Documentation repos come in too** (added 2026-08-06): `epic-docs` → `docs/epics/`. It ships
+  no code and is not a `uv` workspace member (`docs/` is outside the `libs/*`, `services/*`,
+  `tools/*` globs), so the ADR-0002 argument does not apply — the case is simply that epic
+  specs are the design record for the code now living here, and splitting the two makes both
+  harder to follow. Imported under a `docs` kind that drops only what cannot function in a
+  monorepo (nested `.devcontainer/`, non-root `.pre-commit-config.yaml`).
 
 The full mapping is [scripts/migration/repos.tsv](../../scripts/migration/repos.tsv).
 

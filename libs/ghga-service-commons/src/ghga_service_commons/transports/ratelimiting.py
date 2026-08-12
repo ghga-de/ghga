@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Provides an httpx.AsyncTransport that handles rate limiting responses."""
+"""Provides an httpx2.AsyncTransport that handles rate limiting responses."""
 
 import asyncio
 import random
@@ -21,14 +21,14 @@ import time
 from logging import getLogger
 from types import TracebackType
 
-import httpx
+import httpx2
 
 from ghga_service_commons.transports.config import RateLimitingTransportConfig
 
 log = getLogger(__name__)
 
 
-class AsyncRateLimitingTransport(httpx.AsyncBaseTransport):
+class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
     """Custom async Transport adding rate limiting handling on top of AsyncHTTPTransport.
 
     If no retry-after header is found in the 429 response, this hands control back to the
@@ -41,7 +41,7 @@ class AsyncRateLimitingTransport(httpx.AsyncBaseTransport):
     """
 
     def __init__(
-        self, config: RateLimitingTransportConfig, transport: httpx.AsyncBaseTransport
+        self, config: RateLimitingTransportConfig, transport: httpx2.AsyncBaseTransport
     ) -> None:
         self._jitter = config.per_request_jitter
         self._transport = transport
@@ -50,7 +50,7 @@ class AsyncRateLimitingTransport(httpx.AsyncBaseTransport):
         self._last_retry_after_received: float = 0
         self._wait_time: float = 0
 
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Handles HTTP requests and adds wait logic for HTTP 429 responses around calls."""
         # Calculate seconds since the last request has been fired and corresponding wait time
         time_elapsed = time.monotonic() - self._last_retry_after_received
@@ -72,6 +72,8 @@ class AsyncRateLimitingTransport(httpx.AsyncBaseTransport):
             await asyncio.sleep(sleep_for)
 
         # Delegate call and update timestamp
+        # Strictly pass request as non kwarg arg to work around Otel httpx
+        # instrumentation trying to extract from arg[0]
         response = await self._transport.handle_async_request(request)
 
         # Update state

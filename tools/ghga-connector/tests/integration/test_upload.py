@@ -15,14 +15,13 @@
 
 """Integration tests for the upload path"""
 
+import json
 from pathlib import Path
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
-import httpx
+import httpx2
 import pytest
-from ghga_service_commons.utils.temp_files import big_temp_file
-from pytest_httpx import HTTPXMock
 
 from ghga_connector import exceptions
 from ghga_connector.config import set_runtime_config
@@ -30,29 +29,24 @@ from ghga_connector.core.client import async_client
 from ghga_connector.core.main import upload_files
 from ghga_connector.core.uploading.structs import CoreFileInfo
 from ghga_connector.core.utils import modify_for_debug
+from ghga_service_commons.utils.temp_files import big_temp_file
 from tests.fixtures.config import get_test_config
-from tests.fixtures.mock_api.app import mock_external_calls  # noqa: F401
+from tests.fixtures.mock_api.apis import (
+    MockApis,
+    mock_apis,  # noqa: F401
+)
+from tests.fixtures.mock_api.router import mock_health_checks
 from tests.fixtures.s3 import S3Fixture, s3_fixture  # noqa: F401
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,
     PUBLIC_KEY_FILE,
+    TEST_STORAGE_ALIAS1,
     patch_work_package_functions,  # noqa: F401
 )
 
 ALIAS = "test-file-1"
 SIZE = 10 * 1024 * 1024
-PART_SIZE = 5 * 1024**2
-FILE_ID = UUID("550e8400-e29b-41d4-a716-446655440002")
-SHORT_LIFESPAN = 10
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.httpx_mock(
-        assert_all_responses_were_requested=False,
-        assert_all_requests_were_expected=False,
-        can_send_already_matched_responses=True,
-        should_mock=lambda request: str(request.url).endswith("/health"),
-    ),
-]
+pytestmark = [pytest.mark.asyncio]
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -62,86 +56,80 @@ def apply_test_config():
         yield
 
 
-def set_presigned_upload_url_update_endpoint(
-    monkeypatch,
-    s3_fixture: S3Fixture,  # noqa: F811
-    *,
-    bucket_id: str,
-    upload_id_ref: list[str],
-):
-    """Temporarily assign the S3 upload URL update endpoint in the mock app.
+class S3BackedUpload:
+    """Runs the Upload API mock against a real multipart upload in the S3 fixture.
 
-    Since creating the URL requires access to the S3 fixture, this behavior is
-    defined here instead of with the rest of the mock api.
+    Creating a file upload starts a multipart upload in `bucket_id`, requesting a part
+    URL presigns against it, and completing the upload finishes it and checks the MD5
+    the connector calculated against the one S3 reports. The object ID the Upload API
+    made up along the way is available as `object_id` once the upload has started.
     """
 
-    async def update_part_upload_url(object_id: str, part_no: int) -> str:
-        """Create a new presigned upload URL for S3."""
-        assert upload_id_ref, "No upload ID found"
-        upload_url = await s3_fixture.storage.get_part_upload_url(
-            bucket_id=bucket_id,
-            object_id=object_id,
-            upload_id=upload_id_ref[0],
+    def __init__(self, s3: S3Fixture, *, bucket_id: str) -> None:
+        self._s3 = s3
+        self._bucket_id = bucket_id
+        self._upload_id: str | None = None
+        self.object_id: str | None = None
+
+    def serve(self, upload_api) -> None:
+        """Answer the Upload API mock's endpoints out of the S3 fixture."""
+        upload_api.on_create_file_upload = self._create_file_upload
+        upload_api.on_get_part_upload_url = self._get_part_upload_url
+        upload_api.on_complete_file_upload = self._complete_file_upload
+
+    async def _create_file_upload(
+        self, request: httpx2.Request, **path_variables
+    ) -> httpx2.Response:
+        """Start a multipart upload for a newly made up object ID."""
+        self.object_id = str(uuid4())
+        self._upload_id = await self._s3.storage.init_multipart_upload(
+            bucket_id=self._bucket_id, object_id=self.object_id
+        )
+        return httpx2.Response(
+            201,
+            json={
+                "file_id": self.object_id,
+                "alias": json.loads(request.read())["alias"],
+                "storage_alias": TEST_STORAGE_ALIAS1,
+            },
+        )
+
+    async def _get_part_upload_url(
+        self, request: httpx2.Request, file_id: UUID, part_no: int, **path_variables
+    ) -> httpx2.Response:
+        """Presign an upload URL for the requested part of the multipart upload."""
+        assert self._upload_id, "No multipart upload was started"
+        url = await self._s3.storage.get_part_upload_url(
+            bucket_id=self._bucket_id,
+            object_id=str(file_id),
+            upload_id=self._upload_id,
             part_number=part_no,
         )
-        return upload_url
+        return httpx2.Response(200, json=url)
 
-    # Monkeypatch the placeholder function with the above
-    monkeypatch.setattr(
-        "tests.fixtures.mock_api.app.update_part_upload_url_placeholder",
-        update_part_upload_url,
-    )
-
-
-def set_init_upload_placeholder(
-    monkeypatch,
-    s3_fixture: S3Fixture,  # noqa: F811
-    *,
-    bucket_id: str,
-    upload_id_ref: list[str],
-):
-    """Patch the `init_upload_placeholder` function in the mock app with an actual
-    function to initiate a multipart upload in the given S3 fixture and return the
-    upload ID.
-    """
-
-    async def init_upload(object_id: str):
-        """Initiate a multipart upload in the given S3 fixture and pass the upload ID to
-        the upload ID ref so it can be accessed by the test function.
-        """
-        upload_id_ref.clear()
-        upload_id_ref.append(
-            await s3_fixture.storage.init_multipart_upload(
-                bucket_id=bucket_id, object_id=object_id
-            )
+    async def _complete_file_upload(
+        self, request: httpx2.Request, file_id: UUID, **path_variables
+    ) -> httpx2.Response:
+        """Finish the multipart upload and check the announced MD5 against S3."""
+        assert self._upload_id, "No multipart upload was started"
+        await self._s3.storage.complete_multipart_upload(
+            upload_id=self._upload_id, bucket_id=self._bucket_id, object_id=str(file_id)
         )
+        self._upload_id = None
 
-    async def complete_upload(object_id: str, calculated_md5: str):
-        """Complete an S3 upload"""
-        assert upload_id_ref, "No upload ID found"
-        await s3_fixture.storage.complete_multipart_upload(
-            upload_id=upload_id_ref.pop(), bucket_id=bucket_id, object_id=object_id
-        )
-        etag = await s3_fixture.storage.get_object_etag(
-            object_id=object_id, bucket_id=bucket_id
+        calculated_md5 = json.loads(request.read())["encrypted_md5"]
+        etag = await self._s3.storage.get_object_etag(
+            object_id=str(file_id), bucket_id=self._bucket_id
         )
         assert etag.strip('"') == calculated_md5, (
             f"Connector calculated {calculated_md5}, but S3 says it should be {etag}"
         )
-
-    # Monkeypatch the placeholder functions with the above
-    monkeypatch.setattr(
-        "tests.fixtures.mock_api.app.init_upload_placeholder", init_upload
-    )
-    monkeypatch.setattr(
-        "tests.fixtures.mock_api.app.terminate_upload_placeholder", complete_upload
-    )
+        return httpx2.Response(204)
 
 
 async def test_upload_journey(
     s3_fixture: S3Fixture,  # noqa: F811
-    httpx_mock: HTTPXMock,
-    mock_external_calls,  # noqa: F811
+    mock_apis: MockApis,  # noqa: F811
     monkeypatch,
     patch_work_package_functions,  # noqa: F811
 ):
@@ -151,32 +139,8 @@ async def test_upload_journey(
         "ghga_connector.core.uploading.api_calls.is_service_healthy", lambda s: True
     )
 
-    upload_id_ref: list[str] = []
-    object_id_ref: list[str] = []
-
-    set_init_upload_placeholder(
-        monkeypatch, s3_fixture, bucket_id=bucket_id, upload_id_ref=upload_id_ref
-    )
-    set_presigned_upload_url_update_endpoint(
-        monkeypatch,
-        s3_fixture,
-        bucket_id=bucket_id,
-        upload_id_ref=upload_id_ref,
-    )
-
-    async def capturing_init_upload(object_id: str):
-        object_id_ref.clear()
-        object_id_ref.append(object_id)
-        upload_id_ref.clear()
-        upload_id_ref.append(
-            await s3_fixture.storage.init_multipart_upload(
-                bucket_id=bucket_id, object_id=object_id
-            )
-        )
-
-    monkeypatch.setattr(
-        "tests.fixtures.mock_api.app.init_upload_placeholder", capturing_init_upload
-    )
+    upload = S3BackedUpload(s3_fixture, bucket_id=bucket_id)
+    upload.serve(mock_apis.upload)
 
     # create a big temp file
     with big_temp_file(SIZE) as file:
@@ -192,22 +156,20 @@ async def test_upload_journey(
                 my_private_key_path=PRIVATE_KEY_FILE,
                 passphrase=None,
             )
-        assert object_id_ref, "No object ID was captured during upload"
+        assert upload.object_id, "No object ID was captured during upload"
         object_size = await s3_fixture.storage.get_object_size(
-            bucket_id=bucket_id, object_id=object_id_ref[0]
+            bucket_id=bucket_id, object_id=upload.object_id
         )
         assert object_size == file_info.encrypted_size
 
 
 async def test_upload_bad_url(
-    httpx_mock: HTTPXMock,
-    mock_external_calls,  # noqa: F811
+    mock_apis: MockApis,  # noqa: F811
     monkeypatch,
     patch_work_package_functions,  # noqa: F811
 ):
     """Check that the right error is raised for a bad URL in the upload logic."""
-    # The intercepted health check API call will return the following mock response
-    httpx_mock.add_exception(httpx.RequestError(""))
+    mock_health_checks(monkeypatch, reachable=False)
     with big_temp_file(SIZE) as file, pytest.raises(exceptions.ApiNotReachableError):
         actual_size = Path(file.name).stat().st_size
         modify_for_debug(debug=True)

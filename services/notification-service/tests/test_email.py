@@ -24,10 +24,10 @@ from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
 import pytest
-from hexkit.correlation import correlation_id_var
-from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import SecretStr
 
+from hexkit.correlation import correlation_id_var
+from hexkit.protocols.dao import ResourceNotFoundError
 from ns.adapters.outbound.lox24_client import Lox24Client
 from ns.adapters.outbound.smtp_client import (
     SmtpAuthConfig,

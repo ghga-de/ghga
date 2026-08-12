@@ -21,10 +21,10 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from hexkit.providers.mongodb.migrations import MigrationConfig
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from ars.migrations.entry import run_db_migrations
+from hexkit.providers.mongodb.migrations import MigrationConfig
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 pytestmark = pytest.mark.asyncio()
 
@@ -134,7 +134,10 @@ async def test_v3_migration(mongodb: MongoDbFixture):
 
     # Get data, sort everything, and compare
     migrated_requests = collection.find({}).to_list()
-    sort_func = lambda x: str(x["_id"])
+
+    def sort_func(x):
+        return str(x["_id"])
+
     migrated_requests.sort(key=sort_func)
     expected_migrated_requests.sort(key=sort_func)
     expected_reverted_requests.sort(key=lambda x: x["_id"])

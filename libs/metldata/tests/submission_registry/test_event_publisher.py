@@ -18,7 +18,6 @@
 import json
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
-
 from metldata.config import SubmissionConfig
 from metldata.event_handling.event_handling import FileSystemEventPublisher
 from metldata.event_handling.models import SubmissionAnnotation, SubmissionEventPayload

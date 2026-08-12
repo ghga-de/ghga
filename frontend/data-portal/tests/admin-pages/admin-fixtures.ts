@@ -52,10 +52,19 @@ export const test = baseTest.extend<AdminFixtures>({
 
     await expect(adminMenuTrigger).toBeVisible();
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      await adminMenuTrigger.click();
+      // Bound each click. Under load a lingering CDK overlay backdrop can cover
+      // the trigger, and an unbounded click would swallow the whole test timeout
+      // instead of letting this loop retry.
+      try {
+        await adminMenuTrigger.click({ timeout: 5000 });
+      } catch {
+        // Fall through to the recovery below and retry.
+      }
       if (await managerItem.isVisible({ timeout: 2000 }).catch(() => false)) {
         break;
       }
+      // Close whatever overlay is still open so the next attempt reaches the trigger.
+      await page.keyboard.press('Escape');
     }
 
     await expect(managerItem).toBeVisible({ timeout: 10000 });

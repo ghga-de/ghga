@@ -16,6 +16,9 @@
 
 """Translators for publishing notification events."""
 
+from pydantic import UUID4
+
+from auth_service.constants import TRACER
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import (
     IvaChangeEventsConfig,
@@ -23,9 +26,6 @@ from ghga_event_schemas.configs import (
 )
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
-from pydantic import UUID4
-
-from auth_service.constants import TRACER
 
 from ..models.ivas import Iva
 from ..ports.event_pub import EventPublisherPort

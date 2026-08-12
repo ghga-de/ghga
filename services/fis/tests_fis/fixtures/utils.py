@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).parent.resolve()
 
 def create_file_under_interrogation(storage_alias: str):
     """Generate some dummy data for the specified storage_alias"""
-    file = FileUnderInterrogation(
+    return FileUnderInterrogation(
         id=uuid4(),
         storage_alias=storage_alias,
         bucket_id="inbox1",
@@ -39,4 +39,3 @@ def create_file_under_interrogation(storage_alias: str):
         state_updated=now_utc_ms_prec(),
         can_remove=False,
     )
-    return file

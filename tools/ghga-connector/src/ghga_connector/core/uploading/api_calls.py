@@ -18,7 +18,7 @@
 import logging
 from uuid import UUID
 
-import httpx
+import httpx2
 from pydantic import UUID4, ValidationError
 from tenacity import RetryError
 
@@ -44,13 +44,13 @@ def _form_authorization_headers(work_order_token: str) -> dict[str, str]:
 
 
 def _check_for_request_errors(retry_error: RetryError, url: str):
-    """Examine an instance of a RetryError to see if it contains an httpx.RequestError
+    """Examine an instance of a RetryError to see if it contains an httpx2.RequestError
 
     Raises a ConnectionFailedError if there's a ConnectError or ConnectTimeout, and
-    re-raises all other httpx.RequestError types as a RequestFailedError.
+    re-raises all other httpx2.RequestError types as a RequestFailedError.
     """
     exception = retry_error.last_attempt.exception()
-    if exception and isinstance(exception, httpx.RequestError):
+    if exception and isinstance(exception, httpx2.RequestError):
         exceptions.raise_if_connection_failed(request_error=exception, url=url)
         raise exceptions.RequestFailedError(url=url) from retry_error
 
@@ -59,7 +59,7 @@ class UploadClient:
     """An adapter for interacting with the Upload API and uploading files to S3."""
 
     def __init__(
-        self, *, client: httpx.AsyncClient, work_package_client: WorkPackageClient
+        self, *, client: httpx2.AsyncClient, work_package_client: WorkPackageClient
     ):
         self._client = client
         self._work_package_client = work_package_client
@@ -72,7 +72,7 @@ class UploadClient:
         self,
         *,
         status_code: int,
-        response: httpx.Response,
+        response: httpx2.Response,
         file_upload_box_id: UUID4 | None = None,
         file_alias: str | None = None,
         file_id: UUID4 | None = None,

@@ -19,9 +19,9 @@
 import asyncio
 from urllib.parse import parse_qs, urlparse
 
-from ghga_service_commons.utils.utc_dates import now_as_utc
 from pytest import mark, raises
 
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from top.core.models import LoginInfo, TokenResponse, UserInfo
 from top.core.oidc_provider import OidcProvider, OidcProviderConfig
 

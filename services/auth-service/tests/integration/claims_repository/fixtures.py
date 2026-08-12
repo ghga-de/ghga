@@ -18,13 +18,6 @@
 from collections.abc import AsyncGenerator
 
 import pytest_asyncio
-from ghga_service_commons.api.testing import AsyncTestClient as BareClient
-from hexkit.correlation import set_new_correlation_id
-from hexkit.protocols.dao import ResourceNotFoundError
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-from hexkit.utils import now_utc_ms_prec
 
 from auth_service.claims_repository.models.config import (
     IvaType,
@@ -34,6 +27,13 @@ from auth_service.config import Config
 from auth_service.prepare import prepare_rest_app
 from auth_service.user_registry.models.users import User, UserStatus
 from auth_service.user_registry.translators.dao import UserDaoPublisherFactory
+from ghga_service_commons.api.testing import AsyncTestClient as BareClient
+from hexkit.correlation import set_new_correlation_id
+from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import ID_OF_ROD_STEWARD
 
 data_steward = User(

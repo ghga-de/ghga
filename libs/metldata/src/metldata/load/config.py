@@ -16,12 +16,12 @@
 
 """Config parameters and their defaults."""
 
+from pydantic import Field, PositiveInt
+
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.log import LoggingConfig
 from hexkit.providers.akafka import KafkaConfig
 from hexkit.providers.mongodb import MongoDbConfig
-from pydantic import Field, PositiveInt
-
 from metldata.artifacts_rest.config import ArtifactsRestConfig
 from metldata.event_handling.event_handling import FileSystemEventConfig
 from metldata.load.collect import ArtifactCollectorConfig

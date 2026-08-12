@@ -20,10 +20,10 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import pytest_asyncio
+
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from nos.adapters.outbound.dao import get_user_dao
 from nos.config import Config
 from nos.inject import prepare_core, prepare_event_subscriber

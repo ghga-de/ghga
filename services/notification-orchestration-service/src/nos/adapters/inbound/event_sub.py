@@ -19,6 +19,8 @@ import logging
 from contextlib import suppress
 from uuid import UUID
 
+from pydantic import UUID4
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import UserEventsConfig
 from ghga_event_schemas.configs.stateful import AccessRequestEventsConfig
@@ -30,8 +32,6 @@ from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
 from nos.models import EventId
 from nos.ports.inbound.orchestrator import OrchestratorPort
 from nos.ports.outbound.dao import EventIdDaoPort, ResourceNotFoundError

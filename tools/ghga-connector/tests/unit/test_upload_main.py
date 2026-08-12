@@ -19,7 +19,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
-import httpx
+import httpx2
 import pytest
 
 from ghga_connector import exceptions
@@ -146,7 +146,7 @@ async def test_upload_files_applies_config_part_size(
         f.write(b"data")
         f.flush()
         core_file_info = CoreFileInfo(alias="test", path=Path(f.name), decrypted_size=4)
-        async with httpx.AsyncClient() as client:
+        async with httpx2.AsyncClient() as client:
             await upload_files(
                 client=client,
                 core_file_info_list=[core_file_info],

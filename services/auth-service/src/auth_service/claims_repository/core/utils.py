@@ -19,13 +19,13 @@
 from collections import defaultdict
 from collections.abc import Callable
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
-from hexkit.protocols.dao import ResourceNotFoundError
 from pydantic import UUID4
 
 from auth_service.user_registry.deps import IvaDao, UserDao
 from auth_service.user_registry.models.ivas import IvaState
 from auth_service.user_registry.models.users import User, UserStatus, UserWithRoles
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
+from hexkit.protocols.dao import ResourceNotFoundError
 
 from ..deps import ClaimDao
 from ..models.claims import VisaType

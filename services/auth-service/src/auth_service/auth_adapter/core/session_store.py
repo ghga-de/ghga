@@ -20,11 +20,11 @@ import secrets
 from enum import StrEnum
 from typing import Protocol
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from pydantic import UUID4, EmailStr, Field
 from pydantic_settings import BaseSettings
 
 from auth_service.user_registry.models.users import User
+from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 
 from ..ports.session_store import BaseSession, SessionStorePort
 from .totp import TOTPToken
@@ -138,6 +138,7 @@ class SessionStore(SessionStorePort[Session]):
 
     def _create_session(  # noqa: PLR0913
         self,
+        *,
         ext_id: str,
         user_name: str,
         user_email: str,

@@ -21,10 +21,11 @@ from functools import reduce
 from pathlib import Path
 from typing import TypeVar
 
-import httpx
+import httpx2
 import yaml
-from ghga_service_commons.utils.simple_token import generate_token_and_hash
 from pydantic_settings import BaseSettings
+
+from ghga_service_commons.utils.simple_token import generate_token_and_hash
 
 DELETION_TOKEN_PATH = Path.home() / ".ghga_file_deletion_token.txt"
 DELETION_TOKEN_HASH_PATH = Path.home() / ".ghga_file_deletion_token_hash.txt"
@@ -100,8 +101,8 @@ def retrieve_well_known_values(wkvs_api_url: str, value_name: str = "storage_ali
     url = path_join(wkvs_api_url, "values", value_name)
 
     try:
-        response = httpx.get(url)
-    except httpx.RequestError:
+        response = httpx2.get(url)
+    except httpx2.RequestError:
         LOG.error(f"Could not retrieve data from {url} due to connection issues.")
         raise
 

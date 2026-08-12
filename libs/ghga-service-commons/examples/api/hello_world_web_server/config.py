@@ -17,10 +17,10 @@
 
 from functools import lru_cache
 
-from hexkit.config import config_from_yaml
 from pydantic import Field
 
 from ghga_service_commons.api import ApiConfigBase
+from hexkit.config import config_from_yaml
 
 
 @config_from_yaml(prefix="hello_world")

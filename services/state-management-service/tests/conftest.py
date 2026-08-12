@@ -15,6 +15,7 @@
 """Import necessary test fixtures."""
 
 import pytest
+
 from hexkit.providers.akafka.testutils import (  # noqa: F401
     kafka_container_fixture,
     kafka_fixture,
@@ -27,7 +28,6 @@ from hexkit.providers.s3.testutils import (  # noqa: F401
     federated_s3_fixture,
     s3_multi_container_fixture,
 )
-
 from tests.fixtures.config import DEFAULT_TEST_CONFIG
 
 

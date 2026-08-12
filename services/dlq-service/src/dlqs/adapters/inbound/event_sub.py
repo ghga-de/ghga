@@ -17,12 +17,12 @@
 from collections.abc import Mapping
 from datetime import datetime
 
-from hexkit.custom_types import Ascii, JsonObject
-from hexkit.protocols.eventsub import DLQSubscriberProtocol
 from pydantic import UUID4
 
 from dlqs.models import RawDLQEvent
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
+from hexkit.custom_types import Ascii, JsonObject
+from hexkit.protocols.eventsub import DLQSubscriberProtocol
 
 
 class DLQSubTranslator(DLQSubscriberProtocol):

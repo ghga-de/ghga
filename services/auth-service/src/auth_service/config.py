@@ -17,14 +17,6 @@
 
 from typing import Literal
 
-from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.auth.ghga import AuthConfig
-from hexkit.config import config_from_yaml
-from hexkit.log import LoggingConfig
-from hexkit.opentelemetry import OpenTelemetryConfig
-from hexkit.providers.akafka import KafkaConfig
-from hexkit.providers.mongodb.migrations import MigrationConfig
-from hexkit.providers.mongokafka import MongoKafkaConfig
 from pydantic import AnyUrl, Field, HttpUrl, field_validator
 
 from auth_service.auth_adapter.core.session_store import SessionConfig
@@ -42,6 +34,14 @@ from auth_service.user_registry.translators.dao import UserDaoConfig
 from auth_service.user_registry.translators.event_pub import (
     EventPubTranslatorConfig,
 )
+from ghga_service_commons.api import ApiConfigBase
+from ghga_service_commons.auth.ghga import AuthConfig
+from hexkit.config import config_from_yaml
+from hexkit.log import LoggingConfig
+from hexkit.opentelemetry import OpenTelemetryConfig
+from hexkit.providers.akafka import KafkaConfig
+from hexkit.providers.mongodb.migrations import MigrationConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig
 
 
 @config_from_yaml(prefix=SERVICE_NAME)

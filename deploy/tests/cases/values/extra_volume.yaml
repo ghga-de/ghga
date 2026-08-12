@@ -7,5 +7,6 @@ extraVolumeMounts:
   - name: test
     mountPath: /tmp/test
 
-cronjob:
-  enabled: true
+cronjobs:
+  default:
+    enabled: true

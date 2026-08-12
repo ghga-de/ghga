@@ -18,6 +18,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
+import httpx2
 from fastapi import FastAPI
 
 from dcs.adapters.inbound.event_sub import EventSubTranslator
@@ -69,8 +70,19 @@ async def get_persistent_publisher(
 
 
 @asynccontextmanager
-async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort]:
-    """Constructs and initializes all core components and their outbound dependencies."""
+async def prepare_core(
+    *,
+    config: Config,
+    http_base_transport: httpx2.AsyncBaseTransport | None = None,
+    http_mount_env_proxies: bool = True,
+) -> AsyncGenerator[DataRepositoryPort]:
+    """Constructs and initializes all core components and their outbound dependencies.
+
+    `http_base_transport` is handed to the outbound HTTP client, which lets tests
+    serve the Secrets API from a mock instead of the network. Replacing the network
+    layer rules out the env proxies, so such callers also pass
+    `http_mount_env_proxies=False`.
+    """
     object_storages = S3ObjectStorages(config=config)
 
     async with (
@@ -78,7 +90,11 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[DataRepositoryPort]:
         get_persistent_publisher(
             config=config, dao_factory=dao_factory
         ) as persistent_pub_provider,
-        get_configured_httpx_client(config=config) as httpx_client,
+        get_configured_httpx_client(
+            config=config,
+            base_transport=http_base_transport,
+            mount_env_proxies=http_mount_env_proxies,
+        ) as httpx_client,
     ):
         drs_object_dao = await get_drs_dao(dao_factory=dao_factory)
         event_publisher = EventPubTranslator(

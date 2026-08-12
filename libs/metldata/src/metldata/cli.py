@@ -20,9 +20,9 @@ import asyncio
 import functools
 
 import typer
+
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
-
 from metldata.combined import get_app
 from metldata.config import Config
 

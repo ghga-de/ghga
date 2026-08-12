@@ -18,11 +18,11 @@
 from pathlib import Path
 from uuid import UUID, uuid4
 
-import ghga_event_schemas.pydantic_ as event_schemas
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
+import ghga_event_schemas.pydantic_ as event_schemas
 from dins.core import models
+from hexkit.utils import now_utc_ms_prec
 
 BASE_DIR = Path(__file__).parent.resolve()
 

@@ -18,12 +18,12 @@
 from collections.abc import AsyncGenerator
 
 import pytest_asyncio
-from ghga_service_commons.api.testing import AsyncTestClient as BareClient
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from auth_service.config import Config
 from auth_service.prepare import prepare_rest_app
+from ghga_service_commons.api.testing import AsyncTestClient as BareClient
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 
 @pytest_asyncio.fixture(name="bare_client")
@@ -36,7 +36,7 @@ async def fixture_bare_client(kafka: KafkaFixture) -> AsyncGenerator[BareClient]
         provide_apis=["users"],
         migration_wait_sec=2,
         db_version_collection="authDbVersions",
-    )  # type: ignore
+    )
     async with prepare_rest_app(config) as app, BareClient(app) as client:
         yield client
 

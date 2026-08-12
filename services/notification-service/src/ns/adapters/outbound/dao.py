@@ -17,7 +17,6 @@
 """Produce a DAO using a DAO factory"""
 
 from hexkit.protocols.dao import DaoFactoryProtocol
-
 from ns.models import EventId
 from ns.ports.outbound.dao import EventIdDaoPort
 

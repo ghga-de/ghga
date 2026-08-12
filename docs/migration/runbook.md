@@ -174,3 +174,26 @@ Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`
 - Historical release tags are **not** imported (they'd reference rewritten SHAs); the new scheme
   is `name/x.y.z` ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - `.legacy_repos/` and `.migration-work/` must stay gitignored (nested `.git` dirs; scratch).
+
+## Deploy (charts): manual semantic port — no textual sync
+
+The `charts` repo row was removed from `repos.tsv` (2026-08): after the ADR-0013
+restructure (`base/` → `deploy/charts/ghga-common`, per-service charts generated),
+upstream commits no longer apply as patches. Instead, port upstream library changes
+**semantically**:
+
+1. Diff upstream **final state** against ours (`.legacy_repos/charts`,
+   `base/ghga-common/templates/*` vs `deploy/charts/ghga-common/templates/*`) —
+   don't replay individual commits; increments of one rework reconcile as one step.
+2. Check each feature for monorepo fit (anything serving upstream's Emissary/Istio
+   path that the demo pruned may be unwanted).
+3. Port upstream's new `base/tests` cases into `deploy/tests` — the harnesses share
+   ancestry; ours keeps its render-to-files debug output on purpose.
+4. Migrate member `chart-values.yaml` / `deploy/src/values/*` if the values schema
+   changed (upstream's `src/values` diffs show the target shape).
+5. Verify: `just charts-test`, `just charts`, `just demo-template`, and a
+   before/after `helm template` diff of the affected charts (a backward-compatible
+   port renders byte-identically).
+
+First such port: the cronjob-subsystem rework (`cronjobs` map, per-job overrides,
+merged pod annotations, vault singleTemplate for Job/CronJob), 2026-08.

@@ -16,6 +16,14 @@
       </button>
       <h1>Upload Box Details</h1>
     </header>
+    <div class="mt-1 inline-block text-end">
+      <app-refresh-button
+        what="the upload box details"
+        [loading]="isLoading() || filesLoading()"
+        umamiEvent="Upload Box Manager Detail Refresh Clicked"
+        (refresh)="refresh()"
+      />
+    </div>
     @if (uploadBox(); as box) {
       <!-- The tooltip lives on the wrapper so it still shows when the button is
         disabled (a disabled Material button has pointer-events: none). -->
@@ -206,13 +214,20 @@
           <p><strong>Files:</strong></p>
           @if (box.file_count > 0) {
             <app-upload-box-files-table
-              [files]="fileUploads()"
+              [pageFiles]="pageFiles()"
               [boxState]="box.state"
               [loading]="filesLoading()"
+              [totalCount]="filesTotalCount()"
+              [pageIndex]="filesPageIndex()"
+              [pageSize]="filesPageSize()"
+              [sortActive]="filesSortState().column"
+              [sortDirection]="filesSortState().direction"
               [showDelete]="box.state === 'open'"
               [deletable]="canDeleteFileFn"
               deleteEventLabel="Upload Box Manager Detail Delete File Clicked"
               (deleteFile)="deleteFile($event)"
+              (page)="onFilesPage($event)"
+              (sortChange)="onFilesSort($event)"
             />
           } @else {
             <p class="text-warning mt-2">This upload box is still empty.</p>

@@ -15,74 +15,73 @@
 
 """Unit tests for Work Package operations"""
 
-from functools import partial
-
 import crypt4gh.keys
 import pytest
 from pydantic import SecretBytes
-from pytest_httpx import HTTPXMock
 
 from ghga_connector import exceptions
 from ghga_connector.core.client import async_client
 from ghga_connector.core.work_package import WorkPackageClient
 from tests.fixtures import set_runtime_test_config  # noqa: F401
+from tests.fixtures.mock_api.apis import (
+    MockApis,
+    WorkPackageApiMock,
+    mock_apis,  # noqa: F401
+)
+from tests.fixtures.mock_api.router import respond
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,
     mock_work_package_token,
     patch_work_package_functions,  # noqa: F401
 )
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.httpx_mock(
-        assert_all_responses_were_requested=False,
-        can_send_already_matched_responses=True,
-        should_mock=lambda request: True,
-    ),
-]
+pytestmark = [pytest.mark.asyncio]
+
+FILES = {"file_1": ".tar.gz"}
 
 
-async def test_get_work_package_file_info(
-    httpx_mock: HTTPXMock,
-    monkeypatch,
+@pytest.fixture()
+def work_package_api(
+    mock_apis: MockApis,  # noqa: F811
     set_runtime_test_config,  # noqa: F811
+) -> WorkPackageApiMock:
+    """The Work Package API mock, with the connector pointed at it."""
+    return mock_apis.work_package
+
+
+@pytest.mark.parametrize(
+    "status_code, expected_error",
+    [
+        (200, None),
+        (403, exceptions.NoWorkPackageAccessError),
+        (500, exceptions.InvalidWorkPackageResponseError),
+        (501, exceptions.InvalidWorkPackageResponseError),
+    ],
+)
+async def test_get_work_package_file_info(
+    status_code: int,
+    expected_error: type[Exception] | None,
+    work_package_api: WorkPackageApiMock,
+    monkeypatch,
 ):
     """Test response handling with some mock - just make sure code paths work"""
-    files = {"file_1": ".tar.gz"}
     private_key = SecretBytes(crypt4gh.keys.get_private_key(PRIVATE_KEY_FILE, ""))
     monkeypatch.setattr(
         "ghga_connector.core.work_package.get_work_package_token",
         mock_work_package_token,
     )
 
+    work_package_api.on_get_work_package = respond(status_code, json={"files": FILES})
+
     async with async_client() as client:
-        partial_work_pkg_client = partial(
-            WorkPackageClient,
+        work_package_client = WorkPackageClient(
             client=client,
             my_private_key=private_key,
             my_public_key=b"",  # doesn't matter for this test
         )
 
-        httpx_mock.add_response(json={"files": files}, status_code=200)
-
-        work_package_client = partial_work_pkg_client()
-        response = await work_package_client.get_package_files()
-        assert response == files
-
-        httpx_mock.add_response(json={"files": files}, status_code=403)
-
-        with pytest.raises(exceptions.NoWorkPackageAccessError):
-            work_package_client = partial_work_pkg_client()
-            response = await work_package_client.get_package_files()
-
-        httpx_mock.add_response(json={"files": files}, status_code=500)
-
-        with pytest.raises(exceptions.InvalidWorkPackageResponseError):
-            work_package_client = partial_work_pkg_client()
-            response = await work_package_client.get_package_files()
-
-        httpx_mock.add_response(json={"files": files}, status_code=501)
-
-        with pytest.raises(exceptions.InvalidWorkPackageResponseError):
-            work_package_client = partial_work_pkg_client()
-            response = await work_package_client.get_package_files()
+        if expected_error is None:
+            assert await work_package_client.get_package_files() == FILES
+        else:
+            with pytest.raises(expected_error):
+                await work_package_client.get_package_files()

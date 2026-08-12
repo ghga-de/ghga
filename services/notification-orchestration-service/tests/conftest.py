@@ -18,6 +18,7 @@
 from uuid import UUID
 
 import pytest_asyncio
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import ResourceNotFoundError
 from hexkit.providers.akafka.testutils import (  # noqa: F401
@@ -29,7 +30,6 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
     mongodb_container_fixture,
     mongodb_fixture,
 )
-
 from nos.adapters.outbound.dao import get_user_dao
 from tests.fixtures.joint import JointFixture, joint_fixture  # noqa: F401
 

@@ -22,12 +22,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Response, status
 from fastapi.exceptions import HTTPException
-from hexkit.protocols.dao import ResourceNotFoundError
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from auth_service.constants import TRACER
 from auth_service.user_registry.deps import UserDaoDependency
+from hexkit.protocols.dao import ResourceNotFoundError
+from hexkit.utils import now_utc_ms_prec
 
 from ..core.utils import user_exists
 from ..deps import ClaimDaoDependency

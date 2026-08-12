@@ -15,6 +15,9 @@
 
 """Outbound DAO adapter - wires DTO models to MongoDB/Kafka via the outbox pattern."""
 
+from pydantic import Field
+from pydantic_settings import BaseSettings
+
 from ghga_event_schemas.configs import (
     FileAccessionMappingEventsConfig,
     ResearchDataUploadBoxEventsConfig,
@@ -22,9 +25,6 @@ from ghga_event_schemas.configs import (
 from ghga_event_schemas.pydantic_ import FileAccessionMapping
 from hexkit.providers.mongodb import MongoDbIndex
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-from pydantic import Field
-from pydantic_settings import BaseSettings
-
 from rs.constants import (
     FILE_ACCESSION_COLLECTION,
     RESEARCH_DATA_UPLOAD_BOX_COLLECTION,

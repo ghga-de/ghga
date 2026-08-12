@@ -23,12 +23,8 @@ from typing import NamedTuple
 
 import pytest_asyncio
 from fastapi import status
-from ghga_service_commons.api.testing import AsyncTestClient as BareClient
-from ghga_service_commons.utils.utc_dates import now_as_utc
-from hexkit.providers.akafka.testutils import KafkaFixture
-from httpx import Response
+from httpx2 import Response
 from pydantic import SecretStr
-from pytest_httpx import HTTPXMock
 
 from auth_service import config as config_module
 from auth_service.auth_adapter import prepare as auth_adapter_prepare_module
@@ -44,15 +40,19 @@ from auth_service.user_registry.deps import (
     get_user_dao,
     get_user_registry,
 )
+from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.api.testing import AsyncTestClient as BareClient
+from ghga_service_commons.utils.utc_dates import now_as_utc
+from hexkit.providers.akafka.testutils import KafkaFixture
 
 from ...fixtures.utils import (
-    RE_USER_INFO_URL,
     USER_INFO,
     MockClaimDao,
     MockUserRegistry,
     MockUserTokenDao,
     create_access_token,
     headers_for_session,
+    mock_userinfo,
 )
 
 AUTH_PATH = CONFIG.api_ext_path.strip("/")
@@ -157,10 +157,10 @@ async def query_new_session(
 
 @pytest_asyncio.fixture(name="client_with_session")
 async def fixture_bare_client_with_session(
-    bare_client: BareClient, httpx_mock: HTTPXMock
+    bare_client: BareClient, mock_router: MockRouter
 ) -> AsyncGenerator[ClientWithSession]:
     """Get test client for the auth adapter with a logged in user"""
-    httpx_mock.add_response(url=RE_USER_INFO_URL, json=USER_INFO)
+    mock_userinfo(mock_router, USER_INFO)
 
     user_registry = MockUserRegistry()
     user_dao = user_registry.mock_user_dao

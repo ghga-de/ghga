@@ -21,6 +21,7 @@ The dummies are overridden by the actual dependencies when preparing the applica
 from typing import Annotated
 
 from fastapi import Depends
+
 from ghga_service_commons.api.di import DependencyDummy
 
 from .ports.dao import ClaimDao

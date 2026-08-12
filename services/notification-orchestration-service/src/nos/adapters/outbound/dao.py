@@ -18,7 +18,6 @@
 
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import DaoFactoryProtocol
-
 from nos.models import EventId
 from nos.ports.outbound.dao import AccessRequestDaoPort, EventIdDaoPort, UserDaoPort
 

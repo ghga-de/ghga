@@ -98,204 +98,269 @@ export default tseslint.config(
           // the default error message
           message:
             '{{from.captured.context}}/{{from.type}} is not allowed to import from {{to.captured.context}}/{{to.type}}',
-          // all rules will be checked in order and matching rules alter the result
-          rules: [
+          // all policies will be checked in order and matching policies alter the result
+          policies: [
             // generally allow only importing from same context
             {
-              from: { type: '*' },
+              from: { element: { type: '*' } },
               allow: {
-                to: { type: '*', captured: { context: '{{from.captured.context}}' } },
+                to: {
+                  element: {
+                    type: '*',
+                    captured: { context: '{{from.captured.context}}' },
+                  },
+                },
               },
             },
             {
-              from: { type: '*' },
+              from: { element: { type: '*' } },
               disallow: {
-                to: { type: '*', captured: { context: '!{{from.captured.context}}' } },
+                to: {
+                  element: {
+                    type: '*',
+                    captured: { context: '!{{from.captured.context}}' },
+                  },
+                },
               },
               message:
                 '{{from.captured.context}} is not allowed to import from {{to.captured.context}}',
             },
             {
-              from: { type: '*' },
-              allow: { to: { type: '*', captured: { context: 'shared' } } },
+              from: { element: { type: '*' } },
+              allow: {
+                to: { element: { type: '*', captured: { context: 'shared' } } },
+              },
             },
             // overarching portal context may import other feature components
             {
-              from: { type: 'features', captured: { context: 'portal' } },
+              from: { element: { type: 'features', captured: { context: 'portal' } } },
               allow: {
                 to: {
-                  type: 'features',
-                  captured: {
-                    context: ['metadata', 'ivas', 'access-requests', 'auth'],
+                  element: {
+                    type: 'features',
+                    captured: {
+                      context: ['metadata', 'ivas', 'access-requests', 'auth'],
+                    },
                   },
                 },
               },
             },
             // access requests context may import from verification addresses context
             {
-              from: { type: 'features', captured: { context: 'access-requests' } },
+              from: {
+                element: { type: 'features', captured: { context: 'access-requests' } },
+              },
               allow: {
                 to: [
-                  { type: 'service', captured: { context: 'ivas' } },
-                  { type: 'model', captured: { context: 'ivas' } },
-                  { type: 'pipe', captured: { context: 'ivas' } },
+                  { element: { type: 'service', captured: { context: 'ivas' } } },
+                  { element: { type: 'model', captured: { context: 'ivas' } } },
+                  { element: { type: 'pipe', captured: { context: 'ivas' } } },
                 ],
               },
             },
             {
-              from: { type: 'model', captured: { context: 'access-requests' } },
+              from: {
+                element: { type: 'model', captured: { context: 'access-requests' } },
+              },
               allow: {
-                to: [{ type: 'model', captured: { context: 'ivas' } }],
+                to: [{ element: { type: 'model', captured: { context: 'ivas' } } }],
               },
             },
             // upload context may import from verification addresses and metadata context
             {
-              from: { type: 'features', captured: { context: 'upload' } },
+              from: { element: { type: 'features', captured: { context: 'upload' } } },
               allow: {
                 to: [
-                  { type: 'service', captured: { context: 'ivas' } },
-                  { type: 'model', captured: { context: 'ivas' } },
-                  { type: 'pipe', captured: { context: 'ivas' } },
-                  { type: 'service', captured: { context: 'metadata' } },
-                  { type: 'model', captured: { context: 'metadata' } },
+                  { element: { type: 'service', captured: { context: 'ivas' } } },
+                  { element: { type: 'model', captured: { context: 'ivas' } } },
+                  { element: { type: 'pipe', captured: { context: 'ivas' } } },
+                  { element: { type: 'service', captured: { context: 'metadata' } } },
+                  { element: { type: 'model', captured: { context: 'metadata' } } },
                 ],
               },
             },
             // work-package context may import from some other contexts
             {
-              from: { type: 'features', captured: { context: 'work-packages' } },
+              from: {
+                element: { type: 'features', captured: { context: 'work-packages' } },
+              },
               allow: {
                 to: [
-                  { type: 'service', captured: { context: 'ivas' } },
-                  { type: 'model', captured: { context: 'ivas' } },
-                  { type: 'pipe', captured: { context: 'ivas' } },
-                  { type: 'model', captured: { context: 'access-requests' } },
-                  { type: 'model', captured: { context: 'upload' } },
+                  { element: { type: 'service', captured: { context: 'ivas' } } },
+                  { element: { type: 'model', captured: { context: 'ivas' } } },
+                  { element: { type: 'pipe', captured: { context: 'ivas' } } },
+                  {
+                    element: {
+                      type: 'model',
+                      captured: { context: 'access-requests' },
+                    },
+                  },
+                  { element: { type: 'model', captured: { context: 'upload' } } },
                 ],
               },
             },
             // auth context may import from verification addresses and access request context
             {
-              from: { type: 'features', captured: { context: 'auth' } },
+              from: { element: { type: 'features', captured: { context: 'auth' } } },
               allow: {
                 to: [
-                  { type: 'service', captured: { context: 'ivas' } },
-                  { type: 'model', captured: { context: 'ivas' } },
-                  { type: 'pipe', captured: { context: 'ivas' } },
-                  { type: 'features', captured: { context: 'ivas' } },
-                  { type: 'service', captured: { context: 'access-requests' } },
-                  { type: 'model', captured: { context: 'access-requests' } },
-                  { type: 'pipe', captured: { context: 'access-requests' } },
-                  { type: 'features', captured: { context: 'access-requests' } },
+                  { element: { type: 'service', captured: { context: 'ivas' } } },
+                  { element: { type: 'model', captured: { context: 'ivas' } } },
+                  { element: { type: 'pipe', captured: { context: 'ivas' } } },
+                  { element: { type: 'features', captured: { context: 'ivas' } } },
+                  {
+                    element: {
+                      type: 'service',
+                      captured: { context: 'access-requests' },
+                    },
+                  },
+                  {
+                    element: {
+                      type: 'model',
+                      captured: { context: 'access-requests' },
+                    },
+                  },
+                  {
+                    element: { type: 'pipe', captured: { context: 'access-requests' } },
+                  },
+                  {
+                    element: {
+                      type: 'features',
+                      captured: { context: 'access-requests' },
+                    },
+                  },
                 ],
               },
             },
             // main may only import config, main app modules and mock setup (dev mode)
             {
-              from: { type: 'main' },
-              disallow: { to: { type: '*' } },
+              from: { file: { categories: 'main' } },
+              disallow: { to: { element: { type: '*' } } },
               message:
                 'Main modules may only import config, main app modules and mock setup',
             },
             {
-              from: { type: 'main' },
-              allow: { to: { type: ['config', 'main-app', 'mock'] } },
+              from: { file: { categories: 'main' } },
+              allow: {
+                to: [
+                  { file: { categories: ['config', 'main-app'] } },
+                  { element: { type: 'mock' } },
+                ],
+              },
             },
             // main app may only import features and shared modules
             {
-              from: { type: 'main-app' },
-              disallow: { to: { type: '*' } },
+              from: { file: { categories: 'main-app' } },
+              disallow: { to: { element: { type: '*' } } },
               message:
                 'Main app component may only import portal features and shared code',
             },
             {
-              from: { type: 'main-app' },
+              from: { file: { categories: 'main-app' } },
               allow: {
                 to: [
-                  { type: 'features', captured: { context: 'portal' } },
-                  { type: '*', captured: { context: 'shared' } },
+                  { element: { type: 'features', captured: { context: 'portal' } } },
+                  { element: { type: '*', captured: { context: 'shared' } } },
                 ],
               },
             },
             // config may only import modules for routes
             {
-              from: { type: 'config' },
-              disallow: { to: { type: '*' } },
+              from: { file: { categories: 'config' } },
+              disallow: { to: { element: { type: '*' } } },
               message: 'Config modules can only import routes, utils and auth services',
             },
             {
-              from: { type: 'config' },
+              from: { file: { categories: 'config' } },
               allow: {
                 to: [
-                  { type: 'routes' },
-                  { type: 'service', captured: { context: 'auth' } },
-                  { type: 'util', captured: { context: 'shared' } },
+                  { file: { categories: 'routes' } },
+                  { element: { type: 'service', captured: { context: 'auth' } } },
+                  { element: { type: 'util', captured: { context: 'shared' } } },
                 ],
               },
             },
             // modules for routes may import feature components
             {
-              from: { type: 'routes' },
-              allow: { to: { type: 'features' } },
+              from: { file: { categories: 'routes' } },
+              allow: { to: { element: { type: 'features' } } },
             },
             // modules for routes may not import ui components
             {
-              from: { type: 'routes' },
-              disallow: { to: { type: 'ui' } },
+              from: { file: { categories: 'routes' } },
+              disallow: { to: { element: { type: 'ui' } } },
               message: 'Modules for routes cannot import ui components',
             },
-            // tests are currently exempt from all rules
+            // mocks are exempt from all rules, except the mock rule further below
             {
-              from: { type: ['spec', 'mock'] },
-              allow: { to: { type: '*' } },
+              from: { element: { type: 'mock' } },
+              allow: { to: { element: { type: '*' } } },
             },
             // disallow importing from higher levels
             {
-              from: { type: 'ui' },
-              disallow: { to: { type: 'features' } },
+              from: { element: { type: 'ui' } },
+              disallow: { to: { element: { type: 'features' } } },
               message: 'UI components should not import feature components',
             },
             {
-              from: { type: 'ui' },
-              disallow: { to: { type: 'service' } },
+              from: { element: { type: 'ui' } },
+              disallow: { to: { element: { type: 'service' } } },
               message: 'UI components should not import services',
             },
             {
-              from: { type: ['service', 'pipe', 'model', 'util'] },
-              disallow: { to: { type: ['features', 'ui'] } },
+              from: { element: { type: ['service', 'pipe', 'model', 'util'] } },
+              disallow: { to: { element: { type: ['features', 'ui'] } } },
               message: 'Components should not be imported from other kinds of modules',
             },
             {
-              from: { type: 'pipe' },
-              disallow: { to: { type: 'service' } },
+              from: { element: { type: 'pipe' } },
+              disallow: { to: { element: { type: 'service' } } },
               message: 'Services should not be imported from pipes',
             },
             {
-              from: { type: 'model' },
-              disallow: { to: { type: ['service', 'pipe'] } },
+              from: { element: { type: 'model' } },
+              disallow: { to: { element: { type: ['service', 'pipe'] } } },
               message: 'Services and pipes should not be imported from models',
             },
             {
-              from: { type: 'util' },
-              disallow: { to: { type: ['service', 'pipe'] } },
+              from: { element: { type: 'util' } },
+              disallow: { to: { element: { type: ['service', 'pipe'] } } },
               message: 'Services and pipes should not be imported from utilities',
             },
             // Auth service may be imported in other contexts
             {
-              from: { type: ['features', 'service', 'routes'] },
-              allow: { to: { type: 'service', captured: { context: 'auth' } } },
+              from: [
+                { element: { type: ['features', 'service'] } },
+                { file: { categories: 'routes' } },
+              ],
+              allow: {
+                to: { element: { type: 'service', captured: { context: 'auth' } } },
+              },
             },
             // Auth models may be imported in other contexts
             {
-              from: { type: ['features', 'service', 'model', 'mock'] },
-              allow: { to: { type: 'model', captured: { context: 'auth' } } },
+              from: { element: { type: ['features', 'service', 'model', 'mock'] } },
+              allow: {
+                to: { element: { type: 'model', captured: { context: 'auth' } } },
+              },
             },
 
             // Mock module may only import models
             {
-              from: { type: 'mock' },
-              disallow: { to: { type: '!model' } },
+              from: { element: { type: 'mock' } },
+              disallow: { to: { element: { type: '!model' } } },
               message: 'Mock modules can only import models {{to.captured.context}}',
+            },
+            // Tests are currently exempt from all rules. Spec files are a file
+            // category rather than an element, so they also match the element rules
+            // for the folder they live in; this exemption must stay last to win.
+            // The target list covers both layers because some import targets (config,
+            // routes, the main app component) are categorised files without an element.
+            {
+              from: { file: { categories: 'spec' } },
+              allow: {
+                to: [{ element: { type: '*' } }, { file: { categories: '*' } }],
+              },
             },
           ],
         },
@@ -308,80 +373,57 @@ export default tseslint.config(
           alwaysTryTypes: true,
         },
       },
+      // Element patterns match folders, so single files are classified here instead,
+      // by category. A file can carry a category and still belong to an element:
+      // `src/app/metadata/ui/x.spec.ts` is category `spec` inside the `ui` element.
+      'boundaries/files': [
+        { category: 'main', pattern: 'src/main.ts' },
+        { category: 'config', pattern: 'src/app/**/*.config.ts' },
+        { category: 'main-app', pattern: 'src/app/app.ts' },
+        { category: 'routes', pattern: 'src/app/**/*-routes.ts' },
+        { category: 'spec', pattern: 'src/app/**/*.spec.ts|tests/**/*.ts' },
+        {
+          category: 'tooling',
+          pattern: ['setup-test.ts', 'playwright.config.ts', 'vitest.config.ts'],
+        },
+      ],
       'boundaries/elements': [
         // The first matching pattern will be used as the element type.
         // The element types correspond to the layers of the architecture matrix.
         // The name of the vertical slice is captured as the context value.
         {
-          type: 'main',
-          mode: 'full',
-          pattern: 'src/main.ts',
-        },
-        {
-          type: 'config',
-          mode: 'full',
-          pattern: 'src/app/**/*.config.ts',
-        },
-        {
-          type: 'main-app',
-          mode: 'full',
-          pattern: 'src/app/app.ts',
-        },
-        {
-          type: 'routes',
-          mode: 'full',
-          pattern: 'src/app/**/*-routes.ts',
-        },
-        {
           type: 'features',
           pattern: 'src/app/*/features',
-          mode: 'folder',
           capture: ['context'],
-        },
-        {
-          type: 'spec',
-          pattern: 'src/app/**/*.spec.ts|tests/**/*.ts',
-          mode: 'full',
         },
         {
           type: 'ui',
           pattern: 'src/app/*/ui',
-          mode: 'folder',
           capture: ['context'],
         },
         {
           type: 'service',
           pattern: 'src/app/*/services',
-          mode: 'folder',
           capture: ['context'],
         },
         {
           type: 'pipe',
           pattern: 'src/app/*/pipes',
-          mode: 'folder',
           capture: ['context'],
         },
         {
           type: 'model',
           pattern: 'src/app/*/models',
-          mode: 'folder',
           capture: ['context'],
         },
         {
           type: 'util',
           pattern: 'src/app/*/utils',
-          mode: 'folder',
           capture: ['context'],
         },
         {
           type: 'mock',
-          mode: 'folder',
           pattern: 'src/mocks',
-        },
-        {
-          type: 'tooling',
-          mode: 'file',
-          pattern: ['setup-test.ts', 'playwright.config.ts', 'vitest.config.ts'],
         },
       ],
     },

@@ -19,10 +19,10 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from ghga_service_commons.api import ApiConfigBase, configure_app
 
 from ars import __version__
 from ars.adapters.inbound.fastapi_.routes import router
+from ghga_service_commons.api import ApiConfigBase, configure_app
 
 
 def get_openapi_schema(app: FastAPI) -> dict[str, Any]:

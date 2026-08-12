@@ -18,7 +18,6 @@
 from abc import ABC, abstractmethod
 
 from hexkit.custom_types import JsonObject
-
 from mass.core import models
 
 

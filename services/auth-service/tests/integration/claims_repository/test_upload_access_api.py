@@ -21,12 +21,12 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
-from hexkit.utils import now_utc_ms_prec
 
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.claims_repository.models.claims import VisaType
 from auth_service.user_registry.deps import get_iva_dao, get_user_dao
 from auth_service.user_registry.models.ivas import Iva, IvaState, IvaType
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import ID_OF_JOHN, PHONE_OF_JOHN
 
 from ...fixtures.utils import MockClaimDao, MockIvaDao, MockUserDao

@@ -24,7 +24,6 @@ from hexkit.providers.akafka import (
     KafkaEventSubscriber,
 )
 from hexkit.providers.mongodb import MongoDbDaoFactory
-
 from nos.adapters.inbound.event_sub import (
     AccessRequestOutboxTranslator,
     EventSubTranslator,

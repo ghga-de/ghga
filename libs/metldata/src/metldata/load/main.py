@@ -20,9 +20,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+
 from ghga_service_commons.api import configure_app
 from hexkit.providers.mongodb.provider import ConfiguredMongoClient, MongoDbDaoFactory
-
 from metldata.load.aggregator import MongoDbAggregator
 from metldata.load.api import rest_api_factory
 from metldata.load.config import ArtifactLoaderAPIConfig

@@ -18,62 +18,53 @@
 
 from __future__ import annotations
 
-import httpx
+import httpx2
 import pytest
 from fastapi import HTTPException
-from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
-from ghga_service_commons.api.mock_router import (  # noqa: F401
-    MockRouter,
-    assert_all_responses_were_requested,
-)
+from ghga_service_commons.api.mock_router import MockRouter
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 from tests.integration.fixtures.mock_api import app
 
 BASE_URL = "http://localhost"
 
 
-def http_exception_handler(request: httpx.Request, exc: HttpException):
+def http_exception_handler(request: httpx2.Request, exc: HttpException):
     """Define an exception handler that can be attached to the MockRouter."""
     assert isinstance(exc, HttpException)
-    return httpx.Response(
+    return httpx2.Response(
         status_code=exc.status_code,
         json=exc.body.model_dump(),
     )
 
 
-def test_non_existent_path(httpx_mock: HTTPXMock):  # noqa: F811
+def test_non_existent_path():
     """Make a request with a path that isn't registered."""
-    httpx_mock.add_callback(callback=app.handle_request)
     with pytest.raises(HttpException):
-        with httpx.Client(base_url=BASE_URL) as client:
+        with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
             client.get("/does/not/exist")
 
 
-def test_url_with_wrong_method(httpx_mock: HTTPXMock):  # noqa: F811
+def test_url_with_wrong_method():
     """Make a request to a url that is registered but with the wrong method."""
-    httpx_mock.add_callback(callback=app.handle_request)
     with pytest.raises(HttpException):
-        with httpx.Client(base_url=BASE_URL) as client:
+        with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
             client.patch("/hello")
 
 
-def test_simplest_get(httpx_mock: HTTPXMock):  # noqa: F811
+def test_simplest_get():
     """Make sure there's nothing wrong with an endpoint path with no variables."""
-    httpx_mock.add_callback(callback=app.handle_request)
-    with httpx.Client(base_url=BASE_URL) as client:
+    with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
         response = client.get("/hello")
         assert response is not None
         assert response.json() == {"hello": "world"}
 
 
-def test_get_one_path_variable(httpx_mock: HTTPXMock):  # noqa: F811
+def test_get_one_path_variable():
     """Verify that a path terminating with one variable is okay."""
-    httpx_mock.add_callback(callback=app.handle_request)
-
     expected = "beach_ball"
 
-    with httpx.Client(base_url=BASE_URL) as client:
+    with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
         response = client.get(f"/items/{expected}")
         assert response is not None
         body = response.json()
@@ -81,14 +72,12 @@ def test_get_one_path_variable(httpx_mock: HTTPXMock):  # noqa: F811
         assert body["expected"] == expected
 
 
-def test_get_two_path_variables(httpx_mock: HTTPXMock):  # noqa: F811
+def test_get_two_path_variables():
     """Make sure the handler can parse paths with more than one variable."""
-    httpx_mock.add_callback(callback=app.handle_request)
-
     # pass str number as a sanity check that it stays a str
     expected = ["4", 9]
 
-    with httpx.Client(base_url=BASE_URL) as client:
+    with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
         response = client.get(f"/items/{expected[0]}/sizes/{expected[1]}")
         assert response is not None
         body = response.json()
@@ -96,28 +85,24 @@ def test_get_two_path_variables(httpx_mock: HTTPXMock):  # noqa: F811
         assert body["expected"] == expected
 
 
-def test_get_with_bad_input(httpx_mock: HTTPXMock):  # noqa: F811
+def test_get_with_bad_input():
     """Look for error raised with invalid path variables."""
-    httpx_mock.add_callback(callback=app.handle_request)
-
     expected = ["pass", "fail"]
 
     with pytest.raises(HttpException):
-        with httpx.Client(base_url=BASE_URL) as client:
+        with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
             client.get(f"/items/{expected[0]}/sizes/{expected[1]}")
 
 
-def test_post_successful(httpx_mock: HTTPXMock):  # noqa: F811
+def test_post_successful():
     """Pass a vanilla POST request.
 
     Makes sure that the request parameter is correctly passed to the endpoint function.
     """
-    httpx_mock.add_callback(callback=app.handle_request)
-
     request_body = {"detail": {"a key": "a value"}}
     expected = request_body["detail"]
 
-    with httpx.Client(base_url=BASE_URL) as client:
+    with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
         response = client.post("/items", json=request_body)
         assert response is not None
 
@@ -126,30 +111,27 @@ def test_post_successful(httpx_mock: HTTPXMock):  # noqa: F811
         assert body["expected"] == expected
 
 
-def test_post_failure(httpx_mock: HTTPXMock):  # noqa: F811
+def test_post_failure():
     """Cause the endpoint to raise an HttpException.
 
     Makes sure that endpoint-defined exceptions are passed up as expected when no
     exception handler is specified.
     """
-    httpx_mock.add_callback(callback=app.handle_request)
-
     # cause a failure by omitting the "detail" key that the endpoint looks for
     with pytest.raises(HttpException):
-        with httpx.Client(base_url=BASE_URL) as client:
+        with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
             client.post("/items", json={})
 
 
-def test_post_failure_with_handler(httpx_mock: HTTPXMock):  # noqa: F811
+def test_post_failure_with_handler():
     """Cause the endpoint to raise an HttpException.
 
     Makes sure that exceptions are handled with the specified handler.
     """
     app.exception_handler = http_exception_handler
-    httpx_mock.add_callback(callback=app.handle_request)
 
     # cause a failure by omitting the "detail" key that the endpoint looks for
-    with httpx.Client(base_url=BASE_URL) as client:
+    with httpx2.Client(base_url=BASE_URL, transport=app.as_transport()) as client:
         client.post("/items", json={})
 
 
@@ -187,7 +169,7 @@ def test_endpoint_missing_typehint():
             """Define a dummy function with missing type-hint info."""
 
 
-def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
+def test_handler_errors_filtering():
     """Make sure only the specified errors are passed to the handler.
 
     When a handler is provided and errors are specified,
@@ -197,8 +179,8 @@ def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
     class TestValueError(ValueError):
         """Subclass of ValueError to test handle_exception_subclasses."""
 
-    def handler(request: httpx.Request, exc: ValueError | TestValueError):
-        return httpx.Response(status_code=500)
+    def handler(request: httpx2.Request, exc: ValueError | TestValueError):
+        return httpx2.Response(status_code=500)
 
     throwaway: MockRouter = MockRouter(
         exception_handler=handler,
@@ -219,9 +201,7 @@ def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
     def fails_also():  # will only get passed to error if we set handle_exception_subclasses
         raise TestValueError()
 
-    httpx_mock.add_callback(callback=throwaway.handle_request, is_reusable=True)
-
-    with httpx.Client(base_url=BASE_URL) as client:
+    with httpx2.Client(base_url=BASE_URL, transport=throwaway.as_transport()) as client:
         client.get("/gotohandler")
         with pytest.raises(HttpException):
             client.get("/raise")
@@ -232,7 +212,7 @@ def test_handler_errors_filtering(httpx_mock: HTTPXMock):  # noqa: F811
         client.get("/raise2")
 
 
-def test_exceptions_no_handler(httpx_mock: HTTPXMock):  # noqa: F811
+def test_exceptions_no_handler():
     """Test exception handlers.
 
     Errors specified in exceptions_to_handle should be raised normally if
@@ -246,18 +226,16 @@ def test_exceptions_no_handler(httpx_mock: HTTPXMock):  # noqa: F811
     def raise_an_error():
         raise HTTPException(status_code=404)
 
-    httpx_mock.add_callback(callback=throwaway.handle_request)
-
-    with httpx.Client(base_url=BASE_URL) as client:
+    with httpx2.Client(base_url=BASE_URL, transport=throwaway.as_transport()) as client:
         with pytest.raises(HTTPException):
             client.get("/")
 
 
-def test_no_exceptions_specified(httpx_mock: HTTPXMock):  # noqa: F811
+def test_no_exceptions_specified():
     """Make sure nothing is passed to the error handler if we omit exceptions_to_handle."""
 
-    def handler(request: httpx.Request, exc: HTTPException):
-        return httpx.Response(status_code=500)
+    def handler(request: httpx2.Request, exc: HTTPException):
+        return httpx2.Response(status_code=500)
 
     throwaway: MockRouter = MockRouter(exception_handler=handler)
 
@@ -265,8 +243,6 @@ def test_no_exceptions_specified(httpx_mock: HTTPXMock):  # noqa: F811
     def raise_an_error():
         raise HTTPException(status_code=404)
 
-    httpx_mock.add_callback(callback=throwaway.handle_request)
-
-    with httpx.Client(base_url=BASE_URL) as client:
+    with httpx2.Client(base_url=BASE_URL, transport=throwaway.as_transport()) as client:
         with pytest.raises(HTTPException):
             client.get("/")

@@ -23,15 +23,16 @@ from secrets import choice
 from typing import Any
 from urllib.parse import urlencode
 
+from jwcrypto import jwk
+from pydantic import AnyHttpUrl, Field, PositiveInt
+from pydantic_settings import BaseSettings
+from typing_extensions import TypedDict
+
 from ghga_service_commons.utils.jwt_helpers import (
     decode_and_validate_token,
     generate_jwk,
     sign_and_serialize_token,
 )
-from jwcrypto import jwk
-from pydantic import AnyHttpUrl, Field, PositiveInt
-from pydantic_settings import BaseSettings
-from typing_extensions import TypedDict
 
 from .models import LoginInfo, TokenResponse, UserInfo
 

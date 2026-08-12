@@ -276,16 +276,24 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Whether metadata files are still loading */
   metadataFilesLoading = computed(() => this.#metadataFilesOrNull() === null);
 
-  /** Files in the upload box (excluding deleted and failed ones) */
+  /**
+   * Files in the upload box (excluding deleted and failed ones).
+   *
+   * Mapping needs every file of the box at once — for auto-matching, for the
+   * autocomplete, for the unmapped counts and for the submitted payload — so this
+   * reads the complete list rather than the paginated one used by the file table.
+   * The service walks through as many pages as the box needs, so this covers
+   * boxes of any size.
+   */
   boxFiles = computed<FileUploadWithAccession[]>(() =>
-    this.#uploadBoxService.boxFileUploads
-      .value()
+    this.#uploadBoxService
+      .allBoxFiles()
       .filter((file) => file.state !== 'cancelled' && file.state !== 'failed'),
   );
 
   /** Whether upload box files are still loading */
   boxFilesLoading = computed<boolean>(() =>
-    this.#uploadBoxService.boxFileUploads.isLoading(),
+    this.#uploadBoxService.allBoxFileUploads.isLoading(),
   );
 
   // Derived mappings
@@ -567,6 +575,7 @@ export class UploadBoxMappingComponent implements OnInit {
   /** @inheritdoc */
   ngOnInit(): void {
     this.#studyService.loadStudies();
+    this.#uploadBoxService.loadAllFileUploadsForBox(this.box().id);
     const snapshot = this.#mappingStateService.snapshotFor(this.box().id);
     if (snapshot) {
       this.selectedStudyId.set(snapshot.studyId);

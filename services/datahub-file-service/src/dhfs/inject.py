@@ -18,8 +18,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from hexkit.providers.s3 import S3ObjectStorage
-
 from dhfs.adapters.outbound.central import CentralClient
 from dhfs.adapters.outbound.http import get_configured_httpx_client
 from dhfs.adapters.outbound.s3 import S3Client
@@ -28,6 +26,7 @@ from dhfs.core.cleaner import S3Cleaner
 from dhfs.core.interrogator import Interrogator
 from dhfs.ports.outbound.cleaner import S3CleanerPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
+from hexkit.providers.s3 import S3ObjectStorage
 
 
 @asynccontextmanager

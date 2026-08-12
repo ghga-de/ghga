@@ -22,3 +22,13 @@ docker build -f docker/Dockerfile \
 > per-member `PACKAGE`/`EXECUTABLE` values come from `[tool.ghga]`
 > ([conventions](../docs/conventions.md)). The front end keeps its own bespoke Dockerfile under
 > `frontend/`.
+
+## Published tags
+
+- `<member>:<platform-version>` — release artifacts, one image per member
+  (`.github/workflows/release.yaml`, manual for now).
+- `platform:dev` + `data-portal:dev` — mutable dev tags tracking `main`
+  (`.github/workflows/dev-images.yaml`): the mono Python image (VARIANT=mono, all members
+  in one venv) and the front-end image. Not release artifacts — they feed the daily
+  vulnerability watch (`.github/workflows/security-scan.yaml`), which rescans them,
+  trials a lockfile update, and opens a PR when the update fixes known CVEs.

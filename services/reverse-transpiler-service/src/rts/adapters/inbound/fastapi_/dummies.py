@@ -17,8 +17,8 @@
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
+from ghga_service_commons.api.di import DependencyDummy
 from rts.ports.inbound.rev_tran import ReverseTranspilerPort
 
 reverse_transpiler_port = DependencyDummy("reverse_transpiler_port")

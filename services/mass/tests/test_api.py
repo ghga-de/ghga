@@ -18,10 +18,10 @@
 
 import logging
 
-import httpx
+import httpx2
 import pytest
-from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 from mass.core import models
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture, QueryParams
@@ -93,7 +93,7 @@ async def test_malformed_document(
 
     with caplog.at_level(logging.WARNING):
         with pytest.raises(
-            httpx.HTTPStatusError, match="500 Internal Server Error"
+            httpx2.HTTPStatusError, match="500 Internal Server Error"
         ) as exc_info:
             await joint_fixture.call_search_endpoint(params)
         assert (
@@ -154,7 +154,7 @@ async def test_search_invalid_class(joint_fixture: JointFixture):
     """Verify that searching with a bad class name results in a 422"""
     params: QueryParams = {"class_name": "InvalidClassName", "limit": 1}
 
-    with pytest.raises(httpx.HTTPStatusError, match="422 Unprocessable Entity"):
+    with pytest.raises(httpx2.HTTPStatusError, match="422 Unprocessable"):
         await joint_fixture.call_search_endpoint(params)
 
 

@@ -15,11 +15,11 @@
 
 """Config Parameter Modeling and Parsing"""
 
+from pydantic import Field, ValidationInfo, field_validator
+
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
-from pydantic import Field, ValidationInfo, field_validator
-
 from top.core.oidc_provider import OidcProviderConfig
 
 SERVICE_NAME = "top"

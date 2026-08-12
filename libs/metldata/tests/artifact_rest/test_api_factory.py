@@ -16,14 +16,14 @@
 
 """Test the api_factory module."""
 
-import httpx
+import httpx2
 import pytest
 from fastapi import FastAPI
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.utc_dates import UTCDatetime, now_as_utc
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from metldata.artifacts_rest.api_factory import rest_api_factory
 from metldata.artifacts_rest.artifact_info import ArtifactInfo, get_artifact_info_dict
 from metldata.load.aggregator import MongoDbAggregator
@@ -37,7 +37,7 @@ pytestmark = pytest.mark.asyncio()
 async def get_example_app_client(
     dao_factory: DaoFactoryProtocol,
     artifact_infos: list[ArtifactInfo] = EXAMPLE_ARTIFACT_INFOS,
-) -> httpx.AsyncClient:
+) -> httpx2.AsyncClient:
     """Return a test client for a FastAPI generated using the artifact_rest_factory."""
     router = await rest_api_factory(
         artifact_infos=artifact_infos, dao_factory=dao_factory

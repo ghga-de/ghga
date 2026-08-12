@@ -23,7 +23,6 @@ from hexkit.providers.mongodb.migrations import (
     Reversible,
 )
 from hexkit.utils import now_utc_ms_prec
-
 from rs.constants import FILE_ACCESSION_COLLECTION, RESEARCH_DATA_UPLOAD_BOX_COLLECTION
 from rs.core.models import FileAccession
 
