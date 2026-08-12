@@ -1,13 +1,5 @@
 # Epic Documentation
 
-> [!NOTE]
-> **This repository is retired.**
-> Epic documentation is now continued in our monorepo at
-> [ghga-de/ghga](https://github.com/ghga-de/ghga), under
-> [`docs/epics`](https://github.com/ghga-de/ghga/tree/main/docs/epics).
-> The specifications kept here remain available for reference,
-> but new epics should be documented in the monorepo.
-
 This repository contains technical specifications for GHGA development epics,
 documenting the scope and plans for each epic before the epic is started.
 
