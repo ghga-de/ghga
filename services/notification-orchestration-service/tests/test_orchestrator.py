@@ -57,7 +57,7 @@ def iva_state_payload(user_id: UUID4, state: event_schemas.IvaState) -> dict[str
                 "dac_alias": "Some DAC",
                 "dac_email": "dac@some.org",
                 "request_text": "Please grant me access to this data.",
-                "request_url": f"https://data.ghga.de/access-requests/{ACCESS_REQUEST_ID}",
+                "request_url": f"https://data.ghga.de/access-request-manager/{ACCESS_REQUEST_ID}",
             },
             "pending",
         ),
