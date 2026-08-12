@@ -43,7 +43,7 @@ characters, version counter.
 Only `.V` changes.
 
 `Legacy accession`: An identifier minted under the current flat scheme (`GHGAS`/`GHGAD`/`GHGAF` +
-random digits). Not parseable into a root and a version, and never rewritten.
+random digits). Not parseable into a root and a version.
 
 `Superseded study`: A study for which a successor has been declared. Its datasets leave the search
 index but stay reachable by URL/PID.
@@ -53,7 +53,7 @@ so on. Single-valued, so it terminates at a unique newest study.
 
 `Merge`: One successor declared as the replacement of more than one predecessor.
 
-`Reuse slot`: A new slot on the LinkML model's file classes carrying the prior GHGA file accession
+`Reuse slot`: A new slot on the ghga metadata model's file classes carrying the prior GHGA file accession
 of a file the submission reuses rather than re-uploads.
 
 `Ancestry collection`: The metldata collection holding the `predecessor PID -> successor PID`
@@ -64,8 +64,8 @@ relation, written by the loader and read by the data portal.
 ### Included/Required:
 
 - **One study per submission.** dskit must reject any submission whose metadata contains more than
-  one study, naming the studies found, and the metldata loader must assert the same rather than
-  silently truncating. Every other item below is undefined for a two-study submission: child
+  one study, and the metldata loader must assert the same rather than
+  silently truncating. Every other item below is undefined for a multi-study submission: child
   accessions derive from *the* study PID, replacement is declared per study, supersede is
   study-level. The test bed's example metadata is currently a single submission containing two
   studies and must be split as part of this work.
@@ -80,8 +80,7 @@ relation, written by the loader and read by the data portal.
 - **Steward-declared replacement, two paths.** `dskit metadata submit --replaces <exact study PID>`
   (repeatable, to express a merge) and a new `dskit metadata replace-study <old PID> <new PID>` for
   two already-submitted studies. Both must fail when the named predecessor is already replaced, and
-  when the predecessor's successor chain already reaches the successor. Together these keep the
-  successor relation a forest.
+  when the predecessor's successor chain already reaches the successor.
 - **Version derivation on submit.** One new-scheme predecessor continues its lineage at
   `V = predecessor version + 1`; a legacy predecessor starts a fresh root at `V = 1`; a merge
   prompts the steward to either continue one named predecessor's lineage or mint a fresh root.
