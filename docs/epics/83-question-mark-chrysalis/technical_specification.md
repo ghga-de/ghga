@@ -37,7 +37,6 @@ To this goal, it needs to keep track of the transformation workflows, original a
 - Implement logic to process incoming AnnotatedEMPacks, execute the corresponding workflows and store the resulting AnnotatedEMPacks if required.
 - Implement code to manage changes in models, workflows and routes, e.g. by creating universal schema descriptions from the ingress schema descriptions and re-transforming the AnnotatedEMPacks.
 
-
 ### Core entities
 
 #### `Model`

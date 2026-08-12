@@ -104,3 +104,4 @@ This repository is part of the [Epic Planning and Marathon SOP](https://ghga.pag
 - (85) [Tasselled Wobbegong](./85-tasselled-wobbegong/technical_specification.md): Support for Key-Value-Store in Hexkit
 - (86) [Archaeopteryx](./86-archaeopteryx/technical_specification.md): Basic Research Data Upload Box Frontend
 - (87) [Mermaid'S Purse](./87-mermaids-purse/technical_specification.md): Global Unique IDs, Aggregate Transformations, and Workflow API
+- (89) [Apollo](./89-apollo/technical_specification.md): Initial Version of the GHGA Registry Service
