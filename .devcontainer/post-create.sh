@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Named volumes mount root-owned; chown the mount points back to vscode
-# so uv, Playwright, and Claude Code can write to them.
-sudo chown vscode:vscode ~/.local ~/.local/share ~/.cache
-sudo chown -R vscode:vscode ~/.claude ~/.local/share/uv ~/.cache/uv ~/.cache/ms-playwright
+# so uv, Playwright, Claude Code, and gh can write to them.
+sudo chown vscode:vscode ~/.local ~/.local/share ~/.cache ~/.config
+sudo chown -R vscode:vscode ~/.claude ~/.config/gh ~/.local/share/uv ~/.cache/uv ~/.cache/ms-playwright
 
 # just and kind come from no feature, and ~/.local/bin is not one of the persisted
 # volumes — so a rebuild loses them and every justfile recipe stops working, including
