@@ -339,6 +339,7 @@ async def get_research_data_upload_box(
 )
 @TRACER.start_as_current_span("routes.list_upload_box_files")
 async def list_upload_box_files(  # noqa: PLR0913
+    *,
     box_id: UUID,
     registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,

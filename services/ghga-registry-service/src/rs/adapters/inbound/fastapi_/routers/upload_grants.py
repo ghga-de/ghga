@@ -96,6 +96,7 @@ async def grant_upload_access(
 )
 @TRACER.start_as_current_span("routes.get_upload_access_grants")
 async def get_upload_access_grants(  # noqa: PLR0913
+    *,
     registry: dummies.RegistryDummy,
     auth_context: UserAuthContext,
     user_id: Annotated[
