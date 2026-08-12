@@ -30,15 +30,15 @@ This epic changes the interrogation loop so DHFS works on several files at once,
 
 ### Not included:
 
-- Running multiple DHFS replicas per hub as a way to add throughput. There is currently no claim or lease mechanism between DHFS and FIS, so two replicas would both pick up and redundantly process the same file. Making that safe is a separate design challenge involving FIS, not something to fold into this epic.
-- Any change to what FIS returns from `GET /storages/{alias}/uploads`. FIS still hands back the whole batch of pending files in one call, with no pagination or per-file claiming. That's fine for now since DHFS keeps the batch in memory and works through it itself.
+- Running multiple DHFS replicas per hub as a way to add throughput. There is currently no claim or lease mechanism between DHFS and FIS, so two replicas would both pick up and redundantly process the same file. Making that safe is a separate design challenge involving FIS.
+- Any change to what FIS returns from `GET /storages/{alias}/uploads`. FIS still hands back the whole batch of pending files in one call, with no pagination or per-file claiming.
 
 ## Additional Implementation Details:
 
 ### Current behavior
 
 
-`interrogate_new_files()` fetches the full batch of pending files from FIS and then loops over them with a plain `for file in new_files: await self.interrogate_file(file)`. Nothing about the next file starts until the current one is fully done, reported, and out of the way.
+`interrogate_new_files()` fetches a full batch of pending files from FIS and then loops over them with a plain `for` loop, calling `await self.interrogate_file(file)` on each one. The next file won't start until the current one is fully processed.
 
 ```mermaid
 flowchart TD
