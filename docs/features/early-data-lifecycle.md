@@ -84,6 +84,8 @@ So:
   replaces a legacy `GHGAS…` study, and nothing may assume a predecessor PID is parseable into root
   + version;
 - a legacy PID carries no lineage, so a successor replacing one starts a fresh root at `V = 1`
+  (§2.2) — not `V = 2`, which would leave `GHGA.YY.XXX.1` permanently unresolvable and has no
+  defined value when several legacy studies merge;
   (§2.2);
 - both schemes coexist indefinitely in search results, artifact queries and portal URLs.
 
