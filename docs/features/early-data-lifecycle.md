@@ -154,7 +154,7 @@ Service-side metldata cannot renumber after the fact; it can only record what it
 #### Reuse checks are offline warnings, not service-side rejections
 
 Merging (§2.4) makes any "the reused file must belong to my own lineage" rule unworkable, since
-after a merge there is no single lineage to belong to. The same-lineage hard check in rs is
+after a merge there is no single lineage to belong to. The same-lineage hard check in the registry service is
 therefore dropped. In its place, dskit warns at submit time and asks the steward to confirm. All
 three checks are decidable from submitted metadata alone, so they need no view of physical files:
 
