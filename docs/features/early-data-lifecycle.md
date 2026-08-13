@@ -561,5 +561,12 @@ invisible the moment that inversion lands.
 ## 7. Open questions / risks
 
 - **Scale of the file admin panel** (§4.3, §4.5). The listing is unbounded by design — every archived
-  file in GHGA. Confirm pagination/filtering are enough, and add the `FileAccession.file_id` index the
-  reverse lookup needs.
+  file in GHGA. hexkit's offset-based `find_all(skip=…, limit=…)` and `FindResult.total_count()`
+  bound a page, so response size is handled; two questions are not:
+  - **Governance fan-out.** The portal composes governance per accession from metldata (§4.3), so a
+    page of N rows costs N cross-service lookups unless batched into one artifact query.
+  - **Mapped/unmapped filtering.** "Archived but never mapped" is a `FileUpload` with no
+    `FileAccession` row — an anti-join `find_all` cannot express, needing an aggregation pipeline or
+    a denormalized flag on the upload record.
+
+  Either way, add the `FileAccession.file_id` index the reverse lookup needs.
