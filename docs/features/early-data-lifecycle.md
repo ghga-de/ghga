@@ -147,7 +147,7 @@ Service-side metldata cannot renumber after the fact; it can only record what it
   (PID) in that file entity's **reuse slot** (a new model slot, §4.2). dskit does not
   resolve that PID to a physical file and cannot — the offline side has no view of uploads or
   archived files. It carries the prior PID through in the metadata. The binding to a physical file
-  happens later, at mapping time in the data portal (rs), see §2.5: the new study's file entity gets
+  happens later, at mapping time in the data portal (via rs), see §2.5: the new study's file entity gets
   its own `{study_pid}.{alias}` accession, and rs binds it to the same `file_id` as the referenced
   prior accession.
 
