@@ -377,8 +377,8 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   online reader of the supersede relation in the early rollout, which is why rs's `superseded_by_id`
   is left unpopulated (§4.3). It must resolve a chain to its terminal study, not just one hop (§2.4),
   and answer for legacy `GHGAS…` predecessors that never had a lineage.
-- **Model slot for reused-file accession.** The LinkML model's file classes need a slot to carry the
-  prior GHGA file accession (distinct from the existing `ega_accession`). Add it to the GHGA model and
+- **Reuse slot in the model (§2.3).** The LinkML model's file classes need a slot carrying the prior
+  GHGA file accession, distinct from the existing `ega_accession`. Add it to the GHGA model and
   regenerate artifact models.
 - **`studies[0]` — enforce, don't tolerate.** With one study per submission now a hard rule (§2.6),
   `load/collect.py:91` should assert a single study and fail loudly otherwise, replacing today's
