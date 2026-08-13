@@ -180,7 +180,7 @@ even when every other attribute is untouched — so the warning must name the co
 gain authority. The standing view of who governs what is the file admin panel, which lists the DAP
 and DAC for each archived file (§4.5).
 
-#### dins must key file information by file, not by accession
+#### DINS must key file information by file, not by accession
 
 IFRS announces a file's size, checksum and storage alias **once**, at archival. dins treats that as
 a one-time hand-off: it parks the payload keyed by `file_id`, merges it into the first accession that
