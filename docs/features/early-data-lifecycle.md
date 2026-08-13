@@ -165,15 +165,15 @@ three checks are decidable from submitted metadata alone, so they need no view o
 | 3 | for the reused files, the `data_access_policy` — including its nested `data_access_committee` — reachable via their dataset(s) does not match what applied before | warning that the submission would place files under new governance + confirm |
 
 All three are warnings the steward may override, not errors. They catch accidental reuse and
-accidental governance changes. Check 3 compares the governing attributes per file, since a file may
-sit in datasets with different policies.
+accidental governance changes.
 
-**Check 3 compares content, never accessions or aliases.** Comparing the alias segment is tempting,
-because an unchanged committee usually keeps its alias, but it misses a steward who keeps the alias
-while editing the committee's membership, has nothing to compare for legacy predecessors (§2.1), and
-means nothing across a merge, where aliases from different lineages are unrelated strings. The
-attributes are already in the submission store, so field-by-field comparison costs no service
-call; accessions only name the differing entity in the message.
+**Check 3 compares all DAP/DAC attributes, never accessions or aliases.** It runs per file, since a
+file may sit in datasets with different policies. Comparing the alias segment is tempting, because
+an unchanged committee usually keeps its alias, but it misses a steward who keeps the alias while
+editing the committee's membership, has nothing to compare for legacy predecessors (§2.1), and means
+nothing across a merge, where aliases from different lineages are unrelated strings. The attributes
+are already in the submission store, so field-by-field comparison costs no service call; accessions
+only name the differing entity in the message.
 
 The case the check exists for is a file becoming subject to additional DACs — a governance change
 even when every other attribute is untouched — so the warning must name the committees that would
