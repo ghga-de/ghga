@@ -387,10 +387,9 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 - **Record supersede at load, and out of band.** The loader (`load/api.py`, `load/load.py`,
   `load/event_publisher.py`) applies the replacement carried in the payload: mark each named
   predecessor superseded by the successor, remove the superseded studies' primary-dataset resources
-  from the search track (emit `searchable_resource_deleted`) while keeping them queryable via the
+  from the search track (emit `searchable_resource_deleted`) while keeping them findable via the
   artifacts API for direct URL access, and write the relation into the ancestry collection the portal
-  hint reads (above). Reject a declaration whose predecessor is already replaced, and keep
-  re-application of the same declaration idempotent.
+  hint reads (above). Keep re-application of the same declaration idempotent.
 
 ### 4.3 `services/ghga-registry-service` (rs)
 
