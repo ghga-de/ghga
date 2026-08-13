@@ -1,7 +1,7 @@
 # Early Data Lifecycle Rollout — Developer Guide
 
 > **Audience.** Developers implementing the feature across dskit, metldata, the registry
-> service, MASS, dins and the data portal.
+> service, MASS, DINS and the data portal.
 >
 > **Read first.** [`docs/architecture/metadata-and-file-journeys.md`](../architecture/metadata-and-file-journeys.md)
 > — the current-state map this document builds on. RDUB, FUB, primary dataset source,
@@ -147,8 +147,8 @@ Service-side metldata cannot renumber after the fact; it can only record what it
   (PID) in that file entity's **reuse slot** (a new model slot, §4.2). dskit does not
   resolve that PID to a physical file and cannot — the offline side has no view of uploads or
   archived files. It carries the prior PID through in the metadata. The binding to a physical file
-  happens later, at mapping time in the data portal (via rs), see §2.5: the new study's file entity gets
-  its own `{study_pid}.{alias}` accession, and rs binds it to the same `file_id` as the referenced
+  happens later, at mapping time in the data portal (via RS), see §2.5: the new study's file entity gets
+  its own `{study_pid}.{alias}` accession, and RS binds it to the same `file_id` as the referenced
   prior accession.
 
 #### Reuse checks are offline warnings, not service-side rejections
@@ -202,9 +202,9 @@ to that file however late it appears, and clear all such accessions when the fil
   successor relation is single-valued in the forward direction: from any study there is exactly one
   successor, so following the chain from a legacy study always terminates at a unique newest study.
   This is what makes the portal hint well-defined even under merges.
-- **metldata is the single source of truth for supersede status** as served. rs, MASS and the portal
-  are consumers: rs's `Study.superseded_by_id`/`status` are populated
-  from the signal metldata emits, not computed by rs.
+- **metldata is the single source of truth for supersede status** as served. RS, MASS and the portal
+  are consumers: RS's `Study.superseded_by_id`/`status` are populated
+  from the signal metldata emits, not computed by RS.
 - **Legacy means a successor has been declared for this study.** Legacy studies' datasets are hidden
   from search but remain reachable by URL/PID (`/dataset/{id}`, `/study/{id}`). The portal shows an
   "updated version available" hint that resolves at study level, following the successor chain to its
@@ -213,7 +213,7 @@ to that file however late it appears, and clear all such accessions when the fil
   §2.2), so loading is not the only moment supersede status can change — see §4.2.
 - **Hidden from search must not mean deleted or unreachable.** The signal that removes an old version
   from the search index must still leave its artifacts reachable by accession *and* carry the
-  supersede pointer, so the portal hint and rs's `superseded_by_id` can be set (§4.2).
+  supersede pointer, so the portal hint and RS's `superseded_by_id` can be set (§4.2).
 
 ### 2.5 Mapping / archival decoupling
 
@@ -283,7 +283,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 5. Service-side metldata records the declared replacement (§2.4): each named predecessor is marked
    superseded, its datasets leave the search track while staying queryable by URL, and the relation
    lands in the ancestry collection.
-6. MASS stops returning the superseded studies' datasets. rs receives the supersede signal and sets
+6. MASS stops returning the superseded studies' datasets. RS receives the supersede signal and sets
    `status`; `superseded_by_id` stays unpopulated in this rollout (§4.3).
 7. The portal shows the successor in search; visiting a superseded dataset or study by URL shows the
    "updated version available" hint, resolved by following the chain to its terminal study.
@@ -292,7 +292,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 
 8. Files are uploaded via the UCS box path and **archived** — no mapping required. The steward then
    opens the mapping view for a study and works against the **archived** box(es):
-   - **files referenced by prior PID** — rs binds the new entity's accession to that same file and
+   - **files referenced by prior PID** — RS binds the new entity's accession to that same file and
      lists every study the file already maps to. No same-lineage gate; that judgement was made
      offline at submit time (§2.3).
    - **entities with no reuse PID** — matched by alias/filename against a pool of archived boxes,
@@ -374,7 +374,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 - **Ancestry collection (new).** metldata keeps a queryable collection of the
   `predecessor PID → successor PID` relation, written by the loader, and exposes a read endpoint over
   it. This is what the portal's "updated version available" hint resolves against (§4.5) — the sole
-  online reader of the supersede relation in the early rollout, which is why rs's `superseded_by_id`
+  online reader of the supersede relation in the early rollout, which is why RS's `superseded_by_id`
   is left unpopulated (§4.3). It must resolve a chain to its terminal study, not just one hop (§2.4),
   and answer for legacy `GHGAS…` predecessors that never had a lineage.
 - **Reuse slot in the model (§2.3).** The LinkML model's file classes need a slot carrying the prior
@@ -391,7 +391,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   artifacts API for direct URL access, and write the relation into the ancestry collection the portal
   hint reads (above). Keep re-application of the same declaration idempotent.
 
-### 4.3 `services/ghga-registry-service` (rs)
+### 4.3 `services/ghga-registry-service` (RS)
 
 - **Relax the accession↔file relation from 1:1 to many-to-one.** No schema change or migration is
   needed: `FileAccession` is already keyed by `pid` with `file_id` as an ordinary nullable field
@@ -412,11 +412,11 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   a single box:
   - **PID-referenced files** — for each file entity carrying a prior GHGA file accession, bind the new
     entity's accession to that file's `file_id` (the many-to-one case) and report the list of studies
-    the file already maps to, so the steward can see where else it is in use. rs reads the reuse slot
+    the file already maps to, so the steward can see where else it is in use. RS reads the reuse slot
     from the metldata artifacts it already consumes — no new event field is needed to carry it.
     **There is no same-lineage validation here.** Merging (§2.4) removes any single lineage to
     validate against; the judgement is made offline instead, by the §2.3 warnings the steward confirms
-    at submit time. rs still verifies the referenced accession exists and is mapped.
+    at submit time. RS still verifies the referenced accession exists and is mapped.
   - **Unreferenced files** — let the steward add a pool of archived boxes (the ones originally used) as
     candidates, then map by alias/filename with manual corrections. The data source is the
     post-archival box/file inventory retained per
@@ -430,7 +430,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   | file UUID (`file_id`) | ucs `FileUpload` |
   | GHGA accession(s) — plural | `FileAccession` rows for that `file_id` (many-to-one) |
   | study/studies | `FileAccession.study_id` per accession |
-  | governing `data_access_policy` + nested `data_access_committee` | not from rs — resolved per accession by the portal, via that file entity's dataset(s) in metldata's artifacts |
+  | governing `data_access_policy` + nested `data_access_committee` | not from RS — resolved per accession by the portal, via that file entity's dataset(s) in metldata's artifacts |
   | file upload box | the RDUB/FUB the upload belongs to |
   | upload box alias | `FileUpload.alias` |
 
@@ -446,21 +446,21 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 
   This is also the first read path that starts from `file_id` rather than from a box or an accession,
   so it wants an index on `FileAccession.file_id` (none today — the collection is keyed by `pid`). The
-  governance data lives in metldata and the portal fetches it from metldata directly; rs does not join
-  it at read time. So rs's listing returns the file/accession/study/box columns only, and the portal
+  governance data lives in metldata and the portal fetches it from metldata directly; RS does not join
+  it at read time. So RS's listing returns the file/accession/study/box columns only, and the portal
   composes the governance column per accession from metldata's artifacts (§4.5).
-- **Study deprecation — rs is a consumer, not the author.** The steward authors the relation (§2.2)
-  and metldata records and propagates it (§4.2). rs's job is to receive the supersede signal and land
+- **Study deprecation — RS is a consumer, not the author.** The steward authors the relation (§2.2)
+  and metldata records and propagates it (§4.2). RS's job is to receive the supersede signal and land
   it in the fields its `Study` already has (`superseded_by_id`, `status`). `superseded_by_id` is
   single-valued, which matches the single-valued successor direction (§2.4); it is the *predecessor*
-  side that is many. Note that rs's ingestion path (`rs/adapters/inbound/event_sub.py`
+  side that is many. Note that RS's ingestion path (`rs/adapters/inbound/event_sub.py`
   `ResourceSubTranslator` → `rs/core/legacy_resources.py`) fills lifecycle fields with placeholders
   (forced `ARCHIVED`, sentinel creator).
 
   **`superseded_by_id` is not populated in the early rollout.** The portal resolves the successor from
-  metldata's ancestry collection, not from rs (§4.5), so nothing reads the field — and propagating it
-  would mean adding a supersede pointer to the events rs consumes (§4.6) to serve no reader. The field
-  stays in the model for when rs takes ownership of study metadata; until then it is left unset rather
+  metldata's ancestry collection, not from RS (§4.5), so nothing reads the field — and propagating it
+  would mean adding a supersede pointer to the events RS consumes (§4.6) to serve no reader. The field
+  stays in the model for when RS takes ownership of study metadata; until then it is left unset rather
   than filled with a value nobody derives.
 
 ### 4.4 `services/mass`
@@ -479,7 +479,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 - **"Updated version available" hint.** On `dataset/:id` and `study/:id`, detect that the entity
   belongs to a superseded study and render a hint linking to its successor — following the chain to
   the terminal study (§2.4). The successor is resolved from metldata, against the ancestry collection
-  it maintains (§4.2); rs is not involved. Because merges exist, the hint may lead from several old
+  it maintains (§4.2); RS is not involved. Because merges exist, the hint may lead from several old
   studies to the *same* successor; the reverse ("this study replaced A, B and C") is a separate,
   optional affordance.
 - **Study-centric mapping UI.** Rework
@@ -491,7 +491,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 - **Reused-file affordances.** Surface, in the mapping view, which entities are satisfied by a prior
   GHGA accession vs need a physical file.
 - **File admin panel (new, steward-only).** A browsable table over every archived file in GHGA, backed
-  by the rs listing (§4.3): file UUID, GHGA accession(s), study/studies, the governing
+  by the RS listing (§4.3): file UUID, GHGA accession(s), study/studies, the governing
   `data_access_policy` and its nested `data_access_committee`, upload box, and box alias — with the
   box columns empty for legacy files that never came through a box. This is the only place an
   archived-but-unmapped file becomes visible, which is why it is part of this feature rather than a
@@ -504,13 +504,13 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 - **No change is needed to carry the declared replacement.** The relation stays inside metldata —
   recorded in its ancestry collection and read from there by the portal (§4.2, §4.5) — so no supersede
   pointer has to be added to `MetadataDatasetOverview` or `SearchableResource`. Hiding superseded
-  datasets travels on the existing `searchable_resource_deleted` event (§4.4). Should rs later need
+  datasets travels on the existing `searchable_resource_deleted` event (§4.4). Should RS later need
   `superseded_by_id` populated, that is the point at which a field gets added; keep any such change
   additive and mind the single-version source-coupling in this monorepo (all consumers see one schema
   version).
 - **No change is needed for the many-to-one file relation.** `FileAccessionMapping` is already emitted
   per accession carrying its `file_id`, so *N* accessions on one file simply produce *N* events. wps
-  stores and deletes by accession and is unaffected; dins is not — its `PendingFileInfo` merge is
+  stores and deletes by accession and is unaffected; DINS is not — its `PendingFileInfo` merge is
   keyed by `file_id` and consumes the record, which is a required service change rather than an
   assumption to test (§2.3).
 
@@ -524,7 +524,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   successor chain single-valued.
 - **The successor relation is acyclic** (§2.2) — dskit alone, walking the chain in the submission
   store.
-- **`accession → file` single-valued, immutable once bound** (§2.3) — rs
+- **`accession → file` single-valued, immutable once bound** (§2.3) — RS
   `FileController.map_accessions_to_file_ids`; only file → accession becomes many.
 - **Legacy PIDs stay valid forever** (§2.1) — never rewritten, never assumed parseable into
   root + version.
@@ -542,12 +542,12 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
    everything else depends on the new accessions existing. Land with unit tests for format,
    uniqueness, version continuation, legacy-predecessor handling, and dataset file-set reuse.
 2. **Model slot for reused-file accession** (§4.2) — metadata carries the prior PID; binding to a
-   physical file is deferred to rs at mapping time (§4.3).
-3. **rs: relax the cardinality validation + invert archival↔mapping** (§4.3) — independent of PIDs;
+   physical file is deferred to RS at mapping time (§4.3).
+3. **RS: relax the cardinality validation + invert archival↔mapping** (§4.3) — independent of PIDs;
    unblocks both the mapping redesign and the admin panel.
 4. **Declared replacement: `--replaces` + `replace-study` → recording, search hiding, propagation**
    (§4.1, §4.2, §4.4), including the reuse warnings (§2.3) that depend on the submission store.
-5. **rs study-centric mapping surface + file admin panel API** (§4.3).
+5. **RS study-centric mapping surface + file admin panel API** (§4.3).
 6. **Portal: mapping UI rework, legacy hint, file admin panel** (§4.5).
 
 Steps 1–2, 3, and 4 are largely independent once step 0 and the PID scheme are fixed. The file admin
