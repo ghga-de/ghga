@@ -182,7 +182,7 @@ and DAC for each archived file (§4.5).
 
 #### DINS must key file information by file, not by accession
 
-IFRS announces a file's size, checksum and storage alias **once**, at archival. dins treats that as
+IFRS announces a file's size, checksum and storage alias **once**, at archival. DINS treats that as
 a one-time hand-off: it parks the payload keyed by `file_id`, merges it into the first accession that
 claims it, and **deletes it**.
 Under reuse a second accession is mapped much later (§2.5), IFRS never re-announces, and nothing is
