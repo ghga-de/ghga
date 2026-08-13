@@ -349,7 +349,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 ### 4.2 `libs/metldata`
 
 - **Accession scheme.** Replace/augment the flat random `AccessionRegistry`
-  (`accession_registry/accession_registry.py:82`) so studies and their children follow the lifecycle
+  so studies and their children follow the lifecycle
   scheme. Preferred: a lineage-aware accessioning path that, given a study lineage + version + alias
   set + dataset file-sets, produces the structured PIDs, with per-year uniqueness for study `XXX`
   (scoped to the `YY` block) and lineage-scoped uniqueness for `.DS.xxx`.
@@ -381,7 +381,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   GHGA file accession, distinct from the existing `ega_accession`. Add it to the GHGA model and
   regenerate artifact models.
 - **`studies[0]` — enforce, don't tolerate.** With one study per submission now a hard rule (§2.6),
-  `load/collect.py:91` should assert a single study and fail loudly otherwise, replacing today's
+  the metldata loader should assert a single study and fail loudly otherwise, replacing today's
   silent `[0]` truncation. dskit rejects multi-study submissions upstream, but the loader is a
   separate trust boundary and should not depend on that.
 - **Record supersede at load, and out of band.** The loader (`load/api.py`, `load/load.py`,
@@ -401,10 +401,10 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   (`rs/core/rdub_manager.py`): the no-duplicate-`file_id` check plus the "every active file in the box
   must be mapped" check together force each submission to be a bijection over the box's files. Those
   are what relax. **Keep** the per-accession guard in `FileController.map_accessions_to_file_ids`
-  (`rs/core/files.py:37`) that rejects re-binding an already-mapped accession to a different `file_id`
+  (`rs/core/files.py`) that rejects re-binding an already-mapped accession to a different `file_id`
   or study — that is the single-valued `accession → file` direction the design preserves (§2.3).
 - **Invert the archival↔mapping dependency.** Remove the "all files mapped" archival prerequisite
-  (`_check_archival_prerequisites`, `rdub_manager.py:314`) and the requirement that
+  (`_check_archival_prerequisites` in `rdub_manager.py`) and the requirement that
   `store_accession_map` covers every active file, so a box can be archived with no mapping (archival
   then only requires no `init`/`inbox` files at the ucs level). Conversely, make archival a
   precondition for mapping: `store_accession_map` today *rejects* archived boxes — that guard inverts
@@ -454,7 +454,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   and metldata records and propagates it (§4.2). rs's job is to receive the supersede signal and land
   it in the fields its `Study` already has (`superseded_by_id`, `status`). `superseded_by_id` is
   single-valued, which matches the single-valued successor direction (§2.4); it is the *predecessor*
-  side that is many. Note that rs's ingestion path (`rs/adapters/inbound/event_sub.py:65`
+  side that is many. Note that rs's ingestion path (`rs/adapters/inbound/event_sub.py`
   `ResourceSubTranslator` → `rs/core/legacy_resources.py`) fills lifecycle fields with placeholders
   (forced `ARCHIVED`, sentinel creator).
 
