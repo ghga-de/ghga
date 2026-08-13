@@ -296,7 +296,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
      lists every study the file already maps to. No same-lineage gate; that judgement was made
      offline at submit time (§2.3).
    - **entities with no reuse PID** — matched by alias/filename against a pool of archived boxes,
-     with manual corrections, reusing today's matching UX (§4.3).
+     with manual corrections, reusing today's matching UX (§4.5).
 
 **Browsing archived files (data portal, steward-only):**
 
