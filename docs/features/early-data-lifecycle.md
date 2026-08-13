@@ -142,7 +142,7 @@ Service-side metldata cannot renumber after the fact; it can only record what it
   file may be referenced by many accessions. Today the relation is 1:1; what relaxes is the registry
   service's per-request bijection.
 - The steward expresses reuse in the submitted metadata by putting the prior GHGA file accession
-  (PID) in a dedicated file-entity slot (a new model slot, §4.2). dskit does not
+  (PID) in that file entity's **reuse slot** (a new model slot, §4.2). dskit does not
   resolve that PID to a physical file and cannot — the offline side has no view of uploads or
   archived files. It carries the prior PID through in the metadata. The binding to a physical file
   happens later, at mapping time in the data portal (rs), see §2.5: the new study's file entity gets
