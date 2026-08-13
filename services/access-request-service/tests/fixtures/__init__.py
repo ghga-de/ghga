@@ -20,6 +20,11 @@ from typing import NamedTuple
 
 import pytest
 import pytest_asyncio
+from pytest import fixture
+
+from ars.config import Config
+from ars.ports.inbound.repository import AccessRequestRepositoryPort
+from ars.prepare import prepare_consumer, prepare_core, prepare_rest_app
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import (
     generate_jwk,
@@ -28,17 +33,15 @@ from ghga_service_commons.utils.jwt_helpers import (
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from pytest import fixture
 
-from ars.config import Config
-from ars.ports.inbound.repository import AccessRequestRepositoryPort
-from ars.prepare import prepare_consumer, prepare_core, prepare_rest_app
+from .access_grants import AccessGrantsMock, access_grants_mock_fixture
 
 __all__ = [
     "AUTH_CLAIMS_DOE",
     "AUTH_CLAIMS_STEWARD",
     "AUTH_KEY_PAIR",
     "RestFixture",
+    "access_grants_mock_fixture",
     "auth_headers_doe_fixture",
     "auth_headers_steward_fixture",
     "consumer_fixture",
@@ -102,15 +105,21 @@ class RestFixture(NamedTuple):
     config: Config
     kafka: KafkaFixture
     mongodb: MongoDbFixture
+    access_grants: AccessGrantsMock
     rest_client: AsyncTestClient
 
 
 @pytest_asyncio.fixture(name="rest")
 async def rest_fixture(
-    config: Config, mongodb: MongoDbFixture, kafka: KafkaFixture
+    config: Config,
+    mongodb: MongoDbFixture,
+    kafka: KafkaFixture,
+    access_grants: AccessGrantsMock,
 ) -> AsyncGenerator[RestFixture]:
     """A fixture that embeds all other fixtures for API-level integration testing."""
-    async with prepare_core(config=config) as repository:
+    async with prepare_core(
+        config=config, access_grants_transport=access_grants.as_transport()
+    ) as repository:
         async with (
             prepare_rest_app(config=config, repository_override=repository) as app,
         ):
@@ -119,6 +128,7 @@ async def rest_fixture(
                     config=config,
                     kafka=kafka,
                     mongodb=mongodb,
+                    access_grants=access_grants,
                     rest_client=rest_client,
                 )
 
@@ -129,20 +139,30 @@ class ConsumerFixture(NamedTuple):
     config: Config
     kafka: KafkaFixture
     mongodb: MongoDbFixture
+    access_grants: AccessGrantsMock
     repository: AccessRequestRepositoryPort
     subscriber: KafkaEventSubscriber
 
 
 @pytest_asyncio.fixture(name="consumer")
 async def consumer_fixture(
-    config: Config, mongodb: MongoDbFixture, kafka: KafkaFixture
+    config: Config,
+    mongodb: MongoDbFixture,
+    kafka: KafkaFixture,
+    access_grants: AccessGrantsMock,
 ) -> AsyncGenerator[ConsumerFixture]:
     """A fixture that embeds all other fixtures for consumer integration testing."""
-    async with prepare_consumer(config=config) as consumer:
-        yield ConsumerFixture(
-            config=config,
-            kafka=kafka,
-            mongodb=mongodb,
-            repository=consumer.repository,
-            subscriber=consumer.event_subscriber,
-        )
+    async with prepare_core(
+        config=config, access_grants_transport=access_grants.as_transport()
+    ) as repository:
+        async with prepare_consumer(
+            config=config, repository_override=repository
+        ) as consumer:
+            yield ConsumerFixture(
+                config=config,
+                kafka=kafka,
+                mongodb=mongodb,
+                access_grants=access_grants,
+                repository=consumer.repository,
+                subscriber=consumer.event_subscriber,
+            )

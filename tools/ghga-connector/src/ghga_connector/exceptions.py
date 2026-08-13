@@ -18,7 +18,7 @@
 
 from pathlib import Path
 
-import httpx
+import httpx2
 from pydantic import UUID4
 
 from ghga_connector.constants import MAX_PART_NUMBER
@@ -121,7 +121,7 @@ class CompleteFileUploadError(_FileUploadError):
 
 
 class ConnectionFailedError(RuntimeError):
-    """Thrown when a ConnectError or ConnectTimeout error is raised by httpx"""
+    """Thrown when a ConnectError or ConnectTimeout error is raised by httpx2"""
 
     def __init__(self, *, url: str, reason: str):
         message = f"Request to '{url}' failed to connect. Reason: {reason}"
@@ -601,8 +601,8 @@ class WellKnownValueNotFound(RuntimeError):
         super().__init__(message)
 
 
-def raise_if_connection_failed(request_error: httpx.RequestError, url: str):
+def raise_if_connection_failed(request_error: httpx2.RequestError, url: str):
     """Check if request exception is caused by hitting max retries and raise accordingly"""
-    if isinstance(request_error, (httpx.ConnectError, httpx.ConnectTimeout)):
+    if isinstance(request_error, (httpx2.ConnectError, httpx2.ConnectTimeout)):
         connection_failure = str(request_error.args[0])
         raise ConnectionFailedError(url=url, reason=connection_failure)

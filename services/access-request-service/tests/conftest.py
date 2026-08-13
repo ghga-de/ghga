@@ -26,6 +26,7 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
 )
 
 from .fixtures import (  # noqa: F401
+    access_grants_mock_fixture,
     auth_headers_doe_fixture,
     auth_headers_steward_fixture,
     config_fixture,

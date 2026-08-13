@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-This module provides custom proxy handling, as the way httpx setups the client, there is
+This module provides custom proxy handling, as the way httpx2 setups the client, there is
 an order of precedence which necessitates manual setup for proxies if a custom transport
 is provided.
 
@@ -22,39 +22,17 @@ client and will parse env proxies unconditionally.
 If you don't want to trust the env, don't use the functions from this module.
 
 NO_PROXY is now respected: hosts excluded from proxying via NO_PROXY are kept as
-`None` mounts, which tells httpx to connect directly for them. Note that wildcard and
-CIDR NO_PROXY entries behave according to httpx's mount pattern matching rather than
-httpx's own NO_PROXY logic (which is bypassed entirely once `mounts` are supplied).
+`None` mounts, which tells httpx2 to connect directly for them. Note that wildcard and
+CIDR NO_PROXY entries behave according to httpx2's mount pattern matching rather than
+httpx2's own NO_PROXY logic (which is bypassed entirely once `mounts` are supplied).
 This is a pre-existing limitation of routing through `mounts` and is not introduced
 by this handling.
 """
 
-from httpx import AsyncBaseTransport, AsyncHTTPTransport, Limits, _utils
+from httpx2 import AsyncBaseTransport, AsyncHTTPTransport, Limits, _utils
 
-from .config import CompositeCacheConfig, CompositeConfig
+from .config import CompositeConfig
 from .factory import CompositeTransportFactory, get_ssl_verify
-
-
-def cached_ratelimiting_retry_proxies(
-    config: CompositeCacheConfig,
-    limits: Limits | None = None,
-):
-    """Setup proxies from env for cached ratelimiting retry transport.
-
-    The returned dictionary needs to be provided as `mounts` to the client.
-    """
-    mounts: dict[str, AsyncBaseTransport | None] = {}
-    for key, transport in _get_base_proxies_from_env().items():
-        if transport is None:
-            # NO_PROXY host: keep None so httpx connects directly for this host.
-            mounts[key] = None
-            continue
-        mounts[key] = (
-            CompositeTransportFactory.create_cached_ratelimiting_retry_transport(
-                config=config, base_transport=transport, limits=limits
-            )
-        )
-    return mounts
 
 
 def ratelimiting_retry_proxies(
@@ -68,7 +46,7 @@ def ratelimiting_retry_proxies(
     mounts: dict[str, AsyncBaseTransport | None] = {}
     for key, transport in _get_base_proxies_from_env().items():
         if transport is None:
-            # NO_PROXY host: keep None so httpx connects directly for this host.
+            # NO_PROXY host: keep None so httpx2 connects directly for this host.
             mounts[key] = None
             continue
         mounts[key] = CompositeTransportFactory.create_ratelimiting_retry_transport(
@@ -78,13 +56,13 @@ def ratelimiting_retry_proxies(
 
 
 def _get_base_proxies_from_env() -> dict[str, AsyncHTTPTransport | None]:
-    """Use httpx internals to correctly parse proxy environment variables.
+    """Use httpx2 internals to correctly parse proxy environment variables.
 
     This will populate http, https and all proxy settings and create transports
     based on those proxy strings.
 
-    NO_PROXY hosts are returned by httpx with a ``None`` url; these are preserved as
-    ``None`` so that NO_PROXY is respected (httpx connects directly for them) instead
+    NO_PROXY hosts are returned by httpx2 with a ``None`` url; these are preserved as
+    ``None`` so that NO_PROXY is respected (httpx2 connects directly for them) instead
     of being silently routed through a proxy.
     """
     verify = get_ssl_verify()

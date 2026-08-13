@@ -8,7 +8,7 @@ RUN apk upgrade --no-cache --available
 FROM base AS builder
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 # install pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.20.0 --activate
 # install static web server (curl/jq/sudo/which are build-only, intentionally unpinned)
 # hadolint ignore=DL3018
 RUN apk add --no-cache curl jq sudo which \

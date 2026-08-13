@@ -20,12 +20,12 @@ from functools import partial
 from random import choice
 
 import pytest
-from hexkit.providers.mongodb.provider import dto_to_document
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.utils import now_utc_ms_prec
 
 from dlqs.adapters.outbound.dao import DLQ_EVENTS_COLLECTION
 from dlqs.models import StoredDLQEvent
+from hexkit.providers.mongodb.provider import dto_to_document
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.utils import now_utc_ms_prec
 from tests.fixtures import utils
 
 ReferenceEventsDict = dict[str, dict[str, list[StoredDLQEvent]]]

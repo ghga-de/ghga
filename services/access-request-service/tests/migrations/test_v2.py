@@ -18,11 +18,11 @@
 from uuid import UUID
 
 import pytest
-from hexkit.providers.mongodb.migrations import MigrationConfig
-from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 from ars.core.models import AccessRequestStatus
 from ars.migrations import V2Migration, run_db_migrations
+from hexkit.providers.mongodb.migrations import MigrationConfig
+from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 pytestmark = pytest.mark.asyncio()
 
@@ -109,7 +109,7 @@ async def test_v2_migration(mongodb: MongoDbFixture):
 
     for doc in migrated_docs:
         assert "__metadata__" in doc
-        assert doc["__metadata__"]["published"] == True
+        assert doc["__metadata__"]["published"]
         assert not doc["__metadata__"]["deleted"]
         assert UUID(doc["__metadata__"]["correlation_id"])
         assert doc["dataset_title"] == ""
@@ -122,7 +122,7 @@ async def test_v2_migration(mongodb: MongoDbFixture):
             "note_to_requester",
         ]:
             assert field in doc
-            assert doc[field] == None
+            assert doc[field] is None
 
     # Reverse the V2 migration
     await run_db_migrations(

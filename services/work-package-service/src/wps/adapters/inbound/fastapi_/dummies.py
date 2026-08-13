@@ -23,10 +23,10 @@ to be replaced  with actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
+
 from ghga_service_commons.api.di import DependencyDummy
 from ghga_service_commons.auth.context import AuthContextProtocol
 from ghga_service_commons.auth.ghga import AuthContext
-
 from wps.ports.inbound.repository import WorkPackageRepositoryPort
 
 __all__ = [

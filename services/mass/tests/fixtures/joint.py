@@ -20,15 +20,16 @@ import glob
 import re
 from collections.abc import AsyncGenerator, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TypeAlias
 
 import pytest_asyncio
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoClient, MongoDbFixture
-
 from mass.config import Config
 from mass.core import models
 from mass.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
@@ -85,7 +86,7 @@ class JointFixture:
         """Populate a collection for each file in test_data."""
         filename_pattern = re.compile(r"/(\w+)\.json")
         self._query_handler._dao_collection._indexes_created = False  # type: ignore
-        for filename in glob.glob("tests/fixtures/test_data/*.json"):
+        for filename in glob.glob(f"{Path(__file__).parent}/test_data/*.json"):
             match_obj = re.search(filename_pattern, filename)
             if match_obj:
                 collection_name = match_obj.group(1)

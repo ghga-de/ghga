@@ -24,7 +24,6 @@ from uuid import UUID, uuid4
 import crypt4gh.header
 import crypt4gh.lib
 from crypt4gh.keys import get_private_key
-from hexkit.utils import now_utc_ms_prec
 from nacl.bindings import (
     crypto_aead_chacha20poly1305_ietf_decrypt as decrypt_algo,
 )
@@ -41,6 +40,7 @@ from dhfs.core.models import FileUpload, InterrogationReport
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from dhfs.ports.outbound.s3 import S3ClientPort
+from hexkit.utils import now_utc_ms_prec
 
 log = logging.getLogger(__name__)
 

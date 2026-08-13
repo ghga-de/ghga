@@ -17,13 +17,14 @@
 
 import asyncio
 import json
+import logging
 from contextlib import suppress
 
 import pytest
 from fastapi import FastAPI
-from hexkit.log import LoggingConfig, configure_logging
 
 from ghga_service_commons.api.api import ApiConfigBase, configure_app, run_server
+from hexkit.log import LoggingConfig, configure_logging
 
 EXPECTED_FIELDS = {
     "timestamp",
@@ -37,8 +38,24 @@ EXPECTED_FIELDS = {
 }
 
 
+@pytest.fixture
+def restore_root_logging():
+    """Undo the global root logger changes made by `configure_logging`.
+
+    Under `capsys` it binds a handler to a capture buffer that pytest later closes.
+    """
+    root = logging.getLogger()
+    saved_handlers = root.handlers[:]
+    saved_level = root.level
+    try:
+        yield
+    finally:
+        root.handlers[:] = saved_handlers
+        root.setLevel(saved_level)
+
+
 @pytest.mark.asyncio
-async def test_uvicorn_log_format(capsys):
+async def test_uvicorn_log_format(capsys, restore_root_logging):
     """Verify that the uvicorn logs are formatted with the configured logging."""
     test_app = FastAPI()
     config = ApiConfigBase()

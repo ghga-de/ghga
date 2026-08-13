@@ -15,7 +15,6 @@
 """GHGA Registry implementation"""
 
 from hexkit.protocols.dao import ResourceNotFoundError
-
 from rs.core.models import Study
 from rs.ports.inbound.files import FileControllerPort
 from rs.ports.inbound.legacy_resources import LegacyResourceManagerPort

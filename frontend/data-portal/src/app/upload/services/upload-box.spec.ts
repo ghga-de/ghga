@@ -4,7 +4,11 @@
  * @license Apache-2.0
  */
 
-import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
@@ -12,6 +16,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
+import { provideHttpCache, withHttpCacheInterceptor } from '@ngneat/cashew';
 import {
   BoxRetrievalResults,
   ResearchDataUploadBoxBase,
@@ -19,6 +24,12 @@ import {
   UploadBoxState,
   UploadBoxVirtualFilter,
 } from '../models/box';
+import {
+  BoxUploadsPage,
+  DEFAULT_UPLOADS_PAGE_SIZE,
+  FileUploadWithAccession,
+  MAX_UPLOADS_PAGE_SIZE,
+} from '../models/file-upload';
 import { GrantWithBoxInfo, UploadGrant } from '../models/grant';
 import { UploadBoxService } from './upload-box';
 
@@ -92,6 +103,9 @@ describe('UploadBoxService', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        // The service drops cached responses when reloading; the cache itself is
+        // never exercised here, since the testing backend bypasses the interceptor.
+        provideHttpCache(),
         { provide: AuthService, useClass: MockAuthService },
         { provide: ConfigService, useClass: MockConfigService },
       ],
@@ -817,26 +831,425 @@ describe('UploadBoxService', () => {
 
   describe('loadFileUploadsForBox', () => {
     const BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
+    const UPLOADS_URL = `http://mock.dev/rs/upload-boxes/${encodeURIComponent(BOX_ID)}/uploads`;
 
-    it('should request file uploads filtered by box id', async () => {
+    const FILE: FileUploadWithAccession = {
+      id: 'file-1',
+      box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
+      alias: 'alpha.txt',
+      state: 'interrogated',
+      state_updated: '2026-01-01T00:00:00Z',
+      storage_alias: 'TUE01',
+      bucket_id: 'inbox-tue01',
+      decrypted_sha256: null,
+      decrypted_size: 1024,
+      encrypted_size: 2048,
+      part_size: 512,
+      accession: null,
+    };
+
+    /**
+     * Flush the pending request for a page of file uploads.
+     * @param page - the page to respond with
+     * @returns the query parameters of the flushed request
+     */
+    async function flushUploads(page: BoxUploadsPage): Promise<URLSearchParams> {
+      const req = httpMock.expectOne((request) => request.url === UPLOADS_URL);
+      expect(req.request.method).toBe('GET');
+      const params = new URLSearchParams(req.request.params.toString());
+      req.flush(page);
+      await Promise.resolve();
+      return params;
+    }
+
+    it('should request the first page of file uploads for the box', async () => {
       service.loadFileUploadsForBox(BOX_ID);
       testBed.tick();
 
-      const req = httpMock.expectOne(
-        `http://mock.dev/rs/upload-boxes/${encodeURIComponent(BOX_ID)}/uploads`,
-      );
-      expect(req.request.method).toBe('GET');
-      req.flush([]);
+      const params = await flushUploads({ items: [FILE], total_count: 42 });
 
+      expect(params.get('skip')).toBe('0');
+      expect(params.get('limit')).toBe(String(DEFAULT_UPLOADS_PAGE_SIZE));
+      expect(params.has('sort')).toBe(false);
+
+      expect(service.boxFiles()).toEqual([FILE]);
+      expect(service.boxFilesTotalCount()).toBe(42);
+    });
+
+    it('should request another page when paginated', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [FILE], total_count: 42 });
+
+      service.paginateFileUploads(25, 50);
+      testBed.tick();
+      const params = await flushUploads({ items: [], total_count: 42 });
+
+      expect(params.get('skip')).toBe('50');
+      expect(params.get('limit')).toBe('25');
+      expect(service.boxFilesSkip()).toBe(50);
+      expect(service.boxFilesLimit()).toBe(25);
+    });
+
+    it('should cap the page size at the maximum the backend accepts', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 0 });
+
+      service.paginateFileUploads(5000, 0);
+      testBed.tick();
+      const params = await flushUploads({ items: [], total_count: 0 });
+
+      expect(params.get('limit')).toBe(String(MAX_UPLOADS_PAGE_SIZE));
+    });
+
+    it('should send the sort order and return to the first page when sorting', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      service.paginateFileUploads(DEFAULT_UPLOADS_PAGE_SIZE, 20);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      service.sortFileUploadsByColumn('size', 'desc');
+      testBed.tick();
+      const params = await flushUploads({ items: [], total_count: 42 });
+
+      expect(params.get('sort')).toBe('-decrypted_size');
+      expect(params.get('skip')).toBe('0');
+      expect(service.boxFilesSortState()).toEqual({
+        column: 'size',
+        direction: 'desc',
+      });
+    });
+
+    it('should sort by the accession shown for archived boxes', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      service.sortFileUploadsByColumn('accession', 'asc');
+      testBed.tick();
+      const params = await flushUploads({ items: [], total_count: 42 });
+
+      expect(params.get('sort')).toBe('accession');
+      expect(service.boxFilesSortState()).toEqual({
+        column: 'accession',
+        direction: 'asc',
+      });
+    });
+
+    it('should reset pagination and sorting when switching to another box', async () => {
+      service.loadFileUploadsForBox(BOX_ID);
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      service.paginateFileUploads(25, 50);
+      service.sortFileUploadsByColumn('alias', 'desc');
+      testBed.tick();
+      await flushUploads({ items: [], total_count: 42 });
+
+      const OTHER_BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68002';
+      service.loadFileUploadsForBox(OTHER_BOX_ID);
+      testBed.tick();
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url ===
+          `http://mock.dev/rs/upload-boxes/${encodeURIComponent(OTHER_BOX_ID)}/uploads`,
+      );
+      const params = new URLSearchParams(req.request.params.toString());
+      req.flush({ items: [], total_count: 0 });
       await Promise.resolve();
 
-      expect(service.boxFileUploads.value()).toEqual([]);
+      expect(params.get('skip')).toBe('0');
+      expect(params.get('limit')).toBe(String(DEFAULT_UPLOADS_PAGE_SIZE));
+      expect(params.has('sort')).toBe(false);
     });
 
     it('should not request file uploads when no box id has been set', () => {
       testBed.tick();
       // httpMock.verify() in afterEach ensures no unexpected requests were made
-      expect(service.boxFileUploads.value()).toEqual([]);
+      expect(service.boxFiles()).toEqual([]);
+      expect(service.boxFilesTotalCount()).toBe(0);
     });
+  });
+
+  describe('loadAllFileUploadsForBox', () => {
+    const BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
+    const UPLOADS_URL = `http://mock.dev/rs/upload-boxes/${encodeURIComponent(BOX_ID)}/uploads`;
+
+    /**
+     * Build a page of distinct file uploads.
+     * @param count - the number of file uploads on the page
+     * @param offset - the index the aliases and IDs start at
+     * @returns the file uploads of the page
+     */
+    function makeFiles(count: number, offset = 0): FileUploadWithAccession[] {
+      return Array.from({ length: count }, (_, index) => ({
+        id: `file-${offset + index}`,
+        box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
+        alias: `file-${offset + index}.txt`,
+        state: 'interrogated' as const,
+        state_updated: '2026-01-01T00:00:00Z',
+        storage_alias: 'TUE01',
+        bucket_id: 'inbox-tue01',
+        decrypted_sha256: null,
+        decrypted_size: 1024,
+        encrypted_size: 2048,
+        part_size: 512,
+        accession: null,
+      }));
+    }
+
+    /**
+     * Flush the pending request for a page of the complete file list.
+     * @param page - the page to respond with
+     * @returns the query parameters of the flushed request
+     */
+    async function flushPage(page: BoxUploadsPage): Promise<URLSearchParams> {
+      const req = httpMock.expectOne((request) => request.url === UPLOADS_URL);
+      const params = new URLSearchParams(req.request.params.toString());
+      req.flush(page);
+      // Two microtask turns: one for the HTTP promise, one for the loader loop.
+      await Promise.resolve();
+      await Promise.resolve();
+      return params;
+    }
+
+    it('should request the complete file list with the maximum page size', async () => {
+      service.loadAllFileUploadsForBox(BOX_ID);
+      testBed.tick();
+
+      const files = makeFiles(3);
+      const params = await flushPage({ items: files, total_count: 3 });
+
+      expect(params.get('skip')).toBe('0');
+      expect(params.get('limit')).toBe(String(MAX_UPLOADS_PAGE_SIZE));
+      expect(service.allBoxFiles()).toEqual(files);
+    });
+
+    it('should walk through all pages of a box larger than one page', async () => {
+      service.loadAllFileUploadsForBox(BOX_ID);
+      testBed.tick();
+
+      const totalCount = 2 * MAX_UPLOADS_PAGE_SIZE + 5;
+      const firstPage = makeFiles(MAX_UPLOADS_PAGE_SIZE);
+      const secondPage = makeFiles(MAX_UPLOADS_PAGE_SIZE, MAX_UPLOADS_PAGE_SIZE);
+      const thirdPage = makeFiles(5, 2 * MAX_UPLOADS_PAGE_SIZE);
+
+      const first = await flushPage({ items: firstPage, total_count: totalCount });
+      expect(first.get('skip')).toBe('0');
+
+      const second = await flushPage({ items: secondPage, total_count: totalCount });
+      expect(second.get('skip')).toBe(String(MAX_UPLOADS_PAGE_SIZE));
+
+      const third = await flushPage({ items: thirdPage, total_count: totalCount });
+      expect(third.get('skip')).toBe(String(2 * MAX_UPLOADS_PAGE_SIZE));
+
+      // httpMock.verify() in afterEach ensures no further page was requested.
+      expect(service.allBoxFiles()).toHaveLength(totalCount);
+      expect(service.allBoxFiles()).toEqual([
+        ...firstPage,
+        ...secondPage,
+        ...thirdPage,
+      ]);
+    });
+
+    it('should stop walking when a page comes back empty despite a higher count', async () => {
+      service.loadAllFileUploadsForBox(BOX_ID);
+      testBed.tick();
+
+      const files = makeFiles(2);
+      await flushPage({ items: files, total_count: 99 });
+      // The backend claims more files than it delivers; the walk must not loop
+      // forever on the same offset.
+      await flushPage({ items: [], total_count: 99 });
+
+      expect(service.allBoxFiles()).toEqual(files);
+    });
+  });
+});
+
+describe('UploadBoxService with the HTTP cache in place', () => {
+  let service: UploadBoxService;
+  let httpMock: HttpTestingController;
+  let testBed: TestBed;
+
+  const BOX = TEST_BOX_RETRIEVAL_RESULTS.boxes[0];
+  const BOX_URL = `http://mock.dev/rs/upload-boxes/${BOX.id}`;
+  const UPLOADS_URL = `${BOX_URL}/uploads`;
+  const USER_GRANTS_URL =
+    'http://mock.dev/rs/upload-grants?user_id=doe%40test.dev&valid=true';
+
+  beforeEach(() => {
+    testBed = TestBed.configureTestingModule({
+      providers: [
+        // The cache interceptor is part of the chain here, as it is in the app,
+        // so a request that is served from the cache never reaches the backend.
+        provideHttpClient(withInterceptors([withHttpCacheInterceptor()])),
+        provideHttpClientTesting(),
+        provideHttpCache({ strategy: 'implicit' }),
+        { provide: AuthService, useClass: MockAuthService },
+        { provide: ConfigService, useClass: MockConfigService },
+      ],
+    });
+    service = TestBed.inject(UploadBoxService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  /**
+   * Answer the request for the current user's grants, which starts as soon as
+   * the user is known and is not the subject of most tests here.
+   * @param grants - the grants to respond with
+   */
+  async function flushUserGrants(grants: GrantWithBoxInfo[] = []): Promise<void> {
+    testBed.tick();
+    httpMock.expectOne(USER_GRANTS_URL).flush(grants);
+    await Promise.resolve();
+  }
+
+  /**
+   * Load the single box resource and answer the resulting request.
+   * @param box - the box to respond with
+   */
+  async function loadBox(box = BOX): Promise<void> {
+    service.loadUploadBox(BOX.id);
+    testBed.tick();
+    httpMock.expectOne(BOX_URL).flush(box);
+    await Promise.resolve();
+  }
+
+  it('should serve a plain reload of a box from the cache', async () => {
+    await flushUserGrants();
+    await loadBox();
+
+    // Requesting the box that is already loaded leaves the request unchanged,
+    // so no request is issued at all ...
+    service.loadUploadBox(BOX.id);
+    testBed.tick();
+    httpMock.expectNone(BOX_URL);
+
+    // ... and reloading without dropping the cache entry replays the response.
+    service.uploadBox.reload();
+    testBed.tick();
+    await Promise.resolve();
+    httpMock.expectNone(BOX_URL);
+    expect(service.uploadBox.value()).toEqual(BOX);
+  });
+
+  it('should fetch a box again when reloaded', async () => {
+    await flushUserGrants();
+    await loadBox();
+
+    service.reloadUploadBox(BOX.id);
+    testBed.tick();
+    const changed = { ...BOX, file_count: 7, size: 700 };
+    httpMock.expectOne(BOX_URL).flush(changed);
+    await Promise.resolve();
+
+    expect(service.uploadBox.value()).toEqual(changed);
+  });
+
+  it('should fetch the file uploads of a box again when reloaded', async () => {
+    await flushUserGrants();
+
+    service.loadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    const firstFiles = [{ id: 'file-1' }] as unknown as FileUploadWithAccession[];
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: firstFiles, total_count: 1 });
+    await Promise.resolve();
+    expect(service.boxFiles()).toEqual(firstFiles);
+
+    // Files arrive through the GHGA Connector, so the same page must be fetched
+    // again rather than replayed from the cache.
+    service.reloadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    const moreFiles = [
+      { id: 'file-1' },
+      { id: 'file-2' },
+    ] as unknown as FileUploadWithAccession[];
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: moreFiles, total_count: 2 });
+    await Promise.resolve();
+
+    expect(service.boxFiles()).toEqual(moreFiles);
+    expect(service.boxFilesTotalCount()).toBe(2);
+  });
+
+  it('should drop all cached pages of the file uploads, not just the current one', async () => {
+    await flushUserGrants();
+
+    service.loadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [], total_count: 100 });
+    await Promise.resolve();
+
+    service.paginateFileUploads(10, 10);
+    testBed.tick();
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [], total_count: 100 });
+    await Promise.resolve();
+
+    // Back to the first page, which is still cached under its own key.
+    service.reloadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [], total_count: 100 });
+    await Promise.resolve();
+
+    service.paginateFileUploads(10, 0);
+    testBed.tick();
+    const req = httpMock.expectOne((req) => req.url === UPLOADS_URL);
+    expect(new URLSearchParams(req.request.params.toString()).get('skip')).toBe('0');
+    req.flush({ items: [], total_count: 100 });
+    await Promise.resolve();
+  });
+
+  it('should fetch the user grants again when reloaded', async () => {
+    await flushUserGrants();
+
+    service.reloadUserGrants();
+    testBed.tick();
+    const grants = [{ id: 'grant-1' }] as unknown as GrantWithBoxInfo[];
+    httpMock.expectOne(USER_GRANTS_URL).flush(grants);
+    await Promise.resolve();
+
+    expect(service.userGrants.value()).toEqual(grants);
+  });
+
+  it('should drop the cached user grants when a grant is created', async () => {
+    await flushUserGrants();
+
+    service
+      .createUploadGrant({
+        user_id: 'doe@test.dev',
+        iva_id: null,
+        box_id: BOX.id,
+        valid_from: '2026-01-01T00:00:00Z',
+        valid_until: '2026-07-01T00:00:00Z',
+      })
+      .subscribe();
+    httpMock.expectOne('http://mock.dev/rs/upload-grants').flush({ id: 'grant-1' });
+    await Promise.resolve();
+
+    // The new grant is only visible on the account page once the grants are
+    // fetched again, which the dropped cache entry now allows.
+    service.userGrants.reload();
+    testBed.tick();
+    httpMock.expectOne(USER_GRANTS_URL).flush([]);
+    await Promise.resolve();
   });
 });

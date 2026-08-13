@@ -43,7 +43,7 @@ from rs.core.models import (
     BoxRetrievalResults,
     BoxUploadsPage,
     CreateUploadBoxRequest,
-    FileUpload,
+    FileUploadWithAccession,
     HubStorageSummary,
     ResearchDataUploadBox,
     UpdateUploadBoxRequest,
@@ -59,8 +59,10 @@ box_router = APIRouter()
 # statistics per storage and therefore doesn't live under the /upload-boxes prefix
 storage_router = APIRouter()
 
-# The fields that file uploads may be sorted by (a leading dash denotes descending order)
-_SORTABLE_FILE_UPLOAD_FIELDS = frozenset(FileUpload.model_fields)
+# The fields that file uploads may be sorted by (a leading dash denotes descending
+# order). This includes the accession, which is not a field of the file uploads as
+# provided by the file box service, but is attached to them by this service.
+_SORTABLE_FILE_UPLOAD_FIELDS = frozenset(FileUploadWithAccession.model_fields)
 
 
 def _ensure_valid_sort_fields(sort: str) -> str:

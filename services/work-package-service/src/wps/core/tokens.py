@@ -20,9 +20,9 @@ import hashlib
 import secrets
 import string
 
-from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto import jwk
 
+from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
 from wps.core.models import BaseWorkOrderToken
 

@@ -17,6 +17,8 @@
 
 import logging
 
+from pydantic import UUID4
+
 import ghga_event_schemas.pydantic_ as event_schemas
 from ghga_event_schemas.configs import FileUploadBoxEventsConfig, ResourceEventsConfig
 from ghga_event_schemas.validation import (
@@ -26,8 +28,6 @@ from ghga_event_schemas.validation import (
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-from pydantic import UUID4
-
 from rs.core.models import FileUploadBox
 from rs.ports.inbound.registry import RegistryPort
 

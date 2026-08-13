@@ -19,9 +19,7 @@ import base64
 import logging
 from json import JSONDecodeError
 
-import httpx
-from ghga_service_commons.utils.crypt import encrypt
-from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
+import httpx2
 from jwcrypto.jwk import JWK
 from pydantic import Field, HttpUrl, SecretStr, ValidationError
 from pydantic_settings import BaseSettings
@@ -31,8 +29,15 @@ from dhfs.adapters.outbound.http import check_for_request_errors
 from dhfs.constants import AUTH_TOKEN_VALID_SECONDS, JWT_AUD, JWT_ISS
 from dhfs.core import models
 from dhfs.ports.outbound.central import CentralClientPort
+from ghga_service_commons.utils.crypt import encrypt
+from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 
 log = logging.getLogger(__name__)
+
+# Paths of the Central API endpoints, relative to the configured base URL.
+UPLOADS_PATH = "/storages/{storage_alias}/uploads"
+REMOVABLE_FILES_PATH = "/storages/{storage_alias}/uploads/can_remove"
+INTERROGATION_REPORTS_PATH = "/storages/{storage_alias}/interrogation-reports"
 
 
 class CentralClientConfig(BaseSettings):
@@ -69,7 +74,7 @@ class CentralClient(CentralClientPort):
         self,
         *,
         config: CentralClientConfig,
-        httpx_client: httpx.AsyncClient,
+        httpx_client: httpx2.AsyncClient,
     ) -> None:
         """Initialize the CentralClient instance"""
         self._httpx_client = httpx_client
@@ -83,6 +88,10 @@ class CentralClient(CentralClientPort):
             value_error = ValueError("No private token-signing key found.")
             log.error(value_error)
             raise value_error
+
+    def _url_for(self, path: str) -> str:
+        """Build the full URL for one of the Central API path templates above."""
+        return self._base_url + path.format(storage_alias=self._storage_alias)
 
     def _make_jwt(self) -> str:
         claims: dict[str, str] = {
@@ -98,8 +107,8 @@ class CentralClient(CentralClientPort):
         """Create an authorization header with a bearer token containing a fresh JWT"""
         return {"Authorization": f"Bearer {self._make_jwt()}"}
 
-    def _response_to_object_id_list(self, response: httpx.Response) -> list[str]:
-        """Returns a list of strings from an httpx Response.
+    def _response_to_object_id_list(self, response: httpx2.Response) -> list[str]:
+        """Returns a list of strings from an httpx2 Response.
 
         Raises:
         - ResponseFormatError if response body parsing fails.
@@ -115,9 +124,9 @@ class CentralClient(CentralClientPort):
         return body
 
     def _response_to_file_upload_list(
-        self, response: httpx.Response
+        self, response: httpx2.Response
     ) -> list[models.FileUpload]:
-        """Extract a list of FileUploads from an httpx Response.
+        """Extract a list of FileUploads from an httpx2 Response.
 
         Raises:
         - ResponseFormatError if response body parsing fails.
@@ -136,7 +145,7 @@ class CentralClient(CentralClientPort):
         - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         - ResponseFormatError if response body parsing fails.
         """
-        url = f"{self._base_url}/storages/{self._storage_alias}/uploads"
+        url = self._url_for(UPLOADS_PATH)
         log.debug("Fetching new uploads from %s.", url)
         try:
             response = await self._httpx_client.get(
@@ -163,7 +172,7 @@ class CentralClient(CentralClientPort):
         - CentralAPIError if the request to the central API fails.
         - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         """
-        url = f"{self._base_url}/storages/{self._storage_alias}/uploads/can_remove"
+        url = self._url_for(REMOVABLE_FILES_PATH)
         log.debug(
             "Querying GHGA Central API about removability of %i files (URL is %s).",
             len(object_ids),
@@ -196,7 +205,7 @@ class CentralClient(CentralClientPort):
         - UpgradeRequiredError if the central API indicates this DHFS instance is outdated
         """
         body = report.model_dump(mode="json")
-        url = f"{self._base_url}/storages/{self._storage_alias}/interrogation-reports"
+        url = self._url_for(INTERROGATION_REPORTS_PATH)
         msg = (
             "was successfully re-encrypted"
             if report.passed

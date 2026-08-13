@@ -37,9 +37,10 @@
 | `tools/ghga-connector` | CLI | Uploader client for the **new** box path (`ubox`, `batch-upload`). |
 | `frontend/data-portal` | Angular app | Browse/search datasets, dataset & study detail pages, steward upload-box + mapping UI. |
 
-Not part of the metadata world today: `services/em-transformation-service` is an unmodified
-template scaffold (package `my_microservice`, only `GET /greet/{name}`); the future
-schemapack services (resource-registry, resource-search) do not exist yet.
+Not part of the metadata world today: the future schemapack services (resource-registry,
+resource-search) do not exist yet, and `em-transformation-service` is developed upstream
+against the metldata 5.x schemapack line — it was removed from this monorepo until the
+workspace moves off the integrated metldata 4.x line (see `scripts/migration/repos.tsv`).
 
 ---
 

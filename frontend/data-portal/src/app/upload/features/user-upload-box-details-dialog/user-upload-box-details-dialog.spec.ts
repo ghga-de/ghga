@@ -4,11 +4,14 @@
  * @license Apache-2.0
  */
 
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
-import { FileUploadWithAccession } from '@app/upload/models/file-upload';
+import {
+  DEFAULT_UPLOADS_PAGE_SIZE,
+  FileUploadWithAccession,
+} from '@app/upload/models/file-upload';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
@@ -67,13 +70,22 @@ class MockUploadBoxService {
   };
 
   boxFileUploads = {
-    value: this.#files.asReadonly(),
     isLoading: this.#filesLoading.asReadonly(),
     error: () => undefined,
   };
 
+  boxFiles = this.#files.asReadonly();
+  boxFilesTotalCount = computed<number>(() => this.#files().length);
+  boxFilesSkip = signal<number>(0);
+  boxFilesLimit = signal<number>(DEFAULT_UPLOADS_PAGE_SIZE);
+  boxFilesSortState = signal({ column: 'alias', direction: 'asc' as const });
+
   loadUploadBox = vitest.fn();
+  reloadUploadBox = vitest.fn();
   loadFileUploadsForBox = vitest.fn();
+  reloadFileUploadsForBox = vitest.fn();
+  paginateFileUploads = vitest.fn();
+  sortFileUploadsByColumn = vitest.fn();
 
   /**
    * Test helper: set the loaded box.
@@ -129,10 +141,10 @@ async function createComponent(): Promise<{
 }
 
 describe('UserUploadBoxDetailsDialogComponent', () => {
-  it('should request the box when opened', async () => {
+  it('should fetch the box again when opened', async () => {
     const { fixture, service } = await createComponent();
     await fixture.whenStable();
-    expect(service.loadUploadBox).toHaveBeenCalledWith('box-1');
+    expect(service.reloadUploadBox).toHaveBeenCalledWith('box-1');
   });
 
   it('should show the box details and files once loaded', async () => {
@@ -142,7 +154,26 @@ describe('UserUploadBoxDetailsDialogComponent', () => {
     await fixture.whenStable();
     expect(screen.getByText('My Box')).toBeInTheDocument();
     expect(screen.getByText('alpha.txt')).toBeInTheDocument();
-    expect(service.loadFileUploadsForBox).toHaveBeenCalledWith('box-1');
+    expect(service.reloadFileUploadsForBox).toHaveBeenCalledWith('box-1');
+  });
+
+  it('should fetch the box and its files again when the refresh button is used', async () => {
+    const { fixture, service } = await createComponent();
+    service.setBox(box);
+    await fixture.whenStable();
+    screen.getByRole('button', { name: 'Refresh the file list' }).click();
+    expect(service.reloadUploadBox).toHaveBeenCalledTimes(2);
+    expect(service.reloadFileUploadsForBox).toHaveBeenCalledTimes(2);
+  });
+
+  it('should fetch the files only once per opening', async () => {
+    const { fixture, service } = await createComponent();
+    service.setBox(box);
+    await fixture.whenStable();
+    // a later change of the box, e.g. a differing file count, must not refetch
+    service.setBox({ ...box, file_count: box.file_count + 1 });
+    await fixture.whenStable();
+    expect(service.reloadFileUploadsForBox).toHaveBeenCalledTimes(1);
   });
 
   it('should not offer any modifying actions', async () => {

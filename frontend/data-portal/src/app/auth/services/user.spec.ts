@@ -5,6 +5,7 @@
  */
 
 import { provideHttpClient } from '@angular/common/http';
+import { provideHttpCache } from '@ngneat/cashew';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ConfigService } from '@app/shared/services/config';
@@ -27,6 +28,7 @@ describe('UserService', () => {
         { provide: ConfigService, useClass: MockConfigService },
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideHttpCache(),
       ],
     });
     service = TestBed.inject(UserService);

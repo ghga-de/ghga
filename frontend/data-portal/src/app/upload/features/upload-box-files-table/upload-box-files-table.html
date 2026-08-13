@@ -1,5 +1,14 @@
 <div class="overflow-auto">
-  <table mat-table matSort [dataSource]="dataSource" class="w-full">
+  <table
+    mat-table
+    matSort
+    matSortDisableClear
+    [matSortActive]="sortActive()"
+    [matSortDirection]="sortDirection()"
+    (matSortChange)="sortChange.emit($event)"
+    [dataSource]="pageFiles()"
+    class="w-full"
+  >
     <ng-container matColumnDef="alias">
       <th mat-header-cell *matHeaderCellDef mat-sort-header>Filename</th>
       <td mat-cell *matCellDef="let file">{{ file.alias }}</td>
@@ -61,6 +70,10 @@
   <mat-paginator
     showFirstLastButtons
     class="sticky left-0"
+    [length]="totalCount()"
+    [pageIndex]="pageIndex()"
+    [pageSize]="pageSize()"
+    (page)="page.emit($event)"
     aria-label="Select page of files"
   ></mat-paginator>
 }

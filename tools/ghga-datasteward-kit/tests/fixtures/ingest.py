@@ -22,6 +22,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
+
+from ghga_datasteward_kit.file_ingest import IngestConfig
+from ghga_datasteward_kit.models import LegacyOutputMetadata, OutputMetadata
 from ghga_service_commons.utils.crypt import KeyPair, encode_key, generate_key_pair
 from ghga_service_commons.utils.simple_token import generate_token_and_hash
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -31,9 +34,6 @@ from metldata.submission_registry.models import (
     SubmissionStatus,
 )
 from metldata.submission_registry.submission_store import SubmissionStore
-
-from ghga_datasteward_kit.file_ingest import IngestConfig
-from ghga_datasteward_kit.models import LegacyOutputMetadata, OutputMetadata
 
 EXAMPLE_SUBMISSION = Submission(
     title="test",

@@ -30,7 +30,6 @@ from ghga_event_schemas.validation import get_validated_payload
 from hexkit.custom_types import Ascii, JsonObject
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
-
 from wps.constants import TRACER
 from wps.core.models import (
     Dataset,

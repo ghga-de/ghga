@@ -18,10 +18,10 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from nos.adapters.outbound.dao import get_event_id_dao
 from nos.inject import prepare_event_subscriber
 from tests.conftest import TEST_USER

@@ -16,8 +16,8 @@
 """Testing the submission store."""
 
 import pytest
-from ghga_service_commons.utils.utc_dates import now_as_utc
 
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.config import SubmissionConfig
 from metldata.submission_registry.models import (
     StatusChange,

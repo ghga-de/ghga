@@ -16,11 +16,12 @@
 
 """Translation between general and user specific DAOs."""
 
+from pydantic import Field
+
 from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import IvaChangeEventsConfig, UserEventsConfig
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
-from pydantic import Field
 
 from ..models.ivas import Iva as IvaDto
 from ..models.users import User as UserDto

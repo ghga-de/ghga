@@ -14,11 +14,10 @@
 # limitations under the License.
 """REST API configuration and function for CLI"""
 
-from ghga_service_commons.api import run_server
-from hexkit.log import configure_logging
-
 from dins.config import Config
 from dins.inject import prepare_event_subscriber, prepare_rest_app
+from ghga_service_commons.api import run_server
+from hexkit.log import configure_logging
 
 
 async def run_rest():

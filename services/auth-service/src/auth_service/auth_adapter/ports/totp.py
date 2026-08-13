@@ -18,8 +18,9 @@
 
 from abc import ABC, abstractmethod
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
 from pydantic import BaseModel
+
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 
 class TOTPHandlerPort[T: BaseModel](ABC):

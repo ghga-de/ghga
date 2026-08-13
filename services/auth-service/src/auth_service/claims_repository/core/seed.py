@@ -18,9 +18,6 @@
 
 import logging
 
-from hexkit.correlation import set_new_correlation_id
-from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
 from auth_service.claims_repository.deps import ClaimDao
@@ -28,6 +25,9 @@ from auth_service.config import Config
 from auth_service.user_registry.deps import IvaDao, UserDao
 from auth_service.user_registry.models.ivas import Iva, IvaBasicData
 from auth_service.user_registry.models.users import User, UserStatus
+from hexkit.correlation import set_new_correlation_id
+from hexkit.protocols.dao import MultipleHitsFoundError, NoHitsFoundError
+from hexkit.utils import now_utc_ms_prec
 
 from ..models.claims import VisaType
 from ..models.config import UserWithIVA

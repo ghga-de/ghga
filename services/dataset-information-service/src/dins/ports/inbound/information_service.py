@@ -16,9 +16,9 @@
 
 from abc import ABC, abstractmethod
 
-import ghga_event_schemas.pydantic_ as event_schemas
 from pydantic import UUID4
 
+import ghga_event_schemas.pydantic_ as event_schemas
 from dins.core.models import DatasetFileInformation, FileInformation, PendingFileInfo
 
 

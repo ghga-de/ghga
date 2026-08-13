@@ -30,6 +30,10 @@ from hexkit.opentelemetry import configure_opentelemetry
 DB_VERSION = 3
 
 
+# `configure_opentelemetry()` sets up autoinstrumentation and needs to be called before
+# any FastAPI and pymongo objects are created for those to be instrumented correctly
+
+
 async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()

@@ -7,8 +7,11 @@
 import { Component, computed, effect, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { PageEvent } from '@angular/material/paginator';
+import { Sort } from '@angular/material/sort';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
+import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
 import { ResearchDataUploadBox, UploadBoxStateClass } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
@@ -28,6 +31,7 @@ import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-b
     MatDialogModule,
     Capitalise,
     ParseBytes,
+    RefreshButtonComponent,
     StencilComponent,
     UploadBoxFilesTableComponent,
   ],
@@ -63,36 +67,95 @@ export class UserUploadBoxDetailsDialogComponent {
   protected hasError = computed<boolean>(() => !this.box() && !!this.#box.error());
 
   /**
-   * The files contained in the box. Filtered by the box's file upload box ID so
-   * files left over from a previously opened box are never shown while the fresh
-   * list is loading. Each file references the underlying file upload box via its
-   * `box_id`, which is the `file_upload_box_id` of the research box, not its `id`.
+   * The files on the currently shown page of the box. Filtered by the box's file
+   * upload box ID so files left over from a previously opened box are never shown
+   * while the fresh page is loading. Each file references the underlying file
+   * upload box via its `box_id`, which is the `file_upload_box_id` of the research
+   * box, not its `id`.
    */
-  protected files = computed<FileUploadWithAccession[]>(() => {
+  protected pageFiles = computed<FileUploadWithAccession[]>(() => {
     const fileUploadBoxId = this.box()?.file_upload_box_id;
     if (!fileUploadBoxId) return [];
-    return this.#uploadBoxService.boxFileUploads
-      .value()
+    return this.#uploadBoxService
+      .boxFiles()
       .filter((file) => file.box_id === fileUploadBoxId);
   });
+
+  /** The total number of files in the box, across all pages. */
+  protected filesTotalCount = this.#uploadBoxService.boxFilesTotalCount;
+
+  /** The number of files shown per page. */
+  protected filesPageSize = this.#uploadBoxService.boxFilesLimit;
+
+  /** The zero-based index of the currently shown page of files. */
+  protected filesPageIndex = computed<number>(() => {
+    const pageSize = this.filesPageSize();
+    if (!pageSize) return 0;
+    return Math.floor(this.#uploadBoxService.boxFilesSkip() / pageSize);
+  });
+
+  /** The column and direction the files are currently sorted by. */
+  protected filesSortState = this.#uploadBoxService.boxFilesSortState;
 
   /** Whether the box's file list is still being loaded. */
   protected filesLoading = computed<boolean>(() =>
     this.#uploadBoxService.boxFileUploads.isLoading(),
   );
 
-  /** Load the box files once the box is available and known to be non-empty. */
+  /**
+   * Fetch the box and its files again on request. Uploads run through the GHGA
+   * Connector, so file states advance while this dialog stays open.
+   */
+  protected refreshFiles(): void {
+    this.#uploadBoxService.reloadUploadBox(this.boxId);
+    this.#uploadBoxService.reloadFileUploadsForBox(this.boxId);
+  }
+
+  /**
+   * Request a different page of files from the server.
+   * @param event - the page event emitted by the paginator
+   */
+  protected onFilesPage(event: PageEvent): void {
+    this.#uploadBoxService.paginateFileUploads(
+      event.pageSize,
+      event.pageIndex * event.pageSize,
+    );
+  }
+
+  /**
+   * Request the files in a different order from the server.
+   * @param sort - the sort event emitted by the table headers
+   */
+  protected onFilesSort(sort: Sort): void {
+    this.#uploadBoxService.sortFileUploadsByColumn(sort.active, sort.direction);
+  }
+
+  /** Whether the files of this box have already been requested for this dialog. */
+  #filesRequested = false;
+
+  /**
+   * Load the box files once the box is available and known to be non-empty.
+   * The dialog is created anew every time it is opened, so the flag limits this
+   * to one fetch per opening: the box signal keeps changing afterwards (for
+   * instance while paging through the files), and refetching on each of those
+   * changes would be pointless.
+   */
   #loadFilesEffect = effect(() => {
     const box = this.box();
-    if (box && box.file_count > 0) {
-      this.#uploadBoxService.loadFileUploadsForBox(box.id);
+    if (box && box.file_count > 0 && !this.#filesRequested) {
+      this.#filesRequested = true;
+      this.#uploadBoxService.reloadFileUploadsForBox(box.id);
     }
   });
 
   /**
-   * Trigger loading of the single box when the dialog is opened.
+   * Fetch the box again whenever the dialog is opened. Files are uploaded with
+   * the GHGA Connector outside the portal, so the box contents and its file
+   * list change without anything happening here. Merely loading the box would
+   * not issue a request at all when the same box was inspected before, since
+   * the request of the underlying resource would be unchanged.
    */
   constructor() {
-    this.#uploadBoxService.loadUploadBox(this.boxId);
+    this.#uploadBoxService.reloadUploadBox(this.boxId);
   }
 }

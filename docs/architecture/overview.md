@@ -65,7 +65,7 @@ ghga-monorepo/
     auth-service/  access-request-service/  dataset-information-service/  mass/
     notification-service/  notification-orchestration-service/  work-package-service/
     well-known-value-service/  dlq-service/  state-management-service/  ghga-registry-service/
-    reverse-transpiler-service/  em-transformation-service/  datahub-file-service/
+    reverse-transpiler-service/  datahub-file-service/
     dcs/ ekss/ fis/ ifrs/ pcs/ ucs/
   tools/                      # CLIs / jobs
     ghga-connector/  ghga-datasteward-kit/  ghga-transpiler/  ghga-validator/  auth-km-jobs/

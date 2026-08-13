@@ -19,7 +19,6 @@ from ghga_event_schemas import pydantic_ as event_schemas
 from ghga_event_schemas.configs import NotificationEventsConfig
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.eventpub import EventPublisherProtocol
-
 from nos.core.notifications import Notification
 from nos.ports.outbound.notification_emitter import NotificationEmitterPort
 

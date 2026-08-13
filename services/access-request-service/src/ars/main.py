@@ -15,12 +15,11 @@
 
 """In this module object construction and dependency injection is carried out."""
 
-from ghga_service_commons.api import run_server
-from hexkit.log import configure_logging
-
 from ars.config import Config
 from ars.migrations import run_db_migrations
 from ars.prepare import prepare_access_request_dao, prepare_consumer, prepare_rest_app
+from ghga_service_commons.api import run_server
+from hexkit.log import configure_logging
 
 DB_VERSION = 3
 

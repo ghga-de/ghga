@@ -17,18 +17,25 @@
 
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
+from functools import partial
+from unittest.mock import patch
 
 import pytest_asyncio
+from jwcrypto.jwk import JWK
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from jwcrypto.jwk import JWK
-
 from rs.config import Config
 from rs.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from rs.ports.inbound.registry import RegistryPort
 from tests.fixtures.config import get_config
+from tests.fixtures.external_apis import (
+    AccessApiMock,
+    FileBoxApiMock,
+    get_mocked_httpx_client,
+)
 
 
 @dataclass
@@ -41,6 +48,8 @@ class JointFixture:
     kafka: KafkaFixture
     mongodb: MongoDbFixture
     rest_client: AsyncTestClient
+    access_api: AccessApiMock
+    file_box_api: FileBoxApiMock
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -49,6 +58,8 @@ async def joint_fixture(
     kafka: KafkaFixture,
     auth_jwk: JWK,
     work_order_jwk: JWK,
+    access_api: AccessApiMock,
+    file_box_api: FileBoxApiMock,
 ) -> AsyncGenerator[JointFixture]:
     """A fixture that embeds all other fixtures for API-level integration testing."""
     auth_key = auth_jwk.export(private_key=False)
@@ -60,19 +71,27 @@ async def joint_fixture(
         work_order_signing_key=work_order_signing_key,
     )
 
-    async with (
-        prepare_core(config=config) as registry,
-        prepare_event_subscriber(
-            config=config, registry_override=registry
-        ) as event_subscriber,
-        prepare_rest_app(config=config, registry_override=registry) as app,
-        AsyncTestClient(app=app) as rest_client,
-    ):
-        yield JointFixture(
-            config=config,
-            registry=registry,
-            event_subscriber=event_subscriber,
-            kafka=kafka,
-            mongodb=mongodb,
-            rest_client=rest_client,
-        )
+    # Route all outbound HTTP calls to the API mocks instead of the network
+    mocked_client_factory = partial(
+        get_mocked_httpx_client, access_api=access_api, file_box_api=file_box_api
+    )
+
+    with patch("rs.inject.get_configured_httpx_client", mocked_client_factory):
+        async with (
+            prepare_core(config=config) as registry,
+            prepare_event_subscriber(
+                config=config, registry_override=registry
+            ) as event_subscriber,
+            prepare_rest_app(config=config, registry_override=registry) as app,
+            AsyncTestClient(app=app) as rest_client,
+        ):
+            yield JointFixture(
+                config=config,
+                registry=registry,
+                event_subscriber=event_subscriber,
+                kafka=kafka,
+                mongodb=mongodb,
+                rest_client=rest_client,
+                access_api=access_api,
+                file_box_api=file_box_api,
+            )

@@ -16,7 +16,6 @@
 """Service entry point function(s)."""
 
 from hexkit.log import configure_logging
-
 from ns.config import Config
 from ns.inject import prepare_event_subscriber
 from ns.migrations import run_db_migrations

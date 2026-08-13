@@ -99,24 +99,27 @@ demo-template:
 # members shipping their own Dockerfile.dhi (frontend) build with it in-place.
 # Tags use the release registry scheme with tag 'local' so the charts' generated
 # image references resolve with only a tag override (values-local.yaml).
-image target:
+# `tag` and trailing docker-build flags are overridable so CI reuses these recipes
+# instead of duplicating the build commands — e.g. dev-images.yaml / security-scan.yaml
+# run `just image-mono dev --pull --label org.opencontainers.image.revision=<sha>`.
+image target tag='local' *flags:
     #!/usr/bin/env bash
     set -euo pipefail
     if [ -f "{{target}}/Dockerfile.dhi" ]; then
         name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile.dhi" -t "ghcr.io/ghga-de/ghga/$name:local" "{{target}}"
+        docker build -f "{{target}}/Dockerfile.dhi" {{flags}} -t "ghcr.io/ghga-de/ghga/$name:{{tag}}" "{{target}}"
     else
         name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
-        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" -t "ghcr.io/ghga-de/ghga/$name:local" .
+        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "ghcr.io/ghga-de/ghga/$name:{{tag}}" .
     fi
 
 # One build instead of ~22 — the demo/CI image step drops from ~15-20 min to ~1 min.
 # The charts start services with `command: [<executable>]`, so one image serves them all;
 # see the mono stage in docker/Dockerfile for why this is demo/CI only.
 # Build the mono image: EVERY Python member in one venv (docker/Dockerfile VARIANT=mono).
-image-mono:
-    docker build -f docker/Dockerfile --build-arg VARIANT=mono \
-      -t ghcr.io/ghga-de/ghga/platform:local .
+image-mono tag='local' *flags:
+    docker build -f docker/Dockerfile --build-arg VARIANT=mono {{flags}} \
+      -t ghcr.io/ghga-de/ghga/platform:{{tag}} .
 
 # Building and loading are deliberately SEPARATE (`just demo-load` does the loading): the
 # build survives `just down`, the load does not, and coupling them made a cluster teardown

@@ -20,7 +20,6 @@ from operator import itemgetter
 from typing import Any, cast
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
-
 from metldata.artifacts_rest.models import (
     ArtifactInfo,
     GlobalStats,

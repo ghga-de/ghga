@@ -21,6 +21,9 @@ from copy import deepcopy
 from pathlib import Path
 
 import yaml
+from pydantic import Field
+
+from ghga_datasteward_kit.utils import load_config_yaml
 from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.accession_registry.config import Config as AccessionConfig
@@ -40,9 +43,6 @@ from metldata.transform.main import (
     TransformationEventHandlingConfig,
     run_workflow_on_all_source_events,
 )
-from pydantic import Field
-
-from ghga_datasteward_kit.utils import load_config_yaml
 
 
 class MetadataConfig(

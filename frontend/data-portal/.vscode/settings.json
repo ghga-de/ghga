@@ -15,7 +15,8 @@
     "qrcode",
     "schemapack",
     "teardown",
-    "TOTP"
+    "TOTP",
+    "unpaginated"
   ],
   "cSpell.language": "en-GB",
   "editor.defaultFormatter": "esbenp.prettier-vscode",

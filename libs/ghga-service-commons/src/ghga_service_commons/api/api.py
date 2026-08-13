@@ -28,18 +28,18 @@ from collections.abc import Sequence
 import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from hexkit.correlation import (
-    InvalidCorrelationIdError,
-    correlation_id_from_str,
-    new_correlation_id,
-    set_correlation_id,
-)
 from pydantic import UUID4, Field
 from pydantic_settings import BaseSettings
 
 from ghga_service_commons.httpyexpect.models import HttpExceptionBody
 from ghga_service_commons.httpyexpect.server.handlers.fastapi_ import (
     configure_exception_handler,
+)
+from hexkit.correlation import (
+    InvalidCorrelationIdError,
+    correlation_id_from_str,
+    new_correlation_id,
+    set_correlation_id,
 )
 
 __all__ = [

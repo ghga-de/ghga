@@ -19,7 +19,6 @@
 from unittest.mock import patch
 
 import pytest
-from hexkit.providers.s3 import S3Config
 from pydantic import SecretStr
 
 from ghga_service_commons.utils.multinode_storage import (
@@ -27,6 +26,7 @@ from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorages,
     S3ObjectStoragesConfig,
 )
+from hexkit.providers.s3 import S3Config
 
 
 def _make_config() -> S3ObjectStoragesConfig:

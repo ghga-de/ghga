@@ -17,7 +17,6 @@
 
 from collections import defaultdict
 from numbers import Number
-from typing import Union
 
 from ghga_validator.core.models import ValidationMessage, ValidationResult
 from ghga_validator.my_linkml.object_iterator import ObjectIterator
@@ -119,7 +118,7 @@ class RefValidationPlugin(ValidationPlugin):
 
     def find_missing_refs(
         self,
-        ref_value: Union[list[Union[Number, str]], Union[Number, str]],
+        ref_value: list[Number | str] | Number | str,
         id_list: list,
     ) -> list:
         """

@@ -31,7 +31,7 @@
 
 """Collection of classes for modelling validation results"""
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -39,8 +39,8 @@ from pydantic import BaseModel
 class ValidationMessage(BaseModel):
     """ValidationMessage represents a validation error message"""
 
-    field: Optional[str] = None
-    value: Optional[Any] = None
+    field: str | None = None
+    value: Any | None = None
     message: str
 
 
@@ -61,7 +61,7 @@ class ValidationReport(BaseModel):
     for a given object.
     """
 
-    object: Optional[dict]
+    object: dict | None
     type: str
     valid: bool
     validation_results: list[ValidationResult]

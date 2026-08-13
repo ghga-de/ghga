@@ -16,7 +16,6 @@
 """Testing the whole encryption, upload, validation flow"""
 
 import asyncio
-import ipaddress
 import sys
 import threading
 import time
@@ -26,16 +25,11 @@ from tempfile import TemporaryDirectory
 from typing import Any
 from unittest.mock import Mock
 
-import httpx
+import httpx2
 import pytest
 import requests
 import uvicorn
 from fastapi import FastAPI
-from ghga_service_commons.api.api import ApiConfigBase
-from ghga_service_commons.api.testing import get_free_port
-from ghga_service_commons.utils.temp_files import big_temp_file
-from hexkit.providers.s3.testutils import S3ContainerFixture
-from pytest_httpx import HTTPXMock
 
 from ghga_datasteward_kit.batch_s3_upload import FileMetadata
 from ghga_datasteward_kit.batch_s3_upload import main as batch_upload_main
@@ -50,49 +44,43 @@ from ghga_datasteward_kit.s3_upload.utils import (
     get_bucket_id,
     get_object_storage,
 )
-from ghga_datasteward_kit.utils import path_join
+from ghga_service_commons.api.api import ApiConfigBase
+from ghga_service_commons.api.testing import get_free_port
+from ghga_service_commons.utils.temp_files import big_temp_file
+from hexkit.providers.s3.testutils import S3ContainerFixture
 from tests.fixtures.config import (  # noqa: F401
     config_fixture,
     legacy_config_fixture,
     steward_token_fixture,
     storage_config,
 )
+from tests.fixtures.mock_api import ApiMock, respond
 
 ALIAS = "test_file"
 BUCKET_ID = "test-bucket"
 FILE_SIZE = 50 * 1024**2
 
+pytestmark = pytest.mark.asyncio
 
-def _is_testcontainer_host(host: str) -> bool:
-    """Whether a request host is a testcontainers-exposed endpoint (to pass through).
 
-    testcontainers publishes container ports on the docker host: `localhost`/`127.0.0.1`
-    under local Docker, but the docker-bridge gateway IP (e.g. `172.17.0.1`) under
-    docker-in-docker. So treat any IP-literal host — not just a fixed list — as a real
-    container endpoint, while mocked GHGA APIs use domain names.
+def mock_wkvs(monkeypatch: pytest.MonkeyPatch, s3_endpoint_url: str) -> None:
+    """Mock the WKVS lookup resolving the configured storage alias to `s3_endpoint_url`.
+
+    Only the clients handed out by `httpx2` itself are redirected. The S3 traffic to the
+    testcontainer and the part uploads go through their own clients and stay on the
+    real network.
     """
-    if host in ("localhost", "host.docker.internal"):
-        return True
-    try:
-        ipaddress.ip_address(host)
-    except ValueError:
-        return False
-    return True
-
-
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.httpx_mock(
-        assert_all_responses_were_requested=False,
-        can_send_already_matched_responses=True,
-        should_mock=lambda request: not _is_testcontainer_host(request.url.host),
-    ),
-]
+    api_mock = ApiMock()
+    api_mock.add(
+        method="GET",
+        path="/values/storage_aliases",
+        handler=respond(200, json={"storage_aliases": {"test": s3_endpoint_url}}),
+    )
+    api_mock.patch_httpx(monkeypatch)
 
 
 async def test_legacy_process(
     legacy_config_fixture: LegacyConfig,  # noqa: F811
-    httpx_mock: HTTPXMock,
     monkeypatch,
 ):
     """Test whole upload/download process for s3_upload script"""
@@ -108,11 +96,7 @@ async def test_legacy_process(
                 ),
             }
         )
-        httpx_mock.add_response(
-            url=path_join(config.wkvs_api_url, "values/storage_aliases"),
-            json={"storage_aliases": {"test": s3_config.s3_endpoint_url}},
-            status_code=200,
-        )
+        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
         sys.set_int_max_str_digits(FILE_SIZE)
@@ -145,7 +129,7 @@ async def test_legacy_process(
         assert (config.output_dir / ALIAS).with_suffix(".json").exists()
 
 
-async def test_process(config_fixture: Config, monkeypatch, httpx_mock: HTTPXMock):  # noqa: F811
+async def test_process(config_fixture: Config, monkeypatch):  # noqa: F811
     """Test whole upload/download process for s3_upload script"""
 
     async def secret_exchange_dummy(
@@ -169,11 +153,7 @@ async def test_process(config_fixture: Config, monkeypatch, httpx_mock: HTTPXMoc
                 ),
             }
         )
-        httpx_mock.add_response(
-            url=path_join(config.wkvs_api_url, "values/storage_aliases"),
-            json={"storage_aliases": {"test": s3_config.s3_endpoint_url}},
-            status_code=200,
-        )
+        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
         sys.set_int_max_str_digits(FILE_SIZE)
@@ -221,7 +201,6 @@ async def test_process(config_fixture: Config, monkeypatch, httpx_mock: HTTPXMoc
 async def test_error_handling_local_checksum_validation(
     config_fixture: Config,  # noqa: F811
     monkeypatch,
-    httpx_mock: HTTPXMock,
 ):
     """Test upload context manager error handling and cleanup when raising local checksum validation errors."""
     sys.set_int_max_str_digits(FILE_SIZE)
@@ -236,11 +215,7 @@ async def test_error_handling_local_checksum_validation(
                 ),
             }
         )
-        httpx_mock.add_response(
-            url=path_join(config.wkvs_api_url, "values/storage_aliases"),
-            json={"storage_aliases": {"test": s3_config.s3_endpoint_url}},
-            status_code=200,
-        )
+        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -291,7 +266,6 @@ async def test_error_handling_local_checksum_validation(
 async def test_error_handling_remote_checksum_validation(
     config_fixture: Config,  # noqa: F811
     monkeypatch,
-    httpx_mock: HTTPXMock,
 ):
     """Test upload context manager error handling and cleanup when raising remote checksum validation errors."""
     sys.set_int_max_str_digits(FILE_SIZE)
@@ -306,11 +280,7 @@ async def test_error_handling_remote_checksum_validation(
                 ),
             }
         )
-        httpx_mock.add_response(
-            url=path_join(config.wkvs_api_url, "values/storage_aliases"),
-            json={"storage_aliases": {"test": s3_config.s3_endpoint_url}},
-            status_code=200,
-        )
+        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -355,7 +325,6 @@ async def test_error_handling_remote_checksum_validation(
 async def test_error_handling_upload_completion(
     config_fixture: Config,  # noqa: F811
     monkeypatch,
-    httpx_mock: HTTPXMock,
 ):
     """Test upload context manager error handling and cleanup when raising upload completion errors."""
     sys.set_int_max_str_digits(FILE_SIZE)
@@ -370,11 +339,7 @@ async def test_error_handling_upload_completion(
                 ),
             }
         )
-        httpx_mock.add_response(
-            url=path_join(config.wkvs_api_url, "values/storage_aliases"),
-            json={"storage_aliases": {"test": s3_config.s3_endpoint_url}},
-            status_code=200,
-        )
+        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -426,7 +391,6 @@ async def test_error_handling_upload_completion(
 async def test_error_handling_part_upload(
     config_fixture: Config,  # noqa: F811
     monkeypatch,
-    httpx_mock: HTTPXMock,
 ):
     """Test upload context manager error handling and cleanup when raising part upload errors."""
     sys.set_int_max_str_digits(FILE_SIZE)
@@ -441,11 +405,7 @@ async def test_error_handling_part_upload(
                 ),
             }
         )
-        httpx_mock.add_response(
-            url=path_join(config.wkvs_api_url, "values/storage_aliases"),
-            json={"storage_aliases": {"test": s3_config.s3_endpoint_url}},
-            status_code=200,
-        )
+        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -468,7 +428,7 @@ async def test_error_handling_part_upload(
                     async def raise_part_upload_exception(
                         self,
                         *,
-                        client: httpx.AsyncClient,
+                        client: httpx2.AsyncClient,
                         file_processor: Generator[tuple[int, bytes], Any, None],
                         start: float,
                     ):
@@ -498,7 +458,6 @@ async def test_error_handling_part_upload(
 async def test_batch_upload_retries(
     config_fixture: Config,  # noqa: F811
     monkeypatch,
-    httpx_mock: HTTPXMock,
 ):
     """Test the batch upload auto-retry mechanism"""
     sys.set_int_max_str_digits(FILE_SIZE)
@@ -513,11 +472,7 @@ async def test_batch_upload_retries(
                 ),
             }
         )
-        httpx_mock.add_response(
-            url=path_join(config.wkvs_api_url, "values/storage_aliases"),
-            json={"storage_aliases": {"test": s3_config.s3_endpoint_url}},
-            status_code=200,
-        )
+        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -586,7 +541,7 @@ async def test_batch_upload(config_fixture: Config, steward_token_fixture, monke
         duration of the test.
 
     The special stuff also involves running a web server in another thread. We can't
-    use httpx_mock because that relies on monkey patching. The test endpoints are:
+    mock the transport because that relies on monkey patching. The test endpoints are:
     - /health (only used for `wait_until_responsive`)
     - /wkvs/values/storage_aliases (for providing the dummy storage map)
     - /federated/ingest_secret (for providing the dummy secret ID)

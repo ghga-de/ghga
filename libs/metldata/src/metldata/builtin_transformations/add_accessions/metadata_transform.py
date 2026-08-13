@@ -73,6 +73,7 @@ def lookup_accession(
 
 
 def add_accession_to_resource(  # noqa: PLR0913
+    *,
     resource: Json,
     class_name: str,
     old_identifier_slot: str,

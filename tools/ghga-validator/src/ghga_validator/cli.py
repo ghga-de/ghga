@@ -18,7 +18,6 @@
 
 import json
 from pathlib import Path
-from typing import Optional
 
 import typer
 import yaml
@@ -141,7 +140,7 @@ def main(
         writable=True,
         help="Path to resulting validation report",
     ),
-    target_class: Optional[str] = typer.Option(None, help="The root class name"),
+    target_class: str | None = typer.Option(None, help="The root class name"),
 ):
     """
     GHGA Validator

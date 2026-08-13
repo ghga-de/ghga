@@ -1,0 +1,24 @@
+deployment:
+  enabled: true
+
+cronSchedule: "0 * * * *"
+
+cronjobs:
+  cleanup:
+    enabled: true
+    schedule: "0 3 * * *"
+    successfulJobsHistoryLimit: 2
+    executable: cleanup-tool
+    executableArgs:
+      - "--dry-run"
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256M"
+      requests:
+        cpu: "100m"
+        memory: "128M"
+  report:
+    enabled: true
+  skipped:
+    enabled: false

@@ -14,15 +14,14 @@
 # limitations under the License.
 """Config Parameter Modeling and Parsing"""
 
+from dins.adapters.inbound.event_sub import EventSubTranslatorConfig
+from dins.constants import SERVICE_NAME
 from ghga_event_schemas.configs import FileAccessionMappingEventsConfig
 from ghga_service_commons.api import ApiConfigBase
 from hexkit.config import config_from_yaml
 from hexkit.log import LoggingConfig
 from hexkit.opentelemetry import OpenTelemetryConfig
 from hexkit.providers.mongokafka import MongoKafkaConfig
-
-from dins.adapters.inbound.event_sub import EventSubTranslatorConfig
-from dins.constants import SERVICE_NAME
 
 
 @config_from_yaml(prefix=SERVICE_NAME)

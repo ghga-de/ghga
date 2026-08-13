@@ -20,7 +20,6 @@ from hexkit.providers.mongodb.migrations import (
     MigrationManager,
     MigrationMap,
 )
-
 from ns.migrations.definitions import V2Migration
 
 MIGRATION_MAP = {2: V2Migration}

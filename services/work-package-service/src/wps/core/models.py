@@ -20,8 +20,6 @@ in the API.
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.protocols.dao import UUID4Field
 from pydantic import (
     UUID4,
     BaseModel,
@@ -33,6 +31,8 @@ from pydantic import (
     model_validator,
 )
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.protocols.dao import UUID4Field
 from wps.core.crypt import validate_public_key
 
 __all__ = [
@@ -357,6 +357,6 @@ class UploadWorkOrderTokenRequest(BaseModel):
             return self
         if self.work_type == "create" and not self.alias:
             raise ValueError("File alias is required for CREATE work type")
-        elif self.work_type != "create" and not self.file_id:
+        if self.work_type != "create" and not self.file_id:
             raise ValueError("File ID is required for UPLOAD, CLOSE, DELETE work types")
         return self

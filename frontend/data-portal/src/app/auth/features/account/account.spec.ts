@@ -17,6 +17,7 @@ import { IvaService } from '@app/ivas/services/iva';
 import { ConfigService } from '@app/shared/services/config';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { provideHttpCache } from '@ngneat/cashew';
+import { screen } from '@testing-library/angular';
 import { AccountComponent } from './account';
 
 /**
@@ -35,6 +36,7 @@ class MockAuthService {
  */
 class MockIvaService {
   loadUserIvas = () => undefined;
+  reloadUserIvas = vitest.fn();
   userIvas = { value: () => [], isLoading: () => false, error: () => undefined };
 }
 
@@ -49,6 +51,7 @@ class MockUploadBoxService {
     reload: () => undefined,
   };
   loadUserGrants = () => undefined;
+  reloadUserGrants = vitest.fn();
 }
 
 const MockConfigService = {
@@ -82,4 +85,44 @@ describe('AccountComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  // The refresh buttons sit in the card headers, next to the section headings,
+  // but the fetching itself belongs to the list inside each card. Bound via
+  // template reference variables, this pairing is easy to get wrong, so every
+  // button is checked to reach the list it belongs to.
+  const refreshButtons: {
+    label: string;
+    reload: () => ReturnType<typeof vitest.fn>;
+  }[] = [
+    {
+      label: 'Refresh your IVAs',
+      reload: () =>
+        (TestBed.inject(IvaService) as unknown as MockIvaService).reloadUserIvas,
+    },
+    {
+      label: 'Refresh your dataset access',
+      reload: () =>
+        vitest.spyOn(TestBed.inject(AccessRequestService), 'reloadUserAccessGrants'),
+    },
+    {
+      label: 'Refresh your pending access requests',
+      reload: () =>
+        vitest.spyOn(TestBed.inject(AccessRequestService), 'reloadUserAccessRequests'),
+    },
+    {
+      label: 'Refresh your Research Data Upload Boxes',
+      reload: () =>
+        (TestBed.inject(UploadBoxService) as unknown as MockUploadBoxService)
+          .reloadUserGrants,
+    },
+  ];
+
+  for (const { label, reload } of refreshButtons) {
+    it(`should refresh the matching section via "${label}"`, () => {
+      const spy = reload();
+      const callsBefore = spy.mock.calls.length;
+      screen.getByRole('button', { name: label }).click();
+      expect(spy.mock.calls.length).toBe(callsBefore + 1);
+    });
+  }
 });

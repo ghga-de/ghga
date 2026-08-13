@@ -54,6 +54,7 @@ class MockUploadBoxService {
   };
   getStorageLocationLabel = (storageAlias: string) => storageAlias;
   loadAllUploadBoxes = vitest.fn();
+  reloadAllUploadBoxes = vitest.fn();
   setUploadBoxesFilter = vitest.fn();
 
   /**
@@ -108,8 +109,13 @@ describe('UploadBoxManagerComponent', () => {
     expect(heading).toHaveTextContent('Upload Box Manager');
   });
 
-  it('should load all upload boxes upon initialization', () => {
-    expect(uploadBoxService.loadAllUploadBoxes).toHaveBeenCalled();
+  it('should fetch all upload boxes again upon initialization', () => {
+    expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalled();
+  });
+
+  it('should fetch all upload boxes again when the refresh button is used', () => {
+    screen.getByRole('button', { name: 'Refresh the upload boxes' }).click();
+    expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalledTimes(2);
   });
 
   it('should hide filters when no upload boxes are loaded', () => {
@@ -143,7 +149,7 @@ describe('UploadBoxManagerComponent', () => {
 
     component.openCreateUploadBoxDialog();
 
-    expect(uploadBoxService.loadAllUploadBoxes).toHaveBeenCalledTimes(1);
+    expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalledTimes(1);
     expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
       'Upload Box created successfully.',
     );

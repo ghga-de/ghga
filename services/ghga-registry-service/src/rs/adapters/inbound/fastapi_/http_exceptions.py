@@ -15,8 +15,9 @@
 
 """A collection of http exceptions."""
 
-from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from pydantic import UUID4, BaseModel
+
+from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 
 __all__ = [
     "HttpAccessionMapError",

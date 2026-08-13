@@ -20,9 +20,9 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
+
 from ghga_event_schemas.pydantic_ import AccessRequestDetails, User
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-
 from nos.migrations import run_db_migrations
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import make_access_request

@@ -19,11 +19,6 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from hexkit.correlation import set_new_correlation_id
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-from hexkit.utils import now_utc_ms_prec
 
 from ars.adapters.outbound.daos import get_access_request_dao, get_dataset_dao
 from ars.core.models import (
@@ -33,6 +28,11 @@ from ars.core.models import (
     Dataset,
 )
 from ars.core.repository import AccessRequestRepository
+from hexkit.correlation import set_new_correlation_id
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.utils import now_utc_ms_prec
 from tests.test_repository import AccessGrantsDummy
 
 pytestmark = pytest.mark.asyncio()
@@ -90,7 +90,7 @@ async def test_upsert(config, kafka: KafkaFixture, mongodb: MongoDbFixture):
         assert event.type_ == "upserted"
         assert event.key == event.payload["id"] == str(access_request.id)
         assert event.payload["status"] == "pending"
-        assert event.payload["ticket_id"] == None
+        assert event.payload["ticket_id"] is None
 
         # Perform an update to the request
         access_request_update = access_request.model_copy(

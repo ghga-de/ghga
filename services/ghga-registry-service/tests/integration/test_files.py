@@ -18,10 +18,9 @@
 from uuid import uuid4
 
 import pytest
+
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 from hexkit.utils import now_utc_ms_prec
-from pytest_httpx import HTTPXMock
-
 from rs.adapters.outbound.dao import get_file_accession_dao
 from rs.core.models import (
     AccessionMapRequest,
@@ -29,14 +28,13 @@ from rs.core.models import (
     FileUploadWithAccession,
 )
 from tests.fixtures import utils
+from tests.fixtures.external_apis import respond
 from tests.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_submission(
-    joint_fixture: JointFixture, httpx_mock: HTTPXMock, ds_auth_headers
-):
+async def test_submission(joint_fixture: JointFixture, ds_auth_headers):
     """Test the process starting from the start to finish.
 
     Submit a map to the HTTP API and inspect the outbox events.
@@ -48,11 +46,8 @@ async def test_submission(
     file_upload_box_id = uuid4()
 
     # Mock the UCS call to create a FileUploadBox (occurs when we create an RDUB)
-    httpx_mock.add_response(
-        method="POST",
-        url=f"{joint_fixture.config.ucs_url}/boxes",
-        status_code=201,
-        json=str(file_upload_box_id),
+    joint_fixture.file_box_api.on_create_file_upload_box = respond(
+        201, json=str(file_upload_box_id)
     )
 
     # Create an RDUB
@@ -84,10 +79,8 @@ async def test_submission(
     file_upload2 = file_upload1.model_copy(
         update={"id": file_id2, "alias": "test2.bam", "accession": accession2}
     )
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{joint_fixture.config.ucs_url}/boxes/{file_upload_box_id}/uploads?skip=0&limit=100&with_checksums=false",
-        status_code=200,
+    joint_fixture.file_box_api.on_get_file_upload_list = respond(
+        200,
         json={
             "items": [
                 file_upload1.model_dump(mode="json"),

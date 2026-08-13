@@ -17,15 +17,15 @@
 import logging
 from pathlib import Path
 
-import httpx
-from metldata.submission_registry.submission_store import (
-    SubmissionStore,
-    SubmissionStoreConfig,
-)
+import httpx2
 from pydantic import Field, ValidationError
 
 from ghga_datasteward_kit import models, utils
 from ghga_datasteward_kit.exceptions import UnknownStorageAliasError
+from metldata.submission_registry.submission_store import (
+    SubmissionStore,
+    SubmissionStoreConfig,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -207,7 +207,7 @@ def file_ingest(
 
     headers = {"Authorization": f"Bearer {token}"}
 
-    with httpx.Client() as client:
+    with httpx2.Client() as client:
         response = client.post(
             f"{endpoint_url}",
             json=payload.model_dump(),

@@ -21,12 +21,11 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
+
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
-from pytest_httpx import HTTPXMock
-
 from wps.config import Config
 from wps.constants import WORK_ORDER_TOKEN_VALID_SECONDS
 from wps.core.models import DatasetWithExpiration
@@ -36,14 +35,15 @@ from .fixtures import (  # noqa: F401
     RDU_BOX_ID,
     SIGNING_KEY_PAIR,
     USER_ID,
+    fixture_access_api,
     fixture_auth_headers,
     fixture_bad_auth_headers,
     fixture_client,
     fixture_config,
     fixture_repository,
     headers_for_token,
-    non_mocked_hosts,
 )
+from .fixtures.access_api import AccessApiMock, respond
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET, FILE_ACCESSION_MAPS
 
@@ -88,25 +88,27 @@ async def test_get_work_package_unauthorized(client: AsyncTestClient):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_make_download_work_order_token(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
-    httpx_mock: HTTPXMock,
+    access_api: AccessApiMock,
     mongodb_populated: MongoDbFixture,
     config: Config,
 ):
     """Test that download-type work order tokens can be properly created."""
     # mock the access check for the test dataset to grant access
-    url = f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets/some-dataset-id"
     valid_until = (now_utc_ms_prec() + timedelta(days=365)).isoformat()
-    httpx_mock.add_response(method="GET", url=url, json=valid_until)
+    access_api.on_check_download_access = respond(json=valid_until)
 
     # create a work package
     response = await client.post(
         "/work-packages", json=DATASET_CREATION_DATA, headers=auth_headers
     )
     assert response.status_code == status.HTTP_201_CREATED
+    assert (
+        access_api.last_url
+        == f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets/some-dataset-id"
+    )
 
     response_data = response.json()
     assert isinstance(response_data, dict)
@@ -235,11 +237,7 @@ async def test_make_download_work_order_token(
     }
 
     # mock the access check for the test dataset to revoke access
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets/some-dataset-id",
-        text="false",
-    )
+    access_api.on_check_download_access = respond(json=False)
 
     # try to fetch a work order token again
     response = await client.post(
@@ -250,22 +248,17 @@ async def test_make_download_work_order_token(
     assert "Download access has been revoked" in response.json()["detail"]
 
 
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_make_upload_work_order_token(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
-    httpx_mock: HTTPXMock,
+    access_api: AccessApiMock,
     mongodb_populated: MongoDbFixture,
     config: Config,
 ):
     """Test that upload-type work order tokens can be created."""
     # Mock upload access check to grant access
     valid_until = (now_utc_ms_prec() + timedelta(days=365)).isoformat()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{USER_ID}/boxes/{RDU_BOX_ID}",
-        json=valid_until,
-    )
+    access_api.on_check_upload_access = respond(json=valid_until)
 
     # Create an upload work package
     upload_creation_data = {
@@ -278,6 +271,9 @@ async def test_make_upload_work_order_token(
         "/work-packages", json=upload_creation_data, headers=auth_headers
     )
     assert response.status_code == status.HTTP_201_CREATED
+    assert (
+        access_api.last_url == f"{UPLOAD_ACCESS_URL}/users/{USER_ID}/boxes/{RDU_BOX_ID}"
+    )
 
     response_data = response.json()
     work_package_id = response_data["id"]
@@ -425,16 +421,14 @@ async def test_get_datasets_for_another_user(
 async def test_get_datasets_when_none_authorized(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
-    httpx_mock: HTTPXMock,
+    access_api: AccessApiMock,
     mongodb_populated: MongoDbFixture,
 ):
     """Test that no datasets are fetched when none are accessible."""
     # mock the access check for the test dataset
     expires = (now_utc_ms_prec() + timedelta(days=365)).isoformat()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets",
-        json={"some-other-dataset-id": expires},
+    access_api.on_get_accessible_datasets = respond(
+        json={"some-other-dataset-id": expires}
     )
 
     # get the list of datasets
@@ -446,11 +440,10 @@ async def test_get_datasets_when_none_authorized(
     assert response_data == []
 
 
-@pytest.mark.httpx_mock(can_send_already_matched_responses=True)
 async def test_get_upload_wot_expired_access(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
-    httpx_mock: HTTPXMock,
+    access_api: AccessApiMock,
     mongodb_populated: MongoDbFixture,
     config: Config,
 ):
@@ -459,11 +452,7 @@ async def test_get_upload_wot_expired_access(
     """
     # Mock initial upload access check to grant access
     valid_until = (now_utc_ms_prec() + timedelta(days=365)).isoformat()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{USER_ID}/boxes/{RDU_BOX_ID}",
-        json=valid_until,
-    )
+    access_api.on_check_upload_access = respond(json=valid_until)
 
     # Create an upload work package
     upload_creation_data = {
@@ -482,11 +471,7 @@ async def test_get_upload_wot_expired_access(
     token = decrypt(response_data["token"])
 
     # Mock expired access check - return null to indicate no access
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{USER_ID}/boxes/{RDU_BOX_ID}",
-        text="null",
-    )
+    access_api.on_check_upload_access = respond(json=None)
 
     # Try to create a work order token - should fail due to expired box access
     create_request = {"work_type": "create", "alias": "test-file"}
@@ -503,25 +488,24 @@ async def test_get_upload_wot_expired_access(
 async def test_get_datasets(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
-    httpx_mock: HTTPXMock,
+    access_api: AccessApiMock,
     mongodb_populated: MongoDbFixture,
 ):
     """Test that the list of accessible datasets can be fetched."""
     # mock the access check for the test dataset
 
     expires = (now_utc_ms_prec() + timedelta(days=365)).isoformat()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets",
+    access_api.on_get_accessible_datasets = respond(
         json={
             "some-dataset-id": expires,
             "some-non-existing-dataset-id": expires,
-        },
+        }
     )
 
     # get the list of datasets
     response = await client.get(f"/users/{USER_ID}/datasets", headers=auth_headers)
     assert response.status_code == status.HTTP_200_OK
+    assert access_api.last_url == f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/datasets"
 
     response_data = response.json()
     assert isinstance(response_data, list)
@@ -534,7 +518,7 @@ async def test_get_datasets(
 async def test_get_upload_boxes(
     client: AsyncTestClient,
     auth_headers: dict[str, str],
-    httpx_mock: HTTPXMock,
+    access_api: AccessApiMock,
     mongodb: MongoDbFixture,
     config: Config,
 ):
@@ -542,13 +526,11 @@ async def test_get_upload_boxes(
     box_id1 = "91ba4d24-0bb6-4dd4-b80d-b0cf2421fb79"
     box_id2 = "40bdf805-7e85-45d1-9ad7-4f66b8fd9c7b"
     expires = (now_utc_ms_prec() + timedelta(days=180)).isoformat()
-    httpx_mock.add_response(
-        method="GET",
-        url=f"{UPLOAD_ACCESS_URL}/users/{USER_ID}/boxes",
+    access_api.on_get_accessible_boxes = respond(
         json={
             box_id1: expires,
             box_id2: expires,
-        },
+        }
     )
 
     # Insert boxes into the DB using the ids defined above
@@ -578,6 +560,7 @@ async def test_get_upload_boxes(
 
     response = await client.get(f"/users/{USER_ID}/boxes", headers=auth_headers)
     assert response.status_code == status.HTTP_200_OK
+    assert access_api.last_url == f"{UPLOAD_ACCESS_URL}/users/{USER_ID}/boxes"
     data = response.json()
     assert data
     assert isinstance(data, list)

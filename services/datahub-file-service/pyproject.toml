@@ -21,12 +21,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dhfs"
-version = "3.1.0"
+version = "4.0.0"
 description = "Data Hub File Service - a service enabling file inspection and re-encryption at Data Hubs"
 dependencies = [
     "typer >= 0.25.1",
-    "ghga-service-commons[auth,http,objectstorage,transports,crypt] >= 7.0.4",
-    "hexkit[s3] >= 8.2.1",
+    "ghga-service-commons[auth,http,objectstorage,transports,crypt] >= 8.0.0",
+    "hexkit[s3] >= 9.0.0",
     "crypt4gh >= 1.7",
     "async-lru >= 2.1.0",
 ]
@@ -44,118 +44,6 @@ dhfs = "dhfs.__main__:run"
 where = [
     "src",
 ]
-
-[tool.ruff]
-exclude = [
-    ".git",
-    ".devcontainer",
-    "__pycache__",
-    "build",
-    "dist",
-]
-line-length = 88
-src = [
-    "src",
-    "tests",
-    "examples",
-    "scripts",
-]
-target-version = "py313"
-
-[tool.ruff.lint]
-fixable = [
-    "UP",
-    "I",
-    "D",
-    "RUF022",
-]
-ignore = [
-    "E111",
-    "E114",
-    "E116",
-    "E117",
-    "E501",
-    "W191",
-    "PLW",
-    "RUF001",
-    "RUF010",
-    "RUF012",
-    "N818",
-    "B008",
-    "PLR2004",
-    "D205",
-    "D400",
-    "D401",
-    "D107",
-    "D206",
-    "D300",
-    "UP040",
-    "PLC0206",
-]
-select = [
-    "C90",
-    "F",
-    "I",
-    "S",
-    "B",
-    "N",
-    "UP",
-    "PL",
-    "RUF",
-    "SIM",
-    "D",
-    "E",
-    "W",
-    "ASYNC",
-    "LOG",
-    "PERF",
-    "RET",
-    "C4",
-]
-
-[tool.ruff.lint.mccabe]
-max-complexity = 10
-
-[tool.ruff.lint.per-file-ignores]
-"scripts/*" = [
-    "PL",
-    "S",
-    "SIM",
-    "D",
-    "E402",
-]
-"tests/*" = [
-    "S",
-    "SIM",
-    "PLR",
-    "B011",
-]
-".devcontainer/*" = [
-    "S",
-    "SIM",
-    "D",
-]
-"examples/*" = [
-    "S",
-    "D",
-]
-"__init__.py" = [
-    "D",
-]
-
-[tool.ruff.lint.pydocstyle]
-convention = "pep257"
-
-[tool.mypy]
-disable_error_code = "import"
-show_error_codes = true
-exclude = [
-    "build/lib/",
-]
-warn_redundant_casts = true
-warn_unused_ignores = true
-check_untyped_defs = true
-no_site_packages = false
 
 [tool.pytest.ini_options]
 minversion = "9.0"

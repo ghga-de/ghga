@@ -20,9 +20,9 @@ replaced at runtime by actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
 from dins.ports.inbound.information_service import InformationServicePort
+from ghga_service_commons.api.di import DependencyDummy
 
 information_service_port = DependencyDummy("information_service")
 

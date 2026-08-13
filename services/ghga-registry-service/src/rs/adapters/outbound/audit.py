@@ -16,11 +16,11 @@
 
 from typing import Literal
 
+from pydantic import UUID4
+
 from ghga_event_schemas.pydantic_ import AuditRecord
 from hexkit.correlation import get_correlation_id
 from hexkit.utils import now_utc_ms_prec
-from pydantic import UUID4
-
 from rs.core.models import ResearchDataUploadBox
 from rs.ports.outbound.audit import AuditRepositoryPort
 from rs.ports.outbound.event_pub import EventPublisherPort

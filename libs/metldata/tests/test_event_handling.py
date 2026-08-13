@@ -19,10 +19,10 @@
 import json
 
 import pytest
-from hexkit.custom_types import Ascii, JsonObject
-from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import UUID4, BaseModel, ConfigDict, Field
 
+from hexkit.custom_types import Ascii, JsonObject
+from hexkit.protocols.eventsub import EventSubscriberProtocol
 from metldata.event_handling.event_handling import FileSystemEventSubscriber
 from tests.fixtures.event_handling import (
     Event,

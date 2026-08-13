@@ -32,7 +32,6 @@ from fastapi import (
     Response,
     status,
 )
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from pydantic import UUID4, SecretStr
 
 from auth_service.claims_repository.core.utils import get_active_roles
@@ -48,6 +47,7 @@ from auth_service.user_registry.models.users import (
     User,
     UserStatus,
 )
+from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 
 from ..core.auth import (
     UserInfoError,
@@ -127,6 +127,7 @@ add_allowed_routes()
 )
 @TRACER.start_as_current_span("router.login")
 async def login(  # noqa: C901, PLR0913
+    *,
     request: Request,
     session_store: SessionStoreDependency,
     user_dao: UserDaoDependency,
@@ -367,6 +368,7 @@ async def create_new_totp_token(
 )
 @TRACER.start_as_current_span("router.rpc_verify_totp")
 async def rpc_verify_totp(  # noqa: PLR0913
+    *,
     session_store: SessionStoreDependency,
     session: SessionDependency,
     totp_handler: TOTPHandlerDependency,

@@ -236,7 +236,7 @@ def test_get_factory_kit_not_existent():
     Test the `get_factory_kit` method of the `ExceptionMapping` class
     when called with parameters that don't resolve to a mapping.
     """
-    fallback_factory = lambda status_code, data: ExampleError()  # noqa: E731
+    fallback_factory = lambda status_code, data: ExampleError()
     expected_params = ["status_code", "data"]
 
     # create an ExceptionMapping and get a factory kit:

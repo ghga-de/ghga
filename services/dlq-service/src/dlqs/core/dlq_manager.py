@@ -20,11 +20,6 @@ from collections import Counter, defaultdict
 from contextlib import suppress
 from uuid import UUID
 
-from hexkit.correlation import set_correlation_id
-from hexkit.protocols.dao import ResourceAlreadyExistsError
-from hexkit.protocols.eventpub import EventPublisherProtocol
-from hexkit.providers.akafka.provider.eventsub import HeaderNames
-
 from dlqs.config import Config
 from dlqs.models import (
     DLQInfo,
@@ -35,6 +30,10 @@ from dlqs.models import (
 )
 from dlqs.ports.inbound.dlq_manager import DLQManagerPort
 from dlqs.ports.outbound.dao import EventDaoPort, ResourceNotFoundError
+from hexkit.correlation import set_correlation_id
+from hexkit.protocols.dao import ResourceAlreadyExistsError
+from hexkit.protocols.eventpub import EventPublisherProtocol
+from hexkit.providers.akafka.provider.eventsub import HeaderNames
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ def stored_event_from_raw_event(event: RawDLQEvent) -> StoredDLQEvent:
     )
 
     # Create the final object to be stored in the database
-    stored_event = StoredDLQEvent(
+    return StoredDLQEvent(
         dlq_id=event.dlq_id,
         topic=og_topic,
         type_=event.type_,
@@ -80,7 +79,6 @@ def stored_event_from_raw_event(event: RawDLQEvent) -> StoredDLQEvent:
         headers={HeaderNames.CORRELATION_ID: event.headers[HeaderNames.CORRELATION_ID]},
         dlq_info=dlq_info,
     )
-    return stored_event
 
 
 class DLQManager(DLQManagerPort):
@@ -247,7 +245,7 @@ class DLQManager(DLQManagerPort):
             empty_dlq_error = self.DLQEmptyError(service=service, topic=topic)
             log.error(empty_dlq_error)
             raise empty_dlq_error
-        elif next_event.dlq_id != dlq_id:
+        if next_event.dlq_id != dlq_id:
             # If the supplied dlq ID doesn't match that of the next event, raise an error
             sequence_error = self.DLQSequenceError(
                 dlq_id=dlq_id, service=service, topic=topic, next_id=next_event.dlq_id

@@ -21,9 +21,9 @@ from collections.abc import Callable
 from contextlib import suppress
 from functools import partial
 
-from ghga_event_schemas import pydantic_ as event_schemas
 from pydantic import UUID4
 
+from ghga_event_schemas import pydantic_ as event_schemas
 from nos.config import Config
 from nos.core import notifications
 from nos.ports.inbound.orchestrator import OrchestratorPort
@@ -130,7 +130,9 @@ class Orchestrator(OrchestratorPort):
             user.email,
         )
 
-        request_url = f"{self._config.portal_url}access-requests/{access_request.id}"
+        request_url = (
+            f"{self._config.portal_url}access-request-manager/{access_request.id}"
+        )
 
         # Send a notification to the data steward
         await self._notification_emitter.email_notify(
@@ -437,10 +439,11 @@ class Orchestrator(OrchestratorPort):
 
         Critical information includes the user's email address and name.
         """
-        changed = []
-        for field in ["email", "name"]:
-            if getattr(existing_user, field) != getattr(new_user, field):
-                changed.append(field)
+        changed = [
+            field
+            for field in ["email", "name"]
+            if getattr(existing_user, field) != getattr(new_user, field)
+        ]
         return " and ".join(changed)
 
     async def upsert_access_request(

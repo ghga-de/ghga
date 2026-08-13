@@ -20,17 +20,17 @@ import logging
 from typing import Any
 
 import pytest
-from hexkit.providers.akafka.testutils import KafkaFixture
-from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-from hexkit.utils import now_utc_ms_prec
 
 from auth_service.claims_repository.core.seed import seed_data_steward_claims
 from auth_service.claims_repository.models.config import IvaType, UserWithIVA
 from auth_service.claims_repository.translators.dao import ClaimDaoFactory
 from auth_service.config import Config
 from auth_service.user_registry.translators.dao import UserDaoPublisherFactory
+from hexkit.providers.akafka.testutils import KafkaFixture
+from hexkit.providers.mongodb import MongoDbDaoFactory
+from hexkit.providers.mongodb.testutils import MongoDbFixture
+from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
+from hexkit.utils import now_utc_ms_prec
 
 
 async def fut(config: Config):

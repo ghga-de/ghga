@@ -117,12 +117,11 @@ def thaw(frozen: Any) -> Any:
     """
     if isinstance(frozen, Mapping):
         return {key: thaw(value) for key, value in frozen.items()}
-    elif isinstance(frozen, Set):
+    if isinstance(frozen, Set):
         return {thaw(item) for item in frozen}
-    elif isinstance(frozen, list | tuple):
+    if isinstance(frozen, list | tuple):
         return [thaw(item) for item in frozen]
-    else:
-        return frozen
+    return frozen
 
 
 def dumps_model(

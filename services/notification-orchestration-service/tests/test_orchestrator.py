@@ -19,11 +19,11 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from ghga_event_schemas import pydantic_ as event_schemas
-from hexkit.providers.akafka.testutils import ExpectedEvent
 from logot import Logot, logged
 from pydantic import UUID4
 
+from ghga_event_schemas import pydantic_ as event_schemas
+from hexkit.providers.akafka.testutils import ExpectedEvent
 from nos.core import notifications
 from tests.conftest import TEST_USER
 from tests.fixtures.joint import JointFixture
@@ -57,7 +57,7 @@ def iva_state_payload(user_id: UUID4, state: event_schemas.IvaState) -> dict[str
                 "dac_alias": "Some DAC",
                 "dac_email": "dac@some.org",
                 "request_text": "Please grant me access to this data.",
-                "request_url": f"https://data.ghga.de/access-requests/{ACCESS_REQUEST_ID}",
+                "request_url": f"https://data.ghga.de/access-request-manager/{ACCESS_REQUEST_ID}",
             },
             "pending",
         ),
@@ -381,15 +381,14 @@ async def test_iva_state_change(
         assert data_steward_notification.plaintext_body.startswith("\nThe 'fax' IVA")
 
     # Combine the two notifications into a list of expected events
-    expected_events = []
-    for notification in [user_notification, data_steward_notification]:
-        if notification:
-            expected_events.append(
-                ExpectedEvent(
-                    payload=notification.model_dump(),
-                    type_=joint_fixture.config.email_notification_type,
-                )
-            )
+    expected_events = [
+        ExpectedEvent(
+            payload=notification.model_dump(),
+            type_=joint_fixture.config.email_notification_type,
+        )
+        for notification in [user_notification, data_steward_notification]
+        if notification
+    ]
 
     # Consume the event and verify that the expected events are published
     async with joint_fixture.kafka.expect_events(

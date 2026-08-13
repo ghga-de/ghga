@@ -1,0 +1,6 @@
+deployment:
+  agentPrePopulateOnly: "false"
+
+cronjob:
+  agentPrePopulateOnly: "true"
+  note: cronjob-only

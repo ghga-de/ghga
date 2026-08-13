@@ -18,8 +18,8 @@
 
 from fastapi import HTTPException
 from fastapi.routing import APIRouter
-from hexkit.protocols.dao import DaoFactoryProtocol, ResourceNotFoundError
 
+from hexkit.protocols.dao import DaoFactoryProtocol, ResourceNotFoundError
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
 from metldata.artifacts_rest.models import ArtifactInfo, GlobalStats

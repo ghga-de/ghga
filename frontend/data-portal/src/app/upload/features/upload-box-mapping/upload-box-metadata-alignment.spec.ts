@@ -62,13 +62,14 @@ const VALID_METADATA = {
  * Minimal mock of UploadBoxService for alignment component tests.
  */
 class MockUploadBoxService {
-  #boxFileUploads = signal<FileUploadWithAccession[]>(TEST_BOX_FILES);
+  #allBoxFiles = signal<FileUploadWithAccession[]>(TEST_BOX_FILES);
 
-  boxFileUploads = {
-    value: this.#boxFileUploads.asReadonly(),
+  allBoxFileUploads = {
     isLoading: () => false,
     error: () => undefined,
   };
+
+  allBoxFiles = this.#allBoxFiles.asReadonly();
 }
 
 /**

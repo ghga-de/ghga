@@ -18,10 +18,10 @@
 
 from collections.abc import Awaitable, Callable
 
-from hexkit.custom_types import Ascii, JsonObject
-from hexkit.protocols.eventsub import EventSubscriberProtocol
 from pydantic import UUID4
 
+from hexkit.custom_types import Ascii, JsonObject
+from hexkit.protocols.eventsub import EventSubscriberProtocol
 from metldata.event_handling.models import SubmissionEventPayload
 from metldata.event_handling.submission_events import SourceEventConfig
 

@@ -19,8 +19,8 @@ replaced at runtime by actual dependencies.
 from typing import Annotated
 
 from fastapi import Depends
-from ghga_service_commons.api.di import DependencyDummy
 
+from ghga_service_commons.api.di import DependencyDummy
 from sms.config import Config
 from sms.ports.inbound.docs_handler import DocsHandlerPort
 from sms.ports.inbound.events_handler import EventsHandlerPort

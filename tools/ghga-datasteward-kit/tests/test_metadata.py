@@ -32,6 +32,10 @@ from tests.fixtures.metadata import (
     ORIGINAL_MODEL_PATH,
 )
 
+# anchored to this file: the monorepo runs pytest from the workspace root, so
+# CWD-relative fixture paths (which upstream CI can use) do not resolve here
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
 
 def workdir_factory(original_model_path: Path):
     """Prepare a work directory for the provided model."""
@@ -84,15 +88,15 @@ def test_archive_happy(archive_workdir: Path):
     "file_overview_path, output",
     [
         (
-            Path("./tests/fixtures/files_to_upload/all_accounted_for.tsv"),
+            FIXTURES_DIR / Path("files_to_upload/all_accounted_for.tsv"),
             "Success: All files in all_accounted_for.tsv are accounted for in metadata.json",
         ),
         (
-            Path("./tests/fixtures/files_to_upload/1_missing.tsv"),
+            FIXTURES_DIR / Path("files_to_upload/1_missing.tsv"),
             "The following file aliases are missing from metadata.json:\n- MISSING1",
         ),
         (
-            Path("./tests/fixtures/files_to_upload/3_missing.tsv"),
+            FIXTURES_DIR / Path("files_to_upload/3_missing.tsv"),
             "The following file aliases are missing from metadata.json:\n- MISSING1\n- MISSING2\n- MISSING3",
         ),
     ],
@@ -100,7 +104,7 @@ def test_archive_happy(archive_workdir: Path):
 def test_compare_aliases(file_overview_path: Path, output: str, capsys):
     """Test the `compare_aliases` function and verify the printed output."""
     compare_aliases(
-        metadata_path=Path("./tests/fixtures/metadata.json"),
+        metadata_path=FIXTURES_DIR / "metadata.json",
         tsv=file_overview_path,
     )
     captured = capsys.readouterr()

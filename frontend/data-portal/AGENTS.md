@@ -38,6 +38,59 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 - `src/mocks`: MSW handlers with static API/auth responses
 - `tests`: end-to-end tests
 
+## API mocking philosophy
+
+The MSW layer in `src/mocks` serves **static, pre-made responses only**. Do not write
+mock handlers that contain backend logic. It backs both the dev server and the
+Playwright tests, so this is also what bounds what those tests can prove — see
+[Test levels](#test-levels) below.
+
+- Reimplementing backend behaviour (filtering, pagination, sorting, validation,
+  computed fields) duplicates work that already exists in the services, and the copy
+  inevitably drifts from the real implementation. Tests then pass against a fiction
+  and give a false sense of security. Real end-to-end coverage against actual backend
+  is done in the archive test bed.
+- Add fixtures to `src/mocks/data.ts` and map them to endpoints in
+  `src/mocks/responses.ts`. `createHandlersForResponses` in `src/mocks/handlers.ts` is
+  the only handler generator; keep it generic.
+- For endpoints that vary by query string, register one entry per request the app
+  actually makes, including the query parameters:
+  `'GET /api/ars/access-requests?dataset_id=<id>&*': someStaticResponse`. The handler
+  picks the entry matching the most parameters, so a parameterless entry acts as the
+  fallback.
+- Deriving one fixture from another at module load (slicing an array into pages, for
+  example) is fine — that is authoring data, not simulating a backend at request time.
+- Paginated list endpoints are the one exception, since sorting and pagination are a
+  convention shared by all of them rather than per-endpoint logic. A fixture with an
+  `items` array registered _without_ `skip`/`limit` in its key is treated as the
+  complete collection: the handler sorts it by `sort` (comma-separated fields, leading
+  `-` for descending) and then applies `skip`/`limit`. Register the whole collection,
+  not per-request pages — sorting must precede slicing, so an already-paged fixture
+  cannot be sorted correctly. Do not extend this to filtering, validation, or computed
+  fields.
+
+## Test levels
+
+Follows directly from the mocking philosophy above; see
+[Automated tests](README.md#automated-tests) for the full rationale.
+
+- **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most
+  coverage belongs — request shapes, cache invalidation, state transitions, rendering
+  and event wiring. Services are tested against `HttpTestingController`, components
+  against mocked services.
+- **E2E tests in this repo** (Playwright, `tests`): a **smoke layer**, despite the name.
+  They stop at the network boundary, since the MSW mocks serve them too, but they boot
+  the real app in a real browser with the real services and interceptors. Use them for
+  assembly and wiring, not for behaviour. Keep them few and cheap.
+- **Archive test bed** (separate repository): real backend and database, and the only
+  level that can verify a flow whose outcome depends on the backend changing state.
+
+The practical consequence: do **not** try to cover a "change something, then see the
+change reflected" flow with a Playwright test here. The mocks answer identically before
+and after the mutation, so such a test could only assert that a request was made — which
+a unit test already does more precisely and far more cheaply. Leave those flows to the
+archive test bed, which is more expensive to run.
+
 ## Repo commands (pnpm)
 
 This repo uses `pnpm` (not npm) for dependency installation and scripts.

@@ -1,8 +1,9 @@
 # Chart values for this member (deployment knowledge only).
 # Derived facts — image, executable, configPrefix, command style — are stamped
 # by the chart generator from workspace metadata (deploy/src/create_charts.py).
-cronjob:
-  enabled: true
+cronjobs:
+  default:
+    enabled: true
 
 deployment:
   enabled: false

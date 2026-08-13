@@ -19,12 +19,11 @@ import asyncio
 import importlib
 import logging
 
+from auth_service.migrations.entry import run_db_migrations
 from ghga_service_commons.api import run_server
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-
-from auth_service.migrations.entry import run_db_migrations
 
 from .config import CONFIG, Config
 

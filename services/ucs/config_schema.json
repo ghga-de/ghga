@@ -208,7 +208,7 @@
     },
     "enable_opentelemetry": {
       "default": false,
-      "description": "If set to true, this will run necessary setup code.If set to false, environment variables are set that should also effectively disable autoinstrumentation.",
+      "description": "If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled.",
       "title": "Enable Opentelemetry",
       "type": "boolean"
     },

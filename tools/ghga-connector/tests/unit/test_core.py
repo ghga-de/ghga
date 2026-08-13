@@ -16,35 +16,42 @@
 
 """Tests for the core functions of the cli"""
 
+import re
+
 import pytest
-from pytest_httpx import HTTPXMock, httpx_mock  # noqa: F401
 
 from ghga_connector.core.api_calls import is_service_healthy
+from tests.fixtures.mock_api.router import mock_health_checks
+
+HEALTHY_API_URL = "https://ghga.de"
 
 
-@pytest.mark.httpx_mock(
-    assert_all_responses_were_requested=False,
-    assert_all_requests_were_expected=False,
-)
+@pytest.fixture()
+def mock_health_endpoint(monkeypatch):
+    """Serve https://ghga.de/health and refuse every other connection.
+
+    Only the one URL is reported as healthy, so this also pins down which URL
+    `is_service_healthy` derives from the API URL it is given.
+    """
+    mock_health_checks(monkeypatch, healthy_url=re.escape(HEALTHY_API_URL))
+
+
 @pytest.mark.parametrize(
     "api_url,timeout_in_seconds,expected_response",
     [
         ("https://bad_url", 5, False),
-        ("https://ghga.de", 5, True),
-        ("https://ghga.de/", 5, True),
-        ("https://ghga.de/health", 5, True),
-        ("https://ghga.de/health/", 5, True),
+        (HEALTHY_API_URL, 5, True),
+        (f"{HEALTHY_API_URL}/", 5, True),
+        (f"{HEALTHY_API_URL}/health", 5, True),
+        (f"{HEALTHY_API_URL}/health/", 5, True),
     ],
 )
 def test_is_service_healthy(
     api_url: str,
     timeout_in_seconds: int,
     expected_response: bool,
-    httpx_mock: HTTPXMock,  # noqa: F811
+    mock_health_endpoint,
 ):
     """Test healthy check function"""
-    httpx_mock.add_response(
-        url="https://ghga.de/health", status_code=200, json={"status": "OK"}
-    )
     response = is_service_healthy(api_url, timeout_in_seconds=timeout_in_seconds)
     assert response == expected_response

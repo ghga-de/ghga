@@ -19,10 +19,10 @@
 from datetime import timedelta
 from uuid import UUID
 
-from ghga_service_commons.utils.utc_dates import UTCDatetime
-from hexkit.utils import now_utc_ms_prec
 from pydantic import UUID4
 
+from ghga_service_commons.utils.utc_dates import UTCDatetime
+from hexkit.utils import now_utc_ms_prec
 from wps.ports.outbound.access import AccessCheckPort
 
 USERS_WITH_DOWNLOAD_ACCESS = [UUID("a86f8281-e18a-429e-88a9-a5c8ea0cf754")]
@@ -95,4 +95,4 @@ class AccessCheckMock(AccessCheckPort):
         if user_id not in USERS_WITH_UPLOAD_ACCESS:
             return {}
         expires = now_utc_ms_prec() + self.validity_period
-        return {box_id: expires for box_id in BOXES_WITH_UPLOAD_ACCESS}
+        return dict.fromkeys(BOXES_WITH_UPLOAD_ACCESS, expires)

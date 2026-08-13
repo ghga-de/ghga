@@ -22,7 +22,7 @@ from datetime import timedelta
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from dcs.core.errors import StorageAliasNotConfiguredError
+from dcs.core.errors import StorageAliasNotConfiguredError, StorageUnavailableError
 from dcs.ports.inbound.bucket_cleanup import BucketCleanerPort
 from dcs.ports.outbound.dao import DrsObjectDaoPort
 from ghga_service_commons.utils.multinode_storage import (
@@ -108,10 +108,18 @@ class DownloadBucketCleaner(BucketCleanerPort):
         )
 
         # filter to get all files in download bucket that should be removed
-        object_ids = [
-            uuid.UUID(x)
-            for x in await object_storage.list_all_object_ids(bucket_id=bucket_id)
-        ]
+        try:
+            raw_object_ids = await object_storage.list_all_object_ids(
+                bucket_id=bucket_id
+            )
+        except Exception as error:
+            # If the first call to S3 fails, assume there's a persistent issue and skip the bucket
+            log.warning(
+                StorageUnavailableError(alias=storage_alias, reason=str(error)),
+                exc_info=True,
+            )
+            return
+        object_ids = [uuid.UUID(x) for x in raw_object_ids]
         log.debug(
             f"Retrieved list of deletion candidates for storage '{storage_alias}'"
         )
@@ -145,13 +153,18 @@ class DownloadBucketCleaner(BucketCleanerPort):
                     await object_storage.delete_object(
                         bucket_id=bucket_id, object_id=str(object_id)
                     )
-                except (
-                    object_storage.ObjectError,
-                    object_storage.ObjectStorageProtocolError,
-                ) as error:
+                except object_storage.ObjectStorageProtocolError as error:
                     cleanup_error = self.CleanupError(
                         object_id=object_id,
                         storage_alias=storage_alias,
                         reason=str(error),
                     )
                     log.error(cleanup_error)
+                except Exception as error:
+                    # Assume connection errors here are transient and just log them
+                    cleanup_error = self.CleanupError(
+                        object_id=object_id,
+                        storage_alias=storage_alias,
+                        reason=str(error),
+                    )
+                    log.warning(cleanup_error, exc_info=True)

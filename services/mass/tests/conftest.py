@@ -24,7 +24,6 @@ from hexkit.providers.mongodb.testutils import (  # noqa: F401
     get_persistent_mongodb_fixture,
     mongodb_container_fixture,
 )
-
 from tests.fixtures.joint import (  # noqa: F401
     JointFixture,
     joint_fixture,

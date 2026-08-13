@@ -19,9 +19,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
+
 from hexkit.providers.akafka.provider import KafkaEventPublisher, KafkaEventSubscriber
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
-
 from mass.adapters.inbound.event_sub import EventSubTranslator
 from mass.adapters.inbound.fastapi_ import dummies
 from mass.adapters.inbound.fastapi_.configure import get_configured_app

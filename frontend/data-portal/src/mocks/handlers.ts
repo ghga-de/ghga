@@ -11,6 +11,92 @@ import { umamiHandlers } from './umami';
 
 const DELAY = 0; // delay in seconds for testing
 
+/** A list response carrying its entries in an `items` array */
+type Collection = { items: unknown[]; total_count?: number };
+
+/**
+ * Check whether a static response is a list response with an `items` array.
+ * @param response - the static response to check
+ * @returns whether the response is a collection
+ */
+function isCollection(response: ResponseValue): response is Collection {
+  return (
+    typeof response === 'object' &&
+    response !== null &&
+    Array.isArray((response as Collection).items)
+  );
+}
+
+/**
+ * Compare two entries of a collection by a single field.
+ *
+ * Entries without a value for the field sort last, numbers compare numerically
+ * and everything else compares as a string.
+ * @param left - the first entry
+ * @param right - the second entry
+ * @param field - the name of the field to compare by
+ * @returns a negative number, zero, or a positive number for ordering
+ */
+function compareByField(left: unknown, right: unknown, field: string): number {
+  const leftValue = (left as Record<string, unknown>)[field];
+  const rightValue = (right as Record<string, unknown>)[field];
+  if (leftValue == null || rightValue == null) {
+    if (leftValue == rightValue) return 0;
+    return leftValue == null ? 1 : -1;
+  }
+  if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+    return leftValue - rightValue;
+  }
+  return String(leftValue).localeCompare(String(rightValue));
+}
+
+/**
+ * Derive the requested window of a complete collection response.
+ *
+ * This is the one piece of backend behaviour the mocks reproduce, because it is
+ * a convention shared by all paginated list endpoints rather than logic specific
+ * to any one of them: entries are sorted by the comma-separated field names in
+ * `sort` (a leading dash denotes descending order), the total count is reported
+ * before pagination, and `skip` and `limit` then select the page. Sorting has to
+ * happen before slicing, which is why the mock cannot simply reorder a response
+ * that is already a page.
+ * @param collection - the complete collection to derive the window from
+ * @param params - the query parameters of the request
+ * @returns the collection response for the requested window
+ */
+function windowOfCollection(
+  collection: Collection,
+  params: URLSearchParams,
+): Collection {
+  let items = collection.items;
+
+  const sort = params.get('sort');
+  if (sort) {
+    const specs = sort
+      .split(',')
+      .map((spec) => spec.trim())
+      .filter(Boolean);
+    items = [...items].sort((left, right) => {
+      for (const spec of specs) {
+        const descending = spec.startsWith('-');
+        const field = descending ? spec.slice(1) : spec;
+        const result = compareByField(left, right, field);
+        if (result) return descending ? -result : result;
+      }
+      return 0;
+    });
+  }
+
+  const total_count = items.length;
+  const skip = Number(params.get('skip')) || 0;
+  const limit = params.get('limit');
+  if (skip || limit !== null) {
+    items = items.slice(skip, limit === null ? undefined : skip + Number(limit));
+  }
+
+  return { ...collection, items, total_count };
+}
+
 /**
  * Create request handlers for the given responses
  *
@@ -117,6 +203,26 @@ function createHandlersForResponses(responses: {
       }
       if (Object.keys(responseMap).length > 1) {
         console.debug('Using mock data for params', paramString);
+      }
+      // Paginated list endpoints all share one convention (`sort`, `skip` and
+      // `limit` over an `items` array), so instead of registering a fixture per
+      // page and per sort order, a single fixture holding the whole collection is
+      // narrowed down to whatever the request asks for. This is deliberately not
+      // conditional on a `sort` parameter being present: the same code path also
+      // implements plain pagination, and skipping it for unsorted requests would
+      // return every entry on the first page.
+      //
+      // The exemption for entries that pin `skip` or `limit` in their key is what
+      // lets an endpoint stay fully static: such a fixture is a canned window
+      // rather than a complete collection, and narrowing it again would paginate
+      // twice and report a total count of just that window.
+      const matchedParams = new URLSearchParams(paramString ?? '');
+      if (
+        isCollection(response) &&
+        !matchedParams.has('skip') &&
+        !matchedParams.has('limit')
+      ) {
+        response = windowOfCollection(response, new URL(request.url).searchParams);
       }
       let status = 200;
       if (typeof response === 'number') {

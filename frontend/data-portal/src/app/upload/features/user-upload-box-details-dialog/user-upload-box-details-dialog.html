@@ -34,12 +34,27 @@
       </div>
 
       <div>
-        <p class="mb-2"><strong>Files:</strong></p>
+        <div class="mb-2 flex items-center justify-between">
+          <p><strong>Files:</strong></p>
+          <app-refresh-button
+            what="the file list"
+            [loading]="filesLoading()"
+            umamiEvent="User Upload Box Details Refresh Files Clicked"
+            (refresh)="refreshFiles()"
+          />
+        </div>
         @if (box.file_count > 0) {
           <app-upload-box-files-table
-            [files]="files()"
+            [pageFiles]="pageFiles()"
             [boxState]="box.state"
             [loading]="filesLoading()"
+            [totalCount]="filesTotalCount()"
+            [pageIndex]="filesPageIndex()"
+            [pageSize]="filesPageSize()"
+            [sortActive]="filesSortState().column"
+            [sortDirection]="filesSortState().direction"
+            (page)="onFilesPage($event)"
+            (sortChange)="onFilesSort($event)"
           />
         } @else {
           <p class="text-warning">This upload box is still empty.</p>

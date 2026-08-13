@@ -17,9 +17,9 @@
 
 import string
 
-from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from jwcrypto import jwk
 
+from ghga_service_commons.utils.jwt_helpers import sign_and_serialize_token
 from rs.constants import WORK_ORDER_TOKEN_VALID_SECONDS
 from rs.core.models import BaseWorkOrderToken
 

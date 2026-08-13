@@ -18,7 +18,6 @@
 
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import Dao, ResourceNotFoundError
-
 from nos.models import EventId
 
 __all__ = [

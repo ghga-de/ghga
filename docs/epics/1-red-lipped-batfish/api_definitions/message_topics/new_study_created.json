@@ -1,0 +1,35 @@
+{
+  "$id": "https://raw.githubusercontent.com/ghga-de/milestones-docs/main/milestone_1/api_definitions/async_topics/new_study_created.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "This event type is triggered when a new study is created in the Metadata Repository service.",
+  "properties": {
+    "associated_files": {
+      "description": "A list of files associated with the newly created study.",
+      "items": {
+        "$ref": "https://raw.githubusercontent.com/ghga-de/ghga-metadata-schema/main/artifacts/jsonschema/ghga.schema.json#/definitions/File"
+      },
+      "type": "array"
+    },
+    "request_id": {
+      "description": "A unique identified for the original user request that let to this event.",
+      "type": "string"
+    },
+    "study": {
+      "$ref": "https://raw.githubusercontent.com/ghga-de/ghga-metadata-schema/main/artifacts/jsonschema/ghga.schema.json#/definitions/Study"
+    },
+    "timestamp": {
+      "description": "The time when the study was posted by the user.",
+      "format": "date-time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id",
+    "study",
+    "associated_files",
+    "timestamp"
+  ],
+  "title": "new_study_created",
+  "type": "object"
+}

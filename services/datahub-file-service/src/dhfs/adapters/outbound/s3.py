@@ -18,9 +18,8 @@
 import base64
 import logging
 
-import httpx
+import httpx2
 from async_lru import alru_cache
-from hexkit.protocols.objstorage import ObjectStorageProtocol
 from tenacity import RetryError
 
 from dhfs.adapters.outbound.http import check_for_request_errors
@@ -32,6 +31,7 @@ from dhfs.constants import (
 )
 from dhfs.core.models import FileUpload
 from dhfs.ports.outbound.s3 import S3ClientPort
+from hexkit.protocols.objstorage import ObjectStorageProtocol
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class S3Client(S3ClientPort):
         *,
         config: Config,
         object_storage: ObjectStorageProtocol,
-        httpx_client: httpx.AsyncClient,
+        httpx_client: httpx2.AsyncClient,
     ) -> None:
         self._config = config
         self._storage = object_storage
@@ -164,7 +164,7 @@ class S3Client(S3ClientPort):
             bucket_id=bucket_id, object_id=object_id
         )
 
-        headers = httpx.Headers(
+        headers = httpx2.Headers(
             {
                 "Range": f"bytes={start}-{stop - 1}",  # HTTP Range is inclusive, so subtract 1
                 "Cache-Control": "no-store",  # don't cache part downloads

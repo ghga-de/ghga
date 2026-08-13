@@ -23,10 +23,10 @@ from io import BufferedReader
 from pathlib import Path
 
 import crypt4gh.lib
-from hexkit.providers.s3 import S3Config, S3ObjectStorage
 
 from ghga_datasteward_kit.s3_upload.config import LegacyConfig
 from ghga_datasteward_kit.utils import retrieve_well_known_values
+from hexkit.providers.s3 import S3Config, S3ObjectStorage
 
 LOG = logging.getLogger("s3_upload")
 

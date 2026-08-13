@@ -16,8 +16,8 @@
 """Test to make sure that the DLQ is correctly set up for this service."""
 
 import pytest
-from hexkit.providers.akafka.testutils import KafkaFixture
 
+from hexkit.providers.akafka.testutils import KafkaFixture
 from ns.inject import prepare_event_subscriber
 from tests.fixtures.config import get_config
 

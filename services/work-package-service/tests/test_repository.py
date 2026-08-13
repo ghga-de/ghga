@@ -20,12 +20,12 @@ from datetime import timedelta
 from uuid import UUID, uuid4
 
 import pytest
+
 from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
-
 from tests.fixtures.access import (
     BOXES_WITH_UPLOAD_ACCESS,
     USER_FOR_ACCESS_CHECK_ERROR,

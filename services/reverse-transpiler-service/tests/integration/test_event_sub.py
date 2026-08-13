@@ -18,10 +18,10 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from hexkit.custom_types import JsonObject
 from hexkit.providers.akafka.provider.eventsub import HeaderNames
 from hexkit.providers.akafka.testutils import KafkaFixture
-
 from rts.inject import prepare_event_subscriber
 from tests.fixtures.config import get_config
 
