@@ -27,7 +27,7 @@ from search.
 This document describes a smaller step we can take first: rolling out the data lifecycle on the
 existing stack — LinkML plus offline metadata management via `ghga-datasteward-kit` — so we can
 issue lifecycle PIDs and handle revisions before the schemapack services land. It stays within
-dskit, metldata, MASS, registry-service and data-portal. The schemapack services are out of scope.
+dskit, metldata, DINS, MASS, registry-service and data-portal. The schemapack services are out of scope.
 
 Three user-visible outcomes:
 
