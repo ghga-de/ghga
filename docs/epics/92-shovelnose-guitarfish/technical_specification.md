@@ -112,36 +112,31 @@ For requeuing _all_ files in a box, step #2 above would fetch all failed FileUpl
 
 On the RS side the endpoint checks the Data Steward role, resolves the RDUB to its FUB, creates the work order token, and calls the corresponding UCS endpoint. It should write an audit record like the other steward-initiated box operations do. The existing `log_box_updated` method in the audit module isn't a file-level action, so this should be its own (new) method.
 
-
-### What FIS has to do
-
-`process_file_upload()` (`fis/core/interrogation.py:289`) currently drops the requeue on the floor. A file coming back as 'inbox' hits the `insert` branch, the insert fails with `ResourceAlreadyExistsError`, and the fall-through only acts on 'cancelled', 'failed' and 'archived'. It needs a branch for a known file arriving as 'inbox' when the local copy is 'failed', which must:
-
-- set `state="inbox"`, `state_updated` from the event, and `interrogated=False`, so `get_files_not_yet_interrogated()` (`:355`) starts returning it again. That query filters on exactly `state="inbox"` and `interrogated=False`, which is why no DHFS change is needed for any of this.
-- set `can_remove=False`. Failure set it to True and nothing on the success path ever sets it back (`_handle_successful_report()` doesn't touch it). If it stays True through a successful retry, DHFS's cleaner will delete the freshly re-encrypted object out of the interrogation bucket, most likely before IFRS has copied it.
-- delete the stored `InterrogationReport` for that file. `_check_if_report_is_duplicate()` (`:125`) compares any incoming report against the stored one and raises `InterrogationReportConflict` when they differ, and `_handle_failure_report()` inserts rather than upserts. With the old failure report still in place, the retry's report is rejected no matter how it turns out.
-
-Deleting the old report throws away the record of why the file failed the first time, which is awkward for an epic whose premise is that the fault may be ours. Logging the report's contents at INFO before deleting it is enough to keep the trail without introducing report history as a concept.
-
 ### Counting failed files
 
-Add 'failed' to the states the box stats aggregation matches (`ucs/constants.py:25`, used by `MongoDbBoxStatsAggregator.compute_box_stats()`). The same three-way ambiguity in 'failed' applies here: a file that died during initiation occupies no storage, so counting it inflates the box. Matching on `state="failed"` together with a non-null `decrypted_sha256` keeps `size` describing bytes that actually exist.
+Add 'failed' to the states the box stats aggregation matches, but only if initial inbox upload succeeded. A file that died during initiation occupies no storage. This parallels the logic used to decided whether a requeue request is valid. Matching on `state="failed"` together with a non-null `decrypted_sha256` keeps `size` describing bytes that actually exist.
 
-One knock-on effect in `initiate_file_upload()` (`:346`): the max-size check starts from `box.size`, which now includes the failed file being replaced, and then adds the new file's `decrypted_size` on top. A user re-uploading a failed alias into a nearly-full box can be rejected for space that is about to be freed. The overwrite branch already re-fetches the box after cancelling an active upload; the failed/cancelled replacement happens later, inside `_insert_file_upload()`, so either that branch needs to handle 'failed' too or the check needs to discount the existing upload for the same alias.
+We need to verify the logic in `initiate_file_upload()`, too, specifically in the path that replaces previously failed files. We need to make sure that the file size isn't doubly counted so that the box limit isn't erroneously crossed. 
 
-### Blocking archival, and resolving a failed file
+### Blocking archival and resolving a failed file (UCS)
 
-`archive_file_upload_box()` (`:1107`) scans for 'init' and 'inbox' files and raises `IncompleteUploadsError`. Failed files should be rejected as well, but through a separate error: "incomplete" describes a file that is still uploading, and the remedy here is different enough (requeue it, or delete it) that the portal should be able to say so. RS's `_check_archival_prerequisites()` needs the equivalent check ahead of its accession check, with the failed file IDs attached to `HttpArchivalPrereqsError`, which currently carries an empty data model.
+`archive_file_upload_box()` scans for 'init' and 'inbox' files and raises `IncompleteUploadsError` if it finds any. Failed files should trigger rejection as well, but through a separate error because "incomplete" describes a file that is still uploading, and the remedy here is different enough (requeue it or delete it). RS also needs an equivalent check ahead of its accession map check, with the failed file IDs attached to `HttpArchivalPrereqsError`, which currently just has an empty data model.
+The logic around accession mapping keeps ignoring failed files, which gives a workable order of operations: resolve the failed files first, then map, then archive. Requiring accessions for failed files instead would mean mapping a file that may never exist. _Note/reminder that accession mapping domain logic is expected to change substantially in the coming months._
 
-This leaves the accession map alone. `store_accession_map()` keeps ignoring failed files, which combined with the archival block gives a workable order of operations: resolve the failed files first, then map, then archive. Requiring accessions for failed files instead would mean mapping a file that may never exist.
+We should also update UCS and RS to allow 'failed' files to be deleted from boxes even when they're locked. Otherwise users/Data Stewards have to do an inconvenient dance where they unlock-delete-lock, and that's not fun. _Alternatively_, we could rig the RS to do that sequence automatically without the user being aware of it. In the latter approach, UCS wouldn't need an update, only RS would.
 
-The one rough edge is that deletion, the other half of "resolve", goes through `_get_unlocked_box()` in UCS and is rejected outright for locked boxes in RS's `delete_file_upload()` (`rs/core/rdub_manager.py:886`). Archival happens from 'locked', so a Data Steward who decides to give up on a failed file has to unlock the box, delete, re-lock, and re-submit the map, and unlocking a box that users still have grants for invites new uploads in the meantime. Allowing deletion of a 'failed' FileUpload while the box is locked is a small, contained exception and worth taking as part of this epic.
+### FIS Adaptations
 
-### Listing failed files
+FIS's `process_file_upload()` method needs to be updated. At present, a requeued file coming back as 'inbox' fails with `ResourceAlreadyExistsError`, and the fallback handling only acts on 'cancelled', 'failed' and 'archived'. It needs a branch for a known file arriving as 'inbox' when the local copy is 'failed'. To do that, we need to do the following:
+- set `state="inbox"`, `state_updated` to the values on the event, and `interrogated=False`, so `get_files_not_yet_interrogated()` serves the FileUpload to DHFS again.
+- set `can_remove=False`. If it stays True during a successful retry, DHFS's cleaner will delete the freshly re-encrypted object out of the interrogation bucket. Should avoid that.
+- delete the stored `InterrogationReport` for that file.
 
-Worth being precise about what's actually filtering today, because it isn't UCS: `get_box_file_info()` applies no state filter at all, and neither does RS's `get_upload_box_files()`. Failed files are already returned by both. The filtering happens in the clients - the portal's mapping view drops them (`upload-box-metadata-alignment.ts:54`, `upload-box-mapping.ts:291`) and the connector treats a failed alias as absent when resuming a batch (`batch_processing.py:387`). The connector's behavior is still correct after this epic: re-uploading is one of the two legitimate ways to resolve a failed file. The portal's mapping view is the one that has to change, and it can't simply stop filtering, since a failed file can't be given an accession; it needs to surface them as blockers instead.
+Deleting the old report throws away the record of why the file failed the previous time, but logging the report's contents at INFO before deleting it is enough to keep the trail without introducing some kind of history tracking (and if we did that there are other things I would want to include - could be an epic in the middle future).
 
-Adding the optional `state` query parameter to both list endpoints is what makes "by default" meaningful rather than accidental, and gives the portal a server-side way to ask for just the failed files when it wants to show that blocker list.
+### Listing failed files (Data Portal)
+
+Currently, the Data Portal's mapping view drops them and the Connector treats a failed alias as absent when resuming a batch. The Connector's behavior is correct, just mentioning it for completeness. The portal's mapping view needs to show failed files in some way that makes it clear they block archival and need to be addressed. I can imagine several ways this could be done, but a certain Data Steward should be consulted, as well as a frontend developer. It should be noted that RS and UCS allow the Data Portal to filter files server-side by state. Since I don't know what the desired implementation is here, it's listed as an "Optional" requirement.
 
 ### Testing
 
