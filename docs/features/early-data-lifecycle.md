@@ -189,7 +189,7 @@ Under reuse a second accession is mapped much later (§2.5), IFRS never re-annou
 left to merge — so the dataset page shows blank size and checksum indefinitely, with only a "still
 waiting for `FileInternallyRegistered`" log line to explain it.
 
-dins must therefore retain the per-file data instead of consuming it, serve it to any accession bound
+DINS must therefore retain the per-file data instead of consuming it, serve it to any accession bound
 to that file however late it appears, and clear all such accessions when the file is deleted
 (`delete_file_information` currently resolves a `file_id` to just one).
 
