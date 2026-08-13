@@ -67,11 +67,8 @@ Consequences:
 - `XXX` collisions are resolved by retry against a per-year uniqueness check, i.e. only against
   other `XXX` minted in the same `YY`. `.DS.xxx` collisions are resolved by retry within the
   lineage.
-- **"Identical file set"** is compared over the reuse-slot accessions provided in the metadata-spreadsheet
- — not over physical files, which dskit cannot see (§2.3), and not over the
-  entities' own accessions, which change every revision. The comparison only arises when a successor
-  continues a new-scheme lineage: a legacy predecessor forces a fresh root at `V = 1` (§2.2), so
-  there is no predecessor dataset to compare against.
+- **"Identical file set"** is compared over the reuse-slot accessions in the submitted metadata
+  (§2.3), not over physical files and not over the entities' own accessions.
 
 #### Existing studies keep their legacy identifiers
 
