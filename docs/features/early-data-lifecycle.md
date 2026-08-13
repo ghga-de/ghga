@@ -212,8 +212,8 @@ to that file however late it appears, and clear all such accessions when the fil
 - A supersede relation may be established long after both studies were loaded (`replace-study`,
   §2.2), so loading is not the only moment supersede status can change — see §4.2.
 - **Hidden from search must not mean deleted or unreachable.** The signal that removes an old version
-  from the search index must still leave its artifacts queryable *and* carry the supersede pointer,
-  so the portal hint and rs's `superseded_by_id` can be set (§4.2).
+  from the search index must still leave its artifacts reachable by accession *and* carry the
+  supersede pointer, so the portal hint and rs's `superseded_by_id` can be set (§4.2).
 
 ### 2.5 Mapping / archival decoupling
 
