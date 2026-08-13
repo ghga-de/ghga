@@ -54,7 +54,7 @@ submit time (§2.6).
 
 | Entity | PID format | Notes |
 |---|---|---|
-| **Study** | `GHGA.YY.XXX.V` | `YY` = 2-digit year, frozen at v1. `XXX` = 3 base32 characters (`[A-Z2-7]`, RFC 4648 — no `0/1/8/9`), unique within the year rather than globally, so 32³ = 32,768 studies per year. `V` = version counter, starts at 1 and increments per revision. Since `YY` is frozen at v1, `GHGA.YY.XXX` is still unique overall (year + year-unique random), though the same `XXX` may recur in a different year. |
+| **Study** | `GHGA.YY.XXX.V` | `YY` = 2-digit year, unchanged by later revisions. `XXX` = 3 base32 characters (`[A-Z2-7]`, RFC 4648 — no `0/1/8/9`), unique within the year rather than globally, so 32³ = 32,768 studies per year. `V` = version counter, starts at 1 and increments per revision. Since `YY` never changes, `GHGA.YY.XXX` is still unique overall (year + year-unique random), though the same `XXX` may recur in a different year. |
 | **Lineage root** | `GHGA.YY.XXX` | The study's lineage identity, stable across all revisions of one study; only `.V` changes. |
 | **Dataset** | `{study_pid}.DS.[A-Z2-7]{3}` | Random 3-character base32 block, unique within the study lineage. **Reuse rule:** if a dataset's file set is identical to a predecessor-revision dataset, its `.DS.xxx` block is reused; otherwise a fresh one is generated. |
 | **Every other entity** | `{study_pid}.{alias}` | `alias` = the entity alias from the submitted metadata. **Requires** aliases to be unique across all entities within a study revision. |
