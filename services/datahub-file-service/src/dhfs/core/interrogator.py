@@ -509,8 +509,10 @@ class Interrogator(InterrogatorPort):
     ) -> tuple[bytes, tuple[bytes, bytes]]:
         """Produce the bytes to upload for one part, plus their (md5, sha256) digests.
 
-        Each buffer is dropped as soon as the next stage no longer needs it, which is
-        what keeps peak memory at two parts per slot rather than three.
+        Each buffer is dropped as soon as the next stage no longer needs it, which
+        holds peak memory to the three parts per slot that `max_concurrent_parts`
+        documents. The peak is inside the re-encryption: its input, its bytearray
+        output, and the `bytes` copy that httpx2 requires are all live at once.
         """
         encrypted_part = await self._download_part(ctx)
         decrypted_part = await self._decrypt_stage(
