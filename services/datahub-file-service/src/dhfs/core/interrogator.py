@@ -16,14 +16,18 @@
 """Core logic for file re-encryption and interrogation"""
 
 import asyncio
+import contextvars
+import functools
 import io
 import logging
 import os
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
+from typing import Any
 from uuid import UUID, uuid4
 
 import crypt4gh.header
@@ -145,6 +149,31 @@ class Interrogator(InterrogatorPort):
         # One budget for every part in flight, shared by all files, so peak memory is
         #  a function of this number alone rather than of it times the file count.
         self._part_slots = asyncio.Semaphore(self._max_concurrent_parts)
+        # Crypto and hashing get their own pool rather than the event loop's default
+        #  executor, which hexkit's S3 provider uses for every boto3 call. Sharing it
+        #  let CPU work squeeze out the S3 round trips this pipeline overlaps it with,
+        #  and the default is only min(32, cpu_count + 4) - as few as 5 or 6 workers on
+        #  a CPU-limited container. A part never runs more than one of these at a time,
+        #  so one worker per part slot is enough.
+        self._crypto_executor = ThreadPoolExecutor(
+            max_workers=self._max_concurrent_parts, thread_name_prefix="dhfs-crypto"
+        )
+
+    def close(self) -> None:
+        """Shut the crypto thread pool down. Safe to call more than once."""
+        self._crypto_executor.shutdown(wait=False)
+
+    async def _run_crypto(self, func: Callable[..., Any], /, *args, **kwargs) -> Any:
+        """Run a blocking crypto/hashing call on the dedicated pool.
+
+        Mirrors `asyncio.to_thread`, including the context propagation, but targets
+        `_crypto_executor` instead of the loop's default executor.
+        """
+        loop = asyncio.get_running_loop()
+        context = contextvars.copy_context()
+        return await loop.run_in_executor(
+            self._crypto_executor, functools.partial(context.run, func, *args, **kwargs)
+        )
 
     async def interrogate_new_files(self) -> None:
         """Query the GHGA Central API for new files that need to be re-encrypted.
@@ -386,7 +415,7 @@ class Interrogator(InterrogatorPort):
         """Decrypt a part in a worker thread, keeping the event loop free."""
         try:
             with _stopwatch(ctx.timings, "decrypt"):
-                return await asyncio.to_thread(
+                return await self._run_crypto(
                     self._decrypt_part, encrypted_part=encrypted_part, secret=secret
                 )
         except Exception as err:
@@ -406,7 +435,7 @@ class Interrogator(InterrogatorPort):
         """Re-encrypt a part under the new secret, in a worker thread."""
         try:
             with _stopwatch(ctx.timings, "reencrypt"):
-                return await asyncio.to_thread(
+                return await self._run_crypto(
                     self._reencrypt_part,
                     decrypted_part=decrypted_part,
                     new_secret=secret,
@@ -429,7 +458,7 @@ class Interrogator(InterrogatorPort):
         """
         try:
             with _stopwatch(ctx.timings, "verify"):
-                return await asyncio.to_thread(
+                return await self._run_crypto(
                     self._decrypt_part,
                     encrypted_part=reencrypted_part,
                     secret=secret,
@@ -464,7 +493,7 @@ class Interrogator(InterrogatorPort):
         # Digesting a whole part blocks for tens of milliseconds, so it goes to a
         #  thread like the crypto does.
         with _stopwatch(ctx.timings, "digest"):
-            part_digests = await asyncio.to_thread(
+            part_digests = await self._run_crypto(
                 Checksums.digest_encrypted_part, reencrypted_part
             )
         return reencrypted_part, part_digests
@@ -548,7 +577,7 @@ class Interrogator(InterrogatorPort):
                     if index:
                         await hashed[index - 1].wait()
                     with _stopwatch(timings, "fold"):
-                        await asyncio.to_thread(
+                        await self._run_crypto(
                             checksums.update_unencrypted, verified_part
                         )
                     hashed[index].set()

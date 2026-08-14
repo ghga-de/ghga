@@ -141,7 +141,8 @@ class Config(
             + " the re-encryption of another and the upload of a third, and it is the"
             + " service's memory budget: peak use is roughly max_concurrent_parts * 3 *"
             + " the part size, no matter how many files are in flight. Files share the"
-            + " budget, so a single large file can use all of it."
+            + " budget, so a single large file can use all of it. It also sizes the"
+            + " thread pool that runs decryption, re-encryption and hashing."
         ),
     )
 
