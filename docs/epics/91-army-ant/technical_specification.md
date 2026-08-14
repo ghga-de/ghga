@@ -8,7 +8,7 @@ Epic planning and implementation follow the
 
 ### Outline:
 
-DHFS (Data Hub File Service) polls FIS for files that need interrogation and re-encryption, then works through them one file at a time. It downloads a file, decrypts it, re-encrypts it with a new secret, uploads it, and reports back to FIS before moving on to the next file. When there's a large backlog for a given Data Hub, or a batch of big files, this adds up. Files sit around waiting their turn even though nothing requires them to be processed in order.
+DHFS performs what we sometimes call "interrogation" on newly uploaded files: it downloads each one, decrypts it, checks its checksums against the declared values, re-encrypts it under a new secret, uploads it, and reports back to FIS. It polls FIS for the list of files needing this, and currently works through the list one file at a time. When there's a large backlog for a given Data Hub, or a batch of big files, this adds up. Files sit around waiting their turn even though nothing requires them to be processed in order.
 
 This epic changes the interrogation loop so DHFS works on several files at once, up to a configurable limit, instead of sequentially. Before we can do that safely, a few pieces of shared client code need small fixes, because they were written assuming only one request is ever in flight at a time.
 
