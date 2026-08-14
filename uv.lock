@@ -3566,7 +3566,7 @@ wheels = [
 
 [[package]]
 name = "rs"
-version = "5.0.2"
+version = "5.0.3"
 source = { editable = "services/ghga-registry-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
