@@ -44,6 +44,14 @@ jobs:
 
       - uses: azure/setup-helm@v5
 
+      # ghga-common's own dependency (bitnami's `common` library) is already vendored
+      # (deploy/charts/ghga-common/charts/common-2.22.0.tgz + Chart.lock are committed),
+      # but `cr package`/`helm package` still validates the lock against a registered
+      # repo, not just the vendored .tgz — without this, packaging ghga-common fails with
+      # "no repository definition for https://charts.bitnami.com/bitnami".
+      - name: Add chart dependency repositories
+        run: helm repo add bitnami https://charts.bitnami.com/bitnami
+
       # Vendor dependencies bottom-up — app charts before the umbrella — so every
       # packaged chart is self-contained: chart-releaser packages each directory as-is,
       # and a checked-out `file://../ghga-common` reference can't be resolved by an
