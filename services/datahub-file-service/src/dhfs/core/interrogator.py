@@ -312,15 +312,25 @@ class Interrogator(InterrogatorPort):
 
         The output buffer is sized up front: each segment sheds SEGMENT_OVERHEAD bytes.
 
-        Raises DecryptionError if decryption fails.
+        Raises DecryptionError if decryption fails or if the input is not framed the
+        way that sizing assumes.
         """
         part_size = len(encrypted_part)
         segments = ceil(part_size / crypt4gh.lib.CIPHER_SEGMENT_SIZE)
-        buffer = bytearray(part_size - SEGMENT_OVERHEAD * segments)
         key = secret.get_secret_value()
         read_position = write_position = 0
 
         try:
+            # Sizing happens inside the try so that a malformed part fails as a
+            #  DecryptionError like any other bad input, rather than escaping as a
+            #  bare ValueError that the caller would misread as merely retryable.
+            plaintext_size = part_size - SEGMENT_OVERHEAD * segments
+            if plaintext_size < 0:
+                raise ValueError(
+                    f"A part of {part_size} bytes is too short to carry a Crypt4GH"
+                    + " nonce and authentication tag"
+                )
+            buffer = bytearray(plaintext_size)
             source = memoryview(encrypted_part)
             target = memoryview(buffer)
             while read_position < part_size:
@@ -337,6 +347,16 @@ class Interrogator(InterrogatorPort):
                 target[write_position : write_position + len(decrypted)] = decrypted
                 write_position += len(decrypted)
                 read_position += crypt4gh.lib.CIPHER_SEGMENT_SIZE
+
+            # The buffer is returned whole rather than sliced, since slicing a
+            #  bytearray copies it and would undo the point of preallocating. That is
+            #  only sound while the segment framing fills it exactly; a short write
+            #  would otherwise hand back silent trailing zeros as if they were plaintext.
+            if write_position != len(buffer):
+                raise ValueError(
+                    f"Decryption produced {write_position} bytes for a"
+                    + f" {len(buffer)}-byte buffer"
+                )
             return buffer
         except Exception as err:
             # We do a catch-all here on purpose - decrypt_algo can raise several error types

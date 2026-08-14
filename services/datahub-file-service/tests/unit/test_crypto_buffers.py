@@ -118,6 +118,71 @@ def test_decrypt_part_raises_on_wrong_secret(interrogator: Interrogator):
         interrogator._decrypt_part(encrypted_part=ciphertext, secret=wrong_secret)
 
 
+@pytest.mark.parametrize("size", PLAINTEXT_SIZES)
+def test_decrypted_output_is_exactly_the_plaintext_length(
+    interrogator: Interrogator, size: int
+):
+    """The preallocated buffer is returned whole, so it has to be filled exactly.
+
+    Slicing it down would copy and undo the preallocation, so a buffer that the
+    segment loop underfills would surface as trailing zeros appended to the plaintext.
+    """
+    secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
+    ciphertext = interrogator._reencrypt_part(
+        decrypted_part=os.urandom(size), new_secret=secret
+    )
+
+    recovered = interrogator._decrypt_part(encrypted_part=ciphertext, secret=secret)
+
+    assert len(recovered) == size
+
+
+@pytest.mark.parametrize(
+    "part_size",
+    [1, NONCE_LENGTH, SEGMENT_OVERHEAD - 1],
+    ids=["single byte", "nonce only", "one short of a nonce and tag"],
+)
+def test_decrypt_rejects_parts_too_short_to_be_framed(
+    interrogator: Interrogator, part_size: int
+):
+    """A part below the per-segment overhead sizes the output buffer negatively.
+
+    That allocation has to fail as a DecryptionError. Escaping as a bare ValueError
+    would get it classified as merely retryable and re-attempted forever.
+    """
+    secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
+
+    with pytest.raises(Interrogator.DecryptionError):
+        interrogator._decrypt_part(encrypted_part=os.urandom(part_size), secret=secret)
+
+
+def test_decrypt_rejects_a_truncated_part(interrogator: Interrogator):
+    """A part cut short mid-segment must not decrypt to a shorter plaintext."""
+    secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
+    ciphertext = interrogator._reencrypt_part(
+        decrypted_part=os.urandom(2 * SEGMENT), new_secret=secret
+    )
+
+    with pytest.raises(Interrogator.DecryptionError):
+        interrogator._decrypt_part(
+            encrypted_part=ciphertext[: len(ciphertext) - 100], secret=secret
+        )
+
+
+def test_decrypt_rejects_a_corrupted_part(interrogator: Interrogator):
+    """A flipped byte must fail authentication rather than yield wrong plaintext."""
+    secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
+    ciphertext = bytearray(
+        interrogator._reencrypt_part(
+            decrypted_part=os.urandom(SEGMENT + 500), new_secret=secret
+        )
+    )
+    ciphertext[len(ciphertext) // 2] ^= 0xFF
+
+    with pytest.raises(Interrogator.DecryptionError):
+        interrogator._decrypt_part(encrypted_part=ciphertext, secret=secret)
+
+
 def test_reencryption_uses_a_fresh_nonce_per_segment(interrogator: Interrogator):
     """Reusing a nonce under one key would break ChaCha20-Poly1305."""
     secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
