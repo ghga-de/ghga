@@ -15,7 +15,10 @@
 
 """Integration tests for the Interrogator class"""
 
+import asyncio
 import json
+from typing import cast
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import httpx2
@@ -23,6 +26,7 @@ import pytest
 from pydantic import SecretBytes
 
 from dhfs.adapters.outbound.s3 import S3Client
+from dhfs.core.interrogator import Interrogator
 from dhfs.core.models import FileUpload
 from tests.fixtures.central_api import fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
@@ -110,9 +114,14 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         f"Expected 2 reports, got {len(received_reports)}"
     )
 
+    # Files are processed concurrently, so reports arrive in completion order rather
+    #  than input order - look each one up by file ID instead of by position.
+    reports_by_file_id = {report["file_id"]: report for report in received_reports}
+    assert reports_by_file_id.keys() == {str(f.id) for f in file_uploads}
+
     # Verify each report has the correct structure for successful interrogation
-    for report, file_upload in zip(received_reports, file_uploads, strict=True):
-        assert report["file_id"] == str(file_upload.id)
+    for file_upload in file_uploads:
+        report = reports_by_file_id[str(file_upload.id)]
         assert report["storage_alias"] == file_upload.storage_alias
         assert report["bucket_id"] == config.interrogation_bucket_id
         assert report["passed"] is True
@@ -581,3 +590,135 @@ async def test_connection_failed_on_report_failure(
         "Unable to reach the GHGA Central API while submitting the file processing report"
         in caplog.text
     )
+
+
+async def test_part_budget_is_shared_across_files(joint_fixture: JointFixture):
+    """`max_concurrent_parts` bounds parts in flight across all files, not per file.
+
+    With a per-file budget, two files would each get the full allowance and the peak
+    would be twice the limit, which is what made peak memory depend on two settings
+    rather than one.
+    """
+    config = joint_fixture.config
+    await joint_fixture.s3.storage.create_bucket(INBOX)
+    await joint_fixture.s3.storage.create_bucket(config.interrogation_bucket_id)
+
+    file_uploads: list[FileUpload] = []
+    for _ in range(2):
+        object_id = str(uuid4())
+        encrypted_object = get_encrypted_object(
+            part_size=PART_SIZE, file_size=int(PART_SIZE * 3.5)
+        )
+        await upload_encrypted_object(
+            bucket_id=INBOX,
+            object_id=object_id,
+            storage=joint_fixture.s3.storage,
+            encrypted_object=encrypted_object,
+        )
+        file_uploads.append(
+            FileUpload(
+                id=uuid4(),
+                decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
+                storage_alias=config.storage_alias,
+                bucket_id=INBOX,
+                object_id=UUID(object_id),
+                decrypted_size=encrypted_object.unencrypted_size,
+                encrypted_size=encrypted_object.encrypted_size,
+                part_size=PART_SIZE,
+            )
+        )
+
+    joint_fixture.central_api.on_fetch_new_uploads = respond(
+        200, json=[f.model_dump(mode="json") for f in file_uploads]
+    )
+    joint_fixture.central_api.on_submit_report = respond(201, json={})
+
+    budget = 2
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    interrogator._part_slots = asyncio.Semaphore(budget)
+
+    in_flight = 0
+    peak = 0
+    original_prepare = interrogator._prepare_part
+
+    async def counting_prepare(ctx, **kwargs):
+        nonlocal in_flight, peak
+        in_flight += 1
+        peak = max(peak, in_flight)
+        try:
+            return await original_prepare(ctx, **kwargs)
+        finally:
+            in_flight -= 1
+
+    with patch.object(interrogator, "_prepare_part", counting_prepare):
+        await interrogator.interrogate_new_files()
+
+    # Both files have several parts each, so the budget has to actually bind
+    assert peak > 1, "test did not exercise any concurrency"
+    assert peak <= budget, (
+        f"{peak} parts were in flight at once, above the budget of {budget}"
+    )
+
+
+async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
+    """Parts are processed concurrently, so they can finish in any order.
+
+    Both integrity checks that conclude interrogation are order-sensitive: the
+    whole-file SHA-256 over the decrypted content, and the ETag derived from the
+    concatenated per-part MD5s. Completing them successfully with the part order
+    deliberately inverted is what proves the reordering logic holds.
+    """
+    config = joint_fixture.config
+    await joint_fixture.s3.storage.create_bucket(INBOX)
+    await joint_fixture.s3.storage.create_bucket(config.interrogation_bucket_id)
+
+    object_id = str(uuid4())
+    # Enough parts that concurrency and the hand-off between them actually matter
+    encrypted_object = get_encrypted_object(
+        part_size=PART_SIZE, file_size=int(PART_SIZE * 5.5)
+    )
+    await upload_encrypted_object(
+        bucket_id=INBOX,
+        object_id=object_id,
+        storage=joint_fixture.s3.storage,
+        encrypted_object=encrypted_object,
+    )
+
+    file_upload = FileUpload(
+        id=uuid4(),
+        decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
+        storage_alias=config.storage_alias,
+        bucket_id=INBOX,
+        object_id=UUID(object_id),
+        decrypted_size=encrypted_object.unencrypted_size,
+        encrypted_size=encrypted_object.encrypted_size,
+        part_size=PART_SIZE,
+    )
+    expected_part_count = len(list(file_upload.calc_encrypted_part_ranges()))
+    assert expected_part_count > 1, "test needs a multipart file to be meaningful"
+
+    received_reports = []
+
+    def capture_report(request: httpx2.Request) -> httpx2.Response:
+        """Handler to capture interrogation reports sent to the API"""
+        received_reports.append(json.loads(request.content))
+        return httpx2.Response(status_code=201, json={})
+
+    joint_fixture.central_api.on_submit_report = capture_report
+
+    # Delay earlier parts the most, so downloads finish in reverse order
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    original_download = interrogator._download_part
+
+    async def staggered_download(ctx):
+        await asyncio.sleep(0.05 * (expected_part_count - ctx.part_no))
+        return await original_download(ctx)
+
+    with patch.object(interrogator, "_download_part", staggered_download):
+        await interrogator.interrogate_file(file_upload)
+
+    assert len(received_reports) == 1
+    report = received_reports[0]
+    assert report["passed"] is True
+    assert len(report["encrypted_parts_md5"]) == expected_part_count
+    assert len(report["encrypted_parts_sha256"]) == expected_part_count

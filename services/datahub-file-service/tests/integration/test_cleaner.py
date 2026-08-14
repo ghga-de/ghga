@@ -14,6 +14,8 @@
 # limitations under the License.
 """Integration tests for the S3Cleaner class"""
 
+import asyncio
+import time
 import unittest.mock
 
 import httpx2
@@ -141,6 +143,47 @@ async def test_cleaner_some_files_failed(
     # The file that failed to delete should still be in the bucket
     remaining_files = await joint_fixture.s3.storage.list_all_object_ids(interrogation)
     assert set(remaining_files) == {failing_file_id}
+
+
+async def test_deletions_run_concurrently(joint_fixture: JointFixture):
+    """Deleting N objects should not cost N times the round-trip latency.
+
+    Each deletion is an independent request, so they are issued with bounded
+    concurrency rather than one at a time.
+    """
+    interrogation = joint_fixture.config.interrogation_bucket_id
+    file_ids = [f"0000000{i}-fbef-4a32-8f70-e81766383980" for i in range(8)]
+
+    for file_id in file_ids:
+        with temp_file_object(bucket_id=interrogation, object_id=file_id) as file:
+            await joint_fixture.s3.populate_file_objects([file])
+
+    joint_fixture.central_api.on_get_removable_files = respond(200, json=file_ids)
+
+    delay = 0.1
+    original_remove_file = joint_fixture.s3_cleaner._s3_client.remove_file  # type: ignore
+
+    async def slow_remove_file(*, object_id: str) -> None:
+        await asyncio.sleep(delay)
+        await original_remove_file(object_id=object_id)
+
+    with unittest.mock.patch.object(
+        joint_fixture.s3_cleaner._s3_client,  # type: ignore
+        "remove_file",
+        new=slow_remove_file,
+    ):
+        started = time.monotonic()
+        await joint_fixture.s3_cleaner.scan_and_clean()
+        elapsed = time.monotonic() - started
+
+    # Everything still gets deleted...
+    assert await joint_fixture.s3.storage.list_all_object_ids(interrogation) == []
+
+    # ...but serially this would take at least len(file_ids) * delay. The default
+    #  concurrency covers all 8 at once, so allow one delay plus generous slack.
+    assert elapsed < len(file_ids) * delay / 2, (
+        f"Deletions look serial: {elapsed:.2f}s for {len(file_ids)} objects"
+    )
 
 
 async def test_no_files_in_interrogation_bucket(

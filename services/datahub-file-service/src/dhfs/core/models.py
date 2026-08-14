@@ -24,7 +24,7 @@ from math import ceil
 import crypt4gh.lib
 from pydantic import UUID4, BaseModel, Field, SecretBytes, computed_field
 
-from dhfs.constants import AUTH_TAG_LENGTH, NONCE_LENGTH
+from dhfs.constants import SEGMENT_OVERHEAD
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 __all__ = ["FileUpload", "InterrogationReport", "PartRange"]
@@ -84,7 +84,7 @@ class FileUpload(BaseModel):
         chunks = self.decrypted_size // crypt4gh.lib.SEGMENT_SIZE
 
         # Each full-length encrypted chunk in the file is CIPHER_SEGMENT_SIZE bytes long
-        # The difference is 28 bytes. This comes from a 12-byte NONCE and a 16-byte auth tag.
+        # The difference per chunk is SEGMENT_OVERHEAD (nonce + auth tag).
         chunk_size = crypt4gh.lib.CIPHER_SEGMENT_SIZE
 
         # The last bytes of the file, which are less than SEGMENT_SIZE, are encrypted as
@@ -92,7 +92,7 @@ class FileUpload(BaseModel):
         unencrypted_remainder = self.decrypted_size - crypt4gh.lib.SEGMENT_SIZE * chunks
         size_sans_envelope = chunk_size * chunks
         if unencrypted_remainder:
-            size_sans_envelope += unencrypted_remainder + NONCE_LENGTH + AUTH_TAG_LENGTH
+            size_sans_envelope += unencrypted_remainder + SEGMENT_OVERHEAD
 
         # We can therefore calculate the encrypted file size given the decrypted size,
         #  and use that to calculate the size of the envelope / offset of the content.

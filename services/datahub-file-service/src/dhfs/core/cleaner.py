@@ -15,9 +15,11 @@
 
 """Post-interrogation S3 bucket cleanup logic"""
 
+import asyncio
 import logging
 
 from dhfs.adapters.outbound.http import ConnectionFailedError
+from dhfs.config import Config
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.cleaner import S3CleanerPort
 from dhfs.ports.outbound.s3 import S3ClientPort
@@ -33,11 +35,13 @@ class S3Cleaner(S3CleanerPort):
     def __init__(
         self,
         *,
+        config: Config,
         central_client: CentralClientPort,
         s3_client: S3ClientPort,
     ):
         self._central_client = central_client
         self._s3_client = s3_client
+        self._max_concurrent_deletions = config.max_concurrent_deletions
 
     async def scan_and_clean(self):  # noqa: C901, PLR0911
         """Get a list of all objects in the 'interrogation' bucket, then query the
@@ -89,22 +93,27 @@ class S3Cleaner(S3CleanerPort):
             log.info("No files marked for removal, exiting.")
             return
 
-        # Track deletion results
-        deleted_count = 0
-        failed_deletions = []
+        failed_deletions: list[str] = []
 
-        for object_id in removable_objects:
-            try:
-                await self._s3_client.remove_file(object_id=object_id)
-            except Exception:
-                failed_deletions.append(object_id)
-            else:
-                deleted_count += 1
+        # Independent round trips; run a bounded number of them at once.
+        semaphore = asyncio.Semaphore(self._max_concurrent_deletions)
+
+        async def _remove(object_id: str) -> None:
+            """Delete one object, recording a failure rather than raising it."""
+            async with semaphore:
+                try:
+                    await self._s3_client.remove_file(object_id=object_id)
+                except Exception:
+                    failed_deletions.append(object_id)
+
+        async with asyncio.TaskGroup() as task_group:
+            for object_id in removable_objects:
+                task_group.create_task(_remove(object_id))
 
         log.info(
             "Cleanup completed%s: %d file(s) deleted successfully, %d failed.",
             " with errors" if failed_deletions else "",
-            deleted_count,
+            len(removable_objects) - len(failed_deletions),
             len(failed_deletions),
             extra=(
                 {"objects_unable_to_delete": failed_deletions}
