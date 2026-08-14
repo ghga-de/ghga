@@ -22,7 +22,7 @@ import io
 import logging
 import os
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -75,7 +75,7 @@ class _PartContext:
 
 
 @contextmanager
-def _stopwatch(timings: dict[str, float], stage: str) -> Iterator[None]:
+def _stopwatch(timings: dict[str, float], stage: str) -> Generator[None]:
     """Add the block's elapsed time to `timings[stage]`.
 
     Deliberately not exception-safe: a stage that raised did not do its work, so its
@@ -121,6 +121,21 @@ def _most_significant_error(group: BaseExceptionGroup) -> BaseException:
             if isinstance(error, error_type):
                 return error
     return errors[0]
+
+
+@contextmanager
+def _collapsing_error_groups() -> Generator[None]:
+    """Reduce a TaskGroup's ExceptionGroup to the single error worth surfacing.
+
+    Only `ExceptionGroup` is caught, never `BaseExceptionGroup`. A group carrying a
+    `CancelledError` - or a `KeyboardInterrupt`, or a `SystemExit` - propagates
+    untouched, so a concurrent retryable failure can never mask a shutdown signal by
+    outranking it.
+    """
+    try:
+        yield
+    except ExceptionGroup as group:
+        raise _most_significant_error(group) from group
 
 
 class Interrogator(InterrogatorPort):
@@ -217,12 +232,10 @@ class Interrogator(InterrogatorPort):
 
         # A CriticalError is not handled above, so it escapes the group and aborts the
         #  remaining files - which is the point, since the batch must not continue.
-        try:
+        with _collapsing_error_groups():
             async with asyncio.TaskGroup() as task_group:
                 for file in new_files:
                     task_group.create_task(_handle_file(file))
-        except BaseExceptionGroup as group:
-            raise _most_significant_error(group) from group
 
         log.info("Finished processing current file batch.")
 
@@ -601,14 +614,12 @@ class Interrogator(InterrogatorPort):
                 return part_digests
 
         _wall = time.monotonic()
-        try:
+        with _collapsing_error_groups():
             async with asyncio.TaskGroup() as task_group:
                 tasks = [
                     task_group.create_task(_handle_part(index, part_range))
                     for index, part_range in enumerate(part_ranges)
                 ]
-        except BaseExceptionGroup as group:
-            raise _most_significant_error(group) from group
         wall_time = time.monotonic() - _wall
 
         checksums.set_encrypted_parts([task.result() for task in tasks])

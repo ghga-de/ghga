@@ -19,10 +19,13 @@ Parts run inside nested TaskGroups, so failures can arrive wrapped several layer
 and severity has to survive that nesting.
 """
 
+import asyncio
+
 import pytest
 
 from dhfs.core.interrogator import (
     InterrogatorPort,
+    _collapsing_error_groups,
     _flatten_exception_group,
     _most_significant_error,
 )
@@ -82,3 +85,41 @@ def test_severity_survives_the_nested_part_group():
         ],
     )
     assert _most_significant_error(group) is CRITICAL
+
+
+def test_collapsing_surfaces_the_most_significant_error():
+    """The happy path: an ordinary ExceptionGroup collapses to its worst member."""
+    with pytest.raises(InterrogatorPort.CriticalError) as exc_info:
+        with _collapsing_error_groups():
+            raise ExceptionGroup("parts failed", [INCONCLUSIVE, CRITICAL])
+
+    assert exc_info.value is CRITICAL
+
+
+def test_cancellation_is_not_downgraded_to_a_retry():
+    """A cancelled batch must not be reported as a file that merely needs retrying.
+
+    `CancelledError` is a BaseException, so a TaskGroup carrying one raises a
+    `BaseExceptionGroup` rather than an `ExceptionGroup`. Catching the broader type
+    would let the concurrent InconclusiveError outrank the cancellation and turn a
+    shutdown into an endless retry.
+    """
+    with pytest.raises(BaseExceptionGroup) as exc_info:
+        with _collapsing_error_groups():
+            raise BaseExceptionGroup(
+                "batch cancelled", [INCONCLUSIVE, asyncio.CancelledError()]
+            )
+
+    # The group passed straight through instead of collapsing to INCONCLUSIVE
+    assert not isinstance(exc_info.value, InterrogatorPort.InconclusiveError)
+    assert len(exc_info.value.exceptions) == 2
+
+
+@pytest.mark.parametrize(
+    "base_error", [asyncio.CancelledError(), KeyboardInterrupt(), SystemExit()]
+)
+def test_base_exceptions_propagate_untouched(base_error):
+    """Nothing that stops the process may be swallowed by the severity ranking."""
+    with pytest.raises(BaseExceptionGroup):
+        with _collapsing_error_groups():
+            raise BaseExceptionGroup("stopping", [base_error])
