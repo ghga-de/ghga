@@ -56,7 +56,7 @@ so on. Single-valued, so it terminates at a unique newest study.
 
 `Merge`: One successor declared as the replacement of more than one predecessor.
 
-`Reuse slot`: A new slot on the ghga metadata model's file classes carrying the prior GHGA file accession
+`Reuse accession`: The prior GHGA file accession a submission puts on a file entity (`reused_accession`) to reuse that file rather than re-upload it.
 of a file the submission reuses rather than re-uploads.
 
 `Ancestry collection`: The metldata collection holding the `predecessor PID -> successor PID`
