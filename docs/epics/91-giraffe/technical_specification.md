@@ -109,7 +109,7 @@ relation, written by the loader and read by the data portal.
 - **File admin panel.** A steward-only, paginated, filterable listing over every archived file in
   GHGA — including files archived but never mapped, a population that only comes into existence
   once archival stops requiring mapping.
-- **dins must key file information by file, not consume it.** Retain the per-file registration data
+- **DINS must key file information by file, not consume it.** Retain the per-file registration data
   instead of deleting it on first merge, serve it to any accession bound to that file however late
   it arrives, and clear all such accessions when the file is deleted.
 
