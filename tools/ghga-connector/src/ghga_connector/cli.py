@@ -215,11 +215,6 @@ def decrypt(  # noqa: PLR0912, C901
         + "that was announced when the download token was created. "
         + "Defaults to key.sec in the current folder.",
     ),
-    passphrase: str | None = typer.Option(
-        None,
-        help="Passphrase for the encrypted private key. "
-        + "Only needs to be provided if the key is actually encrypted.",
-    ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
     ),
@@ -265,7 +260,6 @@ def decrypt(  # noqa: PLR0912, C901
                 input_file=input_file,
                 output_file=output_file,
                 decryption_private_key_path=my_private_key_path,
-                passphrase=passphrase,
             )
         except ValueError as error:
             errors[str(input_file)] = (

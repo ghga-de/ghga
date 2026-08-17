@@ -214,10 +214,12 @@ def decrypt_file(
     input_file: Path,
     output_file: Path,
     decryption_private_key_path: Path,
-    passphrase: str | None,
 ):
-    """Delegate decryption of a file Crypt4GH"""
-    decryptor = Crypt4GHDecryptor(
-        decryption_key_path=decryption_private_key_path, passphrase=passphrase
+    """Decrypt a Crypt4GH-encrypted file."""
+    config = get_config()
+    my_private_key = utils.get_private_key(
+        decryption_private_key_path, config.passphrase
     )
-    decryptor.decrypt_file(input_path=input_file, output_path=output_file)
+    keys = [(0, my_private_key.get_secret_value(), None)]
+    with input_file.open("rb") as infile, output_file.open("wb") as outfile:
+        crypt4gh.lib.decrypt(keys=keys, infile=infile, outfile=outfile)

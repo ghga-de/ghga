@@ -21,7 +21,7 @@ from contextvars import ContextVar
 from typing import Any
 
 import httpx2
-from pydantic import Field, PositiveInt
+from pydantic import Field, PositiveInt, SecretStr
 
 from ghga_connector import exceptions
 from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_WAIT_TIME
@@ -103,6 +103,10 @@ class Config(CompositeConfig):
     wkvs_api_url: str = Field(
         default="https://data.ghga.de/.well-known",
         description="URL to the root of the WKVS API. Should start with https://",
+    )
+    passphrase: SecretStr | None = Field(
+        default=None,
+        description="The passphrase used, if applicable, to decrypt the Crypt4GH private key for use in upload.",
     )
 
 
