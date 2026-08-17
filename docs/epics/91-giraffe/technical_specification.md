@@ -198,7 +198,7 @@ This epic covers the following user journeys.
   box is required; the governance columns are **not** served here (see below). Legacy files that
   never came through an upload box have no box — that field is empty rather than omitted, and the
   response must not assume a box exists.
-- A study-centric mapping endpoint set, extending the existing per-box surface, so mapping can be
+- A study-centric mapping endpoint set, replacing the existing per-box surface, so mapping can be
   driven by study across a pool of archived boxes. For entities carrying a reuse slot the response
   must include the list of studies the referenced file already maps to.
 
