@@ -117,7 +117,7 @@ relation, written by the loader and read by the data portal.
 
 ### Not included:
 
-- **The schemapack services** — resource-registry, resource-search, `em-transformation-service` —
+- **The schemapack services** — resource-registry, resource-search, em-transformation-service —
   and the schemapack migration itself. This epic is deliberately confined to the LinkML plus
   offline-dskit stack.
 - **Re-accessioning existing studies.** Legacy identifiers are never rewritten.
