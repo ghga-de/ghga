@@ -68,7 +68,7 @@ relation, written by the loader and read by the data portal.
 
 - **One study per submission.** dskit must reject any submission whose metadata contains more than
   one study, and the metldata loader must assert the same rather than
-  silently truncating. Every other item below is undefined for a multi-study submission: child
+  silently truncating. Every other item below would be ambiguous for a multi-study submission: child
   accessions derive from *the* study PID, replacement is declared per study, supersede is
   study-level. The test bed's example metadata is currently a single submission containing two
   studies and must be split as part of this work.
