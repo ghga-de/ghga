@@ -252,7 +252,7 @@ Proposed new config fields. All must have safe defaults.
 
 ```python
 # libs/metldata — lifecycle accession scheme
-lifecycle_accession_prefix: str = "GHGA"   # leading block of the study PID
+study_pid_prefix: str = "GHGA"   # leading block of the study PID
 study_pid_random_block_length: int = 3     # base32 chars; 32**3 = 32,768 studies per year
 lifecycle_mint_max_retries: int = 10       # collision retries against the per-year bucket
 
