@@ -154,7 +154,6 @@ async def test_upload_journey(
                 core_file_info_list=[file_info],
                 my_public_key_path=PUBLIC_KEY_FILE,
                 my_private_key_path=PRIVATE_KEY_FILE,
-                passphrase=None,
             )
         assert upload.object_id, "No object ID was captured during upload"
         object_size = await s3_fixture.storage.get_object_size(
@@ -182,5 +181,4 @@ async def test_upload_bad_url(
                 core_file_info_list=[file_info],
                 my_public_key_path=PUBLIC_KEY_FILE,
                 my_private_key_path=PRIVATE_KEY_FILE,
-                passphrase=None,
             )
