@@ -95,6 +95,7 @@ relation, written by the loader and read by the data portal.
   resources so they leave the search index while remaining queryable through the artifacts API, and
   write the relation into a new ancestry collection with a read endpoint. Re-application of the
   same declaration must be idempotent.
+- **"Updated version available" hint in the portal.** A superseded study or dataset reached by URL must show a hint linking to the terminal study of its successor chain, resolved from metldata's ancestry endpoint.
 - **Many-to-one accession-to-file relation.** rs must accept many accessions bound to one
   `file_id`, one per study reusing the file, while keeping `accession -> file` single-valued and
   immutable once bound.
