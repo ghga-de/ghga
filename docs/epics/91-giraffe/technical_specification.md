@@ -112,9 +112,7 @@ relation, written by the loader and read by the data portal.
 
 ### Optional:
 
-- **"This study replaced A, B and C" view.** The reverse direction of the portal's "updated
-  version available" hint. Merges make it meaningful, but nothing depends on it and the forward
-  hint is the user-visible outcome this epic promises.
+- **"This study replaced A, B and C" note.** The reverse direction of the portal's "updated version available" hint, as a line on `study/:id` rather than a screen of its own, listing direct predecessors only. Merges make it meaningful, but nothing depends on it and the forward hint is the user-visible outcome this epic promises. It would need the ancestry collection queryable by successor, which `GET /ancestry/{study_pid}` as specified does not support.
 
 ### Not included:
 
