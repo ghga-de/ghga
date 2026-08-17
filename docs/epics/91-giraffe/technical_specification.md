@@ -10,7 +10,7 @@ Epic planning and implementation follow the
 
 ### Outline:
 
-GHGA has no notion of study identity, versioning or replacement.
+GHGA so far has no notion of study identity, versioning or replacement.
 A submission may in principle carry several studies — the loader silently keeps only the first —
 and a re-submission mints fresh random accessions with no link back to what it supersedes.
 At the same time, file upload and file-to-metadata mapping are welded together by two separate
