@@ -34,6 +34,7 @@ ignore = [
     "B011", # allow assert False
     "PLR2004", # magic numbers should be constants
     "PLR0913", # Too many arguments to function call
+    "PLR0917", # Too many positional arguments
     "D205", # blank-line-after-summary
     "D400", # first doc line ends in period
     "D401", # non-imperative-mood

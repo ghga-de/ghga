@@ -69,6 +69,13 @@ def _upload_grant_row(fixtures, box_title):
     return grants_list.locator("div.border-b").filter(has_text=box_title)
 
 
+def _files_table(fixtures: JointFixture):
+    """Return the files table shown in the upload box details."""
+    table = fixtures.playwright.page.locator("app-upload-box-files-table table")
+    expect(table).to_be_visible(timeout=TIMEOUT)
+    return table
+
+
 @then("the upload box manager list is displayed")
 def check_manager_list(fixtures: JointFixture):
     """Check the Upload Box Manager list/table component is shown."""
@@ -233,6 +240,59 @@ def submit_upload(storage_name: str, fixtures: JointFixture):
     expect(row).to_have_count(0)
 
 
+@then(
+    parse(
+        'the files uploaded to "{storage_name}" storage are listed in "{direction}" order'
+    )
+)
+def check_files_order(storage_name: str, direction: str, fixtures: JointFixture):
+    """Check the file name column lists the box's files in the given order."""
+    assert direction in ("ascending", "descending"), f"Unknown order: {direction}"
+    files = fixtures.state.get_state(f"rdub_{storage_name}_files")
+    assert files, f"No uploaded files found in state for storage '{storage_name}'"
+    aliases = sorted(
+        (str(file["alias"]) for file in files), reverse=direction == "descending"
+    )
+
+    table = _files_table(fixtures)
+    rows = table.locator("tbody tr")
+    expect(rows).to_have_count(len(files), timeout=TIMEOUT)
+    # The paginator only appears when the box holds more files than fit one page
+    paginator = fixtures.playwright.page.get_by_label("Select page of files")
+    expect(paginator).to_have_count(0)
+    for index, alias in enumerate(aliases):
+        expect(rows.nth(index).locator("td").first).to_have_text(alias, timeout=TIMEOUT)
+
+
+@then(
+    parse(
+        'the files uploaded to "{storage_name}" storage can be sorted '
+        'by file name in "{direction}" order'
+    )
+)
+def sort_files_and_check_order(
+    storage_name: str, direction: str, fixtures: JointFixture
+):
+    """Sort the files table by file name via its column header and check the order.
+
+    The file list starts out in ascending name order (the server default), so a
+    single click on the header requests the descending order.
+    """
+    assert direction == "descending", f"Unsupported sort direction: {direction}"
+    page = fixtures.playwright.page
+    header = _files_table(fixtures).get_by_role("columnheader", name="Filename")
+    expect(header).to_be_visible(timeout=TIMEOUT)
+    # The reordered list must be requested from the server, not sorted locally
+    with page.expect_response(
+        lambda response: "/uploads" in response.url and "sort=-alias" in response.url
+    ) as response_info:
+        header.click()
+    assert response_info.value.ok, (
+        f"Sorting the file list failed: {response_info.value.status}"
+    )
+    check_files_order(storage_name, direction, fixtures)
+
+
 @then(parse('the uploaded files for "{dataset_alias}" are listed in the upload box'))
 def check_uploaded_files_in_box(
     dataset_alias: str, fixtures: JointFixture, file_fixture: dict
@@ -284,12 +344,18 @@ def check_mapping_complete(dataset_alias: str, fixtures: JointFixture):
     expect(info_card).to_contain_text("Locked", timeout=TIMEOUT)
     content_card = page.locator("mat-card-content")
 
+    # The file states advance on the server as ingestion progresses, but the
+    # view does not poll on its own — re-fetch the file list with the refresh
+    # button until all files are re-encrypted.
+    refresh_button = page.get_by_role("button", name="Refresh the upload box details")
+    expect(refresh_button).to_be_visible(timeout=TIMEOUT)
+
     slept: int = 0
     while slept < INGEST_TIMEOUT:
         if content_card.get_by_text("re-encrypted").count() == file_count:
             break
-        page.reload(wait_until="commit")
-        page.wait_for_load_state()
+        with page.expect_response(lambda response: "/uploads" in response.url):
+            refresh_button.click()
         time.sleep(INGEST_INTERVAL)
         slept += INGEST_INTERVAL
     expect(content_card.get_by_text("re-encrypted")).to_have_count(file_count)
@@ -347,14 +413,20 @@ def check_box_archived(storage_name: str, fixtures: JointFixture):
     expect(info_card).to_contain_text("State:", timeout=TIMEOUT)
     expect(info_card).to_contain_text(storage_name, timeout=TIMEOUT)
 
-    # the state change may not be reflected immediately in the UI,
-    # so we reload until the "Archived" state appears.
+    # The state change may not be reflected immediately in the UI, so we
+    # re-fetch the box with the refresh button until "Archived" appears.
+    refresh_button = page.get_by_role("button", name="Refresh the upload box details")
     slept: int = 0
     while slept < INGEST_TIMEOUT:
         if info_card.get_by_text("Archived").is_visible():
             return
-        page.reload(wait_until="commit")
-        page.wait_for_load_state()
+        expect(refresh_button).to_be_enabled(timeout=TIMEOUT)
+        with page.expect_response(
+            lambda response: (
+                "/upload-boxes/" in response.url and response.request.method == "GET"
+            )
+        ):
+            refresh_button.click()
         time.sleep(INGEST_INTERVAL)
         slept += INGEST_INTERVAL
     raise AssertionError(

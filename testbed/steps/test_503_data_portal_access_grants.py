@@ -175,6 +175,43 @@ def check_access_request_detail_page(
     expect(main).to_contain_text("Notes")
 
 
+@when(parse('I set the ticket ID to "{ticket_id}"'))
+def set_ticket_id(fixtures: JointFixture, ticket_id: str):
+    """Fill and save the ticket ID field on the access request detail page.
+
+    The edit and save controls are icon-only chips without an accessible name,
+    so they are located by their component classes.
+    """
+    page = fixtures.playwright.page
+    field = page.locator("app-access-request-field-edit").filter(has_text="Ticket ID")
+    expect(field).to_be_visible(timeout=TIMEOUT)
+    field.locator("mat-chip.edit-button").click()
+    field.locator("input").fill(ticket_id)
+    save_chip = field.locator("mat-chip.save-edit-button")
+    # The save chip stays disabled while the entered value fails validation
+    # (the portal only accepts numeric ticket IDs with up to 9 digits)
+    expect(save_chip).not_to_have_class(re.compile("chip-disabled"), timeout=TIMEOUT)
+    with page.expect_response(
+        lambda response: (
+            "/access-requests/" in response.url and response.request.method == "PATCH"
+        )
+    ) as response_info:
+        save_chip.click()
+    assert response_info.value.ok, (
+        f"Saving the ticket ID failed: {response_info.value.status}"
+    )
+
+
+@then(parse('the ticket ID "{ticket_id}" is saved'))
+def check_ticket_id_saved(fixtures: JointFixture, ticket_id: str):
+    """Reload the detail page and check that the ticket ID was persisted."""
+    page = fixtures.playwright.page
+    page.reload()
+    page.wait_for_load_state()
+    field = page.locator("app-access-request-field-edit").filter(has_text="Ticket ID")
+    expect(field).to_contain_text(ticket_id, timeout=TIMEOUT)
+
+
 @then(parse('the status of the access request is "{status}"'))
 def check_access_request_status(fixtures: JointFixture, status: str):
     """Check the status of the access request on the detail page."""

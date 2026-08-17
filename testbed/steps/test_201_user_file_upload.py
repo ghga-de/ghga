@@ -281,6 +281,7 @@ def reupload_interrupted_file(storage_name: str, fixtures: JointFixture):
         file_info=[(interrupted["object_id"], Path(interrupted["file_path"]))],
         fixtures=fixtures,
         upload_token=upload_token,
+        overwrite=True,
     )
     assert "Successfully uploaded" in completed_upload.stdout
 
