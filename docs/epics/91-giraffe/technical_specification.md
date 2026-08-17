@@ -16,7 +16,10 @@ and a re-submission mints fresh random accessions with no link back to what it s
 At the same time, file upload and file-to-metadata mapping are welded together by two separate
 guards in rs. A Research Data Upload Box only archives once every one of its files carries an
 accession, and each mapping request must be a complete bijection over the box's active files — it
-may not name a file twice, and it may not leave one out. Independently of that, a mapping request
+may not name a file twice, and it may not leave one out (active meaning not cancelled or failed).
+Neither the mapping request nor the box has to cover all files of the corresponding study though. The portal
+warns about study files left unmapped, but that warning is overridable. Independently of that, a
+mapping request
 against an archived box is refused outright. Since mapping is the only way to bind an accession to
 a file and is always addressed to a specific box, that second guard is what makes reusing an
 already-archived file in a later study impossible: the file's box is by definition archived, so no
