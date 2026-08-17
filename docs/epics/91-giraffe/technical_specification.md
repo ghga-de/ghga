@@ -101,8 +101,7 @@ relation, written by the loader and read by the data portal.
 - **Archival and mapping decoupled, dependency inverted.** Drop the "all files mapped" archival
   prerequisite; require instead that a box be archived before its files can be mapped.
 - **Study-centric mapping surface in rs and the portal.** Mapping is driven by study rather than by
-  a single box: entities carrying a reuse slot bind to the referenced file and report the other
-  studies already using it; entities without one are matched by alias/filename against a pool of
+  a single box: entities carrying a reuse accession bind to the referenced file, and RS reports which other studies already use that file; entities without one are matched by alias/filename against a pool of
   archived boxes with manual corrections.
 - **File admin panel.** A steward-only, paginated, filterable listing over every archived file in
   GHGA — including files archived but never mapped, a population that only comes into existence
