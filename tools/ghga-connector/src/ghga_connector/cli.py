@@ -27,7 +27,7 @@ from ghga_connector.core.main import (
     async_batch_upload,
     async_download,
     async_ubox,
-    decrypt_file,
+    get_decryptor,
 )
 from ghga_connector.core.utils import modify_for_debug
 
@@ -65,12 +65,8 @@ def batch_upload(  # noqa: PLR0913
     my_private_key_path: Path = typer.Option(
         "./key.sec",
         help="The path to a private key from the key pair that will be used to encrypt the "
-        + "crypt4gh envelope. Defaults to key.sec in the current folder.",
-    ),
-    passphrase: str | None = typer.Option(
-        None,
-        help="Passphrase for the encrypted private key. "
-        + "Only needs to be provided if the key is actually encrypted.",
+        + "crypt4gh envelope. Defaults to key.sec in the current folder. If the key is "
+        + "encrypted, you will be prompted for its passphrase.",
     ),
     max_retries: int = typer.Option(
         DEFAULT_BATCH_MAX_RETRIES,
@@ -111,7 +107,6 @@ def batch_upload(  # noqa: PLR0913
             tsv=tsv,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
             max_retries=max_retries,
             dry_run=dry_run,
             shorten=shorten_names,
@@ -130,12 +125,8 @@ def ubox(
     my_private_key_path: Path = typer.Option(
         "./key.sec",
         help="The path to a private key from the key pair that will be used to encrypt the "
-        + "crypt4gh envelope. Defaults to key.sec in the current folder.",
-    ),
-    passphrase: str | None = typer.Option(
-        None,
-        help="Passphrase for the encrypted private key. "
-        + "Only needs to be provided if the key is actually encrypted.",
+        + "crypt4gh envelope. Defaults to key.sec in the current folder. If the key is "
+        + "encrypted, you will be prompted for its passphrase.",
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
@@ -147,13 +138,12 @@ def ubox(
         async_ubox(
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
         )
     )
 
 
 @cli.command(no_args_is_help=True)
-def download(  # noqa: PLR0913
+def download(
     *,
     output_dir: Path = typer.Option(
         ..., help="The directory to put the downloaded files into."
@@ -168,12 +158,8 @@ def download(  # noqa: PLR0913
         "./key.sec",
         help="The path to a private key from the Crypt4GH key pair "
         + "that was announced when the download token was created. "
-        + "Defaults to key.sec in the current folder.",
-    ),
-    passphrase: str | None = typer.Option(
-        None,
-        help="Passphrase for the encrypted private key. "
-        + "Only needs to be provided if the key is actually encrypted.",
+        + "Defaults to key.sec in the current folder. If the key is encrypted, you "
+        + "will be prompted for its passphrase.",
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
@@ -190,7 +176,6 @@ def download(  # noqa: PLR0913
             output_dir=output_dir,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
             overwrite=overwrite,
         )
     )
@@ -213,12 +198,8 @@ def decrypt(  # noqa: PLR0912, C901
         "./key.sec",
         help="The path to a private key from the Crypt4GH key pair "
         + "that was announced when the download token was created. "
-        + "Defaults to key.sec in the current folder.",
-    ),
-    passphrase: str | None = typer.Option(
-        None,
-        help="Passphrase for the encrypted private key. "
-        + "Only needs to be provided if the key is actually encrypted.",
+        + "Defaults to key.sec in the current folder. If the key is encrypted, you "
+        + "will be prompted for its passphrase.",
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
@@ -240,16 +221,34 @@ def decrypt(  # noqa: PLR0912, C901
         CLIMessageDisplay.display(f"Creating output directory '{output_dir}'")
         output_dir.mkdir(parents=True)
 
-    errors = {}
+    input_files = []
     skipped_files = []
-    file_count = 0
-    for input_file in input_dir.iterdir():
-        if not input_file.is_file() or input_file.suffix != C4GH:
-            skipped_files.append(str(input_file))
-            continue
+    for path in sorted(input_dir.iterdir()):
+        if path.is_file() and path.suffix == C4GH:
+            input_files.append(path)
+        else:
+            skipped_files.append(str(path))
 
-        file_count += 1
+    if skipped_files:
+        CLIMessageDisplay.display(
+            f"The following files were skipped as they are not {C4GH} files:"
+        )
+        for file in skipped_files:
+            CLIMessageDisplay.display(f"- {file}")
 
+    if not input_files:
+        CLIMessageDisplay.display(
+            f"No files were processed because the directory '{input_dir}' contains no "
+            + "applicable files."
+        )
+        return
+
+    # read the key up front so that the passphrase is only asked for once and problems
+    #  with the key itself are not reported as per-file decryption failures
+    decryptor = get_decryptor(my_private_key_path)
+
+    errors = {}
+    for input_file in input_files:
         # strip the .c4gh extension for the output file
         output_file = output_dir / input_file.with_suffix("").name
 
@@ -261,12 +260,7 @@ def decrypt(  # noqa: PLR0912, C901
 
         try:
             CLIMessageDisplay.display(f"Decrypting file with id '{input_file}'...")
-            decrypt_file(
-                input_file=input_file,
-                output_file=output_file,
-                decryption_private_key_path=my_private_key_path,
-                passphrase=passphrase,
-            )
+            decryptor.decrypt_file(input_path=input_file, output_path=output_file)
         except ValueError as error:
             errors[str(input_file)] = (
                 f"Could not decrypt the provided file with the given key.\nError: {str(error)}"
@@ -276,20 +270,9 @@ def decrypt(  # noqa: PLR0912, C901
         CLIMessageDisplay.success(
             f"Successfully decrypted file '{input_file}' to location '{output_dir}'."
         )
-    if file_count == 0:
-        CLIMessageDisplay.display(
-            f"No files were processed because the directory '{input_dir}' contains no "
-            + "applicable files."
-        )
-
-    if skipped_files:
-        CLIMessageDisplay.display(
-            f"The following files were skipped as they are not {C4GH} files:"
-        )
-        for file in skipped_files:
-            CLIMessageDisplay.display(f"- {file}")
 
     if errors:
         CLIMessageDisplay.failure("The following files could not be decrypted:")
         for input_path, cause in errors.items():
             CLIMessageDisplay.failure(f"- {input_path}:\n\t{cause}")
+        raise typer.Exit(code=1)

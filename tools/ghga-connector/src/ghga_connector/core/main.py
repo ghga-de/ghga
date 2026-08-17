@@ -49,7 +49,6 @@ async def async_batch_upload(  # noqa: PLR0913
     tsv: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
     dry_run: bool = False,
     shorten: bool = False,
@@ -75,7 +74,6 @@ async def async_batch_upload(  # noqa: PLR0913
             core_file_info_list=core_file_info_list,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
             max_retries=max_retries,
             dry_run=dry_run,
             shorten=shorten,
@@ -89,7 +87,6 @@ async def upload_files(  # noqa: PLR0913
     core_file_info_list: list[CoreFileInfo],
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
     dry_run: bool = False,
     shorten: bool = False,
@@ -134,7 +131,6 @@ async def async_ubox(
     *,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
 ):
     """Launch an interactive shell for managing a single upload box.
 
@@ -160,7 +156,6 @@ async def async_download(
     output_dir: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     overwrite: bool = False,
 ):
     """Download files asynchronously"""
