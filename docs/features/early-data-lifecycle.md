@@ -64,10 +64,12 @@ Consequences:
 - Because `{study_pid}` embeds the version, every non-study accession changes on every revision
   (`GHGA.24.ABC.1.mysample` → `GHGA.24.ABC.2.mysample`), even for an unchanged entity. This is
   expected.
-- `XXX` collisions are resolved by retry against a per-year uniqueness check, i.e. only against
-  other `XXX` minted in the same `YY`. `.DS.xxx` collisions are resolved by retry within the
-  lineage.
-- **"Identical file set"** is compared over the reuse-slot accessions in the submitted metadata
+- `XXX` uniqueness is checked per year, i.e. only against other `XXX` minted in the same `YY`;
+  `.DS.xxx` uniqueness is checked within the lineage. Minting a fresh sequence draws at random and
+  checks it against that bucket, up to 100 attempts — a constant, not a config field. If all 100
+  collide it gathers the sequences still unused in the bucket and picks one at random, and it raises
+  an error only if that list is empty.
+- **"Identical file set"** is compared over the reuse accessions in the submitted metadata
   (§2.3), not over physical files and not over the entities' own accessions.
 
 #### Existing studies keep their legacy identifiers
@@ -143,10 +145,10 @@ Service-side metldata cannot renumber after the fact; it can only record what it
   accession always resolves to exactly one file, and that binding is immutable once set), while a
   file may be referenced by many accessions. Today the relation is 1:1; what relaxes is the registry
   service's per-request bijection.
-- The steward expresses reuse in the submitted metadata by putting the prior GHGA file accession
-  (PID) in that file entity's **reuse slot** (a new model slot, §4.2). dskit does not
-  resolve that PID to a physical file and cannot — the offline side has no view of uploads or
-  archived files. It carries the prior PID through in the metadata. The binding to a physical file
+- The steward expresses reuse in the submitted metadata by putting the prior GHGA file accession in
+  that file entity's **`reused_accession`** (a new model property, §4.2). dskit does not
+  resolve that accession to a physical file and cannot — the offline side has no view of uploads or
+  archived files. It carries the prior accession through in the metadata. The binding to a physical file
   happens later, at mapping time in the data portal (via RS), see §2.5: the new study's file entity gets
   its own `{study_pid}.{alias}` accession, and RS binds it to the same `file_id` as the referenced
   prior accession.
@@ -203,8 +205,8 @@ to that file however late it appears, and clear all such accessions when the fil
   successor, so following the chain from a legacy study always terminates at a unique newest study.
   This is what makes the portal hint well-defined even under merges.
 - **metldata is the single source of truth for supersede status** as served. RS, MASS and the portal
-  are consumers: RS's `Study.superseded_by_id`/`status` are populated
-  from the signal metldata emits, not computed by RS.
+  are consumers, never authors: none of them computes the relation. In the early rollout RS holds no
+  copy of it at all — `status` never carries supersede and `superseded_by_id` stays unset (§4.3).
 - **Legacy means a successor has been declared for this study.** Legacy studies' datasets are hidden
   from search but remain reachable by URL/PID (`/dataset/{id}`, `/study/{id}`). The portal shows an
   "updated version available" hint that resolves at study level, following the successor chain to its
@@ -212,8 +214,8 @@ to that file however late it appears, and clear all such accessions when the fil
 - A supersede relation may be established long after both studies were loaded (`replace-study`,
   §2.2), so loading is not the only moment supersede status can change — see §4.2.
 - **Hidden from search must not mean deleted or unreachable.** The signal that removes an old version
-  from the search index must still leave its artifacts reachable by accession *and* carry the
-  supersede pointer, so the portal hint and RS's `superseded_by_id` can be set (§4.2).
+  from the search index must still leave its artifacts reachable by accession, and the supersede
+  relation must be recorded in metldata so the portal hint can resolve against it (§4.2).
 
 ### 2.5 Mapping / archival decoupling
 
@@ -260,8 +262,8 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 **Submitting a successor study (offline, dskit):**
 
 1. Submitter prepares the submission's spreadsheet as usual — **exactly one study** (§2.6). For any
-   file being reused from an earlier study, they put its **prior GHGA file accession (PID)** in that
-   file entity's reuse slot instead of providing a new upload.
+   file being reused from an earlier study, they put its **prior GHGA file accession** in that
+   file entity's `reused_accession` instead of providing a new upload.
 2. `dskit metadata submit --replaces GHGA.24.ABC.1 …` (repeat the flag to merge several
    predecessors; omit it entirely for a brand-new study):
    - **rejects** a submission with more than one study, or one naming an already-replaced
@@ -270,7 +272,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
    - **mints child accessions** `{study_pid}.{alias}`, reusing a dataset's `.DS.xxx` block when its
      file-set is unchanged;
    - **runs the three reuse warnings** (§2.3) for the steward to confirm;
-   - **carries reuse slots through untouched** — no resolution to physical files;
+   - **carries reuse accessions through untouched** — no resolution to physical files;
    - **records the declared replacement** so it travels with the submission.
 3. `dskit metadata transform` — unchanged.
 4. `dskit load` — pushes artifacts **together with the declared replacement**.
@@ -283,8 +285,8 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 5. Service-side metldata records the declared replacement (§2.4): each named predecessor is marked
    superseded, its datasets leave the search track while staying queryable by URL, and the relation
    lands in the ancestry collection.
-6. MASS stops returning the superseded studies' datasets. RS receives the supersede signal and sets
-   `status`; `superseded_by_id` stays unpopulated in this rollout (§4.3).
+6. MASS stops returning the superseded studies' datasets. RS reflects supersede in neither field:
+   `status` never carries it, and `superseded_by_id` stays unset in this rollout (§4.3).
 7. The portal shows the successor in search; visiting a superseded dataset or study by URL shows the
    "updated version available" hint, resolved by following the chain to its terminal study.
 
@@ -292,10 +294,10 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 
 8. Files are uploaded via the UCS box path and **archived** — no mapping required. The steward then
    opens the mapping view for a study and works against the **archived** box(es):
-   - **files referenced by prior PID** — RS binds the new entity's accession to that same file and
+   - **entities carrying a reuse accession** — RS binds the new entity's accession to that same file and
      lists every study the file already maps to. No same-lineage gate; that judgement was made
      offline at submit time (§2.3).
-   - **entities with no reuse PID** — matched by alias/filename against a pool of archived boxes,
+   - **entities without one** — matched by alias/filename against a pool of archived boxes,
      with manual corrections, reusing today's matching UX (§4.5).
 
 **Browsing archived files (data portal, steward-only):**
@@ -331,7 +333,8 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   declared predecessor; reused accessions absent from every ancestor; governance
   (`data_access_policy` + nested `data_access_committee`) differing per file from what applied
   before. All are computed from the submission store — no service calls, no view of physical files.
-  Provide a non-interactive escape hatch (e.g. `--yes`) so scripted submissions don't hang.
+  Provide an auto-confirm option (e.g. `--yes`) that accepts all three without prompting, so
+  scripted submissions don't hang.
 - **PID minting moves from "random per class" to the lifecycle scheme** (§2.1) but stays in metldata.
   dskit supplies the parameters — the submitted content, the named predecessors, and the lineage
   chosen for a merge (§2.2); metldata generates and mints the study PID, `{study_pid}.{alias}` and
@@ -340,7 +343,7 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 - **File-set-based dataset-suffix reuse.** Compute each dataset's file set from the metadata, diff
   against predecessor datasets in the submission store, reuse `.DS.xxx` on exact match else mint.
   Done purely from metadata — no physical-file knowledge needed.
-- **Carry reuse slots through untouched.** File entities referencing a prior GHGA file accession are
+- **Carry reuse accessions through untouched.** File entities referencing a prior GHGA file accession are
   passed through as-is; dskit performs no resolution to a physical file — the offline side can't
   (§2.3). What it does instead is the metadata-level warning checks above.
 - **Uniqueness on submit** — enforce alias uniqueness across all entities within the study (§2.1) and
@@ -372,14 +375,18 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   continuation, ancestor resolution and the cycle check (§4.1); and, once loaded, in a server-side
   ancestry collection (below) that the portal queries.
 - **Ancestry collection (new).** metldata keeps a queryable collection of the
-  `predecessor PID → successor PID` relation, written by the loader, and exposes a read endpoint over
-  it. This is what the portal's "updated version available" hint resolves against (§4.5) — the sole
-  online reader of the supersede relation in the early rollout, which is why RS's `superseded_by_id`
-  is left unpopulated (§4.3). It must resolve a chain to its terminal study, not just one hop (§2.4),
-  and answer for legacy `GHGAS…` predecessors that never had a lineage.
-- **Reuse slot in the model (§2.3).** The LinkML model's file classes need a slot carrying the prior
-  GHGA file accession, distinct from the existing `ega_accession`. Add it to the GHGA model and
-  regenerate artifact models.
+  `predecessor PID → successor PID` relation, written by the loader, and exposes it as
+  `GET /studies/{study_pid}/successor`, returning `null` when the study has no successor. This is
+  what the portal's "updated version available" hint resolves against (§4.5), and it is the sole
+  online reader of the supersede relation in the early rollout; RS holds no copy (§4.3). It must
+  resolve a chain to its terminal study, not just one hop (§2.4) — the response is the newest study,
+  not the direct successor — and answer for legacy `GHGAS…` predecessors that never had a lineage.
+  RS takes this endpoint over at the study-ownership handover (§4.3). The reverse direction, a
+  `GET /studies/{study_pid}/predecessors` returning an array, is only needed for the optional
+  "this study replaced A, B and C" note (§4.5).
+- **Reuse accession in the model (§2.3).** The metadata model's file classes need a
+  `reused_accession` property carrying the prior GHGA file accession, distinct from the existing
+  `ega_accession`. Add it to the GHGA model and regenerate artifact models.
 - **`studies[0]` — enforce, don't tolerate.** With one study per submission now a hard rule (§2.6),
   the metldata loader should assert a single study and fail loudly otherwise, replacing today's
   silent `[0]` truncation. dskit rejects multi-study submissions upstream, but the loader is a
@@ -390,6 +397,15 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   from the search track (emit `searchable_resource_deleted`) while keeping them findable via the
   artifacts API for direct URL access, and write the relation into the ancestry collection the portal
   hint reads (above). Keep re-application of the same declaration idempotent.
+- **Governance resolution (new).** The file → dataset → `data_access_policy` →
+  `data_access_committee` traversal is written **once**, as a function in `libs/metldata`
+  parameterised over the metadata representation, so dskit's warning 3 (§2.3) calls it offline
+  against the submission store and the loader calls it against artifacts. The sharing is at function
+  level: warning 3 asks a historical question, the file admin panel a current one. The loader
+  denormalises the result into an accession-keyed governance collection, mirroring the ancestry
+  collection above — governance only changes at load, so precomputing costs no freshness — and
+  `POST /file-governance/query` serves it to RS (§4.3). POST rather than GET because a batch is one
+  page of the panel and can outgrow a URL; HTTP `QUERY` would fit but is not yet safe to rely on.
 
 ### 4.3 `services/ghga-registry-service` (RS)
 
@@ -407,13 +423,20 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   `store_accession_map` covers every active file, so a box can be archived with no mapping (archival
   then only requires no `init`/`inbox` files at the ucs level). Conversely, make archival a
   precondition for mapping: `store_accession_map` today *rejects* archived boxes — that guard inverts
-  to *require* the box be archived.
-- **Study-centric mapping surface.** Add/extend endpoints so mapping is driven by study rather than by
-  a single box:
-  - **PID-referenced files** — for each file entity carrying a prior GHGA file accession, bind the new
+  to *require* every box being mapped into be archived.
+- **Study-centric mapping surface.** `POST /upload-boxes/{box_id}/file-ids` is **replaced** by
+  `POST /studies/{study_id}/file-ids`, which takes one accession map for the whole study regardless
+  of which archived box each file was uploaded into; the per-box endpoint is removed, not kept
+  alongside. The box was only ever the scope RS validated against — the `FileAccession` rows it
+  writes carry `pid`, `file_id` and `study_id` and no box — so nothing stored is lost by dropping it
+  from the path, and it mirrors the existing `GET /studies/{study_id}/file-ids`.
+  `GET /upload-boxes/{box_id}/uploads` is untouched and still supplies the candidate files, called
+  once per archived box the steward works against. Two populations are handled differently:
+  - **Reuse-referenced files** — for each file entity carrying a reuse accession, bind the new
     entity's accession to that file's `file_id` (the many-to-one case) and report the list of studies
-    the file already maps to, so the steward can see where else it is in use. RS reads the reuse slot
-    from the metldata artifacts it already consumes — no new event field is needed to carry it.
+    the file already maps to, so the steward can see where else it is in use. RS reads
+    `reused_accession` from the metldata artifacts it already consumes — no new event field is
+    needed to carry it.
     **There is no same-lineage validation here.** Merging (§2.4) removes any single lineage to
     validate against; the judgement is made offline instead, by the §2.3 warnings the steward confirms
     at submit time. RS still verifies the referenced accession exists and is mapped.
@@ -430,38 +453,59 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
   | file UUID (`file_id`) | ucs `FileUpload` |
   | GHGA accession(s) — plural | `FileAccession` rows for that `file_id` (many-to-one) |
   | study/studies | `FileAccession.study_id` per accession |
-  | governing `data_access_policy` + nested `data_access_committee` | not from RS — resolved per accession by the portal, via that file entity's dataset(s) in metldata's artifacts |
+  | governing `data_access_policy` + nested `data_access_committee` | resolved by metldata, fetched per page by RS (below) |
   | file upload box | the RDUB/FUB the upload belongs to |
   | upload box alias | `FileUpload.alias` |
 
   Legacy files that never came through an upload box have no box and no alias — those columns are
   empty rather than omitted, and the listing must not assume a box exists.
 
-  Two notes on the governance column. It is the same file → dataset → policy → committee resolution
-  the reuse warning uses (§2.3, warning 3), so the two should share one implementation rather than
-  drift apart. And because a file may back several accessions across several studies — and may sit in
+  **metldata resolves governance, RS serves it, the portal only renders it.** RS calls
+  `POST /file-governance/query` (§4.2) with the accessions on the page and composes them into the
+  rows it returns, so the listing is complete on its own and the portal joins nothing. That keeps the
+  panel's contract stable — it is written once against this listing and does not change when
+  ownership moves. RS already makes synchronous calls to sibling services, so the pattern is
+  established. A metldata failure must degrade the governance cells only, leaving the listing itself
+  intact, and responses should be cached since governance changes only at load.
+
+  The resolution itself is the same file → dataset → policy → committee traversal the reuse warning
+  uses (§2.3, warning 3). The two share one implementation, as a function in `libs/metldata` (§4.2):
+  warning 3 calls it offline against the submission store, the loader calls it against artifacts.
+  Because a file may back several accessions across several studies — and may sit in
   datasets with different policies — the column is per accession, not per file, and can legitimately
   show more than one policy for the same physical file. That is the situation warning 3 exists to make
   deliberate, so this panel is the audit trail for it.
 
   This is also the first read path that starts from `file_id` rather than from a box or an accession,
-  so it wants an index on `FileAccession.file_id` (none today — the collection is keyed by `pid`). The
-  governance data lives in metldata and the portal fetches it from metldata directly; RS does not join
-  it at read time. So RS's listing returns the file/accession/study/box columns only, and the portal
-  composes the governance column per accession from metldata's artifacts (§4.5).
-- **Study deprecation — RS is a consumer, not the author.** The steward authors the relation (§2.2)
-  and metldata records and propagates it (§4.2). RS's job is to receive the supersede signal and land
-  it in the fields its `Study` already has (`superseded_by_id`, `status`). `superseded_by_id` is
-  single-valued, which matches the single-valued successor direction (§2.4); it is the *predecessor*
-  side that is many. Note that RS's ingestion path (`rs/adapters/inbound/event_sub.py`
-  `ResourceSubTranslator` → `rs/core/legacy_resources.py`) fills lifecycle fields with placeholders
-  (forced `ARCHIVED`, sentinel creator).
+  so it wants an index on `FileAccession.file_id` (none today — the collection is keyed by `pid`).
 
-  **`superseded_by_id` is not populated in the early rollout.** The portal resolves the successor from
-  metldata's ancestry collection, not from RS (§4.5), so nothing reads the field — and propagating it
-  would mean adding a supersede pointer to the events RS consumes (§4.6) to serve no reader. The field
-  stays in the model for when RS takes ownership of study metadata; until then it is left unset rather
-  than filled with a value nobody derives.
+  The arrangement is interim by design. Once RS owns study metadata it resolves governance
+  internally, and the metldata client, the cache and the degradation path all disappear with the
+  listing's contract unchanged — the same shape as the `superseded_by_id` handover below.
+- **Study deprecation — RS is a consumer, not the author.** The steward authors the relation (§2.2)
+  and metldata records and propagates it (§4.2). Note that RS's ingestion path
+  (`rs/adapters/inbound/event_sub.py` `ResourceSubTranslator` → `rs/core/legacy_resources.py`) fills
+  lifecycle fields with placeholders (forced `ARCHIVED`, sentinel creator).
+
+  **`status` never carries supersede.** A superseded study is still `ARCHIVED`, so supersede is an
+  independent axis; a `SUPERSEDED` value would collapse two independent facts into one mutually
+  exclusive field. `StudyStatus` (`rs/core/models.py`) keeps its two values, `DRAFT` and `ARCHIVED`.
+  This is a permanent exclusion, not a rollout deferral, and it holds after the handover below.
+
+  **`superseded_by_id` is the right field, but stays unset in the early rollout.** It is flag and
+  pointer in one, and since a study is replaced at most once, one `superseded_by_id` per study
+  encodes the full graph; it is the *predecessor* side that is many (§2.4). It is unset here because
+  RS cannot derive it: the only signal RS receives is `searchable_resource_deleted`, carrying a
+  dataset accession and a class name but no study PID and no successor; RS writes a study exactly
+  once and has no update path, while supersede can be declared long after load through
+  `replace-study` (§2.2); and a copy in RS could drift silently from metldata, which is ground truth.
+  Nothing reads the field in this rollout either — the portal resolves the successor from metldata
+  (§4.5).
+
+  **Where it lands.** RS becomes the owner and ground truth for the study eventually, and the
+  relation moves there at that handover: `superseded_by_id` gets populated, a backfill aligned
+  against the submission store adds the superseded studies RS never ingested, and RS takes over the
+  forward-resolving successor endpoint metldata serves in the early rollout (§4.2).
 
 ### 4.4 `services/mass`
 
@@ -493,7 +537,9 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 - **File admin panel (new, steward-only).** A browsable table over every archived file in GHGA, backed
   by the RS listing (§4.3): file UUID, GHGA accession(s), study/studies, the governing
   `data_access_policy` and its nested `data_access_committee`, upload box, and box alias — with the
-  box columns empty for legacy files that never came through a box. This is the only place an
+  box columns empty for legacy files that never came through a box. The governance columns arrive as
+  part of that listing; the portal renders them and joins nothing itself, and does not call metldata
+  for this view (§4.3). This is the only place an
   archived-but-unmapped file becomes visible, which is why it is part of this feature rather than a
   follow-up: decoupling archival from mapping (§2.5) is what creates files that no other view can
   reach. Expect it to be used to *find* the files a later mapping pass needs, so filtering by
@@ -536,24 +582,37 @@ is attributed. Enforcing one study at submit turns that silent truncation into a
 
 ## 6. Suggested implementation order
 
+The work splits into two strands that land differently, because one of them is an order inversion
+rather than an addition.
+
+**Land on main incrementally, in this order:**
+
 0. **One-study enforcement** (§2.6) — small, and every later step assumes it. Splitting the test bed's
    two-study example metadata is part of this step, not a follow-up.
 1. **PID scheme + submission-store extensions in dskit/metldata** (§4.1, §4.2 accession parts) —
    everything else depends on the new accessions existing. Land with unit tests for format,
    uniqueness, version continuation, legacy-predecessor handling, and dataset file-set reuse.
-2. **Model slot for reused-file accession** (§4.2) — metadata carries the prior PID; binding to a
+2. **Model property for the reuse accession** (§4.2) — metadata carries the prior accession; binding to a
    physical file is deferred to RS at mapping time (§4.3).
-3. **RS: relax the cardinality validation + invert archival↔mapping** (§4.3) — independent of PIDs;
-   unblocks both the mapping redesign and the admin panel.
-4. **Declared replacement: `--replaces` + `replace-study` → recording, search hiding, propagation**
-   (§4.1, §4.2, §4.4), including the reuse warnings (§2.3) that depend on the submission store.
-5. **RS study-centric mapping surface + file admin panel API** (§4.3).
-6. **Portal: mapping UI rework, legacy hint, file admin panel** (§4.5).
+3. **Declared replacement: `--replaces` + `replace-study` → recording, search hiding, propagation**
+   (§4.1, §4.2, §4.4), including the reuse warnings (§2.3) and the portal's "updated version
+   available" hint (§4.5).
 
-Steps 1–2, 3, and 4 are largely independent once step 0 and the PID scheme are fixed. The file admin
-panel (3 → 5 → 6) is the one strand that can ship on its own: it depends only on the archival↔mapping
-inversion, not on PIDs or replacement, and it is what keeps archived-but-unmapped files from becoming
-invisible the moment that inversion lands.
+The DINS retain-instead-of-consume fix (§2.3, §4.3) is independent of all of these and can land at
+any point. Nothing in this strand changes an existing contract, so each piece can ship on its own.
+
+**Develop the archival↔mapping inversion on one branch and cut over in a single step.** That strand
+is the RS cardinality relaxation, the archival inversion, `POST /studies/{study_id}/file-ids`
+replacing the per-box endpoint, and the portal's mapping rework (§4.3, §4.5). It cannot be staged:
+`store_accession_map` goes from *rejecting* archived boxes to *requiring* them, so at the moment that
+flips, RS, the portal's map-then-archive chain and the test bed all break together. The new endpoint
+replaces the old one in the same cutover, and the test bed's mapping scenarios change with it — the
+single-study split belongs to the first strand and lands earlier.
+
+**The file admin panel lands after the cutover** (§4.3 API, §4.5 UI). The population it exists to
+show — files archived but never mapped — only comes into existence once the inversion ships, so
+there is nothing for it to list before then. It depends on the inversion alone, not on PIDs or
+replacement.
 
 ---
 
