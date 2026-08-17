@@ -37,6 +37,10 @@ scenarios("../features/200_upload_initiated.feature")
 
 UPLOAD_VISA_TYPE = "https://www.ghga.de/GA4GH/VisaTypes/Upload/v1.0"
 
+# Boxes are listed in reverse creation order, so the "last" is the secondary box
+# and the "next" page is the previously created primary box.
+PAGINATION_PARAMS = {"last": {"skip": 0, "limit": 1}, "next": {"skip": 1, "limit": 1}}
+
 
 @given("no data upload boxes have been created yet")
 def rs_database_is_empty(config: Config, mongo: MongoFixture, state: StateStorage):
@@ -263,6 +267,42 @@ def delete_upload_box(
 
     return fixtures.http.delete(
         url, headers=headers, params={"version": box["version"]}
+    )
+
+
+@when(
+    parse('"{full_name}" retrieves the "{page}" data upload boxes'),
+    target_fixture="response",
+)
+def retrieve_paginated_rdubs(
+    full_name: str, page: str, fixtures: JointFixture
+) -> Response:
+    """Retrieve a single page of the upload box list using skip/limit pagination."""
+    assert page in PAGINATION_PARAMS, f"Unknown page: {page}"
+
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, f"No session found for {full_name}"
+    assert session.user_id, f"user_id is missing for {full_name}"
+
+    url = f"{fixtures.config.rs_url}/upload-boxes"
+    headers = fixtures.auth.headers(session=session)
+    return fixtures.http.get(url, headers=headers, params=PAGINATION_PARAMS[page])
+
+
+@then(parse('the "{storage_name}" upload box is returned'))
+def check_paginated_upload_box(
+    storage_name: str, response: Response, fixtures: JointFixture
+):
+    """Check that the page contains exactly the upload box for the given storage."""
+    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
+    assert rdub, f"No data upload box found for storage '{storage_name}'"
+
+    boxes = response.json().get("boxes", [])
+    actual_ids = [box.get("id") for box in boxes]
+    assert actual_ids == [rdub["id"]], (
+        f"Expected only the {storage_name} upload box {rdub['id']}, got {actual_ids}"
     )
 
 

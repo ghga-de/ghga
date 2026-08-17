@@ -1,12 +1,12 @@
 # All your requirements go here. Please adapt as needed:
 
-ghga-connector==3.0.1
-ghga-datasteward-kit==5.4.1
+ghga-connector @ git+https://github.com/ghga-de/ghga-connector.git@main
+ghga-datasteward-kit==5.4.2
 metldata >=4.2,<5
 
 ghga-event-schemas>=13,<14
-ghga-service-commons[auth,crypt]>=7,<8
-hexkit[all]>=8,<9
+ghga-service-commons[auth,crypt]>=8,<9
+hexkit[all]>=9,<10
 openpyxl >= 3.1,<4
 
 crypt4gh>=1.8,<2
