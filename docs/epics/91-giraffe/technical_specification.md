@@ -261,7 +261,7 @@ max_file_listing_page_size: int = 1000     # matches the existing upload-listing
 ```
 
 The base32 alphabet is fixed to RFC 4648 (`[A-Z2-7]`, no `0/1/8/9`) and is not configurable —
-changing it would invalidate previously minted PIDs.
+changing it could invalidate previously minted PIDs.
 
 ## Additional Implementation Details:
 
