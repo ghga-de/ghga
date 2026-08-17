@@ -205,14 +205,10 @@ async def async_download(
                 )
 
 
-def decrypt_file(
-    input_file: Path,
-    output_file: Path,
-    decryption_private_key_path: Path,
-    passphrase: str | None,
-):
-    """Delegate decryption of a file Crypt4GH"""
-    decryptor = Crypt4GHDecryptor(
-        decryption_key_path=decryption_private_key_path, passphrase=passphrase
-    )
-    decryptor.decrypt_file(input_path=input_file, output_path=output_file)
+def get_decryptor(decryption_private_key_path: Path) -> Crypt4GHDecryptor:
+    """Get a decryptor for the given private key.
+
+    The key is read once here, so decrypting a whole directory only asks the user for
+    the passphrase a single time.
+    """
+    return Crypt4GHDecryptor(decryption_key_path=decryption_private_key_path)

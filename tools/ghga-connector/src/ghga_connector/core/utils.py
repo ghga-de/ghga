@@ -16,21 +16,35 @@
 """Various helper functions"""
 
 import logging
+import os
 import sys
+import warnings
+from collections.abc import Callable
+from contextlib import redirect_stderr
 from functools import partial
+from getpass import GetPassWarning, getpass
+from io import StringIO
 from pathlib import Path
 from types import TracebackType
 from typing import Any
 
 import crypt4gh.keys
-import crypt4gh.lib
 from pydantic import SecretBytes
 
 from ghga_connector import exceptions
+from ghga_connector.constants import PASSPHRASE_ENV_VAR
 from ghga_connector.core.downloading.structs import FileInfo
 from ghga_connector.core.message_display import CLIMessageDisplay
 
 log = logging.getLogger(__name__)
+
+
+class _KeyIsEncrypted(BaseException):
+    """Raised from the passphrase callback to report that a key is encrypted.
+
+    It derives from `BaseException` so that it escapes crypt4gh, which turns every
+    `Exception` raised while parsing a key into a process exit.
+    """
 
 
 def strtobool(value: str) -> bool:
@@ -100,19 +114,97 @@ def get_public_key(my_public_key_path: Path) -> bytes:
     return crypt4gh.keys.get_public_key(filepath=my_public_key_path)
 
 
-def get_private_key(
-    my_private_key_path: Path, passphrase: str | None = None
+def prompt_for_passphrase() -> str | None:
+    """Ask the user for the private key passphrase without echoing it.
+
+    Returns None if there is no terminal to ask on, so that a script is not held up
+    waiting for an answer that cannot be given.
+    """
+    if sys.stdin is None or not sys.stdin.isatty():
+        return None
+    try:
+        with warnings.catch_warnings():
+            # `getpass` warns instead of failing when it cannot turn the terminal's
+            #  echo off, and then reads the passphrase in plain, visible text. The
+            #  warning is raised before it reads anything, so turning it into an error
+            #  keeps the passphrase off the screen (and out of any terminal log).
+            warnings.simplefilter("error", GetPassWarning)
+            passphrase = getpass("Passphrase for your private key: ")
+    except (EOFError, GetPassWarning):
+        return None
+    return passphrase or None
+
+
+def get_passphrase() -> str | None:
+    """Get the passphrase for an encrypted private key.
+
+    It is taken from the environment if that variable is set, which keeps unattended
+    runs possible, and asked for interactively otherwise. It is deliberately not
+    accepted as a command line option, as that would leave it in the shell history
+    and expose it to everyone who can list the running processes.
+    """
+    return os.environ.get(PASSPHRASE_ENV_VAR) or prompt_for_passphrase()
+
+
+def _signal_encrypted_key() -> str:
+    """Report back that the key being read is encrypted, instead of unlocking it"""
+    raise _KeyIsEncrypted()
+
+
+def _read_private_key(
+    my_private_key_path: Path, callback: Callable[[], str]
 ) -> SecretBytes:
-    """Get the user's private key, using the passphrase if supplied/needed."""
+    """Read the private key, keeping crypt4gh's own error output off the screen.
+
+    crypt4gh prints its own "Invalid Key or Passphrase" line before exiting. It is
+    swallowed here because the errors raised by the caller say the same thing more
+    precisely. It remains visible as a log record in debug mode.
+    """
+    with redirect_stderr(StringIO()):
+        return SecretBytes(
+            crypt4gh.keys.get_private_key(
+                filepath=my_private_key_path, callback=callback
+            )
+        )
+
+
+def get_private_key(my_private_key_path: Path) -> SecretBytes:
+    """Get the user's private key, asking for a passphrase only if it is encrypted"""
     if not my_private_key_path.is_file():
         raise exceptions.PrivateKeyFileDoesNotExistError(
             private_key_path=my_private_key_path
         )
-    callback = (lambda: passphrase) if passphrase else None
-    my_private_key = SecretBytes(
-        crypt4gh.keys.get_private_key(filepath=my_private_key_path, callback=callback)
-    )
-    return my_private_key
+
+    try:
+        # crypt4gh only calls the callback once it knows that the key is encrypted,
+        #  so unencrypted keys are read without bothering the user at all
+        return _read_private_key(my_private_key_path, _signal_encrypted_key)
+    except _KeyIsEncrypted:
+        pass
+    except ValueError as error:
+        # raised by crypt4gh before it starts parsing, e.g. for a non-PEM file
+        raise exceptions.PrivateKeyFileInvalidError(
+            private_key_path=my_private_key_path, reason=str(error)
+        ) from error
+    except SystemExit as error:
+        # crypt4gh exits the process for any error while parsing the key
+        raise exceptions.PrivateKeyFileInvalidError(
+            private_key_path=my_private_key_path,
+            reason="it could not be parsed as a Crypt4GH or OpenSSH private key",
+        ) from error
+
+    # the passphrase is asked for out here, where crypt4gh's output is not redirected,
+    #  so that the prompt cannot get swallowed along with it
+    passphrase = get_passphrase()
+    if not passphrase:
+        raise exceptions.PassphraseRequiredError(private_key_path=my_private_key_path)
+
+    try:
+        return _read_private_key(my_private_key_path, lambda: passphrase)
+    except SystemExit as error:
+        raise exceptions.InvalidPassphraseError(
+            private_key_path=my_private_key_path
+        ) from error
 
 
 def check_for_existing_file(*, file_info: FileInfo, overwrite: bool):

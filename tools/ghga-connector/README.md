@@ -19,6 +19,10 @@ Most of the commands need the submitter's private key that matches the public ke
 The private key is used for file encryption in the upload path and decryption of the work package access and work order tokens during download.
 Additionally, the decrypt command needs the private key to decrypt the downloaded file.
 
+If that private key is protected by a passphrase, the Connector asks for it once per command and does not echo it while it is typed.
+There is deliberately no command line option for the passphrase, as that would leave it in the shell history and expose it to anyone who can list the running processes.
+For unattended runs, where there is no terminal to ask on, the passphrase can be provided in the `GHGA_C4GH_PASSPHRASE` environment variable instead.
+
 
 ## Installation
 
@@ -26,13 +30,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
 ```bash
-docker pull ghga/ghga-connector:3.1.1
+docker pull ghga/ghga-connector:4.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-connector:3.1.1 .
+docker build -t ghga/ghga-connector:4.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -40,7 +44,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/ghga-connector:3.1.1 --help
+docker run -p 8080:8080 ghga/ghga-connector:4.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:

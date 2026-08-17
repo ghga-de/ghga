@@ -17,22 +17,16 @@
 
 from pathlib import Path
 
-import crypt4gh.keys
 import crypt4gh.lib
+
+from ghga_connector.core.utils import get_private_key
 
 
 class Crypt4GHDecryptor:
     """Convenience class to deal with Crypt4GH decryption"""
 
-    def __init__(self, decryption_key_path: Path, passphrase: str | None):
-        if passphrase:
-            self._decryption_key = crypt4gh.keys.get_private_key(
-                filepath=decryption_key_path, callback=lambda: passphrase
-            )
-        else:
-            self._decryption_key = crypt4gh.keys.get_private_key(
-                filepath=decryption_key_path, callback=None
-            )
+    def __init__(self, decryption_key_path: Path):
+        self._decryption_key = get_private_key(decryption_key_path).get_secret_value()
 
     def decrypt_file(self, *, input_path: Path, output_path: Path):
         """Decrypt provided file using Crypt4GH lib"""

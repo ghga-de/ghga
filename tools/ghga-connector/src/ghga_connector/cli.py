@@ -21,7 +21,11 @@ from pathlib import Path
 import typer
 
 from ghga_connector import exceptions
-from ghga_connector.constants import C4GH, DEFAULT_BATCH_MAX_RETRIES
+from ghga_connector.constants import (
+    C4GH,
+    DEFAULT_BATCH_MAX_RETRIES,
+    PASSPHRASE_ENV_VAR,
+)
 from ghga_connector.core import CLIMessageDisplay
 from ghga_connector.core.main import (
     async_batch_upload,
@@ -32,6 +36,13 @@ from ghga_connector.core.main import (
 from ghga_connector.core.utils import modify_for_debug
 
 cli = typer.Typer(no_args_is_help=True)
+
+# Appended to the help of every private key option, as any of them may be encrypted.
+_PASSPHRASE_HELP = (
+    " If the key is encrypted, you will be asked for its passphrase, which is not"
+    + f" echoed. For unattended runs, set the {PASSPHRASE_ENV_VAR} environment"
+    + " variable instead."
+)
 
 # Standard shell exit code for a process terminated by SIGINT (Ctrl+C).
 _SIGINT_EXIT_CODE = 130
@@ -65,8 +76,8 @@ def batch_upload(  # noqa: PLR0913
     my_private_key_path: Path = typer.Option(
         "./key.sec",
         help="The path to a private key from the key pair that will be used to encrypt the "
-        + "crypt4gh envelope. Defaults to key.sec in the current folder. If the key is "
-        + "encrypted, you will be prompted for its passphrase.",
+        + "crypt4gh envelope. Defaults to key.sec in the current folder."
+        + _PASSPHRASE_HELP,
     ),
     max_retries: int = typer.Option(
         DEFAULT_BATCH_MAX_RETRIES,
@@ -125,8 +136,8 @@ def ubox(
     my_private_key_path: Path = typer.Option(
         "./key.sec",
         help="The path to a private key from the key pair that will be used to encrypt the "
-        + "crypt4gh envelope. Defaults to key.sec in the current folder. If the key is "
-        + "encrypted, you will be prompted for its passphrase.",
+        + "crypt4gh envelope. Defaults to key.sec in the current folder."
+        + _PASSPHRASE_HELP,
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
@@ -158,8 +169,8 @@ def download(
         "./key.sec",
         help="The path to a private key from the Crypt4GH key pair "
         + "that was announced when the download token was created. "
-        + "Defaults to key.sec in the current folder. If the key is encrypted, you "
-        + "will be prompted for its passphrase.",
+        + "Defaults to key.sec in the current folder."
+        + _PASSPHRASE_HELP,
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
@@ -198,8 +209,8 @@ def decrypt(  # noqa: PLR0912, C901
         "./key.sec",
         help="The path to a private key from the Crypt4GH key pair "
         + "that was announced when the download token was created. "
-        + "Defaults to key.sec in the current folder. If the key is encrypted, you "
-        + "will be prompted for its passphrase.",
+        + "Defaults to key.sec in the current folder."
+        + _PASSPHRASE_HELP,
     ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."

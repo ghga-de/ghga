@@ -34,6 +34,11 @@ UPLOAD_RETRY_BACKOFF_SEC = 5
 DEFAULT_BATCH_MAX_RETRIES = 3
 BATCH_RETRY_BACKOFF_SEC = 5
 C4GH = ".c4gh"
+# Environment variable holding the passphrase of an encrypted private key. It exists
+#  for unattended runs, where the passphrase cannot be asked for interactively. There
+#  deliberately is no command line option for it, as that would leave the passphrase in
+#  the shell history and expose it in the process list.
+PASSPHRASE_ENV_VAR = "GHGA_C4GH_PASSPHRASE"  # noqa: S105 - a name, not a passphrase
 CACHE_MIN_FRESH = 3
 DOWNLOAD_URL_LIFESPAN = 60  # 1 minute
 DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - CACHE_MIN_FRESH

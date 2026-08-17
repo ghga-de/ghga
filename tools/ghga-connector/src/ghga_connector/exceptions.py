@@ -21,7 +21,7 @@ from pathlib import Path
 import httpx2
 from pydantic import UUID4
 
-from ghga_connector.constants import MAX_PART_NUMBER
+from ghga_connector.constants import MAX_PART_NUMBER, PASSPHRASE_ENV_VAR
 
 
 def extract_reason(exception: BaseException) -> str:
@@ -278,6 +278,17 @@ class InvalidPartSize(RuntimeError):
         super().__init__(message)
 
 
+class InvalidPassphraseError(RuntimeError):
+    """Thrown when the private key could not be unlocked with the passphrase entered"""
+
+    def __init__(self, *, private_key_path: Path):
+        message = (
+            f"The private key file '{private_key_path}' could not be unlocked with the"
+            + " passphrase that was entered."
+        )
+        super().__init__(message)
+
+
 class InvalidWorkPackageToken(RuntimeError):
     """Thrown when the work package string pasted by the user could not be parsed"""
 
@@ -396,11 +407,33 @@ class OutputPathIsNotDirectory(RuntimeError):
         super().__init__(message)
 
 
+class PassphraseRequiredError(RuntimeError):
+    """Thrown when an encrypted private key was given but no passphrase to unlock it"""
+
+    def __init__(self, *, private_key_path: Path):
+        message = (
+            f"The private key file '{private_key_path}' is encrypted, but no passphrase"
+            + " was provided. Run the command in an interactive terminal to be asked"
+            + f" for it, or set the {PASSPHRASE_ENV_VAR} environment variable."
+        )
+        super().__init__(message)
+
+
 class PrivateKeyFileDoesNotExistError(RuntimeError):
     """Thrown when the specified private key file does exist."""
 
     def __init__(self, *, private_key_path: Path):
         message = f"The private key file '{private_key_path}' does not exist."
+        super().__init__(message)
+
+
+class PrivateKeyFileInvalidError(RuntimeError):
+    """Thrown when the specified private key file could not be read"""
+
+    def __init__(self, *, private_key_path: Path, reason: str):
+        message = (
+            f"The private key file '{private_key_path}' could not be read: {reason}"
+        )
         super().__init__(message)
 
 

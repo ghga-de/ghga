@@ -24,6 +24,7 @@ from tempfile import NamedTemporaryFile
 import crypt4gh.keys
 import pytest
 
+from ghga_connector.constants import PASSPHRASE_ENV_VAR
 from ghga_connector.core import is_file_encrypted, read_file_parts
 from ghga_connector.core.crypt import Crypt4GHDecryptor, Crypt4GHEncryptor
 from ghga_connector.core.utils import get_private_key
@@ -74,6 +75,11 @@ async def test_encryption_decryption(
     pubkey_path = key_dir / pk_name
     private_key_path = key_dir / sk_name
 
+    # encrypted keys are unlocked with an interactively entered passphrase
+    monkeypatch.delenv(PASSPHRASE_ENV_VAR, raising=False)
+    monkeypatch.setattr(
+        "ghga_connector.core.utils.prompt_for_passphrase", lambda: "test"
+    )
     private_key = get_private_key(private_key_path)
 
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
