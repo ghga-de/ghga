@@ -128,7 +128,7 @@ relation, written by the loader and read by the data portal.
   mean adding a supersede pointer to the events rs consumes to serve no reader. Therefore it stays in the
   model, unset, for when rs takes ownership of study metadata.
 - **Changes to `libs/ghga-event-schemas`.** See the API section — the design avoids needing any.
-- **Changes to `services/mass`.** Hiding superseded datasets rides the existing deletion event.
+- **Changes to `services/mass`.** Superseded datasets are hidden by the existing `searchable_resource_deleted` event, which MASS already consumes.
 - **A steward search that can still see superseded datasets.** There is no retained "hidden" flag;
   direct URL through the artifacts API is the guaranteed route to a superseded dataset.
 
