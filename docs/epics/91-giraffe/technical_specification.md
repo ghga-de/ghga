@@ -84,9 +84,7 @@ relation, written by the loader and read by the data portal.
   (repeatable, to express a merge) and a new `dskit metadata replace-study <old PID> <new PID>` for
   two already-submitted studies. Both must fail when the named predecessor is already replaced, and
   when the predecessor's successor chain already reaches the successor.
-- **Version derivation on submit.** One new-scheme predecessor continues its lineage at
-  `V = predecessor version + 1`; a legacy predecessor starts a fresh root at `V = 1`; a merge
-  prompts the steward to either continue one named predecessor's lineage or mint a fresh root.
+- **Version derivation on submit.** The successor's version depends on what it replaces: with one new-scheme predecessor it continues that lineage at `V = predecessor version + 1`; with a legacy predecessor it starts a fresh root at `V = 1`; for a merge the steward chooses between continuing one named predecessor's lineage and minting a fresh root.
 - **Three reuse warnings at submit.** Override-able confirmations, not errors, all decidable from
   the submission store without service calls: files reused with no declared predecessor; reused
   accessions absent from every ancestor; governance (`data_access_policy` and its nested
