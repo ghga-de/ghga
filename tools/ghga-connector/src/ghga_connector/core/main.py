@@ -102,7 +102,7 @@ async def upload_files(  # noqa: PLR0913
     state (re-encrypted).
     """
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
     work_package_client = WorkPackageClient(
         client=client, my_private_key=my_private_key, my_public_key=my_public_key
     )
@@ -138,7 +138,7 @@ async def async_ubox(
     REPL exposing 'upload', 'ls' and 'rm' commands against the box.
     """
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
 
     async with async_client() as client, set_runtime_config(client=client):
         work_package_client = WorkPackageClient(
@@ -163,7 +163,7 @@ async def async_download(
         raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
 
     async with async_client() as client, set_runtime_config(client=client):
         CLIMessageDisplay.display("Retrieving API configuration information...")
