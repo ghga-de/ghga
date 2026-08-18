@@ -53,7 +53,7 @@ New endpoints:
     - 404 if the box isn't found
     - 409 if the box is archived
 
-- `POST /boxes/{box_id}/uploads/{file_id}/requeue (UCS)`:
+- `POST /rpc/boxes/{box_id}/uploads/{file_id}/requeue (UCS)`:
   - _Set a single 'failed' FileUpload back to 'inbox'._
   - Requires a `RequeueFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue`.
   - Returns:
