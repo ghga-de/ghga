@@ -19,6 +19,7 @@ import getpass
 import io
 import logging
 import sys
+from collections.abc import Callable
 from contextlib import redirect_stderr
 from functools import partial
 from pathlib import Path
@@ -102,6 +103,16 @@ def get_public_key(my_public_key_path: Path) -> bytes:
     return crypt4gh.keys.get_public_key(filepath=my_public_key_path)
 
 
+def make_passphrase_callback(tries_left: int) -> Callable:
+    """Generates the passphrase callback for decrypting crypt4gh PKs.
+    
+    Mock this in tests when calling get_private_key for an encrypted
+    private key to simulate user input.
+    """
+    prompt_text = f"Enter passphrase to decrypt Crypt4GH private key ({tries_left} attempt(s) remaining): "
+    return partial(getpass.getpass, prompt_text)
+
+
 def get_private_key(
     my_private_key_path: Path, passphrase: SecretStr | None = None
 ) -> SecretBytes:
@@ -121,10 +132,10 @@ def get_private_key(
     tries_left = 3 if passphrase is None else 1
     while tries_left:
         try:
-            prompt_text = f"Enter passphrase to decrypt Crypt4GH private key ({tries_left} attempt(s) remaining): "
-            prompt_fn = partial(getpass.getpass, prompt_text)
             callback = (
-                (lambda: passphrase.get_secret_value()) if passphrase else prompt_fn
+                (lambda: passphrase.get_secret_value())
+                if passphrase
+                else make_passphrase_callback(tries_left)
             )
             with redirect_stderr(io.StringIO()):
                 return SecretBytes(
