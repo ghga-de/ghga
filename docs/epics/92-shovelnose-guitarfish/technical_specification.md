@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 ## Scope
 ### Outline:
 When files don't pass re-encryption and integrity checks ("interrogation") in DHFS, DHFS submits a report to FIS saying that the file failed. The FileUpload state is updated and propagated, and the object is deleted from the inbox bucket in S3 automatically. This is a naive approach to interrogation failures that forces the user to upload the file from scratch when it's entirely possible the fault is ours or due to some flipped bit. Moreover, "failed" files are ignored in most considerations in the file upload path, like RDUB quota calculations and archival prerequisite checks. At the macro level, this epic introduces three changes to this process:
-1. Failed files are not automatically deleted from the inbox bucket.
+1. UCS keeps failed files in the inbox bucket instead of deleting them automatically.
 2. Data Stewards are able to trigger a "retry" - setting the file state back to "inbox".
 3. UCS stops ignoring failed files. They count toward box quotas and block box archival, for example.
 
