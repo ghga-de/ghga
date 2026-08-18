@@ -18,6 +18,7 @@
 
 from pathlib import Path
 
+import crypt4gh.lib
 import httpx2
 
 from ghga_connector.config import get_config, set_runtime_config
@@ -40,7 +41,6 @@ from ghga_connector.core.work_package import WorkPackageClient
 
 from .. import exceptions
 from . import utils
-from .crypt import Crypt4GHDecryptor
 from .message_display import CLIMessageDisplay
 
 
@@ -49,7 +49,6 @@ async def async_batch_upload(  # noqa: PLR0913
     tsv: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
     dry_run: bool = False,
     shorten: bool = False,
@@ -75,7 +74,6 @@ async def async_batch_upload(  # noqa: PLR0913
             core_file_info_list=core_file_info_list,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
             max_retries=max_retries,
             dry_run=dry_run,
             shorten=shorten,
@@ -89,7 +87,6 @@ async def upload_files(  # noqa: PLR0913
     core_file_info_list: list[CoreFileInfo],
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
     dry_run: bool = False,
     shorten: bool = False,
@@ -104,15 +101,15 @@ async def upload_files(  # noqa: PLR0913
     existing FileUpload for its alias as long as it has not reached the "interrogated"
     state (re-encrypted).
     """
+    config = get_config()
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path, config.passphrase)
     work_package_client = WorkPackageClient(
         client=client, my_private_key=my_private_key, my_public_key=my_public_key
     )
     upload_client = UploadClient(client=client, work_package_client=work_package_client)
 
     # Add part size to core file info - this enables us to calculate part ranges
-    config = get_config()
     full_file_info = [
         FileInfoForUpload(core_file_info=cfi, configured_part_size=config.part_size)
         for cfi in core_file_info_list
@@ -134,15 +131,15 @@ async def async_ubox(
     *,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
 ):
     """Launch an interactive shell for managing a single upload box.
 
     Prompts for an access token (via the Work Package client), then opens a small
     REPL exposing 'upload', 'ls' and 'rm' commands against the box.
     """
+    config = get_config()
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path, config.passphrase)
 
     async with async_client() as client, set_runtime_config(client=client):
         work_package_client = WorkPackageClient(
@@ -160,15 +157,15 @@ async def async_download(
     output_dir: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     overwrite: bool = False,
 ):
     """Download files asynchronously"""
+    config = get_config()
     if not output_dir.is_dir():
         raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path, config.passphrase)
 
     async with async_client() as client, set_runtime_config(client=client):
         CLIMessageDisplay.display("Retrieving API configuration information...")
