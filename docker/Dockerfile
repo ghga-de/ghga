@@ -17,8 +17,9 @@
 # NOTE: dhi.io requires authentication (Docker Hub credentials with DHI entitlement) —
 # `docker login dhi.io` locally; DOCKERHUB_USERNAME/DOCKERHUB_TOKEN org secrets in CI.
 
-ARG PYTHON_VERSION=3.13
-ARG BASE=dhi.io/python:${PYTHON_VERSION}-alpine3.23
+# renovate: track=python-base
+ARG PYTHON_BASE=3.13.15-alpine3.24
+ARG BASE=dhi.io/python:${PYTHON_BASE}
 # single = one member per image (the release artifact); mono = every Python member in
 # one venv, for the demo and the integration gate only (see the mono stage below).
 ARG VARIANT=single

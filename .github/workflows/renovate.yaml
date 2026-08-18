@@ -1,0 +1,44 @@
+# Self-hosted Renovate: keeps the DHI base-image tags (docker/Dockerfile,
+# frontend/data-portal/Dockerfile.dhi) up to date against the real dhi.io tag
+# list. Scope is deliberately narrow (see renovate.json5's enabledManagers) —
+# application dependency lockfiles (uv.lock, pnpm-lock.yaml) stay with the
+# existing daily security-scan.yaml workflow.
+#
+# Self-hosted (not the Renovate/Mend GitHub App) so dhi.io auth can reuse the
+# same DOCKERHUB_USERNAME/DOCKERHUB_TOKEN org secrets CI already uses, rather
+# than provisioning a second credential store in an external app dashboard.
+name: renovate
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # weekly, Monday
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # Renovate pushes its own branches
+      pull-requests: write # and opens/updates its own PRs
+    env:
+      RENOVATE_HOST_RULES: >-
+        [{"hostType":"docker","matchHost":"dhi.io",
+          "username":"${{ secrets.DOCKERHUB_USERNAME }}",
+          "password":"${{ secrets.DOCKERHUB_TOKEN }}"}]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Renovate
+        uses: renovatebot/github-action@v46
+        with:
+          configurationFile: renovate.json5
+          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+      # NOTE: PRs opened with the plain GITHUB_TOKEN do not auto-trigger
+      # ci.yaml (same caveat security-scan.yaml documents for its own PRs).
+      # A close/reopen, or switching to that workflow's PAT/App token, is a
+      # possible future refinement — not required to get useful PRs today.
