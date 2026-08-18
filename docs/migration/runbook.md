@@ -13,7 +13,8 @@
 ([ADR-0015](../adr/0015-task-runner.md)), `helm`, `kubectl`, `pnpm`/`node`.
 
 **On the host** ([ADR-0017](../adr/0017-local-integration-host-cluster.md)): a local Kubernetes
-cluster — OrbStack k8s on macOS, minikube on Linux/WSL2 — plus the docker/podman that builds
+cluster — minikube on Linux/WSL2, or a container runtime's built-in Kubernetes — plus the
+docker/podman that builds
 images next to it. The devcontainer talks to the cluster only via a namespace-scoped kubeconfig;
 it runs **no DinD/DooD for the integration path** (component tests keep DinD until hexkit grows
 in-memory provider alternatives). (No mesh/Istio needed for the self-contained path — the
@@ -113,8 +114,8 @@ incremental sync stays low-conflict:
    ([ADR-0017](../adr/0017-local-integration-host-cluster.md)) — same artifact users install:
    ```bash
    # on the HOST: start the cluster (once) and build the affected images next to it
-   #   macOS:  enable OrbStack Kubernetes (its docker-built images are directly visible)
-   #   Linux:  minikube start --apiserver-names=host.docker.internal ; minikube image build ...
+   #   Linux/WSL2:      minikube start --apiserver-names=host.docker.internal ; minikube image build ...
+   #   runtime with k8s: enable it (its docker-built images are directly visible)
    # in the DEVCONTAINER (scoped kubeconfig):
    helm install ghga ./deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-testbed.yaml
    kubectl port-forward svc/<gateway> 8443:443   # bare cluster: no LoadBalancer

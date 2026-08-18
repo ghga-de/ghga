@@ -2,15 +2,15 @@
 set -euo pipefail
 
 # Named volumes mount root-owned; chown the mount points back to vscode
-# so uv, Playwright, and Claude Code can write to them.
-sudo chown vscode:vscode ~/.local ~/.local/share ~/.cache
-sudo chown -R vscode:vscode ~/.claude ~/.local/share/uv ~/.cache/uv ~/.cache/ms-playwright
+# so uv, Playwright, Claude Code, and gh can write to them.
+sudo chown vscode:vscode ~/.local ~/.local/share ~/.cache ~/.config
+sudo chown -R vscode:vscode ~/.claude ~/.config/gh ~/.local/share/uv ~/.cache/uv ~/.cache/ms-playwright
 
 # just and kind come from no feature, and ~/.local/bin is not one of the persisted
 # volumes — so a rebuild loses them and every justfile recipe stops working, including
 # the whole local cluster and test-bed flow. Pinned to the versions the demo and the
 # integration gate are verified against. The arch split is not hypothetical: this runs
-# on an arm64 Mac as readily as on an x86 runner.
+# on arm64 workstations as readily as on an x86 runner.
 JUST_VERSION=1.57.0
 KIND_VERSION=0.30.0
 case "$(uname -m)" in

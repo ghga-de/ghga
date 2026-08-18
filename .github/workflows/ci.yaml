@@ -37,6 +37,7 @@ jobs:
     outputs:
       python: ${{ steps.affected.outputs.python }}
       frontend: ${{ steps.affected.outputs.frontend }}
+      devcontainer: ${{ steps.affected.outputs.devcontainer }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -64,6 +65,16 @@ jobs:
           echo "python=$(split libs services tools)" >> "$GITHUB_OUTPUT"
           echo "frontend=$(split frontend)" >> "$GITHUB_OUTPUT"
           # testbed / deploy targets are exercised by the integration gate (Stage 2).
+
+          # The dev container is not a workspace member, so affected_targets.py does not see
+          # it; diff it directly off the same base. No usable base -> check it, matching the
+          # check-everything fallback above.
+          if git cat-file -e "$base^{commit}" 2> /dev/null \
+            && git diff --quiet "$base" -- .devcontainer; then
+            echo "devcontainer=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "devcontainer=true" >> "$GITHUB_OUTPUT"
+          fi
 
   check-python:
     # lint is a dependency so its uv sync populates the shared uv cache once;
@@ -117,6 +128,51 @@ jobs:
           pnpm test
           pnpm build
         # Playwright E2E is part of the integration gate (Stage 2), not this one.
+
+  # The dev container is otherwise unvalidated by CI, and it is the one artifact that, when
+  # broken, costs every developer their environment rather than a red check. This builds it
+  # on any .devcontainer change and asserts the properties a plain `docker build` would not
+  # reveal.
+  #
+  # Deliberately partial: `devcontainer build` applies neither runArgs nor mounts nor
+  # postCreateCommand, and this runner is amd64. So it covers base-image resolution and
+  # feature installation only — it would have caught the Debian 13 moby incompatibility, but
+  # it cannot say anything about docker-in-docker at runtime, kind, --net=host, or the arm64
+  # path. Those still need a local rebuild.
+  check-devcontainer:
+    needs: discover
+    if: ${{ needs.discover.outputs.devcontainer == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm install -g @devcontainers/cli
+      - name: Build the dev container image
+        run: devcontainer build --workspace-folder . --image-name ghga-devcontainer:ci
+      # The script goes in on stdin via a quoted heredoc rather than `bash -lc '...'`:
+      # inside single quotes an apostrophe in a comment silently ends the string, so the
+      # rest of the assertions are never passed to the container and the failure points
+      # nowhere near the cause. <<'SCRIPT' passes the body through untouched.
+      - name: Assert the image provides what the repo assumes
+        run: |
+          docker run --rm -i ghga-devcontainer:ci bash -l -s <<'SCRIPT'
+          set -eux
+          # The bootstrap interpreter must carry the stdlib, not just python3-minimal:
+          # the justfile image recipes and scripts/*.py import tomllib.
+          python3 -c "import tomllib, json"
+          node --version && pnpm --version && uv --version
+          # Working tools the whole monorepo leans on: fd/rg/bat/jq for navigating and
+          # inspecting a tree this size, shellcheck/shfmt for the shell the repo runs on
+          # (justfile recipes, .devcontainer/post-create.sh, scripts/migration, testbed),
+          # dig for the container's several competing sources of name resolution. dig
+          # arrives via docker-in-docker too, so this also catches that feature dropping
+          # it. One at a time: `command -v a b c` exits 0 even when some are missing.
+          for t in fd bat rg jq shellcheck shfmt dig; do command -v "$t"; done
+          # docker/Dockerfile uses `RUN --mount=type=cache`, so the image builds the repo
+          # publishes depend on BuildKit being available, not just a docker CLI.
+          docker buildx version
+          docker compose version
+          SCRIPT
 
   # TODO (ADR-0002, separable): per-library standalone matrix across supported Python
   # versions, validating the *published* combination alongside the integrated one.
