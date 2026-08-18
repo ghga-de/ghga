@@ -67,6 +67,7 @@ class Uploader:
         self._file_info = file_info
         self._overwrite = overwrite
         self._semaphore = asyncio.Semaphore(max_concurrent_uploads)
+        self._encryption_lock = asyncio.Lock()
 
     def new_progress_bar(self) -> UploadProgressBar:
         """Create a new progress bar"""
@@ -146,7 +147,18 @@ class Uploader:
         async with self._semaphore:
             part_number = 0  # defined here so it can be used in the exception
             try:
-                part_number, part = next(file_processor)
+                async with self._encryption_lock:
+                    # crypt4gh encryption is CPU-bound, so running it on the event loop
+                    # stalls in-flight part uploads and the connection pool's keep-alive
+                    # handling. `next` takes a default because a StopIteration raised in
+                    # a worker thread cannot be propagated through a Future.
+                    next_part = await asyncio.to_thread(next, file_processor, None)
+                if next_part is None:
+                    raise RuntimeError(
+                        "The file processor ran out of parts before all scheduled part"
+                        + " uploads were performed."
+                    )
+                part_number, part = next_part
                 await self._upload_client.upload_file_part(
                     file_id=self._file_id, content=part, part_no=part_number
                 )
