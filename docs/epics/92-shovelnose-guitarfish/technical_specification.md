@@ -47,6 +47,7 @@ New endpoints:
 
 - `POST /boxes/{box_id}/requeue (UCS)`:
   - _Requeue all failed files in a box_
+  - Requires a `RequeueFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue`.
   - Returns:
     - 204 on success
     - 404 if the box isn't found
@@ -54,7 +55,7 @@ New endpoints:
 
 - `POST /boxes/{box_id}/uploads/{file_id}/requeue (UCS)`:
   - _Set a single 'failed' FileUpload back to 'inbox'._
-  - Requires a `RequeueFileWorkOrder` token from the RS, which carries `box_id` and `file_id` like the existing `DeleteFileWorkOrder` but uses a `requeue` work type of its own.
+  - Requires a `RequeueFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue`.
   - Returns:
     - 204 on success
     - 404 if the FileUpload or its inbox object no longer exists
