@@ -1,8 +1,9 @@
 # ADR-0004 — Hybrid releases: platform lockstep + per-component PyPI lanes
 
 - **Status:** Accepted — **revised 2026-07-23** (supersedes the original per-component-only
-  scheme, which predated the consequences of an always-integrated HEAD)
-- **Date:** 2026-06-30 / 2026-07-23
+  scheme, which predated the consequences of an always-integrated HEAD) — **amended
+  2026-08-18**: PyPI-lane membership corrected to what the markers declare (see below)
+- **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18
 - **Deciders:** Leon Kuchenbecker
 
 ## Context
@@ -58,16 +59,34 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 
 ### PyPI lane — per-component semver for out-of-tree consumers
 
-- Members: the libraries (`hexkit`, `ghga-service-commons`, `ghga-event-schemas`, `schemapack`,
-  `metldata`) and the public CLI tools (`ghga-connector`, `ghga-validator`).
+- Members (amended 2026-08-18): the libraries (`hexkit`, `ghga-service-commons`,
+  `schemapack`) and the public CLI tools (`ghga-connector`, `ghga-validator`,
+  `ghga-transpiler`). Three changes against the 2026-07-23 list:
+  - `ghga-event-schemas` — **out.** Embedded in the images and consumed from workspace
+    source; nothing outside the deployment installs it, so an external series would have
+    no consumer.
+  - `metldata` — **out.** A library *and* a deployable service, released in the platform
+    lane with the rest of the deployment.
+  - `ghga-transpiler` — **in.** A public CLI stewards install standalone, like
+    `ghga-validator`.
+
+  The `[tool.ghga]` markers are the operative source
+  ([ADR-0014](0014-capability-markers-and-placement.md)) and `scripts/pypi_members.py`
+  reads the lane from them; this list records the decision behind them.
 - A pushed tag **`name/x.y.z`** publishes that component's wheel; CI asserts the tag matches
   the member's version at HEAD. Libraries release **on demand** — when an external consumer
   needs something or a tool release requires it.
+- The tag names the component; **what uploads comes from the version diff** — lane members
+  whose declared version moved and is not yet on the index, ordered dependencies-first.
+  `release.yaml` asserts the tag, then delegates to `pypi-publish.yaml`, which owns that
+  plan. So the lane has one implementation, a tag for an unmoved member is a no-op, bumps
+  arriving through the mainline sync are harmless, and a version that does not move the
+  series forwards is rejected rather than published.
 - **Closure-train rule:** a published tool must not induce untested combinations on user
   machines. `ghga-connector`'s internal closure (`ghga-service-commons`, `hexkit`) is released
   from the same commit when changed, and the tool pins those versions **exactly** (app-style;
-  documented install method: `pipx`/`uvx`). `ghga-validator` has no internal dependencies —
-  its train is trivially itself.
+  documented install method: `pipx`/`uvx`). `ghga-validator` and `ghga-transpiler` have no
+  internal dependencies — their trains are trivially themselves.
 - The **published-combo matrix** ([ADR-0002](0002-uv-workspace-source-coupled-libs.md)) — the
   component against PyPI-resolved dependencies across its supported Python range — is a
   **prerequisite for the first PyPI-lane release from this repo**, since the workspace only

@@ -1,0 +1,127 @@
+# The published-combo matrix (ADR-0002) — the PyPI lane's test gate.
+#
+# Tests each lane member the way an external consumer gets it: its wheel installed into a
+# bare environment, dependencies resolved from PyPI, on Python versions the workspace
+# never runs. ci.yaml calls it on affected members, pypi-publish.yaml before any upload.
+#
+# Members, extras, test deps and the Python range all come from scripts/pypi_members.py.
+name: pypi-matrix
+
+on:
+  workflow_call:
+    inputs:
+      paths:
+        description: 'JSON array of member paths to restrict to; "[]" = all lane members'
+        type: string
+        default: "[]"
+  workflow_dispatch:
+    inputs:
+      paths:
+        description: 'JSON array of member paths; "[]" = all lane members'
+        required: false
+        default: "[]"
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      cells: ${{ steps.cells.outputs.cells }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: cells
+        # One cell per (member, python version).
+        #
+        # $PATHS, not an interpolated `${{ }}`: interpolation pastes the input into the
+        # script as text, where shell syntax in it would run. As a variable it is data.
+        env:
+          PATHS: ${{ inputs.paths }}
+        run: |
+          paths=$(printf '%s' "$PATHS" \
+            | python3 -c "import json,sys; print(' '.join(json.load(sys.stdin)))")
+          cells=$(python3 scripts/pypi_members.py ${paths:+--paths $paths})
+          echo "cells=$cells" >> "$GITHUB_OUTPUT"
+          echo "$cells" | python3 -m json.tool
+
+          # Without this a member with no cells is skipped silently — a green check that
+          # tested nothing. schemapack is in that state today.
+          python3 scripts/pypi_members.py ${paths:+--paths $paths} --members \
+            | python3 -c "
+          import json, sys
+          for member in json.load(sys.stdin):
+              if not member['pythons']:
+                  print(f\"::warning::{member['package']} has no testable version in\"
+                        f\" range (declares {member['requires_python']}, testable\"
+                        f\" {member['testable_requires_python']}) — NOT covered\")
+          "
+
+  test:
+    needs: discover
+    if: ${{ needs.discover.outputs.cells != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        cell: ${{ fromJSON(needs.discover.outputs.cells) }}
+    name: ${{ matrix.cell.package }} on ${{ matrix.cell.python }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      # The wheel carries the dependency specifiers the member publishes with, not the
+      # workspace's source wiring. Its internal dependencies go into the same wheelhouse,
+      # so --find-links below resolves a release train against the libraries from this
+      # commit — while their local versions are the highest available; it is not a pin.
+      - name: Build the wheel and its closure
+        run: |
+          for path in "${{ matrix.cell.path }}" ${{ matrix.cell.internal_deps }}; do
+            uv build --wheel --out-dir /tmp/wheels "$path"
+          done
+          ls -l /tmp/wheels
+
+      # From /tmp: inside the repo, uv picks up the workspace's requires-python (3.13) and
+      # warns about every member that cannot have it.
+      - name: Create a bare ${{ matrix.cell.python }} environment
+        working-directory: /tmp
+        run: uv venv --python "${{ matrix.cell.python }}" /tmp/venv
+
+      - name: Install the wheel from the index
+        working-directory: /tmp
+        env:
+          EXTRAS: ${{ matrix.cell.extras }}
+          PACKAGE: ${{ matrix.cell.package }}
+        run: |
+          # The closure in the wheelhouse is there to be resolved against, not installed
+          # directly — so pick this member's own wheel by name.
+          wheel=$(ls /tmp/wheels/"${PACKAGE}"-*.whl)
+          spec="$wheel"
+          [ -n "$EXTRAS" ] && spec="${wheel}[${EXTRAS}]"
+          echo "installing $spec"
+          uv pip install --python /tmp/venv/bin/python \
+            --find-links /tmp/wheels "$spec"
+
+      # Members carry no test dependencies of their own (the dev toolchain is centralised
+      # in the root dependency-group), so the suite's come from there, minus the lint
+      # tools, plus whatever the member imports without declaring.
+      - name: Install the test dependencies
+        run: |
+          python3 scripts/pypi_members.py --dev-requirements \
+            --package "${{ matrix.cell.package }}" > /tmp/test-requirements.txt
+          cat /tmp/test-requirements.txt
+          uv pip install --python /tmp/venv/bin/python \
+            --find-links /tmp/wheels -r /tmp/test-requirements.txt
+
+      - name: Show the resolved environment
+        run: uv pip freeze --python /tmp/venv/bin/python
+
+      # cwd = the member directory, as in ci.yaml: each member is its own pytest rootdir,
+      # and the src/ layout means the tests import the installed package.
+      - name: Run the test suite
+        working-directory: ${{ matrix.cell.path }}
+        run: /tmp/venv/bin/python -m pytest -q --durations=10

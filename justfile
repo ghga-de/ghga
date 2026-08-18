@@ -66,6 +66,79 @@ test target=".":
 affected base="origin/main":
     uv run python scripts/affected_targets.py --base {{base}}
 
+# --- PyPI lane --------------------------------------------------------------------------
+# Run ONE cell of the published-combo matrix (.github/workflows/pypi-matrix.yaml) locally.
+#
+# Use it when a cell goes red: `uv sync` cannot reproduce those failures, because in the
+# shared workspace venv a member can import whatever a sibling installed. Here it gets only
+# its own wheel and its declared dependencies, so the gaps surface.
+#
+#   just published-combo tools/ghga-connector        # on the default version
+#   just published-combo libs/hexkit 3.11
+#
+# Test one member the way an external consumer gets it: wheel + PyPI-resolved deps.
+published-combo member python="3.12":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # The same script CI reads, so a local run cannot drift from the cell.
+    cell=$(MEMBER="{{member}}" PYTHON="{{python}}" \
+      MEMBERS="$(python3 scripts/pypi_members.py --members --paths "{{member}}")" \
+      python3 -c "
+    import json, os, sys
+    member, python = os.environ['MEMBER'], os.environ['PYTHON']
+    members = json.loads(os.environ['MEMBERS'])
+    if not members:
+        sys.exit(f'error: {member} is not a PyPI-lane member — check its [tool.ghga]'
+                 ' release marker (ADR-0014)')
+    cell = members[0]
+    package, declared = cell['package'], cell['testable_requires_python']
+    if python not in cell['pythons']:
+        runs_on = ', '.join(cell['pythons']) or 'no version in the matrix range'
+        sys.exit(f'error: the matrix does not run {package} on {python} — it declares'
+                 f' {declared}, so it runs on: {runs_on}')
+    print('\t'.join([package, ','.join(cell['extras']), ' '.join(cell['internal_deps'])]))
+    ")
+    IFS=$'\t' read -r package extras internal_deps <<< "$cell"
+
+    # Fixed path, not mktemp: the venv outlives the recipe, so a failure can be poked at
+    # (`$work/venv/bin/python -m pytest -k ...`), and a re-run wipes it rather than
+    # leaving a trail of temp trees.
+    work="${TMPDIR:-/tmp}/ghga-published-combo/$package-{{python}}"
+    rm -rf "$work" && mkdir -p "$work/wheels"
+
+    # Member + internal closure in one wheelhouse, so the install resolves against the
+    # libraries from this tree rather than PyPI's, as in CI.
+    for path in "{{member}}" $internal_deps; do
+        uv build --wheel --out-dir "$work/wheels" "$path"
+    done
+
+    # From outside the repo: inside it, uv picks up the workspace's requires-python (3.13)
+    # and warns about every member that cannot have it.
+    cd "$work"
+    uv venv --python "{{python}}" "$work/venv"
+
+    # The closure is in the wheelhouse to be resolved against, not installed directly —
+    # so pick this member's own wheel by name.
+    wheel=$(ls "$work"/wheels/"$package"-*.whl)
+    spec="$wheel"
+    [ -n "$extras" ] && spec="${wheel}[${extras}]"
+    echo "== installing $spec"
+    uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" "$spec"
+
+    # Test dependencies live in the root dependency-group, not in the member — minus the
+    # lint tools, plus whatever this member imports without declaring.
+    cd "{{justfile_directory()}}"
+    python3 scripts/pypi_members.py --dev-requirements --package "$package" \
+      > "$work/test-requirements.txt"
+    uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" \
+      -r "$work/test-requirements.txt"
+
+    # cwd = the member directory, as in CI: each member is its own pytest rootdir, and the
+    # src/ layout means the tests import the installed package, not the working tree.
+    echo "== running {{member}} tests on {{python}} (env: $work/venv)"
+    cd "{{member}}"
+    "$work/venv/bin/python" -m pytest -q --durations=10
+
 # --- Front end (data-portal, pnpm) ------------------------------------------------------
 fe-install:
     cd frontend/data-portal && pnpm install --frozen-lockfile

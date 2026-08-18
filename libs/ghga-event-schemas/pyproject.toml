@@ -55,3 +55,8 @@ source = [
 
 [tool.uv.sources]
 ghga-service-commons = { workspace = true }
+
+[tool.ghga]
+# Opts out of the libs/* PyPI default: embedded in the platform images, with no publishing
+# cadence of its own (ADR-0014; ADR-0004's 2026-08-18 amendment says why).
+release = "none"

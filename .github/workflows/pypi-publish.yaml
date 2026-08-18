@@ -1,0 +1,184 @@
+# PyPI lane — publish the libraries and public CLI tools (ADR-0004).
+#
+# DORMANT by intention, not by mechanism: the workflow is complete, and nobody dispatches
+# it. The upstream repos own these releases until they retire. Two things keep an
+# accidental run harmless — dispatch only, and uploading needs the `publish` input on top
+# (with it off, the run builds, tests, and reports what it would upload).
+#
+# A version bump triggers a release, not a change: the author bumps in the PR, the reviewer
+# sees it in the diff. Bumps also arrive through the mainline sync, so the plan skips
+# versions already on PyPI — which is also what makes re-runs idempotent. An unreachable
+# index fails the plan instead: "could not tell" must not pass for "already released".
+#
+# CREDENTIALS: trusted publishing, wired here but not yet set up on the PyPI side. The
+# publish job requests an OIDC token and `uv publish` exchanges it, so this repo holds no
+# API token. Each of the six distributions is its own pypi.org project, so an owner has to
+# add a trusted publisher (owner `ghga-de`, repo `ghga`, workflow `pypi-publish.yaml`) six
+# times. Until then, uploads fail at that exchange.
+#
+# On enablement (after the upstreams are archived):
+#   - switch the trigger to `push: branches: [main]` with base = github.event.before
+#   - add the six trusted publishers
+#   - settle the closure train's pinning question: detection and ordering are implemented,
+#     ADR-0004's "pin them exactly" is not (release_plan's docstring says why).
+name: pypi-publish
+
+on:
+  # release.yaml routes `name/x.y.z` tags here, so the lane has one implementation.
+  workflow_call:
+    inputs:
+      base:
+        description: "Git ref to diff versions against (e.g. HEAD^, or a release tag)"
+        type: string
+        required: true
+      publish:
+        description: "Upload to PyPI; off = build + test only, reporting what it would do"
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Git ref to diff versions against (e.g. HEAD^, or a release tag)"
+        required: true
+        default: HEAD^
+      publish:
+        description: "Upload to PyPI; off = build + test only, reporting what it would do"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  # -------- what moved, and is it actually ours to publish? ------------------------------
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      members: ${{ steps.plan.outputs.members }}
+      paths: ${{ steps.plan.outputs.paths }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # version diffing needs history
+      # The plan drops versions already on PyPI, orders the set dependencies-first, and
+      # fails on any violation — before an upload, since half a train on the index is
+      # worse than none.
+      #
+      # $BASE, not an interpolated `${{ }}`: interpolation pastes the input into the
+      # script as text, where shell syntax in it would run. As a variable it is data.
+      - id: plan
+        env:
+          BASE: ${{ inputs.base }}
+        run: |
+          plan=$(python3 scripts/pypi_members.py --plan --base "$BASE" --check-pypi)
+          echo "$plan" | python3 -m json.tool
+
+          errors=$(echo "$plan" | python3 -c "
+          import json, sys
+          for error in json.load(sys.stdin)['errors']:
+              print(f'::error::{error}')
+          ")
+          if [ -n "$errors" ]; then
+            echo "$errors"
+            exit 1
+          fi
+
+          members=$(echo "$plan" | python3 -c "
+          import json, sys
+          print(json.dumps(json.load(sys.stdin)['members']))
+          ")
+          paths=$(echo "$plan" | python3 -c "
+          import json, sys
+          print(json.dumps(json.load(sys.stdin)['paths']))
+          ")
+          echo "members=$members" >> "$GITHUB_OUTPUT"
+          echo "paths=$paths"     >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json, os
+          bumped = json.loads(os.environ["MEMBERS"])
+          if not bumped:
+              print("No unpublished version bumps since the base ref — nothing to do.")
+          else:
+              print("| member | version | previous |")
+              print("|---|---|---|")
+              for m in bumped:
+                  print(f"| {m['package']} | {m['version']} | {m['previous_version']} |")
+          EOF
+        env:
+          MEMBERS: ${{ steps.plan.outputs.members }}
+
+  # -------- the gate: nothing is uploaded that the matrix has not passed -----------------
+  test:
+    needs: plan
+    if: ${{ needs.plan.outputs.paths != '[]' }}
+    uses: ./.github/workflows/pypi-matrix.yaml
+    with:
+      paths: ${{ needs.plan.outputs.paths }}
+
+  # -------- build and (only on request) upload, dependencies first -----------------------
+  #
+  # Sequential, not a matrix: parallel cells have no ordering, so ghga-connector could
+  # reach the index before the hexkit release it needs, breaking `pip install` for anyone
+  # in that window. This walks the plan's order and stops at the first failure, leaving a
+  # prefix of the train published rather than a hole in the middle. A train is at most
+  # three members, so the parallelism costs nothing worth having.
+  publish:
+    needs: [plan, test]
+    if: ${{ needs.plan.outputs.paths != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # uv exchanges this short-lived OIDC token with PyPI, so no API token is ever
+      # created, stored or rotated here — as the platform lane does with GITHUB_TOKEN.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Build, check and publish the train in order
+        env:
+          MEMBERS: ${{ needs.plan.outputs.members }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
+            path=$(echo "$member"    | jq -r '.path')
+            package=$(echo "$member" | jq -r '.package')
+            version=$(echo "$member" | jq -r '.version')
+
+            echo "::group::$package $version"
+            rm -rf dist
+
+            # Both artefacts: the sdist is what consumers on a platform with no wheel build
+            # from.
+            uv build --out-dir dist "$path"
+            ls -l dist
+            uvx twine check dist/*
+
+            # A local version (0.0.0+ghga.X) means a platform-stamped tree slipped into a
+            # PyPI build. PyPI would reject it anyway; failing here says why.
+            case "$version" in
+              *+*) echo "::error::$package: local version $version is not publishable"
+                   exit 1 ;;
+            esac
+
+            if [ "$PUBLISH" = "true" ]; then
+              # `always`, not the default `automatic`: automatic falls back to hunting for
+              # a token when OIDC is unavailable, reporting a misconfigured publisher as a
+              # credential error. Until the six trusted publishers exist, this fails — and
+              # says so.
+              uv publish --trusted-publishing always dist/*
+              echo "- published \`$package\` $version" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- dry run: would publish \`$package\` $version" \
+                >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "::endgroup::"
+          done

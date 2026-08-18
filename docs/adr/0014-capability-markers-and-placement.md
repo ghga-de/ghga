@@ -2,7 +2,9 @@
 
 - **Status:** Accepted — **amended 2026-07-23**: added the `release` lane key and
   directory defaults (see the revised [ADR-0004](0004-versioning-and-release-by-tag.md))
-- **Date:** 2026-06-30 / 2026-07-23
+  — **amended 2026-08-18**: `ghga-transpiler` and `ghga-event-schemas` added to the
+  explicit-marker list
+- **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18
 - **Deciders:** Leon Kuchenbecker
 
 ## Context
@@ -34,9 +36,11 @@ markers are only written where a member deviates:
 
 Explicit markers (the deviations): `auth-km-jobs` (`platform` + image — a K8s job, relocated
 to `services/` at cutover), `ghga-datasteward-kit` (`platform`, **no** image — run-from-repo),
-`ghga-connector` and `ghga-validator` (`pypi`), and `em-transformation-service`
-(`none` — still an unmodified template skeleton, excluded until it has a real identity
-upstream). Convention: an image member's console
+`ghga-connector`, `ghga-validator` and `ghga-transpiler` (`pypi` — public CLIs, and `tools/*`
+must opt in), `ghga-event-schemas` (`none` — a `libs/` member that opts *out*: consumed from
+workspace source and embedded in the images, with no independent publishing cadence), and
+`em-transformation-service` (`none` — still an unmodified template skeleton, excluded until
+it has a real identity upstream). Convention: an image member's console
 script is named exactly like its distribution (the two divergers, `auth-service` and
 `auth-km-jobs`, were harmonised by normalising their distribution-name spellings — a
 packaging-inert change — and renaming the latter's generic `run` script); the package
