@@ -100,8 +100,10 @@ demo-template:
 # Tags use the release registry scheme with tag 'local' so the charts' generated
 # image references resolve with only a tag override (values-local.yaml).
 # `tag` and trailing docker-build flags are overridable so CI reuses these recipes
-# instead of duplicating the build commands — e.g. dev-images.yaml / security-scan.yaml
-# run `just image-mono dev --pull --label org.opencontainers.image.revision=<sha>`.
+# instead of duplicating the build commands — e.g. security-scan.yaml runs
+# `just image-mono updated --pull`. dev-images.yaml deliberately does NOT: publishing
+# attestations needs a docker-container buildx builder, which these `docker build`
+# recipes cannot provide (see ADR-0018).
 image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail

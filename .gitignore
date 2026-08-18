@@ -39,3 +39,6 @@ rendered/
 claude-backup/
 # local Claude Code project state (skills, settings) — not part of the repo
 .claude/
+
+# buildx --metadata-file output
+metadata.json
