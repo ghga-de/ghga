@@ -105,7 +105,7 @@ def get_public_key(my_public_key_path: Path) -> bytes:
 
 def make_passphrase_callback(tries_left: int) -> Callable:
     """Generates the passphrase callback for decrypting crypt4gh PKs.
-    
+
     Mock this in tests when calling get_private_key for an encrypted
     private key to simulate user input.
     """
