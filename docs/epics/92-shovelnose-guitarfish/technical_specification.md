@@ -28,7 +28,7 @@ When files don't pass re-encryption and integrity checks ("interrogation") in DH
 
 New endpoints:
 
-- `POST /upload-boxes/{box_id}/requeue (RS)`:
+- `POST /rpc/upload-boxes/{box_id}/requeue (RS)`:
   - _Requeue all failed files in a box_
   - Data Steward only
   - Returns:
