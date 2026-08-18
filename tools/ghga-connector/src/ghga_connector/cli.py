@@ -67,11 +67,6 @@ def batch_upload(  # noqa: PLR0913
         help="The path to a private key from the key pair that will be used to encrypt the "
         + "crypt4gh envelope. Defaults to key.sec in the current folder.",
     ),
-    passphrase: str | None = typer.Option(
-        None,
-        help="Passphrase for the encrypted private key. "
-        + "Only needs to be provided if the key is actually encrypted.",
-    ),
     max_retries: int = typer.Option(
         DEFAULT_BATCH_MAX_RETRIES,
         help="Maximum number of automatic retries for files that fail to upload.",
@@ -111,7 +106,6 @@ def batch_upload(  # noqa: PLR0913
             tsv=tsv,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
             max_retries=max_retries,
             dry_run=dry_run,
             shorten=shorten_names,
@@ -132,11 +126,6 @@ def ubox(
         help="The path to a private key from the key pair that will be used to encrypt the "
         + "crypt4gh envelope. Defaults to key.sec in the current folder.",
     ),
-    passphrase: str | None = typer.Option(
-        None,
-        help="Passphrase for the encrypted private key. "
-        + "Only needs to be provided if the key is actually encrypted.",
-    ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
     ),
@@ -147,13 +136,12 @@ def ubox(
         async_ubox(
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
         )
     )
 
 
 @cli.command(no_args_is_help=True)
-def download(  # noqa: PLR0913
+def download(
     *,
     output_dir: Path = typer.Option(
         ..., help="The directory to put the downloaded files into."
@@ -170,11 +158,6 @@ def download(  # noqa: PLR0913
         + "that was announced when the download token was created. "
         + "Defaults to key.sec in the current folder.",
     ),
-    passphrase: str | None = typer.Option(
-        None,
-        help="Passphrase for the encrypted private key. "
-        + "Only needs to be provided if the key is actually encrypted.",
-    ),
     debug: bool = typer.Option(
         False, help="Set this option in order to view traceback for errors."
     ),
@@ -190,7 +173,6 @@ def download(  # noqa: PLR0913
             output_dir=output_dir,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
             overwrite=overwrite,
         )
     )
