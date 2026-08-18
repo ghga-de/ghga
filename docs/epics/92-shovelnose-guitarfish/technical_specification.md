@@ -61,6 +61,7 @@ New endpoints:
     - 404 if the FileUpload or its inbox object no longer exists
     - 409 if the FileUpload's state or the box's state precludes a requeue
 
+A requeue is a command, not a resource manipulation, so these four endpoints use the `/rpc/` convention we already follow elsewhere. RS mounts `box_router` under an `/upload-boxes` prefix, so the RPC routes need a second mount point, but not a second module. `upload_boxes.py` already declares a `storage_router` alongside `box_router` for exactly this reason, so the requeue handlers stay in that module as a `box_rpc_router`, and `routes.py` gains one `include_router` line for it under `/rpc/upload-boxes`. UCS needs no structural change, because its router declares full literal paths without a prefix.
 Existing endpoints whose behavior changes:
 
 - `DELETE /upload-boxes/{box_id}/uploads/{file_id} (RS)` and `DELETE /boxes/{box_id}/uploads/{file_id} (UCS)`: now also delete the object from the inbox bucket when the FileUpload is 'failed', and are allowed while the box is locked for that state (see "Blocking archival and resolving a failed file (UCS)" below).
