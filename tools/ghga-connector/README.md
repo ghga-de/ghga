@@ -69,6 +69,10 @@ The service requires the following configuration parameters:
 - <a id="properties/max_wait_time"></a>**`max_wait_time`** *(integer)*: Maximum time in seconds to wait before quitting without a download. Exclusive minimum: `0`. Default: `3600`.
 - <a id="properties/part_size"></a>**`part_size`** *(integer)*: The part size to use for download. Exclusive minimum: `0`. Default: `67108864`.
 - <a id="properties/wkvs_api_url"></a>**`wkvs_api_url`** *(string)*: URL to the root of the WKVS API. Should start with https://. Default: `"https://data.ghga.de/.well-known"`.
+- <a id="properties/passphrase"></a>**`passphrase`**: The passphrase used, if applicable, to decrypt the Crypt4GH private key for use in upload. Default: `null`.
+  - **Any of**
+    - <a id="properties/passphrase/anyOf/0"></a>*string, format: password*
+    - <a id="properties/passphrase/anyOf/1"></a>*null*
 
 ### Usage:
 
