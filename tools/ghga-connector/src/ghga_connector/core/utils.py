@@ -15,16 +15,18 @@
 
 """Various helper functions"""
 
+import getpass
+import io
 import logging
 import sys
+from contextlib import redirect_stderr
 from functools import partial
 from pathlib import Path
 from types import TracebackType
 from typing import Any
 
 import crypt4gh.keys
-import crypt4gh.lib
-from pydantic import SecretBytes
+from pydantic import SecretBytes, SecretStr
 
 from ghga_connector import exceptions
 from ghga_connector.core.downloading.structs import FileInfo
@@ -101,18 +103,45 @@ def get_public_key(my_public_key_path: Path) -> bytes:
 
 
 def get_private_key(
-    my_private_key_path: Path, passphrase: str | None = None
+    my_private_key_path: Path, passphrase: SecretStr | None = None
 ) -> SecretBytes:
-    """Get the user's private key, using the passphrase if supplied/needed."""
+    """Get the user's private key, using the passphrase if supplied/needed.
+
+    If no passphrase is supplied upfront but crypt4gh detects that the key is encrypted,
+    the user will have 3 attempts to input the passphrase (via `getpass`). If passphrase
+    is supplied upfront, however, only one attempt is made to obtain the key.
+    Stderr is suppressed during the call to `crypt4gh.keys.get_private_key` in order
+    to suppress the error messages written by the library.
+    """
     if not my_private_key_path.is_file():
         raise exceptions.PrivateKeyFileDoesNotExistError(
             private_key_path=my_private_key_path
         )
-    callback = (lambda: passphrase) if passphrase else None
-    my_private_key = SecretBytes(
-        crypt4gh.keys.get_private_key(filepath=my_private_key_path, callback=callback)
-    )
-    return my_private_key
+
+    tries_left = 3 if passphrase is None else 1
+    while tries_left:
+        try:
+            prompt_text = f"Enter passphrase to decrypt Crypt4GH private key ({tries_left} attempt(s) remaining): "
+            prompt_fn = partial(getpass.getpass, prompt_text)
+            callback = (
+                (lambda: passphrase.get_secret_value()) if passphrase else prompt_fn
+            )
+            with redirect_stderr(io.StringIO()):
+                return SecretBytes(
+                    crypt4gh.keys.get_private_key(
+                        filepath=my_private_key_path, callback=callback
+                    )
+                )
+        except (SystemExit, TypeError):
+            tries_left -= 1
+            CLIMessageDisplay.failure("Passphrase incorrect.")
+        except ValueError:
+            CLIMessageDisplay.failure(
+                "The specified private key seems to have an invalid format."
+            )
+            sys.exit(1)
+    CLIMessageDisplay.failure("Could not obtain private key.")
+    sys.exit(1)
 
 
 def check_for_existing_file(*, file_info: FileInfo, overwrite: bool):
