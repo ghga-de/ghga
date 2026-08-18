@@ -18,6 +18,7 @@ chart-generation, and release pipelines key off these — **not** off the folder
 
 ```toml
 [tool.ghga]
+release = "platform"  # release lane: "platform" (lockstep) | "pypi" | "none"
 image = true    # build & push a container image (and generate a Helm chart) on the release tag
 pypi  = true    # publish a wheel to PyPI on the release tag (disabled during the sandbox)
 cli   = true    # exposes a console entry point
@@ -27,9 +28,15 @@ executable = "auth-service"   # console script used as the image ENTRYPOINT
 roles = ["rest", "consumer"]  # deployment roles (distinct service_instance_id per role)
 ```
 
-Examples: `libs/metldata` → `{image, pypi, cli}`; `libs/hexkit` → `{pypi}`;
-`services/auth-service` → `{image}`; `tools/ghga-connector` → `{pypi, cli}`;
-`tools/ghga-transpiler` → `{image, pypi, cli}`.
+Directories supply the defaults, so a marker is only written where a member deviates:
+`services/*` and `frontend/*` default to the platform lane with an image, `libs/*` to the
+PyPI lane, `tools/*` to no lane at all
+([ADR-0014](adr/0014-capability-markers-and-placement.md)).
+
+Examples: `libs/hexkit` → `{pypi}` and `services/auth-service` → `{platform, image}`, both by
+default; `libs/metldata` → `{platform, image}` (a library that is also deployed);
+`libs/ghga-event-schemas` → `{none}` (embedded in the images, never published on its own);
+`tools/ghga-connector` and `tools/ghga-transpiler` → `{pypi, cli}` (public CLIs opting in).
 
 ## Internal dependencies
 

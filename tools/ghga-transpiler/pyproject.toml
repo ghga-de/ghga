@@ -62,3 +62,11 @@ source = [
     "/workspace/src",
     "**/lib/python*/site-packages",
 ]
+
+[tool.ghga]
+# Public CLI, no internal dependencies: opts in to the PyPI lane, which tools/* does not
+# get by default (ADR-0014). This is the v2 branch — unlike main (3.x) it has no
+# schemapack dependency.
+release = "pypi"
+pypi = true
+cli = true

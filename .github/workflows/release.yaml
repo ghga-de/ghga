@@ -46,8 +46,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - id: route
+        # $REF, not an interpolated `${{ }}`: interpolation pastes the input into the
+        # script as text, where shell syntax in it would run. As a variable it is data.
+        env:
+          REF: ${{ github.event.inputs.ref || github.ref_name }}
         run: |
-          ref="${{ github.event.inputs.ref || github.ref_name }}"   # name/x.y.z
+          ref="$REF"   # name/x.y.z
           name="${ref%/*}"; version="${ref##*/}"
           if [ "$name" = "ghga" ]; then lane=platform; else lane=pypi; fi
           echo "name=$name"       >> "$GITHUB_OUTPUT"
@@ -61,6 +65,33 @@ jobs:
           # Member enumeration lives in scripts/image_members.py — the same source
           # the chart generator (deploy/src/create_charts.py) consumes.
           echo "images=$(python3 scripts/image_members.py)" >> "$GITHUB_OUTPUT"
+      # ADR-0004: the tag must name a lane member and match its version at HEAD. What gets
+      # uploaded is pypi-publish.yaml's decision; this only stops a tag announcing a
+      # release nobody made.
+      - name: Check the tag against the member it names
+        if: ${{ steps.route.outputs.lane == 'pypi' }}
+        env:
+          NAME: ${{ steps.route.outputs.name }}
+          VERSION: ${{ steps.route.outputs.version }}
+        run: |
+          python3 scripts/pypi_members.py --members > /tmp/members.json
+          python3 - <<'EOF'
+          import json, os, re, sys
+
+          def canon(name):  # PEP 503: the tag spells the distribution either way
+              return re.sub(r"[-_.]+", "-", name).lower()
+
+          name, version = os.environ["NAME"], os.environ["VERSION"]
+          members = {canon(m["package"]): m for m in json.load(open("/tmp/members.json"))}
+          member = members.get(canon(name))
+          if member is None:
+              known = ", ".join(sorted(members))
+              sys.exit(f"::error::{name} is not a PyPI-lane member (lane: {known})")
+          declared = member["version"]
+          if declared != version:
+              sys.exit(f"::error::tag says {version}, but {name} declares {declared}")
+          print(f"{name} {version} matches {member['path']}")
+          EOF
       # TODO on enablement: assert the tagged commit is on main AND its CI run is green
       # (the release verifies the integrated HEAD; it does not re-test it).
 
@@ -127,17 +158,22 @@ jobs:
       # its own Dockerfile; charts are packaged and pushed as OCI artifacts with
       # version/appVersion = the platform version (Phase B).
 
-  # -------- pypi lane: dormant stub ------------------------------------------------------
+  # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
+  #
+  # That workflow owns the plan (what bumped, in what order, what is already on the index)
+  # and the published-combo gate; this job only routes the tag to it. So a tag whose member
+  # did not move is a reported no-op, and dispatching pypi-publish.yaml directly does the
+  # same thing.
   publish-pypi:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      # TODO on enablement (ADR-0004 pypi lane):
-      #  - assert tag version == the member's pyproject version at HEAD
-      #  - closure train for tools: changed internal deps must be released from this
-      #    commit first, and the tool pins them exactly
-      #  - prerequisite: the published-combo matrix (ADR-0002) exists for this member
-      - run: |
-          echo "DORMANT: would publish ${{ needs.resolve.outputs.name }} ${{ needs.resolve.outputs.version }} to PyPI — targets not configured."
+    permissions:
+      contents: read
+      # For trusted publishing in the called workflow, which cannot hold more than its
+      # caller grants.
+      id-token: write
+    uses: ./.github/workflows/pypi-publish.yaml
+    with:
+      # The tagged commit is the bump commit, so its parent carries the previous versions.
+      base: HEAD^
+      publish: ${{ inputs.push }}
