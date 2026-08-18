@@ -116,6 +116,15 @@ Dropping the `_remove_completed_file_upload()` call from `process_interrogation_
 - `_delete_box_file_uploads()` needs to also remove failed file upload content during whole-box deletion.
 - `process_file_deletion_requested()` currently returns early for 'cancelled' and 'failed', which should be updated so only 'cancelled' returns early, while 'failed' file content is deleted.
 - `_try_to_replace_upload()` deletes the old FileUpload document so there can be a new upload with the same alias. The old object needs to be deleted first, or it becomes an orphan that only the cleanup job would catch. This path is reachable from the Connector, which treats failed aliases as not present when resuming a batch upload (note that the Connector has to be updated too).
+- We also need to guard against Kafka hiccups. For example, the following could happen (but won't because we'll compare `report.interrogated_at` against `file_upload.state_updated`)
+  1. DHFS reports a failure for some file.
+  2. FIS publishes the InterrogationFailure event.
+  3. UCS gets that event and updates the local FileUpload.
+  4. Data Steward requests a retry sometime later on.
+  5. UCS updates its FileUpload again back to the 'inbox' state.
+  6. DHFS begins processing the file.
+  7. Some Kafka blip causes the UCS to re-consume the first InterrogationFailure event.
+  8. UCS marks the FileUpload as failed and kills the upload.
 
 ### The requeue logic in UCS
 
