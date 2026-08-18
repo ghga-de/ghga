@@ -45,7 +45,7 @@ New endpoints:
     - 409 if the box is archived or the file's state doesn't allow a requeue
 
 
-- `POST /boxes/{box_id}/requeue (UCS)`:
+- `POST /rpc/boxes/{box_id}/requeue (UCS)`:
   - _Requeue all failed files in a box_
   - Requires a `RequeueFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue`.
   - Returns:
