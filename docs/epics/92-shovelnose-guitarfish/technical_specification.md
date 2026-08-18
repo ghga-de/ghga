@@ -63,7 +63,7 @@ New endpoints:
 
 Existing endpoints whose behavior changes:
 
-- `DELETE /upload-boxes/{box_id}/uploads/{file_id} (RS)` and `DELETE /boxes/{box_id}/uploads/{file_id} (UCS)`: now also delete the object from the inbox bucket when the FileUpload is 'failed', and are allowed while the box is locked for that state (see "Resolving a failed file" below).
+- `DELETE /upload-boxes/{box_id}/uploads/{file_id} (RS)` and `DELETE /boxes/{box_id}/uploads/{file_id} (UCS)`: now also delete the object from the inbox bucket when the FileUpload is 'failed', and are allowed while the box is locked for that state (see "Blocking archival and resolving a failed file (UCS)" below).
 - `PATCH /upload-boxes/{box_id} (RS)` and `PATCH /boxes/{box_id} (UCS)` with `state: "archived"`: now rejected while the box still holds files in the 'failed' state. RS returns the offending file IDs with the 409 so the Data Steward can act on them.
 - `GET /upload-boxes/{box_id}/uploads (RS)` and `GET /boxes/{box_id}/uploads (UCS)`: gain an optional `state` query parameter for filtering. Omitting it returns every state, failed files included, which is what "returned by default" means here.
 
@@ -74,7 +74,7 @@ No new events are introduced. The requeue is propagated by the existing FileUplo
 
 ### Current behavior
 
-DHFS submits a failure report to FIS. FIS stores the `InterrogationReport`, sets the `FileUnderInterrogation` to `state="failed"`, `interrogated=True`, `can_remove=True`, and publishes an `InterrogationFailure` event (`fis/core/interrogation.py:168`). UCS consumes that event in `process_interrogation_failure()` (`ucs/core/controller.py:1285`), deletes the object from the inbox bucket, sets the FileUpload to 'failed' and records the reason. At that point the file is basically done. The object is deleted from the S3 inbox bucket, so the only way forward for that same file is for the submitter to start over with a new upload (targeting the same alias).
+DHFS submits a failure report to FIS. FIS stores the `InterrogationReport`, sets the `FileUnderInterrogation` to `state="failed"`, `interrogated=True`, `can_remove=True`, and publishes an `InterrogationFailure` event. UCS consumes that event in `process_interrogation_failure()`, deletes the object from the inbox bucket, sets the FileUpload to 'failed' and records the reason. At that point the file is basically done. The object is deleted from the S3 inbox bucket, so the only way forward for that same file is for the submitter to start over with a new upload (targeting the same alias).
 
 Failed files are also invisible to (nearly) everything afterwards. `COUNTED_UPLOAD_STATES` omits 'failed', so it doesn't contribute to `file_count` or `size`. `archive_file_upload_box()` only blocks archival on 'init' and 'inbox' files, and RS's `_check_archival_prerequisites()` and `store_accession_map()` both filter failed files out before checking that everything has an accession.
 
@@ -113,7 +113,7 @@ Dropping the `_remove_completed_file_upload()` call from `process_interrogation_
 - `remove_file_upload()` only calls `_remove_completed_file_upload()` when the state is 'inbox'. It needs to do the same for 'failed', otherwise deleting a failed file leaves its object behind, and once the FileUpload record is gone the object is unattributable. In this case the cleanup job would actually remove the object, but it's better for us to tidy up as we go rather than leave everything to the cleanup job.
 - `_delete_box_file_uploads()` needs to also remove failed file upload content during whole-box deletion.
 - `process_file_deletion_requested()` currently returns early for 'cancelled' and 'failed', which should be updated so only 'cancelled' returns early, while 'failed' file content is deleted.
-- `_try_to_replace_upload()` deletes the old FileUpload document so there can be a new upload with the same alias. The old object needs to be deleted first, or it becomes an orphan that only the cleanup job would catch. This path is reachable from the connector, which treats failed aliases as not present when resuming a batch upload (note that the connector has to be updated too).
+- `_try_to_replace_upload()` deletes the old FileUpload document so there can be a new upload with the same alias. The old object needs to be deleted first, or it becomes an orphan that only the cleanup job would catch. This path is reachable from the Connector, which treats failed aliases as not present when resuming a batch upload (note that the Connector has to be updated too).
 
 ### The requeue logic in UCS
 
