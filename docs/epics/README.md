@@ -107,3 +107,5 @@ This repository is part of the [Epic Planning and Marathon SOP](https://ghga.pag
 - (88) [Pistol Shrimp](./88-pistol-shrimp/technical_specification.md): UCS Upload Permission Guardrails
 - (89) [Apollo](./89-apollo/technical_specification.md): Initial Version of the GHGA Registry Service
 - (90) [Red-Billed Quelea](./90-red-billed-quelea/technical_specification.md): Support for Batch DAO Operations in Hexkit
+- (91) [Army Ant](./91-army-ant/technical_specification.md): Parallelize DHFS File Interrogation
+
