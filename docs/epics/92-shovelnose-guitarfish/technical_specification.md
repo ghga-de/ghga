@@ -32,7 +32,7 @@ New endpoints:
   - _Requeue all failed files in a box_
   - Data Steward only
   - Returns:
-    - 204 on success
+    - 200 on success plus a payload of `{requeued: [file_ids], skipped: [{file_id, reason}]}`
     - 404 if the box isn't found
     - 409 if the box is archived
 
@@ -49,7 +49,7 @@ New endpoints:
   - _Requeue all failed files in a box_
   - Requires a `RequeueFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue`.
   - Returns:
-    - 204 on success
+    - 200 on success plus a payload of `{requeued: [file_ids], skipped: [{file_id, reason}]}`
     - 404 if the box isn't found
     - 409 if the box is archived
 
