@@ -41,3 +41,6 @@ claude-backup/
 /.claude/
 # leave out every local claude settings
 **/.claude/settings.local.json
+
+# buildx --metadata-file output
+metadata.json

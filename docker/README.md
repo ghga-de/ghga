@@ -32,3 +32,20 @@ docker build -f docker/Dockerfile \
   in one venv) and the front-end image. Not release artifacts — they feed the daily
   vulnerability watch (`.github/workflows/security-scan.yaml`), which rescans them,
   trials a lockfile update, and opens a PR when the update fixes known CVEs.
+
+Every published tag also carries a keyless cosign signature (over the resolved digest)
+plus SBOM and SLSA-provenance attestations (buildx-native, `provenance=mode=max`). See
+[ADR-0018](../docs/adr/0018-image-signing-sbom-provenance.md) for the decision record.
+
+Because buildx's own attestations live inside the OCI index where `cosign` does not look,
+both predicates are additionally re-published as signed cosign attestations
+(`cosign attest --type spdxjson` / `--type slsaprovenance1`) against the same digest — so
+`cosign verify-attestation`, and any policy engine built on it, can actually query them.
+`scripts/attest-image.sh` does that re-publishing and is shared by both publish workflows.
+
+That is the **producer** side only. The one thing CI does not prove is the keyless
+certificate identity: the OIDC subject strings a verifier must match are predicted, not
+confirmed (ADR-0018 "Verification identity"), because there is no OIDC token outside a real
+CI run. Admission-control verification lives in `devops-kubernetes-hub`
+([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)); treat these images as
+signed-but-identity-unproven until that side confirms it.
