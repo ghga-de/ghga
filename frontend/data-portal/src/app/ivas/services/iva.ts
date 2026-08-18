@@ -84,11 +84,17 @@ export class IvaService {
   }
 
   /**
-   * Reload all users' IVAs
+   * Reload all users' IVAs, bypassing the HTTP cache.
+   * When the IVAs have not been requested yet in this session, this starts the
+   * first load, since reloading an idle resource would do nothing.
    */
   reloadAllIvas(): void {
     this.#httpCache.delete(this.#ivasUrl);
-    this.allIvas.reload();
+    if (this.#loadAll()) {
+      this.allIvas.reload();
+    } else {
+      this.loadAllIvas();
+    }
   }
 
   /**
