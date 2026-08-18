@@ -36,7 +36,7 @@ New endpoints:
     - 404 if the box isn't found
     - 409 if the box is archived
 
-- `POST /upload-boxes/{box_id}/uploads/{file_id}/requeue (RS)`: 
+- `POST /rpc/upload-boxes/{box_id}/uploads/{file_id}/requeue (RS)`: 
   - _Requeue a single file that failed interrogation so it gets picked up again_.
   - Data Steward only
   - Returns:
