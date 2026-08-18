@@ -156,7 +156,7 @@ We should also update UCS and RS to allow 'failed' files to be deleted from boxe
 
 ### FIS Adaptations
 
-FIS's `process_file_upload()` method needs to be updated. At present, a requeued file coming back as 'inbox' fails with `ResourceAlreadyExistsError`, and the fallback handling only acts on 'cancelled', 'failed' and 'archived'. It needs a branch for a known file arriving as 'inbox' when the local copy is 'failed'. To do that, we need to do the following:
+FIS's `process_file_upload()` method needs to be updated. At present, a requeued file coming back as 'inbox' gets effectively ignored since it's "new" information but FIS is written to disregard such a possibility. The fallback handling only acts on 'cancelled', 'failed' and 'archived'. It needs a branch for a known file arriving as 'inbox' when the local copy is 'failed'. To do that, we need to do the following:
 - set `state="inbox"`, `state_updated` to the values on the event, and `interrogated=False`, so `get_files_not_yet_interrogated()` serves the FileUpload to DHFS again.
 - set `can_remove=False`. If it stays True during a successful retry, DHFS's cleaner will delete the freshly re-encrypted object out of the interrogation bucket. Should avoid that.
 - delete the stored `InterrogationReport` for that file.
