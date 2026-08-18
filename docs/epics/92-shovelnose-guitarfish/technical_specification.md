@@ -101,6 +101,7 @@ flowchart TD
     E -->|requeue| H[UCS: state=inbox, failure_reason cleared]
     E -->|delete| G[UCS: object deleted, state=cancelled]
     F -->|delete| G[UCS: object deleted, state=cancelled]
+    F -->|re-upload| X[UCS: object deleted, new FileUpload created for alias]
     H --> I[FIS: state=inbox, interrogated=False, can_remove=False, old report dropped]
     I --> J[DHFS picks the file up on its next poll]
     G --> K[File No Longer Part of Box]
