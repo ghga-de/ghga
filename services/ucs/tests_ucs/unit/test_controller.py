@@ -1198,9 +1198,13 @@ async def test_get_part_upload_url_with_unknown_storage_alias(rig: JointRig):
     assert "unknown_storage_alias" in str(exc_info.value)
 
 
-async def test_get_part_upload_url_when_s3_upload_not_found(rig: JointRig):
+async def test_get_part_upload_url_when_s3_upload_not_found(
+    rig: JointRig, caplog: pytest.LogCaptureFixture
+):
     """Test for error handling when getting a part URL but S3 raises an error saying
-    that it can't find the corresponding multipart upload on its end.
+    that it can't find the corresponding multipart upload on its end, while the
+    FileUpload is still in the 'init' state. This is a genuine inconsistency between
+    the DB and S3, so it should be logged as a warning.
     """
     # Create a FileUploadBox and a FileUpload
     controller = rig.controller
@@ -1222,12 +1226,74 @@ async def test_get_part_upload_url_when_s3_upload_not_found(rig: JointRig):
         raise ObjectStorageProtocol.MultiPartUploadNotFoundError("", "", "")
 
     storage.get_part_upload_url = do_error
-    with pytest.raises(UploadControllerPort.UploadSessionNotFoundError) as exc_info:
-        await controller.get_part_upload_url(file_id=file_id, part_no=1)
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="ucs.core.controller"):
+        with pytest.raises(UploadControllerPort.UploadSessionNotFoundError) as exc_info:
+            await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
     # Verify the exception contains the S3 upload ID
     s3_upload_id = rig.file_upload_dao.latest.s3_upload_id
     assert s3_upload_id in str(exc_info.value)
+
+    # Verify a warning (not an error) was logged, since the FileUpload is still
+    # in the 'init' state and the missing S3 session is a real inconsistency
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert s3_upload_id in warnings[0].getMessage()
+    assert str(file_id) in warnings[0].getMessage()
+
+
+async def test_get_part_upload_url_when_s3_upload_not_found_and_state_not_init(
+    rig: JointRig, caplog: pytest.LogCaptureFixture
+):
+    """Test for error handling when getting a part URL but S3 raises an error saying
+    that it can't find the corresponding multipart upload on its end, while the
+    FileUpload has already moved past the 'init' state. This is expected (e.g. the
+    upload was cancelled), so it should be logged at INFO rather than as a warning.
+    """
+    # Create a FileUploadBox and a FileUpload
+    controller = rig.controller
+    box_id = await rig.create_default_box()
+    file_id, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Move the FileUpload past the 'init' state
+    file_upload = rig.file_upload_dao.latest
+    file_upload.state = "cancelled"
+    await rig.file_upload_dao.update(file_upload)
+
+    # Set the mock to raise a MultiPartUploadNotFoundError
+    storage = rig.object_storages.for_alias("test")[1]
+
+    async def do_error(*args, **kwargs):
+        raise ObjectStorageProtocol.MultiPartUploadNotFoundError("", "", "")
+
+    storage.get_part_upload_url = do_error
+
+    caplog.clear()
+    with caplog.at_level(logging.INFO, logger="ucs.core.controller"):
+        with pytest.raises(UploadControllerPort.UploadSessionNotFoundError) as exc_info:
+            await controller.get_part_upload_url(file_id=file_id, part_no=1)
+
+    # Verify the exception contains the S3 upload ID
+    s3_upload_id = rig.file_upload_dao.latest.s3_upload_id
+    assert s3_upload_id in str(exc_info.value)
+
+    # The controller itself should log this at INFO only, not WARNING/ERROR
+    controller_records = [
+        r for r in caplog.records if r.name == "ucs.core.controller"
+    ]
+    assert not [r for r in controller_records if r.levelno > logging.INFO]
+    infos = [r for r in controller_records if r.levelno == logging.INFO]
+    assert len(infos) == 1
+    assert s3_upload_id in infos[0].getMessage()
+    assert str(file_id) in infos[0].getMessage()
 
 
 async def test_get_file_ids_for_non_existent_box(rig: JointRig):
