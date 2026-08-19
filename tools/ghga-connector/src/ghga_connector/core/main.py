@@ -69,7 +69,10 @@ async def async_batch_upload(  # noqa: PLR0913
     working directory when the batch upload command is executed.
     """
     core_file_info_list = load_file_info_from_tsv(tsv)
-    async with async_client() as client, set_runtime_config(client=client):
+    async with (
+        async_client(purpose="upload") as client,
+        set_runtime_config(client=client),
+    ):
         await upload_files(
             client=client,
             core_file_info_list=core_file_info_list,
@@ -144,7 +147,10 @@ async def async_ubox(
     my_public_key = utils.get_public_key(my_public_key_path)
     my_private_key = utils.get_private_key(my_private_key_path, passphrase)
 
-    async with async_client() as client, set_runtime_config(client=client):
+    async with (
+        async_client(purpose="upload") as client,
+        set_runtime_config(client=client),
+    ):
         work_package_client = WorkPackageClient(
             client=client, my_private_key=my_private_key, my_public_key=my_public_key
         )
@@ -170,7 +176,10 @@ async def async_download(
     my_public_key = utils.get_public_key(my_public_key_path)
     my_private_key = utils.get_private_key(my_private_key_path, passphrase)
 
-    async with async_client() as client, set_runtime_config(client=client):
+    async with (
+        async_client(purpose="download") as client,
+        set_runtime_config(client=client),
+    ):
         CLIMessageDisplay.display("Retrieving API configuration information...")
         work_package_client = WorkPackageClient(
             client=client,
