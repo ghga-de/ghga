@@ -239,7 +239,12 @@ def dev_requirements(package: str | None = None) -> list[str]:
 
 
 def _version_at(ref: str, path: str) -> str | None:
-    """A member's declared version at a git ref, or None if it did not exist there."""
+    """A member's declared version at a git ref, or None if it did not exist there.
+
+    Only meaningful for a ref that resolves: git exits non-zero both for a path missing
+    from a real commit and for an unknown revision, so against a bad ref every member
+    reads as newly added. Callers resolve the base with _resolve_ref first.
+    """
     result = subprocess.run(
         ["git", "show", f"{ref}:{path}/pyproject.toml"],
         cwd=ROOT,
@@ -252,6 +257,34 @@ def _version_at(ref: str, path: str) -> str | None:
         return tomllib.loads(result.stdout)["project"].get("version")
     except (tomllib.TOMLDecodeError, KeyError):
         return None
+
+
+def _resolve_ref(ref: str) -> str | None:
+    """The commit `ref` names, or None if it names none in this clone.
+
+    `--verify` demands one unambiguous object, `^{commit}` rejects blobs and trees and
+    peels an annotated release tag to its commit, `--quiet` turns the failure into a
+    plain exit code. Resolving once also pins the comparison, so a ref that moves cannot
+    shift under a running plan.
+    """
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip() or None
+
+
+def _unresolvable_base(base: str) -> str:
+    """Why a plan against `base` is refused instead of attempted."""
+    return (
+        f"base ref {base!r} does not name a commit in this clone — refusing to plan a"
+        " release against a comparison that cannot be made. A shallow checkout (no"
+        " HEAD^), an unfetched tag, and a push event's all-zero `before` SHA all land"
+        " here; unguarded, every member reads as newly added and every closure-train"
+        " check passes silently"
+    )
 
 
 @functools.cache
@@ -338,7 +371,11 @@ def _is_newer(candidate: str, other: str) -> bool:
 
 
 def bumped_members(base: str, check_pypi: bool) -> list[dict]:
-    """Lane members whose declared version moved since `base` and is not yet published."""
+    """Lane members whose declared version moved since `base` and is not yet published.
+
+    `base` is a commit the caller has already resolved (_resolve_ref); the version
+    lookup cannot tell an unresolvable ref from a member that did not exist yet.
+    """
     candidates = []
     for member in pypi_members():
         previous = _version_at(base, member["path"])
@@ -359,7 +396,11 @@ def bumped_members(base: str, check_pypi: bool) -> list[dict]:
 
 
 def _changed_since(base: str, path: str) -> bool:
-    """Whether anything under `path` changed since `base`."""
+    """Whether anything under `path` changed since `base`.
+
+    `base` must be resolved for the same reason: a diff that failed to run is
+    indistinguishable here from one that found nothing.
+    """
     result = subprocess.run(
         ["git", "diff", "--name-only", f"{base}...HEAD", "--", path],
         cwd=ROOT,
@@ -398,12 +439,21 @@ def release_plan(base: str, check_pypi: bool) -> dict:
       that merely *differs* is not a release — the sync moves them sideways, and members
       can trail upstream (ghga-validator does today).
     - PyPI was unreachable, so "already published" could not be established.
+    - `base` does not resolve, so no comparison could be made at all. Same rule as the
+      line above, applied to git: "could not tell" must not read as an answer.
 
     ADR-0004 also asks the closure to be pinned exactly; deliberately not done, since it
     means editing synced pyprojects and stops users taking dependency fixes. The
     published-combo matrix covers that instead, by testing the real resolution.
     """
-    candidates = bumped_members(base, check_pypi)
+    # Before anything reads history: an empty plan with one error, not a plan built on a
+    # comparison that never happened. Messages below still quote `base` as given, since
+    # "since HEAD^" reads better than a bare sha.
+    resolved = _resolve_ref(base)
+    if resolved is None:
+        return {"members": [], "paths": [], "errors": [_unresolvable_base(base)]}
+
+    candidates = bumped_members(resolved, check_pypi)
     bumped = [m for m in candidates if not m["already_published"]]
     publishing = {member["path"] for member in bumped}
     lane_paths = {member["path"] for member in pypi_members()}
@@ -441,7 +491,7 @@ def release_plan(base: str, check_pypi: bool) -> dict:
                     f"{member['package']}: internal dependency {dep} is not in the PyPI"
                     " lane, so consumers could never install it"
                 )
-            elif dep not in publishing and _changed_since(base, dep):
+            elif dep not in publishing and _changed_since(resolved, dep):
                 errors.append(
                     f"{member['package']}: internal dependency {dep} changed since"
                     f" {base} but was not bumped — release it from this commit too,"
@@ -496,7 +546,11 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(release_plan(args.base, args.check_pypi)))
         return 0
     if args.bumped:
-        print(json.dumps(bumped_members(args.base, args.check_pypi)))
+        # No errors channel here, so the refusal is an exit code on stderr instead.
+        resolved = _resolve_ref(args.base)
+        if resolved is None:
+            sys.exit(f"error: {_unresolvable_base(args.base)}")
+        print(json.dumps(bumped_members(resolved, args.check_pypi)))
         return 0
 
     members = pypi_members(args.paths)
