@@ -114,10 +114,18 @@ export class UserService {
 
   /**
    * Fetch all users again, bypassing the HTTP cache.
+   * Users register and are changed by other data stewards while the manager is
+   * open, so entering it must not show what was fetched earlier in the session.
+   * When the users have not been requested yet in this session, this starts the
+   * first load, since reloading an idle resource would do nothing.
    */
   reloadUsers(): void {
     this.#httpCache.delete(this.#usersUrl);
-    this.users.reload();
+    if (this.#loadAll()) {
+      this.users.reload();
+    } else {
+      this.loadUsers();
+    }
   }
 
   /**
