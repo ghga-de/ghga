@@ -86,21 +86,6 @@
       "description": "URL to the root of the WKVS API. Should start with https://",
       "title": "Wkvs Api Url",
       "type": "string"
-    },
-    "passphrase": {
-      "anyOf": [
-        {
-          "format": "password",
-          "type": "string",
-          "writeOnly": true
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "The passphrase used, if applicable, to decrypt the Crypt4GH private key for use in upload.",
-      "title": "Passphrase"
     }
   },
   "title": "ModSettings",
