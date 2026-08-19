@@ -37,9 +37,12 @@ CIPHER_SEGMENT_SIZE = crypt4gh.lib.CIPHER_SEGMENT_SIZE
 
 
 @pytest.fixture()
-def private_key():
-    """Load the test private key."""
-    return get_private_key(PRIVATE_KEY_FILE, passphrase=None)
+def private_key(monkeypatch: pytest.MonkeyPatch):
+    """Load the test private key.
+
+    No need to patch make_passphrase_callback() because PRIVATE_KEY_FILE is unencrypted.
+    """
+    return get_private_key(PRIVATE_KEY_FILE)
 
 
 @pytest.fixture(autouse=True)

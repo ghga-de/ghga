@@ -103,7 +103,7 @@ async def upload_files(  # noqa: PLR0913
     """
     config = get_config()
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, config.passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
     work_package_client = WorkPackageClient(
         client=client, my_private_key=my_private_key, my_public_key=my_public_key
     )
@@ -137,9 +137,8 @@ async def async_ubox(
     Prompts for an access token (via the Work Package client), then opens a small
     REPL exposing 'upload', 'ls' and 'rm' commands against the box.
     """
-    config = get_config()
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, config.passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
 
     async with async_client() as client, set_runtime_config(client=client):
         work_package_client = WorkPackageClient(
@@ -165,7 +164,7 @@ async def async_download(
         raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, config.passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
 
     async with async_client() as client, set_runtime_config(client=client):
         CLIMessageDisplay.display("Retrieving API configuration information...")
@@ -213,10 +212,7 @@ def decrypt_file(
     decryption_private_key_path: Path,
 ):
     """Decrypt a Crypt4GH-encrypted file."""
-    config = get_config()
-    my_private_key = utils.get_private_key(
-        decryption_private_key_path, config.passphrase
-    )
+    my_private_key = utils.get_private_key(decryption_private_key_path)
     keys = [(0, my_private_key.get_secret_value(), None)]
     with input_file.open("rb") as infile, output_file.open("wb") as outfile:
         crypt4gh.lib.decrypt(keys=keys, infile=infile, outfile=outfile)

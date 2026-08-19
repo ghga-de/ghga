@@ -77,7 +77,12 @@ async def test_encryption_decryption(
     private_key_path = key_dir / sk_name
 
     passphrase = SecretStr("test") if sk_name.startswith("encrypted") else None
-    private_key = get_private_key(private_key_path, passphrase=passphrase)
+    if passphrase:
+        monkeypatch.setattr(
+            "ghga_connector.core.utils.make_passphrase_callback",
+            lambda tries_left: lambda: passphrase.get_secret_value(),
+        )
+    private_key = get_private_key(private_key_path)
 
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
     monkeypatch.setattr(
@@ -112,7 +117,7 @@ async def test_encryption_decryption(
         # we already have the pk loaded, so mock patch get_private_key to return it directly
         monkeypatch.setattr(
             "ghga_connector.core.utils.get_private_key",
-            lambda x, y: private_key,
+            lambda x: private_key,
         )
 
         # decrypt file and verifies it matches initial input

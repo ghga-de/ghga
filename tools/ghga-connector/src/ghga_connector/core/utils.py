@@ -113,14 +113,10 @@ def make_passphrase_callback(tries_left: int) -> Callable:
     return partial(getpass.getpass, prompt_text)
 
 
-def get_private_key(
-    my_private_key_path: Path, passphrase: SecretStr | None = None
-) -> SecretBytes:
+def get_private_key(my_private_key_path: Path) -> SecretBytes:
     """Get the user's private key, using the passphrase if supplied/needed.
 
-    If no passphrase is supplied upfront but crypt4gh detects that the key is encrypted,
-    the user will have 3 attempts to input the passphrase (via `getpass`). If passphrase
-    is supplied upfront, however, only one attempt is made to obtain the key.
+    The user will have 3 attempts to input the passphrase (via `getpass`).
     Stderr is suppressed during the call to `crypt4gh.keys.get_private_key` in order
     to suppress the error messages written by the library.
     """
@@ -129,14 +125,10 @@ def get_private_key(
             private_key_path=my_private_key_path
         )
 
-    tries_left = 3 if passphrase is None else 1
+    tries_left = 3
     while tries_left:
         try:
-            callback = (
-                (lambda: passphrase.get_secret_value())
-                if passphrase
-                else make_passphrase_callback(tries_left)
-            )
+            callback = make_passphrase_callback(tries_left)
             with redirect_stderr(io.StringIO()):
                 return SecretBytes(
                     crypt4gh.keys.get_private_key(

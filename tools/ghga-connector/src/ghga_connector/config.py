@@ -104,10 +104,6 @@ class Config(CompositeConfig):
         default="https://data.ghga.de/.well-known",
         description="URL to the root of the WKVS API. Should start with https://",
     )
-    passphrase: SecretStr | None = Field(
-        default=None,
-        description="The passphrase used, if applicable, to decrypt the Crypt4GH private key for use in upload.",
-    )
 
 
 CONFIG = Config()
