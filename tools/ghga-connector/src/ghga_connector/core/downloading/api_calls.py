@@ -29,7 +29,10 @@ from ghga_connector.constants import (
     DOWNLOAD_URL_CACHE_TIME,
     TIMEOUT_LONG,
 )
-from ghga_connector.core.api_calls.utils import is_service_healthy
+from ghga_connector.core.api_calls.utils import (
+    handle_request_error,
+    is_service_healthy,
+)
 from ghga_connector.core.work_package import WorkPackageClient
 
 from .structs import RetryResponse
@@ -86,19 +89,8 @@ class DownloadClient:
                 headers=headers,
                 timeout=TIMEOUT_LONG,
             )
-        except RetryError as retry_error:
-            wrapped_exception = retry_error.last_attempt.exception()
-            if isinstance(wrapped_exception, httpx2.RequestError):
-                exceptions.raise_if_connection_failed(
-                    request_error=wrapped_exception, url=url
-                )
-                raise exceptions.RequestFailedError(url=url) from retry_error
-            elif wrapped_exception:
-                raise wrapped_exception from retry_error
-            elif result := retry_error.last_attempt.result():
-                response = result
-            else:
-                raise
+        except (RetryError, httpx2.RequestError) as exc:
+            response = handle_request_error(exc, url=url)
 
         return _handle_drs_object_response(url=url, response=response)
 
@@ -140,7 +132,7 @@ class DownloadClient:
                 headers=auth_headers, url=url
             )
         except httpx2.RequestError as request_error:
-            raise exceptions.RequestFailedError(url=url) from request_error
+            response = handle_request_error(request_error, url=url)
 
         status_code = response.status_code
         match status_code:
@@ -215,20 +207,8 @@ class DownloadClient:
         )
         try:
             response: httpx2.Response = await self._client.get(url=url, headers=headers)
-        except RetryError as retry_error:
-            wrapped_exception = retry_error.last_attempt.exception()
-
-            if isinstance(wrapped_exception, httpx2.RequestError):
-                exceptions.raise_if_connection_failed(
-                    request_error=wrapped_exception, url=url
-                )
-                raise exceptions.RequestFailedError(url=url) from retry_error
-            elif wrapped_exception:
-                raise wrapped_exception from retry_error
-            elif result := retry_error.last_attempt.result():
-                response = result
-            else:
-                raise
+        except (RetryError, httpx2.RequestError) as exc:
+            response = handle_request_error(exc, url=url)
 
         status_code = response.status_code
 

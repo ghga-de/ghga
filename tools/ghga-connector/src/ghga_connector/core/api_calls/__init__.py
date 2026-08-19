@@ -17,4 +17,8 @@
 This sub-package contains the api calls, this service makes for various purposes
 """
 
-from .utils import check_url, is_service_healthy  # noqa: F401
+from .utils import (  # noqa: F401
+    check_url,
+    handle_request_error,
+    is_service_healthy,
+)

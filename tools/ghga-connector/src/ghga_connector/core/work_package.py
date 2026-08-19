@@ -31,6 +31,7 @@ from ghga_connector.constants import (
     UPLOAD_WOT_CACHE_SIZE,
     UPLOAD_WOT_CACHE_TIME,
 )
+from ghga_connector.core.api_calls.utils import handle_request_error
 from ghga_connector.core.utils import get_work_package_token
 from ghga_service_commons.utils import crypt
 from ghga_service_commons.utils.crypt import decrypt
@@ -84,17 +85,8 @@ class WorkPackageClient:
             if body is not None:
                 args["json"] = body
             response: httpx2.Response = await fn(**args)
-        except RetryError as retry_error:
-            wrapped_exception = retry_error.last_attempt.exception()
-
-            if isinstance(wrapped_exception, httpx2.RequestError):
-                raise exceptions.RequestFailedError(url=url) from retry_error
-            elif wrapped_exception:
-                raise wrapped_exception from retry_error
-            elif result := retry_error.last_attempt.result():
-                response = result
-            else:
-                raise
+        except (RetryError, httpx2.RequestError) as exc:
+            response = handle_request_error(exc, url=url)
 
         return response
 
