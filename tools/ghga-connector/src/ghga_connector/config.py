@@ -21,7 +21,7 @@ from contextvars import ContextVar
 from typing import Any
 
 import httpx2
-from pydantic import Field, PositiveInt, SecretStr
+from pydantic import Field, PositiveInt
 
 from ghga_connector import exceptions
 from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_WAIT_TIME

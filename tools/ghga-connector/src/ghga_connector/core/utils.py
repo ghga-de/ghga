@@ -27,7 +27,7 @@ from types import TracebackType
 from typing import Any
 
 import crypt4gh.keys
-from pydantic import SecretBytes, SecretStr
+from pydantic import SecretBytes
 
 from ghga_connector import exceptions
 from ghga_connector.core.downloading.structs import FileInfo
