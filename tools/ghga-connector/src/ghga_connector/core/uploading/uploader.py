@@ -163,7 +163,6 @@ class Uploader:
                     file_id=self._file_id, content=part, part_no=part_number
                 )
                 self._progress_bar.advance(len(part))  # Created in `.upload_file()`
-                self._in_sequence_part_number += 1
 
             except BaseException as exc:
                 # correctly reraise CancelledError, else this might get stuck waiting
@@ -180,12 +179,10 @@ class Uploader:
 
         Raises:
             UploadFileError: If there's a problem during actual file upload.
-            EncryptedSizeMismatch: If the actual size of the encrypted file doesn't
+            CiphertextSizeMismatch: If the actual size of the encrypted file doesn't
                 match the expected value.
             CompleteFileUploadError: If there's an error completing the file upload.
         """
-        self._in_sequence_part_number = 1
-
         # Encrypt and upload file parts in parallel
         self._progress_bar = self.new_progress_bar()
         with self._file_path.open("rb") as file, self._progress_bar:
@@ -197,6 +194,16 @@ class Uploader:
                 )
             # Wait for all upload tasks to finish
             await task_handler.gather()
+
+            # Exactly `part_count` parts were requested, so the processor is still
+            # suspended at its final `yield`. Advancing it once more runs the trailing
+            # ciphertext size validation and surfaces any surplus part.
+            surplus_part = await asyncio.to_thread(next, file_processor, None)
+            if surplus_part is not None:
+                raise RuntimeError(
+                    "The file processor produced more parts than the"
+                    + f" {self._file_info.part_count} that were uploaded."
+                )
 
         # Get the unencrypted checksum and tell the Upload API to conclude the S3 upload
         unencrypted_checksum = encryptor.checksums.decrypted_sha256.hexdigest()
