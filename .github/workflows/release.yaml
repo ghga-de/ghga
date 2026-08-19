@@ -38,6 +38,9 @@ env:
 jobs:
   resolve:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # to read this commit's CI run conclusion
     outputs:
       lane: ${{ steps.route.outputs.lane }}
       name: ${{ steps.route.outputs.name }}
@@ -45,6 +48,49 @@ jobs:
       images: ${{ steps.route.outputs.images }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # ancestry check needs history, not just the tip
+
+      # ADR-0004: the release VERIFIES the integrated HEAD, it does not re-test it. CI
+      # already proved this commit good; the tag only snapshots that. So the two things
+      # worth asserting are that the evidence exists and that it is about a commit anybody
+      # reviewed — without them, a tag on an unmerged branch, or on a commit whose CI never
+      # ran or went red, would build images and publish wheels exactly as a good one does.
+      #
+      # Enforced on every run, dispatch included: the check is worth least in the case where
+      # it is easiest to skip.
+      - name: Verify the commit is on main and its CI is green
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --quiet origin +refs/heads/main:refs/remotes/origin/main
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::${GITHUB_SHA::12} is not on main — releases come from main only"
+            exit 1
+          fi
+
+          # `status=completed` excludes runs still in flight, so a release racing its own
+          # CI reads as "no evidence" rather than passing on a partial result.
+          runs=$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yaml/runs?head_sha=$GITHUB_SHA&status=completed" \
+            --jq '.workflow_runs[] | {created_at, conclusion, html_url}' | jq -s 'sort_by(.created_at)')
+
+          if [ "$(echo "$runs" | jq 'length')" -eq 0 ]; then
+            echo "::error::no completed CI run for ${GITHUB_SHA::12} — nothing proves this commit works"
+            exit 1
+          fi
+
+          # The latest run wins: a red run that was re-run green is green.
+          latest=$(echo "$runs" | jq -r 'last')
+          conclusion=$(echo "$latest" | jq -r '.conclusion')
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI for ${GITHUB_SHA::12} concluded '$conclusion' — $(echo "$latest" | jq -r '.html_url')"
+            exit 1
+          fi
+          echo "${GITHUB_SHA::12} is on main and its CI is green"
+
       - id: route
         # $REF, not an interpolated `${{ }}`: interpolation pastes the input into the
         # script as text, where shell syntax in it would run. As a variable it is data.
@@ -92,8 +138,6 @@ jobs:
               sys.exit(f"::error::tag says {version}, but {name} declares {declared}")
           print(f"{name} {version} matches {member['path']}")
           EOF
-      # TODO on enablement: assert the tagged commit is on main AND its CI run is green
-      # (the release verifies the integrated HEAD; it does not re-test it).
 
   # -------- platform lane: build every image, stamped; push only on request -------------
   build-images:
