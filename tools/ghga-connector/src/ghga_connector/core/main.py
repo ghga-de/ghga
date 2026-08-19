@@ -159,7 +159,6 @@ async def async_download(
     overwrite: bool = False,
 ):
     """Download files asynchronously"""
-    config = get_config()
     if not output_dir.is_dir():
         raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
