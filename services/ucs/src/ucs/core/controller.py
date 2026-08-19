@@ -541,7 +541,7 @@ class UploadController(UploadControllerPort):
                 storage_alias=file_upload.storage_alias
             ) from err
         except S3ClientPort.S3UploadNotFoundError as err:
-            log.error(
+            log.warning(
                 err,
                 extra={
                     "s3_upload_id": s3_upload_id,
