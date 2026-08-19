@@ -22,6 +22,10 @@ import crypt4gh.lib
 
 DEFAULT_PART_SIZE = 64 * (1024**2)  # 64 MiB
 TIMEOUT = 60.0
+# Kept well below the idle timeouts of the object storage and the reverse proxies
+#  in front of the APIs, so idle connections are dropped by us rather than being
+#  reaped server-side and reused after they are already dead.
+KEEPALIVE_EXPIRY = 2.0
 TIMEOUT_LONG = 5 * TIMEOUT + 10
 MAX_PART_NUMBER = 10000
 MAX_RETRIES = 5  # retries for a single file part at the HTTP layer (see uploader.py)
