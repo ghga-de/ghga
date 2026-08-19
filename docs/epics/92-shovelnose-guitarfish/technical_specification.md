@@ -6,7 +6,7 @@ Epic planning and implementation follow the
 
 ## Scope
 ### Outline:
-When a file doesn't pass DHFS's re-encryption and integrity checks ("interrogation"), DHFS submits a failure report to FIS. FIS marks the file as failed and notifies UCS, which deletes the object from the inbox bucket in S3, sets the FileUpload to 'failed', and propagates that state to the rest of the system. This is a naive approach to interrogation failures. The uploaded bytes have already passed a checksum and size comparison before the file ever reaches the inbox, so a failure at the interrogation stage points at our own re-encryption pipeline at least as often as at the data itself. Forcing the submitter to re-upload the file from scratch is an expensive remedy for a problem that a second interrogation attempt would often solve, and when the file really is beyond saving, that second attempt simply fails again at no cost to anyone. Moreover, much of the file upload path then ignores "failed" files (RDUB quota calculations and archival prerequisite checks skip them entirely). At the macro level, this epic introduces three changes to this process:
+When a file doesn't pass DHFS's re-encryption and integrity checks ("interrogation"), DHFS submits a failure report to FIS. FIS marks the file as failed and notifies UCS, which deletes the object from the inbox bucket in S3, sets the FileUpload to 'failed', and propagates that state to the rest of the system. This is a naive approach to interrogation failures. The uploaded bytes have already passed a checksum and size comparison before the file reaches the DHFS, so a failure at the interrogation stage is more likely due to decryption failures and misconfigured keys than the data itself. Forcing the submitter to re-upload the file from scratch is an expensive remedy for a problem that a second interrogation attempt would often solve. When the file really is flawed, the second attempt simply fails again and we can take it from there. Moreover, much of the file upload path then ignores "failed" files (RDUB quota calculations and archival prerequisite checks skip them entirely). At the macro level, this epic introduces three changes to this process:
 1. UCS keeps failed files in the inbox bucket instead of deleting them automatically.
 2. Data Stewards are able to trigger a "retry" - setting the file state back to "inbox".
 3. UCS stops ignoring failed files. They count toward box quotas and block box archival, for example.
@@ -36,15 +36,6 @@ New endpoints:
     - 404 if the box isn't found
     - 409 if the box is archived
 
-- `POST /rpc/upload-boxes/{box_id}/uploads/{file_id}/requeue (RS)`: 
-  - _Requeue a single file that failed interrogation so it gets picked up again_.
-  - Data Steward only
-  - Returns:
-    - 204 on success
-    - 404 if the box or the file isn't found
-    - 409 if the box is archived or the file's state doesn't allow a requeue
-
-
 - `POST /rpc/boxes/{box_id}/requeue (UCS)`:
   - _Requeue all failed files in a box_
   - Requires a `RequeueFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue`.
@@ -52,6 +43,14 @@ New endpoints:
     - 200 on success plus a payload of `{requeued: [file_ids], skipped: [{file_id, reason}]}`
     - 404 if the box isn't found
     - 409 if the box is archived
+
+- `POST /rpc/upload-boxes/{box_id}/uploads/{file_id}/requeue (RS)`: 
+  - _Requeue a single file that failed interrogation so it gets picked up again_.
+  - Data Steward only
+  - Returns:
+    - 204 on success
+    - 404 if the box or the file isn't found
+    - 409 if the box is archived or the file's state doesn't allow a requeue
 
 - `POST /rpc/boxes/{box_id}/uploads/{file_id}/requeue (UCS)`:
   - _Set a single 'failed' FileUpload back to 'inbox'._
