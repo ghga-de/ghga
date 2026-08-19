@@ -440,8 +440,10 @@ class RenameDownloadedFileError(RuntimeError):
 class RequestFailedError(RuntimeError):
     """Thrown when a request fails without returning a response code"""
 
-    def __init__(self, *, url: str):
+    def __init__(self, *, url: str, reason: str = ""):
         message = f"The request to '{url}' failed."
+        if reason:
+            message += f" Reason: {reason}"
         super().__init__(message)
 
 
