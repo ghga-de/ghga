@@ -35,6 +35,8 @@ from ghga_connector.core.message_display import CLIMessageDisplay
 
 log = logging.getLogger(__name__)
 
+PASSPHRASE_ATTEMPTS = 3
+
 
 def strtobool(value: str) -> bool:
     """Inplace replacement for distutils.utils"""
@@ -125,7 +127,7 @@ def get_private_key(my_private_key_path: Path) -> SecretBytes:
             private_key_path=my_private_key_path
         )
 
-    tries_left = 3
+    tries_left = PASSPHRASE_ATTEMPTS
     while tries_left:
         try:
             callback = make_passphrase_callback(tries_left)
