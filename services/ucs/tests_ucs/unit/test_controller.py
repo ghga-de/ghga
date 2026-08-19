@@ -1286,9 +1286,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found_and_state_not_init(
     assert s3_upload_id in str(exc_info.value)
 
     # The controller itself should log this at INFO only, not WARNING/ERROR
-    controller_records = [
-        r for r in caplog.records if r.name == "ucs.core.controller"
-    ]
+    controller_records = [r for r in caplog.records if r.name == "ucs.core.controller"]
     assert not [r for r in controller_records if r.levelno > logging.INFO]
     infos = [r for r in controller_records if r.levelno == logging.INFO]
     assert len(infos) == 1
