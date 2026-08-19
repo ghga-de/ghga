@@ -191,7 +191,6 @@ async def test_upload_file_part_wraps_generic_exception():
         uploader = make_uploader(Path(f.name), upload_client=upload_client)
         uploader._file_id = FILE_ID
         uploader._progress_bar = MagicMock()
-        uploader._in_sequence_part_number = 1
         file_processor = make_dummy_file_processor(part_count=1)
         with pytest.raises(exceptions.UploadFileError):
             await uploader._upload_file_part(file_processor)
@@ -207,7 +206,6 @@ async def test_upload_file_part_wraps_exception_with_blank_message(caplog):
         uploader = make_uploader(Path(f.name), upload_client=upload_client)
         uploader._file_id = FILE_ID
         uploader._progress_bar = MagicMock()
-        uploader._in_sequence_part_number = 1
 
         task_handler = TaskHandler()
         task_handler.schedule(uploader._upload_file_part(file_processor))
@@ -230,7 +228,6 @@ async def test_upload_file_part_reraises_cancelled_error():
         uploader = make_uploader(Path(f.name), upload_client=upload_client)
         uploader._file_id = FILE_ID
         uploader._progress_bar = MagicMock()
-        uploader._in_sequence_part_number = 1
         file_processor = make_dummy_file_processor(part_count=1)
         with pytest.raises(asyncio.CancelledError):
             await uploader._upload_file_part(file_processor)
