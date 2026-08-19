@@ -101,7 +101,6 @@ async def upload_files(  # noqa: PLR0913
     existing FileUpload for its alias as long as it has not reached the "interrogated"
     state (re-encrypted).
     """
-    config = get_config()
     my_public_key = utils.get_public_key(my_public_key_path)
     my_private_key = utils.get_private_key(my_private_key_path)
     work_package_client = WorkPackageClient(
@@ -110,6 +109,7 @@ async def upload_files(  # noqa: PLR0913
     upload_client = UploadClient(client=client, work_package_client=work_package_client)
 
     # Add part size to core file info - this enables us to calculate part ranges
+    config = get_config()
     full_file_info = [
         FileInfoForUpload(core_file_info=cfi, configured_part_size=config.part_size)
         for cfi in core_file_info_list
