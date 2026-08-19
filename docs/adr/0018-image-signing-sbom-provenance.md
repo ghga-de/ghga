@@ -1,6 +1,6 @@
 # ADR-0018 — Sign, SBOM, and attest published images; verification foundation for Kyverno
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-14
 - **Deciders:** MKoesters
 
