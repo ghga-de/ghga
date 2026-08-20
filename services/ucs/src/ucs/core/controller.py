@@ -561,8 +561,8 @@ class UploadController(UploadControllerPort):
                     extra=log_extra,
                 )
             else:
-                # A missing S3 session is expected once the FileUpload has moved on
-                # (e.g. cancelled, or the S3 session was cleaned up/expired).
+                # A missing multipart upload is expected once the FileUpload has moved on
+                # (e.g. cancelled, or the multipart upload was cleaned up/expired).
                 log.info(
                     "S3 multipart upload %s for file ID %s could not be found. The"
                     " corresponding FileUpload is in the '%s' state.",
