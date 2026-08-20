@@ -1203,8 +1203,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found(
 ):
     """Test for error handling when getting a part URL but S3 raises an error saying
     that it can't find the corresponding multipart upload on its end, while the
-    FileUpload is still in the 'init' state. This is a genuine inconsistency between
-    the DB and S3, so it should be logged as a warning.
+    FileUpload is still in the 'init' state.
     """
     # Create a FileUploadBox and a FileUpload
     controller = rig.controller
