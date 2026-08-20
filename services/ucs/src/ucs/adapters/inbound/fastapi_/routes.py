@@ -636,7 +636,9 @@ async def remove_file_upload(
         raise http_exceptions.HttpNotAuthorizedError()
 
     try:
-        await upload_controller.remove_file_upload(box_id=box_id, file_id=file_id)
+        await upload_controller.remove_file_upload(
+            box_id=box_id, file_id=file_id, require_unlocked=True
+        )
     except UploadControllerPort.BoxNotFoundError as error:
         raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
     except UploadControllerPort.BoxStateError as error:

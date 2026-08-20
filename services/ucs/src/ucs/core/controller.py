@@ -770,19 +770,26 @@ class UploadController(UploadControllerPort):
         await self._update_box_stats(box_id=box_id, version=box_version)
         log.info("DB data updated for upload completion of file %s", file_id)
 
-    async def remove_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
+    async def remove_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4, require_unlocked: bool
+    ) -> None:
         """Remove a file upload and cancel the ongoing upload if applicable.
+
+        If `require_unlocked` is True, the box must be unlocked to complete the operation.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
         - `BoxVersionError` if the box version changed before stats could be updated.
+        - `FileUploadNotFound` if the FileUpload does not exist.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         # Make sure box exists and is unlocked (unless overridden)
-        box = await self._get_unlocked_box(box_id=box_id)
+        box = await self._get_box(box_id=box_id, require_unlocked=require_unlocked)
 
         # Retrieve the FileUpload data
         try:
@@ -1405,7 +1412,9 @@ class UploadController(UploadControllerPort):
 
         # This will result in a second FileUpload fetch, but alternative is to
         #  replicate removal logic here
-        await self.remove_file_upload(box_id=file_upload.box_id, file_id=file_id)
+        await self.remove_file_upload(
+            box_id=file_upload.box_id, file_id=file_id, require_unlocked=False
+        )
 
     async def cleanup_stale_uploads(self) -> None:
         """Abort stale in-progress multipart uploads and mark their FileUpload records
