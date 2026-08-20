@@ -550,7 +550,7 @@ class UploadController(UploadControllerPort):
                 "state": file_upload.state,
             }
             if file_upload.state == "init":
-                # The DB still expects this S3 multipart upload to exist, so its
+                # The DB expects this S3 multipart upload to exist, so its
                 # disappearance is a genuine inconsistency that leaves the FileUpload
                 # stuck and unable to complete.
                 log.warning(
