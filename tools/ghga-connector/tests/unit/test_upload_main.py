@@ -152,7 +152,6 @@ async def test_upload_files_applies_config_part_size(
                 core_file_info_list=[core_file_info],
                 my_public_key_path=PUBLIC_KEY_FILE,
                 my_private_key_path=PRIVATE_KEY_FILE,
-                passphrase=None,
             )
 
     assert len(captured) == 1

@@ -23,9 +23,11 @@ from tempfile import NamedTemporaryFile
 
 import crypt4gh.keys
 import pytest
+from pydantic import SecretStr
 
 from ghga_connector.core import is_file_encrypted, read_file_parts
-from ghga_connector.core.crypt import Crypt4GHDecryptor, Crypt4GHEncryptor
+from ghga_connector.core.crypt import Crypt4GHEncryptor
+from ghga_connector.core.main import decrypt_file
 from ghga_connector.core.utils import get_private_key
 from ghga_service_commons.utils.temp_files import big_temp_file
 from tests.fixtures.utils import TEST_STORAGE_ALIAS1
@@ -74,8 +76,13 @@ async def test_encryption_decryption(
     pubkey_path = key_dir / pk_name
     private_key_path = key_dir / sk_name
 
-    passphrase = "test" if sk_name.startswith("encrypted") else None
-    private_key = get_private_key(private_key_path, passphrase=passphrase)
+    passphrase = SecretStr("test") if sk_name.startswith("encrypted") else None
+    if passphrase:
+        monkeypatch.setattr(
+            "ghga_connector.core.utils.make_passphrase_callback",
+            lambda tries_left: lambda: passphrase.get_secret_value(),
+        )
+    private_key = get_private_key(private_key_path)
 
     pubkey = base64.b64encode(crypt4gh.keys.get_public_key(pubkey_path)).decode("utf-8")
     monkeypatch.setattr(
@@ -107,13 +114,17 @@ async def test_encryption_decryption(
         encrypted_file_loc = Path(encrypted_file.name)
         assert is_file_encrypted(encrypted_file_loc)
 
-        # decrypt file and verifies it matches initial input
-        decryptor = Crypt4GHDecryptor(
-            decryption_key_path=private_key_path, passphrase=passphrase
+        # we already have the pk loaded, so mock patch get_private_key to return it directly
+        monkeypatch.setattr(
+            "ghga_connector.core.utils.get_private_key",
+            lambda x: private_key,
         )
-        decryptor.decrypt_file(
-            input_path=encrypted_file_loc,
-            output_path=Path(out_file.name),
+
+        # decrypt file and verifies it matches initial input
+        decrypt_file(
+            input_file=encrypted_file_loc,
+            output_file=Path(out_file.name),
+            decryption_private_key_path=private_key_path,
         )
 
         assert in_file.read() == out_file.read()
