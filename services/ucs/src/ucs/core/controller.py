@@ -1045,10 +1045,12 @@ class UploadController(UploadControllerPort):
     ) -> None:
         """Lock an existing FileUploadBox.
 
+        If `force` is set to True, the box will be locked even if there
+        are ongoing uploads.
+
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
-        - `IncompleteUploadsError` if force is False and the box has incomplete FileUploads.
         - `UploadAbortError` if force is True and aborting an in-progress upload fails.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
@@ -1061,36 +1063,27 @@ class UploadController(UploadControllerPort):
             log.info("Box with ID %s is already locked.", box_id)
             return
 
-        incomplete_files = [
-            upload
-            async for upload in self._file_upload_dao.find_all(
-                mapping={"box_id": box_id, "state": "init"}
-            )
-        ]
+        # Look for ongoing uploads and files that failed interrogation
+        incomplete_files = await self._file_upload_dao.find_all(
+            mapping={
+                "box_id": box_id,
+                "$or": [
+                    {"state": "init"},  # ongoing upload
+                    {
+                        "state": "failed",  # failed interrogation
+                        "decrypted_sha256": {"$ne": None},
+                    },
+                ],
+            },
+            sort=["alias"],
+        ).to_list()
 
-        if force:
-            for upload in incomplete_files:
-                await self._remove_incomplete_file_upload(file_upload=upload)
-                upload.state = "cancelled"
-                upload.state_updated = now_utc_ms_prec()
-                await self._file_upload_dao.update(upload)
-                with contextlib.suppress(ResourceNotFoundError):
-                    await self._upload_activity_dao.delete(upload.id)
-            if incomplete_files:
-                log.info(
-                    "Aborted %d in-progress upload(s) in box %s for forced lock.",
-                    len(incomplete_files),
-                    box_id,
-                )
-        else:
-            file_ids = sorted(
-                [(x.id, x.alias) for x in incomplete_files],
-                key=lambda entry: entry[1],
-            )
-            if file_ids:
-                error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
-                log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
-                raise error
+        # If there are incomplete files and force is set to false, raise an error
+        if incomplete_files and not force:
+            file_ids = [(x.id, x.alias) for x in incomplete_files]  # already sorted
+            error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
+            log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
+            raise error
 
         # Recompute stats
         file_count, total_size = await self._calc_box_stats(box_id=box_id)
