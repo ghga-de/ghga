@@ -79,29 +79,6 @@ class UploadController(UploadControllerPort):
         self._box_stats_aggregator = box_stats_aggregator
         self._s3_client = s3_client
 
-    async def _get_box_at_version(
-        self, *, box_id: UUID4, version: int
-    ) -> FileUploadBox:
-        """Fetch a FileUploadBox and verify the version matches.
-
-        Raises:
-        - `BoxNotFoundError` if the box is not in the DB.
-        - `BoxVersionError` if the version doesn't match.
-        """
-        try:
-            box = await self._file_upload_box_dao.get_by_id(box_id)
-        except ResourceNotFoundError as err:
-            error: Exception = self.BoxNotFoundError(box_id=box_id)
-            log.info(error)
-            raise error from err
-
-        if box.version != version:
-            error = self.BoxVersionError(box_id=box_id)
-            log.info(error, extra={"box_id": box_id, "version": version})
-            raise error
-
-        return box
-
     async def _insert_file_upload(
         self,
         *,
@@ -258,12 +235,16 @@ class UploadController(UploadControllerPort):
         await self._file_upload_dao.insert(new_upload)
         return True
 
-    async def _get_unlocked_box(self, *, box_id: UUID4) -> FileUploadBox:
-        """Retrieve a FileUploadBox by ID.
+    async def _get_box(
+        self, *, box_id: UUID4, require_unlocked: bool, version: int | None = None
+    ) -> FileUploadBox:
+        """Retrieve a FileUploadBox by ID, optionally requiring the box to be unlocked ("open")
+        and/or have a specific version number.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist
-        - `BoxStateError` if the box exists but is locked or archived.
+        - `BoxStateError` if `require_unlocked` is True and the box is locked or archived.
+        - `BoxVersionError` if `version` is set and the fetched box's version doesn't match.
         """
         # Verify that the box exists
         try:
@@ -274,9 +255,14 @@ class UploadController(UploadControllerPort):
             raise error from err
 
         # Verify that the box is not locked or archived
-        if box.state != "open":
+        if require_unlocked and box.state != "open":
             error = self.BoxStateError(box_id=box_id, box_state=box.state)
             log.info(error)
+            raise error
+
+        if version is not None and box.version != version:
+            error = self.BoxVersionError(box_id=box_id)
+            log.info(error, extra={"box_id": box_id, "version": version})
             raise error
 
         return box
@@ -378,7 +364,7 @@ class UploadController(UploadControllerPort):
         """
         extra: dict[str, Any] = {"box_id": box_id, "alias": alias}
         # Get the box and resolve S3 storage details
-        box = await self._get_unlocked_box(box_id=box_id)
+        box = await self._get_box(box_id=box_id, require_unlocked=True)
         storage_alias = box.storage_alias
         try:
             bucket_id = self._s3_client.get_bucket_id_for_alias(
@@ -401,9 +387,11 @@ class UploadController(UploadControllerPort):
                 existing_upload = None
 
             if existing_upload and existing_upload.state in ("init", "inbox"):
-                await self.remove_file_upload(box_id=box_id, file_id=existing_upload.id)
+                await self.remove_file_upload(
+                    box_id=box_id, file_id=existing_upload.id, require_unlocked=True
+                )
                 # Re-fetch box to get the updated size/file count
-                box = await self._get_unlocked_box(box_id=box_id)
+                box = await self._get_box(box_id=box_id, require_unlocked=True)
 
         # Get both box size + in progress size and the number of in progress files
         current_size = box.size
@@ -702,8 +690,9 @@ class UploadController(UploadControllerPort):
         - `ChecksumMismatchError` if the checksums don't match.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
-        # Get the FileUploadBox instance and verify that it is unlocked
-        box = await self._get_unlocked_box(box_id=box_id)
+        # Get the FileUploadBox instance (box can be locked because users can lock
+        #  it proactively before all uploads have finished)
+        box = await self._get_box(box_id=box_id, require_unlocked=False)
         box_version = box.version
         extra: dict[str, Any] = {"box_id": box_id, "file_id": file_id}  # just 4 logging
 
@@ -851,18 +840,9 @@ class UploadController(UploadControllerPort):
         - `UploadAbortError` if there's an error aborting an in-progress multipart upload.
         """
         # Get the box
-        try:
-            box = await self._file_upload_box_dao.get_by_id(box_id)
-        except ResourceNotFoundError as err:
-            error: Exception = self.BoxNotFoundError(box_id=box_id)
-            log.info(error)
-            raise error from err
-
-        # Verify the version
-        if version is not None and box.version != version:
-            error = self.BoxVersionError(box_id=box_id)
-            log.info(error, extra={"box_id": box_id, "version": version})
-            raise error
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         # Raise an error if the box is archived
         if box.state == "archived":
@@ -963,7 +943,9 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the box version has changed since it was fetched.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         file_count, total_size = await self._calc_box_stats(box_id=box_id)
 
@@ -1029,7 +1011,9 @@ class UploadController(UploadControllerPort):
         - `BoxMaxSizeTooLowError` if the new max_size is smaller than what has
             already been uploaded.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         if max_size < box.size:
             error = self.BoxMaxSizeTooLowError(
@@ -1055,7 +1039,9 @@ class UploadController(UploadControllerPort):
         - `UploadAbortError` if force is True and aborting an in-progress upload fails.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         if box.state != "open":
             # This goes for archived boxes too
@@ -1111,7 +1097,9 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is archived and cannot be unlocked.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         if box.state == "locked":
             box.version += 1
@@ -1134,7 +1122,9 @@ class UploadController(UploadControllerPort):
         - `IncompleteUploadsError` if the FileUploadBox has incomplete FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         # Exit early if already archived, or raise error if unlocked
         if box.state == "archived":
@@ -1219,12 +1209,7 @@ class UploadController(UploadControllerPort):
         elif all(spec.removeprefix("-") != "alias" for spec in sort):
             sort = [*sort, "alias"]
 
-        try:
-            _ = await self._file_upload_box_dao.get_by_id(box_id)
-        except ResourceNotFoundError as err:
-            error = self.BoxNotFoundError(box_id=box_id)
-            log.info(error)
-            raise error from err
+        _ = await self._get_box(box_id=box_id, require_unlocked=False)
 
         try:
             find_result = self._file_upload_dao.find_all(
