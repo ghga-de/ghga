@@ -21,9 +21,6 @@ jobs:
   renovate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: write # Renovate pushes its own branches
-      pull-requests: write # and opens/updates its own PRs
     env:
       RENOVATE_HOST_RULES: >-
         [{"hostType":"docker","matchHost":"dhi.io",
@@ -31,14 +28,16 @@ jobs:
           "password":"${{ secrets.DOCKERHUB_TOKEN }}"}]
     steps:
       - uses: actions/checkout@v5
+      - name: Mint an app token for Renovate
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_KEY }}
       - name: Renovate
         uses: renovatebot/github-action@v46
         with:
           configurationFile: renovate.json5
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
-      # NOTE: PRs opened with the plain GITHUB_TOKEN do not auto-trigger
-      # ci.yaml (same caveat security-scan.yaml documents for its own PRs).
-      # A close/reopen, or switching to that workflow's PAT/App token, is a
-      # possible future refinement — not required to get useful PRs today.
