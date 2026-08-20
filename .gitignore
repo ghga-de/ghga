@@ -39,3 +39,5 @@ rendered/
 claude-backup/
 # local Claude Code project state (skills, settings) — not part of the repo
 .claude/
+# Playwright traces from failed test-bed runs (diagnostics only, can be large)
+testbed/.traces/

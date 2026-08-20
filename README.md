@@ -52,6 +52,12 @@ Then open <http://localhost/> — the data portal at `/`, the OIDC issuer at `/g
 `just down` deletes the cluster; the built images survive it, so the next `just up`
 reloads rather than rebuilds.
 
+If `kubectl` or `helm` ever says `context "kind-ghga" does not exist` while the cluster is
+plainly running, run `kind export kubeconfig --name ghga`. A devcontainer rebuild keeps the
+cluster (docker's storage is a named volume) but wipes `~/.kube` (the home directory is
+rebuilt from the image), leaving the node running with nothing pointing at it. `just cluster`
+re-exports the context on every run, so the recipes recover on their own.
+
 #### Logging in as the data steward
 
 The demo seeds one data steward ([ADR-0006](docs/adr/0006-self-contained-demo-lightweight-infra.md)),
@@ -115,6 +121,40 @@ Scope a run with `just testbed steps/test_001_health_check.py`, and use
 `just testbed-reset` to return the cluster to a coherent cold start between runs — the
 suite starts from an empty state and its feature files are ordered by numeric prefix.
 
+#### Debugging a failing browser test
+
+The UI tests (`-m frontend`) drive a headless browser, so a failure arrives as a locator
+timeout with no way to see what the page looked like. Setting `TB_TRACE` records a
+[Playwright trace](https://playwright.dev/python/docs/trace-viewer) — a replay of the run
+action by action, with the DOM, network and console at each step:
+
+```bash
+TB_TRACE=1 just testbed -m frontend     # traces kept for failed tests only
+TB_TRACE=all just testbed -m frontend   # traces kept for every browser test
+just testbed-trace                      # list what the run left behind
+just testbed-trace test_500_data_portal_browse  # serve one on :9323
+```
+
+Tracing is off unless `TB_TRACE` is set, and arms only for `@frontend` tests, so ordinary
+runs pay nothing for it. Traces land in `testbed/.traces` (git-ignored, override with
+`TB_TRACE_DIR`) and the directory is emptied at the start of each traced run. Prefer
+`all` when a test fails but its own trace looks innocent: the browser context is shared
+across the whole session, so the culprit is often an earlier test that passed.
+
+#### Watching the services
+
+There is no compose project to browse: every service is a pod inside the single kind node
+container, so Docker-level tooling only ever shows the node.
+
+```bash
+just logs                # what is deployed, and its ready count
+just logs auth-adapter   # follow one service (substring match, `ghga-` prefix optional)
+```
+
+For the click-through equivalent, the Kubernetes extension
+(`ms-kubernetes-tools.vscode-kubernetes-tools`, recommended by the devcontainer) gives a pod
+tree with logs, exec and port-forward against the `kind-ghga` context.
+
 ### Image profiles
 
 Building and loading are separate steps: the build lands in the local docker store and
@@ -140,8 +180,8 @@ and the release workflow always build one image per member. It exists because it
 | Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
-| Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix` |
-| Test bed | `testbed-install`, `testbed-artifacts`, `testbed-up [profile]`, `testbed`, `testbed-reset`, `testbed-hosts` |
+| Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix`, `logs [name]` |
+| Test bed | `testbed-install`, `testbed-artifacts`, `testbed-up [profile]`, `testbed`, `testbed-reset`, `testbed-hosts`, `testbed-trace [file]` |
 | Migration | `import-from-snapshot`, `sync-mainline` |
 
 ## Where to read

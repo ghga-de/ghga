@@ -50,6 +50,7 @@ def login_to_data_portal(
 def logout_from_data_portal(fixtures: JointFixture) -> None:
     """Ensure the current user is logged out of the Data Portal."""
     fixtures.playwright.logout(config=fixtures.config)
+    fixtures.playwright.page.wait_for_load_state()
 
 
 @given("I load the homepage")
@@ -136,10 +137,6 @@ def open_admin_page(fixtures: JointFixture, admin_page: str):
     page_path = ADMIN_PAGES[admin_page][0]
     url = f"{fixtures.config.data_portal_url.rstrip('/')}/{page_path}"
     page = fixtures.playwright.page
-    if page.url.rstrip("/") == url.rstrip("/"):
-        page.reload()
-    else:
-        page.goto(url)
     page.goto(url)
     page.wait_for_load_state()
     main = page.locator("main")

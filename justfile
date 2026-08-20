@@ -268,6 +268,13 @@ cluster:
     just net-fix
     # plain grep, not -q — see the SIGPIPE note in `images-present`
     kind get clusters 2>/dev/null | grep -x ghga > /dev/null || kind create cluster --config deploy/kind-config.yaml --wait 120s
+    # The check above finds the cluster through docker's labels, but every recipe below
+    # reaches it through the kind-ghga context in ~/.kube/config — and the two do not have
+    # the same lifetime here: a devcontainer rebuild keeps docker's storage (a named
+    # volume) and wipes the home directory. The cluster then still exists, creation is
+    # skipped, and the first `--kube-context kind-ghga` fails with "context does not
+    # exist". Re-exporting unconditionally costs nothing and closes that gap.
+    kind export kubeconfig --name ghga > /dev/null
 
 # Build the images first — `just demo-images` (one per member, as released) or
 # `just demo-images-mono` (a single Python image; far faster, demo/CI only). Loading them
@@ -367,6 +374,29 @@ testbed-install:
     VIRTUAL_ENV=$PWD/.venv-testbed uv pip install -r testbed/requirements.txt
     .venv-testbed/bin/playwright install chromium
 
+# Open a Playwright trace from a traced test-bed run (`TB_TRACE=1 just testbed -m frontend`).
+# With no argument, lists what the last traced run left behind. `show-trace` would
+# otherwise try to launch a GUI chromium, which there is no display for in the
+# devcontainer, so serve the viewer instead and let the editor forward the port.
+testbed-trace file="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="${TB_TRACE_DIR:-$PWD/testbed/.traces}"
+    if [ -z "{{file}}" ]; then
+      ls -1 "$dir"/*.zip 2>/dev/null \
+        || { echo "no traces in $dir — record some with \`TB_TRACE=1 just testbed -m frontend\`"; exit 1; }
+      echo
+      echo "open one with: just testbed-trace <name>"
+      exit 0
+    fi
+    # accept a bare test name, a file name or a path
+    trace="{{file}}"
+    [ -f "$trace" ] || trace="$dir/{{file}}"
+    [ -f "$trace" ] || trace="$dir/{{file}}.zip"
+    [ -f "$trace" ] || { echo "error: no such trace: {{file}} (\`just testbed-trace\` lists them)" >&2; exit 1; }
+    echo "serving $trace on http://localhost:9323 (ctrl-c to stop)"
+    .venv-testbed/bin/playwright show-trace --host 0.0.0.0 --port 9323 "$trace"
+
 # Make the in-cluster MinIO name resolve locally: services hand the connector
 # pre-signed S3 URLs built from s3_endpoint_url, and those signatures are bound to
 # that exact host — so the name must resolve both in-cluster and here.
@@ -396,7 +426,21 @@ testbed-reset:
          .forEach(n => db.getSiblingDB(n).dropDatabase())' > /dev/null
     apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailhog|lox24|test-oidc|aai")
     echo "$apps" | xargs -r -n1 $K rollout restart > /dev/null
-    for d in $apps; do $K rollout status "$d" --timeout=240s > /dev/null; done
+    # Name what is being waited on, and what failed. Every app deployment restarts at
+    # once above, so the node runs ~2x the pods (rolling updates surge before they
+    # terminate) while each service re-migrates and rejoins its Kafka consumer group —
+    # 240s was not enough on a loaded machine, and a bare `rollout status > /dev/null`
+    # under `set -e` then aborted with kubectl's "timed out waiting for the condition"
+    # and no clue which of the ~19 deployments it meant.
+    total=$(echo "$apps" | wc -l | tr -d ' ')
+    i=0
+    for d in $apps; do
+        i=$((i + 1))
+        name="${d#deployment.apps/}"
+        printf '  [%2d/%s] waiting for %s\n' "$i" "$total" "$name" >&2
+        $K rollout status "$d" --timeout=600s > /dev/null \
+          || { echo "error: $name did not become ready within 600s — \`just logs $name\` shows why" >&2; exit 1; }
+    done
     sleep 20
     echo "state reset (databases empty, services re-migrated and re-seeded)"
 
@@ -438,3 +482,23 @@ testbed *args:
     trap "kill $PF1 $PF2 2>/dev/null || true" EXIT
     sleep 2
     cd testbed && ../.venv-testbed/bin/pytest -v {{args}}
+
+# The name is matched loosely, so the `ghga-` prefix is optional and a substring is enough.
+# `just logs` with no argument lists the deployments and their ready counts.
+# Follow a service's logs, e.g. `just logs auth-adapter` (no argument lists them).
+logs name="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    K="kubectl --context kind-ghga"
+    if [ -z "{{name}}" ]; then
+        $K get deploy -o custom-columns=NAME:.metadata.name,READY:.status.readyReplicas --no-headers \
+          | awk '{sub(/^ghga-/, "", $1); printf "%-28s %s\n", $1, $2}'
+        exit 0
+    fi
+    # `|| true`: a non-matching grep exits 1, and under `set -e` that kills the recipe
+    # before the message below ever prints
+    match=$($K get deploy -o name | grep -- "{{name}}" | head -1 || true)
+    [ -n "$match" ] || { echo "error: no deployment matching '{{name}}' — \`just logs\` lists them" >&2; exit 1; }
+    echo "== $match ==" >&2
+    # --all-containers: several workloads run a sidecar, and the default picks only one
+    $K logs -f --tail=100 --all-containers "$match"

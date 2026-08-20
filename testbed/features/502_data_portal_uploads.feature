@@ -93,7 +93,8 @@ Feature: 502 Data Portal Uploads
 
     When I load the admin page "Upload Box Manager"
     And I open the details of the "primary" upload box in the portal
-    Then the uploaded files for "DS_A" are listed in the upload box
+    Then the files uploaded to "primary" storage are listed in "ascending" order
+    And the uploaded files for "DS_A" are listed in the upload box
 
     When I select the study "DS_A" in the mapping tool
     Then the file mapping is complete for "DS_A"

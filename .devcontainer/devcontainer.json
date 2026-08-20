@@ -71,6 +71,9 @@
         "ms-playwright.playwright",
         "redhat.vscode-yaml",
         "ms-azuretools.vscode-docker",
+        // This is for the Kubernetes cluster running in the container (kind). 
+        // It provides a UI to inspect the cluster, view logs, and run kubectl commands.
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
         "streetsidesoftware.code-spell-checker",
         "github.vscode-pull-request-github"
       ]

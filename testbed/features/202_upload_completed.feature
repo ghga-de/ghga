@@ -39,3 +39,9 @@ Feature: 202 Upload Completed
       | storage   |
       | primary   |
       | secondary |
+
+  Scenario: Reviewing the storage overview
+
+    When "Data Steward" retrieves the storage overview
+    Then the response status code is "200"
+    And the storage overview matches the uploaded files of each storage
