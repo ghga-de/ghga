@@ -336,6 +336,9 @@ class UploadControllerPort(ABC):
         with the value provided for `encrypted_checksum`. The `unencrypted_checksum`
         is stored in the database.
 
+        If either of the object size or checksum verification steps fail, the object
+        will be removed from the S3 inbox bucket.
+
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `FileUploadStateError` if the FileUpload is in a cancelled or failed state.

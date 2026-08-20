@@ -613,12 +613,14 @@ class UploadController(UploadControllerPort):
         for the file upload itself.
 
         If the checksums don't match, this function marks the FileUpload as failed and
-        raises a ChecksumMismatchError.
+        raises a ChecksumMismatchError after deleting the object from S3.
         """
         file_id = file_upload.id
         object_id = file_upload.object_id
 
         if actual_checksum != expected_checksum:
+            # Delete S3 data first
+            await self._remove_completed_file_upload(file_upload=file_upload)
             # Mark upload as failed, then raise an error
             file_upload.state = "failed"
             file_upload.state_updated = now_utc_ms_prec()
@@ -642,12 +644,14 @@ class UploadController(UploadControllerPort):
         """Verify that the S3 object size matches the declared encrypted_size.
 
         If the sizes don't match, marks the FileUpload as failed and raises
-        UploadSizeMismatchError.
+        UploadSizeMismatchError after deleting the object from S3.
         """
         file_id = file_upload.id
         object_id = file_upload.object_id
 
         if actual_size != file_upload.encrypted_size:
+            # Delete S3 data first
+            await self._remove_completed_file_upload(file_upload=file_upload)
             file_upload.state = "failed"
             file_upload.state_updated = now_utc_ms_prec()
             file_upload.failure_reason = "Actual object size didn't match expected size"
@@ -679,10 +683,12 @@ class UploadController(UploadControllerPort):
         with the value provided for `encrypted_checksum`. The `unencrypted_checksum`
         is stored in the database.
 
+        If either of the object size or checksum verification steps fail, the object
+        will be removed from the S3 inbox bucket.
+
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
-        - `BoxStateError` if the box exists but is locked.
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
