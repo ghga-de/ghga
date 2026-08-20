@@ -1247,8 +1247,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found_and_state_not_init(
 ):
     """Test for error handling when getting a part URL but S3 raises an error saying
     that it can't find the corresponding multipart upload on its end, while the
-    FileUpload has already moved past the 'init' state. This is expected (e.g. the
-    upload was cancelled), so it should be logged at INFO rather than as a warning.
+    FileUpload has already moved past the 'init' state.
     """
     # Create a FileUploadBox and a FileUpload
     controller = rig.controller
