@@ -1235,8 +1235,7 @@ class UploadController(UploadControllerPort):
             raise self.PaginationError() from err
 
         if with_checksums:
-            # TODO: Use `.to_list()` once newer hexkit is pulled in
-            file_uploads = [x async for x in find_result]
+            file_uploads = await find_result.to_list()
         else:
             file_uploads = [
                 x.model_copy(
