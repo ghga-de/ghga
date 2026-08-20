@@ -1236,8 +1236,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found(
     s3_upload_id = rig.file_upload_dao.latest.s3_upload_id
     assert s3_upload_id in str(exc_info.value)
 
-    # Verify a warning (not an error) was logged, since the FileUpload is still
-    # in the 'init' state and the missing S3 session is a real inconsistency
+    # Verify a warning, not an error, was logged.
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert len(warnings) == 1
     assert s3_upload_id in warnings[0].getMessage()
