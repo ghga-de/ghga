@@ -18,6 +18,7 @@
 
 from pathlib import Path
 
+import crypt4gh.lib
 import httpx2
 
 from ghga_connector.config import get_config, set_runtime_config
@@ -40,7 +41,6 @@ from ghga_connector.core.work_package import WorkPackageClient
 
 from .. import exceptions
 from . import utils
-from .crypt import Crypt4GHDecryptor
 from .message_display import CLIMessageDisplay
 
 
@@ -49,7 +49,6 @@ async def async_batch_upload(  # noqa: PLR0913
     tsv: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
     dry_run: bool = False,
     shorten: bool = False,
@@ -78,7 +77,6 @@ async def async_batch_upload(  # noqa: PLR0913
             core_file_info_list=core_file_info_list,
             my_public_key_path=my_public_key_path,
             my_private_key_path=my_private_key_path,
-            passphrase=passphrase,
             max_retries=max_retries,
             dry_run=dry_run,
             shorten=shorten,
@@ -92,7 +90,6 @@ async def upload_files(  # noqa: PLR0913
     core_file_info_list: list[CoreFileInfo],
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     max_retries: int = DEFAULT_BATCH_MAX_RETRIES,
     dry_run: bool = False,
     shorten: bool = False,
@@ -108,7 +105,7 @@ async def upload_files(  # noqa: PLR0913
     state (re-encrypted).
     """
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
     work_package_client = WorkPackageClient(
         client=client, my_private_key=my_private_key, my_public_key=my_public_key
     )
@@ -137,7 +134,6 @@ async def async_ubox(
     *,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
 ):
     """Launch an interactive shell for managing a single upload box.
 
@@ -145,7 +141,7 @@ async def async_ubox(
     REPL exposing 'upload', 'ls' and 'rm' commands against the box.
     """
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
 
     async with (
         async_client(purpose="upload") as client,
@@ -166,7 +162,6 @@ async def async_download(
     output_dir: Path,
     my_public_key_path: Path,
     my_private_key_path: Path,
-    passphrase: str | None = None,
     overwrite: bool = False,
 ):
     """Download files asynchronously"""
@@ -174,7 +169,7 @@ async def async_download(
         raise exceptions.DirectoryDoesNotExistError(directory=output_dir)
 
     my_public_key = utils.get_public_key(my_public_key_path)
-    my_private_key = utils.get_private_key(my_private_key_path, passphrase)
+    my_private_key = utils.get_private_key(my_private_key_path)
 
     async with (
         async_client(purpose="download") as client,
@@ -223,10 +218,9 @@ def decrypt_file(
     input_file: Path,
     output_file: Path,
     decryption_private_key_path: Path,
-    passphrase: str | None,
 ):
-    """Delegate decryption of a file Crypt4GH"""
-    decryptor = Crypt4GHDecryptor(
-        decryption_key_path=decryption_private_key_path, passphrase=passphrase
-    )
-    decryptor.decrypt_file(input_path=input_file, output_path=output_file)
+    """Decrypt a Crypt4GH-encrypted file."""
+    my_private_key = utils.get_private_key(decryption_private_key_path)
+    keys = [(0, my_private_key.get_secret_value(), None)]
+    with input_file.open("rb") as infile, output_file.open("wb") as outfile:
+        crypt4gh.lib.decrypt(keys=keys, infile=infile, outfile=outfile)
