@@ -10,7 +10,7 @@ authors = [
     { name = "Kersten Henrik Breuer", email = "kersten-breuer@outlook.com" },
     { name = "The GHGA Authors", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
