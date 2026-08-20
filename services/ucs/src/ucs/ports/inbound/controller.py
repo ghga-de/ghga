@@ -442,8 +442,8 @@ class UploadControllerPort(ABC):
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
-        - `IncompleteUploadsError` if force is False and the box has incomplete FileUploads.
         - `UploadAbortError` if force is True and aborting an in-progress upload fails.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         ...
 
