@@ -16,8 +16,10 @@
 
 """Shared steps and fixtures"""
 
+import os
 import re
 import subprocess
+from pathlib import Path
 from time import sleep
 from typing import Any, NamedTuple
 
@@ -51,7 +53,7 @@ from fixtures import (  # noqa: RUF100
     state_manager_fixture,
     vault_fixture,
 )
-from pytest import mark
+from pytest import StashKey, fixture, hookimpl, mark
 from pytest_bdd import (  # noqa: RUF100
     given,
     scenarios,
@@ -69,6 +71,78 @@ from steps.utils import (
     parse_notifications,
     reset_user_token_counter,
 )
+
+# --- Playwright tracing (opt-in, debugging only) -------------------------------------
+# A trace is the headless equivalent of watching the browser — `playwright show-trace
+# <file>` replays the run action by action with the DOM, network and console at each
+# step, so a failure can be inspected after the fact instead of reproduced.
+#
+# This is a debugging aid, not part of the suite: it stays off unless TB_TRACE is set,
+# and even then only arms for browser tests (the @frontend tag). A default run therefore
+# pays nothing, and the tests that never touch a browser never launch one.
+#
+#   TB_TRACE=1 just testbed -m frontend     traces kept for failed tests only
+#   TB_TRACE=all just testbed -m frontend   traces kept for every browser test
+#
+# `all` is worth the disk: the browser context is shared for the whole session, so a
+# failure is often caused by a test that passed. Traces land in testbed/.traces, or in
+# TB_TRACE_DIR; the directory is emptied at the start of each traced run so what is left
+# always describes the run you just did.
+_TRACE_MODE = os.environ.get("TB_TRACE", "").strip().lower()
+TRACE_ENABLED = _TRACE_MODE not in ("", "0", "false", "no", "off")
+TRACE_ALL = _TRACE_MODE == "all"
+TRACE_DIR = Path(
+    os.environ.get("TB_TRACE_DIR") or Path(__file__).resolve().parent.parent / ".traces"
+)
+
+_REPORT_KEY = StashKey[dict]()
+
+
+@hookimpl(wrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Stash each phase's report so the tracing fixture can see the outcome."""
+    report = yield
+    if TRACE_ENABLED:
+        item.stash.setdefault(_REPORT_KEY, {})[report.when] = report.failed
+    return report
+
+
+@fixture(scope="session")
+def playwright_tracing(playwright: PlaywrightFixture):
+    """Arm tracing on the browser context, on first use by a traced test."""
+    if TRACE_DIR.is_dir():
+        for stale in TRACE_DIR.glob("*.zip"):
+            stale.unlink()  # traces from an earlier run would only mislead
+    tracing = playwright.context.tracing
+    tracing.start(screenshots=True, snapshots=True, sources=True)
+    yield tracing
+    tracing.stop()
+
+
+@fixture(autouse=True)
+def playwright_trace(request):
+    """Record one trace chunk per browser test, keeping the ones worth looking at.
+
+    Autouse, but inert unless tracing was asked for and this is a browser test. The
+    Playwright fixtures are requested lazily inside that branch, so an untraced run
+    never pulls a browser in through this fixture.
+    """
+    if not (TRACE_ENABLED and request.node.get_closest_marker("frontend")):
+        yield
+        return
+    tracing = request.getfixturevalue("playwright_tracing")
+    tracing.start_chunk(title=request.node.name)
+    try:
+        yield
+    finally:
+        failed = any(request.node.stash.get(_REPORT_KEY, {}).values())
+        if failed or TRACE_ALL:
+            TRACE_DIR.mkdir(parents=True, exist_ok=True)
+            # keep the name filesystem-safe: scenario outlines carry [param] suffixes
+            safe = re.sub(r"[^\w.-]+", "_", request.node.name)
+            tracing.stop_chunk(path=str(TRACE_DIR / f"{safe}.zip"))
+        else:
+            tracing.stop_chunk()  # no path => discarded
 
 
 class UserData(NamedTuple):
