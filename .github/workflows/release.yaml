@@ -6,10 +6,9 @@
 # MANUAL-ONLY. No tag triggers yet: every run is a deliberate `workflow_dispatch`.
 # The platform lane can push images to the INTERIM registry (GHCR under this repo's
 # namespace) when the `push` input is set — authenticated with the ephemeral, per-run
-# GITHUB_TOKEN, so no stored credentials exist. The PyPI lane remains a stub.
+# GITHUB_TOKEN, so no stored credentials exist.
 #
-# On the real enablement decision: restore the tag trigger, revisit REGISTRY, and wire
-# the pypi lane (closure train + published-combo matrix are prerequisites there):
+# On the real enablement decision:
 #   on:
 #     push:
 #       tags:
@@ -204,10 +203,7 @@ jobs:
 
   # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
   #
-  # That workflow owns the plan (what bumped, in what order, what is already on the index)
-  # and the published-combo gate; this job only routes the tag to it. So a tag whose member
-  # did not move is a reported no-op, and dispatching pypi-publish.yaml directly does the
-  # same thing.
+  # It calls pypi-publish.yaml, which picks the packages and runs the tests.
   publish-pypi:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
@@ -218,6 +214,4 @@ jobs:
       id-token: write
     uses: ./.github/workflows/pypi-publish.yaml
     with:
-      # The tagged commit is the bump commit, so its parent carries the previous versions.
-      base: HEAD^
       publish: ${{ inputs.push }}
