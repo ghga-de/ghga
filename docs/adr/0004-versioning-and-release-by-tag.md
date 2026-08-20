@@ -2,8 +2,10 @@
 
 - **Status:** Accepted — **revised 2026-07-23** (supersedes the original per-component-only
   scheme, which predated the consequences of an always-integrated HEAD) — **amended
-  2026-08-18**: PyPI-lane membership corrected to what the markers declare (see below)
-- **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18
+  2026-08-18**: PyPI-lane membership corrected to what the markers declare (see below) —
+  **amended 2026-08-19**: the release set is decided against the index rather than a git
+  diff, and the closure-train rule is narrowed to bumped dependencies (see below)
+- **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18 / 2026-08-19
 - **Deciders:** Leon Kuchenbecker
 
 ## Context
@@ -76,17 +78,39 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 - A pushed tag **`name/x.y.z`** publishes that component's wheel; CI asserts the tag matches
   the member's version at HEAD. Libraries release **on demand** — when an external consumer
   needs something or a tool release requires it.
-- The tag names the component; **what uploads comes from the version diff** — lane members
-  whose declared version moved and is not yet on the index, ordered dependencies-first.
+- The tag names the component; **what uploads is decided against the index** — every lane
+  member declaring a version above the latest one PyPI serves, ordered dependencies-first.
   `release.yaml` asserts the tag, then delegates to `pypi-publish.yaml`, which owns that
-  plan. So the lane has one implementation, a tag for an unmoved member is a no-op, bumps
-  arriving through the mainline sync are harmless, and a version that does not move the
-  series forwards is rejected rather than published.
-- **Closure-train rule:** a published tool must not induce untested combinations on user
-  machines. `ghga-connector`'s internal closure (`ghga-service-commons`, `hexkit`) is released
-  from the same commit when changed, and the tool pins those versions **exactly** (app-style;
-  documented install method: `pipx`/`uvx`). `ghga-validator` and `ghga-transpiler` have no
-  internal dependencies — their trains are trivially themselves.
+  plan. Nothing is diffed against a git ref: "did this commit bump it?" is a different
+  question, and one that misses a bump made weeks ago and never published. So the lane has
+  one implementation, a bump arriving through the mainline sync is picked up like any
+  other, a missed release repairs itself on the next run, a tag for a member already on the
+  index is a no-op, and re-running is idempotent because the second run sees the version
+  there. A member *trailing* the index (`ghga-validator` declares 1.1.1 while PyPI serves
+  1.2.0) is skipped, not an error — being behind is a sync question, not a release one.
+- **Closure-train rule** (amended 2026-08-19): a published tool must not induce untested
+  combinations on user machines. `ghga-connector`'s internal closure
+  (`ghga-service-commons`, `hexkit`) is released **in the same train** when those libraries
+  are themselves candidates, dependencies first, so the tool never reaches the index before
+  a version it needs. `ghga-validator` and `ghga-transpiler` have no internal dependencies —
+  their trains are trivially themselves.
+
+  Two things the original rule asked for are deliberately **not** done:
+
+  - **Exact pinning** is dropped. It would mean editing synced `pyproject.toml`s
+    ([ADR-0010](0010-history-preserving-migration.md)) and would stop users taking
+    dependency fixes. The declared floor stays the contract.
+  - **A library that changed without a bump does not block a dependant's release.** For the
+    outside world that library did not change, so the dependant resolves it from the index
+    like any consumer would. Holding an unrelated release hostage to someone's unreleased
+    work — a fix merged to main that is not ready to ship — would be wrong, and "the
+    directory changed" cannot distinguish a docstring edit from a new API.
+
+  What keeps that honest is the published-combo matrix, which resolves the *same* way: an
+  internal dependency is built from this repo only when it is a release candidate, and
+  otherwise comes from PyPI. So the combination under test is the combination that ships.
+  If a tool genuinely needs unreleased library code, its own floor says so and the install
+  fails there — the accurate signal, at the layer that owns it.
 - The **published-combo matrix** ([ADR-0002](0002-uv-workspace-source-coupled-libs.md)) — the
   component against PyPI-resolved dependencies across its supported Python range — is a
   **prerequisite for the first PyPI-lane release from this repo**, since the workspace only

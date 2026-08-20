@@ -1,46 +1,28 @@
 # PyPI lane — publish the libraries and public CLI tools (ADR-0004).
 #
 # DORMANT by intention, not by mechanism: the workflow is complete, and nobody dispatches
-# it. The upstream repos own these releases until they retire. Two things keep an
-# accidental run harmless — dispatch only, and uploading needs the `publish` input on top
-# (with it off, the run builds, tests, and reports what it would upload).
+# it. The upstream repos own these releases until they retire.
 #
-# A version bump triggers a release, not a change: the author bumps in the PR, the reviewer
-# sees it in the diff. Bumps also arrive through the mainline sync, so the plan skips
-# versions already on PyPI — which is also what makes re-runs idempotent. An unreachable
-# index fails the plan instead: "could not tell" must not pass for "already released".
-#
-# CREDENTIALS: trusted publishing, wired here but not yet set up on the PyPI side. The
-# publish job requests an OIDC token and `uv publish` exchanges it, so this repo holds no
-# API token. Each of the six distributions is its own pypi.org project, so an owner has to
-# add a trusted publisher (owner `ghga-de`, repo `ghga`, workflow `pypi-publish.yaml`) six
-# times. Until then, uploads fail at that exchange.
+# A version bump is the release trigger: every lane member declaring a version above the
+# latest one on PyPI is a candidate. Re-running is idempotent.
+# If PyPI cannot be reached, the run fails.
 #
 # On enablement (after the upstreams are archived):
-#   - switch the trigger to `push: branches: [main]` with base = github.event.before
-#   - add the six trusted publishers
-#   - settle the closure train's pinning question: detection and ordering are implemented,
-#     ADR-0004's "pin them exactly" is not (release_plan's docstring says why).
+#   - switch the trigger to `push: branches: [main]` — no base to supply, the index is it
+#   - bind the publish job to a protected `environment:` so an upload needs a second pair
+#     of eyes; today anyone with write access can dispatch one.
 name: pypi-publish
 
 on:
   # release.yaml routes `name/x.y.z` tags here, so the lane has one implementation.
   workflow_call:
     inputs:
-      base:
-        description: "Git ref to diff versions against (e.g. HEAD^, or a release tag)"
-        type: string
-        required: true
       publish:
         description: "Upload to PyPI; off = build + test only, reporting what it would do"
         type: boolean
         default: false
   workflow_dispatch:
     inputs:
-      base:
-        description: "Git ref to diff versions against (e.g. HEAD^, or a release tag)"
-        required: true
-        default: HEAD^
       publish:
         description: "Upload to PyPI; off = build + test only, reporting what it would do"
         type: boolean
@@ -50,7 +32,7 @@ permissions:
   contents: read
 
 jobs:
-  # -------- what moved, and is it actually ours to publish? ------------------------------
+  # -------- what is the index behind on, and is it ours to publish? ----------------------
   plan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -58,20 +40,14 @@ jobs:
       members: ${{ steps.plan.outputs.members }}
       paths: ${{ steps.plan.outputs.paths }}
     steps:
+      # The plan reads the declared versions in this tree and compares
+      # them with PyPI.
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0 # version diffing needs history
-      # The plan drops versions already on PyPI, orders the set dependencies-first, and
-      # fails on any violation — before an upload, since half a train on the index is
-      # worse than none.
-      #
-      # $BASE, not an interpolated `${{ }}`: interpolation pastes the input into the
-      # script as text, where shell syntax in it would run. As a variable it is data.
+      # The plan takes every member the index is behind on, orders the set
+      # dependencies-first, and fails on any violation
       - id: plan
-        env:
-          BASE: ${{ inputs.base }}
         run: |
-          plan=$(python3 scripts/pypi_members.py --plan --base "$BASE" --check-pypi)
+          plan=$(python3 scripts/pypi_members.py --plan)
           echo "$plan" | python3 -m json.tool
 
           errors=$(echo "$plan" | python3 -c "
@@ -94,24 +70,33 @@ jobs:
           ")
           echo "members=$members" >> "$GITHUB_OUTPUT"
           echo "paths=$paths"     >> "$GITHUB_OUTPUT"
+          echo "$plan" > /tmp/plan.json
 
+      # prints two tables: what's being released, and what isn't with a reason for each.
       - name: Summary
         run: |
           python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
-          import json, os
-          bumped = json.loads(os.environ["MEMBERS"])
-          if not bumped:
-              print("No unpublished version bumps since the base ref — nothing to do.")
+          import json
+          plan = json.load(open("/tmp/plan.json"))
+          if not plan["members"]:
+              print("Every lane member is already on PyPI at the version it declares.\n")
           else:
-              print("| member | version | previous |")
+              print("### Releasing\n")
+              print("| member | version | latest on PyPI | built from the repo |")
+              print("|---|---|---|---|")
+              for m in plan["members"]:
+                  train = ", ".join(m["train_deps"]) or "—"
+                  print(f"| {m['package']} | {m['version']} | {m['pypi_latest']} | {train} |")
+              print()
+          if plan["skipped"]:
+              print("### Not releasing\n")
+              print("| member | version | why |")
               print("|---|---|---|")
-              for m in bumped:
-                  print(f"| {m['package']} | {m['version']} | {m['previous_version']} |")
+              for m in plan["skipped"]:
+                  print(f"| {m['package']} | {m['version']} | {m['reason']} |")
           EOF
-        env:
-          MEMBERS: ${{ steps.plan.outputs.members }}
 
-  # -------- the gate: nothing is uploaded that the matrix has not passed -----------------
+  # --------  run the published-combo tests on the packages the plan chose -----------------
   test:
     needs: plan
     if: ${{ needs.plan.outputs.paths != '[]' }}
@@ -121,11 +106,8 @@ jobs:
 
   # -------- build and (only on request) upload, dependencies first -----------------------
   #
-  # Sequential, not a matrix: parallel cells have no ordering, so ghga-connector could
-  # reach the index before the hexkit release it needs, breaking `pip install` for anyone
-  # in that window. This walks the plan's order and stops at the first failure, leaving a
-  # prefix of the train published rather than a hole in the middle. A train is at most
-  # three members, so the parallelism costs nothing worth having.
+  # One package at a time, in the plan's dependency order, stopping at the first failure.
+  # A package must not reach PyPI before a package it depends on.
   publish:
     needs: [plan, test]
     if: ${{ needs.plan.outputs.paths != '[]' }}
@@ -133,8 +115,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      # uv exchanges this short-lived OIDC token with PyPI, so no API token is ever
-      # created, stored or rotated here — as the platform lane does with GITHUB_TOKEN.
+      # The token uv exchanges with PyPI for upload rights.
       id-token: write
     steps:
       - uses: actions/checkout@v5

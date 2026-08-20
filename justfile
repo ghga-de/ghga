@@ -82,7 +82,7 @@ published-combo member python="3.12":
     set -euo pipefail
     # The same script CI reads, so a local run cannot drift from the cell.
     cell=$(MEMBER="{{member}}" PYTHON="{{python}}" \
-      MEMBERS="$(python3 scripts/pypi_members.py --members --paths "{{member}}")" \
+      MEMBERS="$(python3 scripts/pypi_members.py --members --check-pypi --paths "{{member}}")" \
       python3 -c "
     import json, os, sys
     member, python = os.environ['MEMBER'], os.environ['PYTHON']
@@ -96,9 +96,13 @@ published-combo member python="3.12":
         runs_on = ', '.join(cell['pythons']) or 'no version in the matrix range'
         sys.exit(f'error: the matrix does not run {package} on {python} — it declares'
                  f' {declared}, so it runs on: {runs_on}')
-    print('\t'.join([package, ','.join(cell['extras']), ' '.join(cell['internal_deps'])]))
+    print(package)
+    print(','.join(cell['extras']))
+    print(' '.join(cell['train_deps']))
     ")
-    IFS=$'\t' read -r package extras internal_deps <<< "$cell"
+    # One field per line, not tab-separated: tab is IFS *whitespace*, so bash collapses a
+    # run of them and an empty `extras` (every tool has one) shifts train_deps into it.
+    { read -r package; read -r extras; read -r train_deps; } <<< "$cell"
 
     # Fixed path, not mktemp: the venv outlives the recipe, so a failure can be poked at
     # (`$work/venv/bin/python -m pytest -k ...`), and a re-run wipes it rather than
@@ -106,9 +110,10 @@ published-combo member python="3.12":
     work="${TMPDIR:-/tmp}/ghga-published-combo/$package-{{python}}"
     rm -rf "$work" && mkdir -p "$work/wheels"
 
-    # Member + internal closure in one wheelhouse, so the install resolves against the
-    # libraries from this tree rather than PyPI's, as in CI.
-    for path in "{{member}}" $internal_deps; do
+    # Member + whatever is being released alongside it (--check-pypi decides that: the
+    # libraries whose declared version is not on the index yet). Everything else is left
+    # out so it resolves from PyPI, exactly as in CI and as on a user's machine.
+    for path in "{{member}}" $train_deps; do
         uv build --wheel --out-dir "$work/wheels" "$path"
     done
 

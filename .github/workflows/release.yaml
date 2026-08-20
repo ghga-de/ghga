@@ -23,8 +23,7 @@
 # DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets (the same credentials already used to pull
 # the hardened dhi.io base images). The PyPI lane remains a stub.
 #
-# On enabling this for real: restore the tag trigger and wire the pypi lane (closure
-# train + published-combo matrix are prerequisites there):
+# On the real enablement decision:
 #   on:
 #     push:
 #       tags:
@@ -262,10 +261,7 @@ jobs:
 
   # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
   #
-  # That workflow owns the plan (what bumped, in what order, what is already on the index)
-  # and the published-combo gate; this job only routes the tag to it. So a tag whose member
-  # did not move is a reported no-op, and dispatching pypi-publish.yaml directly does the
-  # same thing.
+  # It calls pypi-publish.yaml, which picks the packages and runs the tests.
   publish-pypi:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
@@ -276,6 +272,4 @@ jobs:
       id-token: write
     uses: ./.github/workflows/pypi-publish.yaml
     with:
-      # The tagged commit is the bump commit, so its parent carries the previous versions.
-      base: HEAD^
       publish: ${{ inputs.push }}
