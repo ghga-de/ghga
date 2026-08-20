@@ -75,15 +75,11 @@ def make_uploader(
     file_info = make_file_info_for_upload(
         path=path, alias=FILE_ALIAS, decrypted_size=1000
     )
-    uploader = Uploader(
+    return Uploader(
         upload_client=upload_client,
         file_info=file_info,
         max_concurrent_uploads=max_concurrent_uploads,
     )
-    # `upload_file` owns this for real uploads; tests driving `_upload_file_part`
-    # directly have to supply it themselves.
-    uploader._encryption_pool = ThreadPoolExecutor(max_workers=1)
-    return uploader
 
 
 async def test_new_progress_bar_uses_display_name():
@@ -198,7 +194,9 @@ async def test_upload_file_part_wraps_generic_exception():
         uploader._progress_bar = MagicMock()
         file_processor = make_dummy_file_processor(part_count=1)
         with pytest.raises(exceptions.UploadFileError):
-            await uploader._upload_file_part(file_processor)
+            await uploader._upload_file_part(
+                file_processor, ThreadPoolExecutor(max_workers=1)
+            )
 
 
 async def test_upload_file_part_wraps_exception_with_blank_message(caplog):
@@ -213,7 +211,11 @@ async def test_upload_file_part_wraps_exception_with_blank_message(caplog):
         uploader._progress_bar = MagicMock()
 
         task_handler = TaskHandler()
-        task_handler.schedule(uploader._upload_file_part(file_processor))
+        task_handler.schedule(
+            uploader._upload_file_part(
+                file_processor, ThreadPoolExecutor(max_workers=1)
+            )
+        )
         with caplog.at_level(logging.ERROR, logger="asyncio"):
             with pytest.raises(exceptions.UploadFileError):
                 await task_handler.gather()
@@ -235,7 +237,9 @@ async def test_upload_file_part_reraises_cancelled_error():
         uploader._progress_bar = MagicMock()
         file_processor = make_dummy_file_processor(part_count=1)
         with pytest.raises(asyncio.CancelledError):
-            await uploader._upload_file_part(file_processor)
+            await uploader._upload_file_part(
+                file_processor, ThreadPoolExecutor(max_workers=1)
+            )
 
 
 async def test_upload_file_calls_complete_after_all_parts():
@@ -370,7 +374,10 @@ async def test_upload_file_part_raises_when_processor_is_exhausted():
         uploader._progress_bar = MagicMock()
 
         with pytest.raises(exceptions.UploadFileError, match="ran out of parts"):
-            await uploader._upload_file_part(make_dummy_file_processor(part_count=0))
+            await uploader._upload_file_part(
+                make_dummy_file_processor(part_count=0),
+                ThreadPoolExecutor(max_workers=1),
+            )
 
 
 async def test_upload_file_raises_when_processor_yields_a_surplus_part():

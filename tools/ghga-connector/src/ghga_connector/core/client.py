@@ -58,7 +58,7 @@ async def async_client(*, purpose: Literal["upload", "download"]):
     )
     limits = httpx2.Limits(
         max_connections=max_concurrent_parts + POOL_HEADROOM,
-        max_keepalive_connections=max_concurrent_parts,
+        max_keepalive_connections=max_concurrent_parts + POOL_HEADROOM,
         keepalive_expiry=KEEPALIVE_EXPIRY,
     )
     transport = get_ratelimiting_retry_transport(limits=limits)
