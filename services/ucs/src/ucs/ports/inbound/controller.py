@@ -352,8 +352,12 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def remove_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
+    async def remove_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4, require_unlocked: bool
+    ) -> None:
         """Remove a file upload and cancel the ongoing upload if applicable.
+
+        If `require_unlocked` is True, the box must be unlocked to complete the operation.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
@@ -364,6 +368,7 @@ class UploadControllerPort(ABC):
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         - `BucketMissingError` if the configured bucket does not exist in S3.
         - `S3OperationError` if S3 returns any other unexpected error.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         ...
 
