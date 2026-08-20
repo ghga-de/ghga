@@ -16,6 +16,7 @@
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 from pydantic import UUID4
 
@@ -67,7 +68,6 @@ class Uploader:
         self._file_info = file_info
         self._overwrite = overwrite
         self._semaphore = asyncio.Semaphore(max_concurrent_uploads)
-        self._encryption_lock = asyncio.Lock()
 
     def new_progress_bar(self) -> UploadProgressBar:
         """Create a new progress bar"""
@@ -133,6 +133,20 @@ class Uploader:
                 exception=exc,
             ) from exc
 
+    async def _encrypt_next_part(
+        self, file_processor: FileProcessor
+    ) -> tuple[int, bytes] | None:
+        """Advance the file processor on the encryption worker, off the event loop.
+
+        The single worker is what keeps the shared processor from being advanced
+        concurrently. `next` gets a default because StopIteration cannot be raised
+        into a Future.
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            self._encryption_pool, next, file_processor, None
+        )
+
     async def _upload_file_part(self, file_processor: FileProcessor) -> None:
         """Encrypt and upload a file part.
 
@@ -147,12 +161,7 @@ class Uploader:
         async with self._semaphore:
             part_number = 0  # defined here so it can be used in the exception
             try:
-                async with self._encryption_lock:
-                    # crypt4gh encryption is CPU-bound, so running it on the event loop
-                    # stalls in-flight part uploads and the connection pool's keep-alive
-                    # handling. `next` takes a default because a StopIteration raised in
-                    # a worker thread cannot be propagated through a Future.
-                    next_part = await asyncio.to_thread(next, file_processor, None)
+                next_part = await self._encrypt_next_part(file_processor)
                 if next_part is None:
                     raise RuntimeError(
                         "The file processor ran out of parts before all scheduled part"
@@ -185,25 +194,33 @@ class Uploader:
         """
         # Encrypt and upload file parts in parallel
         self._progress_bar = self.new_progress_bar()
+        # Owned by this call rather than the instance: shutting it down is terminal.
+        self._encryption_pool = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="crypt4gh"
+        )
         with self._file_path.open("rb") as file, self._progress_bar:
-            file_processor = encryptor.process_file(file=file)
-            task_handler = TaskHandler()
-            for _ in range(self._file_info.part_count):
-                task_handler.schedule(
-                    self._upload_file_part(file_processor=file_processor)
-                )
-            # Wait for all upload tasks to finish
-            await task_handler.gather()
+            try:
+                file_processor = encryptor.process_file(file=file)
+                task_handler = TaskHandler()
+                for _ in range(self._file_info.part_count):
+                    task_handler.schedule(
+                        self._upload_file_part(file_processor=file_processor)
+                    )
+                # Wait for all upload tasks to finish
+                await task_handler.gather()
 
-            # Exactly `part_count` parts were requested, so the processor is still
-            # suspended at its final `yield`. Advancing it once more runs the trailing
-            # ciphertext size validation and surfaces any surplus part.
-            surplus_part = await asyncio.to_thread(next, file_processor, None)
-            if surplus_part is not None:
-                raise RuntimeError(
-                    "The file processor produced more parts than the"
-                    + f" {self._file_info.part_count} that were uploaded."
-                )
+                # The processor is suspended at its final `yield`; advancing it
+                # once more runs its trailing ciphertext size validation.
+                surplus_part = await self._encrypt_next_part(file_processor)
+                if surplus_part is not None:
+                    raise RuntimeError(
+                        "The file processor produced more parts than the"
+                        + f" {self._file_info.part_count} that were uploaded."
+                    )
+            finally:
+                # Let the in-flight encryption finish before the file closes,
+                # so a failed upload cannot stall interpreter shutdown.
+                self._encryption_pool.shutdown(wait=True, cancel_futures=True)
 
         # Get the unencrypted checksum and tell the Upload API to conclude the S3 upload
         unencrypted_checksum = encryptor.checksums.decrypted_sha256.hexdigest()

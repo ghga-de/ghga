@@ -20,7 +20,6 @@ from typing import Any
 
 import httpx2
 from async_lru import alru_cache
-from tenacity import RetryError
 
 from ghga_connector import exceptions
 from ghga_connector.config import get_download_api_url
@@ -29,10 +28,7 @@ from ghga_connector.constants import (
     DOWNLOAD_URL_CACHE_TIME,
     TIMEOUT_LONG,
 )
-from ghga_connector.core.api_calls.utils import (
-    handle_request_error,
-    is_service_healthy,
-)
+from ghga_connector.core.api_calls.utils import is_service_healthy
 from ghga_connector.core.work_package import WorkPackageClient
 
 from .structs import RetryResponse
@@ -89,8 +85,8 @@ class DownloadClient:
                 headers=headers,
                 timeout=TIMEOUT_LONG,
             )
-        except (RetryError, httpx2.RequestError) as exc:
-            response = handle_request_error(exc, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         return _handle_drs_object_response(url=url, response=response)
 
@@ -131,8 +127,8 @@ class DownloadClient:
             response: httpx2.Response = await self._client.get(
                 headers=auth_headers, url=url
             )
-        except httpx2.RequestError as request_error:
-            response = handle_request_error(request_error, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         status_code = response.status_code
         match status_code:
@@ -207,8 +203,8 @@ class DownloadClient:
         )
         try:
             response: httpx2.Response = await self._client.get(url=url, headers=headers)
-        except (RetryError, httpx2.RequestError) as exc:
-            response = handle_request_error(exc, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         status_code = response.status_code
 

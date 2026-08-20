@@ -170,9 +170,8 @@ async def _get_wkvs_values(client: httpx2.AsyncClient) -> dict[str, Any]:
 
     try:
         response = await client.get(url)
-    except httpx2.RequestError as request_error:
-        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
-        raise exceptions.RequestFailedError(url=url) from request_error
+    except exceptions.REQUEST_FAILURES as exc:
+        response = exceptions.handle_request_error(exc, url=url)
 
     if response.status_code != 200:
         raise exceptions.BadResponseCodeError(

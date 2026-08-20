@@ -20,15 +20,11 @@ from uuid import UUID
 
 import httpx2
 from pydantic import UUID4, ValidationError
-from tenacity import RetryError
 
 from ghga_connector import exceptions
 from ghga_connector.config import get_upload_api_url
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
-from ghga_connector.core.api_calls.utils import (
-    handle_request_error,
-    is_service_healthy,
-)
+from ghga_connector.core.api_calls.utils import is_service_healthy
 from ghga_connector.core.uploading.structs import UploadedFileInfo
 from ghga_connector.core.work_package import WorkPackageClient
 
@@ -134,8 +130,8 @@ class UploadClient:
                     "Requesting box upload listing at url %s (skip=%i)", url, skip
                 )
                 response = await self._client.get(url, headers=headers, params=params)
-            except (RetryError, httpx2.RequestError) as exc:
-                response = handle_request_error(exc, url=url)
+            except exceptions.REQUEST_FAILURES as exc:
+                response = exceptions.handle_request_error(exc, url=url)
 
             if response.status_code != 200:
                 self._handle_bad_status_codes(
@@ -206,8 +202,8 @@ class UploadClient:
         try:
             log.debug("Requesting file upload creation at url %s", url)
             response = await self._client.post(url, headers=headers, json=body)
-        except (RetryError, httpx2.RequestError) as exc:
-            response = handle_request_error(exc, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         if response.status_code != 201:
             self._handle_bad_status_codes(
@@ -278,8 +274,8 @@ class UploadClient:
         try:
             log.debug("Getting part upload url from %s", url)
             response = await self._client.get(url, headers=headers)
-        except (RetryError, httpx2.RequestError) as exc:
-            response = handle_request_error(exc, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         # If this is the first time getting 403, try to bust cache and redo. Otherwise
         #  let the class raise an error in _handle_bad_status_codes()
@@ -316,8 +312,8 @@ class UploadClient:
         try:
             log.debug("Uploading file part number %i for %s", part_no, str(file_id))
             response = await self._client.put(url, content=content)
-        except (RetryError, httpx2.RequestError) as exc:
-            response = handle_request_error(exc, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         if response.status_code != 200:
             self._handle_bad_status_codes(
@@ -360,8 +356,8 @@ class UploadClient:
         try:
             log.debug("Requesting file upload completion at url %s", url)
             response = await self._client.patch(url, json=body, headers=headers)
-        except (RetryError, httpx2.RequestError) as exc:
-            response = handle_request_error(exc, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         if response.status_code != 204:
             self._handle_bad_status_codes(
@@ -393,8 +389,8 @@ class UploadClient:
         try:
             log.debug("Requesting file deletion at url %s", url)
             response = await self._client.delete(url, headers=headers)
-        except (RetryError, httpx2.RequestError) as exc:
-            response = handle_request_error(exc, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         if response.status_code != 204:
             self._handle_bad_status_codes(

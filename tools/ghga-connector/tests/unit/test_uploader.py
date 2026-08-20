@@ -17,6 +17,7 @@
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest.mock import AsyncMock, MagicMock, call, patch
@@ -74,11 +75,15 @@ def make_uploader(
     file_info = make_file_info_for_upload(
         path=path, alias=FILE_ALIAS, decrypted_size=1000
     )
-    return Uploader(
+    uploader = Uploader(
         upload_client=upload_client,
         file_info=file_info,
         max_concurrent_uploads=max_concurrent_uploads,
     )
+    # `upload_file` owns this for real uploads; tests driving `_upload_file_part`
+    # directly have to supply it themselves.
+    uploader._encryption_pool = ThreadPoolExecutor(max_workers=1)
+    return uploader
 
 
 async def test_new_progress_bar_uses_display_name():
@@ -351,3 +356,41 @@ async def test_semaphore_initialized_with_max_concurrent_uploads():
         max_concurrent = 2
         uploader = make_uploader(Path(f.name), max_concurrent_uploads=max_concurrent)
         assert uploader._semaphore._value == max_concurrent
+
+
+async def test_upload_file_part_raises_when_processor_is_exhausted():
+    """An under-producing file processor is reported instead of failing obscurely.
+
+    `next` is given a default so StopIteration never has to cross the worker thread,
+    which means the exhausted case has to be detected explicitly.
+    """
+    with NamedTemporaryFile() as f:
+        uploader = make_uploader(Path(f.name))
+        uploader._file_id = FILE_ID
+        uploader._progress_bar = MagicMock()
+
+        with pytest.raises(exceptions.UploadFileError, match="ran out of parts"):
+            await uploader._upload_file_part(make_dummy_file_processor(part_count=0))
+
+
+async def test_upload_file_raises_when_processor_yields_a_surplus_part():
+    """A processor with more parts than were uploaded is caught after gathering."""
+    with NamedTemporaryFile() as f:
+        f.write(b"x" * 100)
+        f.flush()
+
+        mock_file_info = make_file_info_for_upload(path=Path(f.name), alias=FILE_ALIAS)
+        assert mock_file_info.part_count == 1
+
+        uploader = Uploader(
+            upload_client=AsyncMock(),
+            file_info=mock_file_info,
+            max_concurrent_uploads=1,
+        )
+        uploader._file_id = FILE_ID
+        uploader.new_progress_bar = MagicMock(return_value=MagicMock())  # type: ignore
+
+        # One more part than `part_count` says should exist
+        encryptor = make_mock_encryptor(parts=[(1, b"encrypted"), (2, b"surplus")])
+        with pytest.raises(RuntimeError, match="more parts than"):
+            await uploader.upload_file(encryptor=encryptor)

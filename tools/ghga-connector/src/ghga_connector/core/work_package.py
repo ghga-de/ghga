@@ -23,7 +23,6 @@ from uuid import UUID
 import httpx2
 from async_lru import alru_cache
 from pydantic import UUID4, SecretBytes
-from tenacity import RetryError
 
 from ghga_connector.config import get_work_package_api_url
 from ghga_connector.constants import (
@@ -31,7 +30,6 @@ from ghga_connector.constants import (
     UPLOAD_WOT_CACHE_SIZE,
     UPLOAD_WOT_CACHE_TIME,
 )
-from ghga_connector.core.api_calls.utils import handle_request_error
 from ghga_connector.core.utils import get_work_package_token
 from ghga_service_commons.utils import crypt
 from ghga_service_commons.utils.crypt import decrypt
@@ -85,8 +83,8 @@ class WorkPackageClient:
             if body is not None:
                 args["json"] = body
             response: httpx2.Response = await fn(**args)
-        except (RetryError, httpx2.RequestError) as exc:
-            response = handle_request_error(exc, url=url)
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         return response
 

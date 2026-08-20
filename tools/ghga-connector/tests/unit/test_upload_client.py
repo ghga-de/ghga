@@ -29,7 +29,6 @@ from tenacity import RetryError
 
 from ghga_connector import exceptions
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
-from ghga_connector.core.api_calls.utils import handle_request_error
 from ghga_connector.core.client import async_client
 from ghga_connector.core.uploading.api_calls import UploadClient
 from tests.fixtures import set_runtime_test_config  # noqa: F401
@@ -680,7 +679,7 @@ async def test_handle_request_error_translates_transport_errors(
     """
     exc = make_retry_error(request_error) if wrapped else request_error
     with pytest.raises(expected_error):
-        handle_request_error(exc, url="http://example.com")
+        exceptions.handle_request_error(exc, url="http://example.com")
 
 
 async def test_handle_request_error_returns_exhausted_response():
@@ -691,7 +690,9 @@ async def test_handle_request_error_returns_exhausted_response():
     attempt.result.return_value = response
 
     assert (
-        handle_request_error(RetryError(last_attempt=attempt), url="http://example.com")
+        exceptions.handle_request_error(
+            RetryError(last_attempt=attempt), url="http://example.com"
+        )
         is response
     )
 
@@ -699,7 +700,7 @@ async def test_handle_request_error_returns_exhausted_response():
 async def test_handle_request_error_reports_the_reason():
     """The underlying transport message survives into the user-facing error."""
     with pytest.raises(exceptions.RequestFailedError, match="Server disconnected"):
-        handle_request_error(
+        exceptions.handle_request_error(
             httpx2.RemoteProtocolError(
                 "Server disconnected without sending a response."
             ),

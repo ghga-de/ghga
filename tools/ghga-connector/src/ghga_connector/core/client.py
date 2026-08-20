@@ -20,7 +20,7 @@ from typing import Literal
 import httpx2
 
 from ghga_connector.config import get_config
-from ghga_connector.constants import KEEPALIVE_EXPIRY, TIMEOUT
+from ghga_connector.constants import KEEPALIVE_EXPIRY, POOL_HEADROOM, TIMEOUT
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from ghga_service_commons.transports import (
     AsyncRetryTransport,
@@ -47,21 +47,17 @@ def get_ratelimiting_retry_transport(
 async def async_client(*, purpose: Literal["upload", "download"]):
     """Yields a context manager async httpx2 client and closes it afterward.
 
-    `purpose` selects which of the two part-concurrency settings sizes the connection
-    pool, since a given client is only ever used for one of the two transfer paths.
+    A client only ever serves one transfer path, so `purpose` picks which of the two
+    part-concurrency settings sizes the connection pool.
     """
     config = get_config()
-    # httpx2 applies `max_connections` across all origins rather than per host, so the
-    # pool is sized from the number of parts that can be in flight at once. A short
-    # `keepalive_expiry` keeps idle connections from lingering long enough for the
-    # server to reap them first.
     max_concurrent_parts = (
         config.max_concurrent_uploads
         if purpose == "upload"
         else config.max_concurrent_downloads
     )
     limits = httpx2.Limits(
-        max_connections=max_concurrent_parts,
+        max_connections=max_concurrent_parts + POOL_HEADROOM,
         max_keepalive_connections=max_concurrent_parts,
         keepalive_expiry=KEEPALIVE_EXPIRY,
     )
