@@ -1227,9 +1227,11 @@ async def test_get_part_upload_url_when_s3_upload_not_found(
     storage.get_part_upload_url = do_error
 
     caplog.clear()
-    with caplog.at_level(logging.WARNING, logger="ucs.core.controller"):
-        with pytest.raises(UploadControllerPort.UploadSessionNotFoundError) as exc_info:
-            await controller.get_part_upload_url(file_id=file_id, part_no=1)
+    with (
+        caplog.at_level(logging.WARNING, logger="ucs.core.controller"),
+        pytest.raises(UploadControllerPort.UploadSessionNotFoundError) as exc_info,
+    ):
+        await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
     # Verify the exception contains the S3 upload ID
     s3_upload_id = rig.file_upload_dao.latest.s3_upload_id
@@ -1274,9 +1276,11 @@ async def test_get_part_upload_url_when_s3_upload_not_found_and_state_not_init(
     storage.get_part_upload_url = do_error
 
     caplog.clear()
-    with caplog.at_level(logging.INFO, logger="ucs.core.controller"):
-        with pytest.raises(UploadControllerPort.UploadSessionNotFoundError) as exc_info:
-            await controller.get_part_upload_url(file_id=file_id, part_no=1)
+    with (
+        caplog.at_level(logging.INFO, logger="ucs.core.controller"),
+        pytest.raises(UploadControllerPort.UploadSessionNotFoundError) as exc_info,
+    ):
+        await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
     # Verify the exception contains the S3 upload ID
     s3_upload_id = rig.file_upload_dao.latest.s3_upload_id
