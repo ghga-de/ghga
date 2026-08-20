@@ -19,7 +19,7 @@ Compatibility Bugs with JSON Subschema Checking".
 Key facts:
 
 - Package name on PyPI: `ghga-jsonsubschema`; import name: `jsonsubschema`.
-- Requires Python 3.13+; dependency management with `uv` (`uv.lock`).
+- Requires Python 3.10+; dependency management with `uv` (`uv.lock`).
 - Only JSON Schema **draft 4** is supported (`config.VALIDATOR`).
 - Recursive `$ref`s, some negated object/array/numeric schemas, the
   `dependencies` keyword, and non-regular regexes are *unsupported* and raise
@@ -39,7 +39,7 @@ src/jsonsubschema/
 ├── _constants.py        # JSON type/keyword constants
 └── _utils.py            # Validation, regex/interval helpers, debug printing
 tests/                   # pytest suite, one file per JSON type/feature area
-.github/workflows/       # lint.yaml (ruff+mypy), test.yaml (pytest on 3.13/3.14), publish.yaml
+.github/workflows/       # lint.yaml (ruff+mypy), test.yaml (pytest on 3.10-3.13), publish.yaml
 ```
 
 Modules prefixed with `_` are internal; everything meant for users is
@@ -73,9 +73,9 @@ uv run mypy src tests          # type check (pre-commit passes --no-warn-unused-
 uv run pre-commit run --all-files   # everything the CI lint job runs
 ```
 
-CI runs the test suite on Python 3.13 and 3.14 on every push, so changes
-must work on both. Direct commits to `main` are blocked by a pre-commit hook;
-work on feature branches.
+CI runs the test suite on Python 3.10 through 3.13 on every push, so changes
+must work across that range. Direct commits to `main` are blocked by a
+pre-commit hook; work on feature branches.
 
 ## Coding conventions
 

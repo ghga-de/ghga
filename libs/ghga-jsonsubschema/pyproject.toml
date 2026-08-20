@@ -13,7 +13,7 @@ authors = [
 maintainers = [
     { name = "The GHGA Authors", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Operating System :: POSIX :: Linux",
@@ -25,7 +25,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga-jsonsubschema"
-version = "0.1.1"
+version = "0.1.2"
 description = "A tool to check whether a JSON schema is subset/subschema of another JSON schema."
 dependencies = [
     "greenery>=4.2,<5",
