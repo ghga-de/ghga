@@ -35,6 +35,10 @@ spec:
           env:
             - name: CLUSTER_ID
               value: {{ .Values.kafka.clusterId | quote }}
+            {{- with .Values.kafka.heapOpts }}
+            - name: KAFKA_HEAP_OPTS
+              value: {{ . | quote }}
+            {{- end }}
             - name: KAFKA_NODE_ID
               value: "1"
             - name: KAFKA_PROCESS_ROLES

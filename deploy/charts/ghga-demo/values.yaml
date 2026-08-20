@@ -73,6 +73,13 @@ kafka:
   image: apache/kafka:3.9.1
   # fixed KRaft cluster id (any base64-ish 22 chars; fixed so restarts reuse storage)
   clusterId: GhgaDemoKafkaCluster00
+  # The image defaults to `-Xmx1G -Xms1G`, and -Xms COMMITS that gigabyte at start
+  # whatever the load — measured at 862 MiB working set, by far the largest pod on
+  # the node. The demo/testbed topics hold a few hundred tiny events, so the default
+  # is sized for a production broker we are not running. The node has ~7.8 GiB and
+  # also hosts pytest, a headless browser and the connector, so this was roughly
+  # half of the shortfall that starved the UI phase.
+  heapOpts: -Xmx512m -Xms256m
 
 mongodb:
   enabled: true
