@@ -973,6 +973,44 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
     assert str(box_id) in str(exc_info.value)
 
 
+async def test_complete_file_upload_when_box_locked(rig: JointRig):
+    """Verify that we can complete FileUploads when the box is already locked.
+
+    This would be for the situation where a user has initiated uploads and then
+    decided to lock the box without waiting for them to finish.
+    """
+    # Create a FileUploadBox and a FileUpload
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Lock the box
+    version = rig.file_upload_box_dao.latest.version
+    await rig.controller.lock_file_upload_box(
+        box_id=box_id, version=version, force=True
+    )
+    assert rig.file_upload_box_dao.latest.state == "locked"
+
+    # Now complete the file upload
+    object_id = rig.file_upload_dao.latest.object_id
+    await rig.controller.complete_file_upload(
+        box_id=box_id,
+        file_id=file_id,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{object_id}",
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+    )
+
+    # Verify that the upload is now marked complete
+    assert rig.file_upload_dao.latest.state == "inbox"
+
+
 @pytest.mark.parametrize("terminal_state", ["cancelled", "failed"])
 async def test_complete_file_upload_in_terminal_state(
     rig: JointRig, terminal_state: FileUploadState
