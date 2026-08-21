@@ -1,6 +1,5 @@
 name: dins
-description: Dataset Information Service - Providing public metadata about files
-  registered with the Internal File Registry
+description: Dataset Information Service - Providing public metadata about files registered with the Internal File Registry
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

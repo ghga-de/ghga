@@ -128,7 +128,7 @@ async def test_mongodb_timeout():
     """Test the timeout functionality by pointing towards a non-existent DB."""
     config = MongoDbConfig(
         mongo_timeout=1,
-        mongo_dsn="mongodb://localhost:27017",  # type: ignore
+        mongo_dsn="mongodb://localhost:27017",
         db_name="test",
     )
 

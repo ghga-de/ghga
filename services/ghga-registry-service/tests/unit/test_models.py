@@ -55,7 +55,7 @@ def _minimal_study(**kwargs) -> Study:
         "created_by": uuid4(),
     }
     defaults.update(kwargs)
-    return Study(**defaults)  # type: ignore
+    return Study(**defaults)
 
 
 def test_study_status_values():

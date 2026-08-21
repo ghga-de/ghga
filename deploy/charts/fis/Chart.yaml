@@ -1,6 +1,5 @@
 name: fis
-description: File Ingest Service - A service to liaise between Central File 
-  Services and Data Hubs for file inspection.
+description: File Ingest Service - A service to liaise between Central File Services and Data Hubs for file inspection.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

@@ -32,9 +32,31 @@ fmt:
     uv run ruff format .
     uv run ruff check --fix .
 
-# mypy per member (a single `mypy .` collides on duplicate module names across members)
+# A single `mypy .` collides on duplicate module names across members, and the result
+# depends on the path set it is given -- so the unit, not the file, is what gets checked.
+# scripts/typecheck.py is the same runner the pre-commit hook and CI use.
+# Type-check every member (src + tests) and the non-member Python.
 typecheck:
-    for m in libs/*/src services/*/src tools/*/src; do echo "== $m =="; uv run mypy "$m" || exit 1; done
+    uv run python scripts/typecheck.py --all
+
+# --- Git hooks (pre-commit; ADR-0018) ---------------------------------------------------
+# Once per clone -- the dev container does it for you.
+# Install the git hooks into .git/hooks.
+hooks:
+    uv run pre-commit install
+
+# The branch guard is skipped: it exists to stop commits landing on main, not to fail a
+# full-tree sweep.
+# Run every hook over the whole tree, as CI's `hygiene` job does.
+hooks-all:
+    SKIP=no-commit-to-branch uv run pre-commit run --all-files
+
+# Only the generic pre-commit-hooks repo carries a `rev`; the ruff / mypy / prettier /
+# eslint hooks take their version from uv.lock and pnpm-lock.yaml, so those are bumped by
+# updating the lockfiles instead.
+# Bump the pinned hook revisions.
+hooks-update:
+    uv run pre-commit autoupdate
 
 # Run tests; optionally scope to a member, e.g. `just test libs/hexkit`.
 test target=".":
@@ -56,6 +78,13 @@ fe-test:
 
 fe-lint:
     cd frontend/data-portal && pnpm lint
+
+# Prettier owns formatting for the front end (ESLint does not check it).
+fe-format:
+    cd frontend/data-portal && pnpm format
+
+fe-format-check:
+    cd frontend/data-portal && pnpm format:check
 
 # Run the data-portal dev server with MOCKED api + oidc (MSW) — no backend needed.
 # Generates public/config.js (mock_api=true) and serves on http://localhost:8080.

@@ -1,6 +1,5 @@
 name: ifrs
-description: Internal File Registry Service - This service acts as a registry 
-  for the internal location and representation of files.
+description: Internal File Registry Service - This service acts as a registry for the internal location and representation of files.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

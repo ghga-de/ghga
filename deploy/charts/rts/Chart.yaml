@@ -1,6 +1,5 @@
 name: rts
-description: Reverse Transpiler Service - A service running a REST API that 
-  serves accessioned metadata files by study ID
+description: Reverse Transpiler Service - A service running a REST API that serves accessioned metadata files by study ID
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

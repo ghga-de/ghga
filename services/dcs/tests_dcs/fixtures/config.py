@@ -40,4 +40,4 @@ def get_config(
             sources_dict.update(**source.model_dump())
     sources_dict.update(**kwargs)
 
-    return Config(config_yaml=default_config_yaml, **sources_dict)
+    return Config(config_yaml=default_config_yaml, **sources_dict)  # type: ignore

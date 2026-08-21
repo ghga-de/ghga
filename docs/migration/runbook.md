@@ -86,7 +86,8 @@ incremental sync stays low-conflict:
 2. **Lock:** `uv lock` → single root `uv.lock`. Resolve any genuine conflicts now (this is where
    today's `event-schemas 12 vs 13` / `transpiler <3 vs 3.0.0` skew gets reconciled).
 3. **Toolchain:** one `ruff`/`mypy`/`pre-commit` config; delete per-member copies (already dropped
-   on import).
+   on import). **Done** — the root `.pre-commit-config.yaml` covers both stacks and the last
+   per-member copy (testbed's) is gone ([ADR-0018](../adr/0018-pre-commit-hooks.md)).
 4. **Containers:** one shared `docker/Dockerfile` (+ DHI), ENTRYPOINT chosen per service; the
    frontend keeps its bespoke Dockerfile.
 5. **Per-package lib matrix:** a CI job that runs each `libs/*` standalone across its supported

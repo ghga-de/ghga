@@ -1,6 +1,5 @@
 name: nos
-description: The Notification Orchestration Service controls the creation of 
-  notification events.
+description: The Notification Orchestration Service controls the creation of notification events.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

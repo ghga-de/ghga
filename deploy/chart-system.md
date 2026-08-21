@@ -56,4 +56,3 @@ Deploy your parent chart and test the integration with the updated ghga-common c
 ```bash
 helm install <release-name> ./<parent-chart>
 ```
-

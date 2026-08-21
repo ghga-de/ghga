@@ -42,7 +42,7 @@ async def test_claim_creation(mongodb: MongoDbFixture):
         assertion_date=utc_datetime(2022, 9, 1),
         valid_from=utc_datetime(2022, 10, 1),
         valid_until=utc_datetime(2022, 10, 31),
-        source="https://ghga.de",  # type: ignore
+        source="https://ghga.de",
         creation_date=utc_datetime(2022, 9, 15),
     )
     await claim_dao.insert(claim)

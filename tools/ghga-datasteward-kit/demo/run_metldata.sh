@@ -15,5 +15,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cd /workspace/demo/config
+cd /workspace/demo/config || exit 1
 metldata

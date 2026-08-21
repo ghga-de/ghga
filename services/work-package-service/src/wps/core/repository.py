@@ -487,11 +487,17 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         In the following cases, a WorkPackageAccessError is raised:
         - if a work package with the given work_package_id does not exist
         - if the work type is not valid, i.e. one of create, upload, close, or delete
-        - if the work_type requires parameters that are not provided (alias or file ID)
         - if check_valid is set and the work package has expired
         - if a work_package_access_token is specified and it does not match
           the token hash that is stored in the work package
         - if an upload box is not found in the database
+
+        The parameters a work type requires -- alias for create, file ID for upload,
+        close and delete -- are NOT checked here. UploadWorkOrderTokenRequest validates
+        that correlation at the API boundary, so a request missing one is rejected with
+        a 422 before this method is reached. Calling this method directly without them
+        raises a pydantic ValidationError when the work order is constructed, which the
+        route does not translate into a 403.
         """
         extra = {  # only used for logging
             "work_package_id": work_package_id,

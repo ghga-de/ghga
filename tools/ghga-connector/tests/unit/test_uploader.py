@@ -257,7 +257,7 @@ async def test_upload_file_calls_complete_after_all_parts():
             max_concurrent_uploads=1,
         )
         uploader._file_id = FILE_ID
-        uploader.new_progress_bar = MagicMock(return_value=MagicMock())  # type: ignore
+        uploader.new_progress_bar = MagicMock(return_value=MagicMock())
         encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
         await uploader.upload_file(encryptor=encryptor)
         upload_client.complete_file_upload.assert_called_once()
@@ -281,7 +281,7 @@ async def test_upload_file_complete_error_raises_complete_file_upload_error():
             max_concurrent_uploads=1,
         )
         uploader._file_id = FILE_ID
-        uploader.new_progress_bar = MagicMock(return_value=MagicMock())  # type: ignore
+        uploader.new_progress_bar = MagicMock(return_value=MagicMock())
 
         with pytest.raises(exceptions.CompleteFileUploadError):
             encryptor = make_mock_encryptor(parts=[(1, b"encrypted")])
@@ -395,7 +395,7 @@ async def test_upload_file_raises_when_processor_yields_a_surplus_part():
             max_concurrent_uploads=1,
         )
         uploader._file_id = FILE_ID
-        uploader.new_progress_bar = MagicMock(return_value=MagicMock())  # type: ignore
+        uploader.new_progress_bar = MagicMock(return_value=MagicMock())
 
         # One more part than `part_count` says should exist
         encryptor = make_mock_encryptor(parts=[(1, b"encrypted"), (2, b"surplus")])

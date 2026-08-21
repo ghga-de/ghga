@@ -1,6 +1,5 @@
 name: sms
-description: State Management Service - Provides a REST API for basic 
-  infrastructure technology state management.
+description: State Management Service - Provides a REST API for basic infrastructure technology state management.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

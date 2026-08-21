@@ -42,7 +42,7 @@ def test_create_default_op():
 def test_create_custom_op():
     """Create a custom test OP."""
     config = OidcProviderConfig(
-        issuer="https://proxy.aai.lifescience-ri.eu",  # type: ignore
+        issuer="https://proxy.aai.lifescience-ri.eu",
         user_domain="dkfz.de",
         client_id="GHGA-Client",
         valid_seconds=90 * 60,
@@ -141,7 +141,7 @@ async def test_user_info_for_custom_token():
 async def test_user_info_for_default_token_of_custom_op():
     """Create a custom access token for a dummy user."""
     config = OidcProviderConfig(
-        issuer="https://proxy.aai.lifescience-ri.eu",  # type: ignore
+        issuer="https://proxy.aai.lifescience-ri.eu",
         user_domain="dkfz.de",
         client_id="GHGA-Client",
         valid_seconds=90 * 60,
