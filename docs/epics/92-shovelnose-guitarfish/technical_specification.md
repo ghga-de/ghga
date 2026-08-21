@@ -136,6 +136,7 @@ For requeueing a single file (box ID + file ID), the UploadController class:
 3. Rejects failed files that never reached the inbox. 'failed' covers three different situations today: an error during initiation (`_insert_file_upload()`, no object at all), a checksum or size mismatch at completion (`_compare_checksums()` / `_verify_object_size()`, object present but known bad), and an interrogation failure (object present and worth retrying). Only the third one can be requeued. To differentiate between these, we check the `decrypted_sha256` field, which is only populated if the initial inbox upload succeeds. 
    - For requeuing _all_ files in a box, ineligible files (ones that didn't make it to the inbox, or ones that failed interrogation but were deleted already) do _not_ trigger an error, rather they are skipped.
 4. Confirms the object is still in S3. This is one S3 request and it protects against the case where files that failed before this epic shipped, whose objects were already deleted. A missing object should surface as a distinct error the portal can explain rather than a generic 500.
+   - For requeuing _all_ files in a box, a missing object does _not_ trigger an error either, the file is skipped like the ineligible files in step 3.
 5. Sets `state="inbox"`, `state_updated=now()`, and clears `failure_reason`. Clearing the reason isn't cosmetic: `archive_file_upload_box()` raises `FileArchivalError` if a file reaches archival with `failure_reason` filled out.
 
 *Skip reasons:*  
