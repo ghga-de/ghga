@@ -116,7 +116,7 @@ class SigningKeys:
     external_jwk: jwk.JWK | None
 
     def __init__(self):
-        config = AdditionalConfig()  # type: ignore
+        config = AdditionalConfig()
         self.internal_jwk = jwk.JWK.from_json(config.auth_key)
         self.external_jwk = (
             jwk.JWKSet.from_json(config.auth_ext_keys).get_key("test")
@@ -499,7 +499,7 @@ class MockClaimDao:
                 iva_id=DATA_STEWARD_IVA_ID,
                 visa_type=VisaType.GHGA_ROLE,
                 visa_value="data_steward@some.org",
-                source="https://ghga.de",  # type: ignore
+                source="https://ghga.de",
                 assertion_date=valid_date - timedelta(14),
                 asserted_by=AuthorityLevel.SYSTEM,
                 valid_from=valid_date - timedelta(7),
@@ -512,7 +512,7 @@ class MockClaimDao:
                 iva_id=DATA_ACCESS_IVA_ID,
                 visa_type=VisaType.CONTROLLED_ACCESS_GRANTS,
                 visa_value="https://ghga.de/datasets/DS0815",
-                source="https://ghga.de",  # type: ignore
+                source="https://ghga.de",
                 assertion_date=valid_date - timedelta(14),
                 asserted_by=AuthorityLevel.DAC,
                 valid_from=valid_date - timedelta(7),

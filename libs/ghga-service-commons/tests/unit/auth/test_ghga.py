@@ -38,13 +38,13 @@ context_kwargs = {
 
 def test_create_auth_context():
     """Test that a GHGA auth context can be created."""
-    context = AuthContext(**context_kwargs)  # type: ignore
+    context = AuthContext(**context_kwargs)
     assert context.model_dump() == context.model_dump()
 
 
 def test_has_role():
     """Test that roles of the GHGA auth context can be checked."""
-    context = AuthContext(**context_kwargs)  # type: ignore
+    context = AuthContext(**context_kwargs)
     assert context.roles == ["admin"]
     assert has_role(context, "admin")
     assert not has_role(context, "operator")

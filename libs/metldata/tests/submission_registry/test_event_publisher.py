@@ -52,7 +52,7 @@ def check_source_events(
             payload=json.loads(
                 SubmissionEventPayload(
                     submission_id=expected_submission.id,
-                    content=expected_submission.content,  # type: ignore
+                    content=expected_submission.content,
                     annotation=SubmissionAnnotation(
                         accession_map=expected_submission.accession_map
                     ),

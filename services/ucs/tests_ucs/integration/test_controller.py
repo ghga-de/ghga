@@ -637,14 +637,14 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     assert interrogation_file_exists, "Dummy object not present in interrogation bucket"
 
     # REGRESSION TEST: Verify that an S3 error doesn't result in an orphaned inbox object
-    _real_get_storage_fn = controller._s3_client._get_bucket_and_storage
+    _real_get_storage_fn = controller._s3_client._get_bucket_and_storage  # type: ignore[attr-defined]
     _real_delete_fn = s3_storage.delete_object
 
     async def _erroring_delete_fn(*, bucket_id: str, object_id: str) -> None:
         raise s3_storage.ObjectStorageProtocolError("problem")
 
-    s3_storage.delete_object = _erroring_delete_fn
-    controller._s3_client._get_bucket_and_storage = lambda x: (
+    s3_storage.delete_object = _erroring_delete_fn  # type: ignore[method-assign]
+    controller._s3_client._get_bucket_and_storage = lambda x: (  # type: ignore[attr-defined]
         inbox_bucket_id,
         s3_storage,
     )
@@ -666,8 +666,8 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     assert file_upload_check["object_id"] == UUID(object_id)
 
     # Undo the S3 patches. This is the end of the regression test
-    s3_storage.delete_object = _real_delete_fn
-    controller._s3_client._get_bucket_and_storage = _real_get_storage_fn
+    s3_storage.delete_object = _real_delete_fn  # type: ignore[method-assign]
+    controller._s3_client._get_bucket_and_storage = _real_get_storage_fn  # type: ignore[attr-defined]
 
     # Now we can publish the InterrogationSuccess event for real
     await joint_fixture.kafka.publish_event(
@@ -878,13 +878,13 @@ async def test_cleanup_cancels_despite_s3_abort_failure(
     file_upload_doc = db[FILE_UPLOADS_COLLECTION].find_one({"_id": file_id})
     assert file_upload_doc is not None
     s3_upload_id = file_upload_doc["s3_upload_id"]
-    s3_client = joint_fixture.upload_controller._s3_client
+    s3_client = joint_fixture.upload_controller._s3_client  # type: ignore[attr-defined]
 
     async def failing_abort(**kwargs):
         raise s3_client.S3UploadAbortError(
             s3_upload_id=s3_upload_id,
-            object_id=str(file_upload_doc["object_id"]),
-            bucket_id=file_upload_doc["bucket_id"],
+            object_id=str(file_upload_doc["object_id"]),  # type: ignore[index]
+            bucket_id=file_upload_doc["bucket_id"],  # type: ignore[index]
         )
 
     monkeypatch.setattr(s3_client, "abort_multipart_upload", failing_abort)
@@ -1034,8 +1034,8 @@ async def test_cleanup_of_orphaned_files(
         return await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
 
     if simulate_errors:
-        s3_storage.delete_object = _delete_with_error
-        controller._s3_client._get_bucket_and_storage = lambda x: (
+        s3_storage.delete_object = _delete_with_error  # type: ignore[method-assign]
+        controller._s3_client._get_bucket_and_storage = lambda x: (  # type: ignore[attr-defined]
             bucket_id,
             s3_storage,
         )
@@ -1147,5 +1147,5 @@ async def test_deletion_of_multiple_files(joint_fixture: JointFixture):
         )
 
         # Delete the files. No error means success
-        await controller._file_upload_dao.delete(file_id1)
-        await controller._file_upload_dao.delete(file_id2)
+        await controller._file_upload_dao.delete(file_id1)  # type: ignore[attr-defined]
+        await controller._file_upload_dao.delete(file_id2)  # type: ignore[attr-defined]

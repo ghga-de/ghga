@@ -22,6 +22,10 @@ from hexkit.utils import now_utc_ms_prec
 from ifrs.core.models import ArchivableFileUpload, FileUpload
 from tests_ifrs.fixtures.joint import INTERROGATION_BUCKET
 
+# named, so the archival example below can derive from it: on the model the field is
+# optional, and reading it back off the instance widens it to `int | None`
+EXAMPLE_ENCRYPTED_SIZE = 64 * 1024**2 + 1234567
+
 EXAMPLE_FILE_UPLOAD_INBOX = FileUpload(
     id=uuid4(),
     box_id=uuid4(),
@@ -32,7 +36,7 @@ EXAMPLE_FILE_UPLOAD_INBOX = FileUpload(
     state="inbox",
     state_updated=now_utc_ms_prec() - timedelta(hours=1),
     decrypted_size=64 * 1024**2,
-    encrypted_size=64 * 1024**2 + 1234567,
+    encrypted_size=EXAMPLE_ENCRYPTED_SIZE,
     part_size=16 * 1024**2,
 )
 
@@ -47,7 +51,7 @@ EXAMPLE_AWAITING_ARCHIVAL = FileUpload(
     object_id=uuid4(),
     secret_id="some-secret-id",
     decrypted_size=EXAMPLE_FILE_UPLOAD_INBOX.decrypted_size,
-    encrypted_size=EXAMPLE_FILE_UPLOAD_INBOX.encrypted_size + 1000,
+    encrypted_size=EXAMPLE_ENCRYPTED_SIZE + 1000,
     part_size=EXAMPLE_FILE_UPLOAD_INBOX.part_size,
     # The checksums are only examples, they don't correspond to a particular file:
     decrypted_sha256="0677de3685577a06862f226bb1bfa8f889e96e59439d915543929fb4f011d096",

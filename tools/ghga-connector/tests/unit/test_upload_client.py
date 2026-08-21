@@ -670,7 +670,7 @@ def make_retry_error(exception: Exception) -> RetryError:
 )
 @pytest.mark.parametrize("wrapped", [True, False], ids=["via_retry_error", "direct"])
 async def test_handle_request_error_translates_transport_errors(
-    request_error: Exception, expected_error: type[Exception], wrapped: bool
+    request_error: httpx2.RequestError, expected_error: type[Exception], wrapped: bool
 ):
     """Transport failures are translated whether or not tenacity wrapped them.
 

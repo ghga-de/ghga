@@ -15,6 +15,7 @@ Used by .github/workflows/security-scan.yaml in two steps:
 import argparse
 import json
 import pathlib
+from typing import Any
 
 SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
 
@@ -27,7 +28,7 @@ def _load_vulns(path):
     accounting only the (vulnerability, package) pair matters.
     """
     report = json.loads(pathlib.Path(path).read_text())
-    vulns = {}
+    vulns: dict[tuple[str, str], dict[str, Any]] = {}
     for result in report.get("Results") or []:
         for v in result.get("Vulnerabilities") or []:
             key = (v["VulnerabilityID"], v.get("PkgName", ""))

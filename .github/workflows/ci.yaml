@@ -95,7 +95,9 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --all-packages --all-extras
       - name: mypy
-        run: uv run mypy "${{ matrix.target }}/src"
+        # the shared runner, so CI, `just typecheck` and the pre-commit hook check the
+        # same thing: the member's src AND its test package(s), in one invocation
+        run: uv run python scripts/typecheck.py "${{ matrix.target }}"
       - name: pytest
         # cwd = member dir: each member is its own pytest rootdir (the `tests`
         # packages collide across members otherwise)

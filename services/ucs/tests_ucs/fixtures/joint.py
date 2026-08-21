@@ -204,7 +204,7 @@ def rig(config: ConfigFixture, patch_s3_calls) -> JointRig:
                 break
         return {"ETag": f"etag_for_{object_id}", "ContentLength": size}
 
-    storage.get_object_metadata = mock_get_object_metadata
+    storage.get_object_metadata = mock_get_object_metadata  # type: ignore[method-assign]
 
     box_stats_aggregator = InMemBoxStatsAggregator(file_upload_dao=file_upload_dao)
 

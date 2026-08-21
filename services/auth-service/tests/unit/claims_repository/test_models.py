@@ -39,7 +39,7 @@ def test_good_visa_type():
         assertion_date=utc_datetime(2022, 9, 1, 12, 0),
         valid_from=utc_datetime(2022, 10, 1, 0, 0),
         valid_until=utc_datetime(2022, 10, 31, 23, 59),
-        source="https://foo-bar.org",  # type: ignore
+        source="https://foo-bar.org",
     )
 
 
@@ -47,12 +47,12 @@ def test_bas_visa_type():
     """Test creating a visa with a non-existing type"""
     with pytest.raises(ValueError):
         ClaimCreation(
-            visa_type="UNKNOWN_TYPE",  # type: ignore
+            visa_type="UNKNOWN_TYPE",
             visa_value="https://foo.org",
             assertion_date=utc_datetime(2022, 9, 1, 12, 0),
             valid_from=utc_datetime(2022, 10, 1, 0, 0),
             valid_until=utc_datetime(2022, 10, 31, 23, 59),
-            source="https://foo-bar.org",  # type: ignore
+            source="https://foo-bar.org",
         )
 
 
@@ -61,7 +61,7 @@ def test_bas_visa_type():
     [
         "foo@bar.org",
         "https://foo.org",
-        [Identity(iss="https://bar.org", sub="baz")],  # type: ignore
+        [Identity(iss="https://bar.org", sub="baz")],
     ],
 )
 def test_good_visa_values(value):
@@ -72,7 +72,7 @@ def test_good_visa_values(value):
         assertion_date=utc_datetime(2022, 9, 1, 12, 0),
         valid_from=utc_datetime(2022, 10, 1, 0, 0),
         valid_until=utc_datetime(2022, 10, 31, 23, 59),
-        source="https://foo-bar.org",  # type: ignore
+        source="https://foo-bar.org",
     )
 
 
@@ -97,7 +97,7 @@ def test_bad_visa_values(value):
             assertion_date=utc_datetime(2022, 9, 1, 12, 0),
             valid_from=utc_datetime(2022, 10, 1, 0, 0),
             valid_until=utc_datetime(2022, 10, 31, 23, 59),
-            source="https://foo-bar.org",  # type: ignore
+            source="https://foo-bar.org",
         )
 
 
@@ -109,8 +109,8 @@ def test_conditions():
         assertion_date=utc_datetime(2022, 9, 1, 12, 0),
         valid_from=utc_datetime(2022, 10, 1, 0, 0),
         valid_until=utc_datetime(2022, 10, 31, 23, 59),
-        source="https://foo-bar.org",  # type: ignore
-        sub_source="https://baz.foo-bar.org",  # type: ignore
+        source="https://foo-bar.org",
+        sub_source="https://baz.foo-bar.org",
         asserted_by=AuthorityLevel.DAC,
         conditions=[
             [
@@ -194,7 +194,7 @@ def test_validator_period(valid_from, valid_until):
         assertion_date=utc_datetime(2022, 9, 1, 12, 0),
         valid_from=valid_from,
         valid_until=valid_until,
-        source="https://foo.org",  # type: ignore
+        source="https://foo.org",
     )
 
     with pytest.raises(
@@ -206,7 +206,7 @@ def test_validator_period(valid_from, valid_until):
             assertion_date=utc_datetime(2022, 9, 1, 12, 0),
             valid_from=utc_datetime(2022, 10, 1),
             valid_until=valid_from,
-            source="https://foo.org",  # type: ignore
+            source="https://foo.org",
         )
 
     with pytest.raises(
@@ -218,5 +218,5 @@ def test_validator_period(valid_from, valid_until):
             assertion_date=utc_datetime(2022, 9, 1, 12, 0),
             valid_from=valid_from,
             valid_until=valid_from,
-            source="https://foo.org",  # type: ignore
+            source="https://foo.org",
         )

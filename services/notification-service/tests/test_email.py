@@ -112,14 +112,14 @@ async def test_bad_login_config():
         SmtpClientConfig(
             smtp_host="127.0.0.1",
             smtp_port=587,
-            smtp_auth=SmtpAuthConfig(username="test", password=None),  # type: ignore
+            smtp_auth=SmtpAuthConfig(username="test", password=None),
         )
 
     with pytest.raises(ValueError):
         SmtpClientConfig(
             smtp_host="127.0.0.1",
             smtp_port=587,
-            smtp_auth=SmtpAuthConfig(username=None, password="test"),  # type: ignore
+            smtp_auth=SmtpAuthConfig(username=None, password="test"),
         )
 
 

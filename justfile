@@ -25,9 +25,11 @@ fmt:
     uv run ruff format .
     uv run ruff check --fix .
 
-# mypy per member (a single `mypy .` collides on duplicate module names across members)
+# mypy per unit -- a single `mypy .` collides on duplicate module names across members,
+# and the result depends on the path set, so the unit is the thing that gets checked
+# (scripts/typecheck.py; the same runner the pre-commit hook and CI use).
 typecheck:
-    for m in libs/*/src services/*/src tools/*/src; do echo "== $m =="; uv run mypy "$m" || exit 1; done
+    uv run python scripts/typecheck.py --all
 
 # Run tests; optionally scope to a member, e.g. `just test libs/hexkit`.
 test target=".":

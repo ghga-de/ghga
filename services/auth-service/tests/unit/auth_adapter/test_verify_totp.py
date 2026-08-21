@@ -50,7 +50,7 @@ SESSION_ARGS = {
 
 config = Config(
     totp_encryption_key=SecretStr(TOTPHandler.random_encryption_key()),
-)  # type: ignore
+)
 
 
 @pytest.mark.parametrize(

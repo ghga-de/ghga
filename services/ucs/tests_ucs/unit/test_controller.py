@@ -799,7 +799,7 @@ async def test_delete_file_upload_with_s3_error(rig: JointRig):
     async def do_error(*args, **kwargs):
         raise ObjectStorageProtocol.MultiPartUploadAbortError("", "", "")
 
-    storage.abort_multipart_upload = do_error
+    storage.abort_multipart_upload = do_error  # type: ignore[method-assign]
     with pytest.raises(UploadControllerPort.UploadAbortError) as exc_info:
         await controller.remove_file_upload(box_id=box_id, file_id=file_id)
 
@@ -1056,7 +1056,7 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
     async def do_error(*args, **kwargs):
         raise ObjectStorageProtocol.MultiPartUploadConfirmError("", "", "")
 
-    storage.complete_multipart_upload = do_error
+    storage.complete_multipart_upload = do_error  # type: ignore[method-assign]
     with pytest.raises(UploadControllerPort.UploadCompletionError) as exc_info:
         await controller.complete_file_upload(
             box_id=box_id,
@@ -1105,7 +1105,7 @@ async def test_complete_file_upload_size_mismatch(rig: JointRig):
             "ContentLength": ENCRYPTED_SIZE + 1,
         }
 
-    storage.get_object_metadata = wrong_size
+    storage.get_object_metadata = wrong_size  # type: ignore[method-assign]
 
     # Now try to complete the upload. Should get the UploadSizeMismatchError.
     with pytest.raises(UploadControllerPort.UploadSizeMismatchError):
@@ -1221,7 +1221,7 @@ async def test_get_part_upload_url_when_s3_upload_not_found(rig: JointRig):
     async def do_error(*args, **kwargs):
         raise ObjectStorageProtocol.MultiPartUploadNotFoundError("", "", "")
 
-    storage.get_part_upload_url = do_error
+    storage.get_part_upload_url = do_error  # type: ignore[method-assign]
     with pytest.raises(UploadControllerPort.UploadSessionNotFoundError) as exc_info:
         await controller.get_part_upload_url(file_id=file_id, part_no=1)
 
@@ -1298,7 +1298,7 @@ async def test_initiate_upload_after_failed(rig: JointRig):
             )
         return await original_insert(dto)
 
-    file_upload_dao.insert = patched_insert
+    file_upload_dao.insert = patched_insert  # type: ignore[method-assign]
 
     file_id_2, _ = await controller.initiate_file_upload(
         box_id=box_id,
@@ -1347,7 +1347,7 @@ async def test_initiate_upload_after_cancelled(rig: JointRig):
             )
         return await original_insert(dto)
 
-    file_upload_dao.insert = patched_insert
+    file_upload_dao.insert = patched_insert  # type: ignore[method-assign]
 
     file_id_2, _ = await controller.initiate_file_upload(
         box_id=box_id,
@@ -1397,7 +1397,7 @@ async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
             unique_fields={"box_id": str(box_id), "alias": "test_file"}
         )
 
-    file_upload_dao.insert = patched_insert
+    file_upload_dao.insert = patched_insert  # type: ignore[method-assign]
 
     with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
         await controller.initiate_file_upload(
@@ -1508,7 +1508,7 @@ async def test_overwrite_blocked_for_immutable_states(
             unique_fields={"box_id": str(box_id), "alias": "test_file"}
         )
 
-    file_upload_dao.insert = patched_insert
+    file_upload_dao.insert = patched_insert  # type: ignore[method-assign]
 
     with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
         await controller.initiate_file_upload(
@@ -1559,7 +1559,7 @@ async def test_overwrite_false_still_blocks_active_upload(
             unique_fields={"box_id": str(box_id), "alias": "test_file"}
         )
 
-    file_upload_dao.insert = patched_insert
+    file_upload_dao.insert = patched_insert  # type: ignore[method-assign]
 
     with pytest.raises(UploadControllerPort.FileUploadAlreadyExists):
         await controller.initiate_file_upload(
@@ -2305,8 +2305,8 @@ async def test_initiate_file_upload_marks_failed_on_insert_kafka_error(
         await original_upsert(dto)
         raise RuntimeError("Follow-up Error")
 
-    rig.file_upload_dao.insert = insert_then_fail
-    rig.file_upload_dao.upsert = upsert_then_fail
+    rig.file_upload_dao.insert = insert_then_fail  # type: ignore[method-assign]
+    rig.file_upload_dao.upsert = upsert_then_fail  # type: ignore[method-assign]
 
     with caplog.at_level(logging.INFO, logger="ucs.core.controller"):
         with pytest.raises(RuntimeError, match="First Error"):
@@ -2494,7 +2494,7 @@ async def test_remove_file_upload_box_s3_abort_error(rig: JointRig):
     async def do_error(*args, **kwargs):
         raise ObjectStorageProtocol.MultiPartUploadAbortError("", "", "")
 
-    storage.abort_multipart_upload = do_error
+    storage.abort_multipart_upload = do_error  # type: ignore[method-assign]
 
     # Call the box deletion method
     with pytest.raises(UploadControllerPort.UploadAbortError):

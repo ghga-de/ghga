@@ -47,6 +47,6 @@ def get_config(
 SMTP_TEST_CONFIG = SmtpClientConfig(
     smtp_host="127.0.0.1",
     smtp_port=get_free_port(),
-    smtp_auth=SmtpAuthConfig(username="test@example.com", password="test123"),  # type: ignore
+    smtp_auth=SmtpAuthConfig(username="test@example.com", password="test123"),
     use_starttls=False,
 )
