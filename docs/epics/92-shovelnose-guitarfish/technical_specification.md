@@ -143,7 +143,7 @@ For requeueing a single file (box ID + file ID), the UploadController class:
 - File failed inbox validation: "file never interrogated - upload failed validation upon completion"
 - File initiation failed: "file never reached inbox"
 
-> Errors in steps 3-5 do not cause the entire operation to fail. Instead, the operation will continue to the next failed file in the loop. File IDs of the files which could not be requeued will be listed in the response.
+> Errors in steps 3 and 4 do not cause the entire operation to fail. Instead, the operation continues with the next failed file in the loop, and each skipped file is returned in the `skipped` list together with its reason. Steps 1 and 2 remain hard failures for the whole operation, and an error while writing the new state in step 5 aborts the operation rather than being reported as a skip.
 
 Box stats don't need recomputing.
 
