@@ -21,7 +21,8 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_connector"
-version = "3.1.2"
+# 3.1.2 is spent on TestPyPI: a pypi-publish.yaml rehearsal uploaded it there.
+version = "3.1.1"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
 dependencies = [
     "typer~=0.19",

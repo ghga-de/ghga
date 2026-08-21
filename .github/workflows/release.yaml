@@ -3,19 +3,18 @@
 #                  platform version (lockstep; libs embedded from source, never PyPI).
 #   name/x.y.z  -> PYPI lane: publish that component's wheel (closure-train rule for tools).
 #
-# MANUAL-ONLY. No tag triggers yet: every run is a deliberate `workflow_dispatch`.
+# Pushing a `name/x.y.z` tag is the release. workflow_dispatch stays for reruns and for
+# naming a ref by hand; it takes the same string the tag would have carried.
+#
 # The platform lane can push images to the INTERIM registry (GHCR under this repo's
 # namespace) when the `push` input is set — authenticated with the ephemeral, per-run
 # GITHUB_TOKEN, so no stored credentials exist.
-#
-# On the real enablement decision:
-#   on:
-#     push:
-#       tags:
-#         - "*/*.*.*"   # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
 name: release
 
 on:
+  push:
+    tags:
+      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
   workflow_dispatch:
     inputs:
       ref:
@@ -213,5 +212,3 @@ jobs:
       # caller grants.
       id-token: write
     uses: ./.github/workflows/pypi-publish.yaml
-    with:
-      publish: ${{ inputs.push }}
