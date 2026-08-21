@@ -42,6 +42,20 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/ars-0.0.0-dev/ars-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:53.915079794Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Access Request Service
+    digest: 08f8cdff6ec8b68df8e0514d9f8343a97095ac16f33cee9baf28df56188965f7
+    name: ars
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/ars-0.0.0-dev/ars-0.0.0-dev.tgz
+    version: 0.0.0-dev
   auth-km-jobs:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -66,6 +80,20 @@ entries:
       version: 2.x.x
     description: GHGA Auth Key Management Jobs
     digest: 65d54d725d370095dcfbaaf83f67428cdeb98481f51c4f777cda7b92175ed084
+    name: auth-km-jobs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/auth-km-jobs-0.0.0-dev/auth-km-jobs-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:54.154857554Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: GHGA Auth Key Management Jobs
+    digest: 0fadebf80380e7bc9e92936c9ca8966807f5ca42b7aa6f6c5cb57baf55237e80
     name: auth-km-jobs
     type: application
     urls:
@@ -100,6 +128,20 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/auth-service-0.0.0-dev/auth-service-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:54.390088631Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Authentication adapter and services used for the GHGA data portal
+    digest: 0f64451d68d9abe63866a3379ab4b24445f7d8c3b01f5e003a93e4c16334028d
+    name: auth-service
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/auth-service-0.0.0-dev/auth-service-0.0.0-dev.tgz
+    version: 0.0.0-dev
   data-portal:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -124,6 +166,20 @@ entries:
       version: 2.x.x
     description: data-portal
     digest: 9a43f21c80b87542b6982f6d633ed6c83785e0ba86456eb039e5c15d6fcc274c
+    name: data-portal
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/data-portal-0.0.0-dev/data-portal-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:54.629381224Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: data-portal
+    digest: 26d1d102025aa9c28df957f61cd732aebf3385c535580baa95e69e58a124e45c
     name: data-portal
     type: application
     urls:
@@ -175,6 +231,21 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/dcs-0.0.0-dev/dcs-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:55.100099717Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Download Controller Service - a GA4GH DRS-compliant service for delivering
+      files from S3 encrypted according to the GA4GH Crypt4GH standard.
+    digest: d190642bc4bb94ed072c1a5b39eaf30db03801f045a8122f27c6596c2bf38178
+    name: dcs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/dcs-0.0.0-dev/dcs-0.0.0-dev.tgz
+    version: 0.0.0-dev
   dhfs:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -201,6 +272,21 @@ entries:
     description: Data Hub File Service - a service enabling file inspection and re-encryption
       at Data Hubs
     digest: deac051258ca872052d9d1338467b8f5d521bbdbbc35580a08715a4176a9e718
+    name: dhfs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/dhfs-0.0.0-dev/dhfs-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:55.320322115Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Data Hub File Service - a service enabling file inspection and re-encryption
+      at Data Hubs
+    digest: 3521ce46cf3d238cb42f23d3d408887d41f9f4ea4d9c5240e4f8d6f24630bbaa
     name: dhfs
     type: application
     urls:
@@ -237,6 +323,21 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/dins-0.0.0-dev/dins-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:55.51060739Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Dataset Information Service - Providing public metadata about files
+      registered with the Internal File Registry
+    digest: 3cfc1c4ac75650975e646fd655e54d11382ea2b44859f7c5a62c8a8875b0e6a0
+    name: dins
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/dins-0.0.0-dev/dins-0.0.0-dev.tgz
+    version: 0.0.0-dev
   dlqs:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -263,6 +364,21 @@ entries:
     description: DLQ Service - a service to manage the dead letter queue for Kafka
       events
     digest: e30e04bd9acfc29d83ea80493dea15a60d9023b38c8949b56f4d35a1b2f3f575
+    name: dlqs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/dlqs-0.0.0-dev/dlqs-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:55.739564985Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: DLQ Service - a service to manage the dead letter queue for Kafka
+      events
+    digest: 8fc5a3a3560309c963edf603250489f837c35edb9a064445ba5ce5a46e55bf38
     name: dlqs
     type: application
     urls:
@@ -299,6 +415,21 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/ekss-0.0.0-dev/ekss-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:55.984685668Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Encryption Key Store Service - providing crypt4gh file secret extraction,
+      storage and envelope generation
+    digest: e76fcbdb049d38ce23a59805f197143579bd089f7170aad7603c29d3ca456343
+    name: ekss
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/ekss-0.0.0-dev/ekss-0.0.0-dev.tgz
+    version: 0.0.0-dev
   fis:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -325,6 +456,21 @@ entries:
     description: File Ingest Service - A service to liaise between Central File Services
       and Data Hubs for file inspection.
     digest: b39a599c4624afc972c916f71bceed929675105f99be929d880261af468f835e
+    name: fis
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/fis-0.0.0-dev/fis-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:56.246565006Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: File Ingest Service - A service to liaise between Central File Services
+      and Data Hubs for file inspection.
+    digest: 8828bd2ae436b041d93c9645e06f2cdc5e0a068659318f438e5bbb063bafa07e
     name: fis
     type: application
     urls:
@@ -554,6 +700,21 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/ifrs-0.0.0-dev/ifrs-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:56.999689435Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Internal File Registry Service - This service acts as a registry
+      for the internal location and representation of files.
+    digest: 9d3ecfa2067e8aa27d2f24f816924ab49f5ecfc4ad966a28f3f9a5d174c77159
+    name: ifrs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/ifrs-0.0.0-dev/ifrs-0.0.0-dev.tgz
+    version: 0.0.0-dev
   mass:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -580,6 +741,21 @@ entries:
     description: Metadata Artifact Search Service - A service for searching metadata
       artifacts and filtering results.
     digest: 633da2e7d2c5b81e1d01f30980b72c9ed34398bc7aca3897084c61e17adcfe15
+    name: mass
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/mass-0.0.0-dev/mass-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:57.203402033Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Metadata Artifact Search Service - A service for searching metadata
+      artifacts and filtering results.
+    digest: 641b82310f9cf2fc09b15d61b46a38ff2508c6157384e8300d8b7aee1a741d8d
     name: mass
     type: application
     urls:
@@ -616,6 +792,21 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/metldata-0.0.0-dev/metldata-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:57.434161172Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: metldata - A framework for handling metadata based on ETL, CQRS,
+      and event sourcing.
+    digest: 6db8dd4ea14437f3575c405d424ac1330bf3c90931aebe5d5f01467576446f43
+    name: metldata
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/metldata-0.0.0-dev/metldata-0.0.0-dev.tgz
+    version: 0.0.0-dev
   nos:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -642,6 +833,21 @@ entries:
     description: The Notification Orchestration Service controls the creation of notification
       events.
     digest: 890cbebbe24ccf39e34c6865ddc3f953b9c0a08fb00c664a79b650cfe4981d0e
+    name: nos
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/nos-0.0.0-dev/nos-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:57.658021287Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: The Notification Orchestration Service controls the creation of notification
+      events.
+    digest: 886494bc27ba49dd830cf2a9e5020fa36ae2b5c846db735832b4e2711cdf7cbc
     name: nos
     type: application
     urls:
@@ -676,6 +882,20 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/ns-0.0.0-dev/ns-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:57.898566961Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: The Notification Service (NS) handles notification kafka events.
+    digest: 83e04864a9bef310c14c40168385d83300a047df5953e4c9bf4c6d07edc0f84c
+    name: ns
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/ns-0.0.0-dev/ns-0.0.0-dev.tgz
+    version: 0.0.0-dev
   pcs:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -700,6 +920,20 @@ entries:
       version: 2.x.x
     description: Purge Controller Service - a service to commission file deletions
     digest: f18e6085ab81a2dd8d57856b7797f07e33b9ec2e1826eb474721681cdf301954
+    name: pcs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/pcs-0.0.0-dev/pcs-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:58.089103864Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Purge Controller Service - a service to commission file deletions
+    digest: 6de0a8e27d91467738b300639bcafcd83ff396600ac1f8431c5dae5338dd0fb1
     name: pcs
     type: application
     urls:
@@ -751,6 +985,21 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/rs-0.0.0-dev/rs-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:58.566412705Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: GHGA Registry Service - a service for ingesting and archiving metadata
+      from data submitters.
+    digest: abdef4d3acb5c4d46ac007dc55aad8d942e3bab08f031f19518842de58b2088b
+    name: rs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/rs-0.0.0-dev/rs-0.0.0-dev.tgz
+    version: 0.0.0-dev
   rts:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -777,6 +1026,21 @@ entries:
     description: Reverse Transpiler Service - A service running a REST API that serves
       accessioned metadata files by study ID
     digest: 0853c384b3e387201f7af405af0dd0c928f446ec3bde9b7ba9dbe8af16fd31fb
+    name: rts
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/rts-0.0.0-dev/rts-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:58.808071632Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Reverse Transpiler Service - A service running a REST API that serves
+      accessioned metadata files by study ID
+    digest: b1957c2887708b5b0f1b4fd5d9bed2a8285538060da7d216ad6f218fed6b0dce
     name: rts
     type: application
     urls:
@@ -813,6 +1077,21 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/sms-0.0.0-dev/sms-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:59.027133775Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: State Management Service - Provides a REST API for basic infrastructure
+      technology state management.
+    digest: a88ac1d701d147037531bedbb1d8a12eb922778ca7d93274b0e35e0c97a7afbd
+    name: sms
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/sms-0.0.0-dev/sms-0.0.0-dev.tgz
+    version: 0.0.0-dev
   test-oidc-provider:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -837,6 +1116,20 @@ entries:
       version: 2.x.x
     description: Test OpenID Connect provider
     digest: a45a5acce6309fc4342601c9fd5013bb7b0a5f370dd095271f5a1e929a0af249
+    name: test-oidc-provider
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/test-oidc-provider-0.0.0-dev/test-oidc-provider-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:59.248702091Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Test OpenID Connect provider
+    digest: c86f9e0e49f1cfb457ebb1f6a2b7f677c30a126069f91a06a58a8e2adf468134
     name: test-oidc-provider
     type: application
     urls:
@@ -871,6 +1164,20 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/ucs-0.0.0-dev/ucs-0.0.0-dev.tgz
     version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:59.468574313Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Upload Controller Service - manages uploads to an S3 inbox bucket.
+    digest: 3b7ec777599f1ccf760e581b182c63d3a1c779836b8d39304e51835c4a0d15e9
+    name: ucs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/ucs-0.0.0-dev/ucs-0.0.0-dev.tgz
+    version: 0.0.0-dev
   wkvs:
   - apiVersion: v2
     appVersion: 0.0.0-dev
@@ -895,6 +1202,20 @@ entries:
       version: 2.x.x
     description: Well-Known-Value-Service - Provides access to common values via API
     digest: 4b2b4136af5ad1e55fb3b9f82ea809d667bf6cc5afc2e21fd653e5bb8ffb78d8
+    name: wkvs
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/wkvs-0.0.0-dev/wkvs-0.0.0-dev.tgz
+    version: 0.0.0-dev
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:59.689434413Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Well-Known-Value-Service - Provides access to common values via API
+    digest: d47512af42166cc12555ca0962a129f78e6929f723f541ad07ad9609b07e590e
     name: wkvs
     type: application
     urls:
@@ -929,4 +1250,18 @@ entries:
     urls:
     - https://github.com/ghga-de/ghga/releases/download/wps-0.0.0-dev/wps-0.0.0-dev.tgz
     version: 0.0.0-dev
-generated: "2026-08-21T12:39:06.329818552Z"
+  - apiVersion: v2
+    appVersion: 0.0.0-dev
+    created: "2026-08-21T12:57:59.924140527Z"
+    dependencies:
+    - name: ghga-common
+      repository: file://../ghga-common
+      version: 2.x.x
+    description: Work Package Service
+    digest: c65cbd9ace4788f0b859361cdcb3ef95e99f2e81f3210c772819251826158e90
+    name: wps
+    type: application
+    urls:
+    - https://github.com/ghga-de/ghga/releases/download/wps-0.0.0-dev/wps-0.0.0-dev.tgz
+    version: 0.0.0-dev
+generated: "2026-08-21T12:57:59.924287028Z"
