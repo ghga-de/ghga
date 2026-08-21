@@ -158,6 +158,10 @@ jobs:
       - run: uv run pre-commit run --all-files --show-diff-on-failure --color=always
         env:
           SKIP: no-commit-to-branch,ruff,ruff-format,mypy,fe-prettier,fe-eslint
+      # check-python's matrix only covers libs/services/tools, and mypy is SKIPped above,
+      # so the Python that belongs to no member would otherwise never be type-checked here.
+      - name: mypy (non-member Python)
+        run: uv run python scripts/typecheck.py scripts deploy/src testbed
       # The generated charts must stay a pure function of their sources: if they are not,
       # the whitespace hooks and `just charts` undo each other forever (ADR-0018).
       - name: charts are reproducible
