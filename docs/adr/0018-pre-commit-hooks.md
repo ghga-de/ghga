@@ -93,6 +93,13 @@ JSONC files, and a private-key *placeholder* in the datahub-monitor values.
   Rejected: it leaves ~450 tracked files unchecked forever to avoid a one-time fix.
 - **Skip mypy in the hook** (leave it to CI). Rejected: type errors are the expensive class to find
   late, and the per-unit runner makes the cost ~0.8 s per touched member.
-- **shfmt for the shell scripts.** Deferred: it would force a second whole-tree formatting commit,
-  and neither it nor shellcheck can see the justfile's embedded recipe bodies, where most of this
-  repo's shell actually lives. shellcheck alone is included; it needed three real fixes.
+- **shfmt for the shell scripts.** Rejected, measured rather than assumed. At its friendliest flag
+  set (`-i 2 -ci -sr -bn`) it rewrites 5 of the 7 tracked `.sh` files, 134 of their 383 lines — for
+  no correctness gain, since shellcheck (which *is* included, and needed three real fixes) covers
+  that. Some of its output is worse: in `scripts/migration/lib.sh` it dedents aligned continuation
+  comments to column 0, detaching them from the variable they document. And it misses most of the
+  target — roughly 302 further lines of shell live in the justfile's recipe bodies, which neither
+  it nor shellcheck can parse. The seven scripts are already uniformly 2-space and
+  `.devcontainer/post-create.sh` already conforms exactly, so there is no style dispute to settle.
+  Revisit only if one appears, or if the justfile recipe bodies ever move into `.sh` files — which
+  would flip the coverage argument.
