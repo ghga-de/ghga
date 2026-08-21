@@ -42,9 +42,23 @@ them and checks `<member>/src` plus its test package(s) in one invocation. `just
 CI's `check-python` go through the same runner, so the three cannot drift. The hook checks only the
 units you touched; the reverse-dependency closure stays CI's job.
 
-**Type-checking covers tests, not just `src/`.** This is a widening: it surfaced 183 errors, since
-fixed. Most were stale `# type: ignore` comments that `warn_unused_ignores` only flags once a file
-is actually checked.
+**Type-checking covers tests, not just `src/`, with one relaxation.** This is a widening: it
+surfaced 183 errors, since fixed. Worth being honest about what they were — **none was a runtime
+bug**. The bulk were stale `# type: ignore` comments that `warn_unused_ignores` only flags once a
+file is actually checked, and the rest were annotations that lied about the object in hand (a test
+double annotated as the port it stands in for, hiding the mock API the tests then use). That is
+hygiene, not defect detection. The forward-looking case is the stronger one: tests are code that
+has to keep compiling against the API it exercises, so renames and signature changes surface in the
+suite instead of at runtime.
+
+Against that, test code legitimately does things the type system dislikes. Monkeypatching a method
+onto an instance is a bug in production and routine in a test, and left unchecked it cost a
+suppression comment at every patch site — 47 of them across 14 files. So `method-assign` is
+disabled for the test packages via `[[tool.mypy.overrides]]`, and those 47 comments are gone.
+`attr-defined` deliberately stays on: reaching through a port-typed handle into a private member
+needs a suppression, but the same check catches a typo'd or renamed attribute, which is a real
+class of bug in test code. (Note that mypy accepts `*` only as a whole module component, so
+`tests_*` is rejected and the members whose test package carries their name are listed by hand.)
 
 **The front end is checked, not fixed.** prettier and eslint run with `--check` and without
 `--fix`, preserving the data-portal's rule that the hook never rewrites what you are about to
@@ -78,6 +92,9 @@ JSONC files, and a private-key *placeholder* in the datahub-monitor values.
   Prettier owns and formats differently. `check-json` still guarantees validity.
 - A one-off normalisation commit was unavoidable, and `docs/epics/` is exempt from the whitespace
   hooks rather than rewritten — it is imported history.
+- Test code is now type-checked under the same settings as `src/` apart from `method-assign`. If a
+  further category turns out to cost suppressions without catching anything, the override is the
+  place to record that — one entry per error code, with the reason.
 - Hook tool versions can now only be bumped by updating `uv.lock` / `pnpm-lock.yaml`. That is the
   point, but it does mean `pre-commit autoupdate` no longer tells the whole story.
 

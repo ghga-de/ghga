@@ -146,7 +146,7 @@ async def test_smtp_authentication(smtp_auth: SmtpAuthConfig | None):
     def get_mock_server():
         yield mock_server
 
-    smtp_client.get_connection = get_mock_server  # type: ignore [method-assign]
+    smtp_client.get_connection = get_mock_server
 
     message = EmailMessage()
     message["To"] = "to@example.com"

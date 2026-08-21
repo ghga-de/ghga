@@ -117,10 +117,10 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
     else:
         should_verify = None  # cannot verify without token
 
-    totp_handler.verify_code = Mock(return_value=should_verify)  # type: ignore
+    totp_handler.verify_code = Mock(return_value=should_verify)
 
-    session_store.save_session = AsyncMock()  # type: ignore
-    session_store.delete_session = AsyncMock()  # type: ignore
+    session_store.save_session = AsyncMock()
+    session_store.delete_session = AsyncMock()
 
     with nullcontext() if should_verify else pytest.raises(HTTPException) as exc_info:
         await verify_totp(

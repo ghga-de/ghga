@@ -721,7 +721,7 @@ async def test_get_part_upload_url_first_403_triggers_cache_bust_and_second_403_
     # Replace the AsyncMock auto-attribute with a plain MagicMock so calling
     # cache_invalidate() doesn't create an unawaited coroutine warning.
     cache_invalidate_mock = MagicMock()
-    upload_client._work_package_client.get_upload_wot.cache_invalidate = (  # type: ignore
+    upload_client._work_package_client.get_upload_wot.cache_invalidate = (
         cache_invalidate_mock
     )
 

@@ -643,7 +643,7 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     async def _erroring_delete_fn(*, bucket_id: str, object_id: str) -> None:
         raise s3_storage.ObjectStorageProtocolError("problem")
 
-    s3_storage.delete_object = _erroring_delete_fn  # type: ignore[method-assign]
+    s3_storage.delete_object = _erroring_delete_fn
     controller._s3_client._get_bucket_and_storage = lambda x: (  # type: ignore[attr-defined]
         inbox_bucket_id,
         s3_storage,
@@ -666,7 +666,7 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
     assert file_upload_check["object_id"] == UUID(object_id)
 
     # Undo the S3 patches. This is the end of the regression test
-    s3_storage.delete_object = _real_delete_fn  # type: ignore[method-assign]
+    s3_storage.delete_object = _real_delete_fn
     controller._s3_client._get_bucket_and_storage = _real_get_storage_fn  # type: ignore[attr-defined]
 
     # Now we can publish the InterrogationSuccess event for real
@@ -1034,7 +1034,7 @@ async def test_cleanup_of_orphaned_files(
         return await _real_deletion_method(bucket_id=bucket_id, object_id=object_id)
 
     if simulate_errors:
-        s3_storage.delete_object = _delete_with_error  # type: ignore[method-assign]
+        s3_storage.delete_object = _delete_with_error
         controller._s3_client._get_bucket_and_storage = lambda x: (  # type: ignore[attr-defined]
             bucket_id,
             s3_storage,

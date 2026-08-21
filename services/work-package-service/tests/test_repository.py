@@ -256,7 +256,7 @@ async def test_work_package_and_token_creation(
                 work_package_access_token=wpat,
             )
     finally:
-        access.check_download_access = _check_download_access_original  # type: ignore
+        access.check_download_access = _check_download_access_original
 
 
 async def test_checking_accessible_datasets(
