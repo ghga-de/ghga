@@ -7,24 +7,43 @@
 # latest one on PyPI is a candidate. Re-running is idempotent.
 # If PyPI cannot be reached, the run fails.
 #
+# TestPyPI is a gate, not an alternative destination. The whole train is built and checked
+# first, then uploaded to TestPyPI, and only then — with `publish` set — to PyPI. Anything
+# that fails before the last step leaves PyPI untouched. Because the train is built once,
+# the artefacts TestPyPI accepted are byte-for-byte the ones PyPI receives.
+#
+# So `publish: false` is a rehearsal rather than a report: it exercises the build, the
+# metadata, the credentials and the upload itself, stopping short of PyPI. That is the
+# mode to run while only the TestPyPI publishers exist.
+#
+# Note that the plan is always drawn against *real* PyPI, never TestPyPI. The two indexes
+# have separate histories — TestPyPI still holds rehearsals the upstream repos never
+# shipped — so only pypi.org can answer "are consumers missing this version?".
+#
 # On enablement (after the upstreams are archived):
 #   - switch the trigger to `push: branches: [main]` — no base to supply, the index is it
-#   - bind the publish job to a protected `environment:` so an upload needs a second pair
-#     of eyes; today anyone with write access can dispatch one.
 name: pypi-publish
 
 on:
+  # TEMPORARY — REMOVE BEFORE MERGING TO main.
+  # workflow_dispatch only registers once the file is on the default branch, so it cannot
+  # start this lane from a feature branch. A push trigger can: it fires from the branch and
+  # runs that branch's copy. The `inputs` context is empty on a push event, so
+  # `inputs.publish` is falsy and the PyPI step skips itself — the run stops at TestPyPI.
+  push:
+    branches: [feature/pypi_publish]
+
   # release.yaml routes `name/x.y.z` tags here, so the lane has one implementation.
   workflow_call:
     inputs:
       publish:
-        description: "Upload to PyPI; off = build + test only, reporting what it would do"
+        description: "Upload to PyPI too; off = build, check and upload to TestPyPI only"
         type: boolean
         default: false
   workflow_dispatch:
     inputs:
       publish:
-        description: "Upload to PyPI; off = build + test only, reporting what it would do"
+        description: "Upload to PyPI too; off = build, check and upload to TestPyPI only"
         type: boolean
         default: false
 
@@ -104,18 +123,33 @@ jobs:
     with:
       paths: ${{ needs.plan.outputs.paths }}
 
-  # -------- build and (only on request) upload, dependencies first -----------------------
+  # -------- build the train, rehearse on TestPyPI, then upload -----------------------------
   #
-  # One package at a time, in the plan's dependency order, stopping at the first failure.
-  # A package must not reach PyPI before a package it depends on.
+  # Three steps, in order, stopping at the first failure:
+  #
+  #   1. build and check *every* member. Nothing is uploaded until the whole train is
+  #      known good — otherwise a metadata error in the last package surfaces only after
+  #      the first one is already on an index, where it cannot be taken back.
+  #   2. upload the train to TestPyPI. This is the gate.
+  #   3. upload the same files to PyPI, only when `publish` is set.
+  #
+  # Within a step, members are handled in the plan's dependency order: a package must not
+  # reach an index before a package it depends on.
   publish:
     needs: [plan, test]
     if: ${{ needs.plan.outputs.paths != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # TODO on enablement: bind this job to a protected `environment:` so an upload needs a
+    # second pair of eyes and a deployment branch policy can restrict it to main — today a
+    # direct dispatch or push publishes from whatever ref it ran on. Left off for now
+    # because the TestPyPI publishers are registered with no environment, and adding one
+    # here before adding it there is the kind of mismatch that reports as
+    # `invalid-publisher` without saying which field is wrong. Set it on both indexes in
+    # the same change, never one side first.
     permissions:
       contents: read
-      # The token uv exchanges with PyPI for upload rights.
+      # The token uv exchanges with the index for upload rights.
       id-token: write
     steps:
       - uses: actions/checkout@v5
@@ -123,43 +157,93 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Build, check and publish the train in order
+      # One directory per member: the two upload steps push each member's own artefacts,
+      # and building once means TestPyPI and PyPI receive identical files.
+      - name: Build and check the whole train
         env:
           MEMBERS: ${{ needs.plan.outputs.members }}
-          PUBLISH: ${{ inputs.publish }}
         run: |
           set -euo pipefail
+          rm -rf dist
           echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
             path=$(echo "$member"    | jq -r '.path')
             package=$(echo "$member" | jq -r '.package')
             version=$(echo "$member" | jq -r '.version')
 
-            echo "::group::$package $version"
-            rm -rf dist
-
-            # Both artefacts: the sdist is what consumers on a platform with no wheel build
-            # from.
-            uv build --out-dir dist "$path"
-            ls -l dist
-            uvx twine check dist/*
+            echo "::group::build $package $version"
 
             # A local version (0.0.0+ghga.X) means a platform-stamped tree slipped into a
-            # PyPI build. PyPI would reject it anyway; failing here says why.
+            # PyPI build. PyPI would reject it anyway; failing here says why — and before
+            # the build rather than after it.
             case "$version" in
               *+*) echo "::error::$package: local version $version is not publishable"
                    exit 1 ;;
             esac
 
-            if [ "$PUBLISH" = "true" ]; then
-              # `always`, not the default `automatic`: automatic falls back to hunting for
-              # a token when OIDC is unavailable, reporting a misconfigured publisher as a
-              # credential error. Until the six trusted publishers exist, this fails — and
-              # says so.
-              uv publish --trusted-publishing always dist/*
-              echo "- published \`$package\` $version" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "- dry run: would publish \`$package\` $version" \
-                >> "$GITHUB_STEP_SUMMARY"
-            fi
+            # Both artefacts: the sdist is what consumers on a platform with no wheel build
+            # from.
+            uv build --out-dir "dist/$package" "$path"
+            ls -l "dist/$package"
+            uvx twine check "dist/$package"/*
             echo "::endgroup::"
           done
+
+      # The gate. A failure here means the run ends with PyPI untouched.
+      - name: Rehearse the train on TestPyPI
+        env:
+          MEMBERS: ${{ needs.plan.outputs.members }}
+        run: |
+          set -euo pipefail
+          echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
+            package=$(echo "$member" | jq -r '.package')
+            version=$(echo "$member" | jq -r '.version')
+
+            echo "::group::testpypi $package $version"
+
+            # TestPyPI is immutable and shares no history with PyPI: it still carries
+            # versions the upstream repos rehearsed years ago. --check-url below skips
+            # those instead of failing the release over them, but a skip rehearses
+            # nothing, so say so rather than letting it read as a pass.
+            if curl -sfo /dev/null "https://test.pypi.org/pypi/$package/$version/json"; then
+              echo "::warning::$package $version is already on TestPyPI — upload skipped," \
+                   "so this member was not rehearsed"
+            fi
+
+            # `always`, not the default `automatic`: automatic falls back to hunting for a
+            # token when OIDC is unavailable, reporting a misconfigured publisher as a
+            # credential error.
+            uv publish \
+              --trusted-publishing always \
+              --publish-url https://test.pypi.org/legacy/ \
+              --check-url https://test.pypi.org/simple/ \
+              "dist/$package"/*
+            echo "- rehearsed \`$package\` $version on TestPyPI" >> "$GITHUB_STEP_SUMMARY"
+            echo "::endgroup::"
+          done
+
+      - name: Publish the train to PyPI
+        if: ${{ inputs.publish }}
+        env:
+          MEMBERS: ${{ needs.plan.outputs.members }}
+        run: |
+          set -euo pipefail
+          echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
+            package=$(echo "$member" | jq -r '.package')
+            version=$(echo "$member" | jq -r '.version')
+
+            echo "::group::pypi $package $version"
+            # --check-url keeps the documented idempotency when a re-run repeats a train
+            # whose earlier members already landed.
+            uv publish \
+              --trusted-publishing always \
+              --check-url https://pypi.org/simple/ \
+              "dist/$package"/*
+            echo "- published \`$package\` $version" >> "$GITHUB_STEP_SUMMARY"
+            echo "::endgroup::"
+          done
+
+      - name: Note that PyPI was skipped
+        if: ${{ !inputs.publish }}
+        run: |
+          echo "PyPI upload skipped (\`publish\` not set) — the train stopped at TestPyPI." \
+            >> "$GITHUB_STEP_SUMMARY"
