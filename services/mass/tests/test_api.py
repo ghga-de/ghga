@@ -126,7 +126,7 @@ async def test_search_with_limit(joint_fixture: JointFixture):
             "object": {"type": "piano"},
         },
     }
-    hits = [models.Resource(**hit)]  # type: ignore[arg-type]
+    hits = [models.Resource(**hit)]
     compare(results=results, count=3, hit_length=1, hits=hits)
 
 

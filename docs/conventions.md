@@ -58,3 +58,9 @@ One `uv.lock` governs the whole repo → HEAD is always integrated
 - One `ruff` / `mypy` / `pytest` config at the repo root (in `pyproject.toml`); no per-member
   copies (the old `.template/` sync is retired).
 - `just` is the task facade ([ADR-0015](adr/0015-task-runner.md)); `uv` manages Python 3.13.
+- One `.pre-commit-config.yaml` at the root covers **both** stacks
+  ([ADR-0018](adr/0018-pre-commit-hooks.md)). `just hooks` installs it, `just hooks-all` runs
+  everything. The ruff / mypy / prettier / eslint hooks take their version from `uv.lock` and
+  `pnpm-lock.yaml`, not from a `rev:` pin, so a hook can never disagree with CI.
+- mypy runs per member (`src` + tests) via `scripts/typecheck.py` — the same runner behind
+  `just typecheck`, the hook, and CI. Never `mypy .`: the members' `tests` packages collide.

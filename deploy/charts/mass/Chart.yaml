@@ -1,6 +1,5 @@
 name: mass
-description: Metadata Artifact Search Service - A service for searching metadata
-  artifacts and filtering results.
+description: Metadata Artifact Search Service - A service for searching metadata artifacts and filtering results.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

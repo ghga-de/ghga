@@ -1,6 +1,5 @@
 name: dhfs
-description: Data Hub File Service - a service enabling file inspection and 
-  re-encryption at Data Hubs
+description: Data Hub File Service - a service enabling file inspection and re-encryption at Data Hubs
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

@@ -95,7 +95,9 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --all-packages --all-extras
       - name: mypy
-        run: uv run mypy "${{ matrix.target }}/src"
+        # the shared runner, so CI, `just typecheck` and the pre-commit hook check the
+        # same thing: the member's src AND its test package(s), in one invocation
+        run: uv run python scripts/typecheck.py "${{ matrix.target }}"
       - name: pytest
         # cwd = member dir: each member is its own pytest rootdir (the `tests`
         # packages collide across members otherwise)
@@ -124,10 +126,48 @@ jobs:
       - working-directory: ${{ matrix.target }}
         run: |
           pnpm install --frozen-lockfile
+          pnpm format:check
           pnpm lint
           pnpm test
           pnpm build
         # Playwright E2E is part of the integration gate (Stage 2), not this one.
+
+  # Everything the shared pre-commit config checks that no other job covers: whitespace,
+  # YAML/JSON validity, exec bits, private keys, large files. ruff, mypy, eslint and
+  # prettier are SKIPped here because `lint`, `check-python` and `check-frontend` already
+  # run them -- this job must not make CI pay for them twice. no-commit-to-branch is
+  # skipped because CI legitimately runs on main.
+  #
+  # Runs `pre-commit` from the workspace's own pin rather than pre-commit/action, which
+  # would provision a second Python and a second pre-commit version.
+  hygiene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # the full sync: the chart check below imports the generator's dependencies, and
+      # `uv run pre-commit` resolves against the same environment
+      - run: uv sync --locked --all-packages --all-extras
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      - run: uv run pre-commit run --all-files --show-diff-on-failure --color=always
+        env:
+          SKIP: no-commit-to-branch,ruff,ruff-format,mypy,fe-prettier,fe-eslint
+      # check-python's matrix only covers libs/services/tools, and mypy is SKIPped above,
+      # so the Python that belongs to no member would otherwise never be type-checked here.
+      - name: mypy (non-member Python)
+        run: uv run python scripts/typecheck.py scripts deploy/src testbed
+      # The generated charts must stay a pure function of their sources: if they are not,
+      # the whitespace hooks and `just charts` undo each other forever (ADR-0018).
+      - name: charts are reproducible
+        run: |
+          uv run python deploy/src/create_charts.py --version 0.0.0-dev
+          git diff --exit-code
 
   # The dev container is otherwise unvalidated by CI, and it is the one artifact that, when
   # broken, costs every developer their environment rather than a red check. This builds it

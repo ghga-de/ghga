@@ -1,6 +1,5 @@
 name: dlqs
-description: DLQ Service - a service to manage the dead letter queue for Kafka 
-  events
+description: DLQ Service - a service to manage the dead letter queue for Kafka events
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

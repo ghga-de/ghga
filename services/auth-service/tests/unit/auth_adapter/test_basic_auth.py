@@ -25,13 +25,13 @@ from auth_service.config import Config
 
 def test_default_no_allowed_credentials():
     """Test that by default, no Basic auth credentials are set"""
-    config = Config()  # type: ignore
+    config = Config()
     assert not get_allowed_credentials(config)
 
 
 def test_set_credentials():
     """Test that three user names and passwords can be set."""
-    config = Config(basic_auth_credentials="foo:oof bar:rab baz:zab")  # type: ignore
+    config = Config(basic_auth_credentials="foo:oof bar:rab baz:zab")
     assert get_allowed_credentials(config) == [
         HTTPBasicCredentials(username="foo", password="oof"),
         HTTPBasicCredentials(username="bar", password="rab"),
@@ -41,14 +41,14 @@ def test_set_credentials():
 
 def test_invalid_credentials():
     """Test that invalid credentials are detected."""
-    config = Config(basic_auth_credentials="foo:oof rhubarb baz:zab")  # type: ignore
+    config = Config(basic_auth_credentials="foo:oof rhubarb baz:zab")
     with pytest.raises(ValueError, match="must be passed as username:password"):
         get_allowed_credentials(config)
 
 
 def test_password_contains_a_colon():
     """Test that passwords with a colon are treated properly."""
-    config = Config(basic_auth_credentials="foo:bar:baz")  # type: ignore
+    config = Config(basic_auth_credentials="foo:bar:baz")
     assert get_allowed_credentials(config) == [
         HTTPBasicCredentials(username="foo", password="bar:baz"),
     ]

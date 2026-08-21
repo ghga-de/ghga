@@ -11,7 +11,7 @@ exports:
         resource:
           patternType: literal
           type: group
-    
+
     # This is the actual Kubernetes `command` field
     command: ["sh", "-c"]
     commandPrefix: /usr/local/bin/
@@ -29,7 +29,7 @@ exports:
 
     job:
       enabled: false
-    
+
     # A map of CronJobs to render alongside (or instead of) the Deployment. It's a
     # map rather than a list so downstream values files can override a single
     # cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to
@@ -47,7 +47,7 @@ exports:
     cronjobs:
       default:
         enabled: false
-    
+
     nameOverride: ""
 
     fullnameOverride: ""
@@ -233,7 +233,7 @@ exports:
       service:
         namespace: mongodb
         name: mongodb
-      
+
 
     apiBasePath: ""
     serviceName: ""
@@ -253,7 +253,7 @@ exports:
     configPrefix: ""
 
     enableServiceLinks: true
-    
+
     successfulJobsHistoryLimit: 5
 
     environment:
@@ -273,16 +273,16 @@ exports:
       # instead and rely on api_root_path to route — set this to false for them.
       rewritePath: true
       rules: []
-    
+
     probe:
       enabled: false
       hostname: default.ghga.dev
 
     healthEndpoint: "/health"
-    
+
     destinationRule:
       enabled: false
-    
+
     networkPolicy:
       enabled: false
       ingress:

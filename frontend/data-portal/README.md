@@ -162,9 +162,11 @@ You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`. You ca
 
 ## Linter, Commits, and Documentation
 
-The repository is set up in such a way to only allow linted commits. That means commits are blocked by Husky if they cause linter errors (currently, warnings are accepted). This ensures that code quality standards are maintained without building up technical debt that has to be fixed later on.
+The repository is set up in such a way to only allow linted commits. That means commits are blocked if they cause linter errors (currently, warnings are accepted). This ensures that code quality standards are maintained without building up technical debt that has to be fixed later on.
 
-To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix`, which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running `ng lint`), resolve those issues and try again.
+Since the move into the monorepo the hooks come from the root `.pre-commit-config.yaml` rather than from Husky ([ADR-0018](../../docs/adr/0018-pre-commit-hooks.md)); ESLint and Prettier run over the files you touched, out of this package's own `node_modules`, so they are the same versions `pnpm lint` and `pnpm format:check` use. Install them once per clone with `just hooks` from the repo root — the dev container already does.
+
+To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix`, which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running `ng lint`), resolve those issues and try again. Formatting is not auto-fixed either: run `pnpm format` (or `just fe-format`).
 
 ### Ease of use
 

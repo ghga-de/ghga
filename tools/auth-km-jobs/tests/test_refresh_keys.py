@@ -6,6 +6,7 @@ import json
 import os
 import threading
 from collections.abc import Generator
+from typing import cast
 
 import pytest
 from typer.testing import CliRunner
@@ -58,7 +59,7 @@ class _SimpleHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(payload).encode("utf-8"))
 
     def do_GET(self):
-        host, port = self.server.server_address  # type: ignore[attr-defined]
+        host, port = cast(tuple[str, int], self.server.server_address)
         base_url = f"http://{host}:{port}"
         if self.path == "/discovery":
             self._send_json(
@@ -144,7 +145,7 @@ def test_refresh_wps_keys_vault_integration(vault_client):
 
 def test_refresh_ext_keys_vault_integration(vault_client):
     server, thread = _start_test_http_server()
-    host, port = server.server_address  # type: ignore[attr-defined]
+    host, port = cast(tuple[str, int], server.server_address)
     base_url = f"http://{host}:{port}"
     try:
         authority = f"{base_url}/"

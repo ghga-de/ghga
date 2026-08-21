@@ -670,7 +670,7 @@ def make_retry_error(exception: Exception) -> RetryError:
 )
 @pytest.mark.parametrize("wrapped", [True, False], ids=["via_retry_error", "direct"])
 async def test_handle_request_error_translates_transport_errors(
-    request_error: Exception, expected_error: type[Exception], wrapped: bool
+    request_error: httpx2.RequestError, expected_error: type[Exception], wrapped: bool
 ):
     """Transport failures are translated whether or not tenacity wrapped them.
 
@@ -721,7 +721,7 @@ async def test_get_part_upload_url_first_403_triggers_cache_bust_and_second_403_
     # Replace the AsyncMock auto-attribute with a plain MagicMock so calling
     # cache_invalidate() doesn't create an unawaited coroutine warning.
     cache_invalidate_mock = MagicMock()
-    upload_client._work_package_client.get_upload_wot.cache_invalidate = (  # type: ignore
+    upload_client._work_package_client.get_upload_wot.cache_invalidate = (
         cache_invalidate_mock
     )
 

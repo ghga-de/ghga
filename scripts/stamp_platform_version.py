@@ -67,7 +67,8 @@ def _update_record(dist_info: Path, metadata: Path) -> None:
 
 
 def _rewrite_version(dist: Distribution, new_version: str) -> str:
-    dist_info = Path(str(dist._path))  # no public path accessor on Distribution
+    # no public path accessor on Distribution
+    dist_info = Path(str(dist._path))  # type: ignore[attr-defined]
     metadata = dist_info / "METADATA"
     text = metadata.read_text()
     if not VERSION_LINE.search(text):

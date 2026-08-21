@@ -43,7 +43,7 @@ def test_upload_wot_request_model():
     for work_type in ["create", "close", "upload", "delete"]:
         with pytest.raises(ValueError):
             _ = UploadWorkOrderTokenRequest(
-                work_type=work_type,  # type: ignore
+                work_type=work_type,
                 alias=None,
                 file_id=None,
             )
@@ -101,7 +101,7 @@ def test_bad_creation_data():
     """Test instantiating invalid work package creation DTO."""
     with pytest.raises(ValidationError, match="dataset_id"):
         WorkPackageCreationData(
-            dataset_id=["foo", "bar"],  # type: ignore
+            dataset_id=["foo", "bar"],
             type=WorkPackageType.DOWNLOAD,
             file_ids=["some-file-id", "another-file-id"],
             user_public_crypt4gh_key=user_public_crypt4gh_key,
@@ -109,7 +109,7 @@ def test_bad_creation_data():
     with pytest.raises(ValidationError, match="type"):
         WorkPackageCreationData(
             dataset_id="some-dataset-id",
-            type="UNKNOWN_TYPE",  # type: ignore
+            type="UNKNOWN_TYPE",
             file_ids=["some-file-id", "another-file-id"],
             user_public_crypt4gh_key=user_public_crypt4gh_key,
         )
@@ -117,7 +117,7 @@ def test_bad_creation_data():
         WorkPackageCreationData(
             dataset_id="some-dataset-id",
             type=WorkPackageType.DOWNLOAD,
-            file_ids="some-file-id",  # type: ignore
+            file_ids="some-file-id",
             user_public_crypt4gh_key=user_public_crypt4gh_key,
         )
     with pytest.raises(ValidationError, match="user_public_crypt4gh_key"):

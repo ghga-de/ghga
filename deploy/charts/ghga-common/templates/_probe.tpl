@@ -21,11 +21,11 @@ metadata:
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
     {{- end }}
 spec:
-  {{- 
-    $defaults := dict 
-      "jobName" (include "common.names.fullname" .) 
+  {{-
+    $defaults := dict
+      "jobName" (include "common.names.fullname" .)
       "prober" (dict "url" "prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115" )
-      "module" "http_2xx" 
+      "module" "http_2xx"
       "targets" (dict "staticConfig" (dict "static" (list (print "http://" .Values.probe.hostname (include "ghga-common.apiFullBasePath" .) .Values.healthEndpoint))))
   -}}
 {{- include "common.tplvalues.render" ( dict "value" (omit (merge .Values.probe $defaults) "enabled" "hostname") "context" $ ) | nindent 2 }}

@@ -108,7 +108,7 @@ async def test_log_box_created():
     )
 
     # Call log_box_created
-    auditor.create_audit_record = AsyncMock()  # type: ignore[method-assign]
+    auditor.create_audit_record = AsyncMock()
     await auditor.log_box_created(box=box, user_id=user_id)
     auditor.create_audit_record.assert_called_once_with(
         label="ResearchDataUploadBox created",
@@ -146,7 +146,7 @@ async def test_log_box_updated():
     )
 
     # Call log_box_updated
-    auditor.create_audit_record = AsyncMock()  # type: ignore[method-assign]
+    auditor.create_audit_record = AsyncMock()
     await auditor.log_box_updated(box=box, user_id=user_id)
     auditor.create_audit_record.assert_called_once_with(
         label="ResearchDataUploadBox updated",
@@ -181,7 +181,7 @@ async def test_log_box_deleted():
     )
 
     user_id = uuid4()
-    auditor.create_audit_record = AsyncMock()  # type: ignore[method-assign]
+    auditor.create_audit_record = AsyncMock()
     await auditor.log_box_deleted(box=box, user_id=user_id)
     auditor.create_audit_record.assert_called_once_with(
         label="ResearchDataUploadBox deleted",

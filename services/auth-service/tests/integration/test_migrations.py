@@ -311,7 +311,9 @@ def produce_user_docs_for_v2_mig() -> dict[str, list[dict[str, Any]]]:
 
 async def test_v2_migration(mongodb: MongoDbFixture):
     """Test the apply and unapply functions of the v2 migration"""
-    config = Config(
+    # the collection names come from UserDaoConfig, which the pydantic mypy plugin
+    # does not fold into the synthesised __init__ through this inheritance chain
+    config = Config(  # type: ignore[call-arg]
         mongo_dsn=mongodb.config.mongo_dsn,
         db_name=mongodb.config.db_name,
         kafka_servers=["kafka:9092"],

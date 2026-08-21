@@ -184,7 +184,9 @@ def docker_bridge_gateway() -> str | None:
     try:
         import docker  # noqa: PLC0415  # lazy: keep gateway lookup best-effort
 
-        config = docker.from_env().networks.get("bridge").attrs["IPAM"]["Config"]
+        # the repo root carries a `docker/` directory, which mypy resolves as an empty
+        # namespace package in preference to the installed docker-py
+        config = docker.from_env().networks.get("bridge").attrs["IPAM"]["Config"]  # type: ignore[attr-defined]
         return config[0]["Gateway"]
     except Exception:
         return None
