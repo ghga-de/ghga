@@ -21,7 +21,7 @@ from contextvars import ContextVar
 from typing import Any
 
 import httpx2
-from pydantic import Field, PositiveInt
+from pydantic import Field, NonNegativeInt, PositiveInt
 
 from ghga_connector import exceptions
 from ghga_connector.constants import DEFAULT_PART_SIZE, MAX_WAIT_TIME
@@ -87,6 +87,12 @@ def get_crypt4gh_public_key(storage_alias: str) -> str:
 class Config(CompositeConfig):
     """Global Config Parameters"""
 
+    client_num_retries: NonNegativeInt = Field(
+        default=5,
+        description="Total number of attempts made per API call, so a value of 1 means"
+        + " no retries. Uploads are long-lived and cross the public internet, so the"
+        + " Connector allows more attempts than the service default.",
+    )
     max_concurrent_downloads: PositiveInt = Field(
         default=5, description="Number of parallel download tasks for file parts."
     )
@@ -164,9 +170,8 @@ async def _get_wkvs_values(client: httpx2.AsyncClient) -> dict[str, Any]:
 
     try:
         response = await client.get(url)
-    except httpx2.RequestError as request_error:
-        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
-        raise exceptions.RequestFailedError(url=url) from request_error
+    except exceptions.REQUEST_FAILURES as exc:
+        response = exceptions.handle_request_error(exc, url=url)
 
     if response.status_code != 200:
         raise exceptions.BadResponseCodeError(

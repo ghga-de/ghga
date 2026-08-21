@@ -10,8 +10,8 @@
       "type": "integer"
     },
     "client_num_retries": {
-      "default": 3,
-      "description": "Number of times to retry failed API calls.",
+      "default": 5,
+      "description": "Total number of attempts made per API call, so a value of 1 means no retries. Uploads are long-lived and cross the public internet, so the Connector allows more attempts than the service default.",
       "minimum": 0,
       "title": "Client Num Retries",
       "type": "integer"

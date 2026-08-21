@@ -148,7 +148,10 @@ async def test_upload_journey(
         file_info = CoreFileInfo(
             alias=ALIAS, path=Path(file.name), decrypted_size=actual_size
         )
-        async with async_client() as client, set_runtime_config(client=client):
+        async with (
+            async_client(purpose="upload") as client,
+            set_runtime_config(client=client),
+        ):
             await upload_files(
                 client=client,
                 core_file_info_list=[file_info],
@@ -175,7 +178,10 @@ async def test_upload_bad_url(
         file_info = CoreFileInfo(
             alias=ALIAS, path=Path(file.name), decrypted_size=actual_size
         )
-        async with async_client() as client, set_runtime_config(client=client):
+        async with (
+            async_client(purpose="upload") as client,
+            set_runtime_config(client=client),
+        ):
             await upload_files(
                 client=client,
                 core_file_info_list=[file_info],

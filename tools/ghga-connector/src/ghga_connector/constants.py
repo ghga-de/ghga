@@ -23,6 +23,13 @@ import crypt4gh.lib
 DEFAULT_PART_SIZE = 64 * (1024**2)  # 64 MiB
 TIMEOUT = 60.0
 TIMEOUT_LONG = 5 * TIMEOUT + 10
+# Well below server-side idle timeouts, so connections are dropped by us rather than
+#  reaped server-side and then reused after they are already dead.
+KEEPALIVE_EXPIRY = 2.0
+# One spare socket per origin the client talks to (WPS, Upload API, S3).
+#  `max_connections` is global across origins, so without this the part transfers hold
+#  every slot and the control-plane calls have to evict one to get through.
+POOL_HEADROOM = 3
 MAX_PART_NUMBER = 10000
 MAX_RETRIES = 5  # retries for a single file part at the HTTP layer (see uploader.py)
 MAX_WAIT_TIME = 60 * 60

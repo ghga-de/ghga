@@ -15,11 +15,12 @@
 """Handling session initialization for httpx2"""
 
 from contextlib import asynccontextmanager
+from typing import Literal
 
 import httpx2
 
 from ghga_connector.config import get_config
-from ghga_connector.constants import TIMEOUT
+from ghga_connector.constants import KEEPALIVE_EXPIRY, POOL_HEADROOM, TIMEOUT
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from ghga_service_commons.transports import (
     AsyncRetryTransport,
@@ -43,12 +44,22 @@ def get_ratelimiting_retry_transport(
 
 
 @asynccontextmanager
-async def async_client():
-    """Yields a context manager async httpx2 client and closes it afterward"""
+async def async_client(*, purpose: Literal["upload", "download"]):
+    """Yields a context manager async httpx2 client and closes it afterward.
+
+    A client only ever serves one transfer path, so `purpose` picks which of the two
+    part-concurrency settings sizes the connection pool.
+    """
     config = get_config()
+    max_concurrent_parts = (
+        config.max_concurrent_uploads
+        if purpose == "upload"
+        else config.max_concurrent_downloads
+    )
     limits = httpx2.Limits(
-        max_connections=config.max_concurrent_downloads,
-        max_keepalive_connections=config.max_concurrent_downloads,
+        max_connections=max_concurrent_parts + POOL_HEADROOM,
+        max_keepalive_connections=max_concurrent_parts + POOL_HEADROOM,
+        keepalive_expiry=KEEPALIVE_EXPIRY,
     )
     transport = get_ratelimiting_retry_transport(limits=limits)
     proxies = ratelimiting_retry_proxies(config=config, limits=limits)

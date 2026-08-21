@@ -56,7 +56,7 @@ async def test_set_runtime_config(mock_apis: MockApis):  # noqa: F811
         get_upload_api_url,
         get_work_package_api_url,
     ]
-    async with async_client() as client:
+    async with async_client(purpose="download") as client:
         # Verify that all the context vars are empty before calling config setup
         for func in ctx_var_getter_fns:
             with pytest.raises(ValueError):
