@@ -885,7 +885,7 @@ class UploadController(UploadControllerPort):
 
         if files_with_wrong_state:
             first_bad_file = files_with_wrong_state[0]
-            error = self.FileUploadStateError(
+            fus_error = self.FileUploadStateError(
                 file_id=first_bad_file.id,
                 details=(
                     f"FileUpload {first_bad_file.id} is in the '{first_bad_file.state}',"
@@ -894,13 +894,13 @@ class UploadController(UploadControllerPort):
                 ),
             )
             log.error(
-                error,
+                fus_error,
                 extra={
                     "box_id": box_id,
                     "files_with_wrong_state": [f.id for f in files_with_wrong_state],
                 },
             )
-            raise error
+            raise fus_error
 
         # Delete the FileUploads
         await self._delete_box_file_uploads(box_id=box_id)
