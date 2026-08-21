@@ -10,7 +10,7 @@ spec:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
   policyTypes:
   - Ingress
-  ingress: 
+  ingress:
     {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.ingress "context" $) | nindent 2 }}
     {{- if .Values.service.ports }}
     ports:
