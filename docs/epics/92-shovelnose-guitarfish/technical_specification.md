@@ -130,14 +130,22 @@ Dropping the `_remove_completed_file_upload()` call from `process_interrogation_
 
 For requeueing a single file (box ID + file ID), the UploadController class:
 1. Fetches the box. Requeueing should be allowed while the box is 'open' or 'locked' and rejected when it's 'archived'.
+   - For requeuing _all_ files in a box, errors here means the entire operation fails.
 2. Fetches the FileUpload and rejects anything not in the 'failed' state with a `FileUploadStateError`.
-3. Rejects failed files that never reached the inbox. 'failed' covers three different situations today: an error during initiation (`_insert_file_upload()`, no object at all), a checksum or size mismatch at completion (`_compare_checksums()` / `_verify_object_size()`, object present but known bad), and an interrogation failure (object present and worth retrying). Only the third one can be requeued. To differentiate between these, we check the `decrypted_sha256` field, which is only populated if the initial inbox upload succeeds.
-4. Confirms the object is still in S3. This is one S3 request and it protects against the case where files that failed before this epic shipped, whose objects were already deleted. A missing object should surface as a distinct error the portal can explain ("this file predates retry support, it has to be re-uploaded") rather than a generic 500.
+   - For requeuing _all_ files in a box, all failed files would be retrieved instead of just one. Errors here would cause the entire operation to fail.
+3. Rejects failed files that never reached the inbox. 'failed' covers three different situations today: an error during initiation (`_insert_file_upload()`, no object at all), a checksum or size mismatch at completion (`_compare_checksums()` / `_verify_object_size()`, object present but known bad), and an interrogation failure (object present and worth retrying). Only the third one can be requeued. To differentiate between these, we check the `decrypted_sha256` field, which is only populated if the initial inbox upload succeeds. 
+   - For requeuing _all_ files in a box, ineligible files (ones that didn't make it to the inbox, or ones that failed interrogation but were deleted already) do _not_ trigger an error, rather they are skipped.
+4. Confirms the object is still in S3. This is one S3 request and it protects against the case where files that failed before this epic shipped, whose objects were already deleted. A missing object should surface as a distinct error the portal can explain rather than a generic 500.
 5. Sets `state="inbox"`, `state_updated=now()`, and clears `failure_reason`. Clearing the reason isn't cosmetic: `archive_file_upload_box()` raises `FileArchivalError` if a file reaches archival with `failure_reason` filled out.
 
-Box stats don't need recomputing.
+*Skip reasons:*  
+- File not in S3: "this file predates retry support, it has to be re-uploaded"
+- File failed inbox validation: "file never interrogated - upload failed validation upon completion"
+- File initiation failed: "file never reached inbox"
 
-For requeuing _all_ files in a box, step #2 above would fetch all failed FileUploads and performs the remaining steps for each retrieved FileUpload.
+> Errors in steps 3-5 do not cause the entire operation to fail. Instead, the operation will continue to the next failed file in the loop. File IDs of the files which could not be requeued will be listed in the response.
+
+Box stats don't need recomputing.
 
 On the RS side the endpoint checks the Data Steward role, resolves the RDUB to its FUB, creates the work order token, and calls the corresponding UCS endpoint. It should write an audit record like the other steward-initiated box operations do. The existing `log_box_updated` method in the audit module isn't a file-level action, so this should be its own (new) method.
 
