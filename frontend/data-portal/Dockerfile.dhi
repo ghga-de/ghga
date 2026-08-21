@@ -1,3 +1,4 @@
+# TEMP: throwaway edit to make check-images fire on this PR — drop before merge.
 # Multi-stage Dockerfile for building a hardened image for the data portal
 
 # Define the non-dev base-image
