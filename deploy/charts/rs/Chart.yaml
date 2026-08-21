@@ -1,6 +1,5 @@
 name: rs
-description: GHGA Registry Service - a service for ingesting and archiving 
-  metadata from data submitters.
+description: GHGA Registry Service - a service for ingesting and archiving metadata from data submitters.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

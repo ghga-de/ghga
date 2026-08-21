@@ -337,4 +337,3 @@ vaultAgent:
       parameterName: CRYPT4GH_PRIVATE_KEY
 mapping:
   timeoutLoadArtifacts: 10000
-

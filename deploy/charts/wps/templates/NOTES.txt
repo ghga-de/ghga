@@ -6,7 +6,7 @@ Your release is named {{ .Release.Name }}.
 
 {{- $found_reflector := false }}
 {{- range $index, $service := (lookup "apps/v1" "Deployment" "" "").items }}
-{{- if eq $service.metadata.name "reflector" }} 
+{{- if eq $service.metadata.name "reflector" }}
     {{- $found_reflector = true }}
 {{- end }}
 {{- end }}
