@@ -11,7 +11,7 @@
 # VARIANT          = single (default, one member per image) | mono (all Python members
 #                    in one venv; demo/CI only, PACKAGE is ignored) — `just demo-images-mono`
 #
-# Based on GHGA's Docker Hardened Images (mirrors the template's Dockerfile.dhi):
+# Based on Docker Hardened Images (mirrors the template's Dockerfile.dhi):
 # build ON the DHI dev variant so the runtime libc (musl/alpine) matches, run on the plain
 # hardened base (non-root, no shell — hence the /app/entrypoint symlink instead of `sh -c`).
 # NOTE: dhi.io requires authentication (Docker Hub credentials with DHI entitlement) —

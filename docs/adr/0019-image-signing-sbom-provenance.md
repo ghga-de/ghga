@@ -1,4 +1,4 @@
-# ADR-0018 — Sign, SBOM, and attest published images; verification foundation for Kyverno
+# ADR-0019 — Sign, SBOM, and attest published images; verification foundation for Kyverno
 
 - **Status:** Accepted
 - **Date:** 2026-08-14
@@ -6,24 +6,25 @@
 
 ## Context
 
-Every deployable workload is built `FROM` GHGA's private Docker Hardened Images mirror
-(`dhi.io`) and published to `ghcr.io/ghga-de/ghga` by `.github/workflows/dev-images.yaml`
-(every merge to `main`, mutable `:dev` tags) and `.github/workflows/release.yaml` (manual,
-versioned platform-lane artifacts, per [ADR-0004](0004-versioning-and-release-by-tag.md)).
-Neither workflow currently produces an SBOM, provenance, or a signature — there is no way
-for anything downstream to verify that a given image actually came from this repo's CI, or
-what went into it.
+Every deployable workload is built `FROM` Docker Hardened Images (`dhi.io`, an
+authenticated upstream pulled with GHGA's Docker Hub entitlement) and published to
+`ghcr.io/ghga-de/ghga` by two CI workflows: the dev-image one (every merge to `main`,
+mutable `:dev` tags) and the release one (manual, versioned platform-lane artifacts, per
+[ADR-0004](0004-versioning-and-release-by-tag.md)). Neither currently produces an SBOM,
+provenance, or a signature — there is no way for anything downstream to verify that a
+given image actually came from this repo's CI, or what went into it.
 
 GHGA's Helm charts (per-workload resources) live in this repo; the cluster-wide,
-GitOps/platform layer — including the Istio `AuthorizationPolicy` that already enforces
-cluster-wide authorization — lives in a separate repo, `devops-kubernetes-hub`
-([ADR-0011](0011-helm-chart-boundary-hybrid.md)). Admission-control image verification
-(Kyverno `ClusterPolicy`) is the same class of cluster-wide, policy-enforcement concern as
-that `AuthorizationPolicy`, so it belongs there too, not in this repo. What this repo *can*
-and should do is the producer side: sign what it publishes and attach SBOM + provenance —
-the verification foundation the enforcement layer builds on. Authoring the policy itself is
-`devops-kubernetes-hub`'s concern; this ADR records what that policy will have to verify
-against, not the policy.
+GitOps/platform layer — including the edge/cluster auth object it already owns (Istio
+`AuthorizationPolicy` in prod) — lives in a separate, platform-owned repository
+([ADR-0011](0011-helm-chart-boundary-hybrid.md),
+[ADR-0012](0012-self-contained-edge-envoy-gateway.md)). Admission-control image
+verification (Kyverno `ClusterPolicy`) is the same class of environment-wide,
+policy-enforcement concern, so it belongs there too, not in this repo. What this repo
+*can* and should do is the producer side: sign what it publishes and attach SBOM +
+provenance — the verification foundation the enforcement layer builds on. Authoring the
+policy itself is that layer's concern; this ADR records what such a policy will have to
+verify against, not the policy.
 
 ## Decision
 
@@ -32,10 +33,9 @@ against, not the policy.
   `docker/build-push-action` wrapper — matches this repo's existing raw-CLI CI style and
   avoids an extra third-party action; a `docker-container` buildx builder is created first,
   since the default docker-driver builder can't export attestations), attached to the
-  image at push time as OCI-index attestation manifests. Applied to **both**
-  `dev-images.yaml` and `release.yaml` (the latter only when `push=true` — its existing
-  build-only dry-run mode is unaffected, since attestations require an actual registry
-  push).
+  image at push time as OCI-index attestation manifests. Applied to **both** publish
+  workflows — for the release one only when it actually pushes, so its existing build-only
+  dry-run mode is unaffected (attestations require a real registry push).
 
   The resulting `predicateType`s — `https://spdx.dev/Document` (SBOM) and
   `https://slsa.dev/provenance/v1` (provenance) — are **confirmed**, verified locally
@@ -51,44 +51,42 @@ against, not the policy.
   for the real images too.
 - **Signing:** keyless cosign (Sigstore Fulcio + Rekor via GitHub Actions OIDC,
   `permissions: id-token: write`), signing the resolved image **digest**, not the mutable
-  tag. No private key to manage or rotate.
+  tag, and `--recursive` so the OCI index *and* every child manifest carry a signature. No
+  private key to manage or rotate.
 - **Attesting:** the same two predicates are additionally re-published as signed cosign
   attestations (`cosign attest --type spdxjson` / `--type slsaprovenance1`) against that
   same digest. Buildx's in-index attestations are not where cosign looks, so without this
   step nothing downstream could actually verify an SBOM or provenance claim — see
   Consequences for the evidence and the exact failure mode.
 - **Verification identity** — Fulcio issues a short-lived cert per run, bound to the
-  workflow's OIDC claims:
+  workflow's OIDC claims, so a verifier matches on those claims rather than on a tag:
   - Issuer (both workflows): `https://token.actions.githubusercontent.com`
-  - `dev-images.yaml` subject: `https://github.com/ghga-de/ghga/.github/workflows/dev-images.yaml@refs/heads/main`
-  - `release.yaml` subject: `https://github.com/ghga-de/ghga/.github/workflows/release.yaml@refs/heads/main`
-    (a manual `workflow_dispatch` run's `job_workflow_ref` claim reflects the branch the
-    dispatch UI ran against, not the `ref` **input** string used for lane routing —
-    revisit this subject once [ADR-0004](0004-versioning-and-release-by-tag.md)'s tag
-    trigger is restored, since a tag-triggered run's ref claim becomes
-    `refs/tags/<tag>`, widening the regex needed)
+  - Subject: the run's `job_workflow_ref` claim, i.e. this repo's URL plus the publishing
+    workflow's path and the ref it ran on (`…@refs/heads/main` for merges to `main`).
+    A manual dispatch run's claim reflects the branch the dispatch UI ran against, not any
+    `ref` **input** used for lane routing; once
+    [ADR-0004](0004-versioning-and-release-by-tag.md)'s tag trigger is restored, a
+    tag-triggered run's ref becomes `refs/tags/<tag>` and the matching pattern has to widen
+    accordingly.
 
-  **These two subject strings are the expected shape based on GitHub's documented OIDC
-  token claims, not yet empirically confirmed against a real signed image** — confirm with
-  `cosign verify` against a real pushed `:dev` image and a real `push=true` dispatch before
-  any consumer treats them as final.
+  **The exact subject strings are the shape GitHub's documented OIDC claims imply, not yet
+  empirically confirmed against a real signed image** — read them off a real run
+  (`cosign verify … --output json`) before any consumer pins a policy to them.
 - **SLSA rigor:** buildx-native provenance only, for now — not the
   `slsa-framework/slsa-github-generator` reusable workflow. See Alternatives.
 - **Kyverno enforcement stays out of this repo** — no policy, not even an example one.
-  Admission control is `devops-kubernetes-hub`'s to author and own, against the identities
-  and predicate types recorded above. A reference policy carried here would be a second,
-  unversioned copy that nothing in this repo can execute or test, drifting from the one
-  that actually runs.
+  Admission control is the platform/GitOps layer's to author and own, against the
+  identities and predicate types recorded above. A reference policy carried here would be
+  a second, unversioned copy that nothing in this repo can execute or test, drifting from
+  the one that actually runs.
 - **Base image staleness** (the other half of this repo's supply-chain hardening pass) is
-  handled separately by Renovate, tracking each base image as a single full-tag dep
-  (`dhi.io/python`, `dhi.io/node`) rather than tracking the language and alpine versions
-  separately — see `docker/README.md`'s "Base image updates" section for why, and for the
-  consequence that alpine minor bumps are a deliberate hand edit. Not this ADR's concern.
+  deliberately out of scope here — it is a dependency-update concern, tracked on its own,
+  and nothing in this decision depends on it.
 
 ## Consequences
 
 - Keyless signing writes to the **public** Rekor transparency log. Even though
-  `ghcr.io/ghga-de/ghga` is currently private and explicitly interim/disposable
+  `ghcr.io/ghga-de/ghga` is private and an explicitly interim publish target
   ([ADR-0004](0004-versioning-and-release-by-tag.md)), the fact that a given digest was
   built by a given workflow run at a given time becomes public and permanent. Acceptable
   given the registry's already-documented interim status, but a real, honest trade-off —
@@ -128,9 +126,15 @@ against, not the policy.
   (`buildDefinition`/`runDetails`), so v1 is the correct pairing.
 
   The extraction is platform-agnostic: buildx returns `{SPDX: …}` for a single-platform
-  build and `{"linux/amd64": {SPDX: …}, …}` for a multi-platform one, so
-  `scripts/attest-image.sh` normalises both to a platform → predicate map and emits one
+  build and `{"linux/amd64": {SPDX: …}, …}` for a multi-platform one, so the shared
+  attestation script normalises both to a platform → predicate map and emits one
   attestation per platform, each attached to the index digest. Verified against both shapes.
+
+  Note the asymmetry that leaves: signatures are recursive (index + children), attestations
+  are attached to the **index** digest only. A verifier that resolves a platform-specific
+  child manifest and queries attestations against *that* digest finds none — it has to
+  resolve the index, or the attesting side has to fan out per child. Worth settling with
+  whoever writes the consuming policy before anything enforces against these images.
 
   One caveat for whoever writes the consuming policy: cosign v3 publishes attachments via
   OCI referrers where v2 used the `sha256-<digest>.att` tag. Both workflows therefore pin
@@ -139,18 +143,17 @@ against, not the policy.
 - **CI runs the producer half only.** It signs and attests, and the job ends without
   reading anything back — nothing here verifies its own output, so a change that silently
   breaks verifiability would surface only at a consuming cluster's admission controller.
-  Both publish workflows call the same `scripts/attest-image.sh` rather than each carrying
-  its own copy, which at least keeps that path single-sourced. Closing the gap properly
-  means a consumer-side check; see "Verification identity" for the piece that cannot be
-  confirmed outside a real CI run at all.
+  Both publish workflows call one shared attestation script rather than each carrying its
+  own copy, which at least keeps that path single-sourced. Closing the gap properly means
+  a consumer-side check; see "Verification identity" for the piece that cannot be confirmed
+  outside a real CI run at all.
 - SLSA rigor is intentionally capped below what `slsa-framework/slsa-github-generator`
   would provide (an isolated, non-forgeable builder identity vs. this repo's own workflow
   self-attesting its own build). A deliberate, revisitable choice, not an oversight.
-- The justfile's `image`/`image-mono` recipes are deliberately left building plain
-  (unattested) local images for
-  `just demo-images`/`security-scan.yaml`'s local rebuild-and-diff step — attestations are
-  incompatible with `--load`ing into the local docker store. Only the two publish
-  workflows build via `docker buildx build` directly.
+- The justfile's local image recipes are deliberately left building plain (unattested)
+  images for the local demo stack and the vulnerability-scan workflow's rebuild-and-diff
+  step — attestations are incompatible with `--load`ing into the local docker store. Only
+  the two publish workflows build via `docker buildx build` directly.
 
 ## Alternatives considered
 
@@ -165,5 +168,5 @@ against, not the policy.
   has proven itself.
 - **Kyverno `ClusterPolicy` living in this repo.** Rejected: contradicts the
   [ADR-0011](0011-helm-chart-boundary-hybrid.md) boundary — cluster-wide policy
-  enforcement belongs in `devops-kubernetes-hub`, alongside the cluster-wide
+  enforcement belongs in the platform/GitOps repository, alongside the cluster-wide
   `AuthorizationPolicy` that already lives there.

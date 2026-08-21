@@ -16,12 +16,12 @@
 # Every published tag carries an SBOM + SLSA provenance attestation (buildx-native,
 # provenance=mode=max, re-published via cosign attest) and a keyless cosign signature
 # over the resolved digest — see
-# ADR-0018. This build goes through `docker buildx build` directly (a docker-container
+# ADR-0019. This build goes through `docker buildx build` directly (a docker-container
 # builder is required: the default docker-driver builder can't export attestations)
 # rather than the justfile's `image`/`image-mono` recipes: those are also used for
 # local/demo builds that load into the docker store or a kind cluster, which is
 # incompatible with attestations (they turn the push into an OCI index the classic
-# docker store can't represent) — see docs/adr/0018-image-signing-sbom-provenance.md.
+# docker store can't represent) — see docs/adr/0019-image-signing-sbom-provenance.md.
 name: dev-images
 
 on:

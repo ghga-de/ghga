@@ -269,7 +269,7 @@ demo-template:
 # instead of duplicating the build commands — e.g. security-scan.yaml runs
 # `just image-mono updated --pull`. dev-images.yaml deliberately does NOT: publishing
 # attestations needs a docker-container buildx builder, which these `docker build`
-# recipes cannot provide (see ADR-0018).
+# recipes cannot provide (see ADR-0019).
 image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
