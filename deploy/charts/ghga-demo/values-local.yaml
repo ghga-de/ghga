@@ -399,4 +399,3 @@ test-oidc-provider:
     limits:
       cpu: 500m
       memory: 512Mi
-
