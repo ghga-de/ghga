@@ -116,3 +116,6 @@ dlqs-consumer:
 sms:
   image:
     repository: ghga/platform
+secretGen:
+  image:
+    repository: docker.io/ghga/platform
