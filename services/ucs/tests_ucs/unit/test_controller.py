@@ -899,6 +899,7 @@ async def test_lock_box_ignores_terminal_uploads(
     box_id = await rig.create_default_box()
 
     file_upload = make_file_upload(state=terminal_state)
+    file_upload.decrypted_sha256 = None
     file_upload.box_id = box_id
     await rig.file_upload_dao.insert(file_upload)
 
