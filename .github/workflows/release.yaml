@@ -31,6 +31,9 @@
 name: release
 
 on:
+  push:
+    tags:
+      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
   workflow_dispatch:
     inputs:
       ref:
@@ -271,5 +274,3 @@ jobs:
       # caller grants.
       id-token: write
     uses: ./.github/workflows/pypi-publish.yaml
-    with:
-      publish: ${{ inputs.push }}

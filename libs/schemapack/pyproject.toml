@@ -21,7 +21,8 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "schemapack"
-version = "4.3.1"
+# 4.3.1 is spent on TestPyPI: a pypi-publish.yaml rehearsal uploaded it there.
+version = "4.3.0"
 description = "Make your JSON Schemas sociable and create linked data models."
 dependencies = [
     "pydantic >=2, <3",

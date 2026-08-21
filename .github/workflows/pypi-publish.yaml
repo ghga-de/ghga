@@ -7,45 +7,23 @@
 # latest one on PyPI is a candidate. Re-running is idempotent.
 # If PyPI cannot be reached, the run fails.
 #
-# TestPyPI is a gate, not an alternative destination. The whole train is built and checked
-# first, then uploaded to TestPyPI, and only then — with `publish` set — to PyPI. Anything
-# that fails before the last step leaves PyPI untouched. Because the train is built once,
-# the artefacts TestPyPI accepted are byte-for-byte the ones PyPI receives.
+# The whole train is built and checked, then uploaded to TestPyPI, then to PyPI. 
 #
-# So `publish: false` is a rehearsal rather than a report: it exercises the build, the
-# metadata, the credentials and the upload itself, stopping short of PyPI. That is the
-# mode to run while only the TestPyPI publishers exist.
+# Because the train is built once, the artefacts TestPyPI accepted are byte-for-byte the
+# ones PyPI receives.
 #
 # Note that the plan is always drawn against *real* PyPI, never TestPyPI. The two indexes
 # have separate histories — TestPyPI still holds rehearsals the upstream repos never
 # shipped — so only pypi.org can answer "are consumers missing this version?".
 #
-# On enablement (after the upstreams are archived):
-#   - switch the trigger to `push: branches: [main]` — no base to supply, the index is it
+# release.yaml owns when a release happens; this workflow only decides what goes out. It
+# gets no trigger of its own.
 name: pypi-publish
 
 on:
-  # TEMPORARY — REMOVE BEFORE MERGING TO main.
-  # workflow_dispatch only registers once the file is on the default branch, so it cannot
-  # start this lane from a feature branch. A push trigger can: it fires from the branch and
-  # runs that branch's copy. The `inputs` context is empty on a push event, so
-  # `inputs.publish` is falsy and the PyPI step skips itself — the run stops at TestPyPI.
-  push:
-    branches: [feature/pypi_publish]
-
   # release.yaml routes `name/x.y.z` tags here, so the lane has one implementation.
   workflow_call:
-    inputs:
-      publish:
-        description: "Upload to PyPI too; off = build, check and upload to TestPyPI only"
-        type: boolean
-        default: false
   workflow_dispatch:
-    inputs:
-      publish:
-        description: "Upload to PyPI too; off = build, check and upload to TestPyPI only"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -130,8 +108,8 @@ jobs:
   #   1. build and check *every* member. Nothing is uploaded until the whole train is
   #      known good — otherwise a metadata error in the last package surfaces only after
   #      the first one is already on an index, where it cannot be taken back.
-  #   2. upload the train to TestPyPI. This is the gate.
-  #   3. upload the same files to PyPI, only when `publish` is set.
+  #   2. upload the train to TestPyPI.
+  #   3. upload the same files to PyPI.
   #
   # Within a step, members are handled in the plan's dependency order: a package must not
   # reach an index before a package it depends on.
@@ -140,13 +118,15 @@ jobs:
     if: ${{ needs.plan.outputs.paths != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # TODO on enablement: bind this job to a protected `environment:` so an upload needs a
-    # second pair of eyes and a deployment branch policy can restrict it to main — today a
-    # direct dispatch or push publishes from whatever ref it ran on. Left off for now
-    # because the TestPyPI publishers are registered with no environment, and adding one
-    # here before adding it there is the kind of mismatch that reports as
-    # `invalid-publisher` without saying which field is wrong. Set it on both indexes in
-    # the same change, never one side first.
+    # Both uploads run under this one environment, so a required reviewer approves before
+    # the TestPyPI rehearsal rather than between it and PyPI, and a deployment branch policy
+    # here restricts which refs can publish at all — pypi-publish.yaml has no ancestry check
+    # of its own, unlike release.yaml.
+    #
+    # The same name has to be set in the trusted publisher config on *both* indexes. PyPI
+    # matches the environment claim, and a mismatch is reported as `invalid-publisher`
+    # without saying which field is wrong — so change both sides together, never one first.
+    environment: ghga_pypi
     permissions:
       contents: read
       # The token uv exchanges with the index for upload rights.
@@ -188,7 +168,7 @@ jobs:
             echo "::endgroup::"
           done
 
-      # The gate. A failure here means the run ends with PyPI untouched.
+      # A failure here ends the run with PyPI untouched.
       - name: Rehearse the train on TestPyPI
         env:
           MEMBERS: ${{ needs.plan.outputs.members }}
@@ -222,7 +202,6 @@ jobs:
           done
 
       - name: Publish the train to PyPI
-        if: ${{ inputs.publish }}
         env:
           MEMBERS: ${{ needs.plan.outputs.members }}
         run: |
@@ -241,9 +220,3 @@ jobs:
             echo "- published \`$package\` $version" >> "$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"
           done
-
-      - name: Note that PyPI was skipped
-        if: ${{ !inputs.publish }}
-        run: |
-          echo "PyPI upload skipped (\`publish\` not set) — the train stopped at TestPyPI." \
-            >> "$GITHUB_STEP_SUMMARY"
