@@ -58,8 +58,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/ars
+  registry: docker.io
+  repository: ghga/ars
   tag: ""
   digest: ""
   pullPolicy:

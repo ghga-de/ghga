@@ -1,6 +1,6 @@
 # Local-image overlay for kind-in-devcontainer installs:
 #   helm upgrade --install ghga deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-local.yaml
-# Images are built by `just demo-images` as ghcr.io/ghga-de/ghga/<package>:local
+# Images are built by `just demo-images` as docker.io/ghga/<package>:local
 # and loaded into the kind node; tag 'local' + IfNotPresent keeps the cluster
 # from ever pulling them. Demo-sized resources replace the prod defaults — the
 # full platform must fit one kind node.

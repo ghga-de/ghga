@@ -22,10 +22,10 @@ umbrella bundles Envoy Gateway, [ADR-0012](../adr/0012-self-contained-edge-envoy
 
 Hosting ([ADR-0010](../adr/0010-history-preserving-migration.md)):
 - GitHub: repo at **`github.com/ghga-de/ghga`**.
-- **No publish credentials are stored — keep it that way.** Interim image target: GHCR under
-  the repo namespace (`ghcr.io/ghga-de/ghga/...`), pushed only by manual `workflow_dispatch`
-  runs using the ephemeral `GITHUB_TOKEN`. Final targets (registries, PyPI) are still
-  undecided; do not add long-lived registry secrets.
+- Platform image target: Docker Hub (`docker.io/ghga/...`) — matches what production already
+  pulls from. Pushed only by manual `workflow_dispatch` runs, authenticated with the org's
+  stored `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the same credentials used to pull
+  the hardened dhi.io base images). PyPI targets are still undecided.
 
 The legacy clones already exist at [.legacy_repos/](../../.legacy_repos/) (snapshot). For the
 initial import you may use them via `LEGACY_DIR`; **incremental sync must fetch from `ghga-de`**

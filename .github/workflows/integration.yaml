@@ -61,6 +61,9 @@ jobs:
           # only the CLI: the cluster is created by `just testbed-up` from
           # deploy/kind-config.yaml, which publishes the gateway NodePort on port 80
           install_only: true
+          # pinned (rather than "latest") so a bad/incomplete kind release doesn't
+          # break CI with a checksum-verification failure
+          version: v0.32.0
 
       - name: Sync the workspace
         # needed by testbed-artifacts (ghga-datasteward-kit) and by the suite runner,

@@ -54,8 +54,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/auth-km-jobs
+  registry: docker.io
+  repository: ghga/auth-km-jobs
   tag: ""
   digest: ""
   pullPolicy:

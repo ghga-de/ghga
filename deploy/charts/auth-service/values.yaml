@@ -55,8 +55,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/auth-service
+  registry: docker.io
+  repository: ghga/auth-service
   tag: ""
   digest: ""
   pullPolicy:

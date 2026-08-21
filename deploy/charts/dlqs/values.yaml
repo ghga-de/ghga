@@ -59,8 +59,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/dlqs
+  registry: docker.io
+  repository: ghga/dlqs
   tag: ""
   digest: ""
   pullPolicy:
