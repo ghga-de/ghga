@@ -55,8 +55,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/test-oidc-provider
+  registry: docker.io
+  repository: ghga/test-oidc-provider
   tag: ""
   digest: ""
   pullPolicy:

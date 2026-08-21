@@ -4,12 +4,13 @@
 #   name/x.y.z  -> PYPI lane: publish that component's wheel (closure-train rule for tools).
 #
 # MANUAL-ONLY. No tag triggers yet: every run is a deliberate `workflow_dispatch`.
-# The platform lane can push images to the INTERIM registry (GHCR under this repo's
-# namespace) when the `push` input is set — authenticated with the ephemeral, per-run
-# GITHUB_TOKEN, so no stored credentials exist. The PyPI lane remains a stub.
+# The platform lane pushes images to Docker Hub (docker.io/ghga/<member>) — the same
+# registry production already pulls from — when the `push` input is set, authenticated
+# with the org's stored DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets (the same credentials
+# already used to pull the hardened dhi.io base images). The PyPI lane remains a stub.
 #
-# On the real enablement decision: restore the tag trigger, revisit REGISTRY, and wire
-# the pypi lane (closure train + published-combo matrix are prerequisites there):
+# On enabling this for real: restore the tag trigger and wire the pypi lane (closure
+# train + published-combo matrix are prerequisites there):
 #   on:
 #     push:
 #       tags:
@@ -23,7 +24,7 @@ on:
         description: "Tag-style ref, e.g. ghga/17.0.0"
         required: true
       push:
-        description: "Push images to the interim registry (GHCR); off = build-only dry run"
+        description: "Push images to Docker Hub; off = build-only dry run"
         type: boolean
         default: false
 
@@ -31,9 +32,8 @@ permissions:
   contents: read
 
 env:
-  # Interim publish target (test): repo-scoped GHCR path, private by default,
-  # easy to bulk-clean. The real target is a separate, later decision.
-  REGISTRY: ghcr.io/ghga-de/ghga
+  # Real publish target — matches what production already pulls from.
+  REGISTRY: docker.io/ghga
 
 jobs:
   resolve:
@@ -72,7 +72,6 @@ jobs:
     timeout-minutes: 40
     permissions:
       contents: read
-      packages: write # GHCR, via the ephemeral GITHUB_TOKEN (interim target only)
     strategy:
       fail-fast: false
       matrix:
@@ -106,13 +105,13 @@ jobs:
             --label org.opencontainers.image.revision="${GITHUB_SHA::12}" \
             -t "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" \
             "${{ matrix.member.context }}"
-      - name: Login to GHCR
+      - name: Login to Docker Hub
         if: ${{ inputs.push }}
         uses: docker/login-action@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Push
         if: ${{ inputs.push }}
         run: docker push "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"

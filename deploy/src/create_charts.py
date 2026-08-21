@@ -232,7 +232,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--registry",
-        default="ghcr.io/ghga-de/ghga",
+        default="docker.io/ghga",
         help="image registry root; the package name is appended per member",
     )
     args = parser.parse_args()

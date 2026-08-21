@@ -16,106 +16,103 @@
 # ImagePullBackOff with helm blocked on its pre-install hook — a silent 15-minute hang.
 test-oidc-provider:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 auth-adapter:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 auth-rest:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 auth-claims:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 wkvs:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 ekss:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 dcs:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 ucs:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 fis:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 dhfs-primary:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 dhfs-secondary:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 ifrs:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 pcs:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 wps:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 rs:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 metldata:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 rts:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 wps-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 mass-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 ars-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 dcs-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 dins-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 rs-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 ucs-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 fis-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 rts-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 ars:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 mass:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 dins:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 ns:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 nos:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 dlqs:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 dlqs-consumer:
   image:
-    repository: ghga-de/ghga/platform
+    repository: ghga/platform
 sms:
   image:
-    repository: ghga-de/ghga/platform
-secretGen:
-  image:
-    repository: ghcr.io/ghga-de/ghga/platform
+    repository: ghga/platform

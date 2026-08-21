@@ -55,8 +55,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/wkvs
+  registry: docker.io
+  repository: ghga/wkvs
   tag: ""
   digest: ""
   pullPolicy:
