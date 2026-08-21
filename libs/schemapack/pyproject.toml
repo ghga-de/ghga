@@ -63,3 +63,6 @@ source = [
     "/workspace/src",
     "**/lib/python*/site-packages",
 ]
+
+[tool.uv.sources]
+ghga-jsonsubschema = { workspace = true }
