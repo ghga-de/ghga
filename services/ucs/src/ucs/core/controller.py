@@ -1070,9 +1070,9 @@ class UploadController(UploadControllerPort):
                 "$or": [
                     {"state": "init"},  # ongoing upload
                     {
-                        "state": "failed",  # failed interrogation
+                        "state": "failed",
                         "decrypted_sha256": {"$ne": None},
-                    },
+                    },  # failed interrogation
                 ],
             },
             sort=["alias"],
