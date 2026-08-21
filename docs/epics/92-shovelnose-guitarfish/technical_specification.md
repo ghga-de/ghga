@@ -38,7 +38,7 @@ New endpoints:
 
 - `POST /rpc/boxes/{box_id}/requeue (UCS)`:
   - _Requeue all failed files in a box_
-  - Requires a `RequeueAllFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue`.
+  - Requires a `RequeueAllFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue_box` (distinct from the file-level `requeue` so that a single-file token can never validate as a box-level one).
   - Returns:
     - 200 on success plus a payload of `{requeued: [file_ids], skipped: [{file_id, reason}]}`
     - 404 if the box isn't found
