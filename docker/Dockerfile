@@ -1,4 +1,3 @@
-# TEMP: throwaway edit to make check-images fire on this PR — drop before merge.
 # Shared hardened image for any deployable workspace member, built from the REPO ROOT:
 #
 #   docker build -f docker/Dockerfile \
