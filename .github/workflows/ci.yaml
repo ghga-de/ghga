@@ -262,12 +262,13 @@ jobs:
   check-images:
     needs: discover
     if: ${{ needs.discover.outputs.images != '[]' }}
-    runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
         target: ${{ fromJSON(needs.discover.outputs.images) }}
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
