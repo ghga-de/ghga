@@ -23,6 +23,13 @@ on:
       - "deploy/**"
   workflow_dispatch:
 
+# The published index is a single file, rewritten by each run from its own package set, so
+# overlapping runs clobber one another. Queue rather than cancel: a superseded run may be
+# the one holding a version to publish.
+concurrency:
+  group: release-charts
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
