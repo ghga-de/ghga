@@ -99,7 +99,11 @@ jobs:
         run: |
           # The train in the wheelhouse is there to be resolved against, not installed
           # directly — so pick this member's own wheel by name.
-          wheel=$(ls /tmp/wheels/"${PACKAGE}"-*.whl)
+          # A wheel filename carries the ESCAPED distribution name (PEP 427: runs of
+          # `-` become `_`), so a hyphenated `project.name` never matches the file it
+          # built. Most lane members happen to declare underscored names and hid this;
+          # ghga-arcticfreeze and ghga-jsonsubschema do not. Normalise before globbing.
+          wheel=$(ls /tmp/wheels/"${PACKAGE//-/_}"-*.whl)
           spec="$wheel"
           [ -n "$EXTRAS" ] && spec="${wheel}[${EXTRAS}]"
           echo "installing $spec"
