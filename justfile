@@ -108,8 +108,16 @@ sync-mainline *args:
 
 # --- Helm charts --------------------------------------------------------------------------
 # Regenerate the per-service charts from workspace metadata + member chart-values.yaml.
-charts version="0.0.0-dev":
-    uv run python deploy/src/create_charts.py --version {{version}}
+# Passing no version reuses the committed one: release-charts.yaml publishes whatever is
+# committed, so regenerating must not change it (ADR-0004).
+charts version="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "{{version}}" ]; then
+        uv run python deploy/src/create_charts.py --version "{{version}}"
+    else
+        uv run python deploy/src/create_charts.py
+    fi
 
 # Run the chart library tests (renders the dummy chart via helm).
 charts-test:
