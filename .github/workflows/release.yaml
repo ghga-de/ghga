@@ -1,13 +1,20 @@
 # Release — two lanes (revised ADR-0004):
-#   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
-#                  platform version (lockstep; libs embedded from source, never PyPI).
+#   ghga/X.Y.Z  -> PLATFORM lane: build ALL images and package ALL charts from the tagged
+#                  commit, stamped with the platform version (lockstep; libs embedded from
+#                  source, never PyPI) — both from the same commit, so a version number
+#                  denotes one defined state.
 #   name/x.y.z  -> PYPI lane: publish that component's wheel (closure-train rule for tools).
 #
+# A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
+# mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
+# separate process.
+#
 # MANUAL-ONLY. No tag triggers yet: every run is a deliberate `workflow_dispatch`.
-# The platform lane pushes images to Docker Hub (docker.io/ghga/<member>) — the same
-# registry production already pulls from — when the `push` input is set, authenticated
-# with the org's stored DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets (the same credentials
-# already used to pull the hardened dhi.io base images). The PyPI lane remains a stub.
+# The platform lane pushes images to Docker Hub (docker.io/ghga/<member>) and charts as
+# OCI artifacts to the same registry (oci://docker.io/ghga/charts/<chart>) — when the
+# `push` input is set, authenticated with the org's stored
+# DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets (the same credentials already used to pull
+# the hardened dhi.io base images). The PyPI lane remains a stub.
 #
 # On enabling this for real: restore the tag trigger and wire the pypi lane (closure
 # train + published-combo matrix are prerequisites there):
@@ -21,10 +28,10 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Tag-style ref, e.g. ghga/17.0.0"
+        description: "Tag-style ref, e.g. ghga/17.0.0 or ghga/17.1.0-rc.1 for a staging pre-release"
         required: true
       push:
-        description: "Push images to Docker Hub; off = build-only dry run"
+        description: "Push images and charts to Docker Hub; off = build-only dry run"
         type: boolean
         default: false
 
@@ -138,9 +145,67 @@ jobs:
           else
             echo "build-only: ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (push input not set)"
           fi
-      # TODO on enablement: Trivy scan; the front end builds via its own Dockerfile;
-      # charts are packaged and pushed as OCI artifacts with version/appVersion = the
-      # platform version (Phase B).
+      # TODO on enablement: Trivy scan; the front end builds via its own Dockerfile.
+
+  # -------- platform lane: package every chart, stamped; push only on request -----------
+  package-charts:
+    needs: [resolve, build-images]
+    if: ${{ needs.resolve.outputs.lane == 'platform' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - uses: azure/setup-helm@v5
+      - name: Regenerate charts at the release version
+        run: uv run python deploy/src/create_charts.py --version "${{ needs.resolve.outputs.version }}"
+      # ghga-common's own dependency (bitnami's `common` library) is already vendored
+      # (deploy/charts/ghga-common/charts/common-2.22.0.tgz + Chart.lock are committed),
+      # but `helm dep up` still validates the lock against a registered repo, not just
+      # the vendored .tgz.
+      - name: Add chart dependency repositories
+        run: helm repo add bitnami https://charts.bitnami.com/bitnami
+      # Vendor dependencies bottom-up — app charts before the umbrella — so every
+      # packaged chart is self-contained: a checked-out `file://../ghga-common`
+      # reference can't be resolved by an outside consumer.
+      - name: Resolve chart dependencies
+        run: |
+          for c in deploy/charts/*/; do
+            name=$(basename "$c")
+            { [ "$name" = "ghga-common" ] || [ "$name" = "ghga-demo" ]; } && continue
+            helm dep up "$c" --skip-refresh
+          done
+          helm dep up deploy/charts/ghga-demo --skip-refresh
+      - name: Package
+        run: |
+          mkdir -p dist
+          for c in deploy/charts/*/; do
+            helm package "$c" -d dist/
+          done
+      # No separate `helm registry login`: Helm's OCI client reads the same
+      # ~/.docker/config.json this writes.
+      - name: Login to Docker Hub
+        if: ${{ inputs.push }}
+        uses: docker/login-action@v4
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push
+        if: ${{ inputs.push }}
+        run: |
+          for tgz in dist/*.tgz; do
+            helm push "$tgz" "oci://${REGISTRY}/charts"
+          done
+      - name: Summary
+        run: |
+          if [ "${{ inputs.push }}" = "true" ]; then
+            echo "pushed charts to oci://${REGISTRY}/charts (version ${{ needs.resolve.outputs.version }})"
+          else
+            echo "build-only: packaged charts at ${{ needs.resolve.outputs.version }} (push input not set)"
+          fi
 
   # -------- pypi lane: dormant stub ------------------------------------------------------
   publish-pypi:

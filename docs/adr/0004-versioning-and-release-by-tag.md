@@ -86,6 +86,16 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 - Local development builds use the same Dockerfile/stamping path with a dev placeholder
   version (`0.0.0+dev.g<sha>`) — release/local parity is the guarantee that "worked locally"
   transfers.
+- **Chart publish target decided** (2026-08-24): charts publish as **OCI artifacts** under
+  `oci://docker.io/ghga/charts/<chart>`, alongside the images — package + push happen in
+  the same `release.yaml` run that builds the images, from the same tagged commit,
+  stamped with the same platform version. This supersedes the interim `release-charts.yaml`
+  gh-pages index, which published charts independently on every `main` push touching
+  `deploy/` and so let a chart version denote no defined state relative to the images it
+  shipped alongside.
+- **Pre-release cuts**: `ghga/X.Y.Z-rc.N` is a normal platform-lane ref for staging — same
+  mechanism, same lockstep guarantee (images and charts from one commit), just a SemVer
+  pre-release identifier on the version. Not a separate process or workflow.
 
 ## Consequences
 
