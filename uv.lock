@@ -156,18 +156,6 @@ wheels = [
 ]
 
 [[package]]
-name = "arcticfreeze"
-version = "0.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "immutabledict" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/79/227fdc80e32555571a606213b39fcd1176d3ac9a4b6b49f1120044299f1e/arcticfreeze-0.1.1.tar.gz", hash = "sha256:977a1d7c74498d00201d65519fa59f2b59e5a2b303668f7ecaec58a270ce5eda", size = 14546, upload-time = "2024-04-03T08:26:34.942Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/7b/db1d7e9828e8e417d69030a09e6a51635c7a68583f3d1d9998fa213e6b99/arcticfreeze-0.1.1-py3-none-any.whl", hash = "sha256:c9811b3c787bfdb0e2ea721b0a99bb0e700c91945fb1c9ce0822cb859b409916", size = 17189, upload-time = "2024-04-03T08:26:33.408Z" },
-]
-
-[[package]]
 name = "arrow"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3729,7 +3717,7 @@ name = "schemapack"
 version = "4.3.0"
 source = { editable = "libs/schemapack" }
 dependencies = [
-    { name = "arcticfreeze" },
+    { name = "ghga-arcticfreeze" },
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -3745,7 +3733,7 @@ schema-comparison = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arcticfreeze", specifier = "~=0.1.1" },
+    { name = "ghga-arcticfreeze", editable = "libs/ghga-arcticfreeze" },
     { name = "ghga-jsonsubschema", marker = "extra == 'schema-comparison'", editable = "libs/ghga-jsonsubschema" },
     { name = "jsonschema", specifier = ">=4.19.2,<5" },
     { name = "pydantic", specifier = ">=2,<3" },

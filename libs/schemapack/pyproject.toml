@@ -28,7 +28,7 @@ dependencies = [
     "pydantic_settings >=2, <3",
     "ruamel.yaml ~=0.18.6",
     "jsonschema >=4.19.2, <5",
-    "arcticfreeze ~=0.1.1",
+    "ghga-arcticfreeze >=1.0, <2",
     "rich >13, <15",
     "typer >= 0.16.0",
 ]
@@ -65,4 +65,5 @@ source = [
 ]
 
 [tool.uv.sources]
+ghga-arcticfreeze = { workspace = true }
 ghga-jsonsubschema = { workspace = true }
