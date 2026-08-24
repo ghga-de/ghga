@@ -18,6 +18,7 @@ members = [
     "dlqs",
     "ekss",
     "fis",
+    "ghga-arcticfreeze",
     "ghga-connector",
     "ghga-datasteward-kit",
     "ghga-event-schemas",
@@ -1162,6 +1163,26 @@ sdist = { url = "https://files.pythonhosted.org/packages/30/3e/a80a8c077fd798951
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl", hash = "sha256:3a179af3761e4df6eb2e026ff9e1a3033d3587bf980a0b1b2e1e5d08d7358014", size = 9121, upload-time = "2021-03-11T07:16:28.351Z" },
 ]
+
+[[package]]
+name = "ghga-arcticfreeze"
+version = "1.0.0"
+source = { editable = "libs/ghga-arcticfreeze" }
+dependencies = [
+    { name = "immutabledict" },
+]
+
+[package.optional-dependencies]
+pydantic = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "immutabledict", specifier = ">=4.3.1,<5" },
+    { name = "pydantic", marker = "extra == 'pydantic'", specifier = ">=2.13.0,<3" },
+]
+provides-extras = ["pydantic"]
 
 [[package]]
 name = "ghga-connector"
