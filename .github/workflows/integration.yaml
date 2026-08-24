@@ -6,9 +6,8 @@
 # Playwright suite against it. This is what keeps HEAD always integrated.
 #
 # No secrets are needed: the chart's secret-gen hook mints the whole key family
-# in-cluster and the test OP stands in for the identity provider — so once this
-# does run on pull requests, it will give a real verdict even on those from forks,
-# where secrets are withheld.
+# in-cluster and the test OP stands in for the identity provider — so this gives a
+# real verdict even on pull requests from forks, where secrets are withheld.
 #
 # Runner sizing is the open question this workflow exists to answer empirically.
 # Disk is settled: a stock ubuntu-latest reports ~145 G with ~88 G free — not the
@@ -21,21 +20,55 @@
 # full fleet is up. Measure, don't assume — the documented specs were wrong.
 name: integration
 
-# Manual-run only while the runner question is open. To make it a gate, add:
-#   pull_request:
-#   push:
-#     branches: [main]
+# A gate: every pull request and every push to main, subject to `changes` below.
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: integration-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Pre-gate for the ~1h testbed job: prose cannot change its verdict. Default is to run.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      relevant: ${{ steps.check.outputs.relevant }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history for the merge-base diff
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          # unknown change set -> run, never skip
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2> /dev/null; then
+            echo "no usable base -> running the gate"
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$base...HEAD") # three-dot = since the merge base
+          echo "::group::changed files"; echo "$changed"; echo "::endgroup::"
+          relevant=$(echo "$changed" | grep -vE '^docs/|^\.devcontainer/|\.md$' || true)
+          if [ -n "$relevant" ]; then
+            echo "relevant changes:"; echo "$relevant"
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs/dev-container-only change -> skipping the integration gate"
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
   testbed:
+    needs: changes
+    if: ${{ needs.changes.outputs.relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
