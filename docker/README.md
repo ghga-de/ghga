@@ -43,14 +43,27 @@ uses), and opens a PR per Dockerfile weekly. No automerge: a base-image bump is
 security-sensitive, so it always waits for human review. Everything else (`uv.lock`,
 `pnpm-lock.yaml`) stays with `security-scan.yaml`.
 
+A bump edits a Dockerfile, so `ci.yaml`'s `check-images` builds the affected image on the
+PR itself — with `--pull`, so the proposed tag is resolved against the registry rather than
+against whatever manifest the runner has cached — and `images-gate` is the required check.
+That is what establishes the tag exists and that the hardened base still carries what the
+runtime needs; the human review decides *whether* to take the bump, not whether it builds.
+
 Each ARG holds the **whole** tag (`3.13.15-alpine3.24`), not a language version and an
 alpine version in separate ARGs. `dhi.io` does not publish every combination of the two, so
-tracking them as separate deps let Renovate maximise each independently and propose a tag
-that was never published — a break that only surfaces at base pull, after merge. As one dep,
-Renovate can only offer a tag string it actually found in the registry.
+tracking them as separate deps would let Renovate maximise each independently and propose a
+tag that was never published. `check-images` would catch that on the PR, but as one dep the
+bad proposal is never made in the first place: Renovate can only offer a tag string it
+actually found in the registry.
 
 The trade-off: `versioning: docker` treats `-alpineX.Y` as a compatibility suffix and
 compares only tags carrying the same alpine minor. So **Python/Node patch bumps arrive
 automatically, alpine minor bumps do not** — moving to a new alpine is a deliberate hand
-edit of the ARG (and of the `-sfw-dev`/`-sfw-ent-dev` variants' availability, which Renovate
-does not check). That is intentional: an alpine minor is a distro change, not a patch.
+edit of the ARG. That is intentional: an alpine minor is a distro change, not a patch.
+
+Two things Renovate does not check, both left to `check-images`. The `-sfw-dev` /
+`-sfw-ent-dev` build-stage variants: only the runtime tag is tracked, and the Dockerfiles
+derive the dev variants from it, so a runtime tag published ahead of its dev variant fails
+at the build stage. And architecture: `check-images` builds for the runner's arch only, so
+a tag lacking a manifest for some other architecture passes here and would fail wherever
+that architecture is actually built.

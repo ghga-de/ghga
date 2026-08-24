@@ -7,6 +7,18 @@
 # Self-hosted (not the Renovate/Mend GitHub App) so dhi.io auth can reuse the
 # same DOCKERHUB_USERNAME/DOCKERHUB_TOKEN org secrets CI already uses, rather
 # than provisioning a second credential store in an external app dashboard.
+#
+# Requires, with no fallback:
+#   - DOCKERHUB_USERNAME / DOCKERHUB_TOKEN — the dhi.io tag lookups above. Without
+#     them Renovate resolves nothing and proposes nothing (dhi.io answers an
+#     unauthenticated manifest request with a 401).
+#   - RENOVATE_APP_CLIENT_ID / RENOVATE_APP_KEY — an org-owned GitHub App (contents +
+#     pull requests write, installed on this repo) whose PRs come from "<app>[bot]".
+#     Deliberately not the ephemeral GITHUB_TOKEN: GitHub withholds workflow triggers
+#     from PRs it opens, and a base-image bump whose ci.yaml never starts is worse
+#     than no bump at all — check-images/images-gate is the only thing that verifies
+#     the proposed tag builds. Absent these, the token step fails and the run stops
+#     there, which is the intended outcome.
 name: renovate
 
 on:
@@ -34,10 +46,16 @@ jobs:
         with:
           client-id: ${{ secrets.RENOVATE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RENOVATE_APP_KEY }}
+      # No `configurationFile:` on purpose. That input becomes RENOVATE_CONFIG_FILE, i.e.
+      # the GLOBAL config — but `renovate.json5` in the repo root is also one of the
+      # filenames Renovate auto-discovers as the REPO config, and a global file does not
+      # suppress that discovery. Pointing at it would load the same file twice and merge
+      # it with itself (packageRules concatenate). Everything in renovate.json5 is
+      # repo-scoped, so it is left to auto-discovery; the only genuinely global settings
+      # are the two env vars, which is where they stay.
       - name: Renovate
         uses: renovatebot/github-action@v46
         with:
-          configurationFile: renovate.json5
           token: ${{ steps.app-token.outputs.token }}
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
