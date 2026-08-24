@@ -5,8 +5,16 @@
       "path": "."
     },
     {
+      "name": "lib \u00b7 ghga-arcticfreeze",
+      "path": "libs/ghga-arcticfreeze"
+    },
+    {
       "name": "lib \u00b7 ghga-event-schemas",
       "path": "libs/ghga-event-schemas"
+    },
+    {
+      "name": "lib \u00b7 ghga-jsonsubschema",
+      "path": "libs/ghga-jsonsubschema"
     },
     {
       "name": "lib \u00b7 ghga-service-commons",
@@ -51,10 +59,6 @@
     {
       "name": "svc \u00b7 ekss",
       "path": "services/ekss"
-    },
-    {
-      "name": "svc \u00b7 em-transformation-service",
-      "path": "services/em-transformation-service"
     },
     {
       "name": "svc \u00b7 fis",
