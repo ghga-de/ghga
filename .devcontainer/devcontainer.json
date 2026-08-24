@@ -138,6 +138,14 @@
   // browser binaries (~100MB+ each) so E2E tests don't re-download them on every rebuild,
   // and gh's auth token, so `gh auth login` is a one-time step rather than something a
   // rebuild silently undoes.
+  //
+  // Deliberately NOT here: an X11 socket for headed Playwright runs. Where it lives is a
+  // property of the host, not of this repo — /tmp/.X11-unix on Linux, /mnt/wslg/.X11-unix
+  // on WSLg, XQuartz over TCP on macOS — and a bind mount whose source is missing fails
+  // container creation rather than degrading. Add the one your host has, plus a matching
+  // DISPLAY in containerEnv, if you need `pnpm e2e:headed`:
+  //     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"   with "DISPLAY": ":0"
+  // See frontend/data-portal/README.md, "Issues relating to headed execution".
   "mounts": [
     "source=ghga-claude,target=/home/vscode/.claude,type=volume",
     "source=ghga-gh,target=/home/vscode/.config/gh,type=volume",
