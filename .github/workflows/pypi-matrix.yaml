@@ -49,15 +49,15 @@ jobs:
           echo "$cells" | python3 -m json.tool
 
           # Without this a member with no cells is skipped silently — a green check that
-          # tested nothing. schemapack is in that state today.
+          # tested nothing. No member is in that state today; it would take a member
+          # declaring a floor outside TEST_PYTHONS entirely.
           python3 scripts/pypi_members.py ${paths:+--paths $paths} --members \
             | python3 -c "
           import json, sys
           for member in json.load(sys.stdin):
               if not member['pythons']:
                   print(f\"::warning::{member['package']} has no testable version in\"
-                        f\" range (declares {member['requires_python']}, testable\"
-                        f\" {member['testable_requires_python']}) — NOT covered\")
+                        f\" range (declares {member['requires_python']}) — NOT covered\")
           "
 
   test:

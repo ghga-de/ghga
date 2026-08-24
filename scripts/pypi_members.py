@@ -5,10 +5,6 @@ Single source of truth for pypi-matrix.yaml and pypi-publish.yaml; image_members
 platform-lane counterpart. Lane membership follows ADR-0014: libs/* defaults to pypi,
 tools/* to none, services/* to platform, each overridable with [tool.ghga] release.
 
-The Python range lives in TEST_PYTHONS here, not in the members' requires-python: those
-files are synced one-way from upstream and conflict if edited. It is intersected with what
-each member declares, so the matrix widens by itself once the declarations improve.
-
 What needs releasing is decided against the *index*, never against git history: a member
 is a release candidate when the version it declares is above the latest one on PyPI. A
 version bump is the release trigger, so it does not matter which commit made it, how long
@@ -44,16 +40,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from affected_targets import internal_dep_graph
 
-# The versions the matrix runs on. 3.13 (the workspace's own) is deferred for now; nothing
-# in the repo runs 3.14 yet.
-TEST_PYTHONS = ("3.11", "3.12")
+# The versions the matrix runs on.
+TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
 
 # Directory defaults for the release lane (ADR-0014).
 LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
-
-# Members testable on fewer versions than they declare. schemapack says >=3.12, but its
-# suite needs the schema-comparison extra, which needs 3.13. Drop when that floor drops.
-EFFECTIVE_REQUIRES_PYTHON = {"schemapack": ">=3.13"}
 
 # Lint/type tools in the root dev group. A cell only runs tests, and one of these failing
 # to resolve on an older Python would fail it for an unrelated reason.
@@ -204,8 +195,6 @@ def pypi_members(
                 continue
             project = data["project"]
             requires_python = project.get("requires-python", "")
-            # Follow the narrower set, so the matrix never claims an untested version.
-            testable = EFFECTIVE_REQUIRES_PYTHON.get(project["name"], requires_python)
             closure = _closure(relative, graph)
             members.append(
                 {
@@ -213,11 +202,15 @@ def pypi_members(
                     "package": project["name"],
                     "version": project.get("version", ""),
                     "requires_python": requires_python,
-                    "testable_requires_python": testable,
                     "internal_deps": closure,
                     "train_deps": sorted(d for d in closure if d in (train or ())),
                     "extras": _test_extras(project.get("optional-dependencies", {})),
-                    "pythons": [p for p in TEST_PYTHONS if _supported(testable, p)],
+                    # TEST_PYTHONS is intersected with what each member declares in its
+                    # own requires-python, so a member is
+                    # never claimed to be tested on a version it does not support.
+                    "pythons": [
+                        p for p in TEST_PYTHONS if _supported(requires_python, p)
+                    ],
                 }
             )
     return members

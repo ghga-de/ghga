@@ -28,6 +28,17 @@ exactly one resolved version of every package exists across the whole repo.
   **per-package standalone matrix** (`uv run --python 3.10…3.13`) validates the *published*
   combination separately from the workspace lock.
 
+**Amended 2026-08-24 — common `>=3.11` floor across the PyPI lane.** Every lane member now
+declares `requires-python = ">=3.11"` and carries matching classifiers, and the matrix runs
+**3.11–3.14** (`TEST_PYTHONS` in `scripts/pypi_members.py`), superseding the `3.10…3.13`
+above. This narrows what external consumers get — `hexkit`, `ghga-service-commons` and
+`ghga-connector` drop 3.10; `ghga-transpiler` and `ghga-validator` drop 3.9 and 3.10 — in
+exchange for one range the whole lane is actually tested against, rather than per-member
+floors that no surface verified. It also trades away part of the "broad range" premise
+above: the range is now uniform rather than per-library. The floors live in the members'
+own `pyproject.toml`, so for members still synced from mainline ([ADR-0010](0010-history-preserving-migration.md))
+this is a divergence that conflicts until the same change is made upstream.
+
 ## Consequences
 - Integration is structural: there is no version skew possible at HEAD.
 - **A breaking change to a shared lib must be fixed for all consumers in the same PR.** This is
