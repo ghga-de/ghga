@@ -7,7 +7,7 @@
 # latest one on PyPI is a candidate. Re-running is idempotent.
 # If PyPI cannot be reached, the run fails.
 #
-# The whole train is built and checked, then uploaded to TestPyPI, then to PyPI. 
+# The whole train is built and checked, then uploaded to TestPyPI, then to PyPI.
 #
 # Because the train is built once, the artefacts TestPyPI accepted are byte-for-byte the
 # ones PyPI receives.
