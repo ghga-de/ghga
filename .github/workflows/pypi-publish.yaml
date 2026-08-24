@@ -1,20 +1,13 @@
 # PyPI lane — publish the libraries and public CLI tools (ADR-0004).
 #
-# DORMANT by intention, not by mechanism: the workflow is complete, and nobody dispatches
-# it. The upstream repos own these releases until they retire.
-#
 # A version bump is the release trigger: every lane member declaring a version above the
 # latest one on PyPI is a candidate. Re-running is idempotent.
 # If PyPI cannot be reached, the run fails.
 #
 # The whole train is built and checked, then uploaded to TestPyPI, then to PyPI.
 #
-# Because the train is built once, the artefacts TestPyPI accepted are byte-for-byte the
+# Because the train is built once, the artifacts TestPyPI accepted are byte-for-byte the
 # ones PyPI receives.
-#
-# Note that the plan is always drawn against *real* PyPI, never TestPyPI. The two indexes
-# have separate histories — TestPyPI still holds rehearsals the upstream repos never
-# shipped — so only pypi.org can answer "are consumers missing this version?".
 #
 # release.yaml owns when a release happens; this workflow only decides what goes out. It
 # gets no trigger of its own.
