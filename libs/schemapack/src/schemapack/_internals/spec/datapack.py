@@ -24,7 +24,6 @@ from collections import Counter
 from collections.abc import Iterable, Mapping
 from typing import Annotated, Any, Literal, Self, TypeAlias
 
-from arcticfreeze import FrozenDict, freeze
 from pydantic import (
     BeforeValidator,
     Field,
@@ -34,6 +33,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from arcticfreeze import FrozenDict, freeze
 from schemapack._internals.spec.base import _FrozenNoExtraBaseModel
 from schemapack._internals.spec.custom_types import (
     ClassName,

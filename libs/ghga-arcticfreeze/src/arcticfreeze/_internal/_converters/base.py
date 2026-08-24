@@ -19,7 +19,11 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, Generic, TypeVar
+
+# NB: spelled with TypeVar/Generic rather than PEP 695 (`class Converter[InputObject]`)
+# so the package keeps working on Python 3.11, which pyproject.toml still supports.
+InputObject = TypeVar("InputObject")
 
 DEFAULT_PRIORITY: Final = 0
 STANDARD_PRIMITIVE_PRIORITY: Final = 200
@@ -28,7 +32,7 @@ STANDARD_MUTABLE_PRIORITY: Final = -100
 
 
 @dataclass(frozen=True)
-class Converter[InputObject]:
+class Converter(Generic[InputObject]):  # noqa: UP046 - PEP 695 syntax needs Python >= 3.12
     """A class describing how to convert a (mutable) object to an immutable counterpart.
 
     Attributes:

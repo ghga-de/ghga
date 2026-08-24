@@ -19,8 +19,9 @@
 from collections.abc import Mapping
 from typing import Annotated, Any, TypeAlias
 
-from arcticfreeze import FrozenDict
 from pydantic import Field as _Field
+
+from arcticfreeze import FrozenDict
 
 _NonEmptyStr: TypeAlias = Annotated[str, _Field(..., min_length=1)]
 ClassName: TypeAlias = _NonEmptyStr
