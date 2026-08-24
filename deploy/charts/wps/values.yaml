@@ -59,8 +59,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/wps
+  registry: docker.io
+  repository: ghga/wps
   tag: ""
   digest: ""
   pullPolicy:

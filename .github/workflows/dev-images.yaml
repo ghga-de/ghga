@@ -28,6 +28,10 @@ permissions:
 
 env:
   REGISTRY: ghcr.io/ghga-de/ghga
+  # Keeps `just image`/`image-mono` tagging under $REGISTRY here too — the :dev tag is
+  # deliberately separate from the release target (docker.io/ghga; see justfile's
+  # image_registry and release.yaml).
+  IMAGE_REGISTRY: ghcr.io/ghga-de/ghga
 
 jobs:
   publish:

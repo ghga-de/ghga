@@ -2,6 +2,13 @@
 # See docs/adr/0015-task-runner.md. Run `just` to list recipes.
 set shell := ["bash", "-uc"]
 
+# Registry root the `image`/`image-mono`/`demo-load` recipes tag/load under. Defaults to
+# the real platform registry (matches the charts' generated image.registry/repository) so
+# the local kind demo loop needs no override. dev-images.yaml/security-scan.yaml set
+# IMAGE_REGISTRY to their own GHCR scratch space, which is deliberately independent of the
+# release target (see those workflows' headers).
+image_registry := env_var_or_default("IMAGE_REGISTRY", "docker.io/ghga")
+
 default:
     @just --list
 
@@ -185,10 +192,10 @@ image target tag='local' *flags: check-members
     set -euo pipefail
     if [ -f "{{target}}/Dockerfile.dhi" ]; then
         name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile.dhi" {{flags}} -t "ghcr.io/ghga-de/ghga/$name:{{tag}}" "{{target}}"
+        docker build -f "{{target}}/Dockerfile.dhi" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
     else
         name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
-        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "ghcr.io/ghga-de/ghga/$name:{{tag}}" .
+        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .
     fi
 
 # One build instead of ~22 — the demo/CI image step drops from ~15-20 min to ~1 min.
@@ -197,7 +204,7 @@ image target tag='local' *flags: check-members
 # Build the mono image: EVERY Python member in one venv (docker/Dockerfile VARIANT=mono).
 image-mono tag='local' *flags: check-members
     docker build -f docker/Dockerfile --build-arg VARIANT=mono {{flags}} \
-      -t ghcr.io/ghga-de/ghga/platform:{{tag}} .
+      -t {{image_registry}}/platform:{{tag}} .
 
 # uv finds workspace members by glob (`libs/*`, `services/*`, `tools/*`) and refuses any
 # match without a pyproject.toml. In a working tree it consults git first and skips matches
@@ -281,7 +288,7 @@ demo-load profile="" reclaim="false": cluster
     loaded=0
     already=0
     while read -r name; do
-        ref="ghcr.io/ghga-de/ghga/$name:local"
+        ref="{{image_registry}}/$name:local"
         if ! docker image inspect "$ref" > /dev/null 2>&1; then
             if printf '%s\n' "$node_images" | grep -Fx "$ref" > /dev/null; then
                 already=$((already + 1))

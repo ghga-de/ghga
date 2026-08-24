@@ -105,6 +105,17 @@
   // edit does not. `just testbed-hosts` does the same thing for non-devcontainer
   // environments (CI), and is a no-op once the entry is present.
   "runArgs": [
+    // A stable container name for `docker ps` and Docker Desktop: the top-level "name"
+    // above is only VS Code's display label and never reaches Docker, which otherwise
+    // assigns a random adjective_surname. Deriving it from the workspace folder scopes
+    // the name to this checkout instead of the whole daemon — here, ghga_devcontainer.
+    // Two checkouts in identically named folders would still collide, which is ok since
+    // we would not normally want to run two copies of this in parallel.
+    //
+    // Note this does not set the hostname, which stays the HOST's — --net=host below
+    // leaves no network namespace to name, and --hostname is rejected with it.
+    "--name",
+    "${localWorkspaceFolderBasename}_devcontainer",
     "--net=host",
     "--add-host",
     "ghga-minio:127.0.0.1"

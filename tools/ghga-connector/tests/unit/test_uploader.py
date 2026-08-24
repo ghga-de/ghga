@@ -17,6 +17,7 @@
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest.mock import AsyncMock, MagicMock, call, patch
@@ -191,10 +192,11 @@ async def test_upload_file_part_wraps_generic_exception():
         uploader = make_uploader(Path(f.name), upload_client=upload_client)
         uploader._file_id = FILE_ID
         uploader._progress_bar = MagicMock()
-        uploader._in_sequence_part_number = 1
         file_processor = make_dummy_file_processor(part_count=1)
         with pytest.raises(exceptions.UploadFileError):
-            await uploader._upload_file_part(file_processor)
+            await uploader._upload_file_part(
+                file_processor, ThreadPoolExecutor(max_workers=1)
+            )
 
 
 async def test_upload_file_part_wraps_exception_with_blank_message(caplog):
@@ -207,10 +209,13 @@ async def test_upload_file_part_wraps_exception_with_blank_message(caplog):
         uploader = make_uploader(Path(f.name), upload_client=upload_client)
         uploader._file_id = FILE_ID
         uploader._progress_bar = MagicMock()
-        uploader._in_sequence_part_number = 1
 
         task_handler = TaskHandler()
-        task_handler.schedule(uploader._upload_file_part(file_processor))
+        task_handler.schedule(
+            uploader._upload_file_part(
+                file_processor, ThreadPoolExecutor(max_workers=1)
+            )
+        )
         with caplog.at_level(logging.ERROR, logger="asyncio"):
             with pytest.raises(exceptions.UploadFileError):
                 await task_handler.gather()
@@ -230,10 +235,11 @@ async def test_upload_file_part_reraises_cancelled_error():
         uploader = make_uploader(Path(f.name), upload_client=upload_client)
         uploader._file_id = FILE_ID
         uploader._progress_bar = MagicMock()
-        uploader._in_sequence_part_number = 1
         file_processor = make_dummy_file_processor(part_count=1)
         with pytest.raises(asyncio.CancelledError):
-            await uploader._upload_file_part(file_processor)
+            await uploader._upload_file_part(
+                file_processor, ThreadPoolExecutor(max_workers=1)
+            )
 
 
 async def test_upload_file_calls_complete_after_all_parts():
@@ -354,3 +360,44 @@ async def test_semaphore_initialized_with_max_concurrent_uploads():
         max_concurrent = 2
         uploader = make_uploader(Path(f.name), max_concurrent_uploads=max_concurrent)
         assert uploader._semaphore._value == max_concurrent
+
+
+async def test_upload_file_part_raises_when_processor_is_exhausted():
+    """An under-producing file processor is reported instead of failing obscurely.
+
+    `next` is given a default so StopIteration never has to cross the worker thread,
+    which means the exhausted case has to be detected explicitly.
+    """
+    with NamedTemporaryFile() as f:
+        uploader = make_uploader(Path(f.name))
+        uploader._file_id = FILE_ID
+        uploader._progress_bar = MagicMock()
+
+        with pytest.raises(exceptions.UploadFileError, match="ran out of parts"):
+            await uploader._upload_file_part(
+                make_dummy_file_processor(part_count=0),
+                ThreadPoolExecutor(max_workers=1),
+            )
+
+
+async def test_upload_file_raises_when_processor_yields_a_surplus_part():
+    """A processor with more parts than were uploaded is caught after gathering."""
+    with NamedTemporaryFile() as f:
+        f.write(b"x" * 100)
+        f.flush()
+
+        mock_file_info = make_file_info_for_upload(path=Path(f.name), alias=FILE_ALIAS)
+        assert mock_file_info.part_count == 1
+
+        uploader = Uploader(
+            upload_client=AsyncMock(),
+            file_info=mock_file_info,
+            max_concurrent_uploads=1,
+        )
+        uploader._file_id = FILE_ID
+        uploader.new_progress_bar = MagicMock(return_value=MagicMock())  # type: ignore
+
+        # One more part than `part_count` says should exist
+        encryptor = make_mock_encryptor(parts=[(1, b"encrypted"), (2, b"surplus")])
+        with pytest.raises(RuntimeError, match="more parts than"):
+            await uploader.upload_file(encryptor=encryptor)

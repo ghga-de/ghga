@@ -54,6 +54,11 @@ exclude = [
     # imported epic docs are historical artifacts; their ```python fences are not all
     # real Python, and ruff >= 0.16 would otherwise format code blocks in markdown
     "docs/epics",
+    # same ruff >= 0.16 markdown behaviour: this README's ```python fence is upstream
+    # content that ghga-de/ghga-jsonsubschema keeps unformatted. Reformatting it here
+    # would diverge a file the one-way sync re-delivers (ADR-0010). Drop this once that
+    # repo no longer syncs from mainline.
+    "libs/ghga-jsonsubschema/README.md",
 ]
 
 [tool.ruff.lint]
@@ -91,10 +96,19 @@ convention = "pep257"
 # tools/auth-km-jobs predates the shared code standard; relax the rules it does not yet meet
 # (rather than retrofit docstrings etc.). Revisit if the tool is modernised.
 "tools/auth-km-jobs/**" = ["D", "B904", "SIM115", "PLC0415"]
+# libs/ghga-jsonsubschema is a fork of IBM/jsonsubschema, still synced from mainline
+# (ADR-0010), so its code is not ours to restyle. These two entries reproduce the policy its
+# own (now removed) [tool.ruff] carried, instead of churning upstream files:
+#   D101-D103 - its pytest suite is bare `def test_x(): assert ...` functions, no docstrings
+#   RUF100    - `# noqa: E501` markers on long literals; E501 is not selected at the root,
+#               which makes those directives "unused" here but load-bearing upstream
+"libs/ghga-jsonsubschema/tests/**" = ["D101", "D102", "D103", "RUF100"]
 
 # monorepo: internal libraries are workspace *source* -> first-party, not PyPI third-party
 [tool.ruff.lint.isort]
-known-first-party = ["hexkit", "ghga_service_commons", "ghga_event_schemas", "schemapack", "metldata"]
+# `jsonsubschema` and `arcticfreeze` are the import names of the `ghga-jsonsubschema` and
+# `ghga-arcticfreeze` dists (libs/ghga-jsonsubschema, libs/ghga-arcticfreeze).
+known-first-party = ["hexkit", "ghga_service_commons", "ghga_event_schemas", "schemapack", "metldata", "jsonsubschema", "arcticfreeze"]
 
 [tool.mypy]
 # --- ported verbatim from the template ---

@@ -23,7 +23,6 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from arcticfreeze import FrozenDict, freeze
 from immutabledict import immutabledict
 from pydantic import (
     Field,
@@ -32,6 +31,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from arcticfreeze import FrozenDict, freeze
 from schemapack._internals.spec.base import _FrozenNoExtraBaseModel
 from schemapack._internals.utils import JsonSchemaError, assert_valid_json_schema
 from schemapack.exceptions import ParsingError

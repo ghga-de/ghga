@@ -1,0 +1,198 @@
+# Force Resolution of Failed Uploads (Shovelnose Guitarfish)
+**Epic Type:** Implementation Epic
+
+Epic planning and implementation follow the
+[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+
+## Scope
+### Outline:
+When a file doesn't pass DHFS's re-encryption and integrity checks ("interrogation"), DHFS submits a failure report to FIS. FIS marks the file as failed and notifies UCS, which deletes the object from the inbox bucket in S3, sets the FileUpload to 'failed', and propagates that state to the rest of the system. This is a naive approach to interrogation failures. The uploaded bytes have already passed a checksum and size comparison before the file reaches the DHFS, and DHFS already retries transient errors on its own, so what actually lands in 'failed' is usually the result of a systematic fault on our end: a wrong data hub key, a crypt4gh or deploy bug, a bad secret. Forcing the submitter to re-upload the file from scratch is an expensive remedy for that, because once we fix the fault the bytes in the inbox are still perfectly good and only need to be interrogated again. When the file really is flawed, the next attempt simply fails again and we can take it from there. Moreover, much of the file upload path then ignores "failed" files (RDUB quota calculations and archival prerequisite checks skip them entirely). At the macro level, this epic introduces three changes to this process:
+1. UCS keeps failed files in the inbox bucket instead of deleting them automatically.
+2. Data Stewards are able to trigger a "retry" - setting the file state back to "inbox".
+3. UCS stops ignoring failed files. They count toward box quotas and block box archival, for example.
+
+### Included/Required:
+- Add endpoints to RS and UCS to enable Data Stewards to requeue files that fail interrogation.
+- Update UCS so failed files:
+  - Count toward box quotas
+  - Are returned in FileUpload lists by default
+  - Block box archival
+
+### Optional:
+- Update Data Portal to expose new file "requeue" feature to Data Stewards. This can also be done as a separate epic or ticket.
+
+
+## API Definitions:
+
+### RESTful/Synchronous:
+
+New endpoints:
+
+- `POST /rpc/upload-boxes/{box_id}/requeue (RS)`:
+  - _Requeue all failed files in a box_
+  - Data Steward only
+  - Returns:
+    - 200 on success plus a payload of `{requeued: [file_ids], skipped: [{file_id, reason}]}`
+    - 404 if the box isn't found
+    - 409 if the box is archived
+
+- `POST /rpc/boxes/{box_id}/requeue (UCS)`:
+  - _Requeue all failed files in a box_
+  - Requires a `RequeueAllFailedWorkOrder` token from the RS, which carries `box_id` and a work type of `requeue_box` (distinct from the file-level `requeue` so that a single-file token can never validate as a box-level one).
+  - Returns:
+    - 200 on success plus a payload of `{requeued: [file_ids], skipped: [{file_id, reason}]}`
+    - 404 if the box isn't found
+    - 409 if the box is archived
+
+- `POST /rpc/upload-boxes/{box_id}/uploads/{file_id}/requeue (RS)`: 
+  - _Requeue a single file that failed interrogation so it gets picked up again_.
+  - Data Steward only
+  - Returns:
+    - 204 on success
+    - 404 if the box or the file isn't found
+    - 409 if the box is archived or the file's state doesn't allow a requeue
+
+- `POST /rpc/boxes/{box_id}/uploads/{file_id}/requeue (UCS)`:
+  - _Set a single 'failed' FileUpload back to 'inbox'._
+  - Requires a `RequeueFailedFileWorkOrder` token from the RS, which carries `box_id`, `file_id`, and a work type of `requeue`.
+  - Returns:
+    - 204 on success
+    - 404 if the FileUpload or its inbox object no longer exists
+    - 409 if the FileUpload's state or the box's state precludes a requeue
+
+A requeue is a command, not a resource manipulation, so these four endpoints use the `/rpc/` convention we already follow elsewhere. RS mounts `box_router` under an `/upload-boxes` prefix, so the RPC routes need a second mount point, but not a second module. `upload_boxes.py` already declares a `storage_router` alongside `box_router` for exactly this reason, so the requeue handlers stay in that module as a `box_rpc_router`, and `routes.py` gains one `include_router` line for it under `/rpc/upload-boxes`. UCS needs no structural change, because its router declares full literal paths without a prefix.
+
+Existing endpoints whose behavior changes:
+- `DELETE /upload-boxes/{box_id}/uploads/{file_id} (RS)` and `DELETE /boxes/{box_id}/uploads/{file_id} (UCS)`: now also delete the object from the inbox bucket when the FileUpload is 'failed', and are allowed while the box is locked for that state (see "Blocking archival and resolving a failed file (UCS)" below).
+- `PATCH /upload-boxes/{box_id} (RS)` and `PATCH /boxes/{box_id} (UCS)` with `state: "archived"`: now rejected while the box still holds files in the 'failed' state. RS returns the offending file IDs with the 409 so the Data Steward can act on them.
+- `GET /upload-boxes/{box_id}/uploads (RS)` and `GET /boxes/{box_id}/uploads (UCS)`: gain an optional `state` query parameter for filtering. Omitting it returns every state, failed files included, which is what "returned by default" means here.
+
+No new events are introduced. The requeue is propagated by the existing FileUpload outbox event, because it is an ordinary update to the FileUpload document.
+
+
+## Additional Implementation Details:
+
+### Current behavior
+
+DHFS submits a failure report to FIS. FIS stores the `InterrogationReport`, sets the `FileUnderInterrogation` to `state="failed"`, `interrogated=True`, `can_remove=True`, and publishes an `InterrogationFailure` event. UCS consumes that event in `process_interrogation_failure()`, deletes the object from the inbox bucket, sets the FileUpload to 'failed' and records the reason. At that point the file is basically done. The object is deleted from the S3 inbox bucket, so the only way forward for that same file is for the submitter to start over with a new upload (targeting the same alias).
+
+Failed files are also invisible to (nearly) everything afterwards. `COUNTED_UPLOAD_STATES` omits 'failed', so it doesn't contribute to `file_count` or `size`. `archive_file_upload_box()` only blocks archival on 'init' and 'inbox' files, and RS's `_check_archival_prerequisites()` and `store_accession_map()` both filter failed files out before checking that everything has an accession.
+
+```mermaid
+flowchart TD
+    A[DHFS reports failure] --> B[FIS: state=failed, interrogated=True, can_remove=True]
+    B --> C[InterrogationFailure event]
+    C --> D[UCS: delete inbox object]
+    D --> E[UCS: state=failed, failure_reason set]
+    E --> F[file ignored by quota, archival and mapping]
+```
+
+### Target behavior
+
+UCS stops deleting the object, so the bytes stay in the inbox and a second interrogation is possible without a re-upload. A Data Steward requeues the file, UCS flips it back to 'inbox', the outbox event reaches FIS, and FIS puts it back on the list DHFS polls. Alternatively, the file may be deleted by either the Data Steward or the Submitter.
+
+```mermaid
+flowchart TD
+    A[DHFS reports failure] --> B[FIS: state=failed, interrogated=True, can_remove=True]
+    B --> C[InterrogationFailure event]
+    C --> D[UCS: state=failed, object kept in inbox]
+    D --> E{Data Steward acts}
+    D --> F{Submitter acts}
+    E -->|requeue| H[UCS: state=inbox, failure_reason cleared]
+    E -->|delete| G[UCS: object deleted, state=cancelled]
+    F -->|delete| G[UCS: object deleted, state=cancelled]
+    F -->|re-upload| X[UCS: object deleted, new FileUpload created for alias]
+    H --> I[FIS: state=inbox, interrogated=False, can_remove=False, old report dropped]
+    I --> J[DHFS picks the file up on its next poll]
+    G --> K[File No Longer Part of Box]
+```
+
+### Keeping the object in the inbox (UCS)
+
+Dropping the `_remove_completed_file_upload()` call from `process_interrogation_failure()` will ensure UCS doesn't delete objects upon consuming an InterrogationFailure event, but there's more that needs to be done:
+- We need to make sure 'failed' files are now included in the 'known' set and not deleted by the cleanup job. Currently `_cleanup_stale_uploads_for_alias()` builds `known_object_ids` from the 'init' and 'inbox' uploads only, then has `cleanup_orphaned_objects()` delete everything else in the bucket. However, we also want to make sure data for failures that occur at the time of completion for an upload to the inbox, such as a checksum or file size mismatch, _is_ deleted. To do this, we will make sure the cleanup job differentiates 'failed' files by whether the `decrypted_sha256` field is populated. Those with no checksum will be eligible to be culled, while files _with_ a checksum will be kept.
+  - One thing to note: This means that there won't be anything to automatically remove S3 content for failed uploads. Abandoned boxes could, in theory, soak up space. We should speak with a Data Steward to ask whether they foresee this being a realistic issue warranting a configurable auto-deletion threshold for failed files or not.
+- `remove_file_upload()` only calls `_remove_completed_file_upload()` when the state is 'inbox'. It needs to do the same for 'failed', otherwise deleting a failed file leaves its object behind, and once the FileUpload record is gone the object is unattributable. In this case the cleanup job would actually remove the object, but it's better for us to tidy up as we go rather than leave everything to the cleanup job.
+- `_delete_box_file_uploads()` needs to also remove failed file upload content during whole-box deletion.
+- `process_file_deletion_requested()` currently returns early for 'cancelled' and 'failed', which should be updated so only 'cancelled' returns early, while 'failed' file content is deleted.
+- `_try_to_replace_upload()` deletes the old FileUpload document so there can be a new upload with the same alias. The old object needs to be deleted first, or it becomes an orphan that only the cleanup job would catch. This path is reachable from the Connector, which treats failed aliases as not present when resuming a batch upload (note that the Connector has to be updated too).
+- We also need to guard against Kafka hiccups. For example, the following could happen (but won't because we'll compare `report.interrogated_at` against `file_upload.state_updated`)
+  1. DHFS reports a failure for some file.
+  2. FIS publishes the InterrogationFailure event.
+  3. UCS gets that event and updates the local FileUpload.
+  4. Data Steward requests a retry sometime later on.
+  5. UCS updates its FileUpload again back to the 'inbox' state.
+  6. DHFS begins processing the file.
+  7. Some Kafka blip causes the UCS to re-consume the first InterrogationFailure event.
+  8. UCS marks the FileUpload as failed and kills the upload.
+
+### The requeue logic in UCS
+
+For requeueing a single file (box ID + file ID), the UploadController class:
+1. Fetches the box. Requeueing should be allowed while the box is 'open' or 'locked' and rejected when it's 'archived'.
+   - For requeuing _all_ files in a box, errors here means the entire operation fails.
+2. Fetches the FileUpload and rejects anything not in the 'failed' state with a `FileUploadStateError`.
+   - For requeuing _all_ files in a box, all failed files would be retrieved instead of just one. Errors here would cause the entire operation to fail.
+3. Rejects failed files that never reached the inbox. 'failed' covers three different situations today: an error during initiation (`_insert_file_upload()`, no object at all), a checksum or size mismatch at completion (`_compare_checksums()` / `_verify_object_size()`, object present but known bad), and an interrogation failure (object present and worth retrying). Only the third one can be requeued. To differentiate between these, we check the `decrypted_sha256` field, which is only populated if the initial inbox upload succeeds. 
+   - For requeuing _all_ files in a box, ineligible files (ones that didn't make it to the inbox, or ones that failed interrogation but were deleted already) do _not_ trigger an error, rather they are skipped.
+4. Confirms the object is still in S3. This is one S3 request and it protects against the case where files that failed before this epic shipped, whose objects were already deleted. A missing object should surface as a distinct error the portal can explain rather than a generic 500.
+   - For requeuing _all_ files in a box, a missing object does _not_ trigger an error either, the file is skipped like the ineligible files in step 3.
+5. Sets `state="inbox"`, `state_updated=now()`, and clears `failure_reason`. Clearing the reason isn't cosmetic: `archive_file_upload_box()` raises `FileArchivalError` if a file reaches archival with `failure_reason` filled out.
+
+*Skip reasons:*  
+- File not in S3: "this file predates retry support, it has to be re-uploaded"
+- File failed inbox validation: "file never interrogated - upload failed validation upon completion"
+- File initiation failed: "file never reached inbox"
+
+> Errors in steps 3 and 4 do not cause the entire operation to fail. Instead, the operation continues with the next failed file in the loop, and each skipped file is returned in the `skipped` list together with its reason. Steps 1 and 2 remain hard failures for the whole operation, and an error while writing the new state in step 5 aborts the operation rather than being reported as a skip.
+
+Box stats don't need recomputing.
+
+On the RS side the endpoint checks the Data Steward role, resolves the RDUB to its FUB, creates the work order token, and calls the corresponding UCS endpoint. It should write an audit record like the other steward-initiated box operations do. The existing `log_box_updated` method in the audit module isn't a file-level action, so this should be its own (new) method.
+
+### Counting failed files (UCS)
+
+We need to add 'failed' to the states the box stats aggregation matches, but only if initial inbox upload succeeded (i.e. `decrypted_sha256` is set). A file that died during initiation occupies no storage, or at least _shouldn't_. Currently, there is a window where the upload is completed in S3 and we perform post-hoc checks that are only possible at that point. For example, we compare the checksums and object sizes. If these checks fail, the object remains in S3 and we expect the cleanup job to get it. We should aim to delete the objects immediately though. That way, the box calculation matching on `state="failed"` and a non-null `decrypted_sha256` keeps `box.size` accurate. We should still make sure the cleanup job removes objects that don't belong in the inbox though, in case anything falls through the cracks. To do that, the cleanup job will still delete 'failed' items that don't have `decrypted_sha256` set.
+
+We need to verify the logic in `initiate_file_upload()`, too, specifically in the path that replaces previously failed files. We need to make sure that the file size isn't doubly counted so that the box limit isn't erroneously crossed. Instead of limiting it to the `overwrite` branch, we can perform the `box_id` + `alias` lookup on every upload init request, and if there is an existing failed file, we can avoid double-counting the size.
+
+### Blocking archival and resolving a failed file (UCS)
+
+`archive_file_upload_box()` scans for 'init' and 'inbox' files and raises `IncompleteUploadsError` if it finds any. Failed files should trigger rejection as well, but through a separate error because "incomplete" describes a file that is still uploading, and the remedy here is different enough (requeue it or delete it). RS also needs an equivalent check ahead of its accession map check, with the failed file IDs attached to `HttpArchivalPrereqsError`, which currently just has an empty data model.
+The logic around accession mapping keeps ignoring failed files, which gives a workable order of operations: resolve the failed files first, then map, then archive. Requiring accessions for failed files instead would mean mapping a file that may never exist. _Note/reminder that accession mapping domain logic is expected to change substantially in the coming months._
+
+We should also update UCS and RS to allow 'failed' files to be deleted from boxes even when they're locked. Otherwise users/Data Stewards have to do an inconvenient dance where they unlock-delete-lock, and that's not fun. To do this in the UCS we need to reposition the call to the box lookup in `remove_file_upload()` so it comes _after_ fetching the FileUpload. We also split fetching from gating: a plain `_get_box()` that only fetches the box and raises if it doesn't exist, replacing the spots where we currently call the FileUploadBox DAO's `get_by_id()` directly, and a `_get_writable_box(box_id, allowed_states=...)` layered on top of it that additionally rejects boxes outside the permitted states. `_get_unlocked_box()` then becomes the `allowed_states={"open"}` case, and `remove_file_upload()` passes `{"open", "locked"}` when the FileUpload's state and `decrypted_sha256` field identify it as a failed file that may be removed from a locked box.
+
+### FIS Adaptations
+
+FIS's `process_file_upload()` method needs to be updated. At present, a requeued file coming back as 'inbox' gets effectively ignored since it's "new" information but FIS is written to disregard such a possibility. The fallback handling only acts on 'cancelled', 'failed' and 'archived'. It needs a branch for a known file arriving as 'inbox' when the local copy is 'failed'. To do that, we need to do the following:
+- set `state="inbox"`, `state_updated` to the values on the event, and `interrogated=False`, so `get_files_not_yet_interrogated()` serves the FileUpload to DHFS again.
+- set `can_remove=False`. If it stays True during a successful retry, DHFS's cleaner will delete the freshly re-encrypted object out of the interrogation bucket. Should avoid that.
+- delete the stored `InterrogationReport` for that file.
+
+Deleting the old report throws away the record of why the file failed the previous time, but logging the report's contents at INFO before deleting it is enough to keep the trail without introducing some kind of history tracking (and if we did that there are other things I would want to include - could be an epic in the middle future).
+
+### Listing failed files (Data Portal)
+
+Currently, the Data Portal's mapping view drops them and the Connector treats a failed alias as absent when resuming a batch. The Connector's behavior is correct, just mentioning it for completeness. The portal's mapping view needs to show failed files in some way that makes it clear they block archival and need to be addressed. I can imagine several ways this could be done, but a certain Data Steward should be consulted, as well as a frontend developer. It should be noted that RS and UCS allow the Data Portal to filter files server-side by state. Since I don't know what the desired implementation is here, it's listed as an "Optional" requirement.
+
+### Testing
+
+- Cover the requeue endpoint in UCS for each rejection: a file that isn't 'failed', a failed file that never reached the inbox, a failed file whose object is gone from S3, and an archived box. The happy path should assert the resulting state, the cleared `failure_reason`, and that a FileUpload event was published.
+- Assert that a requeue succeeds while the box is locked, rather than being rejected.
+- Add a FIS test for a requeue event on a file it holds as 'failed', asserting the reset of `interrogated` and `can_remove`, the deletion of the stored report, and that the file reappears in `get_files_not_yet_interrogated()`.
+- Add a FIS test that submits a fresh report after a requeue, once passing and once failing, and confirm neither triggers `InterrogationReportConflict` or a duplicate insert error.
+- Regression test the cleanup job: a failed FileUpload with an object in the inbox shouldn't get deleted.
+- Cover the deletion paths for failed files (single file, whole box, deletion request event, and replacement by a same-alias upload), asserting the object is actually removed from the inbox each time.
+- Cover the stats aggregation for a failed file that reached the inbox versus one that failed at initiation.
+- Make sure that re-uploading a failed file doesn't run into the box size limit. There might already be a test for this, but if not we should add it.
+- Make sure box archival is blocked when there's a failed file present. Needs to be tested in both UCS and RS, including the file IDs in the error body in the latter.
+- Existing UCS tests around `process_interrogation_failure` need updated to assert the S3 object is not deleted.
+- Add an end-to-end testbed test case: upload, force an interrogation failure, requeue, and confirm the file gets all the way to 'archived' without a re-upload.
+
+
+## Human Resource/Time Estimation:
+
+Number of sprints required: 1
+
+Number of developers required: 1-2 (Depending on Frontend Work)

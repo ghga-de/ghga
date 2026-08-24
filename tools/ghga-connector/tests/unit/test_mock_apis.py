@@ -89,7 +89,7 @@ async def test_requests_to_the_internet_are_refused(
     assert live_default.startswith("https://"), "expected a real URL as the default"
     assert "127.0.0.1" not in live_default
 
-    async with async_client() as client:
+    async with async_client(purpose="download") as client:
         with pytest.raises(OffLimitsError, match=re.escape(live_default)):
             await client.get(f"{live_default}/values")
 
@@ -103,7 +103,7 @@ async def test_mocked_apis_are_reachable_under_either_loopback_name(
     """Make sure refusing the internet doesn't also refuse the mocks."""
     wkvs_url = httpx2.URL(get_config().wkvs_api_url).copy_with(host=host)
 
-    async with async_client() as client:
+    async with async_client(purpose="download") as client:
         response = await client.get(f"{wkvs_url}/values")
 
     assert response.status_code == 200

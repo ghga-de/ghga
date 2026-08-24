@@ -91,7 +91,10 @@ async def test_download_to_queue(
     )
 
     # download content range with dedicated function:
-    async with async_client() as client, set_runtime_config(client=client):
+    async with (
+        async_client(purpose="download") as client,
+        set_runtime_config(client=client),
+    ):
         # no work package work_pkg_client calls in download_content_range, just mock for correct type
         dummy_work_pkg_client = Mock(spec=WorkPackageClient)
         download_client = DownloadClient(
@@ -144,7 +147,10 @@ async def test_download_file_parts(
         object_id=big_object.object_id, bucket_id=big_object.bucket_id
     )
 
-    async with async_client() as client, set_runtime_config(client=client):
+    async with (
+        async_client(purpose="download") as client,
+        set_runtime_config(client=client),
+    ):
         # no work package work_pkg_client calls in download_file_parts, just mock for correct type
         dummy_work_pkg_client = Mock(spec=WorkPackageClient)
         download_client = DownloadClient(

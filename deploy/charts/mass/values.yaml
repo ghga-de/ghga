@@ -59,8 +59,8 @@ labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/mass
+  registry: docker.io
+  repository: ghga/mass
   tag: ""
   digest: ""
   pullPolicy:

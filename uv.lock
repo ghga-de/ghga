@@ -18,9 +18,11 @@ members = [
     "dlqs",
     "ekss",
     "fis",
+    "ghga-arcticfreeze",
     "ghga-connector",
     "ghga-datasteward-kit",
     "ghga-event-schemas",
+    "ghga-jsonsubschema",
     "ghga-service-commons",
     "ghga-transpiler",
     "ghga-validator",
@@ -151,18 +153,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/35/f2287558c17e29fafc8ef3daf819bb9834061cfa43bff8014f7df7f63bdc/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494", size = 125813, upload-time = "2026-07-12T20:29:05.763Z" },
-]
-
-[[package]]
-name = "arcticfreeze"
-version = "0.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "immutabledict" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/79/227fdc80e32555571a606213b39fcd1176d3ac9a4b6b49f1120044299f1e/arcticfreeze-0.1.1.tar.gz", hash = "sha256:977a1d7c74498d00201d65519fa59f2b59e5a2b303668f7ecaec58a270ce5eda", size = 14546, upload-time = "2024-04-03T08:26:34.942Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/7b/db1d7e9828e8e417d69030a09e6a51635c7a68583f3d1d9998fa213e6b99/arcticfreeze-0.1.1-py3-none-any.whl", hash = "sha256:c9811b3c787bfdb0e2ea721b0a99bb0e700c91945fb1c9ce0822cb859b409916", size = 17189, upload-time = "2024-04-03T08:26:33.408Z" },
 ]
 
 [[package]]
@@ -1163,8 +1153,28 @@ wheels = [
 ]
 
 [[package]]
+name = "ghga-arcticfreeze"
+version = "1.0.0"
+source = { editable = "libs/ghga-arcticfreeze" }
+dependencies = [
+    { name = "immutabledict" },
+]
+
+[package.optional-dependencies]
+pydantic = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "immutabledict", specifier = ">=4.3.1,<5" },
+    { name = "pydantic", marker = "extra == 'pydantic'", specifier = ">=2.13.0,<3" },
+]
+provides-extras = ["pydantic"]
+
+[[package]]
 name = "ghga-connector"
-version = "3.1.1"
+version = "4.0.0"
 source = { editable = "tools/ghga-connector" }
 dependencies = [
     { name = "async-lru" },
@@ -1231,18 +1241,39 @@ requires-dist = [
 
 [[package]]
 name = "ghga-jsonsubschema"
-version = "0.1.1"
-source = { registry = "https://pypi.org/simple" }
+version = "0.1.2"
+source = { editable = "libs/ghga-jsonsubschema" }
 dependencies = [
     { name = "greenery" },
     { name = "jsonref" },
     { name = "jsonschema" },
     { name = "portion" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fd/d6/8bba2e6d3fb05326725cfcf8eaa7001015155463b5297c6b8b11a973f330/ghga_jsonsubschema-0.1.1.tar.gz", hash = "sha256:351132aa599a64a40fdaf7a431edd55de8a99d1ebc2cc874ba406a501fb1e6b6", size = 55969, upload-time = "2026-07-07T08:19:30.967Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/55/7a744f3c3fa6b182b46fc66c678fe38951ff0fda5ee940c46112766fc254/ghga_jsonsubschema-0.1.1-py3-none-any.whl", hash = "sha256:141bd32583a3708f0f9f864a1bad33ad8f066b66633aeb7820844a69bf118f35", size = 35815, upload-time = "2026-07-07T08:19:30.086Z" },
+
+[package.optional-dependencies]
+dev = [
+    { name = "coverage" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "coverage", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=7" },
+    { name = "greenery", specifier = ">=4.2,<5" },
+    { name = "jsonref", specifier = ">=1.1,<2" },
+    { name = "jsonschema", specifier = ">=4.26,<5" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.1" },
+    { name = "portion", specifier = ">=2.6,<3" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "ghga-service-commons"
@@ -3686,7 +3717,7 @@ name = "schemapack"
 version = "4.3.0"
 source = { editable = "libs/schemapack" }
 dependencies = [
-    { name = "arcticfreeze" },
+    { name = "ghga-arcticfreeze" },
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -3702,8 +3733,8 @@ schema-comparison = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arcticfreeze", specifier = "~=0.1.1" },
-    { name = "ghga-jsonsubschema", marker = "extra == 'schema-comparison'", specifier = ">=0.1.0" },
+    { name = "ghga-arcticfreeze", editable = "libs/ghga-arcticfreeze" },
+    { name = "ghga-jsonsubschema", marker = "extra == 'schema-comparison'", editable = "libs/ghga-jsonsubschema" },
     { name = "jsonschema", specifier = ">=4.19.2,<5" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pydantic-settings", specifier = ">=2,<3" },

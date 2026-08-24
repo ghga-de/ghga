@@ -118,11 +118,14 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 
 ### Both lanes
 
-- **Final** publish targets (registries, PyPI enablement) remain undecided. Interim
-  (2026-07-23): the platform lane can push images to **GHCR under the repo's namespace**
-  (`ghcr.io/ghga-de/ghga/<member>`, private) — manual `workflow_dispatch` only, no tag
-  triggers, authenticated via the ephemeral `GITHUB_TOKEN` so **no stored credentials
-  exist**. The PyPI lane stays a stub.
+- **Platform image target decided** (2026-08-21): **Docker Hub**, under the `ghga`
+  namespace (`docker.io/ghga/<member>`) — matches what production already pulls from. The
+  platform lane pushes there, manual `workflow_dispatch` only, no tag triggers yet,
+  authenticated with the org's stored `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the
+  same credentials used to pull the hardened dhi.io base images). GHCR
+  (`ghcr.io/ghga-de/ghga`) remains in use as a separate, deliberately independent scratch
+  registry for `dev-images.yaml`/`security-scan.yaml`'s `:dev`/`:updated` tags — never the
+  release target. PyPI publish targets remain undecided; that lane stays a stub.
 - Local development builds use the same Dockerfile/stamping path with a dev placeholder
   version (`0.0.0+dev.g<sha>`) — release/local parity is the guarantee that "worked locally"
   transfers.

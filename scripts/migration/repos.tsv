@@ -31,6 +31,13 @@ lib	ghga-service-commons	.	libs/ghga-service-commons	main
 lib	ghga-event-schemas	.	libs/ghga-event-schemas	main
 lib	schemapack	.	libs/schemapack	main
 lib	metldata	.	libs/metldata	main
+# GHGA fork of IBM/jsonsubschema (dist `ghga-jsonsubschema`, import name `jsonsubschema`),
+# consumed by libs/schemapack's `schema-comparison` extra. uv-native, not template-derived.
+lib	ghga-jsonsubschema	.	libs/ghga-jsonsubschema	main
+# Deep-freeze helpers (dist `ghga-arcticfreeze` since 1.0.0, import name `arcticfreeze`).
+# NB: PyPI also carries the pre-rename dist `arcticfreeze` 0.1.1, which libs/schemapack
+# still pins — same import package, so the two cannot share a venv. See docs/migration/runbook.md.
+lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
 # Deployable services from file-services-backend (existing monorepo -> flatten to top-level)
 service	file-services-backend	services/dcs	services/dcs	main

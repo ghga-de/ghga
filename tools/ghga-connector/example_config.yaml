@@ -1,5 +1,5 @@
 client_exponential_backoff_max: 60
-client_num_retries: 2
+client_num_retries: 5
 client_reraise_from_retry_error: true
 client_retry_status_codes:
 - 408

@@ -20,6 +20,7 @@ from pathlib import Path
 
 import httpx2
 from pydantic import UUID4
+from tenacity import RetryError
 
 from ghga_connector.constants import MAX_PART_NUMBER
 
@@ -440,8 +441,10 @@ class RenameDownloadedFileError(RuntimeError):
 class RequestFailedError(RuntimeError):
     """Thrown when a request fails without returning a response code"""
 
-    def __init__(self, *, url: str):
+    def __init__(self, *, url: str, reason: str = ""):
         message = f"The request to '{url}' failed."
+        if reason:
+            message += f" Reason: {reason}"
         super().__init__(message)
 
 
@@ -606,3 +609,32 @@ def raise_if_connection_failed(request_error: httpx2.RequestError, url: str):
     if isinstance(request_error, (httpx2.ConnectError, httpx2.ConnectTimeout)):
         connection_failure = str(request_error.args[0])
         raise ConnectionFailedError(url=url, reason=connection_failure)
+
+
+# What a request can fail with once the retry transport has given up. Kept beside the
+#  handler so no call site can drift out of step.
+REQUEST_FAILURES = (RetryError, httpx2.RequestError)
+
+
+def handle_request_error(
+    exc: RetryError | httpx2.RequestError, *, url: str
+) -> httpx2.Response:
+    """Translate a request that ran out of retries into a Connector exception.
+
+    Tenacity reraises the original exception when the final attempt errored and only
+    wraps it in a `RetryError` when that attempt produced a response, so both forms
+    reach the call sites. Returns that response when there is one.
+    """
+    if isinstance(exc, RetryError):
+        wrapped_exception = exc.last_attempt.exception()
+        if wrapped_exception is None:
+            return exc.last_attempt.result()
+        if not isinstance(wrapped_exception, httpx2.RequestError):
+            raise wrapped_exception from exc
+        request_error = wrapped_exception
+    else:
+        request_error = exc
+
+    # Raises the more specific ConnectionFailedError if the connection never stood up
+    raise_if_connection_failed(request_error=request_error, url=url)
+    raise RequestFailedError(url=url, reason=str(request_error)) from exc

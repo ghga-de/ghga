@@ -148,13 +148,15 @@ async def test_upload_journey(
         file_info = CoreFileInfo(
             alias=ALIAS, path=Path(file.name), decrypted_size=actual_size
         )
-        async with async_client() as client, set_runtime_config(client=client):
+        async with (
+            async_client(purpose="upload") as client,
+            set_runtime_config(client=client),
+        ):
             await upload_files(
                 client=client,
                 core_file_info_list=[file_info],
                 my_public_key_path=PUBLIC_KEY_FILE,
                 my_private_key_path=PRIVATE_KEY_FILE,
-                passphrase=None,
             )
         assert upload.object_id, "No object ID was captured during upload"
         object_size = await s3_fixture.storage.get_object_size(
@@ -176,11 +178,13 @@ async def test_upload_bad_url(
         file_info = CoreFileInfo(
             alias=ALIAS, path=Path(file.name), decrypted_size=actual_size
         )
-        async with async_client() as client, set_runtime_config(client=client):
+        async with (
+            async_client(purpose="upload") as client,
+            set_runtime_config(client=client),
+        ):
             await upload_files(
                 client=client,
                 core_file_info_list=[file_info],
                 my_public_key_path=PUBLIC_KEY_FILE,
                 my_private_key_path=PRIVATE_KEY_FILE,
-                passphrase=None,
             )

@@ -72,7 +72,7 @@ async def test_get_drs_object_caching(
     )
     download_api.on_get_drs_object = respond(200, json=DRS_OBJECT)
 
-    async with async_client() as client:
+    async with async_client(purpose="download") as client:
         assert isinstance(client, RecordingClient)
         work_pkg_client = Mock()
         work_pkg_client.get_download_wot = AsyncMock(return_value="fake-wot")
@@ -128,7 +128,7 @@ async def test_retry_response_is_not_cached(
 
     download_api.on_get_drs_object = poll
 
-    async with async_client() as client:
+    async with async_client(purpose="download") as client:
         assert isinstance(client, RecordingClient)
         work_pkg_client = Mock()
         work_pkg_client.get_download_wot = AsyncMock(return_value="fake-wot")
@@ -172,7 +172,7 @@ async def test_get_work_order_token_caching(
         "ghga_connector.core.client.httpx2.AsyncClient", RecordingClient
     )
 
-    async with async_client() as client:
+    async with async_client(purpose="upload") as client:
         assert isinstance(client, RecordingClient)
         work_pkg_client = WorkPackageClient(
             client=client,
