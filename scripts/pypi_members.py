@@ -225,16 +225,14 @@ def pypi_members(
 
 
 def matrix_cells(members: list[dict]) -> list[dict]:
-    """One entry per (member, python version) — the shape a GitHub matrix consumes."""
+    """Creates the test matrix, each cell denoting one member on one Python version."""
     return [
         {
             "path": member["path"],
             "package": member["package"],
             "extras": ",".join(member["extras"]),
             # Only the closure being released alongside this member goes into the
-            # wheelhouse. Its other dependencies resolve from the index, so the cell
-            # installs the combination a consumer gets rather than one only this
-            # checkout can produce.
+            # wheelhouse. Its other dependencies resolve from the index.
             "train_deps": " ".join(member["train_deps"]),
             "python": python,
         }
