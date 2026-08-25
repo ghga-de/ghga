@@ -32,7 +32,7 @@ STANDARD_MUTABLE_PRIORITY: Final = -100
 
 
 @dataclass(frozen=True)
-class Converter(Generic[InputObject]):  # noqa: UP046 - PEP 695 syntax needs Python >= 3.12
+class Converter(Generic[InputObject]):
     """A class describing how to convert a (mutable) object to an immutable counterpart.
 
     Attributes:
