@@ -20,23 +20,46 @@ from pathlib import Path
 
 SERVICES_DIR = Path(__file__).parent.parent.parent.resolve() / "services"
 
+# Services excluded from doc-update scripts entirely (oddballs, not real services).
+EXCLUDED_SERVICES = {"test-oidc-provider"}
+
+# Short abbreviations for services whose folder name is unwieldy to type out.
+SERVICE_ABBREVIATIONS = {
+    "ars": "access-request-service",
+    "auth": "auth-service",
+    "dhfs": "datahub-file-service",
+    "dins": "dataset-information-service",
+    "dlqs": "dlq-service",
+    "emts": "em-transformation-service",
+    "rs": "ghga-registry-service",
+    "nos": "notification-orchestration-service",
+    "ns": "notification-service",
+    "rts": "reverse-transpiler-service",
+    "sms": "state-management-service",
+    "wkvs": "well-known-value-service",
+    "wps": "work-package-service",
+}
+
 
 def list_service_dirs() -> list[Path]:
     """Return a list of directories under the services folder."""
     return [
         folder
         for folder in (SERVICES_DIR / path for path in os.listdir(SERVICES_DIR))
-        if folder.is_dir()
+        if folder.is_dir() and folder.name not in EXCLUDED_SERVICES
     ]
 
 
 def validate_folder_name(folder_name: str) -> str:
+    """Resolve a folder name or abbreviation and verify it names a service."""
+    folder_name = SERVICE_ABBREVIATIONS.get(folder_name, folder_name)
     folder_names = [path.name for path in list_service_dirs()]
     folder_names.append("")
 
     if folder_name not in folder_names:
+        options = folder_names + list(SERVICE_ABBREVIATIONS.keys())
         print(
-            f"Error: '{folder_name}' is not a valid folder. Choose from: {', '.join(folder_names)}"
+            f"Error: '{folder_name}' is not a valid folder. Choose from: {', '.join(options)}"
         )
         exit(1)
     return folder_name
