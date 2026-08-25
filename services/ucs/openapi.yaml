@@ -23,8 +23,8 @@ components:
       properties:
         force:
           default: false
-          description: Only applies when locking the box. If True, any uploads still
-            in the 'init' state will be aborted before locking proceeds.
+          description: Only applies when locking the box. If True, will allow locking
+            the box even when there are ongoing uploads.
           title: Force
           type: boolean
         max_size:
@@ -506,33 +506,33 @@ components:
       - file_id
       title: HttpFileUploadStateErrorData
       type: object
-    HttpIncompleteUploadsError:
+    HttpIncompleteOrFailedError:
       additionalProperties: false
       properties:
         data:
-          $ref: '#/components/schemas/HttpIncompleteUploadsErrorData'
+          $ref: '#/components/schemas/HttpIncompleteOrFailedErrorData'
         description:
           description: A human readable message to the client explaining the cause
             of the exception.
           title: Description
           type: string
         exception_id:
-          const: incompleteUploads
+          const: incompleteOrFailed
           title: Exception Id
           type: string
       required:
       - data
       - description
       - exception_id
-      title: HttpIncompleteUploadsError
+      title: HttpIncompleteOrFailedError
       type: object
-    HttpIncompleteUploadsErrorData:
+    HttpIncompleteOrFailedErrorData:
       properties:
         box_id:
           format: uuid4
           title: Box Id
           type: string
-        file_ids:
+        incomplete_uploads:
           items:
             maxItems: 2
             minItems: 2
@@ -541,12 +541,24 @@ components:
               type: string
             - type: string
             type: array
-          title: File Ids
+          title: Incomplete Uploads
+          type: array
+        need_attention:
+          items:
+            maxItems: 2
+            minItems: 2
+            prefixItems:
+            - format: uuid4
+              type: string
+            - type: string
+            type: array
+          title: Need Attention
           type: array
       required:
       - box_id
-      - file_ids
-      title: HttpIncompleteUploadsErrorData
+      - incomplete_uploads
+      - need_attention
+      title: HttpIncompleteOrFailedErrorData
       type: object
     HttpOrphanedMultipartUploadError:
       additionalProperties: false
@@ -989,10 +1001,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpIncompleteUploadsError'
+                $ref: '#/components/schemas/HttpIncompleteOrFailedError'
           description: 'Exceptions by ID:
 
-            - incompleteUploads: The box has in-progress uploads that must be completed
+            - incompleteOrFailed: The box has in-progress uploads that must be completed
             or cancelled before it can be locked or archived.'
         '422':
           content:
