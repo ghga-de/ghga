@@ -91,7 +91,7 @@ published-combo member python="3.12":
         sys.exit(f'error: {member} is not a PyPI-lane member — check its [tool.ghga]'
                  ' release marker (ADR-0014)')
     cell = members[0]
-    package, declared = cell['package'], cell['testable_requires_python']
+    package, declared = cell['package'], cell['requires_python']
     if python not in cell['pythons']:
         runs_on = ', '.join(cell['pythons']) or 'no version in the matrix range'
         sys.exit(f'error: the matrix does not run {package} on {python} — it declares'
