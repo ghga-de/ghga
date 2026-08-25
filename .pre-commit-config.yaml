@@ -51,9 +51,6 @@ repos:
       - id: debug-statements
       - id: destroyed-symlinks
       - id: detect-private-key
-        # a placeholder body ("...") in the datahub-monitor GitHub App values; the hook is a
-        # substring blacklist and cannot tell a placeholder from a key.
-        exclude: ^deploy/(src/values/datahub-monitor\.yaml|charts/datahub-monitor/values\.yaml)$
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: no-commit-to-branch
