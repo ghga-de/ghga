@@ -120,7 +120,7 @@ class FileBoxClientPort(ABC):
 
     class FUBIncompleteUploadsError(RuntimeError):
         """Raised when locking is rejected because some files are still being
-        uploaded.
+        uploaded or files that failed interrogation need attention.
         """
 
         def __init__(self, *, incomplete_file_ids: list[UUID4]):
@@ -148,7 +148,8 @@ class FileBoxClientPort(ABC):
         """Lock a FileUploadBox in the owning service.
 
         Raises:
-            FUBIncompleteUploadsError if files have incomplete uploads and force=False.
+            FUBIncompleteUploadsError if force=False and there are incomplete uploads
+                or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """

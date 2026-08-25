@@ -441,6 +441,8 @@ class FileBoxClient(FileBoxClientPort):
         """Lock a FileUploadBox in the owning service.
 
         Raises:
+            FUBIncompleteUploadsError if force=False and there are incomplete uploads
+                or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
