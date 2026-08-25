@@ -58,6 +58,4 @@ async def prepare_interrogation_bucket_cleaner(
             config=config, object_storage=object_storage, httpx_client=httpx_client
         )
         central_client = CentralClient(config=config, httpx_client=httpx_client)
-        yield S3Cleaner(
-            config=config, central_client=central_client, s3_client=s3_client
-        )
+        yield S3Cleaner(central_client=central_client, s3_client=s3_client)

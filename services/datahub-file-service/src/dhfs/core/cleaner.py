@@ -15,11 +15,9 @@
 
 """Post-interrogation S3 bucket cleanup logic"""
 
-import asyncio
 import logging
 
 from dhfs.adapters.outbound.http import ConnectionFailedError
-from dhfs.config import Config
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.cleaner import S3CleanerPort
 from dhfs.ports.outbound.s3 import S3ClientPort
@@ -35,13 +33,11 @@ class S3Cleaner(S3CleanerPort):
     def __init__(
         self,
         *,
-        config: Config,
         central_client: CentralClientPort,
         s3_client: S3ClientPort,
     ):
         self._central_client = central_client
         self._s3_client = s3_client
-        self._max_concurrent_deletions = config.max_concurrent_deletions
 
     async def scan_and_clean(self):  # noqa: C901, PLR0911
         """Get a list of all objects in the 'interrogation' bucket, then query the

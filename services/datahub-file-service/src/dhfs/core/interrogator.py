@@ -57,6 +57,19 @@ log = logging.getLogger(__name__)
 #  contiguous bytes-like object works and no conversion is needed at the call site.
 type ByteBuffer = bytes | bytearray | memoryview
 
+# Crypto and hashing run on a small dedicated pool instead of inline on the event loop.
+#  A part's decrypt/re-encrypt/verify chain contains no await, so run inline it blocks
+#  the loop in one stretch - measured at 118-225ms for a 16 MiB part - and during that
+#  stretch no other part's S3 transfer is serviced at all.
+#
+#  Two workers, deliberately not one per part slot. Benchmarking the stages in
+#  isolation showed decrypt and re-encrypt peak at two threads (1.46x and 1.37x over
+#  single-threaded) and then regress hard: at four threads they run *slower* than one,
+#  because parts this size saturate memory bandwidth rather than compute. Sizing this
+#  pool from max_concurrent_parts, as an earlier revision did, lands squarely in that
+#  regressive zone.
+CRYPTO_THREAD_COUNT = 2
+
 
 @dataclass(frozen=True)
 class _PartContext:
@@ -159,19 +172,9 @@ class Interrogator(InterrogatorPort):
             )
         )
         self._s3_client = s3_client
-        self._max_concurrent_files = config.max_concurrent_files
         self._max_concurrent_parts = config.max_concurrent_parts
-        # One budget for every part in flight, shared by all files, so peak memory is
-        #  a function of this number alone rather than of it times the file count.
-        self._part_slots = asyncio.Semaphore(self._max_concurrent_parts)
-        # Crypto and hashing get their own pool rather than the event loop's default
-        #  executor, which hexkit's S3 provider uses for every boto3 call. Sharing it
-        #  let CPU work squeeze out the S3 round trips this pipeline overlaps it with,
-        #  and the default is only min(32, cpu_count + 4) - as few as 5 or 6 workers on
-        #  a CPU-limited container. A part never runs more than one of these at a time,
-        #  so one worker per part slot is enough.
         self._crypto_executor = ThreadPoolExecutor(
-            max_workers=self._max_concurrent_parts, thread_name_prefix="dhfs-crypto"
+            max_workers=CRYPTO_THREAD_COUNT, thread_name_prefix="dhfs-crypto"
         )
 
     def close(self) -> None:
@@ -182,7 +185,8 @@ class Interrogator(InterrogatorPort):
         """Run a blocking crypto/hashing call on the dedicated pool.
 
         Mirrors `asyncio.to_thread`, including the context propagation, but targets
-        `_crypto_executor` instead of the loop's default executor.
+        `_crypto_executor` rather than the loop's default executor - which hexkit's S3
+        provider uses for its boto3 calls, and whose size we do not control.
         """
         loop = asyncio.get_running_loop()
         context = contextvars.copy_context()
@@ -205,37 +209,28 @@ class Interrogator(InterrogatorPort):
 
         log.info("Received a batch of %i file(s) to process.", len(new_files))
 
-        semaphore = asyncio.Semaphore(self._max_concurrent_files)
-
-        async def _handle_file(file: FileUpload) -> None:
-            """Process one file, absorbing the errors that only concern that file."""
-            async with semaphore:
-                try:
-                    # Verify that the file exists in the inbox before proceeding
-                    if not await self._s3_client.get_is_file_in_inbox(file=file):
-                        raise self.InconclusiveError(
-                            f"The file {file.id}, under object ID {file.object_id} was not"
-                            + " found in the inbox"
-                        )
-                    await self.interrogate_file(file)
-                except self.ConclusiveError as err:
-                    reason = getattr(err, "reason", None) or "Unexpected error"
-                    # Errors in .report_failure() are logged without re-raising, because
-                    #  the solution to the error is simply to move on to the next file
-                    await self.report_failure(file_id=file.id, reason=reason)
-                except self.InconclusiveError as err:
-                    log.warning(
-                        "File %s: Unable to conclusively process file - will retry later. Reason: %s",
-                        file.id,
-                        err,
+        # One file at a time. A CriticalError is deliberately left uncaught so that it
+        #  abandons the rest of the batch, which is the point of that severity.
+        for file in new_files:
+            try:
+                # Verify that the file exists in the inbox before proceeding
+                if not await self._s3_client.get_is_file_in_inbox(file=file):
+                    raise self.InconclusiveError(
+                        f"The file {file.id}, under object ID {file.object_id} was not"
+                        + " found in the inbox"
                     )
-
-        # A CriticalError is not handled above, so it escapes the group and aborts the
-        #  remaining files - which is the point, since the batch must not continue.
-        with _collapsing_error_groups():
-            async with asyncio.TaskGroup() as task_group:
-                for file in new_files:
-                    task_group.create_task(_handle_file(file))
+                await self.interrogate_file(file)
+            except self.ConclusiveError as err:
+                reason = getattr(err, "reason", None) or "Unexpected error"
+                # Errors in .report_failure() are logged without re-raising, because
+                #  the solution to the error is simply to move on to the next file
+                await self.report_failure(file_id=file.id, reason=reason)
+            except self.InconclusiveError as err:
+                log.warning(
+                    "File %s: Unable to conclusively process file - will retry later. Reason: %s",
+                    file.id,
+                    err,
+                )
 
         log.info("Finished processing current file batch.")
 
@@ -445,7 +440,7 @@ class Interrogator(InterrogatorPort):
     async def _decrypt_stage(
         self, ctx: _PartContext, *, encrypted_part: ByteBuffer, secret: SecretBytes
     ) -> bytearray:
-        """Decrypt a part in a worker thread, keeping the event loop free."""
+        """Decrypt a part on the crypto pool, keeping the loop free for S3."""
         try:
             with _stopwatch(ctx.timings, "decrypt"):
                 return await self._run_crypto(
@@ -465,7 +460,7 @@ class Interrogator(InterrogatorPort):
     async def _reencrypt_stage(
         self, ctx: _PartContext, *, decrypted_part: ByteBuffer, secret: SecretBytes
     ) -> bytes:
-        """Re-encrypt a part under the new secret, in a worker thread."""
+        """Re-encrypt a part under the new secret, on the crypto pool."""
         try:
             with _stopwatch(ctx.timings, "reencrypt"):
                 return await self._run_crypto(
@@ -525,8 +520,8 @@ class Interrogator(InterrogatorPort):
         )
         del decrypted_part
 
-        # Digesting a whole part blocks for tens of milliseconds, so it goes to a
-        #  thread like the crypto does.
+        # Digesting a whole part blocks for tens of milliseconds, so it goes to the
+        #  pool alongside the crypto rather than running on the loop.
         with _stopwatch(ctx.timings, "digest"):
             part_digests = await self._run_crypto(
                 Checksums.digest_encrypted_part, reencrypted_part
@@ -544,10 +539,9 @@ class Interrogator(InterrogatorPort):
     ) -> Checksums:
         """Perform the decrypt/re-encrypt/decrypt/upload cycle on each file part.
 
-        Parts are processed with bounded concurrency so the download of one part
-        overlaps the CPU work of another and the upload of a third, and within a part
-        the verify pass overlaps the upload. Crypto and hashing run in worker threads
-        to keep the event loop free for that overlap.
+        Parts are processed with bounded concurrency, which is the only concurrency in
+        the pipeline: the stages within a part run strictly in order. Since only one
+        file is in flight at a time, `max_concurrent_parts` is this file's whole budget.
 
         Returns the `Checksums` object containing the checksums calculated during
         the file processing. All error translation is done here, but all S3 cleanup is
@@ -562,6 +556,7 @@ class Interrogator(InterrogatorPort):
         file_id = file_upload.id
         inbox_object_id = str(file_upload.object_id)
         part_ranges = list(file_upload.calc_encrypted_part_ranges())
+        part_slots = asyncio.Semaphore(self._max_concurrent_parts)
 
         # The whole-file sha256 is order-dependent, so each part waits for its
         #  predecessor to be folded in before folding itself in and releasing the next.
@@ -578,10 +573,7 @@ class Interrogator(InterrogatorPort):
             """Process one part, returning its (md5, sha256) digests."""
             part_no = index + 1
 
-            # Acquisition is FIFO and tasks are created in part order, so a part is
-            #  never admitted ahead of its predecessor. That is what keeps the fold
-            #  chain below deadlock-free: it only ever waits on an admitted part.
-            async with self._part_slots:
+            async with part_slots:
                 log.debug("File %s: Processing part %s.", file_id, part_no)
                 ctx = _PartContext(
                     file_upload=file_upload,
@@ -600,36 +592,27 @@ class Interrogator(InterrogatorPort):
                 reencrypted_part, part_digests = await self._prepare_part(
                     ctx, old_secret=old_secret, new_secret=new_secret
                 )
+                verified_part = await self._verify_part(
+                    ctx, reencrypted_part=reencrypted_part, secret=new_secret
+                )
 
-                async def _verify_and_fold(part: bytes) -> None:
-                    """Prove the round-trip, then fold the plaintext into the file hash."""
-                    verified_part = await self._verify_part(
-                        ctx, reencrypted_part=part, secret=new_secret
-                    )
-                    # Waiting here rather than after the upload keeps the chain
-                    #  advancing at crypto speed, not S3 speed. The successor stays
-                    #  blocked until the threaded fold returns, so order still holds.
-                    if index:
-                        await hashed[index - 1].wait()
-                    with _stopwatch(timings, "fold"):
-                        await self._run_crypto(
-                            checksums.update_unencrypted, verified_part
-                        )
-                    hashed[index].set()
+                # Acquisition above is FIFO and tasks are created in part order, so a
+                #  part is never admitted ahead of its predecessor. That is what keeps
+                #  this wait deadlock-free: it only ever waits on an admitted part.
+                if index:
+                    await hashed[index - 1].wait()
+                with _stopwatch(timings, "fold"):
+                    await self._run_crypto(checksums.update_unencrypted, verified_part)
+                hashed[index].set()
+                del verified_part
 
-                # The verify pass feeds the whole-file checksum but nothing the upload
-                #  needs, so the two run together rather than in sequence.
-                async with asyncio.TaskGroup() as part_group:
-                    part_group.create_task(_verify_and_fold(reencrypted_part))
-                    part_group.create_task(
-                        self._upload_part(
-                            ctx,
-                            upload_id=upload_id,
-                            object_id=new_object_id,
-                            part_md5=part_digests[0],
-                            part=reencrypted_part,
-                        )
-                    )
+                await self._upload_part(
+                    ctx,
+                    upload_id=upload_id,
+                    object_id=new_object_id,
+                    part_md5=part_digests[0],
+                    part=reencrypted_part,
+                )
 
                 # Free the buffer before the next part takes this slot
                 del reencrypted_part

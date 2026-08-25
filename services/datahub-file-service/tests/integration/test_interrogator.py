@@ -17,6 +17,7 @@
 
 import asyncio
 import json
+import time
 from typing import cast
 from unittest.mock import patch
 from uuid import UUID, uuid4
@@ -114,10 +115,12 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         f"Expected 2 reports, got {len(received_reports)}"
     )
 
-    # Files are processed concurrently, so reports arrive in completion order rather
-    #  than input order - look each one up by file ID instead of by position.
+    # Files are processed one at a time, in the order the batch listed them, so the
+    #  reports arrive in that order too.
+    assert [report["file_id"] for report in received_reports] == [
+        str(f.id) for f in file_uploads
+    ]
     reports_by_file_id = {report["file_id"]: report for report in received_reports}
-    assert reports_by_file_id.keys() == {str(f.id) for f in file_uploads}
 
     # Verify each report has the correct structure for successful interrogation
     for file_upload in file_uploads:
@@ -592,19 +595,14 @@ async def test_connection_failed_on_report_failure(
     )
 
 
-async def test_part_budget_is_shared_across_files(joint_fixture: JointFixture):
-    """`max_concurrent_parts` bounds parts in flight across all files, not per file.
-
-    With a per-file budget, two files would each get the full allowance and the peak
-    would be twice the limit, which is what made peak memory depend on two settings
-    rather than one.
-    """
+async def _stage_batch(joint_fixture: JointFixture, count: int) -> list[FileUpload]:
+    """Put `count` multipart files in the inbox and announce them to the interrogator."""
     config = joint_fixture.config
     await joint_fixture.s3.storage.create_bucket(INBOX)
     await joint_fixture.s3.storage.create_bucket(config.interrogation_bucket_id)
 
     file_uploads: list[FileUpload] = []
-    for _ in range(2):
+    for _ in range(count):
         object_id = str(uuid4())
         encrypted_object = get_encrypted_object(
             part_size=PART_SIZE, file_size=int(PART_SIZE * 3.5)
@@ -632,10 +630,45 @@ async def test_part_budget_is_shared_across_files(joint_fixture: JointFixture):
         200, json=[f.model_dump(mode="json") for f in file_uploads]
     )
     joint_fixture.central_api.on_submit_report = respond(201, json={})
+    return file_uploads
+
+
+async def test_files_are_processed_one_at_a_time(joint_fixture: JointFixture):
+    """A batch is worked through in sequence, never two files at once.
+
+    Parts are the only thing processed concurrently, which is what keeps peak memory a
+    function of `max_concurrent_parts` alone rather than of it times a file count.
+    """
+    await _stage_batch(joint_fixture, count=2)
+
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    original_interrogate_file = interrogator.interrogate_file
+    windows: list[tuple[float, float]] = []
+
+    async def timed_interrogate_file(file_upload: FileUpload) -> None:
+        started = time.monotonic()
+        try:
+            await original_interrogate_file(file_upload)
+        finally:
+            windows.append((started, time.monotonic()))
+
+    with patch.object(interrogator, "interrogate_file", timed_interrogate_file):
+        await interrogator.interrogate_new_files()
+
+    assert len(windows) == 2
+    windows.sort()
+    assert windows[0][1] <= windows[1][0], (
+        f"Files overlapped: {windows[0]} and {windows[1]}"
+    )
+
+
+async def test_part_concurrency_is_bounded(joint_fixture: JointFixture):
+    """`max_concurrent_parts` caps how many parts of a file are in flight at once."""
+    await _stage_batch(joint_fixture, count=1)
 
     budget = 2
     interrogator = cast(Interrogator, joint_fixture.interrogator)
-    interrogator._part_slots = asyncio.Semaphore(budget)
+    interrogator._max_concurrent_parts = budget
 
     in_flight = 0
     peak = 0
@@ -653,7 +686,7 @@ async def test_part_budget_is_shared_across_files(joint_fixture: JointFixture):
     with patch.object(interrogator, "_prepare_part", counting_prepare):
         await interrogator.interrogate_new_files()
 
-    # Both files have several parts each, so the budget has to actually bind
+    # The file has several parts, so the budget has to actually bind
     assert peak > 1, "test did not exercise any concurrency"
     assert peak <= budget, (
         f"{peak} parts were in flight at once, above the budget of {budget}"

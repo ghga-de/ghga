@@ -15,26 +15,27 @@
 
 """Unit tests for the dedicated crypto thread pool.
 
-Crypto and hashing must not run on the event loop's default executor: hexkit's S3
-provider dispatches every boto3 call there, so sharing it lets CPU work squeeze out
-the S3 round trips the part pipeline is supposed to overlap it with.
+The pool exists so that a part's decrypt/re-encrypt/verify chain - which contains no
+await and therefore blocks in one stretch - cannot stall the S3 transfers of the parts
+running alongside it. Its size is fixed at two rather than derived from
+`max_concurrent_parts`: the crypto stages peak at two threads and regress beyond that,
+so scaling the pool with the part budget makes throughput worse, not better.
 """
 
 import asyncio
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock
 
 import pytest
 
-from dhfs.core.interrogator import Interrogator
+from dhfs.core.interrogator import CRYPTO_THREAD_COUNT, Interrogator
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import DHFS_CRYPT4GH_PRIVATE_KEY_PATH
 
 pytestmark = pytest.mark.asyncio
 
 
-def build_interrogator(max_concurrent_parts: int = 4) -> Interrogator:
+def build_interrogator(max_concurrent_parts: int = 8) -> Interrogator:
     """An Interrogator with mocked-out collaborators - only threading is exercised."""
     config = get_config(
         data_hub_crypt4gh_private_key_path=DHFS_CRYPT4GH_PRIVATE_KEY_PATH,
@@ -45,9 +46,10 @@ def build_interrogator(max_concurrent_parts: int = 4) -> Interrogator:
     )
 
 
-async def test_crypto_runs_on_its_own_pool():
-    """The work must land on a dhfs-crypto thread, not a default-executor one."""
+async def test_crypto_runs_off_the_event_loop():
+    """The work must land on a dhfs-crypto thread, not the loop's own thread."""
     interrogator = build_interrogator()
+    loop_thread = threading.current_thread().name
     try:
         thread_name = await interrogator._run_crypto(
             lambda: threading.current_thread().name
@@ -56,68 +58,49 @@ async def test_crypto_runs_on_its_own_pool():
         interrogator.close()
 
     assert thread_name.startswith("dhfs-crypto")
+    assert thread_name != loop_thread
 
 
-async def test_saturated_default_executor_does_not_stall_crypto():
-    """This is the regression: a fully occupied default executor must not block crypto.
+async def test_pool_size_is_fixed_not_derived_from_part_budget():
+    """A bigger part budget must not widen the pool into its regressive range."""
+    narrow = build_interrogator(max_concurrent_parts=2)
+    wide = build_interrogator(max_concurrent_parts=32)
+    try:
+        assert narrow._crypto_executor._max_workers == CRYPTO_THREAD_COUNT
+        assert wide._crypto_executor._max_workers == CRYPTO_THREAD_COUNT
+    finally:
+        narrow.close()
+        wide.close()
 
-    The default executor is capped at min(32, cpu_count + 4), which is as few as 5 or 6
-    workers on a CPU-limited container - fewer than max_concurrent_parts allows in
-    flight. Pinning it to a single worker here reproduces that in miniature.
+
+async def test_crypto_does_not_block_the_event_loop():
+    """While a crypto call is running, the loop must still service other tasks.
+
+    This is the whole point of the pool: the S3 transfers of concurrent parts are
+    exactly the 'other tasks' that must keep progressing.
     """
-    loop = asyncio.get_running_loop()
-    starved_executor = ThreadPoolExecutor(max_workers=1)
-    loop.set_default_executor(starved_executor)
-
-    release = threading.Event()
-    # Occupy the one and only default worker, exactly as a slow boto3 call would
-    blocker = asyncio.create_task(asyncio.to_thread(release.wait, 10))
-    await asyncio.sleep(0.05)
-
     interrogator = build_interrogator()
+    ticks = 0
+
+    async def ticker() -> None:
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.005)
+            ticks += 1
+
+    ticker_task = asyncio.create_task(ticker())
     try:
-        # Would time out if the crypto call had to queue behind the blocker
-        thread_name = await asyncio.wait_for(
-            interrogator._run_crypto(lambda: threading.current_thread().name),
-            timeout=2,
-        )
+        await interrogator._run_crypto(lambda: threading.Event().wait(0.2))
     finally:
-        release.set()
-        await blocker
+        ticker_task.cancel()
         interrogator.close()
-        starved_executor.shutdown(wait=False)
 
-    assert thread_name.startswith("dhfs-crypto")
-
-
-async def test_pool_has_one_worker_per_part_slot():
-    """A part runs at most one crypto call at a time, so the budgets have to match.
-
-    Fewer workers than slots would silently serialize parts that the semaphore had
-    already admitted.
-    """
-    max_concurrent_parts = 3
-    interrogator = build_interrogator(max_concurrent_parts=max_concurrent_parts)
-
-    entered = threading.Barrier(max_concurrent_parts, timeout=5)
-    try:
-        # Every call blocks until all of them are running, so this only returns if
-        #  the pool really can run that many at once
-        await asyncio.wait_for(
-            asyncio.gather(
-                *(
-                    interrogator._run_crypto(entered.wait)
-                    for _ in range(max_concurrent_parts)
-                )
-            ),
-            timeout=5,
-        )
-    finally:
-        interrogator.close()
+    # A blocking 0.2s call on the loop itself would have allowed zero ticks.
+    assert ticks > 5, f"loop only ticked {ticks} times during a 200ms crypto call"
 
 
 async def test_close_is_idempotent():
-    """Shutdown runs from a context manager's finally, which can be reached twice."""
+    """Shutting the pool down twice must not raise."""
     interrogator = build_interrogator()
     interrogator.close()
     interrogator.close()

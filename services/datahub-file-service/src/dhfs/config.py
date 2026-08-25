@@ -122,38 +122,15 @@ class Config(
         ),
     )
 
-    max_concurrent_files: int = Field(
-        default=2,
-        ge=1,
-        description=(
-            "How many files from a batch to process at the same time. This bounds how"
-            + " many multipart uploads are open at once. It does not affect memory use:"
-            + " that is governed by max_concurrent_parts alone."
-        ),
-    )
-
     max_concurrent_parts: int = Field(
         default=8,
         ge=1,
         description=(
-            "How many file parts to process at the same time, counted across all files"
-            + " being processed concurrently. This lets the download of one part overlap"
-            + " the re-encryption of another and the upload of a third, and it is the"
-            + " service's memory budget: peak use is roughly max_concurrent_parts * 3 *"
-            + " the part size, no matter how many files are in flight. Files share the"
-            + " budget, so a single large file can use all of it. It also sizes the"
-            + " thread pool that runs decryption, re-encryption and hashing."
-        ),
-    )
-
-    max_concurrent_deletions: int = Field(
-        default=16,
-        ge=1,
-        description=(
-            "How many objects the cleanup routine deletes from the interrogation"
-            + " bucket at the same time. Each deletion is its own request, so a serial"
-            + " cleanup costs one round trip per object. Deletions hold no file data,"
-            + " so this only trades against load on the S3 backend."
+            "How many file parts to process at the same time. Files are processed one"
+            + " at a time, so this is the whole budget for the file in flight. It lets"
+            + " the download of one part overlap the re-encryption of another and the"
+            + " upload of a third, and it is the service's memory budget: peak use is"
+            + " roughly max_concurrent_parts * 3 * the part size."
         ),
     )
 
