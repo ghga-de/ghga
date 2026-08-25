@@ -80,6 +80,16 @@ jobs:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v5
+      # arm64 has no native GitHub-hosted runner, so cross-building it on this amd64
+      # runner needs QEMU emulation registered with the kernel, plus a buildx builder
+      # that can actually target multiple platforms in one invocation (the default
+      # "docker" driver can't).
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       # The hardened base (dhi.io) is auth-gated: log in with the org's Docker Hub
       # credentials (same secrets mainline uses). Skipped if the org secrets are not
       # exposed to this repo — the build then fails at the base-image pull with a
@@ -91,20 +101,9 @@ jobs:
           registry: dhi.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # OCI labels are set on the CLI so members whose Dockerfile does not stamp them
-      # itself (the mainline-synced frontend one) still carry version + revision;
-      # for the shared Python Dockerfile they override its labels with equal values.
-      # Build-args a member's Dockerfile does not declare only produce a warning.
-      - name: Build (stamped)
-        run: |
-          docker build -f "${{ matrix.member.dockerfile }}" \
-            --build-arg PACKAGE="${{ matrix.member.package }}" \
-            --build-arg PLATFORM_VERSION="${{ needs.resolve.outputs.version }}" \
-            --build-arg GIT_SHA="${GITHUB_SHA::12}" \
-            --label org.opencontainers.image.version="${{ needs.resolve.outputs.version }}" \
-            --label org.opencontainers.image.revision="${GITHUB_SHA::12}" \
-            -t "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" \
-            "${{ matrix.member.context }}"
+      # Login happens before the build (not after, as with the old single-arch `docker
+      # build` + `docker push`): a multi-platform manifest list has no single-daemon
+      # representation to --load, so buildx pushes straight from the build itself.
       - name: Login to Docker Hub
         if: ${{ inputs.push }}
         uses: docker/login-action@v4
@@ -112,9 +111,26 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Push
-        if: ${{ inputs.push }}
-        run: docker push "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
+      # OCI labels are set on the CLI so members whose Dockerfile does not stamp them
+      # itself (the mainline-synced frontend one) still carry version + revision;
+      # for the shared Python Dockerfile they override its labels with equal values.
+      # Build-args a member's Dockerfile does not declare only produce a warning.
+      #
+      # With push off (dry run) the multi-platform result is neither loadable nor
+      # pushable, so buildx just builds both platforms and discards the output —
+      # enough to validate the Dockerfile builds clean on each arch.
+      - name: Build (stamped)
+        run: |
+          docker buildx build -f "${{ matrix.member.dockerfile }}" \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg PACKAGE="${{ matrix.member.package }}" \
+            --build-arg PLATFORM_VERSION="${{ needs.resolve.outputs.version }}" \
+            --build-arg GIT_SHA="${GITHUB_SHA::12}" \
+            --label org.opencontainers.image.version="${{ needs.resolve.outputs.version }}" \
+            --label org.opencontainers.image.revision="${GITHUB_SHA::12}" \
+            -t "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" \
+            ${{ inputs.push && '--push' || '' }} \
+            "${{ matrix.member.context }}"
       - name: Summary
         run: |
           if [ "${{ inputs.push }}" = "true" ]; then
@@ -122,9 +138,9 @@ jobs:
           else
             echo "build-only: ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (push input not set)"
           fi
-      # TODO on enablement: multi-arch via buildx, Trivy scan; the front end builds via
-      # its own Dockerfile; charts are packaged and pushed as OCI artifacts with
-      # version/appVersion = the platform version (Phase B).
+      # TODO on enablement: Trivy scan; the front end builds via its own Dockerfile;
+      # charts are packaged and pushed as OCI artifacts with version/appVersion = the
+      # platform version (Phase B).
 
   # -------- pypi lane: dormant stub ------------------------------------------------------
   publish-pypi:
