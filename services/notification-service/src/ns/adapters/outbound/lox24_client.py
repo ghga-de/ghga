@@ -68,7 +68,7 @@ class Lox24Client(SmsClientPort):
         """Assign config, which should contain all needed info.
 
         A `transport` can be provided to route the requests somewhere other than the
-        network, e.g. to a `MockRouter` in tests. If omitted, the httpx2 default
+        network, e.g. to an `ApiMock` in tests. If omitted, the httpx2 default
         transport is used.
         """
         self._config = config

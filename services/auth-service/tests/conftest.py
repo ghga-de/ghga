@@ -15,16 +15,14 @@
 
 """Fixtures that are shared between all unit and integration tests"""
 
-import httpx2
 import pytest
 
-from ghga_service_commons.api.mock_router import MockRouter
+from tests.fixtures.oidc_provider import OidcProviderMock
 
 
 @pytest.fixture
-def mock_router(monkeypatch: pytest.MonkeyPatch) -> MockRouter:
-    """Provide a MockRouter that intercepts the requests made with httpx2."""
-    router: MockRouter = MockRouter()
-    client = httpx2.Client(transport=router.as_transport())
-    monkeypatch.setattr(httpx2, "get", client.get)
-    return router
+def oidc_provider(monkeypatch: pytest.MonkeyPatch) -> OidcProviderMock:
+    """Provide a mocked OIDC provider, intercepting the requests made with httpx2."""
+    oidc_provider = OidcProviderMock()
+    oidc_provider.patch_httpx_module(monkeypatch)
+    return oidc_provider

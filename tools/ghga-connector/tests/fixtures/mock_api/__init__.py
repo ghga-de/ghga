@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-"""Mocks of the GHGA APIs the connector talks to, served from a `MockRouter`."""
+"""Mocks of the GHGA APIs the connector talks to, built on `ApiMock`."""

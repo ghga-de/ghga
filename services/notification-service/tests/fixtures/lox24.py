@@ -13,19 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""A mock of the Lox24 SMS gateway, based on the service commons `MockRouter`."""
+"""A mock of the Lox24 SMS gateway, based on the service commons `ApiMock`."""
 
 import json
 
 import pytest
-from httpx2 import BaseTransport, Request, Response
+from httpx2 import Request, Response
 from jsonschema_path import SchemaPath
 from openapi_core.contrib.requests import RequestsOpenAPIRequest
 from openapi_core.validation.request.validators import V30RequestValidator
 from requests import PreparedRequest
 from requests import Request as RequestsRequest
 
-from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.api.mock_api import ApiMock, endpoint
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import BASE_DIR
 
@@ -36,7 +36,7 @@ SEND_SMS_PATH = "/sms"
 SENT_SMS_UUID = "00000000-0000-0000-0000-000000000000"
 
 
-class Lox24Mock:
+class Lox24Mock(ApiMock):
     """Mock of the Lox24 SMS gateway that records every request it receives.
 
     `status_code` determines what the send-SMS endpoint responds with, and
@@ -44,18 +44,19 @@ class Lox24Mock:
     the request under test is made.
     """
 
-    def __init__(self, *, auth_token: str, auth_token_header: str):
+    on_send_sms = endpoint("POST", SEND_SMS_PATH)
+
+    def __init__(self, *, base_url: str, auth_token: str, auth_token_header: str):
+        """Serve the SMS gateway at `base_url`, expecting the given auth token."""
+        super().__init__(base_url=base_url)
         self.status_code: int = 201
         self.expected_json: dict[str, str] | None = None
-        self.requests: list[Request] = []
         self._auth_token = auth_token
         self._auth_token_header = auth_token_header
-        self._router: MockRouter = MockRouter()
-        self._router.post(SEND_SMS_PATH)(self.send_sms)
+        self.on_send_sms = self.send_sms
 
-    def send_sms(self, request: Request) -> Response:
+    def send_sms(self, request: Request, **path_variables: str) -> Response:
         """Record the request and respond with the configured status code."""
-        self.requests.append(request)
         self._match_request(request)
         return Response(status_code=self.status_code, json={"uuid": SENT_SMS_UUID})
 
@@ -77,10 +78,6 @@ class Lox24Mock:
                 raise AssertionError(
                     f"Expected the payload to be {self.expected_json}, got {payload}"
                 )
-
-    def as_transport(self) -> BaseTransport:
-        """Return a transport that routes requests to this mock."""
-        return self._router.as_transport()
 
     def validate_requests(self):
         """Check all recorded requests against the Lox24 OpenAPI spec."""
@@ -111,6 +108,7 @@ def lox24_fixture() -> Lox24Mock:
     """Provide a mocked Lox24 SMS gateway for a single test case."""
     config = get_config()
     return Lox24Mock(
+        base_url=str(config.lox24_base_url),
         auth_token=config.lox24_token.get_secret_value(),
         auth_token_header=config.lox24_auth_token_header,
     )

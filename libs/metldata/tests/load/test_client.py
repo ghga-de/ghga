@@ -19,10 +19,9 @@
 import json
 from uuid import uuid4
 
-import httpx2
 import pytest
 
-from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.api.mock_api import ApiMock, respond
 from metldata.load.client import upload_artifacts_via_http_api
 from metldata.load.collect import get_artifact_topic
 from metldata.load.config import ArtifactLoaderClientConfig
@@ -102,25 +101,20 @@ async def test_upload_artifacts_via_http_api(
     await file_system_event_fixture.publish_events(artifact_events)
 
     # mock the api:
-    observed_requests: list[httpx2.Request] = []
-    router: MockRouter = MockRouter()
-
-    @router.post("/rpc/load-artifacts")
-    def load_artifacts(request: httpx2.Request) -> httpx2.Response:
-        """Record the request and acknowledge it."""
-        observed_requests.append(request)
-        return httpx2.Response(status_code=204)
+    loader_api = ApiMock(base_url=config.loader_api_root)
+    load_artifacts = loader_api.add(
+        method="POST", path="/rpc/load-artifacts", handler=respond(204)
+    )
 
     # upload to api:
     upload_artifacts_via_http_api(
-        token=token, config=config, transport=router.as_transport()
+        token=token, config=config, transport=loader_api.as_transport()
     )
 
     # ensure that the api was called with the expected data:
-    assert len(observed_requests) == 1
-    assert (
-        str(observed_requests[0].url) == f"{config.loader_api_root}/rpc/load-artifacts"
-    )
-    observed_artifacts = json.loads(observed_requests[0].content.decode("utf-8"))
+    assert load_artifacts.call_count == 1
+    observed_request = load_artifacts.requests[0]
+    assert str(observed_request.url) == f"{config.loader_api_root}/rpc/load-artifacts"
+    observed_artifacts = json.loads(observed_request.content.decode("utf-8"))
     assert observed_artifacts == EXAMPLE_ARTIFACTS
-    assert observed_requests[0].headers["Authorization"] == f"Bearer {token}"
+    assert observed_request.headers["Authorization"] == f"Bearer {token}"

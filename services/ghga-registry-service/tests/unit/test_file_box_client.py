@@ -22,12 +22,13 @@ import httpx2
 import pytest
 from jwcrypto.jwk import JWK
 
+from ghga_service_commons.api.mock_api import in_sequence, respond
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import FileBoxClient
 from rs.config import Config
 from rs.core.models import FileUploadWithAccession
-from tests.fixtures.external_apis import FileBoxApiMock, in_sequence, respond
+from tests.fixtures.external_apis import FileBoxApiMock
 from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio

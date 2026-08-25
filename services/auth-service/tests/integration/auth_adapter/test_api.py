@@ -29,17 +29,19 @@ from auth_service.auth_adapter.deps import get_user_token_dao
 from auth_service.auth_adapter.rest.headers import get_bearer_token
 from auth_service.claims_repository.deps import get_claim_dao
 from auth_service.user_registry.deps import get_user_dao
-from ghga_service_commons.api.mock_router import MockRouter
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
 
+from ...fixtures.oidc_provider import (
+    OidcProviderMock,
+    mock_userinfo,
+)
 from ...fixtures.utils import (
     MockClaimDao,
     MockUserDao,
     MockUserTokenDao,
     get_claims_from_token,
     headers_for_session,
-    mock_userinfo,
 )
 from .fixtures import (
     AUTH_PATH,
@@ -307,9 +309,11 @@ async def test_post_user_with_session_and_invalid_csrf(
     assert_is_unauthorized_error(response, "Invalid or missing CSRF token")
 
 
-async def test_post_user_with_session(bare_client: BareClient, mock_router: MockRouter):
+async def test_post_user_with_session(
+    bare_client: BareClient, oidc_provider: OidcProviderMock
+):
     """Test user registration with session and valid CSRF token."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao(ext_id="not.john@aai.org")
@@ -380,10 +384,10 @@ async def test_put_user_with_session_and_invalid_csrf(
 
 async def test_put_unregistered_user_with_session(
     bare_client: BareClient,
-    mock_router: MockRouter,
+    oidc_provider: OidcProviderMock,
 ):
     """Test updating an unregistered user with session."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao(ext_id="not.john@aai.org")
@@ -399,10 +403,10 @@ async def test_put_unregistered_user_with_session(
 
 
 async def test_put_registered_user_with_session(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc_provider: OidcProviderMock
 ):
     """Test updating a registered user with session."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
 
     app = bare_client.app
     user_dao = MockUserDao()

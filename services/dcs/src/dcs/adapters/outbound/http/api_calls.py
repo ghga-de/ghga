@@ -48,7 +48,7 @@ async def get_configured_httpx_client(
     """Produce an httpx2 AsyncClient with configured rate limiting behavior
 
     `base_transport` replaces the network transport at the bottom of the stack. Tests
-    use it to route requests to a `MockRouter` while keeping the retry and rate
+    use it to route requests to an `ApiMock` while keeping the retry and rate
     limiting layers in place.
 
     `mount_env_proxies` controls whether proxies from the environment are mounted.

@@ -27,6 +27,7 @@ from pytest_asyncio import fixture as async_fixture
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
 from ars.core.models import BaseAccessGrant
+from ghga_service_commons.api.mock_api import fail_with, respond
 from hexkit.utils import now_utc_ms_prec
 
 from .fixtures.access_grants import GRANT_ID, AccessGrantsMock
@@ -127,7 +128,7 @@ async def test_grant_download_access_with_server_error(
 ):
     """Test granting download access when there is a server error"""
     grant_access = grants_adapter.grant_download_access
-    access_grants.grant_access_status_code = 500
+    access_grants.on_grant_access = respond(500)
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
@@ -147,7 +148,9 @@ async def test_grant_download_access_with_timeout(
 ):
     """Test granting download access when there is a network timeout"""
     grant_access = grants_adapter.grant_download_access
-    access_grants.error = httpx2.ReadTimeout("Simulated network problem")
+    access_grants.on_grant_access = fail_with(
+        httpx2.ReadTimeout("Simulated network problem")
+    )
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"
@@ -171,7 +174,9 @@ async def test_get_access_grants(
 ):
     """Test fetching download access grants"""
     get_grants = grants_adapter.get_download_access_grants
-    access_grants.grants = [as_json(grant) for grant in returned_grants]
+    access_grants.on_get_grants = respond(
+        200, json=[as_json(grant) for grant in returned_grants]
+    )
 
     params = (
         {"user_id": USER_ID, "iva_id": IVA_ID, "dataset_id": DATASET_ID, "valid": True}
@@ -208,7 +213,9 @@ async def test_get_access_grants_with_data_error(
     get_grants = grants_adapter.get_download_access_grants
 
     # Simulate a server response with missing user name
-    access_grants.grants = [as_json(GRANT, exclude={"user_name"})]
+    access_grants.on_get_grants = respond(
+        200, json=[as_json(GRANT, exclude={"user_name"})]
+    )
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
@@ -222,7 +229,7 @@ async def test_get_access_grants_with_server_error(
 ):
     """Test fetching download access grants with server error"""
     get_grants = grants_adapter.get_download_access_grants
-    access_grants.get_grants_status_code = 500
+    access_grants.on_get_grants = respond(500)
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
@@ -236,7 +243,9 @@ async def test_get_access_grants_with_timeout(
 ):
     """Test fetching download access grants when there is a network timeout"""
     get_grants = grants_adapter.get_download_access_grants
-    access_grants.error = httpx2.ReadTimeout("Simulated network problem")
+    access_grants.on_get_grants = fail_with(
+        httpx2.ReadTimeout("Simulated network problem")
+    )
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"
@@ -265,7 +274,7 @@ async def test_revoke_non_existing_access_grants(
     """Test deleting a non-existing download access grant"""
     revoke_grant = grants_adapter.revoke_download_access_grant
     random_grant_id = uuid4()
-    access_grants.revoke_grant_status_code = 404
+    access_grants.on_revoke_grant = respond(404)
 
     with pytest.raises(
         grants_adapter.AccessGrantNotFoundError,
@@ -281,7 +290,7 @@ async def test_revoke_access_grants_with_server_error(
 ):
     """Test deleting a download access grant when there is a server error"""
     revoke_grant = grants_adapter.revoke_download_access_grant
-    access_grants.revoke_grant_status_code = 500
+    access_grants.on_revoke_grant = respond(500)
 
     with pytest.raises(
         grants_adapter.AccessGrantsError,
@@ -295,7 +304,9 @@ async def test_revoke_access_grants_with_timeout(
 ):
     """Test deleting a download access grants when there is a network timeout"""
     revoke_grant = grants_adapter.revoke_download_access_grant
-    access_grants.error = httpx2.ReadTimeout("Simulated network problem")
+    access_grants.on_revoke_grant = fail_with(
+        httpx2.ReadTimeout("Simulated network problem")
+    )
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"

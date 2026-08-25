@@ -18,8 +18,8 @@
 import pytest
 
 from ghga_datasteward_kit.utils import path_join, retrieve_well_known_values
+from ghga_service_commons.api.mock_api import ApiMock, respond
 from tests.fixtures.ingest import IngestFixture, legacy_ingest_fixture  # noqa: F401
-from tests.fixtures.mock_api import ApiMock, respond
 
 
 @pytest.mark.parametrize(
@@ -92,7 +92,7 @@ def test_retrieve_well_known_values(
         path=f"/values/{value_name}",
         handler=respond(200, json={"storage_aliases": expected_values}),
     )
-    api_mock.patch_httpx(monkeypatch)
+    api_mock.patch_httpx_module(monkeypatch)
 
     retrieved_values = retrieve_well_known_values(
         wkvs_api_url=wkvs_api_url, value_name=value_name
