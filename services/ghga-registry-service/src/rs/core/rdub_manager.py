@@ -216,6 +216,7 @@ class RDUBManager(RDUBManagerPort):
 
         # Make sure the request is not based on outdated info
         if box.version != version:
+            # TODO: Consider if this and similar logs should be only INFO
             log.error(
                 "Can't update RDUB %s because the request is outdated.",
                 box_id,
