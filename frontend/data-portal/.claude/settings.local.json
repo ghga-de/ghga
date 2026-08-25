@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(gh pr *)",
-      "Bash(pnpm typecheck *)",
-      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")"
-    ]
-  }
-}
