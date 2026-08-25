@@ -24,8 +24,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_transpiler"
-# 2.4.2 is spent on TestPyPI: a pypi-publish.yaml rehearsal uploaded it there.
-version = "2.4.1"
+version = "2.5.0"
 description = "GHGA-Transpiler - excel to JSON converter"
 dependencies = [
     "typer >= 0.12",

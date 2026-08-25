@@ -31,11 +31,15 @@ exactly one resolved version of every package exists across the whole repo.
 **Amended 2026-08-24 — common `>=3.11` floor across the PyPI lane.** Every lane member now
 declares `requires-python = ">=3.11"` and carries matching classifiers, and the matrix runs
 **3.11–3.14** (`TEST_PYTHONS` in `scripts/pypi_members.py`), superseding the `3.10…3.13`
-above. This narrows what external consumers get — `hexkit`, `ghga-service-commons` and
-`ghga-connector` drop 3.10; `ghga-transpiler` and `ghga-validator` drop 3.9 and 3.10 — in
-exchange for one range the whole lane is actually tested against, rather than per-member
-floors that no surface verified. It also trades away part of the "broad range" premise
-above: the range is now uniform rather than per-library. The floors live in the members'
+above. The floor is chosen for **workspace coherence**: one range the whole lane is
+actually tested against, rather than per-member floors no surface verified. 3.10 reaches
+end of life shortly, so dropping it costs consumers nothing they should still be relying
+on — `hexkit`, `ghga-service-commons` and `ghga-connector` drop 3.10, `ghga-transpiler` and
+`ghga-validator` drop 3.9 and 3.10, and `schemapack` moves the other way, `>=3.12` →
+`>=3.11`. It also trades away part of the "broad range" premise above: the range is now
+uniform rather than per-library.
+
+The floors live in the members'
 own `pyproject.toml`, so for members still synced from mainline ([ADR-0010](0010-history-preserving-migration.md))
 this is a divergence that conflicts until the same change is made upstream.
 

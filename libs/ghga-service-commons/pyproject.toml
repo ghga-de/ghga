@@ -24,8 +24,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-# 8.0.1 is spent on TestPyPI: a pypi-publish.yaml rehearsal uploaded it there.
-version = "8.0.0"
+version = "8.1.0"
 description = "A library that contains common functionality used in services of GHGA"
 dependencies = [
     "pydantic >=2, <3",
