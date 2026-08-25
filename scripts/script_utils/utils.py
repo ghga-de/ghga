@@ -57,7 +57,10 @@ def validate_folder_name(folder_name: str) -> str:
     folder_names.append("")
 
     if folder_name not in folder_names:
-        options = folder_names + list(SERVICE_ABBREVIATIONS.keys())
+        options = [name for name in folder_names if name] + list(
+            SERVICE_ABBREVIATIONS.keys()
+        )
+        options.append("or leave blank to run for all services")
         print(
             f"Error: '{folder_name}' is not a valid folder. Choose from: {', '.join(options)}"
         )
