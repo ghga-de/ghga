@@ -358,8 +358,10 @@ class RDUBManager(RDUBManagerPort):
         """Check prerequisites for archiving a research data upload box.
 
         Raises:
-            ArchivalPrereqsError: If there are any files in the box that don't yet have
-                an accession assigned OR if the box is still in the 'open' state.
+            ArchivalPrereqsError: If...
+              - There are any files in the box that don't yet have an accession assigned
+              - The box is still in the 'open' state
+              - There are files that failed interrogation and have not been resolved
             OperationError: If there's a problem querying the file box service.
         """
         box_id = box.id
@@ -372,6 +374,16 @@ class RDUBManager(RDUBManagerPort):
         if not files:
             # No files in box, nothing to check
             return
+
+        # Block archival if there are files that have failed interrogation
+        need_action = {
+            f.state == "failed" and f.decrypted_sha256 is not None for f in files
+        }
+        if need_action:
+            raise self.ArchivalPrereqsError(
+                "The following files need action because they failed re-encryption"
+                + f" and verification: {need_action}"
+            )
 
         # Make sure all active files have an accession number
         # (cancelled/failed excluded)
@@ -1148,9 +1160,15 @@ class RDUBManager(RDUBManagerPort):
         requested_file_ids = set(accession_map.values())
 
         # Make sure all specified file IDs are active uploads in the box
+        # Also: remove files that never made it to the inbox, but keep files that
+        #  failed interrogation
         file_ids_in_box = {
-            f.id for f in files if f.state not in ("cancelled", "failed")
+            f.id
+            for f in files
+            if f.state != "cancelled"
+            or (f.state == "failed" and f.decrypted_sha256 is None)
         }
+
         if invalid_ids := (requested_file_ids - file_ids_in_box):
             log.error(
                 "Accession map for box %s included unknown file IDs.",
