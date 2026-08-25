@@ -351,22 +351,26 @@ class HttpPartSizeError(HttpCustomExceptionBase):
         )
 
 
-class HttpIncompleteUploadsError(HttpCustomExceptionBase):
-    """Thrown when locking or archiving a box that still has in-progress uploads."""
+class HttpIncompleteOrFailedError(HttpCustomExceptionBase):
+    """Thrown when locking or archiving a box that still has in-progress uploads
+    or uploads that have failed the re-encryption step and require attention.
+    """
 
-    exception_id = "incompleteUploads"
+    exception_id = "incompleteOrFailed"
 
     class DataModel(BaseModel):
         """Model for exception data"""
 
         box_id: UUID4
-        file_ids: list[tuple[UUID4, str]]
+        incomplete_uploads: list[tuple[UUID4, str]]
+        need_attention: list[tuple[UUID4, str]]
 
     def __init__(
         self,
         *,
         box_id: UUID4,
-        file_ids: list[tuple[UUID4, str]],
+        incomplete_uploads: list[tuple[UUID4, str]],
+        need_attention: list[tuple[UUID4, str]],
         status_code: int = 409,
     ):
         """Construct message and init the exception."""
@@ -375,7 +379,10 @@ class HttpIncompleteUploadsError(HttpCustomExceptionBase):
             description="",
             data={
                 "box_id": str(box_id),
-                "file_ids": [[str(fid), alias] for fid, alias in file_ids],
+                "incomplete_uploads": [
+                    [str(fid), alias] for fid, alias in incomplete_uploads
+                ],
+                "need_attention": [[str(fid), alias] for fid, alias in need_attention],
             },
         )
 

@@ -874,11 +874,11 @@ async def test_lock_box_with_incomplete_upload(rig: JointRig):
         part_size=PART_SIZE,
     )
     # Attempt to lock the box while the upload is still incomplete
-    with pytest.raises(UploadControllerPort.IncompleteUploadsError) as exc_info:
+    with pytest.raises(UploadControllerPort.IncompleteOrFailedError) as exc_info:
         await controller.lock_file_upload_box(box_id=box_id, version=0)
 
     # Verify the exception carries the right IDs and aliases (sorted by alias)
-    assert exc_info.value.file_ids == [
+    assert exc_info.value.incomplete_uploads == [
         (file_id1, "test_file"),
         (file_id2, "test_file2"),
     ]
