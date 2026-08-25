@@ -1,0 +1,4 @@
+#!/bin/bash
+# This script is used to update the service files in the service directory
+# 'fixup' is a shortcut for 'scripts/update_service_files.py'
+python3 ./scripts/update_service_files.py "$@"

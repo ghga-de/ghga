@@ -41,3 +41,4 @@ RUN apt-get update \
 # command line anyone writes, copies, or remembers says `fd` and `bat`, so expose those.
 RUN ln -s /usr/bin/fdfind /usr/local/bin/fd \
  && ln -s /usr/bin/batcat /usr/local/bin/bat
+
