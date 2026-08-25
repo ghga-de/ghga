@@ -110,8 +110,7 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         f"Expected 2 reports, got {len(received_reports)}"
     )
 
-    # Files are processed one at a time, in the order the batch listed them, so the
-    #  reports arrive in that order too.
+    # Files are processed one at a time, so the reports arrive in batch order.
     assert [report["file_id"] for report in received_reports] == [
         str(f.id) for f in file_uploads
     ]
@@ -626,8 +625,7 @@ async def _stage_batch(
 async def test_files_are_processed_one_at_a_time(joint_fixture: JointFixture):
     """A batch is worked through in sequence, never two files at once.
 
-    Parts are the only thing processed concurrently, which is what keeps peak memory a
-    function of `max_concurrent_parts` alone rather than of it times a file count.
+    Only parts run concurrently, so peak memory tracks `max_concurrent_parts` alone.
     """
     await _stage_batch(joint_fixture, count=2)
 
@@ -689,7 +687,7 @@ async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
     concatenated per-part MD5s. Completing them with the part order deliberately
     inverted is what proves the reordering logic holds.
     """
-    # Enough parts that concurrency and the hand-off between them actually matter
+    # Enough parts that concurrency and the hand-off between them matter
     [file_upload] = await _stage_batch(
         joint_fixture, count=1, file_size=int(PART_SIZE * 5.5)
     )
@@ -720,9 +718,8 @@ async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
 async def test_inbox_check_s3_errors_are_translated(joint_fixture: JointFixture):
     """A critical S3 failure on the inbox check must arrive as a CriticalError.
 
-    Left untranslated it escapes `interrogate_new_files` as a raw S3 error, past the
-    `CriticalError` handler main.py uses to exit the run loop cleanly. The severity
-    is what routes it, so the translation has to happen at this call site too.
+    Untranslated it escapes `interrogate_new_files` as a raw S3 error, past the
+    `CriticalError` handler main.py uses to exit the run loop cleanly.
     """
     await _stage_batch(joint_fixture, count=1)
     interrogator = cast(Interrogator, joint_fixture.interrogator)
@@ -760,8 +757,7 @@ async def test_inbox_check_retryable_s3_errors_do_not_stop_the_batch(
 async def test_live_part_tasks_stay_within_the_budget(joint_fixture: JointFixture):
     """A file must not allocate a task per part before any of them runs.
 
-    `adjusted_part_size` allows up to 9,995 parts, so one task each is ~15 MiB of
-    coroutines parked on a semaphore before the first byte is downloaded.
+    `adjusted_part_size` allows up to 9,995 parts - ~15 MiB of parked coroutines.
     """
     budget = 2
     [file_upload] = await _stage_batch(

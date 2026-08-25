@@ -72,8 +72,7 @@ class InterrogatorPort(ABC):
     def close(self) -> None:
         """Release any resources the interrogator holds. Safe to call more than once.
 
-        Declared here so that callers holding only the port - `prepare_interrogator`
-        yields one - can see the teardown obligation.
+        Declared on the port so callers holding only it see the teardown obligation.
         """
         ...
 

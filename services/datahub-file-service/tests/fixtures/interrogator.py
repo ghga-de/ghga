@@ -15,7 +15,7 @@
 
 """Helpers for building an Interrogator in isolation from its collaborators."""
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from unittest.mock import MagicMock
 
@@ -25,7 +25,7 @@ from tests.fixtures.utils import DHFS_CRYPT4GH_PRIVATE_KEY_PATH
 
 
 @contextmanager
-def make_interrogator(**config_overrides) -> Iterator[Interrogator]:
+def make_interrogator(**config_overrides) -> Generator[Interrogator]:
     """An Interrogator with mocked-out collaborators, closed again on exit.
 
     Only the interrogator's own logic is exercised - the Central API and S3 clients

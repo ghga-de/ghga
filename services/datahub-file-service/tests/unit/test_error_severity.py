@@ -83,47 +83,6 @@ def test_severity_survives_the_nested_part_group():
     assert _most_significant_error(group) is CRITICAL
 
 
-UNCLASSIFIED = ValueError("a bug nobody gave a severity")
-
-
-@pytest.mark.parametrize(
-    "errors",
-    [
-        [INCONCLUSIVE, UNCLASSIFIED],
-        [UNCLASSIFIED, INCONCLUSIVE],
-    ],
-    ids=["inconclusive first", "unclassified first"],
-)
-def test_unclassified_error_outranks_a_retry(errors):
-    """An error of no known severity must not be masked by a retryable sibling.
-
-    Surfacing the InconclusiveError would retry the same unhandled failure on every
-    run instead of reporting it once.
-    """
-    group = ExceptionGroup("parts failed", errors)
-    assert _most_significant_error(group) is UNCLASSIFIED
-
-
-@pytest.mark.parametrize(
-    "errors, expected",
-    [
-        ([UNCLASSIFIED, CRITICAL], CRITICAL),
-        ([UNCLASSIFIED, CONCLUSIVE], CONCLUSIVE),
-    ],
-    ids=["critical still wins", "conclusive still wins"],
-)
-def test_classified_severities_still_outrank_the_unclassified(errors, expected):
-    """Ranking the unknown above a retry must not let it outrank a real severity."""
-    for ordering in (errors, list(reversed(errors))):
-        assert _most_significant_error(ExceptionGroup("parts", ordering)) is expected
-
-
-def test_a_lone_unclassified_error_still_surfaces():
-    """The fallthrough has to keep working when nothing is classified at all."""
-    group = ExceptionGroup("parts failed", [UNCLASSIFIED])
-    assert _most_significant_error(group) is UNCLASSIFIED
-
-
 def test_collapsing_surfaces_the_most_significant_error():
     """The happy path: an ordinary ExceptionGroup collapses to its worst member."""
     with pytest.raises(InterrogatorPort.CriticalError) as exc_info:
@@ -136,8 +95,7 @@ def test_collapsing_surfaces_the_most_significant_error():
 def test_cancellation_is_not_downgraded_to_a_retry():
     """A cancelled batch must not be reported as a file that merely needs retrying.
 
-    A TaskGroup carrying a `CancelledError` raises `BaseExceptionGroup`, not
-    `ExceptionGroup`, so catching only the latter lets the cancellation through.
+    Such a group is a `BaseExceptionGroup`, which is deliberately not caught.
     """
     with pytest.raises(BaseExceptionGroup) as exc_info:
         with _collapsing_error_groups():

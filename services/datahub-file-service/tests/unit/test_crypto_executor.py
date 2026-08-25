@@ -49,10 +49,7 @@ async def test_pool_size_is_fixed_not_derived_from_part_budget():
 
 
 async def test_crypto_does_not_block_the_event_loop():
-    """While a crypto call is running, the loop must still service other tasks.
-
-    Those 'other tasks' are the S3 transfers of the parts running alongside it.
-    """
+    """While a crypto call runs, the loop must still service the S3 transfers."""
     ticks = 0
 
     async def ticker() -> None:

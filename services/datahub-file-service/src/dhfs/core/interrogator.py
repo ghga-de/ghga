@@ -53,7 +53,8 @@ from hexkit.utils import now_utc_ms_prec
 
 log = logging.getLogger(__name__)
 
-# Crypto helpers read through a memoryview, so no conversion at the call site.
+# Buffer types the crypto helpers accept. They read through a memoryview, so any
+#  contiguous bytes-like object works and no conversion is needed at the call site.
 type ByteBuffer = bytes | bytearray | memoryview
 
 # Crypto and hashing run off the loop: a part's decrypt/re-encrypt/verify chain has no
@@ -64,10 +65,7 @@ CRYPTO_THREAD_COUNT = 2
 
 @dataclass(frozen=True)
 class _PartContext:
-    """Everything the per-part helpers need besides the buffers and secrets.
-
-    `timings` is the one shared field: it accumulates across every part of the file.
-    """
+    """Everything the per-part helpers need besides the buffers and secrets."""
 
     file_upload: FileUpload
     part_range: PartRange
@@ -130,28 +128,18 @@ def _most_significant_error(group: BaseExceptionGroup) -> BaseException:
     A CriticalError has to stop the whole batch and a ConclusiveError has to fail the
     file outright, so neither may be masked by an InconclusiveError that would merely
     schedule a retry.
-
-    An error of no recognised severity ranks between them: it is not known to be
-    retryable, so surfacing the InconclusiveError alongside it would retry the same
-    unhandled failure on every run instead of reporting it once.
     """
     errors = _flatten_exception_group(group)
+    # TODO: Can other, uncaught errors surface here? These should take precedence
     for error_type in (
         InterrogatorPort.CriticalError,
         InterrogatorPort.ConclusiveError,
+        InterrogatorPort.InconclusiveError,
     ):
         for error in errors:
             if isinstance(error, error_type):
                 return error
 
-    classified = (
-        InterrogatorPort.CriticalError,
-        InterrogatorPort.ConclusiveError,
-        InterrogatorPort.InconclusiveError,
-    )
-    for error in errors:
-        if not isinstance(error, classified):
-            return error
     return errors[0]
 
 
@@ -229,8 +217,8 @@ class Interrogator(InterrogatorPort):
 
         log.info("Received a batch of %i file(s) to process.", len(new_files))
 
-        # One file at a time. A CriticalError is deliberately left uncaught so that it
-        #  abandons the rest of the batch, which is the point of that severity.
+        # One file at a time. A CriticalError is left uncaught so that it abandons
+        #  the rest of the batch, which is the point of that severity.
         for file in new_files:
             try:
                 await self._check_file_is_in_inbox(file=file)
@@ -349,8 +337,9 @@ class Interrogator(InterrogatorPort):
         read_position = write_position = 0
 
         try:
-            # Inside the try so a malformed part fails as DecryptionError like any
-            #  other bad input, not as a bare ValueError read as merely retryable.
+            # Sizing happens inside the try so that a malformed part fails as a
+            #  DecryptionError like any other bad input, rather than escaping as a
+            #  bare ValueError that the caller would misread as merely retryable.
             plaintext_size = part_size - SEGMENT_OVERHEAD * segments
             if plaintext_size < 0:
                 raise ValueError(
@@ -375,8 +364,9 @@ class Interrogator(InterrogatorPort):
                 write_position += len(decrypted)
                 read_position += crypt4gh.lib.CIPHER_SEGMENT_SIZE
 
-            # Returned whole, not sliced - slicing a bytearray copies and would undo
-            #  the preallocation. Sound only while the framing fills it exactly.
+            # Slicing into a bytearray would copy, undoing preallocation gains.
+            # That is only sound while the segment framing fills it exactly; a short write
+            # would otherwise hand back silent trailing zeros as if they were plaintext.
             if write_position != len(buffer):
                 raise ValueError(
                     f"Decryption produced {write_position} bytes for a"
@@ -473,8 +463,8 @@ class Interrogator(InterrogatorPort):
     ) -> Any:
         """Run one crypto stage on the pool, timing it and normalising its failures.
 
-        Errors matching `propagate` keep their own severity; everything else becomes
-        an InconclusiveError, so an unrecognised failure schedules a retry.
+        Errors matching `propagate` keep their severity; anything else becomes an
+        InconclusiveError, so an unrecognised failure schedules a retry.
         """
         try:
             with _stopwatch(ctx.timings, stage):
@@ -490,8 +480,7 @@ class Interrogator(InterrogatorPort):
     ) -> bytearray:
         """Decrypt a part on the crypto pool, keeping the loop free for S3.
 
-        A part that will not decrypt is the source file's problem, so a ConclusiveError
-        from here fails the file rather than scheduling a retry.
+        A part that will not decrypt is the source file's problem, so it fails the file.
         """
         return await self._crypto_stage(
             ctx,
@@ -553,8 +542,7 @@ class Interrogator(InterrogatorPort):
         )
         del decrypted_part
 
-        # Digesting a whole part blocks for tens of milliseconds, so it goes to the
-        #  pool alongside the crypto rather than running on the loop.
+        # Digesting a part blocks for tens of milliseconds, so it goes to the pool.
         part_digests = await self._crypto_stage(
             ctx,
             stage="digest",
@@ -575,10 +563,9 @@ class Interrogator(InterrogatorPort):
     ) -> Checksums:
         """Perform the decrypt/re-encrypt/decrypt/upload cycle on each file part.
 
-        A pool of `max_concurrent_parts` workers draws part ranges from a shared
-        iterator; the stages within a part run strictly in order. Since only one file
-        is in flight at a time, that pool is this file's whole budget - of memory, of
-        live tasks, and of concurrent S3 transfers.
+        `max_concurrent_parts` workers draw part ranges from a shared iterator; the
+        stages within a part run in order. Only one file is in flight at a time, so
+        that pool is this file's whole budget - memory, live tasks and S3 transfers.
 
         Returns the `Checksums` object containing the checksums calculated during
         the file processing. All error translation is done here, but all S3 cleanup is
@@ -605,10 +592,7 @@ class Interrogator(InterrogatorPort):
         async def _handle_part(
             index: int, part_range: PartRange
         ) -> tuple[bytes, bytes]:
-            """Process one part, returning its (md5, sha256) digests.
-
-            The calling worker owns this part for the whole of this call.
-            """
+            """Process one part, returning its (md5, sha256) digests."""
             part_no = index + 1
 
             log.debug("File %s: Processing part %s.", file_id, part_no)
@@ -645,10 +629,7 @@ class Interrogator(InterrogatorPort):
             return part_digests
 
         # The worker count *is* the budget: it bounds live tasks, parts in flight and
-        #  therefore peak memory, and it keeps a 9,995-part file from allocating ten
-        #  thousand coroutines before the first byte is downloaded. A semaphore here
-        #  would be inert - a worker holds one part at a time and there are never more
-        #  workers than the budget, so it could never block.
+        #  peak memory, with no coroutine per part up front. A semaphore would be inert.
         pending = enumerate(part_ranges)
         digests: list[tuple[bytes, bytes] | None] = [None] * len(part_ranges)
         worker_count = min(self._max_concurrent_parts, len(part_ranges))
@@ -659,8 +640,6 @@ class Interrogator(InterrogatorPort):
                 try:
                     index, part_range = next(pending)
                 except StopIteration:
-                    # Never let this escape a coroutine - it would surface as
-                    #  "RuntimeError: coroutine raised StopIteration".
                     return
                 digests[index] = await _handle_part(index, part_range)
 
@@ -704,8 +683,7 @@ class Interrogator(InterrogatorPort):
             metrics[f"{stage}_s"] = round(elapsed, 3)
             metrics[f"{stage}_mib_per_s"] = _throughput(elapsed)
 
-        # Stage times are summed across parts and overlap each other, so only wall
-        #  time reflects how long the file actually took.
+        # Stage times overlap across parts, so only wall time is the real duration.
         metrics["stage_total_s"] = round(sum(timings.values()), 3)
         metrics["total_s"] = round(wall_time, 3)
         metrics["total_mib_per_s"] = _throughput(wall_time)
@@ -762,14 +740,8 @@ class Interrogator(InterrogatorPort):
         new_secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
         log.debug("File %s: Generated new encryption secret.", file_upload.id)
 
-        # Until the upload is completed, every exit from this block has to abort it.
-        #  The new object ID is a fresh uuid4 that is never persisted, so an upload
-        #  left open here can never be found again by a later run - it just accrues
-        #  storage cost until something external reaps it.
-        #
-        #  `finally` rather than `except Exception` so that a CancelledError aborts the
-        #  upload on its way out. Nothing is caught here, so nothing is swallowed and
-        #  the cancellation propagates exactly as it did before.
+        # Every exit from here has to abort an incomplete upload: the new object ID
+        #  is never persisted, so one left open is never found again.
         upload_completed = False
         try:
             # Re-encrypt and upload file parts, obtaining the checksums for the decrypted

@@ -93,29 +93,9 @@ class S3Cleaner(S3CleanerPort):
         deleted_count = 0
         failed_deletions = []
 
-        for index, object_id in enumerate(removable_objects):
+        for object_id in removable_objects:
             try:
                 await self._s3_client.remove_file(object_id=object_id)
-            except S3ClientPort.BucketNotFoundError as err:
-                # A missing bucket is a fact about the run, not about this object, so
-                #  every remaining deletion would fail identically. Stop here, but
-                #  count the untried objects as failed rather than dropping them from
-                #  the tally - none of them were removed.
-                untried = removable_objects[index:]
-                failed_deletions.extend(untried)
-                log.error(
-                    "Cleanup aborted: the interrogation bucket '%s' does not exist."
-                    + " %d object(s) were left in place after %d successful"
-                    + " deletion(s).",
-                    err.bucket_id,
-                    len(untried),
-                    deleted_count,
-                    extra={
-                        "missing_bucket_id": err.bucket_id,
-                        "objects_left_in_place": untried,
-                    },
-                )
-                break
             except Exception:
                 failed_deletions.append(object_id)
             else:

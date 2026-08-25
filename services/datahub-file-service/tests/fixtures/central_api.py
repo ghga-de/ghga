@@ -56,12 +56,12 @@ def respond(status_code: int, json: Any = None) -> ResponseHandler:
 
 
 def capture(
-    into: list, status_code: int = 201, response_json: Any = None
+    received: list, status_code: int = 201, response_json: Any = None
 ) -> ResponseHandler:
-    """Make a handler that records each request's JSON body into `into`."""
+    """Make a handler that records each request's JSON body into `received`."""
 
     def handler(request: httpx2.Request) -> httpx2.Response:
-        into.append(json.loads(request.content))
+        received.append(json.loads(request.content))
         return httpx2.Response(status_code=status_code, json=response_json or {})
 
     return handler
