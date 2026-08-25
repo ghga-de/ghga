@@ -110,23 +110,47 @@ async def test_lock_file_upload_box(
     )
     assert str(fub_state_err.value) == fub_state_err_msg
 
-    # 409 "incompleteOrFailed" -> FUBIncompleteOrFailedError with list of file IDs
-    incomplete_file_ids = [uuid4(), uuid4()]
+    # 409 "incompleteOrFailed" -> FUBIncompleteOrFailedError, with the two groups of
+    #  file IDs reported by the owning service kept separate
+    incomplete_uploads = [uuid4(), uuid4()]
+    need_attention = [uuid4()]
     file_box_api.on_update_file_upload_box = respond(
         409,
         json={
             "exception_id": "incompleteOrFailed",
             "data": {
-                "file_ids": [
-                    [str(fid), f"alias-{i}"]
-                    for i, fid in enumerate(incomplete_file_ids)
-                ]
+                "box_id": str(TEST_BOX_ID),
+                "incomplete_uploads": [
+                    [str(fid), f"alias-{i}"] for i, fid in enumerate(incomplete_uploads)
+                ],
+                "need_attention": [
+                    [str(fid), f"failed-alias-{i}"]
+                    for i, fid in enumerate(need_attention)
+                ],
             },
         },
     )
     with pytest.raises(FileBoxClient.FUBIncompleteOrFailedError) as fub_uploads_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
-    assert fub_uploads_err.value.incomplete_file_ids == incomplete_file_ids
+    assert fub_uploads_err.value.incomplete_uploads == incomplete_uploads
+    assert fub_uploads_err.value.need_attention == need_attention
+
+    # Either group on its own is enough to trigger the error
+    file_box_api.on_update_file_upload_box = respond(
+        409,
+        json={
+            "exception_id": "incompleteOrFailed",
+            "data": {
+                "box_id": str(TEST_BOX_ID),
+                "incomplete_uploads": [],
+                "need_attention": [[str(need_attention[0]), "failed-alias-0"]],
+            },
+        },
+    )
+    with pytest.raises(FileBoxClient.FUBIncompleteOrFailedError) as fub_uploads_err:
+        await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
+    assert fub_uploads_err.value.incomplete_uploads == []
+    assert fub_uploads_err.value.need_attention == need_attention
 
     # Non-409, non-204 -> OperationError
     file_box_api.on_update_file_upload_box = respond(500, json="Some error occurred.")

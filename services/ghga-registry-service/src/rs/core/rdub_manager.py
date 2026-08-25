@@ -202,6 +202,9 @@ class RDUBManager(RDUBManagerPort):
             StateChangeError: If the requested state transition is invalid.
             OperationError: If there's a problem updating the corresponding
                 FileUploadBox.
+            BoxIncompleteOrFailedError: If locking with `force` unset and the box has
+                ongoing uploads or files that failed interrogation, or if archiving a
+                box that still has uninterrogated or failed files.
             ArchivalPrereqsError: If trying to archive the box and prerequisites
                 aren't met.
             ValueError: If state and max_size are both specified.
@@ -300,7 +303,8 @@ class RDUBManager(RDUBManagerPort):
                     )
                 except FileBoxClientPort.FUBIncompleteOrFailedError as incomplete_err:
                     raise self.BoxIncompleteOrFailedError(
-                        incomplete_file_ids=incomplete_err.incomplete_file_ids
+                        incomplete_uploads=incomplete_err.incomplete_uploads,
+                        need_attention=incomplete_err.need_attention,
                     ) from incomplete_err
             case ("locked", "open"):  # unlock the box
                 if force:
@@ -330,7 +334,8 @@ class RDUBManager(RDUBManagerPort):
                     )
                 except FileBoxClientPort.FUBIncompleteOrFailedError as incomplete_err:
                     raise self.BoxIncompleteOrFailedError(
-                        incomplete_file_ids=incomplete_err.incomplete_file_ids
+                        incomplete_uploads=incomplete_err.incomplete_uploads,
+                        need_attention=incomplete_err.need_attention,
                     ) from incomplete_err
                 except FileBoxClientPort.FUBVersionError as version_err:
                     log.error(
@@ -358,10 +363,11 @@ class RDUBManager(RDUBManagerPort):
         """Check prerequisites for archiving a research data upload box.
 
         Raises:
-            ArchivalPrereqsError: If...
-              - There are any files in the box that don't yet have an accession assigned
-              - The box is still in the 'open' state
-              - There are files that failed interrogation and have not been resolved
+            BoxIncompleteOrFailedError: If the box holds files that have not been
+                interrogated yet, or files that failed interrogation and have not been
+                resolved.
+            ArchivalPrereqsError: If there are any files in the box that don't yet have
+                an accession assigned.
             OperationError: If there's a problem querying the file box service.
         """
         box_id = box.id
@@ -375,18 +381,35 @@ class RDUBManager(RDUBManagerPort):
             # No files in box, nothing to check
             return
 
-        # Block archival if there are files that have failed interrogation
-        need_action = {
-            f.state == "failed" and f.decrypted_sha256 is not None for f in files
-        }
-        if need_action:
-            raise self.ArchivalPrereqsError(
-                "The following files need action because they failed re-encryption"
-                + f" and verification: {need_action}"
+        # Block archival while any file is awaiting interrogation, or
+        #  has failed interrogation and is still unresolved.
+        incomplete_uploads = sorted(
+            (f.id for f in files if f.state in ("init", "inbox")), key=str
+        )
+        need_attention = sorted(
+            (
+                f.id
+                for f in files
+                if f.state == "failed" and f.decrypted_sha256 is not None
+            ),
+            key=str,
+        )
+        if incomplete_uploads or need_attention:
+            error = self.BoxIncompleteOrFailedError(
+                incomplete_uploads=incomplete_uploads, need_attention=need_attention
             )
+            log.error(
+                error,
+                extra={
+                    "box_id": box_id,
+                    "version": box.version,
+                    "incomplete_uploads": str(incomplete_uploads),
+                    "need_attention": str(need_attention),
+                },
+            )
+            raise error
 
-        # Make sure all active files have an accession number
-        # (cancelled/failed excluded)
+        # Make sure all remaining files have an accession number.
         file_ids_in_box = {
             f.id for f in files if f.state not in ("cancelled", "failed")
         }
@@ -1072,7 +1095,9 @@ class RDUBManager(RDUBManagerPort):
         """Update the file accession map for a given box and publish an outbox event.
         This results in a version increment for the ResearchDataUploadBox.
 
-        **Files with a state of *cancelled* or *failed* are ignored.**
+        **Cancelled files are ignored, as are files that failed before reaching the
+        inbox. Files that failed interrogation still require a mapping, since they are
+        expected to be resolved rather than dropped.**
 
         Check the specified ResearchDataUploadBox to verify it exists, that the version
         stated in the request is current, and the box has not already been archived.
