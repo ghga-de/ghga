@@ -90,6 +90,7 @@ fe-format-check:
 # instead of the MSW mocks) and --with-oidc (real login instead of the faked session);
 # frontend/data-portal/README.md documents what each one needs. Per-developer settings
 # and secrets go in frontend/data-portal/local.env (see local.env.example).
+
 # Generates public/config.js (mock_api=true) and serves on http://localhost:8080.
 # (Bare `pnpm start` won't work on its own: it skips the config.js generation this
 # launcher does — that's why the server needs run.js, not plain `ng serve`.)
@@ -125,10 +126,11 @@ fe-cert:
 fe-dev-ssl: fe-cert
     #!/usr/bin/env bash
     set -euo pipefail
+    command -v getcap > /dev/null && command -v setcap > /dev/null \
+      || { echo "getcap/setcap not found; install libcap2-bin" >&2; exit 1; }
     node=$(readlink -f "$(command -v node)")
     # plain grep, not -q — see the SIGPIPE note in `images-present`
     if getcap "$node" | grep cap_net_bind_service > /dev/null; then exit 0; fi
-    command -v setcap > /dev/null || { echo "setcap not found; install libcap2-bin" >&2; exit 1; }
     sudo setcap cap_net_bind_service=+ep "$node"
     echo "granted cap_net_bind_service to $node"
 
