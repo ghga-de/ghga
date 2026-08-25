@@ -119,7 +119,7 @@ jobs:
     # The same name has to be set in the trusted publisher config on *both* indexes. PyPI
     # matches the environment claim, and a mismatch is reported as `invalid-publisher`
     # without saying which field is wrong — so change both sides together, never one first.
-    environment: ghga_pypi
+    environment: ghga-pypi
     permissions:
       contents: read
       # The token uv exchanges with the index for upload rights.
