@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for picking the error to surface when concurrent parts or files fail.
+"""Tests for picking the error to surface when several parts fail concurrently.
 
-Parts run inside nested TaskGroups, so failures can arrive wrapped several layers deep
-and severity has to survive that nesting.
+The flatten step handles arbitrarily nested groups defensively, so severity survives
+whatever shape the TaskGroup hands back.
 """
 
 import asyncio
@@ -72,11 +72,7 @@ def test_severity_wins_regardless_of_position(errors, expected):
 
 
 def test_severity_survives_the_nested_part_group():
-    """A CriticalError still wins when it is raised a level deeper than its rival.
-
-    This is the shape the overlapped verify/upload pair produces: the per-part group
-    is nested inside the per-file group.
-    """
+    """A CriticalError still wins when it is nested a level deeper than its rival."""
     group = ExceptionGroup(
         "file",
         [
@@ -99,10 +95,8 @@ def test_collapsing_surfaces_the_most_significant_error():
 def test_cancellation_is_not_downgraded_to_a_retry():
     """A cancelled batch must not be reported as a file that merely needs retrying.
 
-    `CancelledError` is a BaseException, so a TaskGroup carrying one raises a
-    `BaseExceptionGroup` rather than an `ExceptionGroup`. Catching the broader type
-    would let the concurrent InconclusiveError outrank the cancellation and turn a
-    shutdown into an endless retry.
+    A TaskGroup carrying a `CancelledError` raises `BaseExceptionGroup`, not
+    `ExceptionGroup`, so catching only the latter lets the cancellation through.
     """
     with pytest.raises(BaseExceptionGroup) as exc_info:
         with _collapsing_error_groups():

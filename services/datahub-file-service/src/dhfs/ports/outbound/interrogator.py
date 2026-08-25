@@ -69,6 +69,15 @@ class InterrogatorPort(ABC):
             super().__init__(msg)
 
     @abstractmethod
+    def close(self) -> None:
+        """Release any resources the interrogator holds. Safe to call more than once.
+
+        Declared here so that callers holding only the port - `prepare_interrogator`
+        yields one - can see the teardown obligation.
+        """
+        ...
+
+    @abstractmethod
     async def interrogate_new_files(self) -> None:
         """Query the GHGA Central API for new files that need to be re-encrypted.
 

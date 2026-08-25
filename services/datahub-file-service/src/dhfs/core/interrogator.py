@@ -53,31 +53,43 @@ from hexkit.utils import now_utc_ms_prec
 
 log = logging.getLogger(__name__)
 
-# Buffer types the crypto helpers accept. They read through a memoryview, so any
-#  contiguous bytes-like object works and no conversion is needed at the call site.
+# Crypto helpers read through a memoryview, so no conversion at the call site.
 type ByteBuffer = bytes | bytearray | memoryview
 
-# Crypto and hashing run on a small dedicated pool instead of inline on the event loop.
-#  A part's decrypt/re-encrypt/verify sequence doesn't have an `await` anywhere in it,
-#  so it blocks S3 ops if we run it inline. Using a 2-worker pool yields good perf
-#  improvements, but more than that actually showed worse performance.
+# Crypto and hashing run off the loop: a part's decrypt/re-encrypt/verify chain has no
+#  `await` in it and would block S3 ops. Two workers benchmarked best; more regressed,
+#  because pynacl holds the GIL for most of each segment.
 CRYPTO_THREAD_COUNT = 2
 
 
 @dataclass(frozen=True)
 class _PartContext:
-    """Everything the per-part helpers need besides the buffers and secrets."""
+    """Everything the per-part helpers need besides the buffers and secrets.
+
+    `timings` is the one shared field: it accumulates across every part of the file.
+    """
 
     file_upload: FileUpload
     part_range: PartRange
     part_no: int
-    log_extra: dict
+    new_object_id: str
     timings: dict[str, float]
 
     @property
     def file_id(self) -> UUID4:
         """The ID of the file this part belongs to."""
         return self.file_upload.id
+
+    @property
+    def log_extra(self) -> dict:
+        """Structured logging fields identifying this part."""
+        return {
+            "file_id": self.file_upload.id,
+            "inbox_object_id": str(self.file_upload.object_id),
+            "reencrypted_object_id": self.new_object_id,
+            "file_part_number": self.part_no,
+            "content_range": f"{self.part_range.start}-{self.part_range.stop}",
+        }
 
 
 @contextmanager
@@ -103,7 +115,9 @@ def _flatten_exception_group(error: BaseException) -> list[BaseException]:
     return [error]
 
 
-def _translate_s3_error(error: S3ClientPort.S3Error) -> BaseException:
+def _translate_s3_error(
+    error: S3ClientPort.S3Error,
+) -> InterrogatorPort.CriticalError | InterrogatorPort.InconclusiveError:
     """Map an S3 error onto the interrogation error of matching severity."""
     if isinstance(error, S3ClientPort.CriticalS3Error):
         return InterrogatorPort.CriticalError(error)
@@ -178,8 +192,9 @@ class Interrogator(InterrogatorPort):
         """Run a blocking crypto/hashing call on the dedicated pool.
 
         Mirrors `asyncio.to_thread`, including the context propagation, but targets
-        `_crypto_executor` rather than the loop's default executor - which hexkit's S3
-        provider uses for its boto3 calls, and whose size we do not control.
+        `_crypto_executor`. A private pool is what caps crypto at CRYPTO_THREAD_COUNT
+        GIL-competing threads while leaving the loop's default executor - which
+        hexkit's S3 provider uses for its boto3 presigns - free to run alongside it.
         """
         loop = asyncio.get_running_loop()
         context = contextvars.copy_context()
@@ -309,9 +324,8 @@ class Interrogator(InterrogatorPort):
         read_position = write_position = 0
 
         try:
-            # Sizing happens inside the try so that a malformed part fails as a
-            #  DecryptionError like any other bad input, rather than escaping as a
-            #  bare ValueError that the caller would misread as merely retryable.
+            # Inside the try so a malformed part fails as DecryptionError like any
+            #  other bad input, not as a bare ValueError read as merely retryable.
             plaintext_size = part_size - SEGMENT_OVERHEAD * segments
             if plaintext_size < 0:
                 raise ValueError(
@@ -336,10 +350,8 @@ class Interrogator(InterrogatorPort):
                 write_position += len(decrypted)
                 read_position += crypt4gh.lib.CIPHER_SEGMENT_SIZE
 
-            # The buffer is returned whole rather than sliced, since slicing a
-            #  bytearray copies it and would undo the point of preallocating. That is
-            #  only sound while the segment framing fills it exactly; a short write
-            #  would otherwise hand back silent trailing zeros as if they were plaintext.
+            # Returned whole, not sliced - slicing a bytearray copies and would undo
+            #  the preallocation. Sound only while the framing fills it exactly.
             if write_position != len(buffer):
                 raise ValueError(
                     f"Decryption produced {write_position} bytes for a"
@@ -403,20 +415,14 @@ class Interrogator(InterrogatorPort):
             raise _translate_s3_error(err) from err
 
     async def _upload_part(
-        self,
-        ctx: _PartContext,
-        *,
-        upload_id: str,
-        object_id: str,
-        part_md5: bytes,
-        part: bytes,
+        self, ctx: _PartContext, *, upload_id: str, part_md5: bytes, part: bytes
     ) -> None:
         """Upload a single re-encrypted part, translating S3 errors."""
         try:
             with _stopwatch(ctx.timings, "upload"):
                 await self._s3_client.upload_file_part(
                     upload_id=upload_id,
-                    object_id=object_id,
+                    object_id=ctx.new_object_id,
                     part_no=ctx.part_no,
                     part_md5=part_md5,
                     part=part,
@@ -430,44 +436,60 @@ class Interrogator(InterrogatorPort):
             extra=ctx.log_extra,
         )
 
+    async def _crypto_stage(
+        self,
+        ctx: _PartContext,
+        *,
+        stage: str,
+        failure_message: str,
+        func: Callable[..., Any],
+        propagate: tuple[type[BaseException], ...] = (),
+        **kwargs,
+    ) -> Any:
+        """Run one crypto stage on the pool, timing it and normalising its failures.
+
+        Errors matching `propagate` keep their own severity; everything else becomes
+        an InconclusiveError, so an unrecognised failure schedules a retry.
+        """
+        try:
+            with _stopwatch(ctx.timings, stage):
+                return await self._run_crypto(func, **kwargs)
+        except Exception as err:
+            log.warning(failure_message, ctx.file_id, extra=ctx.log_extra)
+            if propagate and isinstance(err, propagate):
+                raise
+            raise self.InconclusiveError(err) from err
+
     async def _decrypt_stage(
         self, ctx: _PartContext, *, encrypted_part: ByteBuffer, secret: SecretBytes
     ) -> bytearray:
-        """Decrypt a part on the crypto pool, keeping the loop free for S3."""
-        try:
-            with _stopwatch(ctx.timings, "decrypt"):
-                return await self._run_crypto(
-                    self._decrypt_part, encrypted_part=encrypted_part, secret=secret
-                )
-        except Exception as err:
-            log.warning(
-                "File %s: Failed to decrypt part number %i.",
-                ctx.file_id,
-                ctx.part_no,
-                extra=ctx.log_extra,
-            )
-            if isinstance(err, (self.InconclusiveError, self.ConclusiveError)):
-                raise
-            raise self.InconclusiveError(err) from err
+        """Decrypt a part on the crypto pool, keeping the loop free for S3.
+
+        A part that will not decrypt is the source file's problem, so a ConclusiveError
+        from here fails the file rather than scheduling a retry.
+        """
+        return await self._crypto_stage(
+            ctx,
+            stage="decrypt",
+            failure_message="File %s: Failed to decrypt a file part.",
+            func=self._decrypt_part,
+            propagate=(self.InconclusiveError, self.ConclusiveError),
+            encrypted_part=encrypted_part,
+            secret=secret,
+        )
 
     async def _reencrypt_stage(
         self, ctx: _PartContext, *, decrypted_part: ByteBuffer, secret: SecretBytes
     ) -> bytes:
         """Re-encrypt a part under the new secret, on the crypto pool."""
-        try:
-            with _stopwatch(ctx.timings, "reencrypt"):
-                return await self._run_crypto(
-                    self._reencrypt_part,
-                    decrypted_part=decrypted_part,
-                    new_secret=secret,
-                )
-        except Exception as err:
-            log.warning(
-                "File %s: Failed to re-encrypt a file part.",
-                ctx.file_id,
-                extra=ctx.log_extra,
-            )
-            raise self.InconclusiveError(err) from err
+        return await self._crypto_stage(
+            ctx,
+            stage="reencrypt",
+            failure_message="File %s: Failed to re-encrypt a file part.",
+            func=self._reencrypt_part,
+            decrypted_part=decrypted_part,
+            new_secret=secret,
+        )
 
     async def _verify_part(
         self, ctx: _PartContext, *, reencrypted_part: ByteBuffer, secret: SecretBytes
@@ -475,32 +497,25 @@ class Interrogator(InterrogatorPort):
         """Decrypt a re-encrypted part again to prove the round-trip was lossless.
 
         This pass is what makes the re-encryption self-checking, so its output - not
-        the original plaintext - is what feeds the whole-file checksum.
+        the original plaintext - is what feeds the whole-file checksum. Unlike the
+        first decrypt, a failure here is ours and merely earns a retry.
         """
-        try:
-            with _stopwatch(ctx.timings, "verify"):
-                return await self._run_crypto(
-                    self._decrypt_part,
-                    encrypted_part=reencrypted_part,
-                    secret=secret,
-                )
-        except Exception as err:
-            log.warning(
-                "File %s: A file part seems incorrectly re-encrypted.",
-                ctx.file_id,
-                extra=ctx.log_extra,
-            )
-            raise self.InconclusiveError(err) from err
+        return await self._crypto_stage(
+            ctx,
+            stage="verify",
+            failure_message="File %s: A file part seems incorrectly re-encrypted.",
+            func=self._decrypt_part,
+            encrypted_part=reencrypted_part,
+            secret=secret,
+        )
 
     async def _prepare_part(
         self, ctx: _PartContext, *, old_secret: SecretBytes, new_secret: SecretBytes
     ) -> tuple[bytes, tuple[bytes, bytes]]:
         """Produce the bytes to upload for one part, plus their (md5, sha256) digests.
 
-        Each buffer is dropped as soon as the next stage no longer needs it, which
-        holds peak memory to the three parts per slot that `max_concurrent_parts`
-        documents. The peak is inside the re-encryption: its input, its bytearray
-        output, and the `bytes` copy that httpx2 requires are all live at once.
+        Each `del` drops a buffer the moment the next stage stops needing it, holding
+        peak memory to the three parts per slot that `max_concurrent_parts` documents.
         """
         encrypted_part = await self._download_part(ctx)
         decrypted_part = await self._decrypt_stage(
@@ -515,10 +530,13 @@ class Interrogator(InterrogatorPort):
 
         # Digesting a whole part blocks for tens of milliseconds, so it goes to the
         #  pool alongside the crypto rather than running on the loop.
-        with _stopwatch(ctx.timings, "digest"):
-            part_digests = await self._run_crypto(
-                Checksums.digest_encrypted_part, reencrypted_part
-            )
+        part_digests = await self._crypto_stage(
+            ctx,
+            stage="digest",
+            failure_message="File %s: Failed to digest a re-encrypted file part.",
+            func=Checksums.digest_encrypted_part,
+            part=reencrypted_part,
+        )
         return reencrypted_part, part_digests
 
     async def _process_file_parts(
@@ -547,7 +565,6 @@ class Interrogator(InterrogatorPort):
         """
         checksums = Checksums()
         file_id = file_upload.id
-        inbox_object_id = str(file_upload.object_id)
         part_ranges = list(file_upload.calc_encrypted_part_ranges())
         part_slots = asyncio.Semaphore(self._max_concurrent_parts)
 
@@ -572,13 +589,7 @@ class Interrogator(InterrogatorPort):
                     file_upload=file_upload,
                     part_range=part_range,
                     part_no=part_no,
-                    log_extra={  # only for logging purposes
-                        "file_id": file_id,
-                        "inbox_object_id": inbox_object_id,
-                        "reencrypted_object_id": new_object_id,
-                        "file_part_number": part_no,
-                        "content_range": f"{part_range.start}-{part_range.stop}",
-                    },
+                    new_object_id=new_object_id,
                     timings=timings,
                 )
 
@@ -599,16 +610,10 @@ class Interrogator(InterrogatorPort):
                 hashed[index].set()
                 del verified_part
 
+                part_md5, _ = part_digests
                 await self._upload_part(
-                    ctx,
-                    upload_id=upload_id,
-                    object_id=new_object_id,
-                    part_md5=part_digests[0],
-                    part=reencrypted_part,
+                    ctx, upload_id=upload_id, part_md5=part_md5, part=reencrypted_part
                 )
-
-                # Free the buffer before the next part takes this slot
-                del reencrypted_part
                 return part_digests
 
         _wall = time.monotonic()

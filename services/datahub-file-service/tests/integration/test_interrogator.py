@@ -29,7 +29,7 @@ from pydantic import SecretBytes
 from dhfs.adapters.outbound.s3 import S3Client
 from dhfs.core.interrogator import Interrogator
 from dhfs.core.models import FileUpload
-from tests.fixtures.central_api import fail_to_connect, respond
+from tests.fixtures.central_api import capture, fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
     EncryptedObject,
@@ -88,16 +88,9 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         200, json=serialized_file_uploads
     )
 
-    # Track the interrogation reports received
+    # Mock the endpoint we upload the file interrogation report to, tracking reports
     received_reports = []
-
-    def capture_report(request: httpx2.Request) -> httpx2.Response:
-        """Handler to capture interrogation reports sent to the API"""
-        received_reports.append(json.loads(request.content))
-        return httpx2.Response(status_code=201, json={})
-
-    # Mock the endpoint we upload the file interrogation report to
-    joint_fixture.central_api.on_submit_report = capture_report
+    joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     # Process all files
     with caplog.at_level("INFO"):
@@ -372,16 +365,9 @@ async def test_file_decryption_error(joint_fixture: JointFixture):
         200, json=[file_upload.model_dump(mode="json")]
     )
 
-    # Track the failure reports received
+    # Mock the report submission endpoint, tracking the failure reports received
     received_reports = []
-
-    def capture_report(request: httpx2.Request) -> httpx2.Response:
-        """Handler to capture failure reports sent to the API"""
-        received_reports.append(json.loads(request.content))
-        return httpx2.Response(status_code=201, json={})
-
-    # Mock the report submission endpoint
-    joint_fixture.central_api.on_submit_report = capture_report
+    joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     # Process files - should handle the decryption error gracefully
     await joint_fixture.interrogator.interrogate_new_files()
@@ -595,7 +581,9 @@ async def test_connection_failed_on_report_failure(
     )
 
 
-async def _stage_batch(joint_fixture: JointFixture, count: int) -> list[FileUpload]:
+async def _stage_batch(
+    joint_fixture: JointFixture, count: int, file_size: int = int(PART_SIZE * 3.5)
+) -> list[FileUpload]:
     """Put `count` multipart files in the inbox and announce them to the interrogator."""
     config = joint_fixture.config
     await joint_fixture.s3.storage.create_bucket(INBOX)
@@ -605,7 +593,7 @@ async def _stage_batch(joint_fixture: JointFixture, count: int) -> list[FileUplo
     for _ in range(count):
         object_id = str(uuid4())
         encrypted_object = get_encrypted_object(
-            part_size=PART_SIZE, file_size=int(PART_SIZE * 3.5)
+            part_size=PART_SIZE, file_size=file_size
         )
         await upload_encrypted_object(
             bucket_id=INBOX,
@@ -694,50 +682,20 @@ async def test_part_concurrency_is_bounded(joint_fixture: JointFixture):
 
 
 async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
-    """Parts are processed concurrently, so they can finish in any order.
-
-    Both integrity checks that conclude interrogation are order-sensitive: the
+    """Both integrity checks that conclude interrogation are order-sensitive: the
     whole-file SHA-256 over the decrypted content, and the ETag derived from the
-    concatenated per-part MD5s. Completing them successfully with the part order
-    deliberately inverted is what proves the reordering logic holds.
+    concatenated per-part MD5s. Completing them with the part order deliberately
+    inverted is what proves the reordering logic holds.
     """
-    config = joint_fixture.config
-    await joint_fixture.s3.storage.create_bucket(INBOX)
-    await joint_fixture.s3.storage.create_bucket(config.interrogation_bucket_id)
-
-    object_id = str(uuid4())
     # Enough parts that concurrency and the hand-off between them actually matter
-    encrypted_object = get_encrypted_object(
-        part_size=PART_SIZE, file_size=int(PART_SIZE * 5.5)
-    )
-    await upload_encrypted_object(
-        bucket_id=INBOX,
-        object_id=object_id,
-        storage=joint_fixture.s3.storage,
-        encrypted_object=encrypted_object,
-    )
-
-    file_upload = FileUpload(
-        id=uuid4(),
-        decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
-        storage_alias=config.storage_alias,
-        bucket_id=INBOX,
-        object_id=UUID(object_id),
-        decrypted_size=encrypted_object.unencrypted_size,
-        encrypted_size=encrypted_object.encrypted_size,
-        part_size=PART_SIZE,
+    [file_upload] = await _stage_batch(
+        joint_fixture, count=1, file_size=int(PART_SIZE * 5.5)
     )
     expected_part_count = len(list(file_upload.calc_encrypted_part_ranges()))
     assert expected_part_count > 1, "test needs a multipart file to be meaningful"
 
     received_reports = []
-
-    def capture_report(request: httpx2.Request) -> httpx2.Response:
-        """Handler to capture interrogation reports sent to the API"""
-        received_reports.append(json.loads(request.content))
-        return httpx2.Response(status_code=201, json={})
-
-    joint_fixture.central_api.on_submit_report = capture_report
+    joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     # Delay earlier parts the most, so downloads finish in reverse order
     interrogator = cast(Interrogator, joint_fixture.interrogator)
