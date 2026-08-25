@@ -124,7 +124,7 @@ published-combo member python="3.12":
 
     # The closure is in the wheelhouse to be resolved against, not installed directly —
     # so pick this member's own wheel by name.
-    wheel=$(ls "$work"/wheels/"$package"-*.whl)
+    wheel=$(ls "$work"/wheels/"${package//-/_}"-*.whl)
     spec="$wheel"
     [ -n "$extras" ] && spec="${wheel}[${extras}]"
     echo "== installing $spec"
