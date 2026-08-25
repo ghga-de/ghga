@@ -1064,7 +1064,7 @@ class UploadController(UploadControllerPort):
             return
 
         # Look for ongoing uploads and files that failed interrogation
-        incomplete_files = await self._file_upload_dao.find_all(
+        blocking_files_cursor = self._file_upload_dao.find_all(
             mapping={
                 "box_id": box_id,
                 "$or": [
@@ -1076,13 +1076,30 @@ class UploadController(UploadControllerPort):
                 ],
             },
             sort=["alias"],
-        ).to_list()
+        )
+        incomplete_uploads = []
+        need_attention = []
+        async for file in blocking_files_cursor:
+            if file.state == "init":
+                incomplete_uploads.append((file.id, file.alias))  # already sorted
+            elif file.state == "failed" and file.decrypted_sha256 is not None:
+                need_attention.append((file.id, file.alias))
 
-        # If there are incomplete files and force is set to false, raise an error
-        if incomplete_files and not force:
-            file_ids = [(x.id, x.alias) for x in incomplete_files]  # already sorted
-            error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
-            log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
+        # If there are incomplete/failed files and force is set to false, raise an error
+        if (incomplete_uploads or need_attention) and not force:
+            error = self.IncompleteOrFailedError(
+                box_id=box_id,
+                incomplete_uploads=incomplete_uploads,
+                need_attention=need_attention,
+            )
+            log.info(
+                error,
+                extra={
+                    "box_id": box_id,
+                    "incomplete_uploads": incomplete_uploads,
+                    "need_attention": str(need_attention),
+                },
+            )
             raise error
 
         # Recompute stats
@@ -1125,7 +1142,7 @@ class UploadController(UploadControllerPort):
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is open.
-        - `IncompleteUploadsError` if the FileUploadBox has incomplete FileUploads.
+        - `IncompleteOrFailedError` if the FileUploadBox has incomplete FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
         box = await self._get_box(
@@ -1149,7 +1166,9 @@ class UploadController(UploadControllerPort):
             key=lambda entry: entry[1],
         )
         if file_ids:
-            error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
+            error = self.IncompleteOrFailedError(
+                box_id=box_id, incomplete_uploads=file_ids
+            )
             log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
             raise error
 

@@ -34,17 +34,25 @@ class UploadControllerPort(ABC):
     class UploadError(RuntimeError):
         """Base error class for all upload errors"""
 
-    class IncompleteUploadsError(UploadError):
+    class IncompleteOrFailedError(UploadError):
         """Raised when trying to lock or archive a FileUploadBox for which
-        at least one incomplete FileUpload exists.
+        at least one FileUpload exists which either failed the interrogation
+        step or is still being uploaded to the inbox.
         """
 
-        def __init__(self, *, box_id: UUID4, file_ids: list[tuple[UUID4, str]]):
+        def __init__(
+            self,
+            *,
+            box_id: UUID4,
+            incomplete_uploads: list[tuple[UUID4, str]],
+            need_attention: list[tuple[UUID4, str]],
+        ):
             self.box_id = box_id
-            self.file_ids = file_ids
+            self.incomplete_uploads = incomplete_uploads
+            self.need_attention = need_attention
             msg = (
-                f"Cannot lock or archive box {box_id} because these"
-                + f" files are incomplete: {file_ids}"
+                f"Cannot lock or archive box {box_id} because some files are"
+                + " still being uploaded or need attention."
             )
             super().__init__(msg)
 
@@ -466,7 +474,7 @@ class UploadControllerPort(ABC):
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is open.
-        - `IncompleteUploadsError` if the FileUploadBox has incomplete FileUploads.
+        - `IncompleteOrFailedError` if the FileUploadBox has incomplete FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
         ...

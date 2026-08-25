@@ -162,13 +162,13 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpFileUploadStateError.get_body_model(),
     },
-    "incompleteUploads": {
+    "incompleteOrFailed": {
         "description": (
             "Exceptions by ID:"
-            + "\n- incompleteUploads: The box has in-progress uploads that must"
+            + "\n- incompleteOrFailed: The box has in-progress uploads that must"
             + " be completed or cancelled before it can be locked or archived."
         ),
-        "model": http_exceptions.HttpIncompleteUploadsError.get_body_model(),
+        "model": http_exceptions.HttpIncompleteOrFailedError.get_body_model(),
     },
 }
 
@@ -237,7 +237,7 @@ async def create_box(
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxVersionOutdated"]
         | ERROR_RESPONSES["boxMaxSizeTooLow"]
-        | ERROR_RESPONSES["incompleteUploads"],
+        | ERROR_RESPONSES["incompleteOrFailed"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["uploadAbortError"],
     },
 )
@@ -299,9 +299,11 @@ async def update_box(  # noqa: C901, PLR0912
         raise http_exceptions.HttpMaxSizeTooLowError(
             box_id=box_id, max_size=error.max_size, current_size=error.current_size
         ) from error
-    except UploadControllerPort.IncompleteUploadsError as error:
-        raise http_exceptions.HttpIncompleteUploadsError(
-            box_id=error.box_id, file_ids=error.file_ids
+    except UploadControllerPort.IncompleteOrFailedError as error:
+        raise http_exceptions.HttpIncompleteOrFailedError(
+            box_id=error.box_id,
+            incomplete_uploads=error.incomplete_uploads,
+            need_attention=error.need_attention,
         ) from error
     except UploadControllerPort.UploadAbortError as error:
         raise http_exceptions.HttpUploadAbortError() from error
