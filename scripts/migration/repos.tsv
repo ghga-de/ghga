@@ -35,8 +35,8 @@ lib	metldata	.	libs/metldata	main
 # consumed by libs/schemapack's `schema-comparison` extra. uv-native, not template-derived.
 lib	ghga-jsonsubschema	.	libs/ghga-jsonsubschema	main
 # Deep-freeze helpers (dist `ghga-arcticfreeze` since 1.0.0, import name `arcticfreeze`).
-# NB: PyPI also carries the pre-rename dist `arcticfreeze` 0.1.1, which libs/schemapack
-# still pins — same import package, so the two cannot share a venv. See docs/migration/runbook.md.
+# NB: PyPI also carries the pre-rename dist `arcticfreeze` 0.1.1 — same import package,
+# so the two cannot share a venv. libs/schemapack was repointed to `ghga-arcticfreeze` here.
 lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
 # Deployable services from file-services-backend (existing monorepo -> flatten to top-level)
