@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import Final, Generic, TypeVar
 
 # NB: spelled with TypeVar/Generic rather than PEP 695 (`class Converter[InputObject]`)
-# so the package keeps working on Python 3.11, which pyproject.toml still supports.
+# so the package keeps working on Python 3.10+3.11, which pyproject.toml still supports.
 InputObject = TypeVar("InputObject")
 
 DEFAULT_PRIORITY: Final = 0
