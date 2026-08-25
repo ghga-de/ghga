@@ -1082,7 +1082,7 @@ class UploadController(UploadControllerPort):
         async for file in blocking_files_cursor:
             if file.state == "init":
                 incomplete_uploads.append((file.id, file.alias))  # already sorted
-            elif file.state == "failed" and file.decrypted_sha256 is not None:
+            else:
                 need_attention.append((file.id, file.alias))
 
         # If there are incomplete/failed files and force is set to false, raise an error
@@ -1096,7 +1096,7 @@ class UploadController(UploadControllerPort):
                 error,
                 extra={
                     "box_id": box_id,
-                    "incomplete_uploads": incomplete_uploads,
+                    "incomplete_uploads": str(incomplete_uploads),
                     "need_attention": str(need_attention),
                 },
             )
@@ -1157,19 +1157,42 @@ class UploadController(UploadControllerPort):
             log.info("Can't unlock box %s because it's still open.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
 
-        # Scan for incomplete files
+        # Scan for incomplete files (note that this invocation includes 'inbox')
         files_not_interrogated_cursor = self._file_upload_dao.find_all(
-            mapping={"box_id": box_id, "state": {"$in": ["init", "inbox"]}}
+            mapping={
+                "box_id": box_id,
+                "$or": [
+                    {"state": {"$in": ["init", "inbox"]}},  # <- ongoing upload
+                    {  # failed interrogation:
+                        "state": "failed",
+                        "decrypted_sha256": {"$ne": None},
+                    },
+                ],
+            }
         )
-        file_ids = sorted(
-            [(x.id, x.alias) async for x in files_not_interrogated_cursor],
-            key=lambda entry: entry[1],
-        )
-        if file_ids:
+        incomplete_uploads = []
+        need_attention = []
+        async for file in files_not_interrogated_cursor:
+            if file.state in ("init", "inbox"):
+                incomplete_uploads.append((file.id, file.alias))  # already sorted
+            else:
+                need_attention.append((file.id, file.alias))
+
+        # If there are incomplete/failed files, raise an error
+        if incomplete_uploads or need_attention:
             error = self.IncompleteOrFailedError(
-                box_id=box_id, incomplete_uploads=file_ids
+                box_id=box_id,
+                incomplete_uploads=incomplete_uploads,
+                need_attention=need_attention,
             )
-            log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
+            log.info(
+                error,
+                extra={
+                    "box_id": box_id,
+                    "incomplete_uploads": str(incomplete_uploads),
+                    "need_attention": str(need_attention),
+                },
+            )
             raise error
 
         # Verify that all files are in state 'interrogated' or 'awaiting_archival'.
