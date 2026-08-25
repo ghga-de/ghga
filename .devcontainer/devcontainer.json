@@ -76,11 +76,17 @@
       ]
     }
   },
-  // Angular dev server (data-portal serves on 8080, not the ng default 4200; API is mocked
-  // in-browser via MSW, so no backend is required to run it).
-  "forwardPorts": [
-    8080
-  ],
+  // No forwardPorts, deliberately. The data-portal dev server listens on 8080 (not the ng
+  // default 4200; the API is mocked in-browser via MSW, so no backend is needed to run it)
+  // and --net=host below already shares it with the host — the same mechanism that puts the
+  // demo's port 80 on the host's http://localhost. Forwarding it as well is not merely
+  // redundant, it loops: VS Code's forwarder listens on the HOST side, so whenever nothing
+  // is bound to 8080 in here, a connection to 127.0.0.1:8080 escapes to the host gateway,
+  // gets forwarded back in, finds nothing, and goes out again. The connection establishes
+  // but never answers, and the loop burns ~200 MB/s until the client gives up. Playwright's
+  // `reuseExistingServer` probe hits exactly that: it concludes a dev server is already up,
+  // never starts one, and waits forever with no output while memory drains.
+
   // Share the host's network namespace. The demo cluster (kind, running in this
   // container's own docker) publishes its gateway on port 80, and only host networking
   // gets that port to the browser on the host computer as a bare http://localhost. The
