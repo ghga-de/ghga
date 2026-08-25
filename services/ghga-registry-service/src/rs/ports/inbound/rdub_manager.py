@@ -96,11 +96,17 @@ class RDUBManagerPort(ABC):
         """
 
     class BoxIncompleteUploadsError(RuntimeError):
-        """Raised when locking is rejected because files have incomplete uploads."""
+        """Raised when locking is rejected because files have incomplete uploads.
+
+        This also includes files that failed interrogation and require some kind
+        of resolution one way or the other.
+        """
 
         def __init__(self, *, incomplete_file_ids: list[UUID4]):
             self.incomplete_file_ids = incomplete_file_ids
-            super().__init__(f"{len(incomplete_file_ids)} file(s) are incomplete.")
+            super().__init__(
+                f"{len(incomplete_file_ids)} file(s) are incomplete or need attention."
+            )
 
     class BoxTitleExistsError(RuntimeError):
         """Raised when trying to create an upload box with a title that already

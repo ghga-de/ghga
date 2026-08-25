@@ -327,6 +327,10 @@ class RDUBManager(RDUBManagerPort):
                         box_id=fub_id,
                         version=old_box.file_upload_box_version,
                     )
+                except FileBoxClientPort.FUBIncompleteUploadsError as incomplete_err:
+                    raise self.BoxIncompleteUploadsError(
+                        incomplete_file_ids=incomplete_err.incomplete_file_ids
+                    ) from incomplete_err
                 except FileBoxClientPort.FUBVersionError as version_err:
                     log.error(
                         "Can't archive RDUB %s because the associated FileUploadBox"
