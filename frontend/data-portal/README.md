@@ -246,6 +246,8 @@ What they cannot show is anything that depends on the backend actually changing 
 
 Treat the tests in this repository as a fast smoke layer: keep them few and cheap, so they stay useful for quick feedback during frontend development.
 
+They need only the development server — the API is mocked in the browser — so the demo platform (`just up` in the monorepo) is not required for them and only competes for memory. If a run hangs with no output at all, that competition is the first thing to check; `just down` frees it. `playwright.config.ts` prints a warning when memory is already low.
+
 - `pnpm e2e` - run e2e-tests in headless mode on Chromium (fast local default)
 - `pnpm e2e:all` - run e2e-tests in headless mode on all configured browsers using `--workers=2`
 - `pnpm e2e:headed` - run e2e tests in headed mode

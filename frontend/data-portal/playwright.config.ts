@@ -5,10 +5,45 @@
  */
 
 import { defineConfig, devices } from '@playwright/test';
+import { readFileSync } from 'fs';
 
 const parsedWorkers = Number.parseInt(process.env.PLAYWRIGHT_WORKERS ?? '', 10);
 const workerCount =
   Number.isInteger(parsedWorkers) && parsedWorkers > 0 ? parsedWorkers : 1;
+
+const LOW_MEMORY_MB = 4096;
+
+/**
+ * Report the memory the machine can still hand out, in MiB.
+ *
+ * MemAvailable rather than os.freemem(): the latter is MemFree on Linux and counts
+ * reclaimable page cache as unavailable, which under-reports by gigabytes on a busy
+ * machine. Returns undefined where /proc is not available, so callers stay silent
+ * rather than guess.
+ *
+ * @returns Available memory in MiB, or undefined if it cannot be determined.
+ */
+function availableMemoryMb(): number | undefined {
+  try {
+    const kb = /MemAvailable:\s+(\d+)/.exec(readFileSync('/proc/meminfo', 'utf8'))?.[1];
+    return kb ? Number(kb) / 1024 : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// These tests need only the dev server — the API comes from the MSW mocks — so the demo
+// platform contributes nothing here but contention for memory. Playwright is what notices
+// a full machine first, since it forks a worker per test file and then launches Chromium,
+// and it notices by hanging silently rather than failing, which reads like a broken suite
+// rather than a full machine. Warn, never fail: the threshold is a rule of thumb.
+const availableMb = availableMemoryMb();
+if (availableMb !== undefined && availableMb < LOW_MEMORY_MB) {
+  console.warn(
+    `\x1b[33mOnly ${Math.round(availableMb)} MiB of memory available. If the tests hang ` +
+      'with no output, stop the demo platform with `just down` — e2e does not need it.\x1b[0m',
+  );
+}
 
 /**
  * Read environment variables from file.
