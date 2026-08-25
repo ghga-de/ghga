@@ -797,3 +797,51 @@ async def test_live_part_tasks_stay_within_the_budget(joint_fixture: JointFixtur
         f"{peak} part tasks were alive at once for a {part_count}-part file,"
         f" above the budget of {budget}"
     )
+
+
+async def test_cancellation_aborts_the_multipart_upload(joint_fixture: JointFixture):
+    """Shutting down mid-file must not leave a multipart upload open forever.
+
+    The new object ID is a fresh uuid4 that is never persisted, so an upload left
+    open here could never be found again by a later run. `CancelledError` is a
+    BaseException, so the old `except Exception` guard stepped straight over the abort.
+
+    The task is cancelled from outside, which is what `asyncio.run` does on shutdown -
+    raising `CancelledError` inside a part would instead be ignored by the TaskGroup,
+    which is a different situation entirely.
+    """
+    [file_upload] = await _stage_batch(joint_fixture, count=1)
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+
+    aborted: list[str] = []
+    original_abort = interrogator._s3_client.abort_upload
+
+    async def recording_abort(*, upload_id: str, object_id: str) -> None:
+        aborted.append(object_id)
+        await original_abort(upload_id=upload_id, object_id=object_id)
+
+    # Fires once the pipeline is past init_interrogation_bucket_upload
+    in_pipeline = asyncio.Event()
+    original_download = interrogator._download_part
+
+    async def signal_then_download(ctx):
+        in_pipeline.set()
+        return await original_download(ctx)
+
+    with (
+        patch.object(interrogator._s3_client, "abort_upload", recording_abort),
+        patch.object(interrogator, "_download_part", signal_then_download),
+    ):
+        task = asyncio.create_task(interrogator.interrogate_file(file_upload))
+        await in_pipeline.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    assert len(aborted) == 1, "the multipart upload was not aborted on cancellation"
+
+    # The abandoned object never materialises in the interrogation bucket
+    remaining = await joint_fixture.s3.storage.list_all_object_ids(
+        joint_fixture.config.interrogation_bucket_id
+    )
+    assert aborted[0] not in remaining

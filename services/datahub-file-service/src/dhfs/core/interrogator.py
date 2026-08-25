@@ -592,7 +592,6 @@ class Interrogator(InterrogatorPort):
         checksums = Checksums()
         file_id = file_upload.id
         part_ranges = list(file_upload.calc_encrypted_part_ranges())
-        part_slots = asyncio.Semaphore(self._max_concurrent_parts)
 
         # The whole-file sha256 is order-dependent, so each part waits for its
         #  predecessor to be folded in before folding itself in and releasing the next.
@@ -608,7 +607,7 @@ class Interrogator(InterrogatorPort):
         ) -> tuple[bytes, bytes]:
             """Process one part, returning its (md5, sha256) digests.
 
-            The calling worker holds a part slot for the whole of this call.
+            The calling worker owns this part for the whole of this call.
             """
             part_no = index + 1
 
@@ -628,10 +627,10 @@ class Interrogator(InterrogatorPort):
                 ctx, reencrypted_part=reencrypted_part, secret=new_secret
             )
 
-            # A worker claims its part only while holding a slot, and parts are
-            #  claimed in index order, so a predecessor is always either finished or
-            #  in flight in another worker. That is what keeps this wait
-            #  deadlock-free: it can only ever wait on a part that is progressing.
+            # Parts are dealt from `pending` in index order and a worker holds one
+            #  at a time, so a predecessor is always either already folded or in
+            #  flight in another worker. That is what keeps this wait deadlock-free:
+            #  it can only ever wait on a part that is progressing.
             if index:
                 await hashed[index - 1].wait()
             with _stopwatch(timings, "fold"):
@@ -645,29 +644,30 @@ class Interrogator(InterrogatorPort):
             )
             return part_digests
 
-        # Workers take a slot before taking a part range, so a worker that has not
-        #  been admitted owns no part and nothing can be waiting on it. Holding the
-        #  live task count to the budget also keeps a 9,995-part file from allocating
-        #  ten thousand coroutines before the first byte is downloaded.
+        # The worker count *is* the budget: it bounds live tasks, parts in flight and
+        #  therefore peak memory, and it keeps a 9,995-part file from allocating ten
+        #  thousand coroutines before the first byte is downloaded. A semaphore here
+        #  would be inert - a worker holds one part at a time and there are never more
+        #  workers than the budget, so it could never block.
         pending = enumerate(part_ranges)
         digests: list[tuple[bytes, bytes] | None] = [None] * len(part_ranges)
+        worker_count = min(self._max_concurrent_parts, len(part_ranges))
 
         async def _part_worker() -> None:
             """Take and process part ranges until the shared iterator runs out."""
             while True:
-                async with part_slots:
-                    try:
-                        index, part_range = next(pending)
-                    except StopIteration:
-                        # Never let this escape a coroutine - it would surface as
-                        #  "RuntimeError: coroutine raised StopIteration".
-                        return
-                    digests[index] = await _handle_part(index, part_range)
+                try:
+                    index, part_range = next(pending)
+                except StopIteration:
+                    # Never let this escape a coroutine - it would surface as
+                    #  "RuntimeError: coroutine raised StopIteration".
+                    return
+                digests[index] = await _handle_part(index, part_range)
 
         _wall = time.monotonic()
         with _collapsing_error_groups():
             async with asyncio.TaskGroup() as task_group:
-                for _ in range(min(self._max_concurrent_parts, len(part_ranges))):
+                for _ in range(worker_count):
                     task_group.create_task(_part_worker())
         wall_time = time.monotonic() - _wall
 
@@ -762,6 +762,15 @@ class Interrogator(InterrogatorPort):
         new_secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
         log.debug("File %s: Generated new encryption secret.", file_upload.id)
 
+        # Until the upload is completed, every exit from this block has to abort it.
+        #  The new object ID is a fresh uuid4 that is never persisted, so an upload
+        #  left open here can never be found again by a later run - it just accrues
+        #  storage cost until something external reaps it.
+        #
+        #  `finally` rather than `except Exception` so that a CancelledError aborts the
+        #  upload on its way out. Nothing is caught here, so nothing is swallowed and
+        #  the cancellation propagates exactly as it did before.
+        upload_completed = False
         try:
             # Re-encrypt and upload file parts, obtaining the checksums for the decrypted
             #  and re-encrypted content
@@ -777,49 +786,45 @@ class Interrogator(InterrogatorPort):
                 old_secret=old_secret,
                 new_secret=new_secret,
             )
-        except Exception:  # all exceptions require aborting the upload, just re-raise
-            await self._clean_up_upload(
-                upload_id=upload_id, object_id=new_object_id, file_id=file_upload.id
-            )
-            raise
 
-        # Compare final decrypted content checksum with the user-reported value
-        if checksums.unencrypted_sha256.hexdigest() != file_upload.decrypted_sha256:
-            log.warning(
-                "File %s: Unable to re-encrypt: sha256 checksum of decrypted content"
-                + " doesn't match user-reported value.",
-                file_upload.id,
-            )
-            await self._clean_up_upload(
-                upload_id=upload_id, object_id=new_object_id, file_id=file_upload.id
-            )
-            raise self.DecryptedChecksumMismatchError()
+            # Compare final decrypted content checksum with the user-reported value
+            if checksums.unencrypted_sha256.hexdigest() != file_upload.decrypted_sha256:
+                log.warning(
+                    "File %s: Unable to re-encrypt: sha256 checksum of decrypted"
+                    + " content doesn't match user-reported value.",
+                    file_upload.id,
+                )
+                raise self.DecryptedChecksumMismatchError()
 
-        # Complete upload
-        log.debug(
-            "File %s: Checksums match - completing multipart upload.",
-            file_upload.id,
-            extra={"file_id": file_upload.id, "upload_id": upload_id},
-        )
-        try:
-            etag_of_reencrypted_obj = await self._s3_client.complete_upload(
-                upload_id=upload_id,
-                object_id=new_object_id,
-                part_count=len(checksums.encrypted_md5),
-            )
+            # Complete upload
             log.debug(
-                "File %s: Multipart upload %s for object ID %s completed.",
+                "File %s: Checksums match - completing multipart upload.",
                 file_upload.id,
-                upload_id,
-                new_object_id,
+                extra={"file_id": file_upload.id, "upload_id": upload_id},
             )
-        except S3ClientPort.CriticalS3Error as err:
-            raise self.CriticalError(err) from err
-        except S3ClientPort.S3Error as err:
-            await self._clean_up_upload(
-                upload_id=upload_id, object_id=new_object_id, file_id=file_upload.id
-            )
-            raise self.InconclusiveError(err) from err
+            try:
+                etag_of_reencrypted_obj = await self._s3_client.complete_upload(
+                    upload_id=upload_id,
+                    object_id=new_object_id,
+                    part_count=len(checksums.encrypted_md5),
+                )
+                log.debug(
+                    "File %s: Multipart upload %s for object ID %s completed.",
+                    file_upload.id,
+                    upload_id,
+                    new_object_id,
+                )
+            except S3ClientPort.CriticalS3Error as err:
+                raise self.CriticalError(err) from err
+            except S3ClientPort.S3Error as err:
+                raise self.InconclusiveError(err) from err
+
+            upload_completed = True
+        finally:
+            if not upload_completed:
+                await self._clean_up_upload(
+                    upload_id=upload_id, object_id=new_object_id, file_id=file_upload.id
+                )
 
         # Check integrity of final object in S3
         if checksums.encrypted_checksum_for_s3() != etag_of_reencrypted_obj:
