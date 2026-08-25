@@ -3718,7 +3718,7 @@ wheels = [
 
 [[package]]
 name = "schemapack"
-version = "4.3.0"
+version = "4.4.0"
 source = { editable = "libs/schemapack" }
 dependencies = [
     { name = "ghga-arcticfreeze" },

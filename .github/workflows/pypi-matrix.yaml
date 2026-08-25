@@ -1,13 +1,10 @@
 # The published-combo matrix (ADR-0002) — the PyPI lane's test gate.
 #
-# Tests each lane member the way an external consumer gets it: its wheel installed into a
-# bare environment, dependencies resolved from PyPI, on Python versions the workspace
+# Tests each lane member: its wheel installed into a bare environment,
+# dependencies resolved from PyPI, on Python versions the workspace
 # never runs. ci.yaml calls it on affected members, pypi-publish.yaml before any upload.
 #
-# If a dependency's version has not changed, it is resolved from PyPI. Only a dependency
-# that is itself a release candidate — declared version above the index, so about to be
-# published — is built from this repo, because that is the version consumers will resolve
-# once the train lands.
+# If a dependency's version has not changed, it is resolved from PyPI.
 #
 # Members, extras, test deps and the Python range all come from scripts/pypi_members.py.
 name: pypi-matrix
@@ -51,9 +48,7 @@ jobs:
           echo "cells=$cells" >> "$GITHUB_OUTPUT"
           echo "$cells" | python3 -m json.tool
 
-          # Without this a member with no cells is skipped silently — a green check that
-          # tested nothing. No member is in that state today; it would take a member
-          # declaring a floor outside TEST_PYTHONS entirely.
+          # Warning if a member with no cells is skipped 
           uv run --script scripts/pypi_members.py ${paths:+--paths $paths} --members \
             | python3 -c "
           import json, sys
@@ -89,19 +84,15 @@ jobs:
           ls -l /tmp/wheels
 
       - name: Create a bare ${{ matrix.cell.python }} environment
-        # Run from /tmp, not the repo: uv reads the repo's own Python pin when it finds
-        # one nearby, and this venv is deliberately on an older version than that.
         working-directory: /tmp
         run: uv venv --python "${{ matrix.cell.python }}" /tmp/venv
 
-      - name: Install the wheel from the index
+      - name: Install the wheel
         working-directory: /tmp
         env:
           EXTRAS: ${{ matrix.cell.extras }}
           PACKAGE: ${{ matrix.cell.package }}
         run: |
-          # The train in the wheelhouse is there to be resolved against, not installed
-          # directly — so pick this member's own wheel by name.
           # Replace dashes with underscores in names.
           wheel=$(ls /tmp/wheels/"${PACKAGE//-/_}"-*.whl)
           spec="$wheel"
@@ -110,8 +101,6 @@ jobs:
           uv pip install --python /tmp/venv/bin/python \
             --find-links /tmp/wheels "$spec"
 
-      # The test dependencies installed from the root pyproject.toml's dev dependency group
-      # minus the lint tools. Everything else comes in with the wheel's own extras.
       - name: Install the test dependencies
         run: |
           uv run --script scripts/pypi_members.py --dev-requirements > /tmp/test-requirements.txt
@@ -122,8 +111,6 @@ jobs:
       - name: Show the resolved environment
         run: uv pip freeze --python /tmp/venv/bin/python
 
-      # cwd = the member directory, as in ci.yaml: each member is its own pytest rootdir,
-      # and the src/ layout means the tests import the installed package.
       - name: Run the test suite
         working-directory: ${{ matrix.cell.path }}
         run: /tmp/venv/bin/python -m pytest -q --durations=10
