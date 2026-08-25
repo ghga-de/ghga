@@ -95,7 +95,7 @@ class RDUBManagerPort(ABC):
         references a version of the resource that is not current.
         """
 
-    class BoxIncompleteUploadsError(RuntimeError):
+    class BoxIncompleteOrFailedError(RuntimeError):
         """Raised when locking is rejected because files have incomplete uploads.
 
         This also includes files that failed interrogation and require some kind

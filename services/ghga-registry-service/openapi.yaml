@@ -593,8 +593,9 @@ components:
           title: Description
         force:
           default: false
-          description: Force the state change even if prerequisites are not met. Only
-            relevant when locking a box; ignored for all other state changes.
+          description: Force the state change even if prerequisites are not met. Only relevant
+            when locking a box, in which case any ongoing uploads will be allowed to continue,
+            but other changes will become prohibited.
           title: Force
           type: boolean
         max_size:

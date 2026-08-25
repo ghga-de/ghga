@@ -32,7 +32,7 @@ from rs.adapters.inbound.fastapi_.http_exceptions import (
     HttpBoxStateError,
     HttpBoxTitleExistsError,
     HttpBoxVersionError,
-    HttpIncompleteUploadsError,
+    HttpIncompleteOrFailedError,
     HttpInternalError,
     HttpNotAuthorizedError,
     HttpStateChangeError,
@@ -229,10 +229,8 @@ async def update_research_data_upload_box(
         raise HttpBoxTitleExistsError(title=request.title or "") from err
     except RDUBManagerPort.BoxVersionError as err:
         raise HttpBoxVersionError() from err
-    except RDUBManagerPort.BoxIncompleteUploadsError as err:
-        raise HttpIncompleteUploadsError(
-            incomplete_uploads=err.incomplete_file_ids
-        ) from err
+    except RDUBManagerPort.BoxIncompleteOrFailedError as err:
+        raise HttpIncompleteOrFailedError(file_ids=err.incomplete_file_ids) from err
     except RDUBManagerPort.ArchivalPrereqsError as err:
         raise HttpArchivalPrereqsError() from err
     except RDUBManagerPort.StateChangeError as err:
