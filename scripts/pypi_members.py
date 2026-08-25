@@ -44,7 +44,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def _requirement_name(spec: str) -> str:
-    """The distribution name at the head of a requirement specifier."""
+    """The package name in a requirement, e.g. `pytest>=9.1` -> `pytest`."""
     for i, ch in enumerate(spec):
         if ch in "<>=!~[ ;(":
             return spec[:i].strip().lower()
@@ -52,6 +52,7 @@ def _requirement_name(spec: str) -> str:
 
 
 def _parse_version(text: str) -> tuple[int, ...]:
+    """Converts a Python version into comparable numbers, e.g. `3.12` -> `(3, 12)`."""
     parts = []
     for chunk in text.strip().split("."):
         if chunk == "*":
@@ -64,6 +65,7 @@ def _parse_version(text: str) -> tuple[int, ...]:
 
 
 def _compare(left: tuple[int, ...], right: tuple[int, ...]) -> int:
+    """Compares two versions: -1 if left is older, 0 if equal, 1 if newer."""
     width = max(len(left), len(right))
     left = left + (0,) * (width - len(left))
     right = right + (0,) * (width - len(right))
@@ -93,7 +95,6 @@ def _satisfies_clause(version: tuple[int, ...], clause: str) -> bool:
                 depth = min(len(version), len(bound))
                 equal = _compare(version[:depth], bound[:depth]) == 0
                 return equal if op == "==" else not equal
-            # ~=X.Y  ->  >=X.Y and <(X+1);  ~=X.Y.Z  ->  >=X.Y.Z and <X.(Y+1)
             if len(bound) < 2:
                 return _compare(version, bound) >= 0
             upper = (*bound[:-2], bound[-2] + 1)
@@ -114,48 +115,76 @@ def _supported(requires_python: str, python: str) -> bool:
 
 
 def _test_extras(optional: dict) -> list[str]:
-    """Every extra a member declares — its own suite may need any of them.
+    """Returns the names of a member's optional dependency groups, i.e. its extras.
 
-    Not just `all`: hexkit's omits redis, so an `all` install cannot collect those tests.
+    Skips any extra that contains a NON_TEST_TOOLS entry — that is a dev extra, and a
+    cell installs every extra it gets back.
     """
-    return sorted(optional)
+    return sorted(
+        name
+        for name, specs in optional.items()
+        if not any(
+            isinstance(spec, str) and _requirement_name(spec) in NON_TEST_TOOLS
+            for spec in specs
+        )
+    )
 
 
-def _closure(path: str, graph: dict[str, set[str]]) -> list[str]:
-    """Every workspace member `path` depends on, transitively — its closure train."""
+def _closure(member_path: str, dependency_graph: dict[str, set[str]]) -> list[str]:
+    """The transitive dependencies of one member.
+
+    Args:
+        member_path:
+            The member's folder relative to the repo root, e.g. `libs/hexkit`
+        dependency_graph:
+            Every member's direct dependencies on other members, keyed the same way.
+            Built by `internal_dep_graph()`.
+    """
     seen: set[str] = set()
-    queue = list(graph.get(path, ()))
+    queue = list(dependency_graph.get(member_path, ()))
     while queue:
         dep = queue.pop()
         if dep in seen:
             continue
         seen.add(dep)
-        queue.extend(graph.get(dep, ()))
+        queue.extend(dependency_graph.get(dep, ()))
     return sorted(seen)
 
 
-def _lane(root: str, ghga: dict) -> str:
-    lane = ghga.get("release")
+def _lane(root: str, ghga_markers: dict) -> str:
+    """The member's release lane: its `[tool.ghga] release`, else LANE_DEFAULTS by folder.
+
+    Args:
+        root:
+            The member's top-level folder: `libs`, `tools` or `services`.
+        ghga_markers:
+            The member's parsed `[tool.ghga]` table, e.g. `{"release": "pypi"}`, or
+            empty when it declares none.
+    """
+    lane = ghga_markers.get("release")
     if lane:
         return lane
-    if ghga.get("pypi"):
+    if ghga_markers.get("pypi"):
         return "pypi"
     return LANE_DEFAULTS.get(root, "none")
 
 
 def pypi_members(
-    paths: list[str] | None = None, train: set[str] | None = None
+    member_paths: list[str] | None = None, release_members: set[str] | None = None
 ) -> list[dict]:
-    """Every workspace member released to PyPI, with its intersected Python versions.
+    """Returns one dict per PyPI-lane member, for the matrix and the release plan.
 
-    `train` is the set of member paths being released in this same run. It splits each
-    member's closure in two: `train_deps` are built from the repo, because the versions
-    they declare are not on the index yet; everything else is left to resolve from PyPI,
-    which is what a consumer's install does. Without a train nothing is built locally —
-    the safe default, since resolving from the index can only under-state what is
-    available, never over-state it.
+    Args:
+        member_paths:
+            Restrict to these member folders; None means every lane member.
+        release_members:
+            The members being released in this same run.
+
+    Returns:
+        One dict per member with `path`, `package`, `version`, `requires_python`,
+        `internal_deps`, `train_deps`, `extras`, and `pythons`
     """
-    graph = internal_dep_graph()
+    dependency_graph = internal_dep_graph()
     members = []
     for root in ("libs", "tools", "services"):
         directory = ROOT / root
@@ -166,17 +195,16 @@ def pypi_members(
             if not manifest.is_file():
                 continue
             relative = str(path.relative_to(ROOT))
-            if paths and relative not in paths:
+            if member_paths and relative not in member_paths:
                 continue
             data = tomllib.loads(manifest.read_text())
-            ghga = data.get("tool", {}).get("ghga", {})
-            # _lane decides alone: honouring `pypi = true` here would readmit a member
-            # that `release = "none"` excluded.
-            if _lane(root, ghga) != "pypi":
+            ghga_markers = data.get("tool", {}).get("ghga", {})
+
+            if _lane(root, ghga_markers) != "pypi":
                 continue
             project = data["project"]
             requires_python = project.get("requires-python", "")
-            closure = _closure(relative, graph)
+            closure = _closure(relative, dependency_graph)
             members.append(
                 {
                     "path": relative,
@@ -184,11 +212,10 @@ def pypi_members(
                     "version": project.get("version", ""),
                     "requires_python": requires_python,
                     "internal_deps": closure,
-                    "train_deps": sorted(d for d in closure if d in (train or ())),
+                    "train_deps": sorted(  # Dependencies released in this run.
+                        d for d in closure if d in (release_members or ())
+                    ),
                     "extras": _test_extras(project.get("optional-dependencies", {})),
-                    # TEST_PYTHONS is intersected with what each member declares in its
-                    # own requires-python, so a member is
-                    # never claimed to be tested on a version it does not support.
                     "pythons": [
                         p for p in TEST_PYTHONS if _supported(requires_python, p)
                     ],
@@ -383,7 +410,7 @@ def release_plan() -> dict:
     candidates, skipped = release_candidates()
     unreachable = [m for m in candidates if m["index_unreachable"]]
     publishing = [m for m in candidates if not m["index_unreachable"]]
-    train = {member["path"] for member in publishing}
+    release_members = {member["path"] for member in publishing}
     lane_paths = {member["path"] for member in pypi_members()}
     errors = []
 
@@ -401,9 +428,9 @@ def release_plan() -> dict:
                     " lane, so consumers could never install it"
                 )
 
-    # Re-read with the train known, so each member carries the closure that will be built
-    # from the repo rather than resolved from the index.
-    by_path = {m["path"]: m for m in pypi_members(train=train)}
+    # Re-read now that the release set is known, so each member carries the closure that
+    # will be built from the repo rather than resolved from the index.
+    by_path = {m["path"]: m for m in pypi_members(release_members=release_members)}
     ordered = _publish_order(
         [dict(m, train_deps=by_path[m["path"]]["train_deps"]) for m in publishing]
     )
@@ -465,16 +492,16 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(candidates))
         return 0
 
-    train = set()
+    release_members = set()
     if args.check_pypi:
         candidates, _ = release_candidates()
         if any(member["index_unreachable"] for member in candidates):
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
             )
-        train = {member["path"] for member in candidates}
+        release_members = {member["path"] for member in candidates}
 
-    members = pypi_members(args.paths, train=train)
+    members = pypi_members(args.paths, release_members=release_members)
     print(json.dumps(members if args.members else matrix_cells(members)))
     return 0
 
