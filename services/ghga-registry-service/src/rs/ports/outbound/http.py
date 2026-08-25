@@ -118,7 +118,7 @@ class FileBoxClientPort(ABC):
     class FUBMaxSizeTooLowError(RuntimeError):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
-    class FUBIncompleteUploadsError(RuntimeError):
+    class FUBIncompleteOrFailedError(RuntimeError):
         """Raised when locking is rejected because some files are still being
         uploaded or files that failed interrogation need attention.
         """
@@ -148,7 +148,7 @@ class FileBoxClientPort(ABC):
         """Lock a FileUploadBox in the owning service.
 
         Raises:
-            FUBIncompleteUploadsError if force=False and there are incomplete uploads
+            FUBIncompleteOrFailedError if force=False and there are incomplete uploads
                 or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.

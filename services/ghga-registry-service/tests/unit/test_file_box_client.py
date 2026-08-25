@@ -110,21 +110,21 @@ async def test_lock_file_upload_box(
     )
     assert str(fub_state_err.value) == fub_state_err_msg
 
-    # 409 "incompleteUploads" -> FUBIncompleteUploadsError with list of file IDs
+    # 409 "incompleteOrFailed" -> FUBIncompleteOrFailedError with list of file IDs
     incomplete_file_ids = [uuid4(), uuid4()]
     file_box_api.on_update_file_upload_box = respond(
         409,
         json={
-            "exception_id": "incompleteUploads",
+            "exception_id": "incompleteOrFailed",
             "data": {
-                "incomplete_uploads": [
+                "file_ids": [
                     [str(fid), f"alias-{i}"]
                     for i, fid in enumerate(incomplete_file_ids)
                 ]
             },
         },
     )
-    with pytest.raises(FileBoxClient.FUBIncompleteUploadsError) as fub_uploads_err:
+    with pytest.raises(FileBoxClient.FUBIncompleteOrFailedError) as fub_uploads_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
     assert fub_uploads_err.value.incomplete_file_ids == incomplete_file_ids
 

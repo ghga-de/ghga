@@ -350,11 +350,11 @@ async def test_update_research_data_upload_box(
         )
         assert response.status_code == 500
 
-        # make sure the API translates the BoxIncompleteUploadsError correctly
+        # make sure the API translates the BoxIncompleteOrFailedError correctly
         rdub_manager.reset_mock()
         incomplete_file_ids = [uuid4(), uuid4()]
         rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (
-            RDUBManagerPort.BoxIncompleteUploadsError(
+            RDUBManagerPort.BoxIncompleteOrFailedError(
                 incomplete_file_ids=incomplete_file_ids
             )
         )
@@ -363,10 +363,8 @@ async def test_update_research_data_upload_box(
         )
         assert response.status_code == 409
         body = response.json()
-        assert body["exception_id"] == "incompleteUploads"
-        assert body["data"]["incomplete_uploads"] == [
-            str(fid) for fid in incomplete_file_ids
-        ]
+        assert body["exception_id"] == "incompleteOrFailed"
+        assert body["data"]["file_ids"] == [str(fid) for fid in incomplete_file_ids]
 
         # handle other exception
         rdub_manager.reset_mock()
