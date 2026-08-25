@@ -143,6 +143,80 @@ async def test_cleaner_some_files_failed(
     assert set(remaining_files) == {failing_file_id}
 
 
+async def test_cleaner_aborts_early_on_missing_bucket(
+    joint_fixture: JointFixture,
+    caplog,
+):
+    """A missing bucket must stop the run, not be re-discovered once per object.
+
+    The bucket's absence is a fact about the run, so every remaining deletion would
+    fail identically. The untried objects still have to be counted as failures -
+    none of them were removed.
+    """
+    interrogation = joint_fixture.config.interrogation_bucket_id
+    file_ids = [
+        "18d50867-fbef-4a32-8f70-e81766383980",
+        "1969264c-3abe-44e6-8db9-65612d6c6a90",
+        "a7084f3d-f4cb-4333-853c-bc1e400f14ba",
+        "c3f2b1a0-1111-4222-8333-444455556666",
+    ]
+    for file_id in file_ids:
+        with temp_file_object(bucket_id=interrogation, object_id=file_id) as file:
+            await joint_fixture.s3.populate_file_objects([file])
+
+    joint_fixture.central_api.on_get_removable_files = respond(200, json=file_ids)
+
+    # The bucket vanishes after the first successful deletion
+    original_remove_file = joint_fixture.s3_cleaner._s3_client.remove_file  # type: ignore
+    attempted: list[str] = []
+
+    async def vanishing_bucket(*, object_id: str) -> None:
+        attempted.append(object_id)
+        if len(attempted) == 1:
+            await original_remove_file(object_id=object_id)
+            return
+        raise S3ClientPort.BucketNotFoundError(bucket_id=interrogation)
+
+    with unittest.mock.patch.object(
+        joint_fixture.s3_cleaner._s3_client,  # type: ignore
+        "remove_file",
+        new=vanishing_bucket,
+    ):
+        with caplog.at_level("INFO"):
+            await joint_fixture.s3_cleaner.scan_and_clean()
+
+    # Stopped at the first missing-bucket error rather than trying all four
+    assert len(attempted) == 2, f"expected an early abort, tried {attempted}"
+
+    # The three it never removed are all counted as failures
+    assert (
+        "Cleanup completed with errors: 1 file(s) deleted successfully, 3 failed."
+        in caplog.text
+    )
+    # The bucket that went missing is named outright, not left inside an error repr
+    assert (
+        f"Cleanup aborted: the interrogation bucket '{interrogation}' does not exist."
+        in caplog.text
+    )
+    assert (
+        "3 object(s) were left in place after 1 successful deletion(s)." in caplog.text
+    )
+
+    aborts = [
+        record for record in caplog.records if hasattr(record, "missing_bucket_id")
+    ]
+    assert len(aborts) == 1, "expected exactly one abort record"
+    assert aborts[0].missing_bucket_id == interrogation
+    assert set(aborts[0].objects_left_in_place) == set(file_ids[1:])
+
+    failed = [
+        record.objects_unable_to_delete
+        for record in caplog.records
+        if hasattr(record, "objects_unable_to_delete")
+    ]
+    assert failed and set(failed[-1]) == set(file_ids[1:])
+
+
 async def test_no_files_in_interrogation_bucket(
     joint_fixture: JointFixture,
     caplog,

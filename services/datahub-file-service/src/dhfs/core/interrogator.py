@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import ceil
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import crypt4gh.header
@@ -125,21 +125,33 @@ def _translate_s3_error(
 
 
 def _most_significant_error(group: BaseExceptionGroup) -> BaseException:
-    """Pick the error to surface when several parts or files fail concurrently.
+    """Pick the error to surface when several parts fail concurrently.
 
     A CriticalError has to stop the whole batch and a ConclusiveError has to fail the
     file outright, so neither may be masked by an InconclusiveError that would merely
     schedule a retry.
+
+    An error of no recognised severity ranks between them: it is not known to be
+    retryable, so surfacing the InconclusiveError alongside it would retry the same
+    unhandled failure on every run instead of reporting it once.
     """
     errors = _flatten_exception_group(group)
     for error_type in (
         InterrogatorPort.CriticalError,
         InterrogatorPort.ConclusiveError,
-        InterrogatorPort.InconclusiveError,
     ):
         for error in errors:
             if isinstance(error, error_type):
                 return error
+
+    classified = (
+        InterrogatorPort.CriticalError,
+        InterrogatorPort.ConclusiveError,
+        InterrogatorPort.InconclusiveError,
+    )
+    for error in errors:
+        if not isinstance(error, classified):
+            return error
     return errors[0]
 
 
@@ -221,12 +233,7 @@ class Interrogator(InterrogatorPort):
         #  abandons the rest of the batch, which is the point of that severity.
         for file in new_files:
             try:
-                # Verify that the file exists in the inbox before proceeding
-                if not await self._s3_client.get_is_file_in_inbox(file=file):
-                    raise self.InconclusiveError(
-                        f"The file {file.id}, under object ID {file.object_id} was not"
-                        + " found in the inbox"
-                    )
+                await self._check_file_is_in_inbox(file=file)
                 await self.interrogate_file(file)
             except self.ConclusiveError as err:
                 reason = getattr(err, "reason", None) or "Unexpected error"
@@ -241,6 +248,24 @@ class Interrogator(InterrogatorPort):
                 )
 
         log.info("Finished processing current file batch.")
+
+    async def _check_file_is_in_inbox(self, *, file: FileUpload) -> None:
+        """Verify that the file exists in the inbox before processing it.
+
+        Raises:
+        - InconclusiveError if the file is absent, or if S3 could not answer.
+        - CriticalError if S3 reports a problem that stops the whole batch.
+        """
+        try:
+            is_in_inbox = await self._s3_client.get_is_file_in_inbox(file=file)
+        except S3ClientPort.S3Error as err:
+            raise _translate_s3_error(err) from err
+
+        if not is_in_inbox:
+            raise self.InconclusiveError(
+                f"The file {file.id}, under object ID {file.object_id} was not"
+                + " found in the inbox"
+            )
 
     async def _fetch_batch(self) -> list[FileUpload] | None:
         """Fetch the next batch of files to process.
@@ -550,9 +575,10 @@ class Interrogator(InterrogatorPort):
     ) -> Checksums:
         """Perform the decrypt/re-encrypt/decrypt/upload cycle on each file part.
 
-        Parts are processed with bounded concurrency, which is the only concurrency in
-        the pipeline: the stages within a part run strictly in order. Since only one
-        file is in flight at a time, `max_concurrent_parts` is this file's whole budget.
+        A pool of `max_concurrent_parts` workers draws part ranges from a shared
+        iterator; the stages within a part run strictly in order. Since only one file
+        is in flight at a time, that pool is this file's whole budget - of memory, of
+        live tasks, and of concurrent S3 transfers.
 
         Returns the `Checksums` object containing the checksums calculated during
         the file processing. All error translation is done here, but all S3 cleanup is
@@ -580,52 +606,73 @@ class Interrogator(InterrogatorPort):
         async def _handle_part(
             index: int, part_range: PartRange
         ) -> tuple[bytes, bytes]:
-            """Process one part, returning its (md5, sha256) digests."""
+            """Process one part, returning its (md5, sha256) digests.
+
+            The calling worker holds a part slot for the whole of this call.
+            """
             part_no = index + 1
 
-            async with part_slots:
-                log.debug("File %s: Processing part %s.", file_id, part_no)
-                ctx = _PartContext(
-                    file_upload=file_upload,
-                    part_range=part_range,
-                    part_no=part_no,
-                    new_object_id=new_object_id,
-                    timings=timings,
-                )
+            log.debug("File %s: Processing part %s.", file_id, part_no)
+            ctx = _PartContext(
+                file_upload=file_upload,
+                part_range=part_range,
+                part_no=part_no,
+                new_object_id=new_object_id,
+                timings=timings,
+            )
 
-                reencrypted_part, part_digests = await self._prepare_part(
-                    ctx, old_secret=old_secret, new_secret=new_secret
-                )
-                verified_part = await self._verify_part(
-                    ctx, reencrypted_part=reencrypted_part, secret=new_secret
-                )
+            reencrypted_part, part_digests = await self._prepare_part(
+                ctx, old_secret=old_secret, new_secret=new_secret
+            )
+            verified_part = await self._verify_part(
+                ctx, reencrypted_part=reencrypted_part, secret=new_secret
+            )
 
-                # Acquisition above is FIFO and tasks are created in part order, so a
-                #  part is never admitted ahead of its predecessor. That is what keeps
-                #  this wait deadlock-free: it only ever waits on an admitted part.
-                if index:
-                    await hashed[index - 1].wait()
-                with _stopwatch(timings, "fold"):
-                    await self._run_crypto(checksums.update_unencrypted, verified_part)
-                hashed[index].set()
-                del verified_part
+            # A worker claims its part only while holding a slot, and parts are
+            #  claimed in index order, so a predecessor is always either finished or
+            #  in flight in another worker. That is what keeps this wait
+            #  deadlock-free: it can only ever wait on a part that is progressing.
+            if index:
+                await hashed[index - 1].wait()
+            with _stopwatch(timings, "fold"):
+                await self._run_crypto(checksums.update_unencrypted, verified_part)
+            hashed[index].set()
+            del verified_part
 
-                part_md5, _ = part_digests
-                await self._upload_part(
-                    ctx, upload_id=upload_id, part_md5=part_md5, part=reencrypted_part
-                )
-                return part_digests
+            part_md5, _ = part_digests
+            await self._upload_part(
+                ctx, upload_id=upload_id, part_md5=part_md5, part=reencrypted_part
+            )
+            return part_digests
+
+        # Workers take a slot before taking a part range, so a worker that has not
+        #  been admitted owns no part and nothing can be waiting on it. Holding the
+        #  live task count to the budget also keeps a 9,995-part file from allocating
+        #  ten thousand coroutines before the first byte is downloaded.
+        pending = enumerate(part_ranges)
+        digests: list[tuple[bytes, bytes] | None] = [None] * len(part_ranges)
+
+        async def _part_worker() -> None:
+            """Take and process part ranges until the shared iterator runs out."""
+            while True:
+                async with part_slots:
+                    try:
+                        index, part_range = next(pending)
+                    except StopIteration:
+                        # Never let this escape a coroutine - it would surface as
+                        #  "RuntimeError: coroutine raised StopIteration".
+                        return
+                    digests[index] = await _handle_part(index, part_range)
 
         _wall = time.monotonic()
         with _collapsing_error_groups():
             async with asyncio.TaskGroup() as task_group:
-                tasks = [
-                    task_group.create_task(_handle_part(index, part_range))
-                    for index, part_range in enumerate(part_ranges)
-                ]
+                for _ in range(min(self._max_concurrent_parts, len(part_ranges))):
+                    task_group.create_task(_part_worker())
         wall_time = time.monotonic() - _wall
 
-        checksums.set_encrypted_parts([task.result() for task in tasks])
+        # The group only exits cleanly once every part is done, so there are no holes.
+        checksums.set_encrypted_parts(cast(list[tuple[bytes, bytes]], digests))
 
         self._log_part_metrics(
             file_upload=file_upload,

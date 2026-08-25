@@ -33,6 +33,7 @@ class S3ClientPort(ABC):
         """Raised when a given bucket does not exist in S3."""
 
         def __init__(self, *, bucket_id: str) -> None:
+            self.bucket_id = bucket_id
             msg = f"Could not find any bucket with the ID '{bucket_id}'."
             super().__init__(msg)
 

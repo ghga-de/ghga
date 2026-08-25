@@ -29,6 +29,8 @@ from pydantic import SecretBytes
 from dhfs.adapters.outbound.s3 import S3Client
 from dhfs.core.interrogator import Interrogator
 from dhfs.core.models import FileUpload
+from dhfs.ports.outbound.interrogator import InterrogatorPort
+from dhfs.ports.outbound.s3 import S3ClientPort
 from tests.fixtures.central_api import capture, fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
@@ -713,3 +715,85 @@ async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
     assert report["passed"] is True
     assert len(report["encrypted_parts_md5"]) == expected_part_count
     assert len(report["encrypted_parts_sha256"]) == expected_part_count
+
+
+async def test_inbox_check_s3_errors_are_translated(joint_fixture: JointFixture):
+    """A critical S3 failure on the inbox check must arrive as a CriticalError.
+
+    Left untranslated it escapes `interrogate_new_files` as a raw S3 error, past the
+    `CriticalError` handler main.py uses to exit the run loop cleanly. The severity
+    is what routes it, so the translation has to happen at this call site too.
+    """
+    await _stage_batch(joint_fixture, count=1)
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+
+    async def raise_critical(*, file):
+        raise S3ClientPort.BucketNotFoundError(bucket_id=file.bucket_id)
+
+    with patch.object(interrogator._s3_client, "get_is_file_in_inbox", raise_critical):
+        with pytest.raises(InterrogatorPort.CriticalError):
+            await interrogator.interrogate_new_files()
+
+
+async def test_inbox_check_retryable_s3_errors_do_not_stop_the_batch(
+    joint_fixture: JointFixture,
+):
+    """A non-critical S3 failure becomes InconclusiveError, so the batch continues."""
+    await _stage_batch(joint_fixture, count=2)
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    seen = 0
+
+    async def raise_operation_error(*, file):
+        nonlocal seen
+        seen += 1
+        raise S3ClientPort.S3OperationError(f"transient failure for {file.id}")
+
+    with patch.object(
+        interrogator._s3_client, "get_is_file_in_inbox", raise_operation_error
+    ):
+        await interrogator.interrogate_new_files()
+
+    # Both files were attempted: the first failure did not abandon the batch
+    assert seen == 2
+
+
+async def test_live_part_tasks_stay_within_the_budget(joint_fixture: JointFixture):
+    """A file must not allocate a task per part before any of them runs.
+
+    `adjusted_part_size` allows up to 9,995 parts, so one task each is ~15 MiB of
+    coroutines parked on a semaphore before the first byte is downloaded.
+    """
+    budget = 2
+    [file_upload] = await _stage_batch(
+        joint_fixture, count=1, file_size=int(PART_SIZE * 5.5)
+    )
+    part_count = len(list(file_upload.calc_encrypted_part_ranges()))
+    assert part_count > budget, "test needs more parts than slots to be meaningful"
+
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    interrogator._max_concurrent_parts = budget
+
+    peak = 0
+    original_download = interrogator._download_part
+
+    def _live_part_tasks() -> int:
+        """Count tasks spawned by _process_file_parts, whatever they are named."""
+        return sum(
+            1
+            for task in asyncio.all_tasks()
+            if "_process_file_parts.<locals>"
+            in getattr(task.get_coro(), "__qualname__", "")
+        )
+
+    async def counting_download(ctx):
+        nonlocal peak
+        peak = max(peak, _live_part_tasks())
+        return await original_download(ctx)
+
+    with patch.object(interrogator, "_download_part", counting_download):
+        await interrogator.interrogate_new_files()
+
+    assert peak <= budget, (
+        f"{peak} part tasks were alive at once for a {part_count}-part file,"
+        f" above the budget of {budget}"
+    )
