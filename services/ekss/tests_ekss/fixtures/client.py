@@ -32,7 +32,8 @@ class ClientFixture:
     """Fixture providing a configured rest client and access to the SecretsHandler mock"""
 
     client: AsyncTestClient
-    secrets_handler: SecretsHandlerPort
+    # the mock, not the port: the tests drive it via return_value / side_effect
+    secrets_handler: AsyncMock
 
 
 @pytest_asyncio.fixture()

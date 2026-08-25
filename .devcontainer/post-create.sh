@@ -37,3 +37,7 @@ uv tool install --reinstall git-filter-repo
 # Provision both stacks
 uv sync --all-packages --all-extras
 (cd frontend/data-portal && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium)
+
+# Git hooks (ADR-0018). Idempotent, and after the sync above because the hooks run ruff,
+# mypy, prettier and eslint out of the two workspaces rather than their own environments.
+uv run pre-commit install

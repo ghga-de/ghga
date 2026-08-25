@@ -36,7 +36,7 @@ from tests.fixtures.metadata_models import VALID_ADVANCED_METADATA_MODEL
 VALID_EXAMPLE_CONFIG = ReferenceInferenceConfig(
     inferred_ref_map={
         "Experiment": {
-            "files": {  # type: ignore
+            "files": {
                 "path": "Experiment(samples)>Sample(files)>File",
                 "multivalued": True,
             }

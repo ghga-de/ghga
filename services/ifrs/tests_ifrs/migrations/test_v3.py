@@ -15,6 +15,7 @@
 
 """Tests for V3 migration logic"""
 
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -42,7 +43,7 @@ async def test_v3_migration(mongodb: MongoDbFixture):
     metadata_collection = db["file_metadata"]
 
     # Create test data for the FileMetadata objects
-    old_metadata = [
+    old_metadata: list[dict[str, Any]] = [
         {
             "_id": f"GHGA00{i}",
             "upload_date": now_utc_ms_prec(),

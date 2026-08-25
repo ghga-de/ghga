@@ -1,0 +1,130 @@
+# GHGA monorepo — one pre-commit config for both stacks (ADR-0018).
+#
+# Replaces the ~28 byte-identical copies the microservice-repository-template used to sync
+# into the Python repos (ADR-0001) and the husky hook the data-portal carried.
+#
+# ruff / mypy / prettier / eslint are `repo: local` on purpose: they must be the versions
+# uv.lock and pnpm-lock.yaml pin, i.e. the ones `just lint`, `just typecheck`, `just fe-lint`
+# and CI run. A `rev:` pin here would drift — the template's scripts/update_hook_revs.py that
+# kept the pins in step reads lock/requirements-dev.txt, which the monorepo replaced with a
+# single root uv.lock. The generic hooks below have no local equivalent, so they stay pinned;
+# `just hooks-update` bumps them.
+#
+# Install: just hooks   Run over everything: just hooks-all   Bump the pins: just hooks-update
+
+minimum_pre_commit_version: "4.6"
+default_install_hook_types: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md] # keep Markdown hard line breaks
+        # docs/epics/ is imported history (ADR-0010): 36 files there end lines with two
+        # spaces as a hard break, and ~116 more lines would still churn with the arg above.
+        exclude: ^docs/epics/
+      - id: end-of-file-fixer
+        # 23 generated config_schema.json — the upstream regenerator was not imported, so
+        # they are frozen artifacts; rewriting them only invites conflicts with it.
+        exclude: (^|/)config_schema\.json$
+      - id: check-yaml
+        # 379 Go-templated Helm manifests are not YAML; 4 transpiler configs use
+        # !!python/object/apply tags that safe_load rejects by design; and one schemapack
+        # example is a duplicate-key document on purpose (it is the parse-error fixture).
+        exclude: |
+          (?x)^(
+              deploy/(charts/[^/]+|src/template|tests/(dummy|template))/templates/.*\.ya?ml
+            | tools/ghga-transpiler/(src/ghga_transpiler/configs|tests/fixtures/configs)/.*\.yaml
+            | libs/schemapack/examples/datapack/invalid/simple_relations/ParsingError\.duplicate_resource_id\.datapack\.yaml
+          )$
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-json
+        # JSONC by convention: VS Code configs, the devcontainer, the tsconfigs.
+        exclude: (^|/)\.vscode/|devcontainer\.json$|(^|/)tsconfig[^/]*\.json$
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-docstring-first
+      - id: debug-statements
+      - id: destroyed-symlinks
+      - id: detect-private-key
+        # a placeholder body ("...") in the datahub-monitor GitHub App values; the hook is a
+        # substring blacklist and cannot tell a placeholder from a key.
+        exclude: ^deploy/(src/values/datahub-monitor\.yaml|charts/datahub-monitor/values\.yaml)$
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: no-commit-to-branch
+        # this repo has only `main`; releases are tags, not branches (ADR-0004).
+        args: [--branch, main]
+      # NOT taken from the template: pretty-format-json. It rewrites 39 tracked files,
+      # among them angular.json and src/mocks/example-metadata.json, which Prettier owns
+      # and formats differently. check-json above still guarantees validity.
+
+  - repo: local
+    hooks:
+      # ---- Python workspace ------------------------------------------------------------
+      # --force-exclude makes ruff honour [tool.ruff] exclude for paths named on the command
+      # line, which is how pre-commit invokes it (the upstream ruff hook passes it too).
+      - id: ruff
+        name: ruff check (uv workspace)
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+        entry: uv run ruff check --force-exclude --fix --exit-non-zero-on-fix
+
+      - id: ruff-format
+        name: ruff format (uv workspace)
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+        entry: uv run ruff format --force-exclude
+
+      # Per unit, never per file: mypy's answer depends on the set of paths it is handed, so
+      # the changed files are mapped back to the members that own them (scripts/typecheck.py
+      # — the same runner `just typecheck` and CI use).
+      - id: mypy
+        name: mypy (per workspace member)
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+        entry: uv run python scripts/typecheck.py
+
+      - id: shellcheck
+        name: shellcheck
+        language: system
+        types: [shell]
+        # -x -P SCRIPTDIR so sourced siblings (scripts/migration/lib.sh) are followed
+        entry: shellcheck -x -P SCRIPTDIR
+
+      # ---- Front end (data-portal) -----------------------------------------------------
+      # Both tools REQUIRE cwd = frontend/data-portal: eslint-plugin-boundaries' settings and
+      # .prettierignore are resolved against the working directory, and from the repo root
+      # every source file fails boundaries/no-unknown-files. pre-commit runs hooks from the
+      # repo root and appends repo-root-relative paths AFTER the entry, so $PWD is captured
+      # before the cd and each positional is rewritten absolute. The flags live INSIDE the
+      # script: a YAML `args:` list is inserted before the filenames, where it would be
+      # swallowed as $0/$1 of `bash -c`.
+      #
+      # --check / no --fix, unlike ruff above: the front end deliberately does not autofix in
+      # the hook, so what you commit is what you checked (frontend/data-portal/README.md).
+      - id: fe-prettier
+        name: prettier --check (data-portal)
+        language: system
+        files: ^frontend/data-portal/
+        require_serial: true
+        # --ignore-unknown: prettier exits 2 on a file type it has no parser for (fonts,
+        # .toml), which would otherwise fail any commit that touches one
+        entry: |
+          bash -c 'root=$PWD; cd frontend/data-portal || exit 1; [ -d node_modules ] || { echo "front-end deps missing; run just fe-install" >&2; exit 1; }; exec pnpm exec prettier --check --ignore-unknown "${@/#/$root/}"' --
+
+      - id: fe-eslint
+        name: eslint (data-portal)
+        language: system
+        files: ^frontend/data-portal/.*\.(ts|html|js|mjs|cjs|md)$
+        require_serial: true
+        # --no-warn-ignored: silences a warning per config-ignored file passed explicitly
+        entry: |
+          bash -c 'root=$PWD; cd frontend/data-portal || exit 1; [ -d node_modules ] || { echo "front-end deps missing; run just fe-install" >&2; exit 1; }; exec pnpm exec eslint --no-warn-ignored "${@/#/$root/}"' --

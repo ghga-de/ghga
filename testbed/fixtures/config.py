@@ -123,7 +123,7 @@ class Config(BaseSettings):
                     "permanent": "hub2-permanent",
                 },
             },
-        }  # type: ignore
+        }
     )
 
     object_id: str = "testbed-event-object"

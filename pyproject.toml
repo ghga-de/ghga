@@ -110,6 +110,30 @@ plugins = ["pydantic.mypy"]
 # monorepo: exclude migration sources/scratch (regex)
 exclude = ['build/lib/', '\.legacy_repos/', '\.migration-work/']
 
+# Assigning to a method is a bug in production code and routine monkeypatching in a
+# test, so `method-assign` is off for the test packages only. Without this the pattern
+# costs a suppression comment per patch site -- there were 47 across 14 files.
+# mypy only accepts `*` as a WHOLE module component, so `tests_*` is rejected and the
+# members whose test package is named after them have to be listed one by one.
+[[tool.mypy.overrides]]
+module = [
+    "tests",
+    "tests.*",
+    "tests_dcs",
+    "tests_dcs.*",
+    "tests_ekss",
+    "tests_ekss.*",
+    "tests_fis",
+    "tests_fis.*",
+    "tests_ifrs",
+    "tests_ifrs.*",
+    "tests_pcs",
+    "tests_pcs.*",
+    "tests_ucs",
+    "tests_ucs.*",
+]
+disable_error_code = ["method-assign"]
+
 [tool.pytest.ini_options]
 minversion = "9.0"
 asyncio_mode = "strict"

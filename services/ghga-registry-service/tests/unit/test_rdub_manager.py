@@ -179,8 +179,8 @@ async def test_create_research_data_upload_box_title_race_condition(rig: JointRi
         fub_id_holder.append(fub_id)
         return fub_id
 
-    rig.file_upload_box_client.create_file_upload_box = capture_fub_id  # type: ignore
-    rig.box_dao.insert = AsyncMock(  # type: ignore
+    rig.file_upload_box_client.create_file_upload_box = capture_fub_id
+    rig.box_dao.insert = AsyncMock(
         side_effect=UniqueConstraintViolationError(unique_fields={"title": "Race Box"})
     )
 
@@ -380,7 +380,7 @@ async def test_update_research_data_upload_box_title_exists(
     box_id = populated_boxes[0]
     box = await rig.box_dao.get_by_id(box_id)
 
-    rig.box_dao.update = AsyncMock(  # type: ignore
+    rig.box_dao.update = AsyncMock(
         side_effect=UniqueConstraintViolationError(
             unique_fields={"title": "Taken Title"}
         )
@@ -1511,7 +1511,7 @@ async def test_archive_research_data_upload_box_happy(
 
     # Mock the file box client
     rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
-    rig.file_upload_box_client.archive_file_upload_box = AsyncMock()  # type: ignore
+    rig.file_upload_box_client.archive_file_upload_box = AsyncMock()
 
     # Only map accessions for the active files, leave the cancelled file unmapped
     await rig.file_accession_dao.insert(
@@ -1690,7 +1690,7 @@ async def test_archive_box_file_upload_box_version_error(
 
     # Mock the file box client
     rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
-    rig.file_upload_box_client.archive_file_upload_box = AsyncMock(  # type: ignore
+    rig.file_upload_box_client.archive_file_upload_box = AsyncMock(
         side_effect=FileBoxClientPort.FUBVersionError(box_id=box_id)
     )
 
@@ -1751,7 +1751,7 @@ async def test_resize_box_fub_max_size_too_low(
     box = await rig.box_dao.get_by_id(box_id)
     original_version = box.version
 
-    rig.file_upload_box_client.resize_file_upload_box = AsyncMock(  # type: ignore
+    rig.file_upload_box_client.resize_file_upload_box = AsyncMock(
         side_effect=FileBoxClientPort.FUBMaxSizeTooLowError("Size too low")
     )
 
@@ -1779,7 +1779,7 @@ async def test_resize_box_fub_version_error(rig: JointRig, populated_boxes: list
     box = await rig.box_dao.get_by_id(box_id)
     original_version = box.version
 
-    rig.file_upload_box_client.resize_file_upload_box = AsyncMock(  # type: ignore
+    rig.file_upload_box_client.resize_file_upload_box = AsyncMock(
         side_effect=FileBoxClientPort.FUBVersionError(box_id=box_id)
     )
 
@@ -1845,7 +1845,7 @@ async def test_delete_file_error_handling(rig: JointRig, populated_boxes: list[U
     test_file_id = uuid4()
 
     # FUBStateError should be translated to BoxStateError
-    rig.file_upload_box_client.delete_file_upload = AsyncMock(  # type: ignore
+    rig.file_upload_box_client.delete_file_upload = AsyncMock(
         side_effect=FileBoxClientPort.FUBStateError("Box is locked")
     )
     with pytest.raises(rig.rdub_manager.BoxStateError):
@@ -1854,7 +1854,7 @@ async def test_delete_file_error_handling(rig: JointRig, populated_boxes: list[U
         )
 
     # OperationError propagates unchanged
-    rig.file_upload_box_client.delete_file_upload = AsyncMock(  # type: ignore
+    rig.file_upload_box_client.delete_file_upload = AsyncMock(
         side_effect=FileBoxClientPort.OperationError("Operation failed")
     )
     with pytest.raises(FileBoxClientPort.OperationError):

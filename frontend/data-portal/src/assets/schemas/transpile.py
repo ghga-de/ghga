@@ -7,7 +7,7 @@ import traceback
 from contextlib import redirect_stderr, redirect_stdout
 
 original_argv = list(sys.argv)
-in_filename, out_filename = args_js.to_py() 
+in_filename, out_filename = args_js.to_py()
 
 def transpile():
     """Transpile the input file using the ghga-transpiler."""

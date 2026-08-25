@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cd /workspace/demo
+cd /workspace/demo || exit 1
 
 mkdir -p \
     ./store/artifact_models \

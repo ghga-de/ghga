@@ -97,7 +97,7 @@ async def test_registration_idempotence(
     assert len(recorder.recorded_events) == 1
     event = recorder.recorded_events[0]
     assert event.payload["file_id"] == str(archivable_file.id)
-    archive_date = datetime.fromisoformat(event.payload["archive_date"])
+    archive_date = datetime.fromisoformat(str(event.payload["archive_date"]))
     assert (now_utc_ms_prec() - archive_date).seconds < 5
     assert event.type_ == joint_fixture.config.file_internally_registered_type
 

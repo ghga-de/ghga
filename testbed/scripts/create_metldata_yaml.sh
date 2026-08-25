@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cd /workspace/example_data/metadata
+cd /workspace/example_data/metadata || exit 1
 
 # create directory for artifact models
 rm -rf artifact_models

@@ -49,6 +49,7 @@ integration tests on Kubernetes.
 | [0015](adr/0015-task-runner.md) | Task runner: `just` now, `moon` later |
 | [0016](adr/0016-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) |
 | [0017](adr/0017-local-integration-host-cluster.md) | Local integration on a host-level cluster; no DinD/DooD in the devcontainer |
+| [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles |
 
 ## Phased roadmap (high level)
 

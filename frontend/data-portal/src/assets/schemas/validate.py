@@ -7,7 +7,7 @@ import traceback
 from contextlib import redirect_stderr, redirect_stdout
 
 original_argv = list(sys.argv)
-schema_filename, in_filename = args_js.to_py() 
+schema_filename, in_filename = args_js.to_py()
 
 def validate():
     """Validate the JSON using schemapack."""

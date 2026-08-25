@@ -532,7 +532,7 @@ async def test_run_batch_upload_skips_already_uploaded():
             make_file_info_for_upload(path=Path(f2.name), alias="fresh"),
         ]
         upload_client = _make_upload_client(
-            [UploadedFileInfo(id=uuid4(), alias="already", state="interrogated")]
+            [UploadedFileInfo(file_id=uuid4(), alias="already", state="interrogated")]
         )
 
         captured: list[list[str]] = []
@@ -566,8 +566,10 @@ async def test_run_batch_upload_does_not_skip_cancelled_or_failed():
         ]
         upload_client = _make_upload_client(
             [
-                UploadedFileInfo(id=uuid4(), alias="cancelled-file", state="cancelled"),
-                UploadedFileInfo(id=uuid4(), alias="failed-file", state="failed"),
+                UploadedFileInfo(
+                    file_id=uuid4(), alias="cancelled-file", state="cancelled"
+                ),
+                UploadedFileInfo(file_id=uuid4(), alias="failed-file", state="failed"),
             ]
         )
 
@@ -630,7 +632,7 @@ async def test_run_batch_upload_all_skipped_does_not_upload():
     with NamedTemporaryFile() as f:
         file_infos = [make_file_info_for_upload(path=Path(f.name), alias="done")]
         upload_client = _make_upload_client(
-            [UploadedFileInfo(id=uuid4(), alias="done", state="interrogated")]
+            [UploadedFileInfo(file_id=uuid4(), alias="done", state="interrogated")]
         )
 
         fake_batch_cycle = AsyncMock()
@@ -657,7 +659,7 @@ async def test_run_batch_upload_dry_run_does_not_upload():
             make_file_info_for_upload(path=Path(f2.name), alias="fresh"),
         ]
         upload_client = _make_upload_client(
-            [UploadedFileInfo(id=uuid4(), alias="already", state="interrogated")]
+            [UploadedFileInfo(file_id=uuid4(), alias="already", state="interrogated")]
         )
 
         fake_batch_cycle = AsyncMock()
@@ -831,7 +833,7 @@ async def test_run_batch_upload_elides_long_skip_list():
         for i in range(12)
     ]
     box = [
-        UploadedFileInfo(id=uuid4(), alias=f"file-{i}", state="interrogated")
+        UploadedFileInfo(file_id=uuid4(), alias=f"file-{i}", state="interrogated")
         for i in range(12)
     ]
     with patch(

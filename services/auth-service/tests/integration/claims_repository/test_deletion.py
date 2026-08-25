@@ -71,7 +71,7 @@ async def test_deletion_handler(
             assertion_date=now,
             valid_from=now,
             valid_until=now + timedelta(1),
-            source="https://ghga.de",  # type: ignore[arg-type]
+            source="https://ghga.de",
             sub_source=None,
             asserted_by=AuthorityLevel.DAC,
             user_id=SOME_USER_ID,
