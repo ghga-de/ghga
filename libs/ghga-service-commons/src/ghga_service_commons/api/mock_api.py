@@ -456,7 +456,9 @@ class RoutingTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
         fallback: httpx2.BaseTransport | httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         """Route to the given mocks, in the order they are passed."""
-        self._routes = [(mock.base_url, mock.as_transport()) for mock in mocks]
+        # taken off the router rather than through `as_transport`, so that a mock
+        # wrapping its own transport in one of these does not route into itself
+        self._routes = [(mock.base_url, mock.router.as_transport()) for mock in mocks]
         self._fallback = fallback
 
     def handle_request(self, request: httpx2.Request) -> httpx2.Response:
