@@ -252,24 +252,32 @@ class HttpIncompleteOrFailedError(HttpCustomExceptionBase):
     and/or files that failed re-encryption and need attention.
     """
 
-    exception_id = "incompleteOrFailedUploads"
+    exception_id = "incompleteOrFailed"
 
     class DataModel(BaseModel):
         """Model for exception data"""
 
-        file_ids: list[UUID4]
+        incomplete_uploads: list[UUID4]
+        need_attention: list[UUID4]
 
     def __init__(
         self,
         *,
-        file_ids: list[UUID4],
+        incomplete_uploads: list[UUID4],
+        need_attention: list[UUID4],
         status_code: int = 409,
     ):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description="Cannot lock box: ongoing uploads and/or re-encryption failures need attention",
-            data={"file_ids": [str(fid) for fid in file_ids]},
+            description=(
+                "Cannot update box: there are ongoing uploads and/or re-encryption"
+                + " failures that need attention."
+            ),
+            data={
+                "incomplete_uploads": [str(fid) for fid in incomplete_uploads],
+                "need_attention": [str(fid) for fid in need_attention],
+            },
         )
 
 

@@ -182,10 +182,15 @@ async def delete_research_data_upload_box(
     description="Update modifiable details for a research data upload box, including"
     + " the description, title, and state. When modifying the state, users are only"
     + " allowed to move the state from OPEN to LOCKED, and all other changes are"
-    + " restricted to Data Stewards. A note on archival: Once archived, the box may"
-    + " no longer be modified, and files in the box will be moved to permanent storage."
-    + " If any files in the box have yet to be re-encrypted, if the box is still open,"
-    + " or if there are any files that lack an accession number, archival is denied.",
+    + " restricted to Data Stewards. A note on locking: locking is denied while the box"
+    + " has ongoing uploads or files that failed re-encryption. Setting `force` locks"
+    + " the box anyway; ongoing uploads are not aborted and may still complete, but no"
+    + " new uploads can be started and no files can be deleted while the box is locked."
+    + " A note on archival: Once archived, the box may no longer be modified, and files"
+    + " in the box will be moved to permanent storage. If any files in the box have yet"
+    + " to be re-encrypted, if any file failed re-encryption without being resolved, if"
+    + " the box is still open, or if there are any files that lack an accession number,"
+    + " archival is denied.",
     response_model=None,
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
@@ -230,7 +235,10 @@ async def update_research_data_upload_box(
     except RDUBManagerPort.BoxVersionError as err:
         raise HttpBoxVersionError() from err
     except RDUBManagerPort.BoxIncompleteOrFailedError as err:
-        raise HttpIncompleteOrFailedError(file_ids=err.incomplete_file_ids) from err
+        raise HttpIncompleteOrFailedError(
+            incomplete_uploads=err.incomplete_uploads,
+            need_attention=err.need_attention,
+        ) from err
     except RDUBManagerPort.ArchivalPrereqsError as err:
         raise HttpArchivalPrereqsError() from err
     except RDUBManagerPort.StateChangeError as err:

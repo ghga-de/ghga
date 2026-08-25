@@ -348,18 +348,25 @@ class FileBoxClient(FileBoxClientPort):
 
         if exception_id == "incompleteOrFailed":
             # exception_id parsed, so the body is a JSON object we can re-read
-            raw = response.json().get("data", {}).get("file_ids", [])
-            incomplete_file_ids = [UUID(item[0]) for item in raw]
-            extra["file_ids"] = incomplete_file_ids
+            data = response.json().get("data", {})
+            # Both groups arrive as (file ID, alias) pairs; only the IDs are relayed
+            incomplete_uploads = [
+                UUID(item[0]) for item in data.get("incomplete_uploads", [])
+            ]
+            need_attention = [UUID(item[0]) for item in data.get("need_attention", [])]
+            extra["incomplete_uploads"] = incomplete_uploads
+            extra["need_attention"] = need_attention
             log.error(
-                "Failed to %s FileUploadBox %s: %d file(s) have incomplete uploads.",
+                "Failed to %s FileUploadBox %s: %d file(s) have incomplete uploads and"
+                + " %d file(s) need attention.",
                 operation,
                 box_id,
-                len(incomplete_file_ids),
+                len(incomplete_uploads),
+                len(need_attention),
                 extra=extra,
             )
             raise self.FUBIncompleteOrFailedError(
-                incomplete_file_ids=incomplete_file_ids
+                incomplete_uploads=incomplete_uploads, need_attention=need_attention
             )
         if exception_id == "boxVersionOutdated":
             log.error(

@@ -96,16 +96,24 @@ class RDUBManagerPort(ABC):
         """
 
     class BoxIncompleteOrFailedError(RuntimeError):
-        """Raised when locking is rejected because files have incomplete uploads.
-
-        This also includes files that failed interrogation and require some kind
-        of resolution one way or the other.
+        """Raised when locking or archiving is rejected because files have incomplete
+        uploads. This also includes files that failed interrogation and require some
+        kind of resolution one way or the other.
+        - `incomplete_uploads`: uploads that have not finished yet. When locking, a
+          user may retry with `force=True` to lock the box and let them run to
+          completion. When archiving, they must finish (or be removed) first.
+        - `need_attention`: files that failed interrogation. These have to be
+          manually resolved by the submitter or a Data Steward.
         """
 
-        def __init__(self, *, incomplete_file_ids: list[UUID4]):
-            self.incomplete_file_ids = incomplete_file_ids
+        def __init__(
+            self, *, incomplete_uploads: list[UUID4], need_attention: list[UUID4]
+        ):
+            self.incomplete_uploads = incomplete_uploads
+            self.need_attention = need_attention
             super().__init__(
-                f"{len(incomplete_file_ids)} file(s) are incomplete or need attention."
+                f"{len(incomplete_uploads)} file(s) are incomplete and"
+                + f" {len(need_attention)} file(s) need attention."
             )
 
     class BoxTitleExistsError(RuntimeError):
@@ -190,6 +198,9 @@ class RDUBManagerPort(ABC):
             StateChangeError: If the requested state transition is invalid.
             OperationError: If there's a problem updating the corresponding
                 FileUploadBox.
+            BoxIncompleteOrFailedError: If locking with `force` unset and the box has
+                ongoing uploads or files that failed interrogation, or if archiving a
+                box that still has uninterrogated or failed files.
             ArchivalPrereqsError: If trying to archive the box and prerequisites
                 aren't met.
             BoxSizeTooSmallError: If the new max_size is smaller than bytes already
@@ -393,7 +404,9 @@ class RDUBManagerPort(ABC):
         """Update the file accession map for a given box and publish an outbox event.
         This results in a version increment for the ResearchDataUploadBox.
 
-        **Files with a state of *cancelled* or *failed* are ignored.**
+        **Cancelled files are ignored, as are files that failed before reaching the
+        inbox. Files that failed interrogation still require a mapping, since they are
+        expected to be resolved rather than dropped.**
 
         Check the specified ResearchDataUploadBox to verify it exists, that the version
         stated in the request is current, and the box has not already been archived.

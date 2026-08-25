@@ -352,10 +352,11 @@ async def test_update_research_data_upload_box(
 
         # make sure the API translates the BoxIncompleteOrFailedError correctly
         rdub_manager.reset_mock()
-        incomplete_file_ids = [uuid4(), uuid4()]
+        incomplete_uploads = [uuid4(), uuid4()]
+        need_attention = [uuid4()]
         rdub_manager.rdub_manager.update_research_data_upload_box.side_effect = (
             RDUBManagerPort.BoxIncompleteOrFailedError(
-                incomplete_file_ids=incomplete_file_ids
+                incomplete_uploads=incomplete_uploads, need_attention=need_attention
             )
         )
         response = await rest_client.patch(
@@ -364,7 +365,10 @@ async def test_update_research_data_upload_box(
         assert response.status_code == 409
         body = response.json()
         assert body["exception_id"] == "incompleteOrFailed"
-        assert body["data"]["file_ids"] == [str(fid) for fid in incomplete_file_ids]
+        assert body["data"]["incomplete_uploads"] == [
+            str(fid) for fid in incomplete_uploads
+        ]
+        assert body["data"]["need_attention"] == [str(fid) for fid in need_attention]
 
         # handle other exception
         rdub_manager.reset_mock()
