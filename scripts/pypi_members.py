@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
 """Enumerate the PyPI-lane workspace members and the published-combo test matrix.
 
-Single source of truth for pypi-matrix.yaml and pypi-publish.yaml; image_members.py is the
-platform-lane counterpart. Lane membership follows ADR-0014: libs/* defaults to pypi,
-tools/* to none, services/* to platform, each overridable with [tool.ghga] release.
+Single source of truth for pypi-matrix.yaml and pypi-publish.yaml. Lane membership
+follows ADR-0014.
 
-What needs releasing is decided against the *index*, never against git history: a member
-is a release candidate when the version it declares is above the latest one on PyPI. A
-version bump is the release trigger, so it does not matter which commit made it, how long
-ago, or whether it arrived through the mainline sync — only whether the index has caught
-up. Diffing two refs would answer a different question ("did this commit bump it?") and
-silently miss a bump that landed earlier.
+What needs releasing is decided against the *index*: a member is a release candidate
+when the version it declares is above the latest one on PyPI. A version bump is the
+release trigger.
 
 Usage:
     python scripts/pypi_members.py --check-pypi         # test matrix cells (json)
     python scripts/pypi_members.py --members            # lane members only
     python scripts/pypi_members.py --paths libs/hexkit  # restrict to given members
-    python scripts/pypi_members.py --dev-requirements --package hexkit  # test deps
+    python scripts/pypi_members.py --dev-requirements       # shared test deps
     python scripts/pypi_members.py --candidates         # members whose version is unreleased
     python scripts/pypi_members.py --plan               # ordered release plan + errors
 
-stdlib only (python >= 3.11 for tomllib).
 """
 
 from __future__ import annotations
@@ -34,10 +29,6 @@ import sys
 
 import tomllib
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-
-# The same dependency graph the affected-target matrix uses, so the two cannot disagree.
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from affected_targets import internal_dep_graph
 
 # The versions the matrix runs on.
@@ -46,20 +37,10 @@ TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
 # Directory defaults for the release lane (ADR-0014).
 LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
 
-# Lint/type tools in the root dev group. A cell only runs tests, and one of these failing
-# to resolve on an older Python would fail it for an unrelated reason.
+# A cell only runs tests, so formatting tools excluded
 NON_TEST_TOOLS = ("ruff", "mypy", "pre-commit")
 
-# Test imports a member declares nowhere and the root dev group does not supply. The
-# workspace hides them — some sibling drags the distribution into the shared venv. Keyed
-# per member so one workaround cannot leak into another's environment. Fix upstream, then
-# delete the entry.
-MATRIX_ONLY_REQUIREMENTS = {
-    # In hexkit's shipped s3 testutils, so consumers hit this too; belongs in `test-s3`.
-    "hexkit": ("httpx2>=2.9.1,<3",),
-    # connector's fixtures import ghga_service_commons.api; it requires only [crypt,transports].
-    "ghga_connector": ("ghga-service-commons[api]",),
-}
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def _requirement_name(spec: str) -> str:
@@ -235,20 +216,19 @@ def matrix_cells(members: list[dict]) -> list[dict]:
     ]
 
 
-def dev_requirements(package: str | None = None) -> list[str]:
+def dev_requirements() -> list[str]:
     """What a bare environment needs to run a member's suite.
 
-    The root dev group minus lint/type tooling, plus that member's undeclared test
-    imports (NON_TEST_TOOLS, MATRIX_ONLY_REQUIREMENTS).
+    The root dev group minus lint/type tooling (NON_TEST_TOOLS). Everything else a member's
+    tests need is declared in its own pyproject and comes in with the wheel's extras.
     """
     data = tomllib.loads((ROOT / "pyproject.toml").read_text())
     group = data.get("dependency-groups", {}).get("dev", [])
-    shared = [
+    return [
         spec
         for spec in group
         if isinstance(spec, str) and _requirement_name(spec) not in NON_TEST_TOOLS
     ]
-    return shared + list(MATRIX_ONLY_REQUIREMENTS.get(package or "", ()))
 
 
 @functools.cache
@@ -452,10 +432,6 @@ def main(argv: list[str] | None = None) -> int:
         help="print the test dependencies, one per line",
     )
     parser.add_argument(
-        "--package",
-        help="with --dev-requirements: add that member's undeclared test imports",
-    )
-    parser.add_argument(
         "--candidates",
         action="store_true",
         help="emit members whose declared version is ahead of the index",
@@ -474,7 +450,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.dev_requirements:
-        print("\n".join(dev_requirements(args.package)))
+        print("\n".join(dev_requirements()))
         return 0
     if args.plan:
         print(json.dumps(release_plan()))

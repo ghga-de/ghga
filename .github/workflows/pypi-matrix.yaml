@@ -108,11 +108,10 @@ jobs:
             --find-links /tmp/wheels "$spec"
 
       # The test dependencies installed from the root pyproject.toml's dev dependency group
-      # minus the lint tools, plus whatever the member imports without declaring.
+      # minus the lint tools. Everything else comes in with the wheel's own extras.
       - name: Install the test dependencies
         run: |
-          python3 scripts/pypi_members.py --dev-requirements \
-            --package "${{ matrix.cell.package }}" > /tmp/test-requirements.txt
+          python3 scripts/pypi_members.py --dev-requirements > /tmp/test-requirements.txt
           cat /tmp/test-requirements.txt
           uv pip install --python /tmp/venv/bin/python \
             --find-links /tmp/wheels -r /tmp/test-requirements.txt
