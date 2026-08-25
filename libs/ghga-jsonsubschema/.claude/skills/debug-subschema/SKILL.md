@@ -12,6 +12,7 @@ Write a minimal pytest-style repro with inline schema dicts (no JSON files —
 
 ```python
 from jsonsubschema import is_subschema
+
 s1 = {"type": "string", "minLength": 5}
 s2 = {"type": "string"}
 print(is_subschema(s1, s2))
@@ -31,9 +32,9 @@ from jsonsubschema._canonicalization import simplify_schema_and_embed_checkers
 
 set_debug(True)  # prints intermediate forms during API calls
 
-c = canonicalize_schema(s1)          # stage 1: canonical form (plain dict)
+c = canonicalize_schema(s1)  # stage 1: canonical form (plain dict)
 e = simplify_schema_and_embed_checkers(c)  # stage 2: simplified, JSONschema instance
-print(type(e), dict(e))              # JSONschema subclasses dict
+print(type(e), dict(e))  # JSONschema subclasses dict
 ```
 
 - Stage 1+2 live in `src/jsonsubschema/_canonicalization.py`.
