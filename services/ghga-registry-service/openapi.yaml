@@ -593,9 +593,9 @@ components:
           title: Description
         force:
           default: false
-          description: Force the state change even if prerequisites are not met. Only relevant
-            when locking a box, in which case any ongoing uploads will be allowed to continue,
-            but other changes will become prohibited.
+          description: Force the state change even if prerequisites are not met. Only
+            relevant when locking a box, in which case any ongoing uploads will be
+            allowed to continue, but other changes will become prohibited.
           title: Force
           type: boolean
         max_size:
@@ -999,10 +999,15 @@ paths:
       description: 'Update modifiable details for a research data upload box, including
         the description, title, and state. When modifying the state, users are only
         allowed to move the state from OPEN to LOCKED, and all other changes are restricted
-        to Data Stewards. A note on archival: Once archived, the box may no longer
-        be modified, and files in the box will be moved to permanent storage. If any
-        files in the box have yet to be re-encrypted, if the box is still open, or
-        if there are any files that lack an accession number, archival is denied.'
+        to Data Stewards. A note on locking: locking is denied while the box has ongoing
+        uploads or files that failed re-encryption. Setting `force` locks the box
+        anyway; ongoing uploads are not aborted and may still complete, but no new
+        uploads can be started and no files can be deleted while the box is locked.
+        A note on archival: Once archived, the box may no longer be modified, and
+        files in the box will be moved to permanent storage. If any files in the box
+        have yet to be re-encrypted, if any file failed re-encryption without being
+        resolved, if the box is still open, or if there are any files that lack an
+        accession number, archival is denied.'
       operationId: update_research_data_upload_box_upload_boxes__box_id__patch
       parameters:
       - in: path

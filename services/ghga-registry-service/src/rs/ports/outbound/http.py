@@ -119,13 +119,24 @@ class FileBoxClientPort(ABC):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
     class FUBIncompleteOrFailedError(RuntimeError):
-        """Raised when locking is rejected because some files are still being
-        uploaded or files that failed interrogation need attention.
+        """Raised when locking or archiving is rejected because some files are still
+        being uploaded or files that failed interrogation need attention.
+
+        The owning service reports the two groups separately:
+        - `incomplete_uploads`: files still in the `init` state. When archiving,
+          this also includes files in the `inbox` state.
+        - `need_attention`: files that failed interrogation and must be resolved.
         """
 
-        def __init__(self, *, incomplete_file_ids: list[UUID4]):
-            self.incomplete_file_ids = incomplete_file_ids
-            super().__init__(f"{len(incomplete_file_ids)} file(s) are incomplete.")
+        def __init__(
+            self, *, incomplete_uploads: list[UUID4], need_attention: list[UUID4]
+        ):
+            self.incomplete_uploads = incomplete_uploads
+            self.need_attention = need_attention
+            super().__init__(
+                f"{len(incomplete_uploads)} file(s) are incomplete and"
+                + f" {len(need_attention)} file(s) need attention."
+            )
 
     class FUBStateError(RuntimeError):
         """Raised when the FileUploadBox is locked and the operation cannot proceed."""
@@ -228,6 +239,8 @@ class FileBoxClientPort(ABC):
         """Archive a FileUploadBox in the owning service.
 
         Raises:
+            FUBIncompleteOrFailedError if the box still contains uploads that have not
+                been interrogated yet or files that failed interrogation.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
         """
