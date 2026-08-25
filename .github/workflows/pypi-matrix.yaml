@@ -37,6 +37,9 @@ jobs:
       cells: ${{ steps.cells.outputs.cells }}
     steps:
       - uses: actions/checkout@v5
+      # pypi_members.py declares its own dependency via PEP 723 and runs as
+      # `uv run --script`; this job installs nothing else.
+      - uses: astral-sh/setup-uv@v7
       - id: cells
         # One cell per (member, python version).
         env:
@@ -44,14 +47,14 @@ jobs:
         run: |
           paths=$(printf '%s' "$PATHS" \
             | python3 -c "import json,sys; print(' '.join(json.load(sys.stdin)))")
-          cells=$(python3 scripts/pypi_members.py --check-pypi ${paths:+--paths $paths})
+          cells=$(uv run --script scripts/pypi_members.py --check-pypi ${paths:+--paths $paths})
           echo "cells=$cells" >> "$GITHUB_OUTPUT"
           echo "$cells" | python3 -m json.tool
 
           # Without this a member with no cells is skipped silently — a green check that
           # tested nothing. No member is in that state today; it would take a member
           # declaring a floor outside TEST_PYTHONS entirely.
-          python3 scripts/pypi_members.py ${paths:+--paths $paths} --members \
+          uv run --script scripts/pypi_members.py ${paths:+--paths $paths} --members \
             | python3 -c "
           import json, sys
           for member in json.load(sys.stdin):
@@ -111,7 +114,7 @@ jobs:
       # minus the lint tools. Everything else comes in with the wheel's own extras.
       - name: Install the test dependencies
         run: |
-          python3 scripts/pypi_members.py --dev-requirements > /tmp/test-requirements.txt
+          uv run --script scripts/pypi_members.py --dev-requirements > /tmp/test-requirements.txt
           cat /tmp/test-requirements.txt
           uv pip install --python /tmp/venv/bin/python \
             --find-links /tmp/wheels -r /tmp/test-requirements.txt

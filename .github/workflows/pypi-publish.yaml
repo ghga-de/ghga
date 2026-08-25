@@ -33,11 +33,14 @@ jobs:
       # The plan reads the declared versions in this tree and compares
       # them with PyPI.
       - uses: actions/checkout@v5
+      # pypi_members.py declares its own dependency via PEP 723 and runs as
+      # `uv run --script`; this job installs nothing else.
+      - uses: astral-sh/setup-uv@v7
       # The plan takes every member the index is behind on, orders the set
       # dependencies-first, and fails on any violation
       - id: plan
         run: |
-          plan=$(python3 scripts/pypi_members.py --plan)
+          plan=$(uv run --script scripts/pypi_members.py --plan)
           echo "$plan" | python3 -m json.tool
 
           errors=$(echo "$plan" | python3 -c "

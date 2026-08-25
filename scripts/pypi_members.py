@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# The only non-stdlib import is `packaging`, which owns the PEP 440 comparison deciding
+# what gets uploaded. PEP 723 inline metadata declares it here rather than in the calling
+# workflows: run this with `uv run --script`, which resolves the block into a throwaway
+# environment. The jobs that call it never `uv sync`, so a bare `python3` has nothing to
+# import.
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["packaging>=25"]
+# ///
 """Enumerate the PyPI-lane workspace members and the published-combo test matrix.
 
 Single source of truth for pypi-matrix.yaml and pypi-publish.yaml. Lane membership
@@ -8,26 +17,27 @@ What needs releasing is decided against the *index*: a member is a release candi
 when the version it declares is above the latest one on PyPI. A version bump is the
 release trigger.
 
-Usage:
-    python scripts/pypi_members.py --check-pypi         # test matrix cells (json)
-    python scripts/pypi_members.py --members            # lane members only
-    python scripts/pypi_members.py --paths libs/hexkit  # restrict to given members
-    python scripts/pypi_members.py --dev-requirements       # shared test deps
-    python scripts/pypi_members.py --candidates         # members whose version is unreleased
-    python scripts/pypi_members.py --plan               # ordered release plan + errors
+Usage (`uv run --script`, so the PEP 723 block above resolves):
+    uv run --script scripts/pypi_members.py --check-pypi        # test matrix cells (json)
+    uv run --script scripts/pypi_members.py --members           # lane members only
+    uv run --script scripts/pypi_members.py --paths libs/hexkit # restrict to given members
+    uv run --script scripts/pypi_members.py --dev-requirements  # shared test deps
+    uv run --script scripts/pypi_members.py --candidates        # unreleased versions
+    uv run --script scripts/pypi_members.py --plan              # ordered plan + errors
 
 """
 
 from __future__ import annotations
 
 import argparse
-import functools
 import json
 import pathlib
-import re
 import sys
+import urllib.error
+import urllib.request
 
 import tomllib
+from packaging.version import InvalidVersion, Version
 
 from affected_targets import internal_dep_graph
 
@@ -170,15 +180,16 @@ def _lane(root: str, ghga_markers: dict) -> str:
 
 
 def pypi_members(
-    member_paths: list[str] | None = None, release_members: set[str] | None = None
+    member_paths: list[str] | None = None, release_member_paths: set[str] | None = None
 ) -> list[dict]:
     """Returns one dict per PyPI-lane member, for the matrix and the release plan.
 
     Args:
         member_paths:
             Restrict to these member folders; None means every lane member.
-        release_members:
-            The members being released in this same run.
+        release_member_paths:
+            The folders of the members being released in this same run. Does not
+            restrict the result — it only fills in each member's `train_deps`.
 
     Returns:
         One dict per member with `path`, `package`, `version`, `requires_python`,
@@ -197,12 +208,12 @@ def pypi_members(
             relative = str(path.relative_to(ROOT))
             if member_paths and relative not in member_paths:
                 continue
-            data = tomllib.loads(manifest.read_text())
-            ghga_markers = data.get("tool", {}).get("ghga", {})
+            member_pyproject = tomllib.loads(manifest.read_text())
+            ghga_markers = member_pyproject.get("tool", {}).get("ghga", {})
 
             if _lane(root, ghga_markers) != "pypi":
                 continue
-            project = data["project"]
+            project = member_pyproject["project"]
             requires_python = project.get("requires-python", "")
             closure = _closure(relative, dependency_graph)
             members.append(
@@ -213,7 +224,7 @@ def pypi_members(
                     "requires_python": requires_python,
                     "internal_deps": closure,
                     "train_deps": sorted(  # Dependencies released in this run.
-                        d for d in closure if d in (release_members or ())
+                        d for d in closure if d in (release_member_paths or ())
                     ),
                     "extras": _test_extras(project.get("optional-dependencies", {})),
                     "pythons": [
@@ -242,36 +253,29 @@ def matrix_cells(members: list[dict]) -> list[dict]:
 
 
 def dev_requirements() -> list[str]:
-    """What a bare environment needs to run a member's suite.
-
-    The root dev group minus lint/type tooling (NON_TEST_TOOLS). Everything else a member's
-    tests need is declared in its own pyproject and comes in with the wheel's extras.
-    """
-    data = tomllib.loads((ROOT / "pyproject.toml").read_text())
-    group = data.get("dependency-groups", {}).get("dev", [])
+    """Returns the root dev group with the lint/type tooling (NON_TEST_TOOLS) dropped."""
+    root_pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    dev_dependencies = root_pyproject.get("dependency-groups", {}).get("dev", [])
     return [
         spec
-        for spec in group
+        for spec in dev_dependencies
         if isinstance(spec, str) and _requirement_name(spec) not in NON_TEST_TOOLS
     ]
 
 
-@functools.cache
 def _pypi_project(package: str) -> dict:
-    """What the index knows: every released version, and the latest stable one.
+    """Queries PyPI's JSON API for what the index knows about one package.
 
-    reachable=False means the query failed, not that the project is new — the callers
-    treat the two differently.
+    Returns `versions` (everything ever released under that name), `latest` (the latest
+    stable release) and `reachable`. reachable=False means the query failed, not that the
+    project is new — the callers treat the two differently.
     """
-    import urllib.error
-    import urllib.request
-
     url = f"https://pypi.org/pypi/{package}/json"
     try:
         with urllib.request.urlopen(url, timeout=15) as response:
-            data = json.load(response)
+            pypi_response = json.load(response)
     except urllib.error.HTTPError as error:
-        # 404 is an answer: nothing of this name has ever been published.
+        # 404 means nothing of this name has ever been published.
         if error.code == 404:
             return {"reachable": True, "versions": set(), "latest": None}
         return {"reachable": False, "versions": set(), "latest": None}
@@ -279,76 +283,41 @@ def _pypi_project(package: str) -> dict:
         return {"reachable": False, "versions": set(), "latest": None}
     return {
         "reachable": True,
-        "versions": set(data.get("releases", {})),
-        # The latest *stable* release: what an unpinned `pip install` resolves to, and so
-        # what a new release has to exceed.
-        "latest": data.get("info", {}).get("version"),
+        "versions": set(pypi_response.get("releases", {})),
+        "latest": pypi_response.get("info", {}).get("version"),
     }
 
 
-# Enough PEP 440 for this lane: a release segment plus an optional dev/pre/post suffix,
-# so 3.0.0rc1 sorts below 3.0.0 and 3.0.0.post1 above it.
-_VERSION_RE = re.compile(
-    r"""^\s*v?
-    (?P<release>\d+(?:\.\d+)*)
-    (?:[-_.]?(?P<pre>a|b|c|rc|alpha|beta|pre|preview)[-_.]?(?P<pre_n>\d+)?)?
-    (?:[-_.]?(?P<post>post|rev|r)[-_.]?(?P<post_n>\d+)?)?
-    (?:[-_.]?dev[-_.]?(?P<dev_n>\d+)?)?
-    (?:\+(?P<local>.+))?\s*$""",
-    re.IGNORECASE | re.VERBOSE,
-)
-
-# dev < pre-release < final < post-release, matching PEP 440's ordering.
-_DEV, _PRE, _FINAL, _POST = 0, 1, 2, 3
-
-
-def _release_key(version: str) -> tuple:
-    """A sort key for a distribution version.
-
-    An unparseable version sorts below everything, so it cannot look like an upgrade.
-    """
-    match = _VERSION_RE.match(version or "")
-    if not match:
-        return ((), _DEV, 0)
-    # Padded so 1.1 and 1.1.0 compare equal rather than by tuple length.
-    release = tuple(int(part) for part in match["release"].split("."))
-    release = release + (0,) * (3 - len(release))
-    if match["dev_n"] is not None or "dev" in (version or "").lower():
-        return (release, _DEV, int(match["dev_n"] or 0))
-    if match["pre"]:
-        return (release, _PRE, int(match["pre_n"] or 0))
-    if match["post"]:
-        return (release, _POST, int(match["post_n"] or 0))
-    return (release, _FINAL, 0)
-
-
 def _is_newer(candidate: str, other: str) -> bool:
-    """Whether `candidate` is strictly greater than `other` in PEP 440 order."""
-    return _release_key(candidate) > _release_key(other)
+    """Compares two version strings, returning True when `candidate` is the newer one.
+
+    Ordering is delegated to `packaging`.
+    """
+    try:
+        return Version(candidate) > Version(other)
+    except InvalidVersion:
+        return False
 
 
 def release_candidates() -> tuple[list[dict], list[dict]]:
-    """Lane members whose declared version is ahead of the index, and those that are not.
+    """Asks the index about every lane member and splits them into candidates and skips.
 
-    The only question asked of each member is "does it declare a version above the latest
-    one PyPI serves?". Nothing here looks at git: which commit did the bump, and how long
-    ago, has no bearing on whether consumers are missing that version.
+    Returns:
+        `(candidates, skipped)`. Both carry the member dicts from `pypi_members`, plus
+        `pypi_latest` and `index_unreachable`; a skipped member also carries the `reason`
+        it was passed over. A failed lookup lands in *candidates* with
+        `index_unreachable=True`, where `release_plan` turns it into an error.
 
     Consequences worth naming:
-
-    - a bump that landed weeks ago is still a candidate until it is actually published,
-      so a missed release repairs itself on the next run rather than staying missed.
-    - re-runs are idempotent for free — the second run sees the version on the index.
+    - re-runs are idempotent for free.
     - a member trailing the index (`ghga-validator` declares 1.1.1 while PyPI serves
-      1.2.0, because upstream kept releasing) is *skipped*, not an error. It is behind,
-      which is a sync question, not a release one.
+      1.2.0, because upstream kept releasing) is *skipped*, not an error.
     """
     candidates, skipped = [], []
     for member in pypi_members():
         version = member["version"]
         project = _pypi_project(member["package"])
         if not project["reachable"]:
-            # "Could not tell" must not read as "nothing to do" — release_plan errors.
             candidates.append(dict(member, pypi_latest=None, index_unreachable=True))
             continue
         member = dict(member, pypi_latest=project["latest"], index_unreachable=False)
@@ -357,7 +326,7 @@ def release_candidates() -> tuple[list[dict], list[dict]]:
             skipped.append(dict(member, reason="declares no version"))
         elif version in project["versions"]:
             # Catches the case `latest` cannot: a prerelease is on the index but is not
-            # the latest *stable*, so the comparison below would re-select it forever.
+            # the latest *stable*.
             skipped.append(dict(member, reason=f"{version} is already on the index"))
         elif latest and not _is_newer(version, latest):
             skipped.append(
@@ -369,12 +338,7 @@ def release_candidates() -> tuple[list[dict], list[dict]]:
 
 
 def _publish_order(members: list[dict]) -> list[dict]:
-    """The release set, dependencies first.
-
-    Uploading a dependent before its dependency leaves a window where the tool is on the
-    index and the version it needs is not. Closure depth gives the order; the set is at
-    most three members, so nothing cleverer is needed.
-    """
+    """Sorts the release set so each member is published after the ones it depends on."""
     by_path = {member["path"]: member for member in members}
     return sorted(
         members,
@@ -386,29 +350,21 @@ def _publish_order(members: list[dict]) -> list[dict]:
 
 
 def release_plan() -> dict:
-    """What to publish, in what order, and why it may not be publishable at all.
+    """Builds the release plan the publish workflow runs on.
 
-    The set is every lane member the index is behind on; the order is dependencies
-    first, so a tool never reaches PyPI before the library version it needs.
+    Takes the release candidates, orders them dependencies-first so a tool never reaches
+    PyPI before the library version it needs, and collects anything that makes the run
+    unsafe to start.
 
-    A dependency that changed *without* a bump is deliberately not a problem. It is not
-    a candidate, so the dependant resolves it from the index like any consumer would —
-    for the outside world that library did not change, and holding an unrelated release
-    hostage to someone's unreleased work would be wrong. What keeps that honest is the
-    published-combo matrix: it resolves the same way, so the combination under test is
-    the combination that ships. If the dependant genuinely needs unreleased code, its
-    own floor says so and the install fails there, which is the accurate signal.
-
-    Errors are hard — half a train on the index is worse than none:
-
-    - an internal dependency is outside the lane: nobody could install it.
-    - PyPI was unreachable, so the whole question could not be answered. "Could not
-      tell" must not read as "nothing to do".
+    Returns:
+        A dict with `members` (the ordered release set), `paths` (their folders),
+        `skipped` (package, version and reason for each member passed over) and `errors`.
+        A non-empty `errors` means publish nothing — the caller fails the job.
     """
     candidates, skipped = release_candidates()
     unreachable = [m for m in candidates if m["index_unreachable"]]
     publishing = [m for m in candidates if not m["index_unreachable"]]
-    release_members = {member["path"] for member in publishing}
+    release_member_paths = {member["path"] for member in publishing}
     lane_paths = {member["path"] for member in pypi_members()}
     errors = []
 
@@ -428,7 +384,9 @@ def release_plan() -> dict:
 
     # Re-read now that the release set is known, so each member carries the closure that
     # will be built from the repo rather than resolved from the index.
-    by_path = {m["path"]: m for m in pypi_members(release_members=release_members)}
+    by_path = {
+        m["path"]: m for m in pypi_members(release_member_paths=release_member_paths)
+    }
     ordered = _publish_order(
         [dict(m, train_deps=by_path[m["path"]]["train_deps"]) for m in publishing]
     )
@@ -490,16 +448,16 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(candidates))
         return 0
 
-    release_members = set()
+    release_member_paths = set()
     if args.check_pypi:
         candidates, _ = release_candidates()
         if any(member["index_unreachable"] for member in candidates):
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
             )
-        release_members = {member["path"] for member in candidates}
+        release_member_paths = {member["path"] for member in candidates}
 
-    members = pypi_members(args.paths, release_members=release_members)
+    members = pypi_members(args.paths, release_member_paths=release_member_paths)
     print(json.dumps(members if args.members else matrix_cells(members)))
     return 0
 

@@ -82,7 +82,7 @@ published-combo member python="3.12":
     set -euo pipefail
     # The same script CI reads, so a local run cannot drift from the cell.
     cell=$(MEMBER="{{member}}" PYTHON="{{python}}" \
-      MEMBERS="$(python3 scripts/pypi_members.py --members --check-pypi --paths "{{member}}")" \
+      MEMBERS="$(uv run --script scripts/pypi_members.py --members --check-pypi --paths "{{member}}")" \
       python3 -c "
     import json, os, sys
     member, python = os.environ['MEMBER'], os.environ['PYTHON']
@@ -133,7 +133,7 @@ published-combo member python="3.12":
     # Test dependencies live in the root dependency-group, not in the member — minus the
     # lint tools, plus whatever this member imports without declaring.
     cd "{{justfile_directory()}}"
-    python3 scripts/pypi_members.py --dev-requirements --package "$package" \
+    uv run --script scripts/pypi_members.py --dev-requirements --package "$package" \
       > "$work/test-requirements.txt"
     uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" \
       -r "$work/test-requirements.txt"
