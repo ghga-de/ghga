@@ -346,11 +346,11 @@ class FileBoxClient(FileBoxClientPort):
             if field in body:
                 extra[field] = body[field]
 
-        if exception_id == "incompleteUploads":
+        if exception_id == "incompleteOrFailed":
             # exception_id parsed, so the body is a JSON object we can re-read
-            raw = response.json().get("data", {}).get("incomplete_uploads", [])
+            raw = response.json().get("data", {}).get("file_ids", [])
             incomplete_file_ids = [UUID(item[0]) for item in raw]
-            extra["incomplete_uploads"] = incomplete_file_ids
+            extra["file_ids"] = incomplete_file_ids
             log.error(
                 "Failed to %s FileUploadBox %s: %d file(s) have incomplete uploads.",
                 operation,
@@ -358,7 +358,7 @@ class FileBoxClient(FileBoxClientPort):
                 len(incomplete_file_ids),
                 extra=extra,
             )
-            raise self.FUBIncompleteUploadsError(
+            raise self.FUBIncompleteOrFailedError(
                 incomplete_file_ids=incomplete_file_ids
             )
         if exception_id == "boxVersionOutdated":
@@ -441,7 +441,7 @@ class FileBoxClient(FileBoxClientPort):
         """Lock a FileUploadBox in the owning service.
 
         Raises:
-            FUBIncompleteUploadsError if force=False and there are incomplete uploads
+            FUBIncompleteOrFailedError if force=False and there are incomplete uploads
                 or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.

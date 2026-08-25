@@ -261,10 +261,10 @@ async def test_lock_box_force_passed_through(
     )
 
 
-async def test_lock_box_incomplete_uploads_error(
+async def test_lock_box_incomplete_or_failed_error(
     rig: JointRig, populated_boxes: list[UUID]
 ):
-    """Test that FUBIncompleteUploadsError is converted to BoxIncompleteUploadsError
+    """Test that FUBIncompleteOrFailedError is converted to BoxIncompleteOrFailedError
     and the box state is rolled back to open.
     """
     box_id = populated_boxes[0]
@@ -273,12 +273,12 @@ async def test_lock_box_incomplete_uploads_error(
 
     incomplete_file_ids = [uuid4(), uuid4()]
     rig.file_upload_box_client.lock_file_upload_box.side_effect = (  # type: ignore
-        FileBoxClientPort.FUBIncompleteUploadsError(
+        FileBoxClientPort.FUBIncompleteOrFailedError(
             incomplete_file_ids=incomplete_file_ids
         )
     )
 
-    with pytest.raises(rig.rdub_manager.BoxIncompleteUploadsError) as exc_info:
+    with pytest.raises(rig.rdub_manager.BoxIncompleteOrFailedError) as exc_info:
         await rig.rdub_manager.update_research_data_upload_box(
             box_id=box_id,
             version=box.version,
@@ -1715,11 +1715,11 @@ async def test_archive_box_file_upload_box_version_error(
     assert unchanged_box.version == original_version  # Version rolled back
 
 
-async def test_archive_box_incomplete_uploads_error(
+async def test_archive_box_incomplete_or_failed_error(
     rig: JointRig, populated_boxes: list[UUID]
 ):
     """Test that the archive branch of _handle_state_change() correctly
-    handles the IncompleteUploadsError.
+    handles the IncompleteOrFailedError.
     """
     box_id = populated_boxes[0]
 
@@ -1751,7 +1751,7 @@ async def test_archive_box_incomplete_uploads_error(
     rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
     incomplete_ids = [uuid4(), uuid4()]
     rig.file_upload_box_client.archive_file_upload_box = AsyncMock(
-        side_effect=FileBoxClientPort.FUBIncompleteUploadsError(
+        side_effect=FileBoxClientPort.FUBIncompleteOrFailedError(
             incomplete_file_ids=incomplete_ids
         )
     )
@@ -1761,7 +1761,7 @@ async def test_archive_box_incomplete_uploads_error(
         models.FileAccession(pid="GHGAF001", file_id=test_file_ids[0])
     )
 
-    with pytest.raises(rig.rdub_manager.BoxIncompleteUploadsError):
+    with pytest.raises(rig.rdub_manager.BoxIncompleteOrFailedError):
         await rig.rdub_manager.update_research_data_upload_box(
             box_id=box_id,
             version=box.version,
