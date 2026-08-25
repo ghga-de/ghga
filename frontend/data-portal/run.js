@@ -16,7 +16,10 @@ import { fileURLToPath } from 'url';
 const NAME = 'data-portal';
 const DEFAULT_BACKEND = 'https://data.staging.ghga.dev';
 
+// In production the settings that must not be baked into the image arrive on a mounted
+// secrets volume; in development they come from a gitignored file next to this script.
 const DOTENV_PATH = '/secrets/.env';
+const LOCAL_ENV_PATH = 'local.env';
 
 const args = process.argv.slice(1);
 const DEV = args.includes('--dev');
@@ -93,6 +96,24 @@ function parseEnvFile(filePath) {
 }
 
 /**
+ * Put the variables of a .env file into the process environment.
+ *
+ * Variables already set in the environment win, so an inline `data_portal_x=... just fe-dev`
+ * still overrides the file. Everything the file defines becomes a real environment variable,
+ * not just the settings keys, so consumers outside the settings schema — `proxy.conf.mjs`
+ * reads `data_portal_ignore_cert` directly — are served by the same file.
+ *
+ * @param {string} filePath - Path to the .env file.
+ */
+function exportEnvFile(filePath) {
+  for (const [key, value] of Object.entries(parseEnvFile(filePath))) {
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+/**
  * Reads and merges configuration settings from default and specific YAML files.
  * Overrides settings with environment variables prefixed with the application name.
  * Variables from the .env file at DOTENV_PATH are used as a fallback when a variable
@@ -107,7 +128,7 @@ function readSettings() {
   const defaultSettings = yaml.load(fs.readFileSync(defaultSettingsPath, 'utf8'));
 
   // Read the (optional) development or production specific configuration file
-  const specificSettingsPath = DEV ? `.devcontainer/${NAME}.yaml` : `${NAME}.yaml`;
+  const specificSettingsPath = DEV ? `${NAME}.dev.yaml` : `${NAME}.yaml`;
 
   let specificSettings = {};
   try {
@@ -309,7 +330,7 @@ async function runDevServer(
   if (ssl) {
     params.push('--ssl', '--ssl-cert', sslCert, '--ssl-key', sslKey);
   }
-  if (logLevel == 'debug') {
+  if (logLevel?.toLowerCase() === 'debug') {
     params.push('--verbose');
   }
 
@@ -374,6 +395,10 @@ function runProdServer(host, port, ssl, sslCert, sslKey, logLevel) {
  */
 async function main() {
   process.chdir(__dirname);
+
+  if (DEV) {
+    exportEnvFile(LOCAL_ENV_PATH);
+  }
 
   const settings = readSettings();
 

@@ -86,16 +86,53 @@ fe-format:
 fe-format-check:
     cd frontend/data-portal && pnpm format:check
 
-# Run the data-portal dev server with MOCKED api + oidc (MSW) — no backend needed.
+# The four dev-server modes are the two independent switches --with-backend (real API
+# instead of the MSW mocks) and --with-oidc (real login instead of the faked session);
+# frontend/data-portal/README.md documents what each one needs. Per-developer settings
+# and secrets go in frontend/data-portal/local.env (see local.env.example).
+
 # Generates public/config.js (mock_api=true) and serves on http://localhost:8080.
 # (Bare `pnpm start` won't work on its own: it skips the config.js generation this
 # launcher does — that's why the server needs run.js, not plain `ng serve`.)
+# Run the data-portal dev server with MOCKED api + oidc (MSW) — no backend needed.
 fe-dev:
     cd frontend/data-portal && node run.js --dev
 
 # Run the data-portal against a real backend (default: staging) instead of mocks.
 fe-dev-backend:
     cd frontend/data-portal && node run.js --dev --with-backend
+
+# Run the data-portal against the real OIDC provider (mock API), on https://<backend host>/.
+fe-dev-oidc: fe-dev-ssl
+    cd frontend/data-portal && node run.js --dev --with-oidc
+
+# Run the data-portal against both the real backend and the real OIDC provider.
+fe-dev-backend-oidc: fe-dev-ssl
+    cd frontend/data-portal && node run.js --dev --with-backend --with-oidc
+
+# Create the dev server's self-signed certificate (idempotent, reissued per hostname).
+fe-cert:
+    frontend/data-portal/create-cert.sh
+
+# What the --with-oidc modes need before they can serve: a certificate, and a node that
+# may bind port 443. The port is not negotiable — the OIDC provider redirects back to a
+# registered URI that carries no port — but this container shares the host's network
+# namespace (see .devcontainer/devcontainer.json), so it also inherits the host's
+# net.ipv4.ip_unprivileged_port_start=1024 instead of the 0 a private namespace gets.
+# Rather than lower that on the host, grant the capability to this container's node,
+# which a rebuild or a node upgrade then discards along with everything else in the
+# image. Idempotent; only the setcap needs sudo.
+[private]
+fe-dev-ssl: fe-cert
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v getcap > /dev/null && command -v setcap > /dev/null \
+      || { echo "getcap/setcap not found; install libcap2-bin" >&2; exit 1; }
+    node=$(readlink -f "$(command -v node)")
+    # plain grep, not -q — see the SIGPIPE note in `images-present`
+    if getcap "$node" | grep cap_net_bind_service > /dev/null; then exit 0; fi
+    sudo setcap cap_net_bind_service=+ep "$node"
+    echo "granted cap_net_bind_service to $node"
 
 # --- Migration (see docs/migration/runbook.md) ------------------------------------------
 # Dry-run the history-preserving import from the local .legacy_repos snapshot.
