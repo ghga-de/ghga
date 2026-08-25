@@ -86,13 +86,23 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 - Local development builds use the same Dockerfile/stamping path with a dev placeholder
   version (`0.0.0+dev.g<sha>`) — release/local parity is the guarantee that "worked locally"
   transfers.
-- **Chart publish target decided** (2026-08-24): charts publish as **OCI artifacts** under
-  `oci://docker.io/ghga/charts/<chart>`, alongside the images — package + push happen in
-  the same `release.yaml` run that builds the images, from the same tagged commit,
-  stamped with the same platform version. This supersedes the interim `release-charts.yaml`
-  gh-pages index, which published charts independently on every `main` push touching
-  `deploy/` and so let a chart version denote no defined state relative to the images it
-  shipped alongside.
+- **Chart publish target decided** (2026-08-24): charts publish as **OCI artifacts**,
+  alongside the images — package + push happen in the same `release.yaml` run that builds
+  the images, from the same tagged commit, stamped with the same platform version. This
+  supersedes the interim `release-charts.yaml` gh-pages index, which published charts
+  independently on every `main` push touching `deploy/` and so let a chart version denote
+  no defined state relative to the images it shipped alongside.
+- **Chart publish target corrected** (2026-08-25): the initial `oci://docker.io/ghga/charts/<chart>`
+  target is invalid — Docker Hub repository paths are exactly two segments
+  (`namespace/repo`), and a chart's name always equals its image's package name
+  (ADR-0014), so publishing under the bare name would collide tag-for-tag with the
+  container image of the same name and version in the same `ghga` namespace. Charts
+  instead publish to `oci://registry-1.docker.io/ghga/<chart>-chart` — same namespace,
+  each chart's own repo, distinguished by a `-chart` suffix (the packaged copy is renamed
+  for this push only; the umbrella's local dependency graph keeps the real chart names).
+  `registry-1.docker.io` is used explicitly rather than the `docker.io` alias: Helm's OCI
+  (ORAS-based) client does not do the same Docker Hub hostname resolution the Docker CLI
+  does, so credentials and push target must agree on the literal registry host.
 - **Pre-release cuts**: `ghga/X.Y.Z-rc.N` is a normal platform-lane ref for staging — same
   mechanism, same lockstep guarantee (images and charts from one commit), just a SemVer
   pre-release identifier on the version. Not a separate process or workflow.

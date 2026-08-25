@@ -5,7 +5,7 @@ Configurations for most GHGA microservice, ready to launch on Kubernetes using [
 ## TL;DR
 
 ```bash
-helm install my-release oci://docker.io/ghga/charts/<chart> --version X.Y.Z
+helm install my-release oci://registry-1.docker.io/ghga/<chart>-chart --version X.Y.Z
 ```
 
 ### Update Chart
