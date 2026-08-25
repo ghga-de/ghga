@@ -1,26 +1,9 @@
-__pycache__
-__pypackages__/
-*.py[ocd]
-*.egg-info
-
-*.lock
-
-.coverage
-htmlcov
-.mypy_cache
-.pytest_cache
-.ruff_cache
-
-build
-dist
-
 *.env
-.venv
 
 *.json
+!.claude/**/*.json
+.claude/settings.local.json
 *.log
 
-/.dev/
-
-.vscode/*
-!.vscode/settings.json
+# local 'scratch' folder is untracked, do not remove
+.dev/

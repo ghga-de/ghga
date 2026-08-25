@@ -39,3 +39,5 @@ rendered/
 claude-backup/
 # root-level Claude Code state only — nested .claude/ dirs in members are tracked
 /.claude/
+# leave out every local claude settings
+**/.claude/settings.local.json
