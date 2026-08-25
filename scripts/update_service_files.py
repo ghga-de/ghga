@@ -121,3 +121,7 @@ def update_service_specific(service: str = ServiceArg, check: bool = CheckFlag):
     print(f"Running all scripts for {service if service else 'all services'}.")
     config_docs(service=service, check=check)
     openapi_docs(service=service, check=check)
+
+
+if __name__ == "__main__":
+    app()
