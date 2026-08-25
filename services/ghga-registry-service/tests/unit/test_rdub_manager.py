@@ -1715,6 +1715,63 @@ async def test_archive_box_file_upload_box_version_error(
     assert unchanged_box.version == original_version  # Version rolled back
 
 
+async def test_archive_box_incomplete_uploads_error(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that the archive branch of _handle_state_change() correctly
+    handles the IncompleteUploadsError.
+    """
+    box_id = populated_boxes[0]
+
+    # Lock the box
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    # Create test file uploads
+    test_file_ids = [uuid4()]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=test_file_ids[0],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test0",
+            decrypted_sha256="checksum0",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
+    incomplete_ids = [uuid4(), uuid4()]
+    rig.file_upload_box_client.archive_file_upload_box = AsyncMock(
+        side_effect=FileBoxClientPort.FUBIncompleteUploadsError(
+            incomplete_file_ids=incomplete_ids
+        )
+    )
+
+    # Insert the requisite accession mapping
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=test_file_ids[0])
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxIncompleteUploadsError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="archived",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+
 async def test_update_box_max_size(rig: JointRig, populated_boxes: list[UUID]):
     """Test that updating max_size persists the new value and calls resize on UCS."""
     box_id = populated_boxes[0]
