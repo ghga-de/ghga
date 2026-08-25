@@ -5,16 +5,17 @@ Configurations for most GHGA microservice, ready to launch on Kubernetes using [
 ## TL;DR
 
 ```bash
-helm repo add ghga https://ghga-de.github.io/charts
-helm search repo ghga
-helm install my-release ghga/<chart>
+helm install my-release oci://registry-1.docker.io/ghga/<chart>-chart --version X.Y.Z
 ```
 
 ### Update Chart
 
-- Update `appVersion` in `src/charts_app_versions.yaml` to desired version
-- Update `src/values` to add service parameters (only required or parameters which differ from default on purpose)
-- Create PR
+Chart content (name, image, values) is generated from workspace metadata by
+`deploy/src/create_charts.py` (`just charts`) — see [../deploy/README.md](./README.md).
+Chart version/`appVersion` and publishing are not per-merge: they're stamped and pushed
+as OCI artifacts only as part of a platform release (`ghga/X.Y.Z` via
+[release.yaml](../.github/workflows/release.yaml), ADR-0004), so a chart version always
+matches a released set of images.
 
 ## Developer notes
 

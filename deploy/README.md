@@ -14,7 +14,7 @@ deploy/
     <per-service charts>/ # generated — do not edit; run `just charts [version]`
     ghga-demo/            # self-contained, single-command umbrella (== the test bed)
     aai/                  # local AAI subchart (mock-oauth2-server default; ADR-0007)
-  src/                    # generator (create_charts.py), chart template, auxiliary values
+  src/                    # generator (create_charts.py), chart template
   tests/                  # library chart tests (pytest renders the dummy chart via helm)
 ```
 
@@ -23,9 +23,7 @@ workspace members enumerated by `scripts/image_members.py` (the same source the 
 workflow uses); the chart version and `appVersion` are the platform version
 (`just charts <version>`, image tags fall back to `appVersion`). Per-member deployment
 values live in `<member>/chart-values.yaml`, co-located with the member. Generated charts
-use `commandStyle: exec` — the monorepo's hardened images have no shell. Charts without a
-workspace member (`test-oidc-provider`, `datahub-monitor`, `remotebackup`) are declared in
-`src/auxiliary_charts.yaml` with values in `src/values/`.
+use `commandStyle: exec` — the monorepo's hardened images have no shell.
 
 The demo umbrella (`helm install ghga deploy/charts/ghga-demo`) bundles the Envoy Gateway
 edge (GatewayClass/Gateway/EnvoyProxy, NodePort 30080 by default) with per-route

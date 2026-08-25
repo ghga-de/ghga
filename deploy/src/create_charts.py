@@ -7,9 +7,6 @@ members enumerated by scripts/image_members.py — the same source the release
 workflow uses. Genuine deployment knowledge lives in each member's
 chart-values.yaml, co-located with the member.
 
-Auxiliary charts (no workspace member behind them) are listed in
-auxiliary_charts.yaml and keep hand-maintained values in values/<name>.yaml.
-
 Conventions baked into the derived values:
 - chart name == package name == image name == console script (ADR-0014)
 - the monorepo images are shell-less hardened bases -> commandStyle=exec,
@@ -30,10 +27,8 @@ from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
 DEPLOY_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = DEPLOY_ROOT.parent
-VALUES_DIR = DEPLOY_ROOT / "src" / "values"
 OUTPUT_DIR = DEPLOY_ROOT / "charts"
 LIBRARY_VALUES = DEPLOY_ROOT / "charts" / "ghga-common" / "values.yaml"
-AUX_CHARTS_YAML = DEPLOY_ROOT / "src" / "auxiliary_charts.yaml"
 CHART_TEMPLATE = DEPLOY_ROOT / "src" / "template"
 DEMO_CHART = OUTPUT_DIR / "ghga-demo"
 # name of the single image carrying every Python member (docker/Dockerfile VARIANT=mono)
@@ -127,12 +122,6 @@ def library_defaults() -> dict:
         return YAML_PARSER.load(library_file)["exports"]["defaults"]
 
 
-def auxiliary_names() -> set[str]:
-    """The charts listed in auxiliary_charts.yaml (they carry their own versions)."""
-    with AUX_CHARTS_YAML.open("r", encoding="utf-8") as aux_file:
-        return set(YAML_PARSER.load(aux_file)["charts"])
-
-
 def current_member_version() -> str:
     """The platform version already stamped on the generated member charts.
 
@@ -150,19 +139,8 @@ def current_member_version() -> str:
             f"no generated charts under {OUTPUT_DIR}/ - has the generator changed?"
         )
 
-    # The auxiliary charts wrap external images and carry their own versions, which
-    # --version does not touch. Only the charts derived from workspace members take
-    # the platform version.
-    auxiliary = auxiliary_names()
-    member_charts = [chart for chart in generated if chart.name not in auxiliary]
-    if not member_charts:
-        sys.exit(
-            f"every generated chart is auxiliary per {AUX_CHARTS_YAML}"
-            " - that cannot be right"
-        )
-
     by_version: dict[str, list[str]] = {}
-    for chart_dir in member_charts:
+    for chart_dir in generated:
         chart_yaml = chart_dir / "Chart.yaml"
         if not chart_yaml.is_file():
             sys.exit(f"{chart_yaml} is missing")
@@ -285,7 +263,7 @@ def mono_overlay_text(registry: str) -> str:
 
 
 def main() -> None:
-    """Regenerate all charts (workspace members + auxiliary)."""
+    """Regenerate all charts from workspace members."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--version",
@@ -314,25 +292,6 @@ def main() -> None:
             values_text=member_values_text(member, args.registry, defaults),
         )
         print(f"Created chart for {member['package']} at {chart_dir}")
-
-    with AUX_CHARTS_YAML.open("r", encoding="utf-8") as aux_file:
-        aux_charts = YAML_PARSER.load(aux_file)
-    for name, chart in aux_charts["charts"].items():
-        values_file = VALUES_DIR / f"{name}.yaml"
-        aux_values = deep_merge(
-            defaults, YAML_PARSER.load(values_file.read_text()) or {}
-        )
-        buffer = StringIO()
-        buffer.write(VALUES_HEADER.format(source=f"deploy/src/values/{name}.yaml"))
-        YAML_PARSER.dump(aux_values, buffer)
-        chart_dir = stamp_chart(
-            name=name,
-            description=chart["description"],
-            version=str(chart.get("version", chart["appVersion"])),
-            app_version=str(chart["appVersion"]),
-            values_text=buffer.getvalue(),
-        )
-        print(f"Created auxiliary chart for {name} at {chart_dir}")
 
     mono_values = DEMO_CHART / "values-mono.yaml"
     mono_values.write_text(mono_overlay_text(args.registry).rstrip("\n") + "\n")
