@@ -59,9 +59,9 @@ env:
   # Real publish target — matches what production already pulls from.
   REGISTRY: docker.io/ghga
   # Charts publish to the same namespace under a `-chart` suffix (see the header comment).
-  # registry-1.docker.io is explicit rather than the docker.io alias: Helm's OCI (ORAS-
-  # based) client does not resolve Docker Hub's hostname aliases the way the Docker CLI
-  # does, so the login and the push target must agree on the literal registry host.
+  # registry-1.docker.io (not the docker.io alias) is the actual backend host OCI
+  # push/pull operations need to hit — but the *login* step targets docker.io, not this;
+  # see package-charts' "Login to Docker Hub" step for why those two intentionally differ.
   CHART_REGISTRY: registry-1.docker.io/ghga
 
 jobs:
@@ -265,14 +265,20 @@ jobs:
             helm package "$c" -d dist/
           done
       # No separate `helm registry login`: Helm's OCI client reads the same
-      # ~/.docker/config.json this writes — keyed by the literal registry host, so this
-      # must log into registry-1.docker.io itself (see CHART_REGISTRY's comment above),
-      # not docker.io as the image-build login above does.
+      # ~/.docker/config.json this writes. Login here targets docker.io — NOT
+      # registry-1.docker.io, despite CHART_REGISTRY pushing there — because `docker
+      # login` only writes Docker Hub credentials under the canonical
+      # https://index.docker.io/v1/ key when the registry it's given is docker.io's
+      # recognized alias; asking it to log into registry-1.docker.io directly writes
+      # credentials under a key ORAS's lookup never finds, producing an anonymous
+      # (unauthenticated) push attempt that Docker Hub then 401s. ORAS *does* translate
+      # a registry-1.docker.io push target back to that canonical key on lookup — it's
+      # only the write side (docker login) that needs the docker.io alias to land there.
       - name: Login to Docker Hub
         if: ${{ inputs.push }}
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
-          registry: registry-1.docker.io
+          registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       # Releases are immutable — but "immutable" means different things per category:
