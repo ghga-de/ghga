@@ -58,16 +58,9 @@ log = logging.getLogger(__name__)
 type ByteBuffer = bytes | bytearray | memoryview
 
 # Crypto and hashing run on a small dedicated pool instead of inline on the event loop.
-#  A part's decrypt/re-encrypt/verify chain contains no await, so run inline it blocks
-#  the loop in one stretch - measured at 118-225ms for a 16 MiB part - and during that
-#  stretch no other part's S3 transfer is serviced at all.
-#
-#  Two workers, deliberately not one per part slot. Benchmarking the stages in
-#  isolation showed decrypt and re-encrypt peak at two threads (1.46x and 1.37x over
-#  single-threaded) and then regress hard: at four threads they run *slower* than one,
-#  because parts this size saturate memory bandwidth rather than compute. Sizing this
-#  pool from max_concurrent_parts, as an earlier revision did, lands squarely in that
-#  regressive zone.
+#  A part's decrypt/re-encrypt/verify sequence doesn't have an `await` anywhere in it,
+#  so it blocks S3 ops if we run it inline. Using a 2-worker pool yields good perf
+#  improvements, but more than that actually showed worse performance.
 CRYPTO_THREAD_COUNT = 2
 
 
