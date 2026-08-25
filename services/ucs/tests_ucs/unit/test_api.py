@@ -638,10 +638,14 @@ async def test_create_box_endpoint_error_handling(
         ),
         (
             UploadControllerPort.IncompleteOrFailedError(
-                box_id=TEST_BOX_ID, incomplete_uploads=[(TEST_FILE_ID, "test_file")]
+                box_id=TEST_BOX_ID,
+                incomplete_uploads=[(TEST_FILE_ID, "test_file")],
+                need_attention=[],
             ),
             http_exceptions.HttpIncompleteOrFailedError(
-                box_id=TEST_BOX_ID, incomplete_uploads=[(TEST_FILE_ID, "test_file")]
+                box_id=TEST_BOX_ID,
+                incomplete_uploads=[(TEST_FILE_ID, "test_file")],
+                need_attention=[],
             ),
         ),
         (
