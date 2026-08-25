@@ -933,6 +933,70 @@ async def test_lock_box_force(rig: JointRig):
     assert (await rig.file_upload_dao.get_by_id(failed_upload.id)).state == "failed"
 
 
+@pytest.mark.parametrize("blocking_state", ["init", "inbox"])
+async def test_archive_box_with_incomplete_upload(
+    rig: JointRig, blocking_state: FileUploadState
+):
+    """Test error handling for the scenario where the user tries to archive a
+    box for which an incomplete FileUpload (still in 'init' or 'inbox') exists.
+    """
+    box_id = await rig.create_default_box()
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+
+    file_upload = make_file_upload(state=blocking_state)
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
+
+    with pytest.raises(UploadControllerPort.IncompleteOrFailedError) as exc_info:
+        await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+
+    assert exc_info.value.incomplete_uploads == [(file_upload.id, file_upload.alias)]
+    assert exc_info.value.need_attention == []
+    assert rig.file_upload_box_dao.latest.state == "locked"
+
+
+async def test_archive_box_with_failed_interrogation(rig: JointRig):
+    """Test error handling for the scenario where the user tries to archive a
+    box for which a FileUpload that failed interrogation (state 'failed' with
+    decrypted_sha256 set) exists. Such uploads need attention and must block
+    archiving even though they aren't still actively uploading.
+    """
+    box_id = await rig.create_default_box()
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+
+    failed_upload = make_file_upload(state="failed")
+    failed_upload.decrypted_sha256 = "a1b2c3"
+    failed_upload.box_id = box_id
+    await rig.file_upload_dao.insert(failed_upload)
+
+    with pytest.raises(UploadControllerPort.IncompleteOrFailedError) as exc_info:
+        await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+
+    assert exc_info.value.incomplete_uploads == []
+    assert exc_info.value.need_attention == [(failed_upload.id, failed_upload.alias)]
+    assert rig.file_upload_box_dao.latest.state == "locked"
+
+
+@pytest.mark.parametrize("terminal_state", ["failed", "cancelled"])
+async def test_archive_box_ignores_terminal_uploads(
+    rig: JointRig, terminal_state: FileUploadState
+):
+    """Archiving must succeed when the only non-interrogated uploads are in a
+    terminal state (cancelled, or failed without having reached the decryption
+    step). Those uploads are no longer active and don't need attention.
+    """
+    box_id = await rig.create_default_box()
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+
+    file_upload = make_file_upload(state=terminal_state)
+    file_upload.decrypted_sha256 = None
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
+
+    await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+    assert rig.file_upload_box_dao.latest.state == "archived"
+
+
 async def test_complete_file_upload_when_box_missing(rig: JointRig):
     """Test error handling in the case where the user tries to complete a FileUpload
     for a box ID that doesn't exist.
