@@ -100,9 +100,16 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   instead publish to `oci://registry-1.docker.io/ghga/<chart>-chart` — same namespace,
   each chart's own repo, distinguished by a `-chart` suffix (the packaged copy is renamed
   for this push only; the umbrella's local dependency graph keeps the real chart names).
-  `registry-1.docker.io` is used explicitly rather than the `docker.io` alias: Helm's OCI
-  (ORAS-based) client does not do the same Docker Hub hostname resolution the Docker CLI
-  does, so credentials and push target must agree on the literal registry host.
+  `registry-1.docker.io` is the actual backend host OCI push/pull operations need to
+  hit, distinct from `docker.io`.
+- **Chart push auth fixed** (2026-08-25): a real dispatch 401'd pushing charts —
+  `docker login` only writes Docker Hub credentials under the canonical
+  `https://index.docker.io/v1/` key when given `docker.io` (its recognized alias);
+  logging into `registry-1.docker.io` directly writes credentials under a key ORAS's
+  lookup never finds, so the push goes out unauthenticated. Fix: login targets
+  `docker.io` (same as the image-build login), while the push target stays
+  `registry-1.docker.io` — ORAS does translate a `registry-1.docker.io` lookup back to
+  the canonical key, it's only the write side that needed the alias.
 - **Pre-release cuts**: `ghga/X.Y.Z-rc.N` is a normal platform-lane ref for staging — same
   mechanism, same lockstep guarantee (images and charts from one commit), just a SemVer
   pre-release identifier on the version. Not a separate process or workflow.
