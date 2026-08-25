@@ -121,18 +121,3 @@ def update_service_specific(service: str = ServiceArg, check: bool = CheckFlag):
     print(f"Running all scripts for {service if service else 'all services'}.")
     config_docs(service=service, check=check)
     openapi_docs(service=service, check=check)
-
-
-@app.command(name="all")
-def update_all(check: bool = CheckFlag):
-    """Run all update scripts for everything in order.
-
-    Scripts are run in order to account for downstream changes, such as config -> readme.
-    Service-specific scripts are run for all services.
-    """
-    config_docs(service="", check=check)
-    openapi_docs(service="", check=check)
-
-
-if __name__ == "__main__":
-    app()
