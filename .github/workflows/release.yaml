@@ -1,9 +1,9 @@
 # Release — two lanes (revised ADR-0004):
-#   ghga/X.Y.Z  -> PLATFORM lane: build ALL images and package ALL charts from the tagged
-#                  commit, stamped with the platform version (lockstep; libs embedded from
-#                  source, never PyPI) — both from the same commit, so a version number
-#                  denotes one defined state.
-#   name/x.y.z  -> PYPI lane: publish that component's wheel (closure-train rule for tools).
+#   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
+#                  platform version (lockstep; libs embedded from source, never PyPI).
+#   name/x.y.z  -> PYPI lane: the tag triggers the run, it does not select what ships. No
+#                  inputs are forwarded, so pypi-publish.yaml re-derives the set from the
+#                  index and publishes every lane member ahead of it, dependencies first.
 #
 # A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
 # mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
@@ -109,14 +109,14 @@ jobs:
           # CI reads as "no evidence" rather than passing on a partial result.
           runs=$(gh api --paginate \
             "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yaml/runs?head_sha=$GITHUB_SHA&status=completed" \
-            --jq '.workflow_runs[] | {created_at, conclusion, html_url}' | jq -s 'sort_by(.created_at)')
+            --jq '.workflow_runs[] | {updated_at, conclusion, html_url}' | jq -s 'sort_by(.updated_at)')
 
           if [ "$(echo "$runs" | jq 'length')" -eq 0 ]; then
             echo "::error::no completed CI run for ${GITHUB_SHA::12} — nothing proves this commit works"
             exit 1
           fi
 
-          # The latest run wins: a red run that was re-run green is green.
+          # The latest result wins: a red run that was re-run green is green.
           latest=$(echo "$runs" | jq -r 'last')
           conclusion=$(echo "$latest" | jq -r '.conclusion')
           if [ "$conclusion" != "success" ]; then
