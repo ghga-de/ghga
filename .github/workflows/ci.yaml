@@ -17,9 +17,12 @@ on:
   push:
     branches: [main]
 
+# PR runs group by ref, so a new push cancels the old one. Main runs group by commit and
+# are never cancelled: release.yaml only releases a commit whose CI passed, and a
+# cancelled run never passes.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Repo-wide lint: covers every member plus root-level code (scripts/, docs snippets)
