@@ -37,5 +37,7 @@ pytestdebug.log
 rendered/
 # local Claude Code state backups — never commit (contains credentials)
 claude-backup/
-# local Claude Code project state (skills, settings) — not part of the repo
-.claude/
+# root-level Claude Code state only — nested .claude/ dirs in members are tracked
+/.claude/
+# leave out every local claude settings
+**/.claude/settings.local.json
