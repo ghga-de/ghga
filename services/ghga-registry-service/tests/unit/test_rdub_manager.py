@@ -1737,7 +1737,7 @@ async def test_archive_box_unsettled_files(
             decrypted_size=1000,
             encrypted_size=1100,
             part_size=100,
-            state=state,  # type: ignore[arg-type]
+            state=state,
             state_updated=now_utc_ms_prec(),
         ),
     ]
