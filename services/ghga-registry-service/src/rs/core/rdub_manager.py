@@ -934,6 +934,11 @@ class RDUBManager(RDUBManagerPort):
 
         Requires either the Data Steward role or upload access to the box.
 
+        The box must be unlocked. Since a box can be locked while uploads are still
+        ongoing, a locked box may hold files that need to be deleted (e.g. ones that
+        failed interrogation). In such a case, a Data Steward will have to unlock
+        the box first and lock it again after the deletion.
+
         Raises:
             BoxNotFoundError: If the box doesn't exist.
             BoxAccessError: If the user doesn't have access to the box.
@@ -1184,14 +1189,16 @@ class RDUBManager(RDUBManagerPort):
 
         requested_file_ids = set(accession_map.values())
 
-        # Make sure all specified file IDs are active uploads in the box
-        # Also: remove files that never made it to the inbox, but keep files that
-        #  failed interrogation
+        # Make sure all specified file IDs are active uploads in the box.
+        # Cancelled files are excluded, as are files that never made it to the inbox
+        #  (a failed upload leaves `decrypted_sha256` unset). Files that made it to the
+        #  inbox but failed interrogation are kept, since they are expected to be
+        #  resolved rather than forgotten.
         file_ids_in_box = {
             f.id
             for f in files
             if f.state != "cancelled"
-            or (f.state == "failed" and f.decrypted_sha256 is None)
+            and not (f.state == "failed" and f.decrypted_sha256 is None)
         }
 
         if invalid_ids := (requested_file_ids - file_ids_in_box):
