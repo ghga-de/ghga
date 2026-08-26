@@ -186,6 +186,8 @@ async def delete_research_data_upload_box(
     + " has ongoing uploads or files that failed re-encryption. Setting `force` locks"
     + " the box anyway; ongoing uploads are not aborted and may still complete, but no"
     + " new uploads can be started and no files can be deleted while the box is locked."
+    + " To delete a file from a locked box, a Data Steward must move it back to OPEN"
+    + " first."
     + " A note on archival: Once archived, the box may no longer be modified, and files"
     + " in the box will be moved to permanent storage. If any files in the box have yet"
     + " to be re-encrypted, if any file failed re-encryption without being resolved, if"
