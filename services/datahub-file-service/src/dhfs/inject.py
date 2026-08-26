@@ -38,9 +38,13 @@ async def prepare_interrogator(*, config: Config) -> AsyncGenerator[Interrogator
             config=config, object_storage=object_storage, httpx_client=httpx_client
         )
         central_client = CentralClient(config=config, httpx_client=httpx_client)
-        yield Interrogator(
+        interrogator = Interrogator(
             config=config, central_client=central_client, s3_client=s3_client
         )
+        try:
+            yield interrogator
+        finally:
+            interrogator.close()
 
 
 @asynccontextmanager

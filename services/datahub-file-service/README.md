@@ -33,13 +33,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/datahub-file-service):
 ```bash
-docker pull ghga/datahub-file-service:4.0.0
+docker pull ghga/datahub-file-service:4.1.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/datahub-file-service:4.0.0 .
+docker build -t ghga/datahub-file-service:4.1.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes.
@@ -47,7 +47,7 @@ However for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/datahub-file-service:4.0.0 --help
+docker run -p 8080:8080 ghga/datahub-file-service:4.1.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -216,6 +216,7 @@ The service requires the following configuration parameters:
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages. Default: `true`.
 - <a id="properties/min_run_interval_seconds"></a>**`min_run_interval_seconds`** *(integer)*: The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation. Default: `60`.
 - <a id="properties/interrogation_bucket_id"></a>**`interrogation_bucket_id`** *(string, required)*: The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS.
+- <a id="properties/max_concurrent_parts"></a>**`max_concurrent_parts`** *(integer)*: How many file parts to process at the same time. Files are processed one at a time, so this is the whole budget for the file in flight. It lets the download of one part overlap the re-encryption of another and the upload of a third, and it is the service's memory budget: peak use is roughly max_concurrent_parts * 3 * the part size. Minimum: `1`. Default: `8`.
 - <a id="properties/library_log_level"></a>**`library_log_level`** *(string)*: The log level to use for libraries. This option can be used in tandem with log_level to view DEBUG logs from DHFS without the noise of third-party libraries. Will be overridden by log_level if log_level is higher. By default, this is set to CRITICAL, which will suppress all logs with a log level lower than CRITICAL. Must be one of: "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", or "TRACE". Default: `"CRITICAL"`.
 - <a id="properties/library_logger_names"></a>**`library_logger_names`** *(array)*: The list of logger names to target with library_log_level. Default: `["httpx2", "crypt4gh", "hexkit", "ghga_service_commons", "boto3", "botocore", "httpcore2", "urllib3"]`.
   - <a id="properties/library_logger_names/items"></a>**Items** *(string)*
