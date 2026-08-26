@@ -18,7 +18,7 @@ For a practical overview of the architecture, purpose, and usage of this library
 
 ### Requirements
 
-* Python 3.13+
+* Python 3.11+
 
 ### Install from PyPI
 
@@ -28,10 +28,10 @@ pip install ghga-jsonsubschema
 
 ### Install from source
 
+The unreleased version can be installed straight from the monorepo, without cloning it:
+
 ```sh
-git clone https://github.com/ghga-de/ghga.git
-cd ghga
-uv sync
+pip install "git+https://github.com/ghga-de/ghga.git#subdirectory=libs/ghga-jsonsubschema"
 ```
 
 ## Running subschema
@@ -70,28 +70,42 @@ if __name__ == "__main__":
 
 ## Development
 
-This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
-developed from the repository root rather than on its own. The repository ships a
-devcontainer with the whole toolchain: open it in VS Code and run
-`Remote-Containers: Reopen in Container`, or set the environment up directly with
-`just sync`.
+This package is developed in the [GHGA monorepo](https://github.com/ghga-de/ghga), where
+it lives in `libs/ghga-jsonsubschema`. Clone that repository and work inside this
+package's directory:
 
-The usual tasks, run from the repository root (see
-[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
-full recipe list):
-
-```bash
-just sync                          # install every member plus the shared dev toolchain
-just test libs/ghga-jsonsubschema  # this member's test suite
-just lint                          # ruff check + format check across the workspace
+```sh
+git clone https://github.com/ghga-de/ghga.git
+cd ghga/libs/ghga-jsonsubschema
+uv sync --extra dev
+uv run pre-commit install
 ```
+
+All further commands should be run from this directory as well.
+
+Run the test suite:
+
+```sh
+uv run pytest tests/
+```
+
+Run the test suite with coverage:
+
+```sh
+uv run pytest --cov tests/
+```
+
+Note that `uv sync` uses the monorepo's shared environment and lockfile at the repository
+root, but installs only this package and its dependencies. To work on the monorepo as a
+whole, with all of its packages installed, run `just sync` from the repository root; its
+[README](https://github.com/ghga-de/ghga#readme) describes the available tasks.
 
 ## Changes made by GHGA
 
 This fork is based on version 0.0.8 of [IBM/jsonsubschema](https://github.com/ibm/jsonsubschema) and introduces additional changes:
 
 * Public API names have been changed to align with PEP 8.
-* The minimum required Python version is now 3.13.
+* The minimum required Python version is now 3.11.
 * Packaging uses more modern conventions.
 * Tests have been converted from `unittest` to `pytest`.
 * An empty `enum` is now treated as an uninhabited schema.
