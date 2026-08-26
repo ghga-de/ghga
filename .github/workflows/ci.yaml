@@ -5,9 +5,11 @@
 # (scripts/affected_targets.py). Python suites run their testcontainers against the
 # runner's native Docker daemon. A change to an image's Dockerfile additionally has that
 # image built (check-images) — the only place a base-image bump is actually verified;
-# images-gate is the always-reported check that makes it enforceable. The integration
-# gate (Stage 2) and the release workflow stay dormant until charts land / publish
-# targets are decided.
+# images-gate is the always-reported check that makes it enforceable. Affected PyPI-lane
+# members are additionally tested: the member's own wheel, plus a wheel for each internal
+# dependency releasing alongside it, against every other dependency resolved from the
+# index — across the supported Python range. published-combo-gate is its always-reported
+# check, for the same reason images-gate is. Stage 2 (integration.yaml) runs as its own workflow.
 name: ci
 
 on:

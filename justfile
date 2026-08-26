@@ -102,7 +102,13 @@ published-combo member python="3.12":
     ")
     # One field per line, not tab-separated: tab is IFS *whitespace*, so bash collapses a
     # run of them and an empty `extras` (every tool has one) shifts train_deps into it.
-    { read -r package; read -r extras; read -r train_deps; } <<< "$cell"
+    # The trailing fields need a fallback: `$(...)` strips trailing newlines, so a member
+    # with no extras and/or no train_deps yields fewer lines than there are reads, and the
+    # read that hits EOF returns 1 — which under `set -e` kills the recipe before it prints
+    # anything. `|| var=""` both neutralizes that and states the intended empty value.
+    { read -r package
+      read -r extras || extras=""
+      read -r train_deps || train_deps=""; } <<< "$cell"
 
     # Fixed path, not mktemp: the venv outlives the recipe, so a failure can be poked at
     # (`$work/venv/bin/python -m pytest -k ...`), and a re-run wipes it rather than
@@ -131,9 +137,10 @@ published-combo member python="3.12":
     uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" "$spec"
 
     # Test dependencies live in the root dependency-group, not in the member — minus the
-    # lint tools, plus whatever this member imports without declaring.
+    # lint tools. The same shared list for every member: anything else a member's suite
+    # needs is declared by the member itself.
     cd "{{justfile_directory()}}"
-    uv run --script scripts/pypi_members.py --dev-requirements --package "$package" \
+    uv run --script scripts/pypi_members.py --dev-requirements \
       > "$work/test-requirements.txt"
     uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" \
       -r "$work/test-requirements.txt"

@@ -109,7 +109,7 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
     ([ADR-0010](0010-history-preserving-migration.md)) and would stop users taking
     dependency fixes. Whatever a member already declares stays the contract, untouched in
     either direction: `ghga-connector` came from upstream pinning
-    `ghga-service-commons==8.0.0` and `hexkit[s3]==9.0.1` and keeps those exacts, while
+    `ghga-service-commons==8.1.0` and `hexkit[s3]==9.0.1` and keeps those exacts, while
     `schemapack` declares a range (`ghga-arcticfreeze >=1.0, <2`). The lane adds no pins
     and relaxes none.
   - **A library that changed without a bump does not block a dependant's release.** For the
