@@ -29,8 +29,8 @@ pip install ghga-jsonsubschema
 ### Install from source
 
 ```sh
-git clone https://github.com/ghga-de/ghga-jsonsubschema.git
-cd ghga-jsonsubschema
+git clone https://github.com/ghga-de/ghga.git
+cd ghga
 uv sync
 ```
 
@@ -70,23 +70,20 @@ if __name__ == "__main__":
 
 ## Development
 
-Set up a local development environment:
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
+developed from the repository root rather than on its own. The repository ships a
+devcontainer with the whole toolchain: open it in VS Code and run
+`Remote-Containers: Reopen in Container`, or set the environment up directly with
+`just sync`.
 
-```sh
-uv sync --extra dev
-uv run pre-commit install
-```
+The usual tasks, run from the repository root (see
+[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
+full recipe list):
 
-Run the test suite:
-
-```sh
-uv run pytest tests/
-```
-
-Run the test suite with coverage:
-
-```sh
-uv run pytest --cov tests/
+```bash
+just sync                          # install every member plus the shared dev toolchain
+just test libs/ghga-jsonsubschema  # this member's test suite
+just lint                          # ruff check + format check across the workspace
 ```
 
 ## Changes made by GHGA
