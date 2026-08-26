@@ -91,7 +91,7 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
     )
 
     # Mock the endpoint we upload the file interrogation report to, tracking reports
-    received_reports = []
+    received_reports: list[dict] = []
     joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     # Process all files
@@ -367,7 +367,7 @@ async def test_file_decryption_error(joint_fixture: JointFixture):
     )
 
     # Mock the report submission endpoint, tracking the failure reports received
-    received_reports = []
+    received_reports: list[dict] = []
     joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     # Process files - should handle the decryption error gracefully
@@ -694,7 +694,7 @@ async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
     expected_part_count = len(list(file_upload.calc_encrypted_part_ranges()))
     assert expected_part_count > 1, "test needs a multipart file to be meaningful"
 
-    received_reports = []
+    received_reports: list[dict] = []
     joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     # Delay earlier parts the most, so downloads finish in reverse order
