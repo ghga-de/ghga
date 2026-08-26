@@ -12,7 +12,7 @@ GHGA Validator - A Python library and command line utility to validate metadata
 
 ghga-validator is a Python library and command line utility to validate metadata
 w.r.t. its compliance to the [GHGA Metadata
-Model](github.com/ghga-de/ghga-metadata-schema). It takes metadata encoded in JSON of YAML format and produces a validation report in JSON format.
+Model](https://github.com/ghga-de/ghga-metadata-schema). It takes metadata encoded in JSON of YAML format and produces a validation report in JSON format.
 
 
 ## Installation
@@ -49,29 +49,23 @@ Options:
 ```
 
 ## Development
-For setting up the development environment, we rely on the
-[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode
-in combination with Docker Compose.
 
-To use it, you have to have Docker Compose as well as vscode with its "Remote - Containers"
-extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in vscode and run the command
-`Remote-Containers: Reopen in Container` from the vscode "Command Palette".
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
+developed from the repository root rather than on its own. The repository ships a
+devcontainer with the whole toolchain: open it in VS Code and run
+`Remote-Containers: Reopen in Container`, or set the environment up directly with
+`just sync`.
 
-This will give you a full-fledged, pre-configured development environment including:
-- infrastructural dependencies of the service (databases, etc.)
-- all relevant vscode extensions pre-installed
-- pre-configured linting and auto-formating
-- a pre-configured debugger
-- automatic license-header insertion
+The usual tasks, run from the repository root (see
+[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
+full recipe list):
 
-Moreover, inside the devcontainer, a convenience commands `dev_install` is available.
-It installs the service with all development dependencies, installs pre-commit.
-
-The installation is performed automatically when you build the devcontainer. However,
-if you update dependencies in the [`./setup.cfg`](./setup.cfg) or the
-[`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
+```bash
+just sync                        # install every member plus the shared dev toolchain
+just test tools/ghga-validator   # this member's test suite
+just lint                        # ruff check + format check across the workspace
+```
 
 ## License
 This repository is free to use and modify according to the
-[Apache 2.0 License](./LICENSE).
+[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/tools/ghga-validator/LICENSE).

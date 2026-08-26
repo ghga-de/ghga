@@ -1,0 +1,216 @@
+# PyPI lane — publish the libraries and public CLI tools (ADR-0004).
+#
+# A version bump is the release trigger: every lane member declaring a version above the
+# latest one on PyPI is a candidate. Re-running is idempotent.
+# If PyPI cannot be reached, the run fails.
+#
+# The whole train is built and checked, then uploaded to TestPyPI, then to PyPI.
+#
+# Because the train is built once, the artifacts TestPyPI accepted are byte-for-byte the
+# ones PyPI receives.
+#
+# release.yaml owns when a release happens; this workflow only decides what goes out. It
+# gets no trigger of its own.
+name: pypi-publish
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  # -------- what is the index behind on, and is it ours to publish? ----------------------
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      members: ${{ steps.plan.outputs.members }}
+      paths: ${{ steps.plan.outputs.paths }}
+    steps:
+      # The plan reads the declared versions in this tree and compares
+      # them with PyPI.
+      - uses: actions/checkout@v5
+      # pypi_members.py declares its own dependency via PEP 723 and runs as
+      # `uv run --script`; this job installs nothing else.
+      - uses: astral-sh/setup-uv@v7
+      # The plan takes every member the index is behind on, orders the set
+      # dependencies-first, and fails on any violation
+      - id: plan
+        run: |
+          plan=$(uv run --script scripts/pypi_members.py --plan)
+          echo "$plan" | python3 -m json.tool
+
+          errors=$(echo "$plan" | python3 -c "
+          import json, sys
+          for error in json.load(sys.stdin)['errors']:
+              print(f'::error::{error}')
+          ")
+          if [ -n "$errors" ]; then
+            echo "$errors"
+            exit 1
+          fi
+
+          members=$(echo "$plan" | python3 -c "
+          import json, sys
+          print(json.dumps(json.load(sys.stdin)['members']))
+          ")
+          paths=$(echo "$plan" | python3 -c "
+          import json, sys
+          print(json.dumps(json.load(sys.stdin)['paths']))
+          ")
+          echo "members=$members" >> "$GITHUB_OUTPUT"
+          echo "paths=$paths"     >> "$GITHUB_OUTPUT"
+          echo "$plan" > /tmp/plan.json
+
+      # prints two tables: what's being released, and what isn't with a reason for each.
+      - name: Summary
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          plan = json.load(open("/tmp/plan.json"))
+          if not plan["members"]:
+              print("Every lane member is already on PyPI at the version it declares.\n")
+          else:
+              print("### Releasing\n")
+              print("| member | version | latest on PyPI | built from the repo |")
+              print("|---|---|---|---|")
+              for m in plan["members"]:
+                  train = ", ".join(m["train_deps"]) or "—"
+                  print(f"| {m['package']} | {m['version']} | {m['pypi_latest']} | {train} |")
+              print()
+          if plan["skipped"]:
+              print("### Not releasing\n")
+              print("| member | version | why |")
+              print("|---|---|---|")
+              for m in plan["skipped"]:
+                  print(f"| {m['package']} | {m['version']} | {m['reason']} |")
+          EOF
+
+  # --------  run the published-combo tests on the packages the plan chose -----------------
+  test:
+    needs: plan
+    if: ${{ needs.plan.outputs.paths != '[]' }}
+    uses: ./.github/workflows/pypi-matrix.yaml
+    with:
+      paths: ${{ needs.plan.outputs.paths }}
+
+  # -------- build the train, rehearse on TestPyPI, then upload -----------------------------
+  #
+  # Three steps, in order, stopping at the first failure:
+  #
+  #   1. build and check *every* member. Nothing is uploaded until the whole train is
+  #      known good — otherwise a metadata error in the last package surfaces only after
+  #      the first one is already on an index, where it cannot be taken back.
+  #   2. upload the train to TestPyPI.
+  #   3. upload the same files to PyPI.
+  #
+  # Within a step, members are handled in the plan's dependency order: a package must not
+  # reach an index before a package it depends on.
+  publish:
+    needs: [plan, test]
+    if: ${{ needs.plan.outputs.paths != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Both uploads run under this one environment, so a required reviewer approves before
+    # the TestPyPI rehearsal rather than between it and PyPI, and a deployment branch policy
+    # here restricts which refs can publish at all — pypi-publish.yaml has no ancestry check
+    # of its own, unlike release.yaml.
+    #
+    # The same name has to be set in the trusted publisher config on *both* indexes. PyPI
+    # matches the environment claim, and a mismatch is reported as `invalid-publisher`
+    # without saying which field is wrong — so change both sides together, never one first.
+    environment: ghga-pypi
+    permissions:
+      contents: read
+      # The token uv exchanges with the index for upload rights.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      # One directory per member: the two upload steps push each member's own artefacts,
+      # and building once means TestPyPI and PyPI receive identical files.
+      - name: Build and check the whole train
+        env:
+          MEMBERS: ${{ needs.plan.outputs.members }}
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
+            path=$(echo "$member"    | jq -r '.path')
+            package=$(echo "$member" | jq -r '.package')
+            version=$(echo "$member" | jq -r '.version')
+
+            echo "::group::build $package $version"
+
+            # A local version (0.0.0+ghga.X) means a platform-stamped tree slipped into a
+            # PyPI build. PyPI would reject it anyway; failing here says why — and before
+            # the build rather than after it.
+            case "$version" in
+              *+*) echo "::error::$package: local version $version is not publishable"
+                   exit 1 ;;
+            esac
+
+            # Both artefacts: the sdist is what consumers on a platform with no wheel build
+            # from.
+            uv build --out-dir "dist/$package" "$path"
+            ls -l "dist/$package"
+            uvx twine check "dist/$package"/*
+            echo "::endgroup::"
+          done
+
+      # A failure here ends the run with PyPI untouched.
+      - name: Rehearse the train on TestPyPI
+        env:
+          MEMBERS: ${{ needs.plan.outputs.members }}
+        run: |
+          set -euo pipefail
+          echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
+            package=$(echo "$member" | jq -r '.package')
+            version=$(echo "$member" | jq -r '.version')
+
+            echo "::group::testpypi $package $version"
+
+            # TestPyPI is immutable and shares no history with PyPI: it still carries
+            # versions the upstream repos rehearsed years ago. --check-url below skips
+            # those instead of failing the release over them, but a skip rehearses
+            # nothing, so say so rather than letting it read as a pass.
+            if curl -sfo /dev/null "https://test.pypi.org/pypi/$package/$version/json"; then
+              echo "::warning::$package $version is already on TestPyPI — upload skipped," \
+                   "so this member was not rehearsed"
+            fi
+
+            # `always`, not the default `automatic`: automatic falls back to hunting for a
+            # token when OIDC is unavailable, reporting a misconfigured publisher as a
+            # credential error.
+            uv publish \
+              --trusted-publishing always \
+              --publish-url https://test.pypi.org/legacy/ \
+              --check-url https://test.pypi.org/simple/ \
+              "dist/$package"/*
+            echo "- rehearsed \`$package\` $version on TestPyPI" >> "$GITHUB_STEP_SUMMARY"
+            echo "::endgroup::"
+          done
+
+      - name: Publish the train to PyPI
+        env:
+          MEMBERS: ${{ needs.plan.outputs.members }}
+        run: |
+          set -euo pipefail
+          echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
+            package=$(echo "$member" | jq -r '.package')
+            version=$(echo "$member" | jq -r '.version')
+
+            echo "::group::pypi $package $version"
+            # --check-url keeps the documented idempotency when a re-run repeats a train
+            # whose earlier members already landed.
+            uv publish \
+              --trusted-publishing always \
+              --check-url https://pypi.org/simple/ \
+              "dist/$package"/*
+            echo "- published \`$package\` $version" >> "$GITHUB_STEP_SUMMARY"
+            echo "::endgroup::"
+          done

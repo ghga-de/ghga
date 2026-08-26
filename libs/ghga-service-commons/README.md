@@ -29,38 +29,22 @@ Thereby, you may specify following extra(s):
 - `auth`: dependencies needed for dealing with authentication and authorization
 
 ## Development
-For setting up the development environment, we rely on the
-[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode.
 
-To use it, you have to have Docker as well as vscode with its "Remote - Containers"
-extension (`ms-vscode-remote.remote-containers`) installed.
-Then, you just have to open this repo in vscode and run the command
-`Remote-Containers: Reopen in Container` from the vscode "Command Palette".
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
+developed from the repository root rather than on its own. The repository ships a
+devcontainer with the whole toolchain: open it in VS Code and run
+`Remote-Containers: Reopen in Container`, or set the environment up directly with
+`just sync`.
 
-This will give you a full-fledged, pre-configured development environment including:
-- infrastructural dependencies of the service (databases, etc.)
-- all relevant vscode extensions pre-installed
-- pre-configured linting and auto-formatting
-- a pre-configured debugger
-- automatic license-header insertion
+The usual tasks, run from the repository root (see
+[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
+full recipe list):
 
-Moreover, inside the devcontainer, there is following convenience command available
-(please type it in the integrated terminal of vscode):
-- `dev_install` - install the lib with all development dependencies and pre-commit hooks
-(please run that if you are starting the devcontainer for the first time
-or if added any python dependencies to the [`./pyproject.toml`](./pyproject.toml))
-
-If you prefer not to use vscode, you could get a similar setup (without the editor specific features)
-by running the following commands:
-``` bash
-# Execute in the repo's root dir:
-cd ./.devcontainer
-
-# build and run the environment with docker-compose
-docker build -t ghga-service-commons .
-docker run -it ghga-service-commons /bin/bash
-
+```bash
+just sync                            # install every member plus the shared dev toolchain
+just test libs/ghga-service-commons  # this member's test suite
+just lint                            # ruff check + format check across the workspace
 ```
 
 ## License
-This repository is free to use and modify according to the [Apache 2.0 License](./LICENSE).
+This repository is free to use and modify according to the [Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/libs/ghga-service-commons/LICENSE).

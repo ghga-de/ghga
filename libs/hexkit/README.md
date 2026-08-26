@@ -69,12 +69,12 @@ and the [API Reference](https://ghga-de.github.io/hexkit/reference/) documents a
 public classes and functions.
 
 For a complete example service built with hexkit, have a look at the
-[stream_calc](https://github.com/ghga-de/hexkit/tree/main/examples/stream_calc)
+[stream_calc](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/examples/stream_calc)
 example application. We also put a lot of effort into making the code
 self-documenting: you can find the protocols being defined at
-[src/hexkit/protocols](https://github.com/ghga-de/hexkit/tree/main/src/hexkit/protocols)
+[src/hexkit/protocols](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/src/hexkit/protocols)
 and the providers being implemented at
-[src/hexkit/providers](https://github.com/ghga-de/hexkit/tree/main/src/hexkit/providers).
+[src/hexkit/providers](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/src/hexkit/providers).
 
 ## Installation
 
@@ -103,7 +103,7 @@ The following extras are available:
 ## Contributing
 
 Contributions are welcome! Please see the
-[contribution guide](https://github.com/ghga-de/hexkit/blob/main/CONTRIBUTING.md)
+[contribution guide](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/CONTRIBUTING.md)
 for how to set up the development environment and build the documentation locally.
 
 ## Credits
@@ -115,4 +115,4 @@ library and designed and coded its first versions.
 ## License
 
 This repository is free to use and modify according to the
-[Apache 2.0 License](https://github.com/ghga-de/hexkit/blob/main/LICENSE).
+[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/LICENSE).

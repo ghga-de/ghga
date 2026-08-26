@@ -1,15 +1,14 @@
 # Release — two lanes (revised ADR-0004):
-#   ghga/X.Y.Z  -> PLATFORM lane: build ALL images and package ALL charts from the tagged
-#                  commit, stamped with the platform version (lockstep; libs embedded from
-#                  source, never PyPI) — both from the same commit, so a version number
-#                  denotes one defined state.
-#   name/x.y.z  -> PYPI lane: publish that component's wheel (closure-train rule for tools).
+#   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
+#                  platform version (lockstep; libs embedded from source, never PyPI).
+#   name/x.y.z  -> PYPI lane: the tag triggers the run, it does not select what ships. No
+#                  inputs are forwarded, so pypi-publish.yaml re-derives the set from the
+#                  index and publishes every lane member ahead of it, dependencies first.
 #
 # A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
 # mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
 # separate process.
 #
-# MANUAL-ONLY. No tag triggers yet: every run is a deliberate `workflow_dispatch`.
 # The `ref` input must name the SAME tag selected in the "Use workflow from" branch/tag
 # picker — `resolve` asserts this and fails otherwise. Every checkout in this file pulls
 # github.sha (the commit the picker resolved to, not the `ref` string), so dispatching
@@ -21,17 +20,20 @@
 # colliding with the same-named image (oci://registry-1.docker.io/ghga/<chart>-chart) —
 # when the `push` input is set, authenticated with the org's stored
 # DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets (the same credentials already used to pull
-# the hardened dhi.io base images). The PyPI lane remains a stub.
+# the hardened dhi.io base images).
 #
-# On enabling this for real: restore the tag trigger and wire the pypi lane (closure
-# train + published-combo matrix are prerequisites there):
-#   on:
-#     push:
-#       tags:
-#         - "*/*.*.*"   # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
+# That input exists only on workflow_dispatch, so **a tag push is build-only**: pushing
+# `ghga/17.0.0` verifies the commit, builds every image and packages every chart, and
+# publishes none of them. Publishing a platform release is a deliberate dispatch against
+# that tag with `push` ticked (ADR-0004: Docker Hub, dispatch only, no tag triggers yet).
+# The pypi lane is unaffected — it does not consult `push` at all.
+#
 name: release
 
 on:
+  push:
+    tags:
+      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
   workflow_dispatch:
     inputs:
       ref:
@@ -67,32 +69,84 @@ env:
 jobs:
   resolve:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # to read this commit's CI run conclusion
     outputs:
       lane: ${{ steps.route.outputs.lane }}
       name: ${{ steps.route.outputs.name }}
       version: ${{ steps.route.outputs.version }}
       images: ${{ steps.route.outputs.images }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      - id: route
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # ancestry check needs history, not just the tip
+      # pypi_members.py declares its own dependency via PEP 723 and runs as
+      # `uv run --script`; this job installs nothing else.
+      - uses: astral-sh/setup-uv@v7
+
+      # ADR-0004: the release VERIFIES the integrated HEAD, it does not re-test it. CI
+      # already proved this commit good; the tag only snapshots that. So the two things
+      # worth asserting are that the evidence exists and that it is about a commit anybody
+      # reviewed — without them, a tag on an unmerged branch, or on a commit whose CI never
+      # ran or went red, would build images and publish wheels exactly as a good one does.
+      #
+      # Enforced on every run, dispatch included: the check is worth least in the case where
+      # it is easiest to skip.
+      - name: Verify the commit is on main and its CI is green
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          ref="${{ github.event.inputs.ref || github.ref_name }}"   # name/x.y.z
-          # The `ref` input is free text; github.ref_name is the actual branch/tag the
-          # "Use workflow from" picker resolved and that every checkout in this workflow
-          # pulls. They can disagree — e.g. dispatching from `main` with `ref: ghga/17.0.0`
-          # would checkout main's HEAD but stamp it as 17.0.0. Require the dispatcher to
-          # pick the tag itself.
-          if [ "${{ github.ref_name }}" != "$ref" ]; then
-            echo "::error::ref input '$ref' does not match the selected branch/tag '${{ github.ref_name }}' — pick the '$ref' tag itself in the 'Use workflow from' selector so the build runs against that exact commit."
+          set -euo pipefail
+          git fetch --no-tags --quiet origin +refs/heads/main:refs/remotes/origin/main
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::${GITHUB_SHA::12} is not on main — releases come from main only"
             exit 1
           fi
-          case "$ref" in
-            */*) ;;
-            *)
-              echo "::error::ref '$ref' has no '/' separating name from version (expected name/x.y.z, e.g. ghga/17.0.0)"
-              exit 1
-              ;;
-          esac
+
+          # `status=completed` excludes runs still in flight, so a release racing its own
+          # CI reads as "no evidence" rather than passing on a partial result.
+          runs=$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yaml/runs?head_sha=$GITHUB_SHA&status=completed" \
+            --jq '.workflow_runs[] | {updated_at, conclusion, html_url}' | jq -s 'sort_by(.updated_at)')
+
+          if [ "$(echo "$runs" | jq 'length')" -eq 0 ]; then
+            echo "::error::no completed CI run for ${GITHUB_SHA::12} — nothing proves this commit works"
+            exit 1
+          fi
+
+          # The latest result wins: a red run that was re-run green is green.
+          latest=$(echo "$runs" | jq -r 'last')
+          conclusion=$(echo "$latest" | jq -r '.conclusion')
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI for ${GITHUB_SHA::12} concluded '$conclusion' — $(echo "$latest" | jq -r '.html_url')"
+            exit 1
+          fi
+          echo "${GITHUB_SHA::12} is on main and its CI is green"
+
+      - id: route
+        # $REF, not an interpolated `${{ }}`: interpolation pastes the input into the
+        # script as text, where shell syntax in it would run. As a variable it is data.
+        # PICKED_REF is passed the same way and for the same reason — a branch name is
+        # attacker-controllable in exactly the way the dispatch input is.
+        env:
+          REF: ${{ github.event.inputs.ref || github.ref_name }}
+          PICKED_REF: ${{ github.ref_name }}
+        run: |
+          ref="$REF"   # name/x.y.z
+          # The `ref` input is free text; PICKED_REF is the branch/tag the "Use workflow
+          # from" picker actually resolved, and the commit every checkout here pulls
+          # (github.sha) is the one IT names, not the one `ref` spells. They can disagree:
+          # dispatching from `main` with `ref: ghga/17.0.0` builds main's HEAD and stamps
+          # it 17.0.0 — silently breaking the lockstep guarantee this lane exists for. The
+          # on-main assertion above does not catch it (main's HEAD is on main by
+          # definition), so require the dispatcher to pick the tag itself. On a tag push
+          # the two strings are equal by construction, so this is a no-op there.
+          if [ "$PICKED_REF" != "$ref" ]; then
+            echo "::error::ref input '$ref' does not match the selected branch/tag '$PICKED_REF' — pick the '$ref' tag itself in the 'Use workflow from' selector so the build runs against that exact commit."
+            exit 1
+          fi
           name="${ref%/*}"; version="${ref##*/}"
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
             echo "::error::version '$version' is not SemVer (expected x.y.z or x.y.z-prerelease)"
@@ -110,8 +164,33 @@ jobs:
           # Member enumeration lives in scripts/image_members.py — the same source
           # the chart generator (deploy/src/create_charts.py) consumes.
           echo "images=$(python3 scripts/image_members.py)" >> "$GITHUB_OUTPUT"
-      # TODO on enablement: assert the tagged commit is on main AND its CI run is green
-      # (the release verifies the integrated HEAD; it does not re-test it).
+      # ADR-0004: the tag must name a lane member and match its version at HEAD. What gets
+      # uploaded is pypi-publish.yaml's decision; this only stops a tag announcing a
+      # release nobody made.
+      - name: Check the tag against the member it names
+        if: ${{ steps.route.outputs.lane == 'pypi' }}
+        env:
+          NAME: ${{ steps.route.outputs.name }}
+          VERSION: ${{ steps.route.outputs.version }}
+        run: |
+          uv run --script scripts/pypi_members.py --members > /tmp/members.json
+          python3 - <<'EOF'
+          import json, os, re, sys
+
+          def canon(name):  # PEP 503: the tag spells the distribution either way
+              return re.sub(r"[-_.]+", "-", name).lower()
+
+          name, version = os.environ["NAME"], os.environ["VERSION"]
+          members = {canon(m["package"]): m for m in json.load(open("/tmp/members.json"))}
+          member = members.get(canon(name))
+          if member is None:
+              known = ", ".join(sorted(members))
+              sys.exit(f"::error::{name} is not a PyPI-lane member (lane: {known})")
+          declared = member["version"]
+          if declared != version:
+              sys.exit(f"::error::tag says {version}, but {name} declares {declared}")
+          print(f"{name} {version} matches {member['path']}")
+          EOF
 
   # -------- platform lane: build every image, stamped; push only on request -------------
   build-images:
@@ -128,7 +207,11 @@ jobs:
       # lockstep: stop dispatching new pushes the moment one member fails so a partial
       # version (some images published, others missing) isn't left standing. This does
       # NOT roll back members that already pushed before the failure — see the TODO below.
-      fail-fast: ${{ inputs.push }}
+      #
+      # `|| false` because `inputs` is empty on a tag push, and fail-fast is one of the few
+      # places that wants a real boolean rather than something truthy: the `if:`s below
+      # coerce the empty string to false on their own, this does not.
+      fail-fast: ${{ inputs.push || false }}
       matrix:
         member: ${{ fromJSON(needs.resolve.outputs.images) }}
     env:
@@ -198,6 +281,7 @@ jobs:
             echo "build-only: ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (push input not set)"
           fi
       # TODO on enablement: Trivy scan; the front end builds via its own Dockerfile.
+
 
   # -------- platform lane: package every chart, stamped; push only on request -----------
   package-charts:
@@ -336,21 +420,15 @@ jobs:
             cat dist/manifest.txt
           fi
 
-  # -------- pypi lane: dormant stub ------------------------------------------------------
+  # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
+  #
+  # It calls pypi-publish.yaml, which picks the packages and runs the tests.
   publish-pypi:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      # TODO on enablement (ADR-0004 pypi lane):
-      #  - assert tag version == the member's pyproject version at HEAD
-      #  - closure train for tools: changed internal deps must be released from this
-      #    commit first, and the tool pins them exactly
-      #  - prerequisite: the published-combo matrix (ADR-0002) exists for this member
-      # Fails on purpose: a dispatch that routes here has selected a name/x.y.z ref, and
-      # this lane cannot publish it yet. Exiting 0 would report a release as done when
-      # nothing was published — the worst failure mode for a release workflow.
-      - run: |
-          echo "::error::pypi lane is a stub — would have published ${{ needs.resolve.outputs.name }} ${{ needs.resolve.outputs.version }}, but no publish target is configured yet."
-          exit 1
+    permissions:
+      contents: read
+      # For trusted publishing in the called workflow, which cannot hold more than its
+      # caller grants.
+      id-token: write
+    uses: ./.github/workflows/pypi-publish.yaml

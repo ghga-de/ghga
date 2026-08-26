@@ -5,9 +5,11 @@
 # (scripts/affected_targets.py). Python suites run their testcontainers against the
 # runner's native Docker daemon. A change to an image's Dockerfile additionally has that
 # image built (check-images) — the only place a base-image bump is actually verified;
-# images-gate is the always-reported check that makes it enforceable. The integration
-# gate (Stage 2) and the release workflow stay dormant until charts land / publish
-# targets are decided.
+# images-gate is the always-reported check that makes it enforceable. Affected PyPI-lane
+# members are additionally tested: the member's own wheel, plus a wheel for each internal
+# dependency releasing alongside it, against every other dependency resolved from the
+# index — across the supported Python range. published-combo-gate is its always-reported
+# check, for the same reason images-gate is. Stage 2 (integration.yaml) runs as its own workflow.
 name: ci
 
 on:
@@ -315,5 +317,36 @@ jobs:
             *) echo "::error::image build gate failed ($d / $b)"; exit 1 ;;
           esac
 
-  # TODO (ADR-0002, separable): per-library standalone matrix across supported Python
-  # versions, validating the *published* combination alongside the integrated one.
+  # The published-combo gate (ADR-0002): the same affected members, tested the way external
+  # consumers get them. pypi-matrix.yaml drops everything outside the PyPI lane, so a
+  # services-only change yields no cells and only its `test` job is skipped — `discover`
+  # still runs, and still queries PyPI once per lane member.
+  check-published-combo:
+    needs: [discover, lint]
+    if: ${{ needs.discover.outputs.python != '[]' }}
+    uses: ./.github/workflows/pypi-matrix.yaml
+    with:
+      paths: ${{ needs.discover.outputs.python }}
+
+  # The check to require in branch protection for this gate, for the same reason
+  # images-gate exists above: check-published-combo is `if:`-gated, and a job that never
+  # starts can leave its check missing rather than skipped. `lint` is in `needs` because
+  # check-published-combo waits on it — without that, a lint failure would skip the matrix
+  # and this job would report it as "nothing to test".
+  published-combo-gate:
+    needs: [discover, lint, check-published-combo]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verdict
+        run: |
+          d='${{ needs.discover.result }}'
+          l='${{ needs.lint.result }}'
+          c='${{ needs.check-published-combo.result }}'
+          echo "discover=$d lint=$l check-published-combo=$c"
+          case "$d:$l:$c" in
+            success:success:success) echo "every affected lane member passed the published-combo matrix" ;;
+            success:success:skipped) echo "no PyPI-lane member affected — nothing to test" ;;
+            *) echo "::error::published-combo gate failed ($d / $l / $c)"; exit 1 ;;
+          esac
