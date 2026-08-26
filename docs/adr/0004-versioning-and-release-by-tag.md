@@ -137,7 +137,19 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   same credentials used to pull the hardened dhi.io base images). GHCR
   (`ghcr.io/ghga-de/ghga`) remains in use as a separate, deliberately independent scratch
   registry for `dev-images.yaml`/`security-scan.yaml`'s `:dev`/`:updated` tags — never the
-  release target. PyPI publish targets remain undecided; that lane stays a stub.
+  release target.
+- **PyPI publish targets decided** (2026-08-26): the lane publishes to **PyPI**, rehearsed
+  on **TestPyPI** first, both by **trusted publishing** (OIDC; no stored tokens). One
+  `pypi-publish.yaml` run builds and checks the whole train before uploading anything, then
+  uploads to TestPyPI, then the *same files* to PyPI; `--check-url` on both makes a re-run
+  idempotent. The `publish` job runs under `environment: ghga-pypi`, whose required
+  reviewers gate the whole job. The two indexes hold **separate** trusted-publisher
+  entries, matched on owner, repository, workflow filename and environment — a mismatch
+  reports only `invalid-publisher`, so both sides change together. The lane has **one
+  entrance**: `release.yaml` routes `name/x.y.z` tags to it via `workflow_call`, so every
+  publish has passed `resolve` (commit on `main`, CI green, tag matching the declared
+  version). `pypi-publish.yaml` declares no `workflow_dispatch` of its own — a second
+  entrance would bypass all three.
 - Local development builds use the same Dockerfile/stamping path with a dev placeholder
   version (`0.0.0+dev.g<sha>`) — release/local parity is the guarantee that "worked locally"
   transfers.
