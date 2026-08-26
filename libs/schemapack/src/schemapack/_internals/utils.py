@@ -32,9 +32,9 @@ import jsonschema.exceptions
 import jsonschema.protocols
 import jsonschema.validators
 import ruamel.yaml
-from arcticfreeze import FrozenDict
 from pydantic import BaseModel
 
+from arcticfreeze import FrozenDict
 from schemapack.exceptions import ParsingError
 
 yaml = ruamel.yaml.YAML(typ="rt")

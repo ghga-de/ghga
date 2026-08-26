@@ -61,6 +61,7 @@ ghga-monorepo/
   ruff.toml / mypy config     # one toolchain config, repo-wide
   libs/                       # source-coupled internal libraries
     hexkit/  ghga-service-commons/  ghga-event-schemas/  schemapack/  metldata/
+    ghga-arcticfreeze/        # deep-freeze helpers, used by schemapack
     ghga-jsonsubschema/       # GHGA fork of IBM/jsonsubschema, used by schemapack
   services/                   # deployable services (FSB's 6 flattened in)
     auth-service/  access-request-service/  dataset-information-service/  mass/

@@ -18,6 +18,7 @@ members = [
     "dlqs",
     "ekss",
     "fis",
+    "ghga-arcticfreeze",
     "ghga-connector",
     "ghga-datasteward-kit",
     "ghga-event-schemas",
@@ -152,18 +153,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/35/f2287558c17e29fafc8ef3daf819bb9834061cfa43bff8014f7df7f63bdc/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494", size = 125813, upload-time = "2026-07-12T20:29:05.763Z" },
-]
-
-[[package]]
-name = "arcticfreeze"
-version = "0.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "immutabledict" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/79/227fdc80e32555571a606213b39fcd1176d3ac9a4b6b49f1120044299f1e/arcticfreeze-0.1.1.tar.gz", hash = "sha256:977a1d7c74498d00201d65519fa59f2b59e5a2b303668f7ecaec58a270ce5eda", size = 14546, upload-time = "2024-04-03T08:26:34.942Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/7b/db1d7e9828e8e417d69030a09e6a51635c7a68583f3d1d9998fa213e6b99/arcticfreeze-0.1.1-py3-none-any.whl", hash = "sha256:c9811b3c787bfdb0e2ea721b0a99bb0e700c91945fb1c9ce0822cb859b409916", size = 17189, upload-time = "2024-04-03T08:26:33.408Z" },
 ]
 
 [[package]]
@@ -1162,6 +1151,26 @@ sdist = { url = "https://files.pythonhosted.org/packages/30/3e/a80a8c077fd798951
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl", hash = "sha256:3a179af3761e4df6eb2e026ff9e1a3033d3587bf980a0b1b2e1e5d08d7358014", size = 9121, upload-time = "2021-03-11T07:16:28.351Z" },
 ]
+
+[[package]]
+name = "ghga-arcticfreeze"
+version = "1.0.0"
+source = { editable = "libs/ghga-arcticfreeze" }
+dependencies = [
+    { name = "immutabledict" },
+]
+
+[package.optional-dependencies]
+pydantic = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "immutabledict", specifier = ">=4.3.1,<5" },
+    { name = "pydantic", marker = "extra == 'pydantic'", specifier = ">=2.13.0,<3" },
+]
+provides-extras = ["pydantic"]
 
 [[package]]
 name = "ghga-connector"
@@ -3708,7 +3717,7 @@ name = "schemapack"
 version = "4.3.0"
 source = { editable = "libs/schemapack" }
 dependencies = [
-    { name = "arcticfreeze" },
+    { name = "ghga-arcticfreeze" },
     { name = "jsonschema" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -3724,7 +3733,7 @@ schema-comparison = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arcticfreeze", specifier = "~=0.1.1" },
+    { name = "ghga-arcticfreeze", editable = "libs/ghga-arcticfreeze" },
     { name = "ghga-jsonsubschema", marker = "extra == 'schema-comparison'", editable = "libs/ghga-jsonsubschema" },
     { name = "jsonschema", specifier = ">=4.19.2,<5" },
     { name = "pydantic", specifier = ">=2,<3" },

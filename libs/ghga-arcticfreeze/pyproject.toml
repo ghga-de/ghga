@@ -7,45 +7,39 @@ build-backend = "setuptools.build_meta"
 [project]
 readme = "README.md"
 authors = [
-    { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
+    { name = "Kersten Henrik Breuer", email = "kersten-breuer@outlook.com" },
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: Apache Software License",
-    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
-name = "schemapack"
-version = "4.3.0"
-description = "Make your JSON Schemas sociable and create linked data models."
+name = "ghga-arcticfreeze"
+version = "1.0.0"
+description = "Enjoy Python on the rocks with deeply (recursively) frozen data structures."
+maintainers = [
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
+]
 dependencies = [
-    "pydantic >=2, <3",
-    "pydantic_settings >=2, <3",
-    "ruamel.yaml ~=0.18.6",
-    "jsonschema >=4.19.2, <5",
-    "ghga-arcticfreeze >=1.0, <2",
-    "rich >13, <15",
-    "typer >= 0.16.0",
+    "immutabledict >= 4.3.1, <5",
 ]
 
 [project.license]
 text = "Apache 2.0"
 
 [project.optional-dependencies]
-schema-comparison = [
-    "ghga-jsonsubschema >= 0.1.0",
+pydantic = [
+    "pydantic >= 2.13.0, <3",
 ]
 
 [project.urls]
-Repository = "https://github.com/ghga-de/schemapack"
-
-[project.scripts]
-schemapack = "schemapack.__main__:cli"
+Repository = "https://github.com/ghga-de/ghga-arcticfreeze"
 
 [tool.setuptools.packages.find]
 where = [
@@ -63,7 +57,3 @@ source = [
     "/workspace/src",
     "**/lib/python*/site-packages",
 ]
-
-[tool.uv.sources]
-ghga-arcticfreeze = { workspace = true }
-ghga-jsonsubschema = { workspace = true }
