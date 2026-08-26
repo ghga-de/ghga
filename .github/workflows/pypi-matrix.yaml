@@ -48,7 +48,7 @@ jobs:
           echo "cells=$cells" >> "$GITHUB_OUTPUT"
           echo "$cells" | python3 -m json.tool
 
-          # Warning if a member with no cells is skipped 
+          # Warning if a member with no cells is skipped
           uv run --script scripts/pypi_members.py ${paths:+--paths $paths} --members \
             | python3 -c "
           import json, sys
