@@ -102,7 +102,9 @@ The following extras are available:
 
 ## Contributing
 
-Contributions are welcome! Please see the
+Contributions are welcome! hexkit is developed in the
+[GHGA monorepo](https://github.com/ghga-de/ghga) under `libs/hexkit`, together with the
+services that build on it. Please see the
 [contribution guide](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/CONTRIBUTING.md)
 for how to set up the development environment and build the documentation locally.
 
@@ -114,5 +116,5 @@ library and designed and coded its first versions.
 
 ## License
 
-This repository is free to use and modify according to the
+hexkit is free to use and modify according to the
 [Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/LICENSE).
