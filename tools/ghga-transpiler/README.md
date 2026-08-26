@@ -44,13 +44,15 @@ Options:
 ```
 ## Development
 
-This package is a member of the [GHGA monorepo](../../README.md) and is developed from the
-repository root rather than on its own. The repository ships a devcontainer with the whole
-toolchain: open it in VS Code and run `Remote-Containers: Reopen in Container`, or set the
-environment up directly with `just sync`.
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
+developed from the repository root rather than on its own. The repository ships a
+devcontainer with the whole toolchain: open it in VS Code and run
+`Remote-Containers: Reopen in Container`, or set the environment up directly with
+`just sync`.
 
 The usual tasks, run from the repository root (see
-[ADR-0015](../../docs/adr/0015-task-runner.md) for the full recipe list):
+[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
+full recipe list):
 
 ```bash
 just sync                         # install every member plus the shared dev toolchain
@@ -60,4 +62,4 @@ just lint                         # ruff check + format check across the workspa
 
 ## License
 This repository is free to use and modify according to the
-[Apache 2.0 License](./LICENSE).
+[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/tools/ghga-transpiler/LICENSE).

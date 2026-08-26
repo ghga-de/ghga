@@ -9,7 +9,7 @@ For any two JSON schemas s1 and s2, s1 <: s2 (reads s1 is subschema/subtype of s
 jsonsubschema is very useful in analysing schema evolution and ensuring that newer schema versions are backward compatible.
 jsonsubschema also enables static type checking on different components of a system that uses JSON schema to describe data interfaces among the system's different components.
 
-For a practical overview of the architecture, purpose, and usage of this library, please see [DETAILS.md](DETAILS.md). For the formal foundations and deep technical details, please refer to the [ISSTA 2021 paper](https://dl.acm.org/doi/10.1145/3460319.3464796) by Andrew Habib, Avraham Shinnar, Martin Hirzel, and Michael Pradel, the original authors of this library.
+For a practical overview of the architecture, purpose, and usage of this library, please see [DETAILS.md](https://github.com/ghga-de/ghga/blob/main/libs/ghga-jsonsubschema/DETAILS.md). For the formal foundations and deep technical details, please refer to the [ISSTA 2021 paper](https://dl.acm.org/doi/10.1145/3460319.3464796) by Andrew Habib, Avraham Shinnar, Martin Hirzel, and Michael Pradel, the original authors of this library.
 
 ## Installation
 
@@ -121,4 +121,4 @@ This fork is based on version 0.0.8 of [IBM/jsonsubschema](https://github.com/ib
 
 ## License
 
-This repository is distributed under the terms of the Apache 2.0 License, see [LICENSE.txt](LICENSE.txt).
+This repository is distributed under the terms of the Apache 2.0 License, see [LICENSE.txt](https://github.com/ghga-de/ghga/blob/main/libs/ghga-jsonsubschema/LICENSE.txt).

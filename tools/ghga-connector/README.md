@@ -63,7 +63,7 @@ The service requires the following configuration parameters:
 ### Usage:
 
 A template YAML file for configuring the service can be found at
-[`./example_config.yaml`](./example_config.yaml).
+[`./example_config.yaml`](https://github.com/ghga-de/ghga/blob/main/tools/ghga-connector/example_config.yaml).
 Please adapt it, rename it to `.ghga_connector.yaml`, and place it in one of the following locations:
 - in the current working directory where you execute the service (on Linux: `./.ghga_connector.yaml`)
 - in your home directory (on Linux: `~/.ghga_connector.yaml`)
@@ -72,7 +72,7 @@ The config YAML file will be automatically parsed by the service.
 
 **Important: If you are using containers, the locations refer to paths within the container.**
 
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml)
+All parameters mentioned in the [`./example_config.yaml`](https://github.com/ghga-de/ghga/blob/main/tools/ghga-connector/example_config.yaml)
 can also be set using environment variables or file secrets.
 
 For naming the environment variables, just prefix the parameter name with `ghga_connector_`,
@@ -98,13 +98,15 @@ The client is roughly structured into three parts:
 
 ## Development
 
-This package is a member of the [GHGA monorepo](../../README.md) and is developed from the
-repository root rather than on its own. The repository ships a devcontainer with the whole
-toolchain: open it in VS Code and run `Remote-Containers: Reopen in Container`, or set the
-environment up directly with `just sync`.
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
+developed from the repository root rather than on its own. The repository ships a
+devcontainer with the whole toolchain: open it in VS Code and run
+`Remote-Containers: Reopen in Container`, or set the environment up directly with
+`just sync`.
 
 The usual tasks, run from the repository root (see
-[ADR-0015](../../docs/adr/0015-task-runner.md) for the full recipe list):
+[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
+full recipe list):
 
 ```bash
 just sync                        # install every member plus the shared dev toolchain
@@ -115,4 +117,4 @@ just lint                        # ruff check + format check across the workspac
 ## License
 
 This repository is free to use and modify according to the
-[Apache 2.0 License](./LICENSE).
+[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/tools/ghga-connector/LICENSE).
