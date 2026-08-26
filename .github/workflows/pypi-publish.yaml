@@ -14,9 +14,7 @@
 name: pypi-publish
 
 on:
-  # release.yaml routes `name/x.y.z` tags here, so the lane has one implementation.
   workflow_call:
-  workflow_dispatch:
 
 permissions:
   contents: read
