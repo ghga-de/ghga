@@ -103,7 +103,9 @@ class RDUBManagerPort(ABC):
           user may retry with `force=True` to lock the box and let them run to
           completion. When archiving, they must finish (or be removed) first.
         - `need_attention`: files that failed interrogation. These have to be
-          manually resolved by the submitter or a Data Steward.
+          manually resolved by the submitter or a Data Steward. Since file deletion
+          requires an unlocked box, resolving them on a locked box means unlocking it,
+          deleting (or re-uploading) the offending files, and locking it again.
         """
 
         def __init__(
@@ -354,6 +356,11 @@ class RDUBManagerPort(ABC):
         """Delete a FileUpload from an upload box.
 
         Requires either the Data Steward role or upload access to the box.
+
+        The box must be unlocked. Since a box can be locked while uploads are still
+        ongoing, a locked box may hold files that need to be deleted (e.g. ones that
+        failed interrogation). In such a case, a Data Steward will have to unlock
+        the box first and lock it again after the deletion.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.
