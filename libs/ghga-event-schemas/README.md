@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/ghga-event-schemas/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-event-schemas/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-event-schemas/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-event-schemas?branch=main)
-
 # GHGA Event Schemas
 
 GHGA Event Schemas: A package that collects schemas used for events exchanged between GHGA service.

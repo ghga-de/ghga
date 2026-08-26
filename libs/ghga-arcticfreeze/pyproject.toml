@@ -42,7 +42,7 @@ pydantic = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ghga-de/ghga-arcticfreeze"
+Repository = "https://github.com/ghga-de/ghga"
 
 [tool.setuptools.packages.find]
 where = [

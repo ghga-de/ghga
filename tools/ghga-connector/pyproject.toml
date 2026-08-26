@@ -19,9 +19,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: Apache Software License",
-    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
-    "Topic :: Software Development :: Libraries",
-    "Intended Audience :: Developers",
+    "Environment :: Console",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Utilities",
+    "Intended Audience :: Science/Research",
 ]
 name = "ghga_connector"
 version = "4.0.0"
@@ -41,7 +42,7 @@ dependencies = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/ghga-connector"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 ghga-connector = "ghga_connector.__main__:run"

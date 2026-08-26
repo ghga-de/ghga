@@ -50,7 +50,7 @@ dev = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/ghga-jsonsubschema"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 jsonsubschema = "jsonsubschema.cli:main"

@@ -39,7 +39,7 @@ dependencies = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/ghga-validator"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 ghga_validator = "ghga_validator.__main__:run"

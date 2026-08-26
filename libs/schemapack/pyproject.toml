@@ -45,7 +45,7 @@ schema-comparison = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ghga-de/schemapack"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 schemapack = "schemapack.__main__:cli"

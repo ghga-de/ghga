@@ -40,7 +40,7 @@ dependencies = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/ghga-transpiler"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 ghga-transpiler = "ghga_transpiler.__main__:run"
