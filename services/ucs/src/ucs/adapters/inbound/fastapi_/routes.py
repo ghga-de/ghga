@@ -165,8 +165,9 @@ ERROR_RESPONSES = {
     "incompleteOrFailed": {
         "description": (
             "Exceptions by ID:"
-            + "\n- incompleteOrFailed: The box has in-progress uploads that must"
-            + " be completed or cancelled before it can be locked or archived."
+            + "\n- incompleteOrFailed: The box has in-progress uploads and/or"
+            + " files that could not be successfully re-encrypted, both of which"
+            + " must be resolved before the box may be locked or archived."
         ),
         "model": http_exceptions.HttpIncompleteOrFailedError.get_body_model(),
     },
@@ -238,7 +239,6 @@ async def create_box(
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxVersionOutdated"]
         | ERROR_RESPONSES["boxMaxSizeTooLow"]
         | ERROR_RESPONSES["incompleteOrFailed"],
-        status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["uploadAbortError"],
     },
 )
 @TRACER.start_as_current_span("routes.update_box")
@@ -305,8 +305,6 @@ async def update_box(  # noqa: C901, PLR0912
             incomplete_uploads=error.incomplete_uploads,
             need_attention=error.need_attention,
         ) from error
-    except UploadControllerPort.UploadAbortError as error:
-        raise http_exceptions.HttpUploadAbortError() from error
     except UploadControllerPort.BoxStatsCalcError as error:
         # The controller already logs the underlying cause, so don't re-log here
         raise http_exceptions.HttpInternalError() from error
