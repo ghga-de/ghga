@@ -1,6 +1,5 @@
-
-[![tests](https://github.com/ghga-de/ghga-validator/actions/workflows/unit_and_int_tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-validator/actions/workflows/unit_and_int_tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-validator/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-validator?branch=main)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-validator.svg)](https://pypi.org/project/ghga-validator/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-validator.svg)](https://pypi.org/project/ghga-validator/)
 
 # Ghga Validator
 

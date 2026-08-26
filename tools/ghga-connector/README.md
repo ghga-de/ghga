@@ -1,5 +1,5 @@
-[![tests](https://github.com/ghga-de/ghga-connector/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-connector/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-connector/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-connector?branch=main)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-connector.svg)](https://pypi.org/project/ghga-connector/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-connector.svg)](https://pypi.org/project/ghga-connector/)
 
 # GHGA Connector
 
@@ -8,7 +8,7 @@ GHGA Connector - A CLI client application for interacting with the GHGA system.
 ## Description
 
 The GHGA Connector is a command line client facilitating interaction with the file storage infrastructure of GHGA.
-To this end, it provides commands for the up- and download of files that interact with the RESTful APIs exposed by the Upload Controller Service (https://github.com/ghga-de/upload-controller-service) and Download Controller Service (https://github.com/ghga-de/download-controller-service), respectively.
+To this end, it provides commands for the up- and download of files that interact with the RESTful APIs exposed by the Upload Controller Service (https://github.com/ghga-de/ghga/tree/main/services/ucs) and Download Controller Service (https://github.com/ghga-de/ghga/tree/main/services/dcs), respectively.
 
 When uploading, the Connector expects an unencrypted file that is subsequently encrypted according to the Crypt4GH standard (https://www.ga4gh.org/news_item/crypt4gh-a-secure-method-for-sharing-human-genetic-data/) and only afterwards uploaded to the GHGA storage infrastructure.
 
@@ -28,14 +28,6 @@ We recommend installing the latest version of the GHGA Connector using pip:
 pip install -U ghga-connector
 ```
 
-A pre-built container image is available on
-[Docker Hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
-```bash
-docker pull ghga/ghga-connector:4.0.0
-# the entrypoint is pre-configured:
-docker run ghga/ghga-connector:4.0.0 --help
-```
-
 To run it from a checkout of this repository instead:
 ```bash
 # Execute in the repo's root dir:
@@ -46,7 +38,7 @@ uv run ghga-connector --help
 
 ### Parameters
 
-The service requires the following configuration parameters:
+The Connector accepts the following configuration parameters:
 - <a id="properties/client_exponential_backoff_max"></a>**`client_exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. Minimum: `0`. Default: `60`.
 - <a id="properties/client_num_retries"></a>**`client_num_retries`** *(integer)*: Total number of attempts made per API call, so a value of 1 means no retries. Uploads are long-lived and cross the public internet, so the Connector allows more attempts than the service default. Minimum: `0`. Default: `5`.
 - <a id="properties/client_retry_status_codes"></a>**`client_retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 429, 500, 502, 503, 504]`.
@@ -62,15 +54,13 @@ The service requires the following configuration parameters:
 
 ### Usage:
 
-A template YAML file for configuring the service can be found at
+A template YAML file for configuring the Connector can be found at
 [`./example_config.yaml`](https://github.com/ghga-de/ghga/blob/main/tools/ghga-connector/example_config.yaml).
 Please adapt it, rename it to `.ghga_connector.yaml`, and place it in one of the following locations:
-- in the current working directory where you execute the service (on Linux: `./.ghga_connector.yaml`)
+- in the current working directory where you run the Connector (on Linux: `./.ghga_connector.yaml`)
 - in your home directory (on Linux: `~/.ghga_connector.yaml`)
 
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
+The config YAML file will be automatically parsed by the Connector.
 
 All parameters mentioned in the [`./example_config.yaml`](https://github.com/ghga-de/ghga/blob/main/tools/ghga-connector/example_config.yaml)
 can also be set using environment variables or file secrets.
@@ -81,7 +71,7 @@ e.g. for the `host` set an environment variable named `ghga_connector_host`
 variables in upper cases).
 
 To use file secrets, please refer to the
-[corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support)
+[corresponding section](https://pydantic.dev/docs/validation/latest/concepts/pydantic_settings/#secrets)
 of the pydantic documentation.
 
 

@@ -1,4 +1,5 @@
-[![tests](https://github.com/ghga-de/ghga-arcticfreeze/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-arcticfreeze/actions/workflows/tests.yaml)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-arcticfreeze.svg)](https://pypi.org/project/ghga-arcticfreeze/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-arcticfreeze.svg)](https://pypi.org/project/ghga-arcticfreeze/)
 
 # arcticfreeze
 

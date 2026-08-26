@@ -1,3 +1,6 @@
+[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-jsonsubschema.svg)](https://pypi.org/project/ghga-jsonsubschema/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-jsonsubschema.svg)](https://pypi.org/project/ghga-jsonsubschema/)
+
 # GHGA JSON Subschema
 
 > **Note:** This is a fork of [IBM/jsonsubschema](https://github.com/ibm/jsonsubschema) maintained by the [German Human Genome-Phenome Archive (GHGA)](https://www.ghga.de/). It was created to bring in necessary fixes, updates, and functionality required by GHGA-related projects.

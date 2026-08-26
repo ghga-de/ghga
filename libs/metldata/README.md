@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/metldata/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/metldata/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/metldata/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/metldata?branch=main)
-
 # Metldata
 
 metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing.
