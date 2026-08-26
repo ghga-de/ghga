@@ -1051,7 +1051,8 @@ class UploadController(UploadControllerPort):
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
-        - `UploadAbortError` if force is True and aborting an in-progress upload fails.
+        - `IncompleteOrFailedError` if force=True and there are files still uploading
+          or that failed interrogation.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         box = await self._get_box(
