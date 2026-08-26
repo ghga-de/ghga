@@ -132,12 +132,16 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 
 - **Platform image target decided** (2026-08-21): **Docker Hub**, under the `ghga`
   namespace (`docker.io/ghga/<member>`) — matches what production already pulls from. The
-  platform lane pushes there, manual `workflow_dispatch` only, no tag triggers yet,
-  authenticated with the org's stored `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the
+  platform lane pushes there, authenticated with the org's stored
+  `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the
   same credentials used to pull the hardened dhi.io base images). GHCR
   (`ghcr.io/ghga-de/ghga`) remains in use as a separate, deliberately independent scratch
   registry for `dev-images.yaml`/`security-scan.yaml`'s `:dev`/`:updated` tags — never the
-  release target.
+  release target. **Publishing is dispatch-gated** (corrected 2026-08-26): a `ghga/X.Y.Z`
+  tag push does trigger `release.yaml`, but the `push` input exists only on
+  `workflow_dispatch`, so a tagged platform run verifies the commit, builds every image and
+  packages every chart, and uploads none of them. Publishing is a deliberate dispatch
+  against that tag with `push` set.
 - **PyPI publish targets decided** (2026-08-26): the lane publishes to **PyPI**, rehearsed
   on **TestPyPI** first, both by **trusted publishing** (OIDC; no stored tokens). One
   `pypi-publish.yaml` run builds and checks the whole train before uploading anything, then
