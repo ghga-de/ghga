@@ -128,9 +128,14 @@ def _most_significant_error(group: BaseExceptionGroup) -> BaseException:
     A CriticalError has to stop the whole batch and a ConclusiveError has to fail the
     file outright, so neither may be masked by an InconclusiveError that would merely
     schedule a retry.
+
+    An error of none of those types is wrapped as an InconclusiveError rather than
+    surfaced raw, which would escape every handler and abandon the rest of the batch.
+    This matches how the crypto stages already treat a failure they do not recognise:
+    DHFS cannot say the file is bad, only that this attempt did not conclude, so the
+    file is retried on the next run.
     """
     errors = _flatten_exception_group(group)
-    # TODO: Can other, uncaught errors surface here? These should take precedence
     for error_type in (
         InterrogatorPort.CriticalError,
         InterrogatorPort.ConclusiveError,
@@ -140,7 +145,7 @@ def _most_significant_error(group: BaseExceptionGroup) -> BaseException:
             if isinstance(error, error_type):
                 return error
 
-    return errors[0]
+    return InterrogatorPort.InconclusiveError(errors[0])
 
 
 @contextmanager

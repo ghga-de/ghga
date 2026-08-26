@@ -841,3 +841,54 @@ async def test_cancellation_aborts_the_multipart_upload(joint_fixture: JointFixt
         joint_fixture.config.interrogation_bucket_id
     )
     assert aborted[0] not in remaining
+
+
+async def test_uncategorized_error_is_retried_not_reported(
+    joint_fixture: JointFixture, caplog
+):
+    """An error the pipeline does not model fails just that file, and says nothing.
+
+    It becomes an InconclusiveError, so the file is logged as needing a retry and the
+    batch carries on. No report is sent for it: DHFS cannot tell Central the file is
+    bad when all it knows is that its own attempt did not conclude.
+    """
+    file_uploads = await _stage_batch(joint_fixture, count=2)
+
+    received_reports = []
+
+    def capture_report(request: httpx2.Request) -> httpx2.Response:
+        received_reports.append(json.loads(request.content))
+        return httpx2.Response(status_code=201, json={})
+
+    joint_fixture.central_api.on_submit_report = capture_report
+
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    boom = TypeError("something the pipeline does not model")
+    doomed_file_id = file_uploads[0].id
+    original_prepare = interrogator._prepare_part
+
+    async def failing_prepare(ctx, **kwargs):
+        if ctx.file_id == doomed_file_id:
+            raise boom
+        return await original_prepare(ctx, **kwargs)
+
+    with caplog.at_level("WARNING"):
+        caplog.clear()
+        with patch.object(interrogator, "_prepare_part", failing_prepare):
+            # No exception escapes - the batch completes
+            await interrogator.interrogate_new_files()
+
+    # The file was logged as retryable, carrying the original error as the reason
+    assert f"File {doomed_file_id}: Unable to conclusively process file" in caplog.text
+    assert str(boom) in caplog.text
+
+    # The second file was processed normally and reported as a success
+    assert [report["file_id"] for report in received_reports] == [
+        str(file_uploads[1].id)
+    ]
+    assert received_reports[0]["passed"] is True
+
+    # Nothing was said about the failed file, and it left no object behind
+    s3_client: S3Client = interrogator._s3_client  # type: ignore
+    interrogation_files = await s3_client.list_files_in_interrogation_bucket()
+    assert len(interrogation_files) == 1

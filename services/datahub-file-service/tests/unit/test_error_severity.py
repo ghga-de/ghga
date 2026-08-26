@@ -33,6 +33,7 @@ from dhfs.core.interrogator import (
 CRITICAL = InterrogatorPort.CriticalError("critical")
 CONCLUSIVE = InterrogatorPort.DecryptionError()
 INCONCLUSIVE = InterrogatorPort.InconclusiveError("inconclusive")
+UNCATEGORIZED = TypeError("something the pipeline does not model")
 
 
 def test_flatten_nested_groups():
@@ -55,6 +56,9 @@ def test_flatten_nested_groups():
         ([CONCLUSIVE, CRITICAL], CRITICAL),
         ([INCONCLUSIVE, CONCLUSIVE, CRITICAL], CRITICAL),
         ([INCONCLUSIVE], INCONCLUSIVE),
+        ([INCONCLUSIVE, UNCATEGORIZED], INCONCLUSIVE),
+        ([CONCLUSIVE, UNCATEGORIZED], CONCLUSIVE),
+        ([CRITICAL, UNCATEGORIZED], CRITICAL),
     ],
     ids=[
         "critical beats inconclusive",
@@ -62,6 +66,9 @@ def test_flatten_nested_groups():
         "critical beats conclusive",
         "critical beats both",
         "lone inconclusive survives",
+        "a known retryable error outranks an uncategorized one",
+        "conclusive beats uncategorized",
+        "critical beats uncategorized",
     ],
 )
 def test_severity_wins_regardless_of_position(errors, expected):
@@ -90,6 +97,21 @@ def test_collapsing_surfaces_the_most_significant_error():
             raise ExceptionGroup("parts failed", [INCONCLUSIVE, CRITICAL])
 
     assert exc_info.value is CRITICAL
+
+
+def test_lone_uncategorized_error_becomes_a_retry():
+    """An error the pipeline does not model schedules a retry rather than escaping.
+
+    Raised as-is it would match no handler and abandon the rest of the batch. DHFS
+    cannot conclude the file is bad from a failure it does not recognise, so the
+    attempt is treated as inconclusive - the same call the crypto stages already make.
+    """
+    with pytest.raises(InterrogatorPort.InconclusiveError) as exc_info:
+        with _collapsing_error_groups():
+            raise ExceptionGroup("parts failed", [UNCATEGORIZED])
+
+    # The original error is kept as the cause, so it still reaches the logs
+    assert exc_info.value.args[0] is UNCATEGORIZED
 
 
 def test_cancellation_is_not_downgraded_to_a_retry():
