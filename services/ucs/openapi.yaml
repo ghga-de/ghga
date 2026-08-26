@@ -1004,22 +1004,15 @@ paths:
                 $ref: '#/components/schemas/HttpIncompleteOrFailedError'
           description: 'Exceptions by ID:
 
-            - incompleteOrFailed: The box has in-progress uploads that must be completed
-            or cancelled before it can be locked or archived.'
+            - incompleteOrFailed: The box has in-progress uploads and/or files that
+            could not be successfully re-encrypted, both of which must be resolved
+            before the box may be locked or archived.'
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HttpUploadAbortError'
-          description: 'Exceptions by ID:
-
-            - uploadAbortError: There was an error aborting the s3 multipart upload.'
       security:
       - HTTPBearer: []
       summary: Update a FileUploadBox (lock/unlock/archive/resize)
