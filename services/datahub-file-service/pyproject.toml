@@ -61,8 +61,7 @@ source = [
 ghga-service-commons = { workspace = true }
 hexkit = { workspace = true }
 
-# Ruff config lives at the repo root; extending it here (rather than duplicating it)
-# makes this file ruff's config root for the member, so ruff reads the
-# `requires-python` above and stops assuming a 3.9 floor it has to lint for.
+# Extending the root config makes this file ruff's config root for the member, so
+# ruff reads the `requires-python` above instead of assuming a 3.9 floor.
 [tool.ruff]
 extend = "../../pyproject.toml"

@@ -20,8 +20,8 @@ hold for partial trailing segments as well as segment-aligned input.
 """
 
 import os
+from collections.abc import Iterator
 from math import ceil
-from unittest.mock import MagicMock
 
 import crypt4gh.lib
 import pytest
@@ -29,8 +29,7 @@ from pydantic import SecretBytes
 
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH, SEGMENT_OVERHEAD
 from dhfs.core.interrogator import Interrogator
-from tests.fixtures.config import get_config
-from tests.fixtures.utils import DHFS_CRYPT4GH_PRIVATE_KEY_PATH
+from tests.fixtures.interrogator import make_interrogator
 
 SEGMENT = crypt4gh.lib.SEGMENT_SIZE
 CIPHER_SEGMENT = crypt4gh.lib.CIPHER_SEGMENT_SIZE
@@ -49,14 +48,10 @@ PLAINTEXT_SIZES = [
 
 
 @pytest.fixture(name="interrogator")
-def interrogator_fixture() -> Interrogator:
+def interrogator_fixture() -> Iterator[Interrogator]:
     """An Interrogator with mocked-out collaborators - only crypto is exercised."""
-    config = get_config(
-        data_hub_crypt4gh_private_key_path=DHFS_CRYPT4GH_PRIVATE_KEY_PATH
-    )
-    return Interrogator(
-        config=config, central_client=MagicMock(), s3_client=MagicMock()
-    )
+    with make_interrogator() as interrogator:
+        yield interrogator
 
 
 @pytest.mark.parametrize("size", PLAINTEXT_SIZES)
@@ -79,8 +74,7 @@ def test_reencrypted_size_matches_crypt4gh_framing(
 ):
     """Each encrypted segment must grow by exactly a nonce plus an auth tag.
 
-    The part-processing loop relies on a re-encrypted part being the same size as the
-    encrypted part it came from, so that S3 part numbers line up with download ranges.
+    The part loop relies on this to keep S3 part numbers lined up with download ranges.
     """
     secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
     segments = ceil(size / SEGMENT)
@@ -122,11 +116,7 @@ def test_decrypt_part_raises_on_wrong_secret(interrogator: Interrogator):
 def test_decrypted_output_is_exactly_the_plaintext_length(
     interrogator: Interrogator, size: int
 ):
-    """The preallocated buffer is returned whole, so it has to be filled exactly.
-
-    Slicing it down would copy and undo the preallocation, so a buffer that the
-    segment loop underfills would surface as trailing zeros appended to the plaintext.
-    """
+    """The preallocated buffer is returned whole, so it has to be filled exactly."""
     secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
     ciphertext = interrogator._reencrypt_part(
         decrypted_part=os.urandom(size), new_secret=secret
@@ -145,10 +135,9 @@ def test_decrypted_output_is_exactly_the_plaintext_length(
 def test_decrypt_rejects_parts_too_short_to_be_framed(
     interrogator: Interrogator, part_size: int
 ):
-    """A part below the per-segment overhead sizes the output buffer negatively.
+    """A part below the per-segment overhead must fail as DecryptionError.
 
-    That allocation has to fail as a DecryptionError. Escaping as a bare ValueError
-    would get it classified as merely retryable and re-attempted forever.
+    Escaping as a bare ValueError would get it classified as merely retryable.
     """
     secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
 
