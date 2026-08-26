@@ -1168,7 +1168,8 @@ class UploadController(UploadControllerPort):
                         "decrypted_sha256": {"$ne": None},
                     },
                 ],
-            }
+            },
+            sort=["alias"],
         )
         incomplete_uploads = []
         need_attention = []
