@@ -201,6 +201,7 @@ jobs:
     timeout-minutes: 40
     permissions:
       contents: read
+      id-token: write # keyless cosign signing (Fulcio/Rekor via OIDC), push-only
     strategy:
       # On a dry run (push off) a failed member is fine to leave the rest running — it's
       # just a validation pass. On a real push, the platform lane's whole point is
@@ -218,10 +219,13 @@ jobs:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
       # arm64 has no native GitHub-hosted runner, so cross-building it on this amd64
       # runner needs QEMU emulation registered with the kernel, plus a buildx builder
       # that can actually target multiple platforms in one invocation (the default
-      # "docker" driver can't).
+      # "docker" driver can't) — the same docker-container builder that attestation
+      # export requires (see the Build step below), so no separate builder step needed.
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
         with:
@@ -261,26 +265,62 @@ jobs:
             echo "::error::$tag already exists — releases are immutable. Bump the version to re-run."
             exit 1
           fi
-      - name: Build (stamped)
+      # OCI labels are set on the CLI so members whose Dockerfile does not stamp them
+      # itself (the mainline-synced frontend one) still carry version + revision;
+      # for the shared Python Dockerfile they override its labels with equal values.
+      # Build-args a member's Dockerfile does not declare only produce a warning.
+      # provenance/sbom require an actual registry push, so both stay off in the
+      # existing "build-only dry run" (push=false) mode — that mode's behavior is
+      # otherwise unchanged (no --push/--load means buildx discards the result after
+      # verifying it builds, same as before: nothing to keep around for a dry run).
+      - name: Build (stamped, attested when pushing)
+        id: build
         run: |
-          docker buildx build -f "${{ matrix.member.dockerfile }}" \
+          push_flags=()
+          attest_flags=()
+          if [ "${{ inputs.push }}" = "true" ]; then
+            push_flags=(--push)
+            attest_flags=(--provenance=mode=max --sbom=true)
+          fi
+          docker buildx build \
             --platform linux/amd64,linux/arm64 \
+            "${push_flags[@]}" \
+            "${attest_flags[@]}" \
             --build-arg PACKAGE="${{ matrix.member.package }}" \
             --build-arg PLATFORM_VERSION="${{ needs.resolve.outputs.version }}" \
-            --build-arg GIT_SHA="${GITHUB_SHA::12}" \
+            --build-arg GIT_SHA="${SHORT_SHA}" \
             --label org.opencontainers.image.version="${{ needs.resolve.outputs.version }}" \
-            --label org.opencontainers.image.revision="${GITHUB_SHA::12}" \
+            --label org.opencontainers.image.revision="${SHORT_SHA}" \
+            --metadata-file metadata.json \
+            -f "${{ matrix.member.dockerfile }}" \
             -t "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" \
-            ${{ inputs.push && '--push' || '' }} \
             "${{ matrix.member.context }}"
+          if [ "${{ inputs.push }}" = "true" ]; then
+            digest=$(jq -r '."containerimage.digest"' metadata.json)
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: sigstore/cosign-installer@v4
+        with:
+          cosign-release: v3.1.3
+        if: ${{ inputs.push }}
+      - name: Sign the published image (keyless)
+        if: ${{ inputs.push }}
+        run: cosign sign --yes --recursive "${{ env.REGISTRY }}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+      # See dev-images.yaml. Gated like signing: no pushed digest to attest in build-only mode.
+      - name: Attest SBOM + provenance (keyless)
+        if: ${{ inputs.push }}
+        run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
       - name: Summary
         run: |
           if [ "${{ inputs.push }}" = "true" ]; then
-            echo "pushed ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
+            echo "pushed ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (signed; SBOM + provenance attached and cosign-attested)"
           else
             echo "build-only: ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (push input not set)"
           fi
-      # TODO on enablement: Trivy scan; the front end builds via its own Dockerfile.
+      # TODO on enablement: Trivy scan on the release artifacts themselves
+      # (security-scan.yaml today only watches the :dev tags); the front end builds via
+      # its own Dockerfile; charts are packaged and pushed as OCI artifacts with
+      # version/appVersion = the platform version (Phase B).
 
 
   # -------- platform lane: package every chart, stamped; push only on request -----------
