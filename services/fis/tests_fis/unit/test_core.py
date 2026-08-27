@@ -503,3 +503,62 @@ async def test_report_handling_conflict(rig: JointRig):
         await rig.interrogation_handler.handle_interrogation_report(
             report=conflicting_report
         )
+
+
+@pytest.mark.parametrize("passed", [True, False], ids=["passing", "failing"])
+async def test_report_handling_after_requeue(rig: JointRig, passed: bool):
+    """Verify that a report submitted after a requeue is treated as a first report."""
+    file = create_file_under_interrogation(HUB1)
+    await rig.interrogation_handler.process_file_upload(file=file)
+
+    first_report = models.InterrogationReportWithSecret(
+        file_id=file.id,
+        storage_alias=file.storage_alias,
+        interrogated_at=now_utc_ms_prec(),
+        passed=False,
+        reason="Wrong data hub key",
+    )
+    await rig.interrogation_handler.handle_interrogation_report(report=first_report)
+
+    # Requeue the file, which discards the first report
+    requeued_file = (await rig.file_dao.get_by_id(file.id)).model_copy()
+    requeued_file.state = "inbox"
+    requeued_file.state_updated = now_utc_ms_prec() + timedelta(hours=1)
+    await rig.interrogation_handler.process_file_upload(file=requeued_file)
+
+    # Discard the failure event from the first interrogation
+    rig.event_store.get(rig.config.file_interrogations_topic)
+
+    # The second interrogation yields a report with entirely different content
+    second_report = models.InterrogationReportWithSecret(
+        file_id=file.id,
+        storage_alias=file.storage_alias,
+        bucket_id="interrogation1" if passed else None,
+        object_id=uuid4() if passed else None,
+        interrogated_at=now_utc_ms_prec() + timedelta(hours=2),
+        passed=passed,
+        secret=b"secret" if passed else None,
+        encrypted_parts_md5=["abc"] if passed else None,
+        encrypted_parts_sha256=["sha"] if passed else None,
+        encrypted_size=100 if passed else None,
+        reason=None if passed else "Checksum mismatch",
+    )
+    rig.secrets_client.deposit_secret.return_value = "test-secret-id-12345"
+
+    # Make sure the report causes neither a conflict nor a duplicate insert error
+    await rig.interrogation_handler.handle_interrogation_report(report=second_report)
+
+    # Verify the new report took the place of the discarded one
+    stored_report = await rig.interrogation_report_dao.get_by_id(file.id)
+    assert stored_report.passed is passed
+    assert stored_report.interrogated_at == second_report.interrogated_at
+
+    # Verify the file reflects the outcome of the second interrogation
+    db_file = await rig.file_dao.get_by_id(file.id)
+    assert db_file.interrogated is True
+    assert db_file.state == ("interrogated" if passed else "failed")
+    assert db_file.can_remove is (not passed)
+
+    # Verify the event for the second interrogation was published
+    event = rig.event_store.get(rig.config.file_interrogations_topic)
+    assert event.payload["file_id"] == str(file.id)
