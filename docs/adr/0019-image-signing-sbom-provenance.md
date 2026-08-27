@@ -7,12 +7,14 @@
 ## Context
 
 Every deployable workload is built `FROM` Docker Hardened Images (`dhi.io`, an
-authenticated upstream pulled with GHGA's Docker Hub entitlement) and published to
-`ghcr.io/ghga-de/ghga` by two CI workflows: the dev-image one (every merge to `main`,
-mutable `:dev` tags) and the release one (manual, versioned platform-lane artifacts, per
-[ADR-0004](0004-versioning-and-release-by-tag.md)). Neither currently produces an SBOM,
-provenance, or a signature — there is no way for anything downstream to verify that a
-given image actually came from this repo's CI, or what went into it.
+authenticated upstream pulled with GHGA's Docker Hub entitlement) and published by two CI
+workflows: the dev-image one (every merge to `main`, mutable `:dev` tags, to GHCR —
+`ghcr.io/ghga-de/ghga`, a deliberately independent scratch registry) and the release one
+(manual, versioned platform-lane artifacts, to Docker Hub — `docker.io/ghga`, the actual
+production target per [ADR-0004](0004-versioning-and-release-by-tag.md)). Neither
+currently produces an SBOM, provenance, or a signature — there is no way for anything
+downstream to verify that a given image actually came from this repo's CI, or what went
+into it.
 
 GHGA's Helm charts (per-workload resources) live in this repo; the cluster-wide,
 GitOps/platform layer — including the edge/cluster auth object it already owns (Istio
@@ -85,12 +87,14 @@ verify against, not the policy.
 
 ## Consequences
 
-- Keyless signing writes to the **public** Rekor transparency log. Even though
-  `ghcr.io/ghga-de/ghga` is private and an explicitly interim publish target
-  ([ADR-0004](0004-versioning-and-release-by-tag.md)), the fact that a given digest was
-  built by a given workflow run at a given time becomes public and permanent. Acceptable
-  given the registry's already-documented interim status, but a real, honest trade-off —
-  revisit if/when a non-disposable production registry is chosen.
+- Keyless signing writes to the **public** Rekor transparency log — regardless of which
+  registry receives the image. The fact that a given digest was built by a given workflow
+  run at a given time becomes public and permanent. For dev-images (GHCR, a private,
+  deliberately interim scratch registry) that was the original, low-stakes framing; but
+  the release lane now pushes to Docker Hub (`docker.io/ghga`), the actual production
+  target ([ADR-0004](0004-versioning-and-release-by-tag.md), decided 2026-08-21 — after
+  this ADR was drafted), so this is a real, honest trade-off on production artifacts, not
+  one an interim registry's disposability was masking.
 - No private-key custody burden — nothing to rotate, no HSM/KMS to provision, no owner to
   assign for key material.
 - Enabling attestations turns even a single-platform push into an OCI image index (image +
