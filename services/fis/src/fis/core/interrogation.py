@@ -341,8 +341,12 @@ class InterrogationHandler(InterrogationHandlerPort):
             return
 
         # If file state is 'inbox' and the local copy shows interrogation failed, requeue it.
-        if file.state == "inbox" and local_file.state == "failed" and local_file.interrogated:
-            await self._requeue_file(file=file)
+        if (
+            file.state == "inbox"
+            and local_file.state == "failed"
+            and local_file.interrogated
+        ):
+            await self._requeue_file(file=file.model_copy())
             return
 
         # If not outdated, see if the state is one we're interested in
