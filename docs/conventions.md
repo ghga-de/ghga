@@ -71,3 +71,21 @@ One `uv.lock` governs the whole repo → HEAD is always integrated
   `pnpm-lock.yaml`, not from a `rev:` pin, so a hook can never disagree with CI.
 - mypy runs per member (`src` + tests) via `scripts/typecheck.py` — the same runner behind
   `just typecheck`, the hook, and CI. Never `mypy .`: the members' `tests` packages collide.
+
+## Testing outbound HTTP calls
+
+- The API a member calls is mocked with `ghga_service_commons.api.mock_api`, never with
+  `pytest-httpx` or a hand-rolled transport: one `ApiMock` subclass per external API, declaring
+  its endpoints with `endpoint(...)` and their default responses. Tests swap a handler onto the
+  `on_...` attribute of the endpoint they exercise (`respond`, `fail_to_connect`, `fail_with`,
+  `in_sequence`, or one of their own) and assert against the mock's recorded `requests`.
+- The mock lives in the member's `tests/fixtures/`, named after the API it stands in for, and
+  takes the same config the service builds its URLs from — so the mock and the client under test
+  can never disagree about where the API is.
+- Mount `as_transport()` as the innermost transport of the client under test, so the retry and
+  rate limiting layers stay in the loop. A client talking to several APIs, or also carrying real
+  traffic, gets a `RoutingTransport` over the mocks instead. Code that takes no transport at all —
+  building its own client, or calling `httpx2.get` — is reached with `patch_httpx_module(monkeypatch)`.
+- An endpoint only one test cares about does not need a subclass: `ApiMock` used directly, with
+  the endpoint registered by `add(...)`, is the form for those — the datasteward kit's tests are
+  the example.
