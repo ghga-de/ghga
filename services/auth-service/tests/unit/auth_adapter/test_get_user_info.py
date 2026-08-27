@@ -19,9 +19,9 @@
 import pytest
 
 from auth_service.auth_adapter.core import auth
-from ghga_service_commons.api.mock_router import MockRouter
 
-from ...fixtures.utils import create_access_token, mock_userinfo
+from ...fixtures.oidc_provider import OidcProviderMock, mock_userinfo
+from ...fixtures.utils import create_access_token
 
 USER_INFO = {
     "name": "John Doe",
@@ -53,9 +53,9 @@ def test_rejects_an_access_token_without_mandatory_claim(claim: str):
         auth.get_user_info(access_token)
 
 
-def test_rejects_user_info_with_mismatch_in_sub(mock_router: MockRouter):
+def test_rejects_user_info_with_mismatch_in_sub(oidc_provider: OidcProviderMock):
     """Test that you cannot get user info with a mismatch in subject claims."""
-    mock_userinfo(mock_router, {**USER_INFO, "sub": "not.john@aai.org"})
+    mock_userinfo(oidc_provider, {**USER_INFO, "sub": "not.john@aai.org"})
     access_token = create_access_token()
     with pytest.raises(
         auth.UserInfoError,
@@ -64,25 +64,25 @@ def test_rejects_user_info_with_mismatch_in_sub(mock_router: MockRouter):
         auth.get_user_info(access_token)
 
 
-def test_rejects_user_info_with_missing_name(mock_router: MockRouter):
+def test_rejects_user_info_with_missing_name(oidc_provider: OidcProviderMock):
     """Test that you cannot get user info with a missing name in user info."""
-    mock_userinfo(mock_router, {**USER_INFO, "name": None})
+    mock_userinfo(oidc_provider, {**USER_INFO, "name": None})
     access_token = create_access_token()
     with pytest.raises(auth.UserInfoError, match="Missing value for name claim"):
         auth.get_user_info(access_token)
 
 
-def test_rejects_user_info_with_missing_email(mock_router: MockRouter):
+def test_rejects_user_info_with_missing_email(oidc_provider: OidcProviderMock):
     """Test that you cannot get user info with missing email in user info."""
-    mock_userinfo(mock_router, {**USER_INFO, "email": None})
+    mock_userinfo(oidc_provider, {**USER_INFO, "email": None})
     access_token = create_access_token()
     with pytest.raises(auth.UserInfoError, match="Missing value for email claim"):
         auth.get_user_info(access_token)
 
 
-def test_user_info_for_valid_token(mock_router: MockRouter):
+def test_user_info_for_valid_token(oidc_provider: OidcProviderMock):
     """Test that you can get user info with a valid token."""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc_provider, USER_INFO)
     access_token = create_access_token()
     user_info = auth.get_user_info(access_token)
     assert user_info is not None
