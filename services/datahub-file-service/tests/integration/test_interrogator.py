@@ -31,7 +31,8 @@ from dhfs.core.interrogator import Interrogator
 from dhfs.core.models import FileUpload
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from dhfs.ports.outbound.s3 import S3ClientPort
-from tests.fixtures.central_api import capture, fail_to_connect, respond
+from ghga_service_commons.api.mock_api import fail_to_connect, respond
+from tests.fixtures.central_api import capture
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
     EncryptedObject,
@@ -176,7 +177,9 @@ async def test_report_failure(joint_fixture: JointFixture):
     # Track the payload received by the handler
     received_payload = None
 
-    def capture_payload(request: httpx2.Request) -> httpx2.Response:
+    def capture_payload(
+        request: httpx2.Request, **path_variables: str
+    ) -> httpx2.Response:
         """Handler to capture the payload sent to the API"""
         nonlocal received_payload
         received_payload = request.content.decode("utf-8")
@@ -436,7 +439,9 @@ async def test_etag_doesnt_match_local_md5(
     )
 
     # Guard: if any report is submitted, the test should fail immediately
-    def report_should_not_be_called(request: httpx2.Request) -> httpx2.Response:
+    def report_should_not_be_called(
+        request: httpx2.Request, **path_variables: str
+    ) -> httpx2.Response:
         raise RuntimeError("No interrogation report should have been submitted!")
 
     joint_fixture.central_api.on_submit_report = report_should_not_be_called
@@ -854,13 +859,8 @@ async def test_uncategorized_error_is_retried_not_reported(
     """
     file_uploads = await _stage_batch(joint_fixture, count=2)
 
-    received_reports = []
-
-    def capture_report(request: httpx2.Request) -> httpx2.Response:
-        received_reports.append(json.loads(request.content))
-        return httpx2.Response(status_code=201, json={})
-
-    joint_fixture.central_api.on_submit_report = capture_report
+    received_reports: list[dict] = []
+    joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     interrogator = cast(Interrogator, joint_fixture.interrogator)
     boom = TypeError("something the pipeline does not model")

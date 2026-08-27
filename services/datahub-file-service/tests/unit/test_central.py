@@ -36,11 +36,12 @@ from dhfs.adapters.outbound.http import (
 )
 from dhfs.config import Config
 from dhfs.core.models import InterrogationReport
+from ghga_service_commons.api.mock_api import respond
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
 from ghga_service_commons.utils.crypt import decrypt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
-from tests.fixtures.central_api import CentralApiMock, respond
+from tests.fixtures.central_api import CentralApiMock
 from tests.fixtures.utils import CENTRAL_CRYPT4GH_PRIVATE_KEY, DHFS_JWK
 
 pytestmark = pytest.mark.asyncio()
@@ -212,7 +213,9 @@ async def test_report_submission(
     fail_report = make_interrogation_failure_report(config.storage_alias)
 
     # Define a handler to let us inspect the request body
-    def inspect_report(request: httpx2.Request) -> httpx2.Response:
+    def inspect_report(
+        request: httpx2.Request, **path_variables: str
+    ) -> httpx2.Response:
         user_agent = request.headers.get("User-Agent")
         assert user_agent == f"GHGA DataHubFileService/{__version__}"
         body = json.loads(request.content)
