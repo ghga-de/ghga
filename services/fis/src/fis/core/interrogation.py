@@ -26,17 +26,17 @@ from pydantic import UUID4, SecretBytes
 from fis.config import Config
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
-from fis.ports.outbound.dao import (
-    FileDao,
-    InterrogationReportDao,
+from fis.ports.outbound.dao import FileDao, InterrogationReportDao
+from fis.ports.outbound.event_pub import EventPubTranslatorPort
+from fis.ports.outbound.secrets import SecretsClientPort
+from ghga_event_schemas import pydantic_ as event_schemas
+from hexkit.protocols.dao import (
     MultipleHitsFoundError,
     NoHitsFoundError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
 )
-from fis.ports.outbound.event_pub import EventPubTranslatorPort
-from fis.ports.outbound.secrets import SecretsClientPort
-from ghga_event_schemas import pydantic_ as event_schemas
+from hexkit.utils import now_utc_ms_prec
 
 STATES = event_schemas.FileUploadState
 log = logging.getLogger(__name__)
@@ -292,7 +292,10 @@ class InterrogationHandler(InterrogationHandlerPort):
         State-by-state behavior:
 
         - 'init': ignored; FIS does not track files until they reach 'inbox'.
-        - 'inbox': insert into the DB if not already present (idempotent).
+        - 'inbox': insert into the DB if not already present (idempotent). If there's
+          already a copy of this file in the 'failed' state, it means a Data Steward
+          requeued the file for interrogation. In that case, reset the interrogation
+          flags and delete the stored report so DHFS picks the file up again.
         - 'cancelled' / 'failed': if the file is known, set can_remove=True and update.
           If not known (i.e., it reached this terminal state before ever hitting 'inbox'),
           log at INFO and ignore since this is a known possibility.
@@ -337,6 +340,11 @@ class InterrogationHandler(InterrogationHandlerPort):
             log.info("Encountered old data for file %s, ignoring.", file.id)
             return
 
+        # If file state is 'inbox' and the local copy shows interrogation failed, requeue it.
+        if file.state == "inbox" and local_file.state == "failed" and local_file.interrogated:
+            await self._requeue_file(file=file)
+            return
+
         # If not outdated, see if the state is one we're interested in
         if file.state != local_file.state and file.state in [
             "cancelled",
@@ -351,6 +359,42 @@ class InterrogationHandler(InterrogationHandlerPort):
                 file.id,
                 file.state,
             )
+
+    async def _requeue_file(self, *, file: models.FileUnderInterrogation) -> None:
+        """Reset a previously failed file so it gets interrogated again.
+
+        Do the following:
+        - Delete the stored `InterrogationReport` (log it in the details)
+        - Set `file.interrogated` to False
+        - Set `file.can_remove` to False
+        - Set `file.state` to `"inbox"`
+        - Update `file.state_updated`
+        """
+        try:
+            old_report = await self._interrogation_report_dao.get_by_id(file.id)
+        except ResourceNotFoundError:
+            log.info(
+                "No InterrogationReport found for requeued file %s.",
+                file.id,
+                extra={"file_id": file.id},
+            )
+        else:
+            await self._interrogation_report_dao.delete(file.id)
+            log.info(
+                "Discarded InterrogationReport for requeued file %s.",
+                file.id,
+                extra={"file_id": file.id, "old_report": old_report.model_dump()},
+            )
+
+        file.interrogated = False
+        file.can_remove = False
+        file.state_updated = now_utc_ms_prec()
+        await self._file_dao.update(file)
+        log.info(
+            "File %s was requeued for interrogation.",
+            file.id,
+            extra={"file_id": file.id},
+        )
 
     async def get_files_not_yet_interrogated(
         self, *, storage_alias: str
