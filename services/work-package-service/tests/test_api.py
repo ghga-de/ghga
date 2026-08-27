@@ -22,6 +22,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 
+from ghga_service_commons.api.mock_api import respond
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -43,7 +44,7 @@ from .fixtures import (  # noqa: F401
     fixture_repository,
     headers_for_token,
 )
-from .fixtures.access_api import AccessApiMock, respond
+from .fixtures.access_api import AccessApiMock
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET, FILE_ACCESSION_MAPS
 
