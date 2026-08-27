@@ -26,6 +26,47 @@ Thereby, you may specify following extra(s):
 - `api`: dependencies needed to use the API server functionalities
 - `auth`: dependencies needed for dealing with authentication and authorization
 
+# Mocking the APIs a service calls
+Outbound HTTP calls are tested against a mock of the API they go to, rather than
+against the network. `ghga_service_commons.api.mock_router` routes requests to the
+endpoints registered on it, and `ghga_service_commons.api.mock_api` builds the mocks
+themselves on top of it.
+
+Model an API once, declaring each endpoint and how it answers when a test says nothing
+about it:
+```python
+from ghga_service_commons.api.mock_api import ApiMock, endpoint, respond
+
+
+class EkssApiMock(ApiMock):
+    """A mock of the EKSS API endpoints that this service talks to."""
+
+    on_get_envelope = endpoint(
+        "GET", "/secrets/{secret_id}/envelopes", respond(200, json={"content": "..."})
+    )
+    on_delete_secret = endpoint("DELETE", "/secrets/{secret_id}", respond(204))
+```
+A test then states only what it cares about, and mounts the mock on the client under
+test:
+```python
+ekss = EkssApiMock(base_url=str(config.ekss_api_url))
+ekss.on_delete_secret = respond(500)
+
+async with httpx2.AsyncClient(transport=ekss.as_transport()) as client:
+    ...
+
+assert str(ekss.last_request.url).endswith("/secrets/some-id")
+```
+An endpoint declared without a default refuses to make up a response, so a test never
+gets one by accident. Besides `respond`, the module has `fail_to_connect`, `fail_with`
+and `in_sequence`; anything else taking the request, plus the endpoint's path variables
+as keyword arguments, works as a handler too, `async` ones included.
+
+The transport returned by `as_transport()` answers every request, so a test using it
+cannot reach the network. Where one client talks to several APIs, or also has to carry
+real traffic, mount a `RoutingTransport` over the mocks instead. Code that builds its
+own client, and hence takes no transport, is redirected with `patch_httpx_module`.
+
 ## Development
 
 This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
