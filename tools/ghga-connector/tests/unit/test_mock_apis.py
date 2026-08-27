@@ -25,7 +25,6 @@ from ghga_connector.config import get_config
 from ghga_connector.core.client import async_client
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.apis import (
-    MOCKED_BASE_URLS,
     MockApis,
     mock_apis,  # noqa: F401
 )
@@ -43,10 +42,10 @@ def apply_test_config():
         yield
 
 
-def _destination(url: str) -> str:
+def _destination(url: str, mock_apis: MockApis) -> str:  # noqa: F811
     """Where a request to `url` would be sent."""
     parsed = httpx2.URL(url)
-    if is_mocked(parsed, MOCKED_BASE_URLS):
+    if is_mocked(parsed, mock_apis.base_urls):
         return "mock"
     return "network" if may_be_reached(parsed) else "refused"
 
@@ -70,9 +69,13 @@ def _destination(url: str) -> str:
         ("https://example.org/anything", "refused"),
     ],
 )
-def test_requests_are_sorted_by_destination(url: str, expected: str):
+def test_requests_are_sorted_by_destination(
+    url: str,
+    expected: str,
+    mock_apis: MockApis,  # noqa: F811
+):
     """Make sure mock, testcontainer and internet traffic are told apart correctly."""
-    assert _destination(url) == expected
+    assert _destination(url, mock_apis) == expected
 
 
 @pytest.mark.asyncio
