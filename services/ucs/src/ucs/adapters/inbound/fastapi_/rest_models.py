@@ -188,6 +188,8 @@ WorkType = Literal[
     "close",
     "delete",
     "delete_box",
+    "requeue",
+    "requeue_box",
 ]
 
 T = TypeVar("T", bound=WorkType)
@@ -244,6 +246,18 @@ class CloseFileWorkOrder(BaseWorkOrderToken[Literal["close"]], _FileUploadToken)
 
 class DeleteFileWorkOrder(BaseWorkOrderToken[Literal["delete"]], _FileUploadToken):
     """WOT schema authorizing a user to delete a file upload"""
+
+
+class RequeueFailedFileWorkOrder(
+    BaseWorkOrderToken[Literal["requeue"]], _FileUploadToken
+):
+    """WOT schema authorizing a Data Steward to requeue a failed FileUpload"""
+
+
+class RequeueAllFailedWorkOrder(BaseWorkOrderToken[Literal["requeue_box"]]):
+    """WOT schema authorizing a Data Steward to requeue all failed FileUploads in a box."""
+
+    box_id: UUID4
 
 
 class DeleteFileBoxWorkOrder(BaseWorkOrderToken[Literal["delete_box"]]):
