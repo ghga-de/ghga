@@ -21,11 +21,12 @@ from uuid import UUID, uuid4
 import httpx2
 import pytest
 
+from ghga_service_commons.api.mock_api import fail_to_connect, respond
 from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import AccessClient
 from rs.config import Config
 from rs.core.models import GrantId
-from tests.fixtures.external_apis import AccessApiMock, fail_to_connect, respond
+from tests.fixtures.external_apis import AccessApiMock
 
 pytestmark = pytest.mark.asyncio
 
