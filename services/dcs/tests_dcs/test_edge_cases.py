@@ -27,12 +27,9 @@ from pydantic import UUID4
 from dcs.core import models
 from dcs.core.errors import StorageAliasNotConfiguredError
 from dcs.ports.outbound.dao import DrsObjectDaoPort
+from ghga_service_commons.api.mock_api import ResponseHandler, fail_to_connect
 from hexkit.utils import now_utc_ms_prec
-from tests_dcs.fixtures.ekss_api import (
-    ResponseHandler,
-    fail_to_connect,
-    secret_not_found,
-)
+from tests_dcs.fixtures.ekss_api import secret_not_found
 from tests_dcs.fixtures.joint import EXAMPLE_FILE, JointFixture, PopulatedFixture
 from tests_dcs.fixtures.utils import (
     generate_token_signing_keys,
