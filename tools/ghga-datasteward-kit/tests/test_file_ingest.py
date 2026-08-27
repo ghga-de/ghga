@@ -28,6 +28,7 @@ from ghga_datasteward_kit.file_ingest import (
     alias_to_accession,
     file_ingest,
 )
+from ghga_service_commons.api.mock_api import ApiMock, MockedEndpoint, respond
 from ghga_service_commons.utils.simple_token import generate_token
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.submission_registry.models import (
@@ -42,7 +43,6 @@ from tests.fixtures.ingest import (  # noqa: F401
     ingest_fixture,
     legacy_ingest_fixture,
 )
-from tests.fixtures.mock_api import ApiMock, MockedEndpoint, respond
 
 DEFAULT_STORAGE_ALIASES = {"test": "http://example.com"}
 
@@ -75,7 +75,7 @@ def mock_ingest_api(
     ingest_endpoint = api_mock.add(
         method="POST", path=endpoint_path, handler=respond(202)
     )
-    api_mock.patch_httpx(monkeypatch)
+    api_mock.patch_httpx_module(monkeypatch)
     return ingest_endpoint
 
 

@@ -20,14 +20,14 @@ from tenacity import RetryError
 
 from ghga_datasteward_kit.s3_upload import LegacyConfig
 from ghga_datasteward_kit.s3_upload.http_client import RequestConfigurator, httpx_client
-from tests.fixtures.config import legacy_config_fixture  # noqa: F401
-from tests.fixtures.mock_api import (
+from ghga_service_commons.api.mock_api import (
     ApiMock,
     MockedEndpoint,
     ResponseHandler,
     fail_with,
     respond,
 )
+from tests.fixtures.config import legacy_config_fixture  # noqa: F401
 
 EXCEPTIONS = [httpx2.ConnectError, httpx2.ConnectTimeout, httpx2.TimeoutException]
 STATUS_CODES = [408, 429, 500, 502, 503, 504]

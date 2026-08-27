@@ -23,7 +23,7 @@ import pytest
 from ghga_datasteward_kit.cli.file import delete_file
 from ghga_datasteward_kit.config import FileDeletionConfig
 from ghga_datasteward_kit.utils import DELETION_TOKEN, load_config_yaml
-from tests.fixtures.mock_api import ApiMock, respond
+from ghga_service_commons.api.mock_api import ApiMock, respond
 
 CONFIG_PATH = Path(__file__).parent / "fixtures" / "file_deletion_config.yaml"
 
@@ -54,7 +54,7 @@ def test_pcs_call(caplog, monkeypatch, tmp_path, file_id: str):
         path=f"/{endpoint}/{file_id}",
         handler=respond(status_code),
     )
-    api_mock.patch_httpx(monkeypatch)
+    api_mock.patch_httpx_module(monkeypatch)
 
     caplog.clear()
     with monkeypatch.context() as patch:

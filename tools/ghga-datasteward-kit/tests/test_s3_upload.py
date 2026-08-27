@@ -45,6 +45,7 @@ from ghga_datasteward_kit.s3_upload.utils import (
     get_object_storage,
 )
 from ghga_service_commons.api.api import ApiConfigBase
+from ghga_service_commons.api.mock_api import ApiMock, respond
 from ghga_service_commons.api.testing import get_free_port
 from ghga_service_commons.utils.temp_files import big_temp_file
 from hexkit.providers.s3.testutils import S3ContainerFixture
@@ -54,7 +55,6 @@ from tests.fixtures.config import (  # noqa: F401
     steward_token_fixture,
     storage_config,
 )
-from tests.fixtures.mock_api import ApiMock, respond
 
 ALIAS = "test_file"
 BUCKET_ID = "test-bucket"
@@ -76,7 +76,7 @@ def mock_wkvs(monkeypatch: pytest.MonkeyPatch, s3_endpoint_url: str) -> None:
         path="/values/storage_aliases",
         handler=respond(200, json={"storage_aliases": {"test": s3_endpoint_url}}),
     )
-    api_mock.patch_httpx(monkeypatch)
+    api_mock.patch_httpx_module(monkeypatch)
 
 
 async def test_legacy_process(
