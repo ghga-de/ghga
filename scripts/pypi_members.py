@@ -309,7 +309,9 @@ def release_candidates() -> tuple[list[dict], list[dict]]:
         `index_unreachable=True`, where `release_plan` turns it into an error.
 
     Consequences worth naming:
-    - re-runs are idempotent for free.
+    - a version already on PyPI is dropped here, so a re-run never attempts to
+      republish it. Nothing checks TestPyPI, so a member stranded there collides on
+      the rehearsal.
     - a member trailing the index (`ghga-validator` declares 1.1.1 while PyPI serves
       1.2.0, because upstream kept releasing) is *skipped*, not an error.
     """

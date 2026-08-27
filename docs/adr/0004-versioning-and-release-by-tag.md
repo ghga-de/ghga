@@ -93,9 +93,11 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   question, and one that misses a bump made weeks ago and never published. So the lane has
   one implementation, a bump arriving through the mainline sync is picked up like any
   other, a missed release repairs itself on the next run, a tag for a member already on the
-  index is a no-op, and re-running is idempotent because the second run sees the version
-  there. A member *trailing* the index (`ghga-validator` declares 1.1.1 while PyPI serves
-  1.2.0) is skipped, not an error — being behind is a sync question, not a release one.
+  index is a no-op, and re-running does not republish: the plan is re-derived from PyPI on
+  every run, so a version already there is dropped before any upload is attempted. Nothing
+  does this for TestPyPI — see the publish-targets entry below. A member *trailing* the
+  index (`ghga-validator` declares 1.1.1 while PyPI serves 1.2.0) is skipped, not an
+  error — being behind is a sync question, not a release one.
 - **Closure-train rule** (amended 2026-08-19): a published tool must not induce untested
   combinations on user machines. `ghga-connector`'s internal closure
   (`ghga-service-commons`, `hexkit`) is released **in the same train** when those libraries
@@ -145,9 +147,14 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 - **PyPI publish targets decided** (2026-08-26): the lane publishes to **PyPI**, rehearsed
   on **TestPyPI** first, both by **trusted publishing** (OIDC; no stored tokens). One
   `pypi-publish.yaml` run builds and checks the whole train before uploading anything, then
-  uploads to TestPyPI, then the *same files* to PyPI; `--check-url` on both makes a re-run
-  idempotent. The `publish` job runs under `environment: ghga-pypi`, whose required
-  reviewers gate the whole job. The two indexes hold **separate** trusted-publisher
+  uploads to TestPyPI, then the *same files* to PyPI. **Neither upload skips a collision**
+  (amended 2026-08-27): `--check-url` was dropped from both, because a rebuilt artifact
+  never byte-matches the index — the flag could only ever fail a run, never skip one — and
+  a skipped rehearsal would send an unrehearsed member to PyPI. So a member already on PyPI
+  is dropped by the plan and never re-uploaded, while one that reached only TestPyPI is
+  still selected and collides on the rehearsal until its version is bumped. The
+  `publish` job runs under `environment: ghga-pypi`, whose required reviewers gate the
+  whole job. The two indexes hold **separate** trusted-publisher
   entries, matched on owner, repository, workflow filename and environment — a mismatch
   reports only `invalid-publisher`, so both sides change together. The lane has **one
   entrance**: `release.yaml` routes `name/x.y.z` tags to it via `workflow_call`, so every
