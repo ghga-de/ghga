@@ -277,6 +277,56 @@ async def test_process_file_upload_updates(
     )
 
 
+async def test_process_file_upload_requeue(rig: JointRig):
+    """Verify that a requeued file is reset for another round of interrogation."""
+    file = create_file_under_interrogation(HUB1)
+    await rig.interrogation_handler.process_file_upload(file=file)
+
+    # Fail the interrogation so the local copy ends up in the requeue-eligible state
+    failure_report = models.InterrogationReportWithSecret(
+        file_id=file.id,
+        storage_alias=file.storage_alias,
+        interrogated_at=now_utc_ms_prec(),
+        passed=False,
+        reason="Checksum mismatch",
+    )
+    await rig.interrogation_handler.handle_interrogation_report(report=failure_report)
+
+    failed_file = await rig.file_dao.get_by_id(file.id)
+    assert failed_file.state == "failed"
+    assert failed_file.interrogated is True
+    assert failed_file.can_remove is True
+    assert await rig.interrogation_report_dao.get_by_id(file.id)
+    assert not await rig.interrogation_handler.get_files_not_yet_interrogated(
+        storage_alias=HUB1
+    )
+
+    # The requeue reaches FIS as an ordinary FileUpload event with the 'inbox' state
+    event_timestamp = now_utc_ms_prec() + timedelta(hours=1)
+    requeued_file = failed_file.model_copy()
+    requeued_file.state = "inbox"
+    requeued_file.state_updated = event_timestamp
+    await rig.interrogation_handler.process_file_upload(file=requeued_file)
+
+    db_file = await rig.file_dao.get_by_id(file.id)
+    assert db_file.state == "inbox"
+    assert db_file.interrogated is False
+    assert db_file.can_remove is False
+
+    # Make sure the timestamp is updated
+    assert failed_file.state_updated <= db_file.state_updated < event_timestamp
+
+    # Make sure the old report is dropped
+    with pytest.raises(ResourceNotFoundError):
+        await rig.interrogation_report_dao.get_by_id(file.id)
+
+    # And check that the file is served again when get_files_not_yet_interrogated is called
+    not_interrogated = await rig.interrogation_handler.get_files_not_yet_interrogated(
+        storage_alias=HUB1
+    )
+    assert [f.id for f in not_interrogated] == [file.id]
+
+
 async def test_get_files_not_yet_interrogated(rig: JointRig):
     """Test the `.get_files_not_yet_interrogated()` method"""
     # Assert that when there are no files, we still get an empty list
