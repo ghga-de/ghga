@@ -24,7 +24,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga-arcticfreeze"
-version = "1.1.0"
+version = "1.1.1"
 description = "Enjoy Python on the rocks with deeply (recursively) frozen data structures."
 maintainers = [
     { name = "The GHGA Authors", email = "contact@ghga.de" },

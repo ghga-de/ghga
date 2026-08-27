@@ -1,7 +1,10 @@
 # PyPI lane — publish the libraries and public CLI tools (ADR-0004).
 #
 # A version bump is the release trigger: every lane member declaring a version above the
-# latest one on PyPI is a candidate. Re-running is idempotent.
+# latest one on PyPI is a candidate. The plan is re-derived from PyPI on every run, so a
+# version already published there is dropped and never re-uploaded. Nothing checks
+# TestPyPI, so a member an earlier attempt stranded there collides on the rehearsal, and
+# only a version bump clears it.
 # If PyPI cannot be reached, the run fails.
 #
 # The whole train is built and checked, then uploaded to TestPyPI, then to PyPI.
@@ -174,22 +177,12 @@ jobs:
 
             echo "::group::testpypi $package $version"
 
-            # TestPyPI is immutable and shares no history with PyPI: it still carries
-            # versions the upstream repos rehearsed years ago. --check-url below skips
-            # those instead of failing the release over them, but a skip rehearses
-            # nothing, so say so rather than letting it read as a pass.
-            if curl -sfo /dev/null "https://test.pypi.org/pypi/$package/$version/json"; then
-              echo "::warning::$package $version is already on TestPyPI — upload skipped," \
-                   "so this member was not rehearsed"
-            fi
-
             # `always`, not the default `automatic`: automatic falls back to hunting for a
             # token when OIDC is unavailable, reporting a misconfigured publisher as a
             # credential error.
             uv publish \
               --trusted-publishing always \
               --publish-url https://test.pypi.org/legacy/ \
-              --check-url https://test.pypi.org/simple/ \
               "dist/$package"/*
             echo "- rehearsed \`$package\` $version on TestPyPI" >> "$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"
@@ -205,11 +198,9 @@ jobs:
             version=$(echo "$member" | jq -r '.version')
 
             echo "::group::pypi $package $version"
-            # --check-url keeps the documented idempotency when a re-run repeats a train
-            # whose earlier members already landed.
+
             uv publish \
               --trusted-publishing always \
-              --check-url https://pypi.org/simple/ \
               "dist/$package"/*
             echo "- published \`$package\` $version" >> "$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"
