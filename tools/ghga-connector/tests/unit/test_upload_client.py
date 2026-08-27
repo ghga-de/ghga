@@ -31,6 +31,7 @@ from ghga_connector import exceptions
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
 from ghga_connector.core.client import async_client
 from ghga_connector.core.uploading.api_calls import UploadClient
+from ghga_service_commons.api.mock_api import respond
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.mock_api.apis import (
     UPLOAD_URL,
@@ -38,7 +39,6 @@ from tests.fixtures.mock_api.apis import (
     UploadApiMock,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import api_url, respond
 from tests.fixtures.utils import (
     TEST_FILE_ID,
     TEST_FUB_ID,
@@ -280,18 +280,12 @@ async def test_upload_file_part(
     mock_apis: MockApis,  # noqa: F811
 ):
     """Test that upload_file_part fetches the presigned URL and PUTs the content to S3."""
-    uploaded: list[bytes] = []
-
-    @mock_apis.router.put(api_url(UPLOAD_URL, ""))
-    def upload_part(request: httpx2.Request) -> httpx2.Response:
-        """Accept the part content at the presigned URL."""
-        uploaded.append(request.read())
-        return httpx2.Response(200)
+    upload_part = mock_apis.storage.add(method="PUT", path="/part")
 
     await upload_client.upload_file_part(
         file_id=TEST_FILE_ID, content=b"abc123", part_no=1
     )
-    assert uploaded == [b"abc123"]
+    assert [request.read() for request in upload_part.requests] == [b"abc123"]
 
 
 async def test_complete_file_upload(
