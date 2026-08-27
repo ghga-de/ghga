@@ -24,12 +24,12 @@ from pydantic import HttpUrl, SecretBytes
 
 from fis.adapters.outbound.http import HttpClientConfig, get_configured_httpx_client
 from fis.adapters.outbound.secrets import SecretsClient, SecretsClientConfig
-from tests_fis.fixtures.ekss_api import (
-    EkssApiMock,
+from ghga_service_commons.api.mock_api import (
     ResponseHandler,
     fail_to_connect,
     respond,
 )
+from tests_fis.fixtures.ekss_api import EkssApiMock
 
 pytestmark = pytest.mark.asyncio
 
@@ -43,7 +43,7 @@ SECRETS_CONFIG = SecretsClientConfig(ekss_api_url=HttpUrl(BASE_URL))
 def bad_json(status_code: int) -> ResponseHandler:
     """Make a handler answering with a body that is not valid JSON."""
 
-    def handler(request: httpx2.Request) -> httpx2.Response:
+    def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
         return httpx2.Response(status_code=status_code, content=b"not valid json")
 
     return handler
