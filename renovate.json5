@@ -25,12 +25,6 @@
     },
   ],
 
-  // dhi.io is a private, authenticated mirror (Docker Hub DHI entitlement) —
-  // reuse the same org secrets CI already uses to log in, so Renovate can
-  // resolve the tags that actually exist there (not just public upstream).
-  // Credentials are global (bot) config, not repo config: injected as
-  // RENOVATE_HOST_RULES in .github/workflows/renovate.yaml, not here.
-
   customManagers: [
     {
       customType: "regex",
