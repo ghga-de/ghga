@@ -154,6 +154,8 @@ mongodb:
     name: mongodb
 apiBasePath: /.well-known/
 serviceName: wkvs
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

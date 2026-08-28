@@ -227,6 +227,8 @@ mongodb:
     name: mongodb
 apiBasePath: ""
 serviceName: ifrs
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

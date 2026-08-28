@@ -216,6 +216,8 @@ mongodb:
     name: mongodb
 apiBasePath: /dins/
 serviceName: dins-consumer
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

@@ -185,6 +185,8 @@ mongodb:
     name: mongodb
 apiBasePath: /metldata/
 serviceName: metldata
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

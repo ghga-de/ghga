@@ -154,6 +154,8 @@ mongodb:
     name: mongodb
 apiBasePath: /op.test/
 serviceName: test-oidc-provider
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

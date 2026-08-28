@@ -181,6 +181,8 @@ mongodb:
     name: mongodb
 apiBasePath: /mass/
 serviceName: mass-consumer
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

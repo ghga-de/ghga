@@ -163,6 +163,8 @@ mongodb:
     name: mongodb
 apiBasePath: ""
 serviceName: ""
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: false
   mountPath: /etc/config.yaml

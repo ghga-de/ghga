@@ -175,6 +175,8 @@ mongodb:
     name: mongodb
 apiBasePath: /fis/
 serviceName: fis-rest
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

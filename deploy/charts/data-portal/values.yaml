@@ -154,6 +154,8 @@ mongodb:
     name: mongodb
 apiBasePath: /
 serviceName: ""
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /app/data-portal.yaml

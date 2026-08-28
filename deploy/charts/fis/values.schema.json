@@ -660,6 +660,16 @@
       "type": "string",
       "description": "Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name"
     },
+    "serviceInstanceId": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "fromPodName": {
+          "type": "boolean",
+          "description": "Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own \"uniquely identifies this instance\" contract)."
+        }
+      }
+    },
     "configMap": {
       "type": "object",
       "additionalProperties": true,

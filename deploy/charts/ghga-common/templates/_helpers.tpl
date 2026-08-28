@@ -61,5 +61,8 @@
 
 {{- define "ghga-common.env-vars" -}}
 {{- $envVars := .Values.configMap.envVar.enabled | ternary (append .Values.envVars (dict "name" (print .Values.configPrefix "_CONFIG_YAML" | upper) "value" .Values.configMap.mountPath)) .Values.envVars }}
+{{- if .Values.serviceInstanceId.fromPodName }}
+{{- $envVars = append $envVars (dict "name" (print .Values.configPrefix "_SERVICE_INSTANCE_ID" | upper) "valueFrom" (dict "fieldRef" (dict "fieldPath" "metadata.name"))) }}
+{{- end }}
 {{- dict "envVars" $envVars | toYaml -}}
 {{- end -}}

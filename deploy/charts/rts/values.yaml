@@ -181,6 +181,8 @@ mongodb:
     name: mongodb
 apiBasePath: /rts/
 serviceName: rts-consumer
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

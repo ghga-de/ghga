@@ -158,6 +158,8 @@ mongodb:
     name: mongodb
 apiBasePath: /sms/
 serviceName: sms-rest
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

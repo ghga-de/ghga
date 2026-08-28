@@ -220,6 +220,8 @@ mongodb:
     name: mongodb
 apiBasePath: /rs/
 serviceName: rs-rest
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml

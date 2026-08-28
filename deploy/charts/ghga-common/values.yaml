@@ -207,6 +207,9 @@ exports:
     apiBasePath: ""
     serviceName: ""
 
+    serviceInstanceId:
+      fromPodName: false
+
     configMap:
       enabled: true
       mountPath: /etc/config.yaml
