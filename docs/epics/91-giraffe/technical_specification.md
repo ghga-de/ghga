@@ -123,10 +123,23 @@ relation, written by the loader and read by the data portal.
 - **Re-accessioning existing studies.** Legacy identifiers are never rewritten.
 - **Entity-level deprecation.** Deprecation is tracked study-level only.
 - **Populating RS's `Study.superseded_by_id`.** This is a pre-existing, currently unused attribute
-  on RS's `Study` model — it is not introduced by this epic. Since the portal resolves the successor from
-  metldata's ancestry collection, nothing reads the field in this rollout; propagating it would
-  mean adding a supersede pointer to the events RS consumes to serve no reader. Therefore it stays in the
-  model, unset, for when RS takes ownership of study metadata.
+  on RS's `Study` model — it is not introduced by this epic. Nothing reads it in this rollout: the
+  portal resolves the successor from metldata's ancestry collection, so propagating a supersede
+  pointer through the events RS consumes would serve no reader.
+
+  *Why RS could not populate it.* The only supersede-related signal RS
+  receives is `searchable_resource_deleted`, whose `SearchableResourceInfo` payload carries a
+  dataset accession and a class name — no study PID and no successor, so RS cannot tell which study
+  was superseded, let alone by what. RS also writes a study exactly once and has no update path:
+  `LegacyResourceManager.upsert_resource` inserts and swallows `ResourceAlreadyExistsError`
+  deliberately, to avoid resetting `created` and churning the outbox for a study that is embedded in
+  many resources — while a replacement may be declared long after load through `replace-study`.
+  And a supersede pointer held in RS would be a second copy of a relation metldata owns, free to
+  drift from ground truth with nothing to reconcile it.
+
+  *When it does get populated.* At the handover where RS becomes the owner of study metadata. That
+  step includes a backfill against metldata's submission store, and RS taking over the
+  forward-resolving successor endpoint metldata serves today.
 - **Changes to `libs/ghga-event-schemas`.** See the API section — the design avoids needing any.
 - **Changes to `services/mass`.** Superseded datasets are hidden by the existing `searchable_resource_deleted` event, which MASS already consumes.
 - **A steward search that can still see superseded datasets.** There is no retained "hidden" flag;
