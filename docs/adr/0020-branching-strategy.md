@@ -16,17 +16,17 @@ Since we made the switch to the monorepo a few weeks ago, we've continued to use
 The result is that the state of `main` is always in flux, because developers are no longer split among isolated repositories but rather touching the same repo.
 Churn is especially high right now because we're A) making adjustments to the repository tooling and B) multiple big features are in progress with more to come.
 The question of "what is in production?" is never clear because the latest release state gets quickly obscured by new updates in preparation for the _next_ release.
-A more favorable branching strategy would address these concerns by clearly isolating work-in-progress from the latest release state.
-We can do that by creating a `dev` branch to contain all unreleased work.
-When the time comes to release the latest version of the monorepo, `dev` gets merged into `main`.
-Subsequent changes continue to be merged into `dev` from feature branches.
-Hotfix branches can be made against `main` directly, then merged into `dev`.
-Feature branches are created from `dev`, but the exact structure for feature branches is deliberately left less defined in order to allow developers the freedom to use the strategy most compatible with the work and/or their preferences, especially since it is important to experiment while we are still getting accustomed to the monorepo as a team.
+
+## Decision
+
+> We decided for a Git Flow variant with two long-lived branches and neglected trunk-based-only and merge queues, to achieve a monorepo with transparent state and separation of concerns (releases vs work), as well as the ability to CD to staging, accepting that we have to keep `dev` and `main` in sync.
+
+Creating a `dev` branch to contain all unreleased work addresses the concerns listed in the Context section by clearly delineating work-in-progress and the latest release state.
 
 - **`main` reflects the latest platform release.** Its HEAD is always a released state.
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
-- **A release merges `dev` into `main`**, and the release tag is applied on `main`.
+- **A platform release merges `dev` into `main`**, and the release tag is applied on `main`.
 - **Hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`** so the fix is never lost on the next release.
 - **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
 
