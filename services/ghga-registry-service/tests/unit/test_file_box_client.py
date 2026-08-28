@@ -159,6 +159,25 @@ async def test_lock_file_upload_box(
     assert fub_uploads_err.value.incomplete_uploads == []
     assert fub_uploads_err.value.need_attention == need_attention
 
+    # ...and check vice versa: incomplete_uploads populated, need_attention empty
+    file_box_api.on_update_file_upload_box = respond(
+        409,
+        json={
+            "exception_id": EXC_ID_INCOMPLETE_OR_FAILED,
+            "data": {
+                "box_id": str(TEST_BOX_ID),
+                "incomplete_uploads": [
+                    [str(fid), f"alias-{i}"] for i, fid in enumerate(incomplete_uploads)
+                ],
+                "need_attention": [],
+            },
+        },
+    )
+    with pytest.raises(FileBoxClient.FUBIncompleteOrFailedError) as fub_uploads_err:
+        await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
+    assert fub_uploads_err.value.incomplete_uploads == incomplete_uploads
+    assert fub_uploads_err.value.need_attention == []
+
     # Non-409, non-204 -> OperationError
     file_box_api.on_update_file_upload_box = respond(500, json="Some error occurred.")
     with pytest.raises(FileBoxClient.OperationError):
