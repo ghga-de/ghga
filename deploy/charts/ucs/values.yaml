@@ -9,46 +9,21 @@ global:
   imagePullSecrets: []
   storageClass: ""
   _topics: {}
-  _consumerGroup:
-    operations:
-    - Read
-    resource:
-      patternType: literal
-      type: group
-
-    # This is the actual Kubernetes `command` field
-command: ["sh", "-c"]
+command:
+- "sh"
+- "-c"
 commandPrefix: ''
 commandStyle: exec
 executable: ucs
 executableArgs:
 - run-rest
-# cmd: ucs consume-events
-
 deployment:
   enabled: true
-
 job:
   enabled: false
-
-    # A map of CronJobs to render alongside (or instead of) the Deployment. It's a
-    # map rather than a list so downstream values files can override a single
-    # cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to
-    # redefine the whole list - Helm only deep-merges maps, not lists.
-    # The map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`),
-    # except for the reserved key `default`, which renders with no suffix - use that
-    # key for the common case of a single cronjob.
-    # Each entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`,
-    # and `executableArgs` independently of the Deployment/other cronjobs; unset
-    # fields fall back to the top-level values.
-    # `podAnnotations` on an entry are added on top of the top-level `podAnnotations`
-    # (and any vault agent annotations), taking precedence on conflicting keys - e.g.
-    # to set `vault.hashicorp.com/agent-pre-populate-only: "true"` only for a cronjob
-    # while the Deployment keeps the vault agent sidecar running.
 cronjobs:
   default:
     enabled: false
-
 nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
@@ -69,13 +44,12 @@ revisionHistoryLimit: 1
 shareProcessNamespace: false
 podSecurityContext:
   fsGroup: 1000
-
 initContainers: []
 migrationInitContainer:
   enabled: false
   image: ""
-  cmd: ["sh", "-c"]
-  args: []
+  executable: ""
+  executableArgs: []
   env: []
   resources: {}
   volumeMounts: []
@@ -97,33 +71,27 @@ schedulerName: ""
 terminationGracePeriodSeconds: ""
 updateStrategy:
   type: RollingUpdate
-
 podRestartPolicy: Always
-cmd: ""
 ports:
   enabled: false
   ports:
   - name: http
     containerPort: 8080
     protocol: TCP
-
 livenessProbe:
   enabled: false
   tcpSocket:
     port: 8080
   initialDelaySeconds: 30
   periodSeconds: 15
-
 readinessProbe:
   enabled: false
   tcpSocket:
     port: 8080
   initialDelaySeconds: 30
   periodSeconds: 15
-
 startupProbe:
   enabled: false
-
 containerSecurityContext:
   enabled: true
   runAsUser: 1000
@@ -135,7 +103,6 @@ containerSecurityContext:
   readOnlyRootFilesystem: true
   runAsNonRoot: true
   allowPrivilegeEscalation: false
-
 lifecycleHooks: {}
 resources:
   limits:
@@ -144,7 +111,6 @@ resources:
   requests:
     cpu: "1000m"
     memory: "1024M"
-
 extraVolumes: []
 extraVolumeMounts: []
 sidecars: []
@@ -159,10 +125,8 @@ service:
     protocol: TCP
     port: 8080
     targetPort: http
-
 serviceAccount:
   create: true
-
 autoscaling:
   enabled: false
   minReplicas: 3
@@ -170,13 +134,9 @@ autoscaling:
   targetCPU: 80
   targetMemory: 80
   metrics: []
-ingress:
-  enabled: false
-
 topicPrefix: ""
 _topics:
   fileUploadValidationSuccess:
-    # as producer
     topic:
       name: file_interrogations_topic
       value: interrogations
@@ -189,7 +149,6 @@ _topics:
       operations:
       - Read
   filesToRegister:
-    # as consumer
     topic:
       name: file_internally_registered_topic
       value: internal-registrations
@@ -200,7 +159,6 @@ _topics:
       operations:
       - Read
   filesToDelete:
-    # as consumer
     topic:
       name: file_deletion_request_topic
       value: purges
@@ -211,7 +169,6 @@ _topics:
       operations:
       - Read
   deadLetterQueue:
-  # as producer
     topic:
       name: kafka_dlq_topic
       value: dlq
@@ -219,7 +176,6 @@ _topics:
       operations:
       - Write
   deadLetterQueueRetry:
-  # as consumer
     topic:
       name:
       value: retry
@@ -227,7 +183,6 @@ _topics:
       operations:
       - Read
   fileUpload:
-    # as consumer
     topic:
       name: file_upload_topic
       value: file-uploads
@@ -235,7 +190,6 @@ _topics:
       operations:
       - Write
   uploadBoxTopic:
-    # as consumer
     topic:
       name: file_upload_box_topic
       value: file-upload-boxes
@@ -254,27 +208,21 @@ kafkaUser:
   clusterName: kafka
   clusterNamespace: strimzi
   caCertSecretName: kafka-cluster-ca-cert
-
 mongodb:
   dbName: upload-controller
-  host: mongodb.mongodb.svc.cluster.local
   service:
     namespace: mongodb
     name: mongodb
-
-
 apiBasePath: /ucs/
 serviceName: ucs-consumer
-serviceInstanceId: ""
-serviceNameConsumer: ""
-serviceInstanceIdConsumer: ""
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /etc/config.yaml
   subPath: config.yaml
   envVar:
     enabled: true
-
 config:
   mongo_dsn:
   host: "0.0.0.0"
@@ -288,29 +236,19 @@ enableServiceLinks: true
 successfulJobsHistoryLimit: 5
 environment:
   name: default
-
 cluster:
   name: default
-
-    # Set `spec` of HTTPRoute here
-    # (`port` is the backend service port used by the default rule; it is consumed by
-    # the template, not copied into `spec`)
 httpRoute:
   enabled: false
   port: 8080
-      # strip the base path before forwarding. Services that reconstruct their own
-      # public URLs (an OIDC discovery document, for example) need the full path
-      # instead and rely on api_root_path to route — set this to false for them.
   rewritePath: true
   rules: []
 probe:
   enabled: false
   hostname: default.ghga.dev
-
 healthEndpoint: "/health"
 destinationRule:
   enabled: false
-
 networkPolicy:
   enabled: false
   ingress:
@@ -318,7 +256,6 @@ networkPolicy:
     - namespaceSelector:
         matchLabels:
           ghga-ingress: allow
-
 strimziApiVersion: kafka.strimzi.io/v1
 vaultAgent:
   enabled: false

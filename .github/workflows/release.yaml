@@ -450,6 +450,22 @@ jobs:
             helm package "$work/${name}-chart" -d "$work"
             helm push "$work/${name}-chart-"*.tgz "oci://${CHART_REGISTRY}"
           done < dist/to-push.txt
+      - name: Update Docker Hub overviews
+        if: ${{ inputs.push }}
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          jwt=$(curl -sf -H 'Content-Type: application/json' \
+            -d "{\"username\":\"$DOCKERHUB_USERNAME\",\"password\":\"$DOCKERHUB_TOKEN\"}" \
+            https://hub.docker.com/v2/auth/token | jq -r .access_token)
+          while read -r name _ _; do
+            short=$(yq '.description' "deploy/charts/${name}/Chart.yaml" | head -c 100)
+            curl -sf -X PATCH -H "Authorization: Bearer $jwt" -H 'Content-Type: application/json' \
+              --data "$(jq -n --rawfile r "deploy/charts/${name}/README.md" --arg d "$short" \
+                              '{full_description: $r, description: $d}')" \
+              "https://hub.docker.com/v2/repositories/ghga/${name}-chart/"
+          done < dist/manifest.txt
       - name: Summary
         run: |
           if [ "${{ inputs.push }}" = "true" ]; then

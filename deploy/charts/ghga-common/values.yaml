@@ -1,3 +1,6 @@
+# Per-key descriptions live in the sibling values.schema.json, not here - they're
+# parsed from there (deploy/src/create_charts.py's library_docs()) into every derived
+# chart's own values.schema.json; keeping them here too would just drift out of sync.
 exports:
   defaults:
     global:
@@ -5,22 +8,11 @@ exports:
       imagePullSecrets: []
       storageClass: ""
       _topics: {}
-      _consumerGroup:
-        operations:
-          - Read
-        resource:
-          patternType: literal
-          type: group
 
-    # This is the actual Kubernetes `command` field
     command: ["sh", "-c"]
     commandPrefix: /usr/local/bin/
-    # "shell": wrap executable+args in `command` via a shell string (needs a shell in
-    # the image). "exec": render command=[prefixed executable], args as a real argv
-    # list — for shell-less hardened runtime images.
     commandStyle: shell
 
-    # Executable name and arguments (will be combined into a shell command)
     executable: ""
     executableArgs: []
 
@@ -30,20 +22,6 @@ exports:
     job:
       enabled: false
 
-    # A map of CronJobs to render alongside (or instead of) the Deployment. It's a
-    # map rather than a list so downstream values files can override a single
-    # cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to
-    # redefine the whole list - Helm only deep-merges maps, not lists.
-    # The map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`),
-    # except for the reserved key `default`, which renders with no suffix - use that
-    # key for the common case of a single cronjob.
-    # Each entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`,
-    # and `executableArgs` independently of the Deployment/other cronjobs; unset
-    # fields fall back to the top-level values.
-    # `podAnnotations` on an entry are added on top of the top-level `podAnnotations`
-    # (and any vault agent annotations), taking precedence on conflicting keys - e.g.
-    # to set `vault.hashicorp.com/agent-pre-populate-only: "true"` only for a cronjob
-    # while the Deployment keeps the vault agent sidecar running.
     cronjobs:
       default:
         enabled: false
@@ -86,8 +64,8 @@ exports:
     migrationInitContainer:
       enabled: false
       image: ""
-      cmd: ["sh", "-c"]
-      args: []
+      executable: ""
+      executableArgs: []
       env: []
       resources: {}
       volumeMounts: []
@@ -125,10 +103,6 @@ exports:
       type: RollingUpdate
 
     podRestartPolicy: Always
-
-    # This is the actual Kubernetes `args` passed as string into array
-    # TODO: rename to a better name
-    cmd: ""
 
     ports:
       enabled: false
@@ -208,9 +182,6 @@ exports:
       targetMemory: 80
       metrics: []
 
-    ingress:
-      enabled: false
-
     topicPrefix: ""
     _topics: {}
     _consumerGroup:
@@ -229,17 +200,15 @@ exports:
 
     mongodb:
       dbName: ""
-      host: mongodb.mongodb.svc.cluster.local
       service:
         namespace: mongodb
         name: mongodb
 
-
     apiBasePath: ""
     serviceName: ""
-    serviceInstanceId: ""
-    serviceNameConsumer: ""
-    serviceInstanceIdConsumer: ""
+
+    serviceInstanceId:
+      fromPodName: false
 
     configMap:
       enabled: true
@@ -262,15 +231,9 @@ exports:
     cluster:
       name: default
 
-    # Set `spec` of HTTPRoute here
-    # (`port` is the backend service port used by the default rule; it is consumed by
-    # the template, not copied into `spec`)
     httpRoute:
       enabled: false
       port: 8080
-      # strip the base path before forwarding. Services that reconstruct their own
-      # public URLs (an OIDC discovery document, for example) need the full path
-      # instead and rely on api_root_path to route — set this to false for them.
       rewritePath: true
       rules: []
 

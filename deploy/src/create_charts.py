@@ -16,6 +16,7 @@ Conventions baked into the derived values:
 """
 
 import argparse
+import json
 import shutil
 import sys
 from copy import deepcopy
@@ -29,6 +30,7 @@ DEPLOY_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = DEPLOY_ROOT.parent
 OUTPUT_DIR = DEPLOY_ROOT / "charts"
 LIBRARY_VALUES = DEPLOY_ROOT / "charts" / "ghga-common" / "values.yaml"
+LIBRARY_SCHEMA = DEPLOY_ROOT / "charts" / "ghga-common" / "values.schema.json"
 CHART_TEMPLATE = DEPLOY_ROOT / "src" / "template"
 DEMO_CHART = OUTPUT_DIR / "ghga-demo"
 # name of the single image carrying every Python member (docker/Dockerfile VARIANT=mono)
@@ -116,10 +118,224 @@ def stamp_chart(
     return chart_dir
 
 
+def _plain(value):
+    """Rebuild a ruamel round-trip structure as plain dict/list, dropping comments.
+
+    Comments carry their source indentation as a raw string; re-nesting a
+    CommentedMap a level shallower (exports.defaults -> a member's values.yaml
+    root) doesn't recalculate that indentation, so a comment above a key would end
+    up misindented relative to it. deep_merge() and chart_values_schema() below
+    both need comment-free plain data to work with; ghga-common/values.schema.json
+    (not values.yaml's own comments) is the source of the descriptions that reach
+    a derived chart's own values.schema.json.
+    """
+    if isinstance(value, dict):
+        return {key: _plain(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_plain(item) for item in value]
+    return value
+
+
+def _docs_from_schema(schema: dict, prefix: str = "") -> dict[str, str]:
+    """Flatten a JSON Schema's `description`s into {dotted.path: text}.
+
+    ghga-common/values.schema.json (hand-authored, alongside values.yaml) is the
+    single source of truth for what every derived chart's own values.schema.json
+    documents; this is the read side of that, used by chart_values_schema() below.
+    """
+    docs: dict[str, str] = {}
+    description = schema.get("description")
+    if description and prefix:
+        docs[prefix] = description
+    for key, child in schema.get("properties", {}).items():
+        docs.update(_docs_from_schema(child, f"{prefix}.{key}" if prefix else key))
+    return docs
+
+
+def library_docs() -> dict[str, str]:
+    """Descriptions from ghga-common/values.schema.json, keyed by dotted path."""
+    with LIBRARY_SCHEMA.open("r", encoding="utf-8") as schema_file:
+        return _docs_from_schema(json.load(schema_file))
+
+
+def config_field_schemas(member: dict) -> tuple[dict, dict]:
+    """A member's (field schemas, $defs) from its config_schema.json, if it has one.
+
+    Not every member has one (tools/frontend members mostly don't). Where present,
+    these are frozen artifacts carried over from each service's pre-monorepo repo
+    (see .pre-commit-config.yaml's end-of-file-fixer exclusion for config_schema.json)
+    - nothing in this repo regenerates them, so treat this as a best-effort snapshot
+    of each field's type/description, not a live, guaranteed-current source.
+
+    $defs is pydantic's own local-ref target for nested models/enums (`$ref:
+    "#/$defs/X"`); a field schema copied without it is a dangling reference the
+    moment it's embedded in a different document, which is exactly what plugging
+    `properties` alone into this chart's own values.schema.json would produce.
+    """
+    schema_file = REPO_ROOT / member["path"] / "config_schema.json"
+    if not schema_file.is_file():
+        return {}, {}
+    with schema_file.open("r", encoding="utf-8") as f:
+        schema = json.load(f)
+    return schema.get("properties", {}), schema.get("$defs", {})
+
+
+def _json_type(value) -> str | None:
+    """Map a Python value to its JSON Schema type keyword; None for null."""
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, (int, float)):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, dict):
+        return "object"
+    return None
+
+
+def _schema_for(value, docs: dict[str, str], prefix: str = "") -> dict:
+    """Build one loose JSON Schema node: known keys typed+described, nothing forbidden.
+
+    Deliberately shallow beyond what the data itself gives: this documents and
+    type-hints values, it doesn't attempt to fully model Kubernetes' own API shapes
+    (resources, affinity, tolerations, ...) or a service's free-form `config` block.
+    additionalProperties stays true on every object and arrays get no `items`
+    constraint, so a real per-member override can never fail `helm lint`/`helm
+    template` schema validation just because this generator didn't know about it.
+
+    Every leaf (scalar, empty map/list, or null) carries its actual value as the
+    standard JSON Schema `default` keyword - not just documentation, it's also what
+    chart_readme_text()'s parameters table reads for the Value column, and what
+    editor tooling (the YAML/Helm extensions that understand values.schema.json)
+    shows as a placeholder.
+    """
+    schema: dict = {}
+    node_type = _json_type(value)
+    if node_type:
+        schema["type"] = node_type
+    description = docs.get(prefix)
+    if description:
+        schema["description"] = description
+    if node_type == "object" and value:
+        schema["additionalProperties"] = True
+        schema["properties"] = {
+            key: _schema_for(item, docs, f"{prefix}.{key}" if prefix else key)
+            for key, item in value.items()
+        }
+    else:
+        if node_type == "object":
+            schema["additionalProperties"] = True
+        schema["default"] = value
+    return schema
+
+
+# configmap.tpl always `omit`s these three from `.Values.config` and recomputes them
+# from a different top-level field instead (with its own prefix logic) - a value set
+# directly under config.<key> here is silently discarded, never reaching config.yaml.
+CONFIG_FIELDS_OVERRIDDEN_BY = {
+    "db_name": "mongodb.dbName",
+    "api_root_path": "apiBasePath",
+    "service_name": "serviceName",
+}
+
+
+def _allow_null(prop: dict) -> dict:
+    """Widen a config_schema.json field fragment to also accept null.
+
+    This repo's own chart-values.yaml files use a bare empty/null value as a "not
+    yet configured, fill in at deploy time" placeholder - e.g. metldata's and
+    ekss's own committed `loader_token_hashes:`/equivalent, empty by design. The
+    frozen, per-service config_schema.json obviously has no notion of that
+    convention, so its declared type is often a strict non-nullable one (plain
+    `array`, no anyOf). Without this, `helm install`/`upgrade` hard-fails schema
+    validation on this repo's *own* committed defaults - confirmed against
+    metldata's config.loader_token_hashes, which is exactly this case.
+    """
+    if "$ref" in prop:
+        # sibling annotation keywords (default, description, title, ...) stay at this
+        # level rather than moving inside the anyOf branch - valid JSON Schema (they're
+        # annotations, not constraints), and it's where _parameter_rows() and editor
+        # tooling actually look for them. Confirmed this was a real bug, not just
+        # theoretical: auth-service's config.totp_algorithm (a $ref'd enum with
+        # `"default": "sha1"` as a $ref sibling) rendered as `null` in the README table
+        # before this fix, since the naive `{"anyOf": [prop, ...]}` buried it.
+        return {
+            **{key: val for key, val in prop.items() if key != "$ref"},
+            "anyOf": [{"$ref": prop["$ref"]}, {"type": "null"}],
+        }
+    if "anyOf" in prop:
+        if any(branch.get("type") == "null" for branch in prop["anyOf"]):
+            return prop
+        return {**prop, "anyOf": [*prop["anyOf"], {"type": "null"}]}
+    prop = dict(prop)
+    node_type = prop.get("type")
+    if node_type is None:
+        prop["type"] = "null"
+    elif isinstance(node_type, list):
+        if "null" not in node_type:
+            prop["type"] = [*node_type, "null"]
+    elif node_type != "null":
+        prop["type"] = [node_type, "null"]
+    return prop
+
+
+def chart_values_schema(
+    values: dict,
+    docs: dict[str, str],
+    config_fields: dict | None = None,
+    config_defs: dict | None = None,
+) -> dict:
+    """A loose values.schema.json for one chart: documents and type-hints, never forbids.
+
+    config_fields/config_defs (from config_field_schemas()) overlay real per-field
+    type/description onto the `config` property specifically - everywhere else stays
+    generic, since only `config` has a per-service schema to draw on. Every
+    config_fields entry is widened to also accept null (see _allow_null()).
+    config_defs is hoisted to this document's own top-level $defs: pydantic's
+    `$ref: "#/$defs/X"` is a same-document pointer, so it only resolves if $defs
+    lives at this schema's root, not nested under `config`. No `required` is
+    carried over from config_fields: many fields the service's own Config marks
+    required (e.g. mongo_dsn) are legitimately blank in a chart's values.yaml
+    because they're actually supplied via a Vault-injected env var at runtime, not
+    through config.yaml at all.
+    """
+    schema = _schema_for(values, docs)
+    if config_fields:
+        config_schema = schema.get("properties", {}).get("config")
+        if config_schema is not None:
+            nullable_fields = {
+                key: _allow_null(prop) for key, prop in config_fields.items()
+            }
+            properties = {**config_schema.get("properties", {}), **nullable_fields}
+            for field, real_source in CONFIG_FIELDS_OVERRIDDEN_BY.items():
+                prop = properties.get(field)
+                if prop is None:
+                    continue
+                note = (
+                    f"NOTE: this chart's configmap.tpl always overwrites config.{field}"
+                    f" with the value computed from `{real_source}` - a value set"
+                    f" directly under config.{field} is silently discarded. Set"
+                    f" `{real_source}` instead."
+                )
+                existing = prop.get("description", "").strip()
+                if existing and not existing.endswith((".", "!", "?")):
+                    existing += "."
+                prop["description"] = f"{existing} {note}".strip()
+            config_schema["properties"] = properties
+    return {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        **({"$defs": config_defs} if config_defs else {}),
+        **schema,
+    }
+
+
 def library_defaults() -> dict:
     """The library chart's exported defaults (exports.defaults)."""
     with LIBRARY_VALUES.open("r", encoding="utf-8") as library_file:
-        return YAML_PARSER.load(library_file)["exports"]["defaults"]
+        loaded = YAML_PARSER.load(library_file)["exports"]["defaults"]
+    return _plain(loaded)
 
 
 def current_member_version() -> str:
@@ -163,21 +379,27 @@ def current_member_version() -> str:
     return next(iter(by_version))
 
 
-def member_values_text(member: dict, registry: str, defaults: dict) -> str:
-    """Compose a member chart's values.yaml: defaults <- derived <- chart-values."""
+def compose_member_values(
+    member: dict, registry: str, defaults: dict
+) -> tuple[dict, str]:
+    """Merge one member chart's values: defaults <- derived <- chart-values."""
     source = f"{member['path']}/chart-values.yaml"
     values = deep_merge(defaults, derived_values(member, registry))
 
     values_file = REPO_ROOT / member["path"] / "chart-values.yaml"
     if values_file.is_file():
         member_values = YAML_PARSER.load(values_file.read_text()) or {}
-        values = deep_merge(values, member_values)
+        values = deep_merge(values, _plain(member_values))
     else:
         source = f"{source} (absent; library defaults only)"
         print(
             f"note: {member['path']} has no chart-values.yaml; using library defaults"
         )
+    return values, source
 
+
+def member_values_text(values: dict, source: str) -> str:
+    """Render one member chart's merged values as values.yaml text."""
     buffer = StringIO()
     buffer.write(VALUES_HEADER.format(source=source))
     YAML_PARSER.dump(values, buffer)
@@ -262,6 +484,110 @@ def mono_overlay_text(registry: str) -> str:
     return buffer.getvalue()
 
 
+def _parameter_rows(schema: dict, prefix: str = "") -> list[tuple[str, str, object]]:
+    """Flatten a values.schema.json into (dotted.name, description, default) rows.
+
+    Mirrors _schema_for()'s own recursion rule: a node with `properties` is a
+    container (recurse into its children), anything else is a leaf row - which is
+    exactly the set of nodes _schema_for() gave a `default` to.
+
+    A key starting with `_` (e.g. `_topics`, `_consumerGroup`) is this repo's own
+    convention for an internal/plumbing value, not something meant to be set
+    directly - skipped here (and everything under it), though it still stays
+    documented in the schema itself for whoever needs the full picture.
+    """
+    properties = schema.get("properties")
+    if properties:
+        rows = []
+        for key, prop in properties.items():
+            if key.startswith("_"):
+                continue
+            path = f"{prefix}.{key}" if prefix else key
+            rows.extend(_parameter_rows(prop, path))
+        return rows
+    if not prefix:
+        return []
+    description = " ".join(schema.get("description", "").split()).replace("|", "\\|")
+    return [(prefix, description, schema.get("default"))]
+
+
+def parameters_table_text(schema: dict) -> str:
+    """A '| Name | Description | Value |' Markdown table from a values.schema.json."""
+    rows = _parameter_rows(schema)
+    lines = ["| Name | Description | Value |", "|------|-------------|-------|"]
+    lines += [
+        f"| `{name}` | {desc} | `{json.dumps(default)}` |"
+        for name, desc, default in rows
+    ]
+    return "\n".join(lines)
+
+
+# Docker Hub's PATCH API rejects a full_description over this many characters
+# outright (docker/roadmap#475: a validation error, not silent truncation) -
+# confirmed live against a real, already-published chart repo's full_description
+# via the public API, which comes back at exactly 24998 characters ending in a
+# trim note: that publisher pre-truncates client-side before the PATCH, the same
+# thing this does, not something Docker Hub does for you server-side. Leave real
+# headroom below it: a chart whose table lands just under 25000 today grows past
+# it the next time a field gains a longer description, and by then this margin is
+# the only thing standing between "still fits" and the release workflow's PATCH
+# call failing outright.
+README_LENGTH_LIMIT = 25000
+README_SAFE_LENGTH = 22000
+
+
+def chart_readme_text(
+    name: str, description: str, path: str, chart_registry: str, schema: dict
+) -> str:
+    """Chart root README.md — `helm package` bundles it into the .tgz (Helm convention;
+    also what Artifact Hub reads as the chart's Overview, were this repo ever listed
+    there), and release.yaml's Docker Hub overview PATCH reuses the same file.
+
+    No `--version` pin in the install snippet: this file is regenerated at every
+    release, so a pinned version here would need updating on every single one - omit
+    it and Helm just installs the latest published version, which is what's true at
+    the time anyone actually reads this.
+    """
+    header = f"""\
+# {name}
+
+{description}
+
+## Installing
+
+```
+helm install {name} oci://{chart_registry}/{name}-chart
+```
+
+## Source
+
+Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/{path}). See
+[values.yaml](values.yaml) for the full set of configurable values.
+
+## Parameters
+
+"""
+    table = parameters_table_text(schema)
+    if len(header) + len(table) <= README_LENGTH_LIMIT:
+        return header + table + "\n"
+
+    budget = README_SAFE_LENGTH - len(header)
+    kept: list[str] = []
+    used = 0
+    for line in table.split("\n"):
+        used += len(line) + 1
+        if used > budget:
+            break
+        kept.append(line)
+    note = (
+        "\n\n> **Note**: this chart has more parameters than fit under Docker Hub's"
+        f" {README_LENGTH_LIMIT}-character overview limit, so the table above has been"
+        " trimmed. See [values.schema.json](values.schema.json) in this chart for"
+        " every parameter."
+    )
+    return header + "\n".join(kept) + note + "\n"
+
+
 def main() -> None:
     """Regenerate all charts from workspace members."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -277,19 +603,44 @@ def main() -> None:
         default="docker.io/ghga",
         help="image registry root; the package name is appended per member",
     )
+    parser.add_argument(
+        "--chart-registry",
+        default="registry-1.docker.io/ghga",
+        help=(
+            "OCI registry root charts are published under (release.yaml's"
+            " CHART_REGISTRY); used only for each chart README's install snippet"
+        ),
+    )
     args = parser.parse_args()
 
     # resolved before the first stamp_chart(), which rmtree()s the chart directories
     version = args.version or current_member_version()
 
     defaults = library_defaults()
+    docs = library_docs()
     for member in image_members():
+        description = member["description"] or member["package"]
+        values, source = compose_member_values(member, args.registry, defaults)
         chart_dir = stamp_chart(
             name=member["package"],
-            description=member["description"] or member["package"],
+            description=description,
             version=version,
             app_version=version,
-            values_text=member_values_text(member, args.registry, defaults),
+            values_text=member_values_text(values, source),
+        )
+        config_fields, config_defs = config_field_schemas(member)
+        schema = chart_values_schema(values, docs, config_fields, config_defs)
+        (chart_dir / "values.schema.json").write_text(
+            json.dumps(schema, indent=2) + "\n"
+        )
+        (chart_dir / "README.md").write_text(
+            chart_readme_text(
+                name=member["package"],
+                description=description,
+                path=member["path"],
+                chart_registry=args.chart_registry,
+                schema=schema,
+            )
         )
         print(f"Created chart for {member['package']} at {chart_dir}")
 
