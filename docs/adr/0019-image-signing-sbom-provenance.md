@@ -68,8 +68,7 @@ verify against, not the policy.
     **input** used for lane routing.
     - `release.yaml`: **confirmed empirically** (2026-08-27) against a real published image
       (`docker.io/ghga/auth-service@sha256:97af0c7a90caa4a876c07a3b5c6dbb919dbf4827fbf53146d1cc018b43b818bb`,
-      release candidate `ghga/15.3.1-rc.3`; reproduce with `verify-image.sh` at the repo
-      root) — the claim is `…/release.yaml@refs/tags/<tag>`
+      release candidate `ghga/15.3.1-rc.3`) — the claim is `…/release.yaml@refs/tags/<tag>`
       (e.g. `…/release.yaml@refs/tags/ghga/15.3.1-rc.3`). This repo's dispatch runs point
       the "Use workflow from" picker at the release tag itself, per
       [ADR-0004](0004-versioning-and-release-by-tag.md), so the claim reflects the tag, not
@@ -79,9 +78,8 @@ verify against, not the policy.
       on push to `main`, so the ref is unambiguous, but this has **not yet** been
       independently confirmed against a real dev image the way the release lane has.
 
-  Read the exact subject off a real run (`cosign verify … --output json`, or
-  `verify-image.sh` with `INSPECT=1`) before any consumer pins a policy to the
-  `dev-images.yaml` shape, which remains a prediction.
+  Read the exact subject off a real run (`cosign verify … --output json`) before any
+  consumer pins a policy to the `dev-images.yaml` shape, which remains a prediction.
 - **SLSA rigor:** buildx-native provenance only, for now — not the
   `slsa-framework/slsa-github-generator` reusable workflow. See Alternatives.
 - **Kyverno enforcement stays out of this repo** — no policy, not even an example one.
