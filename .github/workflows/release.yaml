@@ -450,12 +450,6 @@ jobs:
             helm package "$work/${name}-chart" -d "$work"
             helm push "$work/${name}-chart-"*.tgz "oci://${CHART_REGISTRY}"
           done < dist/to-push.txt
-      # Keyed off manifest.txt, not to-push.txt: a chart's Docker Hub repository overview
-      # isn't the immutable, per-version OCI artifact the "Refuse to overwrite" step
-      # guards — an independently-versioned chart (aai, ghga-common) that skipped its push
-      # this run (unchanged version) should still get a refreshed overview if its
-      # README.md content changed. Requires the repo to already exist on Docker Hub (the
-      # Push step above creates it on first publish), so this runs after Push.
       - name: Update Docker Hub overviews
         if: ${{ inputs.push }}
         env:
