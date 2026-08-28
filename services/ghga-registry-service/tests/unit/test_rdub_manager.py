@@ -1742,11 +1742,12 @@ async def test_archive_box_unsettled_files(
         ),
     ]
 
-    # The settled file has its accession, so that is not what trips the check
     await rig.file_accession_dao.insert(
         models.FileAccession(pid="GHGAF001", file_id=settled_file_id)
     )
 
+    # The first file has its accession and is awaiting archival, so it doesn't trigger an error.
+    # However, the other file is set to a state that does trigger BoxIncompleteOrFailedError.
     with pytest.raises(rig.rdub_manager.BoxIncompleteOrFailedError) as exc_info:
         await rig.rdub_manager.update_research_data_upload_box(
             box_id=box_id,
