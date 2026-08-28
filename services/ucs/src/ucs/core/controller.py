@@ -1159,7 +1159,7 @@ class UploadController(UploadControllerPort):
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
 
         # Scan for incomplete files (note that this invocation includes 'inbox')
-        files_not_interrogated_cursor = self._file_upload_dao.find_all(
+        blocking_files_cursor = self._file_upload_dao.find_all(
             mapping={
                 "box_id": box_id,
                 "$or": [
@@ -1174,7 +1174,7 @@ class UploadController(UploadControllerPort):
         )
         incomplete_uploads = []
         need_attention = []
-        async for file in files_not_interrogated_cursor:
+        async for file in blocking_files_cursor:
             if file.state in ("init", "inbox"):
                 incomplete_uploads.append((file.id, file.alias))  # already sorted
             else:
