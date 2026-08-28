@@ -17,12 +17,16 @@ on:
   push:
     branches: [main]
 
-# PR runs group by ref, so a new push cancels the old one. Main runs group by commit and
-# are never cancelled: release.yaml only releases a commit whose CI passed, and a
-# cancelled run never passes.
+# Keyed on the branch's role, not on the event type. Releases come from main only, and
+# release.yaml requires the tagged commit's OWN CI run to be green — a cancelled run never
+# is — so main runs group by commit and are never cancelled. Every other ref groups by ref
+# and the newest push wins: a superseded run there proves nothing about a commit anyone
+# will release. Asking "is this main?" rather than "is this a PR?" keeps that true for any
+# branch added to the trigger later — a dev branch carrying the merge traffic lands on the
+# cancelling side without touching this block.
 concurrency:
-  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # Repo-wide lint: covers every member plus root-level code (scripts/, docs snippets)
