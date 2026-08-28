@@ -23,6 +23,12 @@ import pytest
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.utils import now_utc_ms_prec
 from rs.config import Config
+from rs.constants import (
+    EXC_ID_ACCESSION_MAP_ERROR,
+    EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_INCOMPLETE_OR_FAILED,
+)
 from rs.core.models import (
     BoxRetrievalResults,
     BoxUploadsPage,
@@ -318,7 +324,7 @@ async def test_update_research_data_upload_box(
             url, json=request_data, headers=user_auth_headers
         )
         assert response.status_code == 409
-        assert response.json()["exception_id"] == "boxVersionOutdated"
+        assert response.json()["exception_id"] == EXC_ID_BOX_VERSION_OUTDATED
 
         # handle state change error from core
         rdub_manager.reset_mock()
@@ -364,7 +370,7 @@ async def test_update_research_data_upload_box(
         )
         assert response.status_code == 409
         body = response.json()
-        assert body["exception_id"] == "incompleteOrFailed"
+        assert body["exception_id"] == EXC_ID_INCOMPLETE_OR_FAILED
         assert body["data"]["incomplete_uploads"] == [
             str(fid) for fid in incomplete_uploads
         ]
@@ -1032,7 +1038,7 @@ async def test_submit_accession_map(
             url, json=request_data, headers=ds_auth_headers
         )
         assert response.status_code == 400
-        assert response.json()["exception_id"] == "accessionMapError"
+        assert response.json()["exception_id"] == EXC_ID_ACCESSION_MAP_ERROR
         assert response.json()["data"]["error_type"] == "duplicate_file_ids"
 
         # Make sure an archived box or accession conflict return a 409
@@ -1044,7 +1050,7 @@ async def test_submit_accession_map(
             url, json=request_data, headers=ds_auth_headers
         )
         assert response.status_code == 409
-        assert response.json()["exception_id"] == "accessionMapError"
+        assert response.json()["exception_id"] == EXC_ID_ACCESSION_MAP_ERROR
         assert response.json()["data"]["error_type"] == "archived"
 
         # handle box not found error from core
@@ -1066,7 +1072,7 @@ async def test_submit_accession_map(
             url, json=request_data, headers=ds_auth_headers
         )
         assert response.status_code == 409
-        assert response.json()["exception_id"] == "boxVersionOutdated"
+        assert response.json()["exception_id"] == EXC_ID_BOX_VERSION_OUTDATED
 
         # handle accession conflict - immutable mapping would be overwritten
         rdub_manager.reset_mock()
@@ -1082,7 +1088,7 @@ async def test_submit_accession_map(
         )
         assert response.status_code == 409
         body = response.json()
-        assert body["exception_id"] == "accessionMapError"
+        assert body["exception_id"] == EXC_ID_ACCESSION_MAP_ERROR
         assert body["data"]["error_type"] == "accession_conflict"
         assert body["data"]["conflicting_accessions"] == ["GHGAF001", "GHGAF002"]
         assert body["data"]["affected_file_ids"] == []
@@ -1204,7 +1210,7 @@ async def test_accession_map_error_translation(
             else 400
         )
         body = response.json()
-        assert body["exception_id"] == "accessionMapError"
+        assert body["exception_id"] == EXC_ID_ACCESSION_MAP_ERROR
         assert body["data"] == expected_data
 
 
@@ -1348,11 +1354,11 @@ async def test_delete_research_data_upload_box(
     "core_error, status_code, exception_id",
     [
         (RDUBManagerPort.BoxNotFoundError(box_id=TEST_BOX_ID), 404, None),
-        (RDUBManagerPort.BoxVersionError(), 409, "boxVersionOutdated"),
+        (RDUBManagerPort.BoxVersionError(), 409, EXC_ID_BOX_VERSION_OUTDATED),
         (
             RDUBManagerPort.BoxStateError(operation="delete the box", state="archived"),
             409,
-            "boxStateError",
+            EXC_ID_BOX_STATE_ERROR,
         ),
         (TypeError(), 500, None),
     ],
