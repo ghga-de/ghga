@@ -1,0 +1,52 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended"],
+  timezone: "Europe/Berlin",
+  labels: ["dependencies", "docker-base-image"],
+
+  // Scope: only the DHI base images below. Application dependency lockfiles
+  // (uv.lock, pnpm-lock.yaml) are already handled by the bespoke daily
+  // security-scan.yaml workflow — do not let Renovate touch those.
+  enabledManagers: ["custom.regex"],
+
+  packageRules: [
+    {
+      groupName: "dhi.io Python base image",
+      matchDepNames: ["dhi.io/python"],
+    },
+    {
+      groupName: "dhi.io Node base image",
+      matchDepNames: ["dhi.io/node"],
+    },
+    {
+      // Security-sensitive base image: every bump waits for human review. No automerge.
+      matchDepNames: ["dhi.io/python", "dhi.io/node"],
+      automerge: false,
+    },
+  ],
+
+  customManagers: [
+    {
+      customType: "regex",
+      description: "dhi.io/python base image tag (docker/Dockerfile)",
+      managerFilePatterns: ["/^docker/Dockerfile$/"],
+      matchStrings: [
+        "# renovate: track=python-base\\s+ARG PYTHON_BASE=(?<currentValue>[\\w.-]+)",
+      ],
+      datasourceTemplate: "docker",
+      depNameTemplate: "dhi.io/python",
+      versioningTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "dhi.io/node base image tag (frontend/data-portal/Dockerfile.dhi)",
+      managerFilePatterns: ["/^frontend/data-portal/Dockerfile\\.dhi$/"],
+      matchStrings: [
+        "# renovate: track=node-base\\s+ARG NODE_BASE=(?<currentValue>[\\w.-]+)",
+      ],
+      datasourceTemplate: "docker",
+      depNameTemplate: "dhi.io/node",
+      versioningTemplate: "docker",
+    },
+  ],
+}

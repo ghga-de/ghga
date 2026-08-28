@@ -1,0 +1,37 @@
+# Self-hosted Renovate: keeps the DHI base-image tags (docker/Dockerfile,
+# frontend/data-portal/Dockerfile.dhi) up to date against the real dhi.io tag
+# list. Scope is deliberately narrow (see renovate.json5's enabledManagers) —
+# application dependency lockfiles (uv.lock, pnpm-lock.yaml) stay with the
+# existing daily security-scan.yaml workflow.
+name: renovate
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # weekly, Monday
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RENOVATE_HOST_RULES: >-
+        [{"hostType":"docker","matchHost":"dhi.io",
+          "username":"${{ secrets.DOCKERHUB_USERNAME }}",
+          "password":"${{ secrets.DOCKERHUB_TOKEN }}"}]
+    steps:
+      - name: Mint an app token for Renovate
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_KEY }}
+      - name: Renovate
+        uses: renovatebot/github-action@v46.2.4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
