@@ -354,6 +354,8 @@ class HttpPartSizeError(HttpCustomExceptionBase):
 class HttpIncompleteOrFailedError(HttpCustomExceptionBase):
     """Thrown when locking or archiving a box that still has in-progress uploads
     or uploads that have failed the re-encryption step and require attention.
+    In the case of locking the box, the `force` parameter can be used to override
+    the error.
     """
 
     exception_id = "incompleteOrFailed"
