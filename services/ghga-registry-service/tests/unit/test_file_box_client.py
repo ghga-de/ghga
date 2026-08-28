@@ -26,6 +26,13 @@ from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import FileBoxClient
 from rs.config import Config
+from rs.constants import (
+    EXC_ID_BOX_MAX_SIZE_TOO_LOW,
+    EXC_ID_BOX_NOT_FOUND,
+    EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_INCOMPLETE_OR_FAILED,
+)
 from rs.core.models import FileUploadWithAccession
 from tests.fixtures.external_apis import FileBoxApiMock, in_sequence, respond
 from tests.fixtures.utils import TEST_MAX_SIZE
@@ -90,7 +97,7 @@ async def test_lock_file_upload_box(
 
     # 409 "boxVersionOutdated" -> FUBVersionError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
@@ -100,7 +107,7 @@ async def test_lock_file_upload_box(
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
@@ -117,7 +124,7 @@ async def test_lock_file_upload_box(
     file_box_api.on_update_file_upload_box = respond(
         409,
         json={
-            "exception_id": "incompleteOrFailed",
+            "exception_id": EXC_ID_INCOMPLETE_OR_FAILED,
             "data": {
                 "box_id": str(TEST_BOX_ID),
                 "incomplete_uploads": [
@@ -139,7 +146,7 @@ async def test_lock_file_upload_box(
     file_box_api.on_update_file_upload_box = respond(
         409,
         json={
-            "exception_id": "incompleteOrFailed",
+            "exception_id": EXC_ID_INCOMPLETE_OR_FAILED,
             "data": {
                 "box_id": str(TEST_BOX_ID),
                 "incomplete_uploads": [],
@@ -174,7 +181,7 @@ async def test_unlock_file_upload_box(
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.unlock_file_upload_box(
@@ -186,7 +193,7 @@ async def test_unlock_file_upload_box(
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.unlock_file_upload_box(
@@ -294,7 +301,7 @@ async def test_get_file_upload_list_missing_box(
     """Test that a 404 is softened to an empty list when missing_box_ok is set."""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     file_box_api.on_get_file_upload_list = respond(
-        404, json={"exception_id": "boxNotFound"}
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
     )
     file_list, total_count = await file_upload_box_client.get_file_upload_list(
         box_id=TEST_BOX_ID, missing_box_ok=True
@@ -433,7 +440,7 @@ async def test_get_all_file_uploads_missing_box(
     """Test that a 404 is softened to an empty list when missing_box_ok is set."""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     file_box_api.on_get_file_upload_list = respond(
-        404, json={"exception_id": "boxNotFound"}
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
     )
     file_list = await file_upload_box_client.get_all_file_uploads(
         box_id=TEST_BOX_ID, missing_box_ok=True
@@ -462,7 +469,7 @@ async def test_archive_file_upload_box(
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.archive_file_upload_box(
@@ -474,7 +481,7 @@ async def test_archive_file_upload_box(
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.archive_file_upload_box(
@@ -518,7 +525,7 @@ async def test_resize_file_upload_box(
 
     # Make sure 409 "boxVersionOutdated" is translated as FUBVersionError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.resize_file_upload_box(
@@ -530,7 +537,7 @@ async def test_resize_file_upload_box(
 
     # Make sure 409 "boxMaxSizeTooLow" is translated as FUBMaxSizeTooLowError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxMaxSizeTooLow"}
+        409, json={"exception_id": EXC_ID_BOX_MAX_SIZE_TOO_LOW}
     )
     with pytest.raises(FileBoxClient.FUBMaxSizeTooLowError):
         await file_upload_box_client.resize_file_upload_box(
@@ -571,7 +578,7 @@ async def test_delete_file_upload(
 
     # Make sure 409/boxStateError is translated as FUBStateError
     file_box_api.on_delete_file_upload = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.delete_file_upload(
@@ -624,13 +631,13 @@ async def test_delete_file_upload_box(
 
     # Verify that 404 (boxNotFound) is treated as success so retries are idempotent
     file_box_api.on_delete_file_upload_box = respond(
-        404, json={"exception_id": "boxNotFound"}
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
     )
     await file_upload_box_client.delete_file_upload_box(box_id=TEST_BOX_ID, version=0)
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
     file_box_api.on_delete_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.delete_file_upload_box(
@@ -642,7 +649,7 @@ async def test_delete_file_upload_box(
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
     file_box_api.on_delete_file_upload_box = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.delete_file_upload_box(
