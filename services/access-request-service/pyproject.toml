@@ -22,7 +22,7 @@ classifiers = [
 ]
 name = "ars"
 version = "8.0.2"
-description = "Access Request Service - manages access requests and serves as a backend for the GHGA Data Portal."
+description = "Access Request Service - a service for managing requests for access to GHGA datasets."
 dependencies = [
     "ghga-event-schemas~=12.0.0",
     "ghga-service-commons[api,auth]>=8.0,<9",

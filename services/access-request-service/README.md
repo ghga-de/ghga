@@ -3,11 +3,30 @@
 
 # Access Request Service
 
-Access Request Service
+Access Request Service - a service for managing requests for access to GHGA datasets.
 
 ## Description
 
-The access request service manages access requests and serves as a backend for the GHGA Data Portal.
+Researchers use the GHGA Data Portal to request access to a dataset for a limited
+period of time. This service is the backend behind that workflow: it stores the
+requests, keeps track of their state, and provides the endpoints through which
+data stewards process them.
+
+A new request records the requested access period, a contact e-mail address and a
+free-text note, and starts out as *pending*. Data stewards can filter and inspect
+the open requests, attach a ticket ID, add an internal note or a note that is
+visible to the requester, adjust the access period, and finally allow or deny the
+request. Allowing a request requires an IVA (independent verification address) and
+registers a corresponding download access grant. Such grants can also be listed
+and revoked again via this service.
+
+Configuration parameters limit how far in advance access may be requested and how
+long it may be granted, with a separate factor by which data stewards are allowed
+to extend the latter limit.
+
+The service maintains its own view of the requestable datasets by consuming
+dataset upsertion and deletion events, and it publishes every change to an access
+request as an event, so that other services can notify the parties involved.
 
 
 ## Installation

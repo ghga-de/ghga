@@ -1,5 +1,5 @@
 name: wps
-description: Work Package Service - allows creating work packages for downloading or uploading dataset files and provides an authorization mechanism for these tasks by issuing access and work order tokens.
+description: Work Package Service - a service for authorizing downloads of dataset files and uploads of research data.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

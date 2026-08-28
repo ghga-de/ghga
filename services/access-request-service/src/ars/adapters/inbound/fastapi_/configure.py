@@ -30,7 +30,7 @@ def get_openapi_schema(app: FastAPI) -> dict[str, Any]:
     return get_openapi(
         title="Access Request Service",
         version=__version__,
-        description="A service managing access requests for the GHGA Data Portal",
+        description="A service for managing requests for access to GHGA datasets",
         tags=[{"name": "AccessRequests"}],
         routes=app.routes,
     )
