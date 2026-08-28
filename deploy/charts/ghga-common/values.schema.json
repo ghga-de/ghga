@@ -1,0 +1,923 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "global": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "imageRegistry": {
+          "type": "string",
+          "description": "Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper)"
+        },
+        "imagePullSecrets": {
+          "type": "array",
+          "description": "Pull secrets applied to every workload in the umbrella (same helper as above)"
+        },
+        "storageClass": {
+          "type": "string",
+          "description": "Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here)"
+        },
+        "_topics": {
+          "type": "object",
+          "description": "Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters)",
+          "additionalProperties": true
+        }
+      }
+    },
+    "command": {
+      "type": "array",
+      "description": "This is the actual Kubernetes `command` field"
+    },
+    "commandPrefix": {
+      "type": "string",
+      "description": "Path prefix prepended to `executable` before it's rendered into `command`/`args`"
+    },
+    "commandStyle": {
+      "type": "string",
+      "description": "\"shell\": wrap executable+args in `command` via a shell string (needs a shell in the image). \"exec\": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images."
+    },
+    "executable": {
+      "type": "string",
+      "description": "Executable name and arguments (will be combined into a shell command)"
+    },
+    "executableArgs": {
+      "type": "array"
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render the Deployment resource; disable for Job/CronJob-only charts"
+        }
+      }
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a one-off Job resource alongside (or instead of) the Deployment"
+        }
+      }
+    },
+    "cronjobs": {
+      "type": "object",
+      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
+      "additionalProperties": true,
+      "properties": {
+        "default": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "nameOverride": {
+      "type": "string",
+      "description": "Override just the chart-name portion of generated resource names (bitnami `common.names.name` convention)"
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "description": "Override the entire generated resource name, bypassing the `<release>-<chart>` convention (bitnami `common.names.fullname`)"
+    },
+    "namespaceOverride": {
+      "type": "string",
+      "description": "Override the namespace resources render into instead of `.Release.Namespace` (bitnami `common.names.namespace`)"
+    },
+    "clusterDomain": {
+      "type": "string",
+      "description": "Cluster DNS domain suffix (bitnami convention); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here"
+    },
+    "annotations": {
+      "type": "object",
+      "description": "Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below)",
+      "additionalProperties": true
+    },
+    "labels": {
+      "type": "object",
+      "description": "Extra labels added to the same resources' own metadata (narrower reach than commonLabels below)",
+      "additionalProperties": true
+    },
+    "commonLabels": {
+      "type": "object",
+      "description": "Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe)",
+      "additionalProperties": true
+    },
+    "commonAnnotations": {
+      "type": "object",
+      "description": "Annotations merged onto the same broad set of resources as commonLabels",
+      "additionalProperties": true
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "registry": {
+          "type": "string",
+          "description": "Default image registry; overridden by global.imageRegistry when set"
+        },
+        "repository": {
+          "type": "string",
+          "description": "Image repository path (create_charts.py fills this in per member)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004)"
+        },
+        "digest": {
+          "type": "string",
+          "description": "Pin the image by digest instead of tag, when set (takes precedence in the bitnami `common.images.image` helper)"
+        },
+        "pullPolicy": {
+          "description": "imagePullPolicy override; null defaults to Always for a `latest` tag, IfNotPresent otherwise"
+        },
+        "pullSecrets": {
+          "type": "array",
+          "description": "Extra pull secrets for just this image reference"
+        }
+      }
+    },
+    "replicaCount": {
+      "type": "number",
+      "description": "Deployment replica count; ignored when autoscaling.enabled"
+    },
+    "revisionHistoryLimit": {
+      "type": "number",
+      "description": "Number of old ReplicaSets Kubernetes keeps around for rollback"
+    },
+    "shareProcessNamespace": {
+      "type": "boolean",
+      "description": "Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID)"
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "fsGroup": {
+          "type": "number",
+          "description": "Group ID Kubernetes chowns mounted volumes to"
+        }
+      }
+    },
+    "initContainers": {
+      "type": "array",
+      "description": "Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled)"
+    },
+    "migrationInitContainer": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Run a dedicated init container for DB migrations before the main container starts"
+        },
+        "image": {
+          "type": "string",
+          "description": "Image for the migration init container; defaults to the main container's image when empty"
+        },
+        "executable": {
+          "type": "string",
+          "description": "Executable name and arguments run inside the migration init container"
+        },
+        "executableArgs": {
+          "type": "array"
+        },
+        "env": {
+          "type": "array",
+          "description": "Extra env vars for just the migration init container"
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "volumeMounts": {
+          "type": "array",
+          "description": "Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets)"
+        }
+      }
+    },
+    "hostAliases": {
+      "type": "array",
+      "description": "Extra `/etc/hosts` entries for the pod"
+    },
+    "podLabels": {
+      "type": "object",
+      "description": "Labels applied only to the Pod template (Deployment/CronJob/Job pod spec), distinct from `labels`/`commonLabels` on the parent resource",
+      "additionalProperties": true
+    },
+    "podAnnotations": {
+      "type": "object",
+      "description": "Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled",
+      "additionalProperties": true
+    },
+    "podAffinityPreset": {
+      "type": "string",
+      "description": "Bitnami pod-affinity preset name (e.g. \"soft\"/\"hard\"); empty disables it"
+    },
+    "podAntiAffinityPreset": {
+      "type": "string",
+      "description": "Bitnami pod-anti-affinity preset name; \"soft\" spreads replicas across nodes when possible"
+    },
+    "nodeAffinityPreset": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Bitnami node-affinity preset type (\"soft\"/\"hard\"); empty disables it"
+        },
+        "key": {
+          "type": "string",
+          "description": "Node label key to match"
+        },
+        "values": {
+          "type": "array",
+          "description": "Node label values to match"
+        }
+      }
+    },
+    "affinity": {
+      "type": "object",
+      "description": "Raw Kubernetes affinity spec; overrides all three presets above when set",
+      "additionalProperties": true
+    },
+    "nodeSelector": {
+      "type": "object",
+      "description": "Plain node-selector labels for pod scheduling",
+      "additionalProperties": true
+    },
+    "tolerations": {
+      "type": "array",
+      "description": "Taints the pod tolerates"
+    },
+    "topologySpreadConstraints": {
+      "type": "array",
+      "description": "Kubernetes pod topology spread constraints"
+    },
+    "priorityClassName": {
+      "type": "string",
+      "description": "PriorityClass to schedule the pod with"
+    },
+    "schedulerName": {
+      "type": "string",
+      "description": "Alternate Kubernetes scheduler to use"
+    },
+    "terminationGracePeriodSeconds": {
+      "type": "string",
+      "description": "Grace period before SIGKILL on pod termination"
+    },
+    "updateStrategy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Deployment rollout strategy (e.g. RollingUpdate/Recreate)"
+        }
+      }
+    },
+    "podRestartPolicy": {
+      "type": "string",
+      "description": "Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this)"
+    },
+    "ports": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render the container's `ports` list below"
+        },
+        "ports": {
+          "type": "array"
+        }
+      }
+    },
+    "livenessProbe": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a container livenessProbe from this block (minus `enabled`)"
+        },
+        "tcpSocket": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "type": "number"
+            }
+          }
+        },
+        "initialDelaySeconds": {
+          "type": "number"
+        },
+        "periodSeconds": {
+          "type": "number"
+        }
+      }
+    },
+    "readinessProbe": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a container readinessProbe from this block (minus `enabled`)"
+        },
+        "tcpSocket": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "type": "number"
+            }
+          }
+        },
+        "initialDelaySeconds": {
+          "type": "number"
+        },
+        "periodSeconds": {
+          "type": "number"
+        }
+      }
+    },
+    "startupProbe": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a container startupProbe from this block (minus `enabled`)"
+        }
+      }
+    },
+    "containerSecurityContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render the container securityContext from this block (minus `enabled`)"
+        },
+        "runAsUser": {
+          "type": "number"
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "drop": {
+              "type": "array"
+            }
+          }
+        },
+        "seccompProfile": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          }
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        }
+      }
+    },
+    "lifecycleHooks": {
+      "type": "object",
+      "description": "Container lifecycle hooks (postStart/preStop)",
+      "additionalProperties": true
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "limits": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          }
+        },
+        "requests": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "extraVolumes": {
+      "type": "array",
+      "description": "Extra volumes for the pod (on top of the config/kafka-secret volumes this chart already renders)"
+    },
+    "extraVolumeMounts": {
+      "type": "array",
+      "description": "Extra volume mounts for the main container (on top of the shared ones every container gets)"
+    },
+    "sidecars": {
+      "type": "array",
+      "description": "Extra full container specs appended alongside the main container"
+    },
+    "envVars": {
+      "type": "array",
+      "description": "Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled)"
+    },
+    "envVarsConfigMap": {
+      "type": "string",
+      "description": "Name of a ConfigMap to load as bulk env vars via `envFrom`"
+    },
+    "envVarsSecret": {
+      "type": "string",
+      "description": "Name of a Secret to load as bulk env vars via `envFrom`"
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render the Service resource"
+        },
+        "type": {
+          "type": "string"
+        },
+        "ports": {
+          "type": "array"
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "description": "Create a dedicated ServiceAccount for this release"
+        }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a HorizontalPodAutoscaler targeting the Deployment"
+        },
+        "minReplicas": {
+          "type": "number"
+        },
+        "maxReplicas": {
+          "type": "number"
+        },
+        "targetCPU": {
+          "type": "number",
+          "description": "Target average CPU utilization percentage; omit/empty to skip this metric"
+        },
+        "targetMemory": {
+          "type": "number",
+          "description": "Target average memory utilization percentage; omit/empty to skip this metric"
+        },
+        "metrics": {
+          "type": "array",
+          "description": "Extra raw HPA metric entries appended after CPU/memory"
+        }
+      }
+    },
+    "topicPrefix": {
+      "type": "string",
+      "description": "Prefix prepended to every Kafka topic name this chart renders/references"
+    },
+    "_topics": {
+      "type": "object",
+      "description": "Per-instance Kafka topics this chart owns (merged with global._topics); shape is {<key>: {topic: {name, value}, type: {name, value}, types: [...]}} - see kafkaTopicsParameters/kafkaUser below for how each field is consumed",
+      "additionalProperties": true
+    },
+    "_consumerGroup": {
+      "type": "object",
+      "description": "ACL entry (or entries) granting this chart's consumer group access, rendered onto the KafkaUser resource when kafkaUser.enabled",
+      "additionalProperties": true,
+      "properties": {
+        "operations": {
+          "type": "array"
+        },
+        "resource": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "patternType": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "kafkaTopicsParameters": {
+      "type": "boolean",
+      "description": "Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config"
+    },
+    "kafkaUser": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup)"
+        },
+        "clusterName": {
+          "type": "string"
+        },
+        "clusterNamespace": {
+          "type": "string"
+        },
+        "caCertSecretName": {
+          "type": "string",
+          "description": "Secret holding the Kafka cluster's CA cert, mounted alongside the user's own TLS secret"
+        }
+      }
+    },
+    "mongodb": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "dbName": {
+          "type": "string",
+          "description": "Database name; combined with dbNamePrefix and injected into config.yaml as db_name. NOTE: mongodb.dbName is the fallback used when the top-level dbName (set per-member, not defaulted here) is empty"
+        },
+        "service": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "namespace": {
+              "type": "string",
+              "description": "Together with mongodb.service.name and cluster.name, forms the Vault KV path this chart reads a dynamic MongoDB credential from"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "apiBasePath": {
+      "type": "string",
+      "description": "Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path"
+    },
+    "serviceName": {
+      "type": "string",
+      "description": "Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name"
+    },
+    "configMap": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render the ConfigMap holding config.yaml and mount it into the container"
+        },
+        "mountPath": {
+          "type": "string"
+        },
+        "subPath": {
+          "type": "string"
+        },
+        "envVar": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath"
+            }
+          }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "The service's own configuration payload (merged with the computed kafka/api/db/service-name values below into the rendered config.yaml)",
+      "additionalProperties": true
+    },
+    "configPrefix": {
+      "type": "string",
+      "description": "Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name"
+    },
+    "enableServiceLinks": {
+      "type": "boolean",
+      "description": "Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace"
+    },
+    "successfulJobsHistoryLimit": {
+      "type": "number",
+      "description": "Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own"
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Identifies which environment this release belongs to; part of the Vault secret path for the \"service\" secrets bundle"
+        }
+      }
+    },
+    "cluster": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials"
+        }
+      }
+    },
+    "httpRoute": {
+      "type": "object",
+      "description": "Set `spec` of HTTPRoute here (`port` is the backend service port used by the default rule; it is consumed by the template, not copied into `spec`)",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render an HTTPRoute (Gateway API, ADR-0012) routing to this service"
+        },
+        "port": {
+          "type": "number"
+        },
+        "rewritePath": {
+          "type": "boolean",
+          "description": "strip the base path before forwarding. Services that reconstruct their own public URLs (an OIDC discovery document, for example) need the full path instead and rely on api_root_path to route - set this to false for them."
+        },
+        "rules": {
+          "type": "array",
+          "description": "Extra HTTPRoute rules rendered before the generated default rule (deduplicated)"
+        }
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a Prometheus-Operator Probe CR blackbox-checking this service over HTTP"
+        },
+        "hostname": {
+          "type": "string",
+          "description": "Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL)"
+        }
+      }
+    },
+    "healthEndpoint": {
+      "type": "string",
+      "description": "Path appended to the probe target URL (after the API base path)"
+    },
+    "destinationRule": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render an Istio DestinationRule for this service"
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a NetworkPolicy restricting ingress traffic to the pod"
+        },
+        "ingress": {
+          "type": "array",
+          "description": "Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports"
+        }
+      }
+    },
+    "strimziApiVersion": {
+      "type": "string",
+      "description": "apiVersion used for the rendered Strimzi KafkaUser resource"
+    },
+    "vaultAgent": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container"
+        },
+        "annotations": {
+          "type": "object",
+          "description": "Base set of vault.hashicorp.com/* sidecar-injection annotations merged onto the pod",
+          "additionalProperties": true,
+          "properties": {
+            "vault.hashicorp.com/tls-skip-verify": {
+              "type": "string"
+            },
+            "vault.hashicorp.com/agent-inject": {
+              "type": "string"
+            },
+            "vault.hashicorp.com/agent-init-first": {
+              "type": "string"
+            },
+            "vault.hashicorp.com/agent-cache-enable": {
+              "type": "string"
+            },
+            "vault.hashicorp.com/agent-pre-populate-only": {
+              "type": "string"
+            },
+            "vault.hashicorp.com/agent-run-as-same-user": {
+              "type": "string"
+            }
+          }
+        },
+        "role": {
+          "type": "string",
+          "description": "Vault auth role to assume; defaults to the release name when empty"
+        },
+        "rolePrefix": {
+          "type": "string",
+          "description": "Prefix prepended to the resolved role name above"
+        },
+        "caCert": {
+          "type": "string",
+          "description": "Path to a custom CA cert for Vault TLS verification"
+        },
+        "tlsSecret": {
+          "type": "string",
+          "description": "Kubernetes secret providing the Vault Agent's TLS material"
+        },
+        "service": {
+          "type": "string",
+          "description": "Override the Vault service address the agent talks to"
+        },
+        "tlsServerName": {
+          "type": "string",
+          "description": "TLS server name override for the Vault connection"
+        },
+        "pgrepPattern": {
+          "type": "string",
+          "description": "Process name the Agent's \"kill -TERM\" hook searches for to restart the app on secret rotation"
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "generic": {
+              "type": "object",
+              "description": "Arbitrary Vault KV paths to inject as individual env vars, keyed by name; each entry needs path/parameterName (and optionally dataKey)",
+              "additionalProperties": true
+            },
+            "mongodb": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Inject a MongoDB connection string built from a Vault-issued dynamic credential"
+                },
+                "secretPath": {
+                  "type": "string",
+                  "description": "Vault KV path to read the credential from; computed from mongodb.service.{namespace,name} + cluster.name when empty"
+                },
+                "connectionString": {
+                  "type": "string",
+                  "description": "Connection-string template; {{username}}/{{password}} are substituted by Vault's own templating, not Helm's"
+                }
+              }
+            },
+            "service": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Inject every key/value pair from one Vault secret as env vars"
+                },
+                "secretPath": {
+                  "type": "string",
+                  "description": "Vault KV path to read from; computed from pathPrefix + environment.name + the release name when empty"
+                },
+                "pathPrefix": {
+                  "type": "string"
+                }
+              }
+            },
+            "crypt4ghInternalPub": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Inject GHGA's shared internal Crypt4GH public key"
+                },
+                "secretPath": {
+                  "type": "string"
+                },
+                "mountPath": {
+                  "type": "string",
+                  "description": "Where to write the key when renderToFile is true"
+                },
+                "dataKey": {
+                  "type": "string",
+                  "description": "Field name to read within the Vault secret"
+                },
+                "renderToFile": {
+                  "type": "boolean",
+                  "description": "true: write to mountPath as a file. false: inject as an env var named parameterName instead"
+                },
+                "parameterName": {
+                  "type": "string"
+                }
+              }
+            },
+            "crypt4ghInternalPriv": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Inject GHGA's shared internal Crypt4GH private key (same fields as crypt4ghInternalPub above)"
+                },
+                "secretPath": {
+                  "type": "string"
+                },
+                "mountPath": {
+                  "type": "string"
+                },
+                "dataKey": {
+                  "type": "string"
+                },
+                "renderToFile": {
+                  "type": "boolean"
+                },
+                "parameterName": {
+                  "type": "string"
+                }
+              }
+            },
+            "crypt4ghExternalPriv": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Inject GHGA's shared external-facing Crypt4GH private key (same fields as crypt4ghInternalPub above)"
+                },
+                "secretPath": {
+                  "type": "string"
+                },
+                "mountPath": {
+                  "type": "string"
+                },
+                "dataKey": {
+                  "type": "string"
+                },
+                "renderToFile": {
+                  "type": "boolean"
+                },
+                "parameterName": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

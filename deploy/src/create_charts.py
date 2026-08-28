@@ -16,6 +16,7 @@ Conventions baked into the derived values:
 """
 
 import argparse
+import json
 import shutil
 import sys
 from copy import deepcopy
@@ -29,6 +30,7 @@ DEPLOY_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = DEPLOY_ROOT.parent
 OUTPUT_DIR = DEPLOY_ROOT / "charts"
 LIBRARY_VALUES = DEPLOY_ROOT / "charts" / "ghga-common" / "values.yaml"
+LIBRARY_SCHEMA = DEPLOY_ROOT / "charts" / "ghga-common" / "values.schema.json"
 CHART_TEMPLATE = DEPLOY_ROOT / "src" / "template"
 DEMO_CHART = OUTPUT_DIR / "ghga-demo"
 # name of the single image carrying every Python member (docker/Dockerfile VARIANT=mono)
@@ -116,10 +118,101 @@ def stamp_chart(
     return chart_dir
 
 
+def _plain(value):
+    """Rebuild a ruamel round-trip structure as plain dict/list, dropping comments.
+
+    Comments carry their source indentation as a raw string; re-nesting a
+    CommentedMap a level shallower (exports.defaults -> a member's values.yaml
+    root) doesn't recalculate that indentation, so a comment above a key would end
+    up misindented relative to it. deep_merge() and chart_values_schema() below
+    both need comment-free plain data to work with; ghga-common/values.schema.json
+    (not values.yaml's own comments) is the source of the descriptions that reach
+    a derived chart's own values.schema.json.
+    """
+    if isinstance(value, dict):
+        return {key: _plain(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_plain(item) for item in value]
+    return value
+
+
+def _docs_from_schema(schema: dict, prefix: str = "") -> dict[str, str]:
+    """Flatten a JSON Schema's `description`s into {dotted.path: text}.
+
+    ghga-common/values.schema.json (hand-authored, alongside values.yaml) is the
+    single source of truth for what every derived chart's own values.schema.json
+    documents; this is the read side of that, used by chart_values_schema() below.
+    """
+    docs: dict[str, str] = {}
+    description = schema.get("description")
+    if description and prefix:
+        docs[prefix] = description
+    for key, child in schema.get("properties", {}).items():
+        docs.update(_docs_from_schema(child, f"{prefix}.{key}" if prefix else key))
+    return docs
+
+
+def library_docs() -> dict[str, str]:
+    """Descriptions from ghga-common/values.schema.json, keyed by dotted path."""
+    with LIBRARY_SCHEMA.open("r", encoding="utf-8") as schema_file:
+        return _docs_from_schema(json.load(schema_file))
+
+
+def _json_type(value) -> str | None:
+    """Map a Python value to its JSON Schema type keyword; None for null."""
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, (int, float)):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, dict):
+        return "object"
+    return None
+
+
+def _schema_for(value, docs: dict[str, str], prefix: str = "") -> dict:
+    """Build one loose JSON Schema node: known keys typed+described, nothing forbidden.
+
+    Deliberately shallow beyond what the data itself gives: this documents and
+    type-hints values, it doesn't attempt to fully model Kubernetes' own API shapes
+    (resources, affinity, tolerations, ...) or a service's free-form `config` block.
+    additionalProperties stays true on every object and arrays get no `items`
+    constraint, so a real per-member override can never fail `helm lint`/`helm
+    template` schema validation just because this generator didn't know about it.
+    """
+    schema: dict = {}
+    node_type = _json_type(value)
+    if node_type:
+        schema["type"] = node_type
+    description = docs.get(prefix)
+    if description:
+        schema["description"] = description
+    if node_type == "object":
+        schema["additionalProperties"] = True
+        if value:
+            schema["properties"] = {
+                key: _schema_for(item, docs, f"{prefix}.{key}" if prefix else key)
+                for key, item in value.items()
+            }
+    return schema
+
+
+def chart_values_schema(values: dict, docs: dict[str, str]) -> dict:
+    """A loose values.schema.json for one chart: documents and type-hints, never forbids."""
+    return {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        **_schema_for(values, docs),
+    }
+
+
 def library_defaults() -> dict:
     """The library chart's exported defaults (exports.defaults)."""
     with LIBRARY_VALUES.open("r", encoding="utf-8") as library_file:
-        return YAML_PARSER.load(library_file)["exports"]["defaults"]
+        loaded = YAML_PARSER.load(library_file)["exports"]["defaults"]
+    return _plain(loaded)
 
 
 def current_member_version() -> str:
@@ -163,21 +256,27 @@ def current_member_version() -> str:
     return next(iter(by_version))
 
 
-def member_values_text(member: dict, registry: str, defaults: dict) -> str:
-    """Compose a member chart's values.yaml: defaults <- derived <- chart-values."""
+def compose_member_values(
+    member: dict, registry: str, defaults: dict
+) -> tuple[dict, str]:
+    """Merge one member chart's values: defaults <- derived <- chart-values."""
     source = f"{member['path']}/chart-values.yaml"
     values = deep_merge(defaults, derived_values(member, registry))
 
     values_file = REPO_ROOT / member["path"] / "chart-values.yaml"
     if values_file.is_file():
         member_values = YAML_PARSER.load(values_file.read_text()) or {}
-        values = deep_merge(values, member_values)
+        values = deep_merge(values, _plain(member_values))
     else:
         source = f"{source} (absent; library defaults only)"
         print(
             f"note: {member['path']} has no chart-values.yaml; using library defaults"
         )
+    return values, source
 
+
+def member_values_text(values: dict, source: str) -> str:
+    """Render one member chart's merged values as values.yaml text."""
     buffer = StringIO()
     buffer.write(VALUES_HEADER.format(source=source))
     YAML_PARSER.dump(values, buffer)
@@ -321,14 +420,20 @@ def main() -> None:
     version = args.version or current_member_version()
 
     defaults = library_defaults()
+    docs = library_docs()
     for member in image_members():
         description = member["description"] or member["package"]
+        values, source = compose_member_values(member, args.registry, defaults)
         chart_dir = stamp_chart(
             name=member["package"],
             description=description,
             version=version,
             app_version=version,
-            values_text=member_values_text(member, args.registry, defaults),
+            values_text=member_values_text(values, source),
+        )
+        schema = chart_values_schema(values, docs)
+        (chart_dir / "values.schema.json").write_text(
+            json.dumps(schema, indent=2) + "\n"
         )
         (chart_dir / "README.md").write_text(
             chart_readme_text(
