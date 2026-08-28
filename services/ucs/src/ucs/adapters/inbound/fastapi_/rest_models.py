@@ -271,6 +271,25 @@ class DeleteFileBoxWorkOrder(BaseWorkOrderToken[Literal["delete_box"]]):
     box_id: UUID4
 
 
+class SkippedFileUpload(BaseModel):
+    """A FileUpload that was passed over during a box-wide requeue."""
+
+    file_id: UUID4 = Field(..., description="The ID of the FileUpload that was skipped")
+    reason: str = Field(..., description="Why the FileUpload could not be requeued")
+
+
+class RequeueAllFailedResponse(BaseModel):
+    """Response body for a box-wide requeue of failed FileUploads."""
+
+    requeued: list[UUID4] = Field(
+        ..., description="The IDs of the FileUploads that were set back to 'inbox'"
+    )
+    skipped: list[SkippedFileUpload] = Field(
+        ..., description="The FileUploads that were ineligible for a requeue"
+    )
+    model_config = ConfigDict(title="Requeue All Failed Response")
+
+
 class BoxUploadsPage(BaseModel):
     """Paginated response for a box's file uploads."""
 
