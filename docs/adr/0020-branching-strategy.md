@@ -5,7 +5,18 @@
 - **Deciders:** Byron Himes
 
 ## Context
-The monorepo has released off a single `main` branch, with releases cut as tags ([ADR-0004](0004-versioning-and-release-by-tag.md)). That means the state of `main` is always in flux. Since changes are constantly being merged, `main` is more often broken than not, except for the narrow window around a release. This approach was fine with our polyrepo setup because the churn for a given repo was comparatively low and thus manageable. With this new monorepo setup, however, the entire team's work is concentrated on the same repo, so `main` gets updated multiple times per day. The question of  "what is in production?" is only answerable by finding the newest tag and comparing commit ranges or PRs included in the release. That's *doable* for a single microservice repo (not ideal), but becomes an actual headache in a monorepo. A favorable branching strategy would involve creating a `dev` branch to contain all unreleased work. When the time comes to release the latest version of the monorepo, `dev` gets merged into `main`. Subsequent changes continue to be merged into `dev` from feature branches. Hotfix branches can be made against `main` directly, then merged into `dev`. Feature branches are created from `dev`, but the exact structure for feature branches is deliberately left less defined in order to allow developers the freedom to use the strategy most compatible with the work and/or their preferences, especially since it is important to experiment while we are still getting accustomed to the monorepo as a team.
+The monorepo has released off a single `main` branch, with releases cut as tags ([ADR-0004](0004-versioning-and-release-by-tag.md)).
+That means the state of `main` is always in flux.
+Since changes are constantly being merged, `main` is more often broken than not, except for the narrow window around a release.
+This approach was fine with our polyrepo setup because the churn for a given repo was comparatively low and thus manageable.
+With this new monorepo setup, however, the entire team's work is concentrated on the same repo, so `main` gets updated multiple times per day.
+The question of  "what is in production?" is only answerable by finding the newest tag and comparing commit ranges or PRs included in the release.
+That's *doable* for a single microservice repo (not ideal), but becomes an actual headache in a monorepo.
+A favorable branching strategy would involve creating a `dev` branch to contain all unreleased work.
+When the time comes to release the latest version of the monorepo, `dev` gets merged into `main`.
+Subsequent changes continue to be merged into `dev` from feature branches.
+Hotfix branches can be made against `main` directly, then merged into `dev`.
+Feature branches are created from `dev`, but the exact structure for feature branches is deliberately left less defined in order to allow developers the freedom to use the strategy most compatible with the work and/or their preferences, especially since it is important to experiment while we are still getting accustomed to the monorepo as a team.
 
 ## Decision
 We will adopt a Git Flow variant with two long-lived branches:
@@ -30,7 +41,11 @@ We will adopt a Git Flow variant with two long-lived branches:
 
 ## Alternatives considered
 - **Trunk-based on `main` alone** (what we do now). Rejected: no branch represents the released state and `main` is always in flux.
-- **Trunk-based on `main` with merge queues** (remix of status quo). Rejected: merge queues would allow PRs to pile up against `main` until certain criteria green-lit the merge. This would, in essence, give the same end result as the proposed strategy, except all the changes that would be merged into `dev` would be in a limbo state against `main`. It would automate the role of `dev` but in exchange we would lose the concrete state tracking and conceptual simplicity offered by an actual branch. This approach might be revisited in the future as part of a production CD strategy when the GHGA platform has gelled more and changes are less disruptive/conflicting.
+- **Trunk-based on `main` with merge queues** (remix of status quo).
+Rejected: merge queues would allow PRs to pile up against `main` until certain criteria green-lit the merge.
+This would, in essence, give the same end result as the proposed strategy, except all the changes that would be merged into `dev` would be in a limbo state against `main`.
+It would automate the role of `dev` but in exchange we would lose the concrete state tracking and conceptual simplicity offered by an actual branch.
+This approach might be revisited in the future as part of a production CD strategy when the GHGA platform has gelled more and changes are less disruptive/conflicting.
 - **Release branches per version** (full Git Flow). Rejected: with controlled platform releases and hotfixes applied to the latest release only, `main` already serves that role; per-version maintenance branches are not something we want or have the user base to justify. We tried doing this with `hexkit` early on, up through about v3 or v4, but it got tedious quickly.
 - **`dev` only, with releases tagged there.** Rejected: it is the status quo renamed — the point is a branch whose HEAD is a release.
 
