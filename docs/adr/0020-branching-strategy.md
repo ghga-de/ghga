@@ -23,10 +23,7 @@ Subsequent changes continue to be merged into `dev` from feature branches.
 Hotfix branches can be made against `main` directly, then merged into `dev`.
 Feature branches are created from `dev`, but the exact structure for feature branches is deliberately left less defined in order to allow developers the freedom to use the strategy most compatible with the work and/or their preferences, especially since it is important to experiment while we are still getting accustomed to the monorepo as a team.
 
-## Decision
-We decided for a Git Flow variant with two long-lived branches and neglected trunk-based-only and merge queues, to achieve a monorepo with transparent state and separation of concerns (releases vs work), as well as the ability to CD to staging, accepting that we have to keep `dev` and `main` in sync.
-
-- **`main` reflects the latest release.** Its HEAD is always a released state, and every release tag sits on it.
+- **`main` reflects the latest platform release.** Its HEAD is always a released state.
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
 - **A release merges `dev` into `main`**, and the release tag is applied on `main`.
@@ -39,10 +36,26 @@ We decided for a Git Flow variant with two long-lived branches and neglected tru
 - Two branches must be kept in sync. Every hotfix must be merged back into `dev`, lest the next release be cursed.
 - Work merged to `dev` is not released until the next release merge.
 - We gain the ability to continuously deploy to staging from `dev` while leaving production deployments compartmentalized. With just a `main` branch this is a more involved process.
-- CI and tooling assume a single branch today and must be updated:
-  - workflow triggers on `branches: [main]` (`ci.yaml`, `dev-images.yaml`, `integration.yaml`) need to cover `dev`.
-  - `no-commit-to-branch` in `.pre-commit-config.yaml` guards `main` only and should also guard `dev`. The comment "this repo has only `main`" and the corresponding note in [ADR-0018](0018-pre-commit-hooks.md) need to be updated.
-  - branch protection is needed on `dev` as well as `main`.
+- CI and tooling assume a single branch today and have to be updated (see below).
+
+### Necessary changes
+
+**Branch**
+- Create `dev` from `main`.
+- Rebase all unmerged work which previously targeted `main` onto `dev`, and retarget open PRs.
+
+**GitHub configuration**
+- Protect `dev` the same way we protect `main`, and keep `main` protected: with releases landing there by merge, nothing should reach it any other way.
+- Make `dev` the default branch, so new branches and PRs are cut against it without anyone having to remember.
+- `security-scan.yaml` opens its automated lockfile PR with `base: main`; that becomes `dev`.
+
+**pre-commit**
+- `no-commit-to-branch` (`.pre-commit-config.yaml`) guards `main` only and must also guard `dev`; its comment ("this repo has only `main`") and the corresponding note in [ADR-0018](0018-pre-commit-hooks.md) are then stale.
+
+**Workflows**
+- `ci.yaml` and `integration.yaml` trigger on `push: branches: [main]`; both need to cover `dev`, which is where merges will land. Their `pull_request` triggers are branch-agnostic and need no change.
+- `dev-images.yaml` publishes the `:dev` image tags on every push to `main`. That should follow `dev` instead — under this strategy `main` moves only at a release, and the `:dev` tags are meant to track integration.
+- `release.yaml` asserts the tagged commit is on `main` ([ADR-0004](0004-versioning-and-release-by-tag.md)). No change needed; the assertion only now starts to mean something.
 
 ## Alternatives considered
 - **Trunk-based on `main` alone** (what we do now). Rejected: no branch represents the released state and `main` is always in flux.
