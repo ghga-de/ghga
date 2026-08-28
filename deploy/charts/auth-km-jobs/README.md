@@ -17,9 +17,9 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/tools/auth
 
 | Name | Description | Value |
 |------|-------------|-------|
-| `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
+| `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
-| `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
+| `global.storageClass` | Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here) | `""` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -28,10 +28,10 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/tools/auth
 | `deployment.enabled` | Render the Deployment resource; disable for Job/CronJob-only charts | `false` |
 | `job.enabled` | Render a one-off Job resource alongside (or instead of) the Deployment | `false` |
 | `cronjobs.default.enabled` |  | `true` |
-| `nameOverride` | Override just the chart-name portion of generated resource names (bitnami `common.names.name` convention) | `""` |
-| `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (bitnami `common.names.fullname`) | `""` |
-| `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (bitnami `common.names.namespace`) | `""` |
-| `clusterDomain` | Cluster DNS domain suffix (bitnami convention); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here | `"cluster.local"` |
+| `nameOverride` | Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention) | `""` |
+| `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`) | `""` |
+| `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`) | `""` |
+| `clusterDomain` | Cluster DNS domain suffix (a convention from the vendored `common` library chart); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here | `"cluster.local"` |
 | `annotations` | Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below) | `{}` |
 | `labels` | Extra labels added to the same resources' own metadata (narrower reach than commonLabels below) | `{}` |
 | `commonLabels` | Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe) | `{}` |
@@ -39,7 +39,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/tools/auth
 | `image.registry` | Default image registry; overridden by global.imageRegistry when set | `"docker.io"` |
 | `image.repository` | Image repository path (create_charts.py fills this in per member) | `"ghga/auth-km-jobs"` |
 | `image.tag` | Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004) | `""` |
-| `image.digest` | Pin the image by digest instead of tag, when set (takes precedence in the bitnami `common.images.image` helper) | `""` |
+| `image.digest` | Pin the image by digest instead of tag, when set (takes precedence in the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `image.pullPolicy` | imagePullPolicy override; null defaults to Always for a `latest` tag, IfNotPresent otherwise | `null` |
 | `image.pullSecrets` | Extra pull secrets for just this image reference | `[]` |
 | `replicaCount` | Deployment replica count; ignored when autoscaling.enabled | `1` |
@@ -57,9 +57,9 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/tools/auth
 | `hostAliases` | Extra `/etc/hosts` entries for the pod | `[]` |
 | `podLabels` | Labels applied only to the Pod template (Deployment/CronJob/Job pod spec), distinct from `labels`/`commonLabels` on the parent resource | `{}` |
 | `podAnnotations` | Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled | `{}` |
-| `podAffinityPreset` | Bitnami pod-affinity preset name (e.g. "soft"/"hard"); empty disables it | `""` |
-| `podAntiAffinityPreset` | Bitnami pod-anti-affinity preset name; "soft" spreads replicas across nodes when possible | `"soft"` |
-| `nodeAffinityPreset.type` | Bitnami node-affinity preset type ("soft"/"hard"); empty disables it | `""` |
+| `podAffinityPreset` | Pod-affinity preset name (e.g. "soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
+| `podAntiAffinityPreset` | Pod-anti-affinity preset name (vendored `common` library chart convention); "soft" spreads replicas across nodes when possible | `"soft"` |
+| `nodeAffinityPreset.type` | Node-affinity preset type ("soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
 | `nodeAffinityPreset.key` | Node label key to match | `""` |
 | `nodeAffinityPreset.values` | Node label values to match | `[]` |
 | `affinity` | Raw Kubernetes affinity spec; overrides all three presets above when set | `{}` |

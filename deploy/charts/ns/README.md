@@ -17,9 +17,9 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/n
 
 | Name | Description | Value |
 |------|-------------|-------|
-| `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
+| `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
-| `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
+| `global.storageClass` | Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here) | `""` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -28,10 +28,10 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/n
 | `deployment.enabled` | Render the Deployment resource; disable for Job/CronJob-only charts | `true` |
 | `job.enabled` | Render a one-off Job resource alongside (or instead of) the Deployment | `false` |
 | `cronjobs.default.enabled` |  | `false` |
-| `nameOverride` | Override just the chart-name portion of generated resource names (bitnami `common.names.name` convention) | `""` |
-| `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (bitnami `common.names.fullname`) | `""` |
-| `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (bitnami `common.names.namespace`) | `""` |
-| `clusterDomain` | Cluster DNS domain suffix (bitnami convention); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here | `"cluster.local"` |
+| `nameOverride` | Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention) | `""` |
+| `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`) | `""` |
+| `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`) | `""` |
+| `clusterDomain` | Cluster DNS domain suffix (a convention from the vendored `common` library chart); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here | `"cluster.local"` |
 | `annotations` | Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below) | `{}` |
 | `labels` | Extra labels added to the same resources' own metadata (narrower reach than commonLabels below) | `{}` |
 | `commonLabels` | Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe) | `{}` |
@@ -39,7 +39,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/n
 | `image.registry` | Default image registry; overridden by global.imageRegistry when set | `"docker.io"` |
 | `image.repository` | Image repository path (create_charts.py fills this in per member) | `"ghga/ns"` |
 | `image.tag` | Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004) | `""` |
-| `image.digest` | Pin the image by digest instead of tag, when set (takes precedence in the bitnami `common.images.image` helper) | `""` |
+| `image.digest` | Pin the image by digest instead of tag, when set (takes precedence in the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `image.pullPolicy` | imagePullPolicy override; null defaults to Always for a `latest` tag, IfNotPresent otherwise | `null` |
 | `image.pullSecrets` | Extra pull secrets for just this image reference | `[]` |
 | `replicaCount` | Deployment replica count; ignored when autoscaling.enabled | `1` |
@@ -57,9 +57,9 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/n
 | `hostAliases` | Extra `/etc/hosts` entries for the pod | `[]` |
 | `podLabels` | Labels applied only to the Pod template (Deployment/CronJob/Job pod spec), distinct from `labels`/`commonLabels` on the parent resource | `{}` |
 | `podAnnotations` | Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled | `{}` |
-| `podAffinityPreset` | Bitnami pod-affinity preset name (e.g. "soft"/"hard"); empty disables it | `""` |
-| `podAntiAffinityPreset` | Bitnami pod-anti-affinity preset name; "soft" spreads replicas across nodes when possible | `"soft"` |
-| `nodeAffinityPreset.type` | Bitnami node-affinity preset type ("soft"/"hard"); empty disables it | `""` |
+| `podAffinityPreset` | Pod-affinity preset name (e.g. "soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
+| `podAntiAffinityPreset` | Pod-anti-affinity preset name (vendored `common` library chart convention); "soft" spreads replicas across nodes when possible | `"soft"` |
+| `nodeAffinityPreset.type` | Node-affinity preset type ("soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
 | `nodeAffinityPreset.key` | Node label key to match | `""` |
 | `nodeAffinityPreset.values` | Node label values to match | `[]` |
 | `affinity` | Raw Kubernetes affinity spec; overrides all three presets above when set | `{}` |
@@ -196,29 +196,5 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/n
 | `vaultAgent.tlsSecret` | Kubernetes secret providing the Vault Agent's TLS material | `""` |
 | `vaultAgent.service` | Override the Vault service address the agent talks to | `""` |
 | `vaultAgent.tlsServerName` | TLS server name override for the Vault connection | `""` |
-| `vaultAgent.pgrepPattern` | Process name the Agent's "kill -TERM" hook searches for to restart the app on secret rotation | `"python"` |
-| `vaultAgent.secrets.generic` | Arbitrary Vault KV paths to inject as individual env vars, keyed by name; each entry needs path/parameterName (and optionally dataKey) | `{}` |
-| `vaultAgent.secrets.mongodb.enabled` | Inject a MongoDB connection string built from a Vault-issued dynamic credential | `false` |
-| `vaultAgent.secrets.mongodb.secretPath` | Vault KV path to read the credential from; computed from mongodb.service.{namespace,name} + cluster.name when empty | `""` |
-| `vaultAgent.secrets.mongodb.connectionString` | Connection-string template; {{username}}/{{password}} are substituted by Vault's own templating, not Helm's | `"mongodb://{{username}}:{{password}}@mongodb:27017/admin"` |
-| `vaultAgent.secrets.service.enabled` | Inject every key/value pair from one Vault secret as env vars | `false` |
-| `vaultAgent.secrets.service.secretPath` | Vault KV path to read from; computed from pathPrefix + environment.name + the release name when empty | `""` |
-| `vaultAgent.secrets.service.pathPrefix` |  | `"operational-secrets/data/unique/apps/archive"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.enabled` | Inject GHGA's shared internal Crypt4GH public key | `false` |
-| `vaultAgent.secrets.crypt4ghInternalPub.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-internal"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.mountPath` | Where to write the key when renderToFile is true | `"/keys/crypt4gh-internal/crypt4gh.pub"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.dataKey` | Field name to read within the Vault secret | `"crypt4gh.pub"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.renderToFile` | true: write to mountPath as a file. false: inject as an env var named parameterName instead | `true` |
-| `vaultAgent.secrets.crypt4ghInternalPub.parameterName` |  | `"CRYPT4GH_PUBLIC_KEY"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.enabled` | Inject GHGA's shared internal Crypt4GH private key (same fields as crypt4ghInternalPub above) | `false` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-internal"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.mountPath` |  | `"/keys/crypt4gh-internal/crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.dataKey` |  | `"crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.renderToFile` |  | `true` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.parameterName` |  | `"CRYPT4GH_PRIVATE_KEY"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.enabled` | Inject GHGA's shared external-facing Crypt4GH private key (same fields as crypt4ghInternalPub above) | `false` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-external"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.mountPath` |  | `"/keys/crypt4gh-external/crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.dataKey` |  | `"crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.renderToFile` |  | `true` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.parameterName` |  | `"CRYPT4GH_PRIVATE_KEY"` |
+
+> **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

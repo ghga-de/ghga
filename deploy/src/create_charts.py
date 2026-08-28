@@ -524,10 +524,9 @@ def parameters_table_text(schema: dict) -> str:
 
 # Docker Hub's PATCH API rejects a full_description over this many characters
 # outright (docker/roadmap#475: a validation error, not silent truncation) -
-# confirmed live against docker.io/bitnamicharts/haproxy's actual full_description
-# via the public API, which comes back at exactly 24998 characters ending in the
-# same trim note this file's own note below is modeled on: that content is
-# pre-truncated by Bitnami's own publishing pipeline before the PATCH, the same
+# confirmed live against a real, already-published chart repo's full_description
+# via the public API, which comes back at exactly 24998 characters ending in a
+# trim note: that publisher pre-truncates client-side before the PATCH, the same
 # thing this does, not something Docker Hub does for you server-side. Leave real
 # headroom below it: a chart whose table lands just under 25000 today grows past
 # it the next time a field gains a longer description, and by then this margin is

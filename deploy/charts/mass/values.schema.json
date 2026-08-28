@@ -65,7 +65,7 @@
       "properties": {
         "imageRegistry": {
           "type": "string",
-          "description": "Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper)",
+          "description": "Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper)",
           "default": ""
         },
         "imagePullSecrets": {
@@ -75,7 +75,7 @@
         },
         "storageClass": {
           "type": "string",
-          "description": "Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here)",
+          "description": "Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here)",
           "default": ""
         },
         "_topics": {
@@ -156,22 +156,22 @@
     },
     "nameOverride": {
       "type": "string",
-      "description": "Override just the chart-name portion of generated resource names (bitnami `common.names.name` convention)",
+      "description": "Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention)",
       "default": ""
     },
     "fullnameOverride": {
       "type": "string",
-      "description": "Override the entire generated resource name, bypassing the `<release>-<chart>` convention (bitnami `common.names.fullname`)",
+      "description": "Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`)",
       "default": ""
     },
     "namespaceOverride": {
       "type": "string",
-      "description": "Override the namespace resources render into instead of `.Release.Namespace` (bitnami `common.names.namespace`)",
+      "description": "Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`)",
       "default": ""
     },
     "clusterDomain": {
       "type": "string",
-      "description": "Cluster DNS domain suffix (bitnami convention); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here",
+      "description": "Cluster DNS domain suffix (a convention from the vendored `common` library chart); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here",
       "default": "cluster.local"
     },
     "annotations": {
@@ -219,7 +219,7 @@
         },
         "digest": {
           "type": "string",
-          "description": "Pin the image by digest instead of tag, when set (takes precedence in the bitnami `common.images.image` helper)",
+          "description": "Pin the image by digest instead of tag, when set (takes precedence in the vendored `common` library chart's `common.images.image` helper)",
           "default": ""
         },
         "pullPolicy": {
@@ -323,12 +323,12 @@
     },
     "podAffinityPreset": {
       "type": "string",
-      "description": "Bitnami pod-affinity preset name (e.g. \"soft\"/\"hard\"); empty disables it",
+      "description": "Pod-affinity preset name (e.g. \"soft\"/\"hard\"), from the vendored `common` library chart; empty disables it",
       "default": ""
     },
     "podAntiAffinityPreset": {
       "type": "string",
-      "description": "Bitnami pod-anti-affinity preset name; \"soft\" spreads replicas across nodes when possible",
+      "description": "Pod-anti-affinity preset name (vendored `common` library chart convention); \"soft\" spreads replicas across nodes when possible",
       "default": "soft"
     },
     "nodeAffinityPreset": {
@@ -337,7 +337,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "Bitnami node-affinity preset type (\"soft\"/\"hard\"); empty disables it",
+          "description": "Node-affinity preset type (\"soft\"/\"hard\"), from the vendored `common` library chart; empty disables it",
           "default": ""
         },
         "key": {
