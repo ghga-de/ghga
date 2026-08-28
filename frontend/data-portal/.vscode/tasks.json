@@ -3,8 +3,11 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "start",
+      // run.js, not the "start" script: it regenerates public/config.js before serving.
+      "label": "dev server (run.js --dev)",
+      "type": "shell",
+      "command": "node",
+      "args": ["run.js", "--dev"],
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",

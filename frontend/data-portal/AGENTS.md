@@ -96,7 +96,8 @@ archive test bed, which is more expensive to run.
 This repo uses `pnpm` (not npm) for dependency installation and scripts.
 
 - Prefer pnpm scripts over direct CLI invocation for consistency with repo tooling.
-- Dev server: `pnpm start`
+- Install deps: `just fe-install` from the repo root (`pnpm install --frozen-lockfile`, as CI does), or `pnpm install` here when you are deliberately changing dependencies. `npm install` is blocked by the `preinstall` guard. The dev container installs them on create, together with Playwright's Chromium.
+- Dev server: `just fe-dev` from the repo root, or `node run.js --dev` here. Not `pnpm start`: that runs `ng serve` without regenerating `public/config.js`, so the app is served with whatever runtime configuration a previous run left behind (or none at all). `--with-backend` / `--with-oidc` select the other three modes; see [Local development](README.md#local-development).
 - Build: `pnpm build` (or `pnpm watch`)
 - Lint: `pnpm lint` (or `pnpm lf` to auto-fix)
 - Format: `pnpm format` (write) or `pnpm format:check` (verify)
@@ -135,7 +136,7 @@ The following tools are pre-installed in the dev container and available on `PAT
 ## Visual inspection
 
 The dev server runs at **http://localhost:8080** (not the Angular default 4200).
-The dev server must already be running (`pnpm start`) before attempting visual inspection.
+The dev server must already be running (`just fe-dev`) before attempting visual inspection.
 
 VS Code's integrated browser gives agents full page interaction (read content, take screenshots, click, type, etc.) via built-in browser tools. There are two modes:
 

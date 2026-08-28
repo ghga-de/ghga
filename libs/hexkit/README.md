@@ -1,7 +1,5 @@
-[![PyPI version shields.io](https://img.shields.io/pypi/v/hexkit.svg)](https://pypi.python.org/pypi/hexkit/)
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/hexkit.svg)](https://pypi.python.org/pypi/hexkit/)
-![tests](https://github.com/ghga-de/hexkit/actions/workflows/tests.yaml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/hexkit/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/hexkit?branch=main)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/hexkit.svg)](https://pypi.org/project/hexkit/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/hexkit.svg)](https://pypi.org/project/hexkit/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
@@ -69,12 +67,12 @@ and the [API Reference](https://ghga-de.github.io/hexkit/reference/) documents a
 public classes and functions.
 
 For a complete example service built with hexkit, have a look at the
-[stream_calc](https://github.com/ghga-de/hexkit/tree/main/examples/stream_calc)
+[stream_calc](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/examples/stream_calc)
 example application. We also put a lot of effort into making the code
 self-documenting: you can find the protocols being defined at
-[src/hexkit/protocols](https://github.com/ghga-de/hexkit/tree/main/src/hexkit/protocols)
+[src/hexkit/protocols](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/src/hexkit/protocols)
 and the providers being implemented at
-[src/hexkit/providers](https://github.com/ghga-de/hexkit/tree/main/src/hexkit/providers).
+[src/hexkit/providers](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/src/hexkit/providers).
 
 ## Installation
 
@@ -102,8 +100,10 @@ The following extras are available:
 
 ## Contributing
 
-Contributions are welcome! Please see the
-[contribution guide](https://github.com/ghga-de/hexkit/blob/main/CONTRIBUTING.md)
+Contributions are welcome! hexkit is developed in the
+[GHGA monorepo](https://github.com/ghga-de/ghga) under `libs/hexkit`, together with the
+services that build on it. Please see the
+[contribution guide](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/CONTRIBUTING.md)
 for how to set up the development environment and build the documentation locally.
 
 ## Credits
@@ -114,5 +114,5 @@ library and designed and coded its first versions.
 
 ## License
 
-This repository is free to use and modify according to the
-[Apache 2.0 License](https://github.com/ghga-de/hexkit/blob/main/LICENSE).
+hexkit is free to use and modify according to the
+[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/LICENSE).

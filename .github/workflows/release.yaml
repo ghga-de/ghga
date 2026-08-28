@@ -1,32 +1,58 @@
 # Release — two lanes (revised ADR-0004):
 #   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
 #                  platform version (lockstep; libs embedded from source, never PyPI).
-#   name/x.y.z  -> PYPI lane: publish that component's wheel (closure-train rule for tools).
+#   name/x.y.z  -> PYPI lane: the tag triggers the run, it does not select what ships. No
+#                  inputs are forwarded, so pypi-publish.yaml re-derives the set from the
+#                  index and publishes every lane member ahead of it, dependencies first.
 #
-# MANUAL-ONLY. No tag triggers yet: every run is a deliberate `workflow_dispatch`.
-# The platform lane pushes images to Docker Hub (docker.io/ghga/<member>) — the same
-# registry production already pulls from — when the `push` input is set, authenticated
-# with the org's stored DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets (the same credentials
-# already used to pull the hardened dhi.io base images). The PyPI lane remains a stub.
+# A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
+# mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
+# separate process.
 #
-# On enabling this for real: restore the tag trigger and wire the pypi lane (closure
-# train + published-combo matrix are prerequisites there):
-#   on:
-#     push:
-#       tags:
-#         - "*/*.*.*"   # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
+# The `ref` input must name the SAME tag selected in the "Use workflow from" branch/tag
+# picker — `resolve` asserts this and fails otherwise. Every checkout in this file pulls
+# github.sha (the commit the picker resolved to, not the `ref` string), so dispatching
+# from `main` with `ref: ghga/17.0.0` would otherwise stamp images/charts as 17.0.0 while
+# actually building whatever commit `main` pointed at — silently breaking the one
+# guarantee this lane exists for.
+# The platform lane pushes images to Docker Hub (docker.io/ghga/<member>) and charts as
+# OCI artifacts to the same namespace, each under a `-chart`-suffixed repo to avoid
+# colliding with the same-named image (oci://registry-1.docker.io/ghga/<chart>-chart) —
+# when the `push` input is set, authenticated with the org's stored
+# DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets (the same credentials already used to pull
+# the hardened dhi.io base images).
+#
+# That input exists only on workflow_dispatch, so **a tag push is build-only**: pushing
+# `ghga/17.0.0` verifies the commit, builds every image and packages every chart, and
+# publishes none of them. Publishing a platform release is a deliberate dispatch against
+# that tag with `push` ticked (ADR-0004: Docker Hub, dispatch only, no tag triggers yet).
+# The pypi lane is unaffected — it does not consult `push` at all.
+#
 name: release
 
 on:
+  push:
+    tags:
+      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
   workflow_dispatch:
     inputs:
       ref:
-        description: "Tag-style ref, e.g. ghga/17.0.0"
+        description: "Tag-style ref, e.g. ghga/17.0.0 or ghga/17.1.0-rc.1 for a staging pre-release"
         required: true
       push:
-        description: "Push images to Docker Hub; off = build-only dry run"
+        description: "Push images and charts to Docker Hub; off = build-only dry run"
         type: boolean
         default: false
+
+# One release run per ref at a time: two dispatches for the same version could otherwise
+# interleave pushes (e.g. both racing to publish the same tag, or one pushing charts
+# against images the other is still mid-push on). A workflow-level group (rather than
+# per-job) serializes the whole run without touching the build-images matrix's own
+# parallelism. Keyed on the raw dispatch input, not a `resolve` output — it must be known
+# before any job (including `resolve`) starts.
+concurrency:
+  group: release-${{ github.event.inputs.ref || github.ref_name }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -34,10 +60,18 @@ permissions:
 env:
   # Real publish target — matches what production already pulls from.
   REGISTRY: docker.io/ghga
+  # Charts publish to the same namespace under a `-chart` suffix (see the header comment).
+  # registry-1.docker.io (not the docker.io alias) is the actual backend host OCI
+  # push/pull operations need to hit — but the *login* step targets docker.io, not this;
+  # see package-charts' "Login to Docker Hub" step for why those two intentionally differ.
+  CHART_REGISTRY: registry-1.docker.io/ghga
 
 jobs:
   resolve:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # to read this commit's CI run conclusion
     outputs:
       lane: ${{ steps.route.outputs.lane }}
       name: ${{ steps.route.outputs.name }}
@@ -45,10 +79,79 @@ jobs:
       images: ${{ steps.route.outputs.images }}
     steps:
       - uses: actions/checkout@v5
-      - id: route
+        with:
+          fetch-depth: 0 # ancestry check needs history, not just the tip
+      # pypi_members.py declares its own dependency via PEP 723 and runs as
+      # `uv run --script`; this job installs nothing else.
+      - uses: astral-sh/setup-uv@v7
+
+      # ADR-0004: the release VERIFIES the integrated HEAD, it does not re-test it. CI
+      # already proved this commit good; the tag only snapshots that. So the two things
+      # worth asserting are that the evidence exists and that it is about a commit anybody
+      # reviewed — without them, a tag on an unmerged branch, or on a commit whose CI never
+      # ran or went red, would build images and publish wheels exactly as a good one does.
+      #
+      # Enforced on every run, dispatch included: the check is worth least in the case where
+      # it is easiest to skip.
+      - name: Verify the commit is on main and its CI is green
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          ref="${{ github.event.inputs.ref || github.ref_name }}"   # name/x.y.z
+          set -euo pipefail
+          git fetch --no-tags --quiet origin +refs/heads/main:refs/remotes/origin/main
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::${GITHUB_SHA::12} is not on main — releases come from main only"
+            exit 1
+          fi
+
+          # `status=completed` excludes runs still in flight, so a release racing its own
+          # CI reads as "no evidence" rather than passing on a partial result.
+          runs=$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yaml/runs?head_sha=$GITHUB_SHA&status=completed" \
+            --jq '.workflow_runs[] | {updated_at, conclusion, html_url}' | jq -s 'sort_by(.updated_at)')
+
+          if [ "$(echo "$runs" | jq 'length')" -eq 0 ]; then
+            echo "::error::no completed CI run for ${GITHUB_SHA::12} — nothing proves this commit works"
+            exit 1
+          fi
+
+          # The latest result wins: a red run that was re-run green is green.
+          latest=$(echo "$runs" | jq -r 'last')
+          conclusion=$(echo "$latest" | jq -r '.conclusion')
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI for ${GITHUB_SHA::12} concluded '$conclusion' — $(echo "$latest" | jq -r '.html_url')"
+            exit 1
+          fi
+          echo "${GITHUB_SHA::12} is on main and its CI is green"
+
+      - id: route
+        # $REF, not an interpolated `${{ }}`: interpolation pastes the input into the
+        # script as text, where shell syntax in it would run. As a variable it is data.
+        # PICKED_REF is passed the same way and for the same reason — a branch name is
+        # attacker-controllable in exactly the way the dispatch input is.
+        env:
+          REF: ${{ github.event.inputs.ref || github.ref_name }}
+          PICKED_REF: ${{ github.ref_name }}
+        run: |
+          ref="$REF"   # name/x.y.z
+          # The `ref` input is free text; PICKED_REF is the branch/tag the "Use workflow
+          # from" picker actually resolved, and the commit every checkout here pulls
+          # (github.sha) is the one IT names, not the one `ref` spells. They can disagree:
+          # dispatching from `main` with `ref: ghga/17.0.0` builds main's HEAD and stamps
+          # it 17.0.0 — silently breaking the lockstep guarantee this lane exists for. The
+          # on-main assertion above does not catch it (main's HEAD is on main by
+          # definition), so require the dispatcher to pick the tag itself. On a tag push
+          # the two strings are equal by construction, so this is a no-op there.
+          if [ "$PICKED_REF" != "$ref" ]; then
+            echo "::error::ref input '$ref' does not match the selected branch/tag '$PICKED_REF' — pick the '$ref' tag itself in the 'Use workflow from' selector so the build runs against that exact commit."
+            exit 1
+          fi
           name="${ref%/*}"; version="${ref##*/}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "::error::version '$version' is not SemVer (expected x.y.z or x.y.z-prerelease)"
+            exit 1
+          fi
           if [ "$name" = "ghga" ]; then lane=platform; else lane=pypi; fi
           echo "name=$name"       >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -61,82 +164,311 @@ jobs:
           # Member enumeration lives in scripts/image_members.py — the same source
           # the chart generator (deploy/src/create_charts.py) consumes.
           echo "images=$(python3 scripts/image_members.py)" >> "$GITHUB_OUTPUT"
-      # TODO on enablement: assert the tagged commit is on main AND its CI run is green
-      # (the release verifies the integrated HEAD; it does not re-test it).
+      # ADR-0004: the tag must name a lane member and match its version at HEAD. What gets
+      # uploaded is pypi-publish.yaml's decision; this only stops a tag announcing a
+      # release nobody made.
+      - name: Check the tag against the member it names
+        if: ${{ steps.route.outputs.lane == 'pypi' }}
+        env:
+          NAME: ${{ steps.route.outputs.name }}
+          VERSION: ${{ steps.route.outputs.version }}
+        run: |
+          uv run --script scripts/pypi_members.py --members > /tmp/members.json
+          python3 - <<'EOF'
+          import json, os, re, sys
+
+          def canon(name):  # PEP 503: the tag spells the distribution either way
+              return re.sub(r"[-_.]+", "-", name).lower()
+
+          name, version = os.environ["NAME"], os.environ["VERSION"]
+          members = {canon(m["package"]): m for m in json.load(open("/tmp/members.json"))}
+          member = members.get(canon(name))
+          if member is None:
+              known = ", ".join(sorted(members))
+              sys.exit(f"::error::{name} is not a PyPI-lane member (lane: {known})")
+          declared = member["version"]
+          if declared != version:
+              sys.exit(f"::error::tag says {version}, but {name} declares {declared}")
+          print(f"{name} {version} matches {member['path']}")
+          EOF
 
   # -------- platform lane: build every image, stamped; push only on request -------------
   build-images:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'platform' }}
     runs-on: ubuntu-latest
+    name: build ${{ matrix.member.package }}
     timeout-minutes: 40
     permissions:
       contents: read
+      id-token: write # keyless cosign signing (Fulcio/Rekor via OIDC), push-only
     strategy:
-      fail-fast: false
+      # On a dry run (push off) a failed member is fine to leave the rest running — it's
+      # just a validation pass. On a real push, the platform lane's whole point is
+      # lockstep: stop dispatching new pushes the moment one member fails so a partial
+      # version (some images published, others missing) isn't left standing. This does
+      # NOT roll back members that already pushed before the failure — see the TODO below.
+      #
+      # `|| false` because `inputs` is empty on a tag push, and fail-fast is one of the few
+      # places that wants a real boolean rather than something truthy: the `if:`s below
+      # coerce the empty string to false on their own, this does not.
+      fail-fast: ${{ inputs.push || false }}
       matrix:
         member: ${{ fromJSON(needs.resolve.outputs.images) }}
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
+      # arm64 has no native GitHub-hosted runner, so cross-building it on this amd64
+      # runner needs QEMU emulation registered with the kernel, plus a buildx builder
+      # that can actually target multiple platforms in one invocation (the default
+      # "docker" driver can't) — the same docker-container builder that attestation
+      # export requires (see the Build step below), so no separate builder step needed.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        with:
+          platforms: arm64
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       # The hardened base (dhi.io) is auth-gated: log in with the org's Docker Hub
       # credentials (same secrets mainline uses). Skipped if the org secrets are not
       # exposed to this repo — the build then fails at the base-image pull with a
       # clear 401, pointing here.
       - name: Login to DHI registry
         if: ${{ env.DHI_USER != '' }}
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: dhi.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # OCI labels are set on the CLI so members whose Dockerfile does not stamp them
-      # itself (the mainline-synced frontend one) still carry version + revision;
-      # for the shared Python Dockerfile they override its labels with equal values.
-      # Build-args a member's Dockerfile does not declare only produce a warning.
-      - name: Build (stamped)
-        run: |
-          docker build -f "${{ matrix.member.dockerfile }}" \
-            --build-arg PACKAGE="${{ matrix.member.package }}" \
-            --build-arg PLATFORM_VERSION="${{ needs.resolve.outputs.version }}" \
-            --build-arg GIT_SHA="${GITHUB_SHA::12}" \
-            --label org.opencontainers.image.version="${{ needs.resolve.outputs.version }}" \
-            --label org.opencontainers.image.revision="${GITHUB_SHA::12}" \
-            -t "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" \
-            "${{ matrix.member.context }}"
+      # Login happens before the build (not after, as with the old single-arch `docker
+      # build` + `docker push`): a multi-platform manifest list has no single-daemon
+      # representation to --load, so buildx pushes straight from the build itself.
+      #
+      # Unlike the DHI login above, this one is NOT guarded on the secret being present:
+      # a real push with no Docker Hub credentials should fail loudly here, not slide
+      # through to a confusing failure later in the build/push step.
       - name: Login to Docker Hub
         if: ${{ inputs.push }}
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Push
+      - name: Refuse to overwrite an existing release tag
         if: ${{ inputs.push }}
-        run: docker push "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
+        run: |
+          tag="${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
+          if docker manifest inspect "$tag" >/dev/null 2>&1; then
+            echo "::error::$tag already exists — releases are immutable. Bump the version to re-run."
+            exit 1
+          fi
+      # OCI labels are set on the CLI so members whose Dockerfile does not stamp them
+      # itself (the mainline-synced frontend one) still carry version + revision;
+      # for the shared Python Dockerfile they override its labels with equal values.
+      # Build-args a member's Dockerfile does not declare only produce a warning.
+      # provenance/sbom require an actual registry push, so both stay off in the
+      # existing "build-only dry run" (push=false) mode — that mode's behavior is
+      # otherwise unchanged (no --push/--load means buildx discards the result after
+      # verifying it builds, same as before: nothing to keep around for a dry run).
+      - name: Build (stamped, attested when pushing)
+        id: build
+        run: |
+          push_flags=()
+          attest_flags=()
+          if [ "${{ inputs.push }}" = "true" ]; then
+            push_flags=(--push)
+            attest_flags=(--provenance=mode=max --sbom=true)
+          fi
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            "${push_flags[@]}" \
+            "${attest_flags[@]}" \
+            --build-arg PACKAGE="${{ matrix.member.package }}" \
+            --build-arg PLATFORM_VERSION="${{ needs.resolve.outputs.version }}" \
+            --build-arg GIT_SHA="${SHORT_SHA}" \
+            --label org.opencontainers.image.version="${{ needs.resolve.outputs.version }}" \
+            --label org.opencontainers.image.revision="${SHORT_SHA}" \
+            --metadata-file metadata.json \
+            -f "${{ matrix.member.dockerfile }}" \
+            -t "${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}" \
+            "${{ matrix.member.context }}"
+          if [ "${{ inputs.push }}" = "true" ]; then
+            digest=$(jq -r '."containerimage.digest"' metadata.json)
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+        if: ${{ inputs.push }}
+      - name: Sign the published image (keyless)
+        if: ${{ inputs.push }}
+        run: cosign sign --yes --recursive "${{ env.REGISTRY }}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+      # See dev-images.yaml. Gated like signing: no pushed digest to attest in build-only mode.
+      - name: Attest SBOM + provenance (keyless)
+        if: ${{ inputs.push }}
+        run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
       - name: Summary
         run: |
           if [ "${{ inputs.push }}" = "true" ]; then
-            echo "pushed ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }}"
+            echo "pushed ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (signed; SBOM + provenance attached and cosign-attested)"
           else
             echo "build-only: ${REGISTRY}/${{ matrix.member.package }}:${{ needs.resolve.outputs.version }} (push input not set)"
           fi
-      # TODO on enablement: multi-arch via buildx, Trivy scan; the front end builds via
+      # TODO on enablement: Trivy scan on the release artifacts themselves
+      # (security-scan.yaml today only watches the :dev tags); the front end builds via
       # its own Dockerfile; charts are packaged and pushed as OCI artifacts with
       # version/appVersion = the platform version (Phase B).
 
-  # -------- pypi lane: dormant stub ------------------------------------------------------
+
+  # -------- platform lane: package every chart, stamped; push only on request -----------
+  package-charts:
+    needs: [resolve, build-images]
+    if: ${{ needs.resolve.outputs.lane == 'platform' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - name: Regenerate charts at the release version
+        run: uv run python deploy/src/create_charts.py --version "${{ needs.resolve.outputs.version }}"
+      # ghga-demo is the local test bed (deploy/README.md), not a release artifact: it
+      # bundles dev-only subcharts (aai's mock-oauth2-server, test-oidc-provider) and its
+      # own Chart.yaml version isn't stamped by create_charts.py to the platform version
+      # in the first place, so it was never a coherent thing to publish. It's still
+      # generated above (`just up`/`just demo-template` need it locally) — this lane just
+      # never packages or pushes it.
+      #
+      # ghga-common's own dependency (bitnami's `common` library) is already vendored
+      # (deploy/charts/ghga-common/charts/common-2.22.0.tgz + Chart.lock are committed).
+      # Every app chart declares ghga-common as a `file://` dependency (ADR-0013); `helm
+      # dep up` per chart would walk into ghga-common's own bitnami dependency and
+      # re-validate it against the remote bitnami index every single time — redundant
+      # network I/O for a dependency that's already pinned and doesn't change between
+      # charts. Package ghga-common once and copy the result into every app chart's
+      # `charts/` directory instead: `helm package` only needs the .tgz physically
+      # present, not a fresh resolution, so this needs no registered repo and no network
+      # access at all.
+      - name: Vendor ghga-common into every app chart
+        run: |
+          work=$(mktemp -d)
+          helm package deploy/charts/ghga-common -d "$work"
+          common_tgz=$(ls "$work"/*.tgz)
+          for c in deploy/charts/*/; do
+            name=$(basename "$c")
+            { [ "$name" = "ghga-common" ] || [ "$name" = "ghga-demo" ]; } && continue
+            mkdir -p "${c}charts"
+            cp "$common_tgz" "${c}charts/"
+          done
+      # Not every chart takes the platform version: ghga-common and aai are hand-
+      # maintained with their own independent version in Chart.yaml (untouched by
+      # create_charts.py --version above, same as ghga-demo). A "generated" chart's
+      # values.yaml carries create_charts.py's header (the same marker it uses itself
+      # in current_member_version()) — anything without it is independently versioned.
+      # Record (name, actual version, generated?) once here so every later step keys off
+      # the version that will actually be packaged/pushed, not an assumed platform version.
+      - name: Package
+        run: |
+          mkdir -p dist
+          : > dist/manifest.txt
+          for c in deploy/charts/*/; do
+            name=$(basename "$c")
+            [ "$name" = "ghga-demo" ] && continue
+            version=$(grep -m1 '^version:' "${c}Chart.yaml" | sed -E 's/version: *"?([^"]*)"?/\1/')
+            if head -1 "${c}values.yaml" | grep -q '^# Generated by create_charts.py'; then
+              generated=yes
+            else
+              generated=no
+            fi
+            echo "$name $version $generated" >> dist/manifest.txt
+            helm package "$c" -d dist/
+          done
+      # No separate `helm registry login`: Helm's OCI client reads the same
+      # ~/.docker/config.json this writes. Login here targets docker.io — NOT
+      # registry-1.docker.io, despite CHART_REGISTRY pushing there — because `docker
+      # login` only writes Docker Hub credentials under the canonical
+      # https://index.docker.io/v1/ key when the registry it's given is docker.io's
+      # recognized alias; asking it to log into registry-1.docker.io directly writes
+      # credentials under a key ORAS's lookup never finds, producing an anonymous
+      # (unauthenticated) push attempt that Docker Hub then 401s. ORAS *does* translate
+      # a registry-1.docker.io push target back to that canonical key on lookup — it's
+      # only the write side (docker login) that needs the docker.io alias to land there.
+      - name: Login to Docker Hub
+        if: ${{ inputs.push }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # Releases are immutable — but "immutable" means different things per category:
+      # a generated chart's tag == the platform version, so it must be fresh every
+      # release (an existing tag means a real version-reuse mistake, hard fail). An
+      # independently-versioned chart's tag only changes when a human bumps its own
+      # Chart.yaml version — an existing tag there is the normal steady state between
+      # content changes, not an error, so it's skipped rather than failed. Either way,
+      # nothing with an existing tag is ever pushed again: that's what actually prevents
+      # a content change without a version bump from silently overwriting a published
+      # chart (the failure mode this whole check exists for).
+      - name: Refuse to overwrite an existing release tag
+        if: ${{ inputs.push }}
+        run: |
+          : > dist/to-push.txt
+          while read -r name version generated; do
+            tag="${CHART_REGISTRY}/${name}-chart:${version}"
+            if docker manifest inspect "$tag" >/dev/null 2>&1; then
+              if [ "$generated" = "yes" ]; then
+                echo "::error::$tag already exists — releases are immutable. Bump the version to re-run."
+                exit 1
+              fi
+              echo "skipping ${name}: $tag already published (independently versioned, unchanged) — bump its Chart.yaml version to publish new content."
+              continue
+            fi
+            echo "$name $version" >> dist/to-push.txt
+          done < dist/manifest.txt
+      # Docker Hub repos are exactly namespace/repo (no third path segment), and a
+      # chart's name always equals its image's package name (ADR-0014) — pushing under
+      # the bare name would collide tag-for-tag with the container image of the same
+      # name and version in the same `ghga` namespace. helm derives the OCI push target
+      # from the packaged Chart.yaml's `name:` field, so re-pack (from the already
+      # ghga-common-vendored chart directory, not the dist/ tgz) a `-chart`-suffixed
+      # copy purely for this push; the on-disk chart directories keep the real,
+      # unsuffixed names (ghga-demo's own dependency graph still uses them via `file://`).
+      - name: Push
+        if: ${{ inputs.push }}
+        run: |
+          work=$(mktemp -d)
+          while read -r name version; do
+            c="deploy/charts/${name}/"
+            rm -rf "${work:?}"/*
+            cp -r "$c" "$work/${name}-chart"
+            sed -i "s/^name: .*/name: ${name}-chart/" "$work/${name}-chart/Chart.yaml"
+            helm package "$work/${name}-chart" -d "$work"
+            helm push "$work/${name}-chart-"*.tgz "oci://${CHART_REGISTRY}"
+          done < dist/to-push.txt
+      - name: Summary
+        run: |
+          if [ "${{ inputs.push }}" = "true" ]; then
+            echo "pushed:"
+            cat dist/to-push.txt
+          else
+            echo "build-only: packaged charts, versions per dist/manifest.txt (push input not set)"
+            cat dist/manifest.txt
+          fi
+
+  # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
+  #
+  # It calls pypi-publish.yaml, which picks the packages and runs the tests.
   publish-pypi:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      # TODO on enablement (ADR-0004 pypi lane):
-      #  - assert tag version == the member's pyproject version at HEAD
-      #  - closure train for tools: changed internal deps must be released from this
-      #    commit first, and the tool pins them exactly
-      #  - prerequisite: the published-combo matrix (ADR-0002) exists for this member
-      - run: |
-          echo "DORMANT: would publish ${{ needs.resolve.outputs.name }} ${{ needs.resolve.outputs.version }} to PyPI — targets not configured."
+    permissions:
+      contents: read
+      # For trusted publishing in the called workflow, which cannot hold more than its
+      # caller grants.
+      id-token: write
+    uses: ./.github/workflows/pypi-publish.yaml

@@ -76,7 +76,7 @@ regeneration is idempotent, and CI asserts it stays that way.
 The exclusions are deliberate and each has a reason recorded in the config: imported epic docs
 (hard line breaks), Go-templated Helm manifests, the transpiler's `!!python/object/apply` configs,
 one schemapack fixture that is a duplicate-key document on purpose, generated `config_schema.json`,
-JSONC files, and a private-key *placeholder* in the datahub-monitor values.
+and JSONC files.
 
 ## Consequences
 - Commits are gated on the same checks CI runs, per changed file, so the feedback arrives before

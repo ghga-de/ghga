@@ -38,14 +38,28 @@ class Checksums:
         """Returns true if the encryption checksum buffer is still empty"""
         return not self.encrypted_md5
 
-    def update_unencrypted(self, part: bytes):
+    def update_unencrypted(self, part: bytes | bytearray | memoryview):
         """Update checksum for unencrypted file"""
         self.unencrypted_sha256.update(part)
 
+    @staticmethod
+    def digest_encrypted_part(part: bytes) -> tuple[bytes, bytes]:
+        """Return the (md5, sha256) digests of a single encrypted part."""
+        return (
+            hashlib.md5(part, usedforsecurity=False).digest(),
+            hashlib.sha256(part).digest(),
+        )
+
     def update_encrypted(self, part: bytes):
         """Update encrypted part checksums"""
-        self.encrypted_md5.append(hashlib.md5(part, usedforsecurity=False).digest())
-        self.encrypted_sha256.append(hashlib.sha256(part).digest())
+        md5, sha256 = self.digest_encrypted_part(part)
+        self.encrypted_md5.append(md5)
+        self.encrypted_sha256.append(sha256)
+
+    def set_encrypted_parts(self, digests: list[tuple[bytes, bytes]]):
+        """Replace the per-part encrypted checksums; `digests` must be in part order."""
+        self.encrypted_md5 = [md5 for md5, _ in digests]
+        self.encrypted_sha256 = [sha256 for _, sha256 in digests]
 
     def encrypted_checksum_for_s3(self) -> str:
         """Formulate the expected encrypted checksum str (etag) stored by S3."""

@@ -12,6 +12,16 @@
 # and :dev makes no greenness promise beyond that. PLATFORM_VERSION is left at its
 # default (0.0.0+dev / the frontend's package.json version) — the revision label and
 # GIT_SHA build-arg carry the traceability.
+#
+# Every published tag carries an SBOM + SLSA provenance attestation (buildx-native,
+# provenance=mode=max, re-published via cosign attest) and a keyless cosign signature
+# over the resolved digest — see
+# ADR-0019. This build goes through `docker buildx build` directly (a docker-container
+# builder is required: the default docker-driver builder can't export attestations)
+# rather than the justfile's `image`/`image-mono` recipes: those are also used for
+# local/demo builds that load into the docker store or a kind cluster, which is
+# incompatible with attestations (they turn the push into an OCI index the classic
+# docker store can't represent) — see docs/adr/0019-image-signing-sbom-provenance.md.
 name: dev-images
 
 on:
@@ -40,21 +50,25 @@ jobs:
     permissions:
       contents: read
       packages: write # GHCR push via the ephemeral GITHUB_TOKEN
+      id-token: write # keyless cosign signing (Fulcio/Rekor via OIDC)
     strategy:
       fail-fast: false
       matrix:
-        # `build` = just recipe (+ target); the justfile owns the dockerfile/context/
-        # registry-name mapping, so the workflow never duplicates it
         include:
           - image: platform
-            build: image-mono
+            dockerfile: docker/Dockerfile
+            context: .
+            build-args: VARIANT=mono
           - image: data-portal
-            build: image frontend/data-portal
+            dockerfile: frontend/data-portal/Dockerfile.dhi
+            context: frontend/data-portal
+            build-args: ""
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
       - uses: actions/checkout@v5
-      - uses: extractions/setup-just@v4
+      - name: Short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
       # The hardened bases (dhi.io) are auth-gated — same pattern as release.yaml:
       # skipped when the org secrets are absent, failing the base pull with a clear 401.
       - name: Login to DHI registry
@@ -64,20 +78,45 @@ jobs:
           registry: dhi.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # --pull refreshes the floating base tags; the revision label is set on the CLI
-      # so the frontend Dockerfile (which stamps nothing) carries it too. A build-arg
-      # a member's Dockerfile does not declare only produces a warning.
-      - name: Build
-        run: |
-          just ${{ matrix.build }} dev \
-            --pull \
-            --build-arg GIT_SHA="${GITHUB_SHA::12}" \
-            --label org.opencontainers.image.revision="${GITHUB_SHA::12}"
       - name: Login to GHCR
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push
-        run: docker push "${REGISTRY}/${{ matrix.image }}:dev"
+      # The default (docker-driver) builder shares the daemon's storage but can't export
+      # attestations to a registry — a docker-container builder is required for that.
+      - name: Create buildx builder
+        run: docker buildx create --use --driver docker-container --name ci
+      # --pull refreshes the floating base tags, same as the plain `docker build --pull`
+      # this replaces. --metadata-file is how the CLI surfaces the pushed digest (the
+      # build-push-action equivalent would be its `outputs.digest`).
+      - name: Build and push (attested)
+        id: build
+        run: |
+          build_args=(--build-arg "GIT_SHA=${SHORT_SHA}")
+          if [ -n "${{ matrix.build-args }}" ]; then
+            build_args+=(--build-arg "${{ matrix.build-args }}")
+          fi
+          docker buildx build \
+            --push \
+            --pull \
+            --provenance=mode=max \
+            --sbom=true \
+            "${build_args[@]}" \
+            --label org.opencontainers.image.revision="${SHORT_SHA}" \
+            --metadata-file metadata.json \
+            -f "${{ matrix.dockerfile }}" \
+            -t "${REGISTRY}/${{ matrix.image }}:dev" \
+            "${{ matrix.context }}"
+          digest=$(jq -r '."containerimage.digest"' metadata.json)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v3.1.3
+      - name: Sign the published image (keyless)
+        run: cosign sign --yes --recursive "${{ env.REGISTRY }}/${{ matrix.image }}@${{ steps.build.outputs.digest }}"
+      # buildx's own attestations live inside the index, where cosign cannot find them.
+      # In a script so release.yaml runs the identical path rather than a second copy.
+      - name: Attest SBOM + provenance (keyless)
+        run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.image }}@${{ steps.build.outputs.digest }}"

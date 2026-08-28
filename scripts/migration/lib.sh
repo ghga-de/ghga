@@ -28,9 +28,20 @@ RW_DIR="${WORK}/_rw"       # per-destination rewritten clones
 drop_paths_for_kind() {
   case "$1" in
     lib|service|tool)
+      # `uv.lock` and `.vscode` are here for the uv-native repos that never came from the
+      # retired template (ghga-jsonsubschema): those lock via a root `uv.lock` FILE rather
+      # than the template's `lock/` dir, and keep editor settings outside `.devcontainer/`.
+      # The monorepo has ONE root lock (ADR-0002), and upstream rewrites its member lock on
+      # every dependency bump — deleting it post-import instead would make every future sync
+      # a modify/delete conflict on that file.
+      # Safe for the template-derived members: neither path has ever existed under libs/*,
+      # services/* or tools/* in the imported history, so `--invert-paths --path <unused>`
+      # is a bit-for-bit no-op there and their rewritten SHAs are unchanged (the incremental
+      # sync determinism this file rests on).
       printf '%s\n' \
         lock .github .template .pyproject_generation .readme_generation scripts \
-        .pre-commit-config.yaml Dockerfile Dockerfile.dhi .devcontainer .dockerignore ;;
+        .pre-commit-config.yaml Dockerfile Dockerfile.dhi .devcontainer .dockerignore \
+        uv.lock .vscode ;;
     frontend)
       # Keep the bespoke frontend Dockerfile/build; only drop per-repo CI + devcontainer.
       printf '%s\n' .github .devcontainer ;;

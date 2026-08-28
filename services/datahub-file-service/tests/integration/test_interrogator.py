@@ -15,7 +15,11 @@
 
 """Integration tests for the Interrogator class"""
 
+import asyncio
 import json
+import time
+from typing import cast
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import httpx2
@@ -23,8 +27,11 @@ import pytest
 from pydantic import SecretBytes
 
 from dhfs.adapters.outbound.s3 import S3Client
+from dhfs.core.interrogator import Interrogator
 from dhfs.core.models import FileUpload
-from tests.fixtures.central_api import fail_to_connect, respond
+from dhfs.ports.outbound.interrogator import InterrogatorPort
+from dhfs.ports.outbound.s3 import S3ClientPort
+from tests.fixtures.central_api import capture, fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import (
     EncryptedObject,
@@ -83,16 +90,9 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         200, json=serialized_file_uploads
     )
 
-    # Track the interrogation reports received
-    received_reports = []
-
-    def capture_report(request: httpx2.Request) -> httpx2.Response:
-        """Handler to capture interrogation reports sent to the API"""
-        received_reports.append(json.loads(request.content))
-        return httpx2.Response(status_code=201, json={})
-
-    # Mock the endpoint we upload the file interrogation report to
-    joint_fixture.central_api.on_submit_report = capture_report
+    # Mock the endpoint we upload the file interrogation report to, tracking reports
+    received_reports: list[dict] = []
+    joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     # Process all files
     with caplog.at_level("INFO"):
@@ -110,9 +110,15 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         f"Expected 2 reports, got {len(received_reports)}"
     )
 
+    # Files are processed one at a time, so the reports arrive in batch order.
+    assert [report["file_id"] for report in received_reports] == [
+        str(f.id) for f in file_uploads
+    ]
+    reports_by_file_id = {report["file_id"]: report for report in received_reports}
+
     # Verify each report has the correct structure for successful interrogation
-    for report, file_upload in zip(received_reports, file_uploads, strict=True):
-        assert report["file_id"] == str(file_upload.id)
+    for file_upload in file_uploads:
+        report = reports_by_file_id[str(file_upload.id)]
         assert report["storage_alias"] == file_upload.storage_alias
         assert report["bucket_id"] == config.interrogation_bucket_id
         assert report["passed"] is True
@@ -360,16 +366,9 @@ async def test_file_decryption_error(joint_fixture: JointFixture):
         200, json=[file_upload.model_dump(mode="json")]
     )
 
-    # Track the failure reports received
-    received_reports = []
-
-    def capture_report(request: httpx2.Request) -> httpx2.Response:
-        """Handler to capture failure reports sent to the API"""
-        received_reports.append(json.loads(request.content))
-        return httpx2.Response(status_code=201, json={})
-
-    # Mock the report submission endpoint
-    joint_fixture.central_api.on_submit_report = capture_report
+    # Mock the report submission endpoint, tracking the failure reports received
+    received_reports: list[dict] = []
+    joint_fixture.central_api.on_submit_report = capture(received_reports)
 
     # Process files - should handle the decryption error gracefully
     await joint_fixture.interrogator.interrogate_new_files()
@@ -581,3 +580,315 @@ async def test_connection_failed_on_report_failure(
         "Unable to reach the GHGA Central API while submitting the file processing report"
         in caplog.text
     )
+
+
+async def _stage_batch(
+    joint_fixture: JointFixture, count: int, file_size: int = int(PART_SIZE * 3.5)
+) -> list[FileUpload]:
+    """Put `count` multipart files in the inbox and announce them to the interrogator."""
+    config = joint_fixture.config
+    await joint_fixture.s3.storage.create_bucket(INBOX)
+    await joint_fixture.s3.storage.create_bucket(config.interrogation_bucket_id)
+
+    file_uploads: list[FileUpload] = []
+    for _ in range(count):
+        object_id = str(uuid4())
+        encrypted_object = get_encrypted_object(
+            part_size=PART_SIZE, file_size=file_size
+        )
+        await upload_encrypted_object(
+            bucket_id=INBOX,
+            object_id=object_id,
+            storage=joint_fixture.s3.storage,
+            encrypted_object=encrypted_object,
+        )
+        file_uploads.append(
+            FileUpload(
+                id=uuid4(),
+                decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
+                storage_alias=config.storage_alias,
+                bucket_id=INBOX,
+                object_id=UUID(object_id),
+                decrypted_size=encrypted_object.unencrypted_size,
+                encrypted_size=encrypted_object.encrypted_size,
+                part_size=PART_SIZE,
+            )
+        )
+
+    joint_fixture.central_api.on_fetch_new_uploads = respond(
+        200, json=[f.model_dump(mode="json") for f in file_uploads]
+    )
+    joint_fixture.central_api.on_submit_report = respond(201, json={})
+    return file_uploads
+
+
+async def test_files_are_processed_one_at_a_time(joint_fixture: JointFixture):
+    """A batch is worked through in sequence, never two files at once.
+
+    Only parts run concurrently, so peak memory tracks `max_concurrent_parts` alone.
+    """
+    await _stage_batch(joint_fixture, count=2)
+
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    original_interrogate_file = interrogator.interrogate_file
+    windows: list[tuple[float, float]] = []
+
+    async def timed_interrogate_file(file_upload: FileUpload) -> None:
+        started = time.monotonic()
+        try:
+            await original_interrogate_file(file_upload)
+        finally:
+            windows.append((started, time.monotonic()))
+
+    with patch.object(interrogator, "interrogate_file", timed_interrogate_file):
+        await interrogator.interrogate_new_files()
+
+    assert len(windows) == 2
+    windows.sort()
+    assert windows[0][1] <= windows[1][0], (
+        f"Files overlapped: {windows[0]} and {windows[1]}"
+    )
+
+
+async def test_part_concurrency_is_bounded(joint_fixture: JointFixture):
+    """`max_concurrent_parts` caps how many parts of a file are in flight at once."""
+    await _stage_batch(joint_fixture, count=1)
+
+    budget = 2
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    interrogator._max_concurrent_parts = budget
+
+    in_flight = 0
+    peak = 0
+    original_prepare = interrogator._prepare_part
+
+    async def counting_prepare(ctx, **kwargs):
+        nonlocal in_flight, peak
+        in_flight += 1
+        peak = max(peak, in_flight)
+        try:
+            return await original_prepare(ctx, **kwargs)
+        finally:
+            in_flight -= 1
+
+    with patch.object(interrogator, "_prepare_part", counting_prepare):
+        await interrogator.interrogate_new_files()
+
+    # The file has several parts, so the budget has to actually bind
+    assert peak > 1, "test did not exercise any concurrency"
+    assert peak <= budget, (
+        f"{peak} parts were in flight at once, above the budget of {budget}"
+    )
+
+
+async def test_parts_completing_out_of_order(joint_fixture: JointFixture):
+    """Both integrity checks that conclude interrogation are order-sensitive: the
+    whole-file SHA-256 over the decrypted content, and the ETag derived from the
+    concatenated per-part MD5s. Completing them with the part order deliberately
+    inverted is what proves the reordering logic holds.
+    """
+    # Enough parts that concurrency and the hand-off between them matter
+    [file_upload] = await _stage_batch(
+        joint_fixture, count=1, file_size=int(PART_SIZE * 5.5)
+    )
+    expected_part_count = len(list(file_upload.calc_encrypted_part_ranges()))
+    assert expected_part_count > 1, "test needs a multipart file to be meaningful"
+
+    received_reports: list[dict] = []
+    joint_fixture.central_api.on_submit_report = capture(received_reports)
+
+    # Delay earlier parts the most, so downloads finish in reverse order
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    original_download = interrogator._download_part
+
+    async def staggered_download(ctx):
+        await asyncio.sleep(0.05 * (expected_part_count - ctx.part_no))
+        return await original_download(ctx)
+
+    with patch.object(interrogator, "_download_part", staggered_download):
+        await interrogator.interrogate_file(file_upload)
+
+    assert len(received_reports) == 1
+    report = received_reports[0]
+    assert report["passed"] is True
+    assert len(report["encrypted_parts_md5"]) == expected_part_count
+    assert len(report["encrypted_parts_sha256"]) == expected_part_count
+
+
+async def test_inbox_check_s3_errors_are_translated(joint_fixture: JointFixture):
+    """A critical S3 failure on the inbox check must arrive as a CriticalError.
+
+    Untranslated it escapes `interrogate_new_files` as a raw S3 error, past the
+    `CriticalError` handler main.py uses to exit the run loop cleanly.
+    """
+    await _stage_batch(joint_fixture, count=1)
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+
+    async def raise_critical(*, file):
+        raise S3ClientPort.BucketNotFoundError(bucket_id=file.bucket_id)
+
+    with patch.object(interrogator._s3_client, "get_is_file_in_inbox", raise_critical):
+        with pytest.raises(InterrogatorPort.CriticalError):
+            await interrogator.interrogate_new_files()
+
+
+async def test_inbox_check_retryable_s3_errors_do_not_stop_the_batch(
+    joint_fixture: JointFixture,
+):
+    """A non-critical S3 failure becomes InconclusiveError, so the batch continues."""
+    await _stage_batch(joint_fixture, count=2)
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    seen = 0
+
+    async def raise_operation_error(*, file):
+        nonlocal seen
+        seen += 1
+        raise S3ClientPort.S3OperationError(f"transient failure for {file.id}")
+
+    with patch.object(
+        interrogator._s3_client, "get_is_file_in_inbox", raise_operation_error
+    ):
+        await interrogator.interrogate_new_files()
+
+    # Both files were attempted: the first failure did not abandon the batch
+    assert seen == 2
+
+
+async def test_live_part_tasks_stay_within_the_budget(joint_fixture: JointFixture):
+    """A file must not allocate a task per part before any of them runs.
+
+    `adjusted_part_size` allows up to 9,995 parts - ~15 MiB of parked coroutines.
+    """
+    budget = 2
+    [file_upload] = await _stage_batch(
+        joint_fixture, count=1, file_size=int(PART_SIZE * 5.5)
+    )
+    part_count = len(list(file_upload.calc_encrypted_part_ranges()))
+    assert part_count > budget, "test needs more parts than slots to be meaningful"
+
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    interrogator._max_concurrent_parts = budget
+
+    peak = 0
+    original_download = interrogator._download_part
+
+    def _live_part_tasks() -> int:
+        """Count tasks spawned by _process_file_parts, whatever they are named."""
+        return sum(
+            1
+            for task in asyncio.all_tasks()
+            if "_process_file_parts.<locals>"
+            in getattr(task.get_coro(), "__qualname__", "")
+        )
+
+    async def counting_download(ctx):
+        nonlocal peak
+        peak = max(peak, _live_part_tasks())
+        return await original_download(ctx)
+
+    with patch.object(interrogator, "_download_part", counting_download):
+        await interrogator.interrogate_new_files()
+
+    assert peak <= budget, (
+        f"{peak} part tasks were alive at once for a {part_count}-part file,"
+        f" above the budget of {budget}"
+    )
+
+
+async def test_cancellation_aborts_the_multipart_upload(joint_fixture: JointFixture):
+    """Shutting down mid-file must not leave a multipart upload open forever.
+
+    The new object ID is a fresh uuid4 that is never persisted, so an upload left
+    open here could never be found again by a later run. `CancelledError` is a
+    BaseException, so the old `except Exception` guard stepped straight over the abort.
+
+    The task is cancelled from outside, which is what `asyncio.run` does on shutdown -
+    raising `CancelledError` inside a part would instead be ignored by the TaskGroup,
+    which is a different situation entirely.
+    """
+    [file_upload] = await _stage_batch(joint_fixture, count=1)
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+
+    aborted: list[str] = []
+    original_abort = interrogator._s3_client.abort_upload
+
+    async def recording_abort(*, upload_id: str, object_id: str) -> None:
+        aborted.append(object_id)
+        await original_abort(upload_id=upload_id, object_id=object_id)
+
+    # Fires once the pipeline is past init_interrogation_bucket_upload
+    in_pipeline = asyncio.Event()
+    original_download = interrogator._download_part
+
+    async def signal_then_download(ctx):
+        in_pipeline.set()
+        return await original_download(ctx)
+
+    with (
+        patch.object(interrogator._s3_client, "abort_upload", recording_abort),
+        patch.object(interrogator, "_download_part", signal_then_download),
+    ):
+        task = asyncio.create_task(interrogator.interrogate_file(file_upload))
+        await in_pipeline.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    assert len(aborted) == 1, "the multipart upload was not aborted on cancellation"
+
+    # The abandoned object never materialises in the interrogation bucket
+    remaining = await joint_fixture.s3.storage.list_all_object_ids(
+        joint_fixture.config.interrogation_bucket_id
+    )
+    assert aborted[0] not in remaining
+
+
+async def test_uncategorized_error_is_retried_not_reported(
+    joint_fixture: JointFixture, caplog
+):
+    """An error the pipeline does not model fails just that file, and says nothing.
+
+    It becomes an InconclusiveError, so the file is logged as needing a retry and the
+    batch carries on. No report is sent for it: DHFS cannot tell Central the file is
+    bad when all it knows is that its own attempt did not conclude.
+    """
+    file_uploads = await _stage_batch(joint_fixture, count=2)
+
+    received_reports = []
+
+    def capture_report(request: httpx2.Request) -> httpx2.Response:
+        received_reports.append(json.loads(request.content))
+        return httpx2.Response(status_code=201, json={})
+
+    joint_fixture.central_api.on_submit_report = capture_report
+
+    interrogator = cast(Interrogator, joint_fixture.interrogator)
+    boom = TypeError("something the pipeline does not model")
+    doomed_file_id = file_uploads[0].id
+    original_prepare = interrogator._prepare_part
+
+    async def failing_prepare(ctx, **kwargs):
+        if ctx.file_id == doomed_file_id:
+            raise boom
+        return await original_prepare(ctx, **kwargs)
+
+    with caplog.at_level("WARNING"):
+        caplog.clear()
+        with patch.object(interrogator, "_prepare_part", failing_prepare):
+            # No exception escapes - the batch completes
+            await interrogator.interrogate_new_files()
+
+    # The file was logged as retryable, carrying the original error as the reason
+    assert f"File {doomed_file_id}: Unable to conclusively process file" in caplog.text
+    assert str(boom) in caplog.text
+
+    # The second file was processed normally and reported as a success
+    assert [report["file_id"] for report in received_reports] == [
+        str(file_uploads[1].id)
+    ]
+    assert received_reports[0]["passed"] is True
+
+    # Nothing was said about the failed file, and it left no object behind
+    s3_client: S3Client = interrogator._s3_client  # type: ignore
+    interrogation_files = await s3_client.list_files_in_interrogation_bucket()
+    assert len(interrogation_files) == 1

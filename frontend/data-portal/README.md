@@ -1,11 +1,13 @@
 # GHGA Data Portal
 
-This repository contains the front-end application for the GHGA data portal.
+This is the front-end application for the GHGA data portal. It lives in the [GHGA monorepo](../../README.md) as a self-contained pnpm workspace with its own lockfile, and is not part of the `uv` workspace that holds the services and libraries.
 
 <!-- toc -->
 
 - [Technology stack](#technology-stack)
 - [Local development](#local-development)
+  - [The four modes](#the-four-modes)
+  - [Per-developer settings](#per-developer-settings)
   - [API requests & the backend](#api-requests--the-backend)
   - [Authentication](#authentication)
 - [Code scaffolding](#code-scaffolding)
@@ -40,10 +42,10 @@ This project is a single Angular application designed as a modularized frontend 
 
 ## Local development
 
-To start a local development server, run:
+To start a local development server, run this from the repository root:
 
 ```bash
-dev_launcher
+just fe-dev
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:8080/`. The application will automatically reload whenever you modify any of the source files.
@@ -54,50 +56,73 @@ The MSW handlers in `src/mocks` intentionally return static responses. We avoid 
 
 The same mock layer also serves the Playwright tests, so this decision shapes what those tests are able to prove. See [Automated tests](#automated-tests) for the consequences.
 
+### The four modes
+
+The API and the authentication are two independent switches, giving four modes:
+
+| Command                    | API                | Authentication     | Browse at                        |
+| -------------------------- | ------------------ | ------------------ | -------------------------------- |
+| `just fe-dev`              | MSW mocks          | faked              | `http://localhost:8080/`         |
+| `just fe-dev-backend`      | proxied to backend | faked              | `http://localhost:8080/`         |
+| `just fe-dev-oidc`         | MSW mocks          | real OIDC provider | `https://data.staging.ghga.dev/` |
+| `just fe-dev-backend-oidc` | proxied to backend | real OIDC provider | `https://data.staging.ghga.dev/` |
+
+Each recipe is a thin wrapper around `node run.js --dev` with `--with-backend` and `--with-oidc` in the corresponding combination, which you can also run directly from this directory. The `run.js` launcher is what generates `public/config.js` from the settings before handing over to `ng serve`, so a bare `pnpm start` is not equivalent — it serves the application without a fresh runtime configuration.
+
+The settings themselves come from three places, each overriding the previous one: `data-portal.default.yaml` (the same defaults the production image uses), `data-portal.dev.yaml` (the development overrides, e.g. the `Development` ribbon and the `ghga-dev-client` OIDC client), and finally the environment, including [`local.env`](#per-developer-settings).
+
+### Per-developer settings
+
+Settings that differ per developer — above all the credentials that must not be committed — belong in `local.env` in this directory. Nothing creates it for you and the dev server runs fine without it; copy the template when you first need one:
+
+```bash
+cp local.env.example local.env
+```
+
+The copy is also how you pick up keys added to `local.env.example` later, so it is worth a glance at the template when a new setting appears.
+
+Every key of `data-portal.default.yaml` can be set there as `data_portal_<key>`, and everything in the file also becomes a plain environment variable, so settings that no YAML key backs (such as `data_portal_ignore_cert`, which `proxy.conf.mjs` reads) work too. A typical file looks like this:
+
+```env
+data_portal_base_url=https://data.staging.ghga.dev
+data_portal_basic_auth=USERNAME:PASSWORD
+data_portal_oidc_client_id=THE_OIDC_CLIENT_ID
+```
+
+Variables already present in the environment win over the file, so `data_portal_base_url=... just fe-dev-backend` overrides it for a single run.
+
 ### API requests & the backend
 
 If you want to test the application against the backend provided by the staging deployment, then run:
 
 ```bash
-dev_launcher --with-backend
+just fe-dev-backend
 ```
 
-In this case, a proxy configuration will be used that proxies all API endpoints to the staging environment, while the application itself is still served by the development server. You can change the name of the staging backend via the environment variable `data_portal_base_url`; by default it will be `data.staging.ghga.dev`.
+In this case, a proxy configuration will be used that proxies all API endpoints to the staging environment, while the application itself is still served by the development server. You can change the name of the staging backend via the setting `data_portal_base_url`; by default it will be `data.staging.ghga.dev`.
 
-If the staging backend requires an additional Basic authentication, you can set it in the environment variable `data_portal_basic_auth`.
+If the staging backend requires an additional Basic authentication, you can set it in `data_portal_basic_auth`.
 
 ### Authentication
 
 If you want to test authentication using the real OIDC provider, then run:
 
 ```bash
-dev_launcher --with-oidc
+just fe-dev-oidc
 ```
-
----
-
-**NOTE**
-
-The development server will serve the application via SSL in this mode, using the certificate created in `.devcontainer/cert.pem`. You should add the corresponding CA certificate `.devcontainer/ca-cert.pem` to the trusted certificates of your development computer or web browser to avoid the warnings when loading the page.
-
----
 
 In this mode, the `data_portal_oidc_client_id` and the other OIDC settings must be set properly as required by the OIDC provider.
 
-You will also need to change the hosts file on your host computer so that localhost points to the staging backend. If you use the default staging backend, then you can browse the application at `https://data.staging.ghga.dev`.
+The provider redirects back to a registered URI that carries no port number, so this mode is not free to choose where it listens: the development server switches to HTTPS on port 443, under the hostname of the backend rather than `localhost`. Three things follow from that, and the `just` recipe takes care of the first two:
 
-To test against the real backend and with the real OIDC provider, you can start the development server like this:
+- **A certificate.** `just fe-cert` creates a local CA in `.certs/` and a certificate for the backend hostname signed by it (both gitignored). Add `.certs/ca-cert.pem` to the trusted certificates of your web browser or host computer to avoid the warnings when loading the page. Only the CA needs to be trusted, so re-issuing the certificate for a different hostname later does not mean touching the browser again.
+- **Permission to bind port 443.** The dev container shares the host's network namespace, and therefore its rule that only root may bind ports below 1024. Instead of relaxing that on your machine, the recipe grants `cap_net_bind_service` to the container's `node` binary once, using `sudo`. A container rebuild discards it and the next run grants it again.
+- **A hosts entry on your host computer**, mapping the backend hostname to `127.0.0.1`, so that the browser reaches the development server rather than the real deployment. With the default backend you then browse the application at `https://data.staging.ghga.dev`. (Inside the container, `run.js` adds the opposite entry — the hostname to the deployment's real address — so that the proxy still reaches the actual backend.)
+
+To test against the real backend and with the real OIDC provider at the same time:
 
 ```bash
-dev_launcher --with-backend --with-oidc
-```
-
-It is recommended to put the necessary settings, particularly the credentials that should be kept secret, in the `local.env` file inside the `.devcontainer` directory. It should look something like this:
-
-```env
-data_portal_base_url=https://data.staging.ghga.dev
-data_portal_basic_auth=USERNAME:PASSWORD
-data_portal_oidc_client_id=THE_OIDC_CLIENT_ID
+just fe-dev-backend-oidc
 ```
 
 ## Code scaffolding
@@ -142,7 +167,9 @@ This project uses pnpm to install dependencies, which is a replacement for the m
 pnpm install
 ```
 
-to install the dependencies.
+to install the dependencies, or `just fe-install` from the repository root to install them exactly as CI does (`--frozen-lockfile`).
+
+You do not normally need either: the dev container provisions both stacks when it is created, installing these dependencies along with the Chromium build that Playwright uses ([`.devcontainer/post-create.sh`](../../.devcontainer/post-create.sh)). Only `pnpm e2e:all` needs the other browsers, which `pnpm exec playwright install firefox webkit` adds.
 
 ### Dependency overrides
 
@@ -219,6 +246,8 @@ What they cannot show is anything that depends on the backend actually changing 
 
 Treat the tests in this repository as a fast smoke layer: keep them few and cheap, so they stay useful for quick feedback during frontend development.
 
+They need only the development server — the API is mocked in the browser — so the demo platform (`just up` in the monorepo) is not required for them and only competes for memory. If a run hangs with no output at all, that competition is the first thing to check; `just down` frees it. `playwright.config.ts` prints a warning when memory is already low.
+
 - `pnpm e2e` - run e2e-tests in headless mode on Chromium (fast local default)
 - `pnpm e2e:all` - run e2e-tests in headless mode on all configured browsers using `--workers=2`
 - `pnpm e2e:headed` - run e2e tests in headed mode
@@ -258,13 +287,13 @@ Like for unit testing, you can also [use the VS Code extension for Playwright](h
 
 #### Issues relating to headed execution
 
-In order for the headed execution to work in the dev container, an X11 server must be running on the host.
+Headed execution (`pnpm e2e:headed`, `pnpm e2e:debug`, `pnpm e2e:ui`) needs an X11 server on the host, and a dev container that can reach it. The container does not mount one by default, because the path to mount differs per host operating system and a mount that fits one host makes container creation fail on another — see the comment above `mounts` in [`.devcontainer/devcontainer.json`](../../.devcontainer/devcontainer.json), which is where you add it for your own host, together with a matching `DISPLAY` in `containerEnv`. Rebuild the container afterwards.
 
-On macOs, you can use [XQuartz](https://www.xquartz.org/). On Windows with WSL 2, you can use the built-in WSLg as X11 server. See [here](https://github.com/microsoft/wslg/wiki/Diagnosing-%22cannot-open-display%22-type-issues-with-WSLg) if that is not working properly.
+On macOS, you can use [XQuartz](https://www.xquartz.org/). On Windows with WSL 2, you can use the built-in WSLg as X11 server. See [here](https://github.com/microsoft/wslg/wiki/Diagnosing-%22cannot-open-display%22-type-issues-with-WSLg) if that is not working properly.
 
-The directory `/tmp/.X11-unix` should exist and should be mounted on the corresponding host directory, which is `/mnt/wslg/.X11-unix` for WSLg. If you run `ls /tmp/.X11-unix`, it should show `X0`. If that is not the case, you may need to add or modify volume mounts manually in the `docker-compose.local.yml` file, of which a suitable version is created for you on startup.
+The directory `/tmp/.X11-unix` should exist in the container and should be mounted on the corresponding host directory, which is `/mnt/wslg/.X11-unix` for WSLg. If you run `ls /tmp/.X11-unix`, it should show `X0`. You may also need to add `/tmp/.X11-unix` to the virtual file shares in Docker Desktop under Linux, and run `xhost +local:docker` on the host system.
 
-You may also need to add `/tmp/.X11-unix` to the virtual file shares in Docker Desktop under Linux, and run `xhost +local:docker` on the host system.
+Note that a headed run is rarely the shortest way to see what a failing test saw: the HTML report and the Playwright trace it embeds are available from a plain headless run, and neither needs a display.
 
 ## Analytics
 

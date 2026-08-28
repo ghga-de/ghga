@@ -9,19 +9,24 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: Apache Software License",
-    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Environment :: Console",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
 ]
 name = "ghga_transpiler"
-version = "2.4.1"
+version = "2.5.0"
 description = "GHGA-Transpiler - excel to JSON converter"
 dependencies = [
     "typer >= 0.12",
@@ -37,7 +42,9 @@ dependencies = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/ghga-transpiler"
+Repository = "https://github.com/ghga-de/ghga"
+"Release Notes" = "https://github.com/ghga-de/ghga/releases"
+"Issue Tracker" = "https://github.com/ghga-de/ghga/issues"
 
 [project.scripts]
 ghga-transpiler = "ghga_transpiler.__main__:run"
@@ -62,3 +69,11 @@ source = [
     "/workspace/src",
     "**/lib/python*/site-packages",
 ]
+
+[tool.ghga]
+# Public CLI, no internal dependencies: opts in to the PyPI lane, which tools/* does not
+# get by default (ADR-0014). This is the v2 branch — unlike main (3.x) it has no
+# schemapack dependency.
+release = "pypi"
+pypi = true
+cli = true

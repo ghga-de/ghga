@@ -121,6 +121,19 @@ class Config(
             + " files until they are copied to permanent storage by IFRS."
         ),
     )
+
+    max_concurrent_parts: int = Field(
+        default=8,
+        ge=1,
+        description=(
+            "How many file parts to process at the same time. Files are processed one"
+            + " at a time, so this is the whole budget for the file in flight. It lets"
+            + " the download of one part overlap the re-encryption of another and the"
+            + " upload of a third, and it is the service's memory budget: peak use is"
+            + " roughly max_concurrent_parts * 3 * the part size."
+        ),
+    )
+
     service_name: str = Field(
         default=SERVICE_NAME, description="Short name of this service"
     )

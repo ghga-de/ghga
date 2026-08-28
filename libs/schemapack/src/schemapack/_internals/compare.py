@@ -17,7 +17,6 @@
 
 from arcticfreeze import FrozenDict
 from jsonsubschema import is_equivalent
-
 from schemapack._internals.exceptions import (
     ComparisonError,
     InequivalentContentSchemas,

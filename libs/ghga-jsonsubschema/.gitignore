@@ -1,0 +1,9 @@
+*.env
+
+*.json
+!.claude/**/*.json
+.claude/settings.local.json
+*.log
+
+# local 'scratch' folder is untracked, do not remove
+.dev/

@@ -9,20 +9,21 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: Apache Software License",
-    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "hexkit"
+# 9.0.2 is spent on TestPyPI: a pypi-publish.yaml rehearsal uploaded it there.
 version = "9.0.1"
 description = "A Toolkit for Building Microservices using the Hexagonal Architecture"
 dependencies = [
@@ -96,6 +97,7 @@ test-akafka = [
 ]
 test-s3 = [
     "hexkit[s3]",
+    "httpx2 >=2.9.1, <3",
     "testcontainers >=4.14, <5",
 ]
 test-mongodb = [
@@ -119,10 +121,10 @@ all = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ghga-de/hexkit"
+Repository = "https://github.com/ghga-de/ghga"
 Documentation = "https://ghga-de.github.io/hexkit/"
-"Release Notes" = "https://github.com/ghga-de/hexkit/releases"
-"Issue Tracker" = "https://github.com/ghga-de/hexkit/issues"
+"Release Notes" = "https://github.com/ghga-de/ghga/releases"
+"Issue Tracker" = "https://github.com/ghga-de/ghga/issues"
 
 [tool.setuptools.packages.find]
 where = [

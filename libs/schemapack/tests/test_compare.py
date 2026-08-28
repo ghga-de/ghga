@@ -20,8 +20,8 @@ from itertools import combinations
 from pathlib import Path
 
 import pytest
-from arcticfreeze import FrozenDict
 
+from arcticfreeze import FrozenDict
 from schemapack import (
     is_equal_schemapack,
     is_equivalent_schemapack,

@@ -541,16 +541,36 @@ class UploadController(UploadControllerPort):
                 storage_alias=file_upload.storage_alias
             ) from err
         except S3ClientPort.S3UploadNotFoundError as err:
-            log.error(
-                err,
-                extra={
-                    "s3_upload_id": s3_upload_id,
-                    "file_id": file_id,
-                    "bucket_id": file_upload.bucket_id,
-                    "part_no": part_no,
-                    "storage_alias": file_upload.storage_alias,
-                },
-            )
+            log_extra = {
+                "s3_upload_id": s3_upload_id,
+                "file_id": file_id,
+                "bucket_id": file_upload.bucket_id,
+                "part_no": part_no,
+                "storage_alias": file_upload.storage_alias,
+                "state": file_upload.state,
+            }
+            if file_upload.state == "init":
+                # The DB expects this S3 multipart upload to exist, so its
+                # disappearance is a genuine inconsistency that leaves the FileUpload
+                # stuck and unable to complete.
+                log.warning(
+                    "S3 multipart upload %s for file ID %s could not be found, but"
+                    " the FileUpload is still in the 'init' state.",
+                    s3_upload_id,
+                    file_id,
+                    extra=log_extra,
+                )
+            else:
+                # A missing multipart upload is expected once the FileUpload has moved on
+                # (e.g. cancelled, or the multipart upload was cleaned up/expired).
+                log.info(
+                    "S3 multipart upload %s for file ID %s could not be found. The"
+                    " corresponding FileUpload is in the '%s' state.",
+                    s3_upload_id,
+                    file_id,
+                    file_upload.state,
+                    extra=log_extra,
+                )
             raise self.UploadSessionNotFoundError(
                 bucket_id=file_upload.bucket_id, s3_upload_id=s3_upload_id
             ) from err
