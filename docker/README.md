@@ -41,9 +41,19 @@ both predicates are additionally re-published as signed cosign attestations
 `cosign verify-attestation`, and any policy engine built on it, can actually query them.
 `scripts/attest-image.sh` does that re-publishing and is shared by both publish workflows.
 
-That is the **producer** side only. The one thing CI does not prove is the keyless
-certificate identity: the OIDC subject strings a verifier must match are predicted, not
-confirmed (ADR-0019 "Verification identity"), because there is no OIDC token outside a real
-CI run. Admission-control verification lives in the platform/GitOps layer
-([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)); treat these images as
+That is the **producer** side only. Verifying it back means matching the keyless
+certificate identity, which is **confirmed** for the release lane (`docker.io/ghga/<member>`,
+`.github/workflows/release.yaml`) against a real published image — see ADR-0019
+"Verification identity" for the exact subject shape. The `dev-images.yaml` / GHCR lane's
+identity is still the predicted shape, not yet independently confirmed against a real dev
+image. Admission-control verification lives in the platform/GitOps layer
+([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)); treat the dev-image lane as
 signed-but-identity-unproven until that side confirms it.
+
+> **Verify against a tag, not a digest copied off a UI.** Release images are multi-platform
+> OCI indexes: `cosign sign --recursive` signs the index **and** every per-platform child
+> manifest, but the SBOM/provenance attestations are published only against the **index**
+> digest. A digest copied from Docker Hub's "layers" UI (or similar) is usually a
+> per-platform child — the signature will verify, but `cosign verify-attestation` will find
+> nothing. Resolve the index digest first (`docker buildx imagetools inspect <repo>:<tag>`)
+> before verifying attestations against it.
