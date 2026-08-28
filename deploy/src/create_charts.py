@@ -241,6 +241,46 @@ CONFIG_FIELDS_OVERRIDDEN_BY = {
 }
 
 
+def _allow_null(prop: dict) -> dict:
+    """Widen a config_schema.json field fragment to also accept null.
+
+    This repo's own chart-values.yaml files use a bare empty/null value as a "not
+    yet configured, fill in at deploy time" placeholder - e.g. metldata's and
+    ekss's own committed `loader_token_hashes:`/equivalent, empty by design. The
+    frozen, per-service config_schema.json obviously has no notion of that
+    convention, so its declared type is often a strict non-nullable one (plain
+    `array`, no anyOf). Without this, `helm install`/`upgrade` hard-fails schema
+    validation on this repo's *own* committed defaults - confirmed against
+    metldata's config.loader_token_hashes, which is exactly this case.
+    """
+    if "$ref" in prop:
+        # sibling annotation keywords (default, description, title, ...) stay at this
+        # level rather than moving inside the anyOf branch - valid JSON Schema (they're
+        # annotations, not constraints), and it's where _parameter_rows() and editor
+        # tooling actually look for them. Confirmed this was a real bug, not just
+        # theoretical: auth-service's config.totp_algorithm (a $ref'd enum with
+        # `"default": "sha1"` as a $ref sibling) rendered as `null` in the README table
+        # before this fix, since the naive `{"anyOf": [prop, ...]}` buried it.
+        return {
+            **{key: val for key, val in prop.items() if key != "$ref"},
+            "anyOf": [{"$ref": prop["$ref"]}, {"type": "null"}],
+        }
+    if "anyOf" in prop:
+        if any(branch.get("type") == "null" for branch in prop["anyOf"]):
+            return prop
+        return {**prop, "anyOf": [*prop["anyOf"], {"type": "null"}]}
+    prop = dict(prop)
+    node_type = prop.get("type")
+    if node_type is None:
+        prop["type"] = "null"
+    elif isinstance(node_type, list):
+        if "null" not in node_type:
+            prop["type"] = [*node_type, "null"]
+    elif node_type != "null":
+        prop["type"] = [node_type, "null"]
+    return prop
+
+
 def chart_values_schema(
     values: dict,
     docs: dict[str, str],
@@ -251,19 +291,24 @@ def chart_values_schema(
 
     config_fields/config_defs (from config_field_schemas()) overlay real per-field
     type/description onto the `config` property specifically - everywhere else stays
-    generic, since only `config` has a per-service schema to draw on. config_defs is
-    hoisted to this document's own top-level $defs: pydantic's `$ref: "#/$defs/X"` is
-    a same-document pointer, so it only resolves if $defs lives at this schema's root,
-    not nested under `config`. No `required` is carried over from config_fields: many
-    fields the service's own Config marks required (e.g. mongo_dsn) are legitimately
-    blank in a chart's values.yaml because they're actually supplied via a Vault-injected
-    env var at runtime, not through config.yaml at all.
+    generic, since only `config` has a per-service schema to draw on. Every
+    config_fields entry is widened to also accept null (see _allow_null()).
+    config_defs is hoisted to this document's own top-level $defs: pydantic's
+    `$ref: "#/$defs/X"` is a same-document pointer, so it only resolves if $defs
+    lives at this schema's root, not nested under `config`. No `required` is
+    carried over from config_fields: many fields the service's own Config marks
+    required (e.g. mongo_dsn) are legitimately blank in a chart's values.yaml
+    because they're actually supplied via a Vault-injected env var at runtime, not
+    through config.yaml at all.
     """
     schema = _schema_for(values, docs)
     if config_fields:
         config_schema = schema.get("properties", {}).get("config")
         if config_schema is not None:
-            properties = {**config_schema.get("properties", {}), **config_fields}
+            nullable_fields = {
+                key: _allow_null(prop) for key, prop in config_fields.items()
+            }
+            properties = {**config_schema.get("properties", {}), **nullable_fields}
             for field, real_source in CONFIG_FIELDS_OVERRIDDEN_BY.items():
                 prop = properties.get(field)
                 if prop is None:

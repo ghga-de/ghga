@@ -925,7 +925,10 @@
             "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
           ],
           "title": "Internal public key",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "mongo_dsn": {
           "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
@@ -935,7 +938,10 @@
           "format": "multi-host-uri",
           "minLength": 1,
           "title": "Mongo Dsn",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "download_access_url": {
           "description": "URL pointing to the internal download access API.",
@@ -943,13 +949,19 @@
             "http://127.0.0.1/download-access"
           ],
           "title": "Download Access Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "host": {
           "default": "127.0.0.1",
           "description": "IP of the host.",
           "title": "Host",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_enable_dlq": {
           "default": false,
@@ -959,7 +971,10 @@
             false
           ],
           "title": "Kafka Enable DLQ",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "db_version_collection": {
           "description": "The name of the collection containing DB version information for this service",
@@ -967,7 +982,10 @@
             "ifrsDbVersions"
           ],
           "title": "Db Version Collection",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "migration_wait_sec": {
           "description": "The number of seconds to wait before checking the DB version again",
@@ -977,35 +995,50 @@
             180
           ],
           "title": "Migration Wait Sec",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "access_upfront_max_days": {
           "default": 180,
           "description": "The maximum lead time in days to request access grants",
           "minimum": 0,
           "title": "Access Upfront Max Days",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "access_grant_min_days": {
           "default": 7,
           "description": "The minimum number of days that the access will be granted",
           "minimum": 1,
           "title": "Access Grant Min Days",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "access_grant_max_days": {
           "default": 730,
           "description": "The maximum number of days that the access can be granted",
           "minimum": 1,
           "title": "Access Grant Max Days",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "access_grant_max_extend": {
           "default": 5,
           "description": "This is a factor that the maximum number of days is multiplied with for data stewards. Set this to 1 to disable extension.",
           "minimum": 1,
           "title": "Access Grant Max Extend",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "access_request_topic": {
           "description": "Name of the event topic containing access request events",
@@ -1013,7 +1046,10 @@
             "access-requests"
           ],
           "title": "Access Request Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "dataset_change_topic": {
           "description": "Name of the topic announcing, among other things, the list of files included in a new dataset.",
@@ -1021,7 +1057,10 @@
             "metadata_datasets"
           ],
           "title": "Dataset Change Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "dataset_deletion_type": {
           "description": "Event type used for communicating dataset deletions",
@@ -1029,7 +1068,10 @@
             "dataset_deleted"
           ],
           "title": "Dataset Deletion Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "dataset_upsertion_type": {
           "description": "Event type used for communicating dataset upsertions",
@@ -1037,13 +1079,19 @@
             "dataset_upserted"
           ],
           "title": "Dataset Upsertion Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "ars",
           "description": "Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead.",
           "title": "Service Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_instance_id": {
           "description": "A string that uniquely identifies this instance across all instances of this service. This is included in log messages.",
@@ -1051,7 +1099,10 @@
             "germany-bw-instance-001"
           ],
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_servers": {
           "description": "A list of connection strings to connect to Kafka bootstrap servers.",
@@ -1064,7 +1115,10 @@
             "type": "string"
           },
           "title": "Kafka Servers",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "kafka_security_protocol": {
           "default": "PLAINTEXT",
@@ -1074,32 +1128,47 @@
             "SSL"
           ],
           "title": "Kafka Security Protocol",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_cafile": {
           "default": "",
           "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
           "title": "Kafka Ssl Cafile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_certfile": {
           "default": "",
           "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
           "title": "Kafka Ssl Certfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_keyfile": {
           "default": "",
           "description": "Optional filename containing the client private key.",
           "title": "Kafka Ssl Keyfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_password": {
           "default": "",
           "description": "Optional password to be used for the client private key.",
           "format": "password",
           "title": "Kafka Ssl Password",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "writeOnly": true
         },
         "generate_correlation_id": {
@@ -1110,7 +1179,10 @@
             false
           ],
           "title": "Generate Correlation Id",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "kafka_max_message_size": {
           "default": 1048576,
@@ -1121,7 +1193,10 @@
           ],
           "exclusiveMinimum": 0,
           "title": "Kafka Max Message Size",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_compression_type": {
           "anyOf": [
@@ -1161,7 +1236,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Max Retries",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_dlq_topic": {
           "default": "dlq",
@@ -1170,7 +1248,10 @@
             "dlq"
           ],
           "title": "Kafka DLQ Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_retry_backoff": {
           "default": 0,
@@ -1184,7 +1265,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Retry Backoff",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "db_name": {
           "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
@@ -1192,7 +1276,10 @@
             "my-database"
           ],
           "title": "Db Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "mongo_timeout": {
           "anyOf": [
@@ -1244,7 +1331,10 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -1267,7 +1357,10 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "auth_algs": {
           "default": [
@@ -1278,7 +1371,10 @@
             "type": "string"
           },
           "title": "Auth Algs",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "auth_check_claims": {
           "additionalProperties": true,
@@ -1291,7 +1387,10 @@
           },
           "description": "A dict of all GHGA internal claims that shall be verified.",
           "title": "Auth Check Claims",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "auth_map_claims": {
           "additionalProperties": {
@@ -1300,25 +1399,37 @@
           "default": {},
           "description": "A mapping of claims to attributes in the GHGA auth context.",
           "title": "Auth Map Claims",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "port": {
           "default": 8080,
           "description": "Port to expose the server on the specified host",
           "title": "Port",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "auto_reload": {
           "default": false,
           "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
           "title": "Auto Reload",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "workers": {
           "default": 1,
           "description": "Number of workers processes to run.",
           "title": "Workers",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "timeout_keep_alive": {
           "default": 90,
@@ -1329,25 +1440,37 @@
             5400
           ],
           "title": "Timeout Keep Alive",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "api_root_path": {
           "default": "",
           "description": "Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead.",
           "title": "Api Root Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "openapi_url": {
           "default": "/openapi.json",
           "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
           "title": "Openapi Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "docs_url": {
           "default": "/docs",
           "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
           "title": "Docs Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "cors_allowed_origins": {
           "anyOf": [

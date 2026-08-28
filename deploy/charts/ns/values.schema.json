@@ -906,18 +906,27 @@
           "format": "multi-host-uri",
           "minLength": 1,
           "title": "Mongo Dsn",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "from_address": {
           "description": "The sender's address.",
           "format": "email",
           "title": "From Address",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "html_email_template": {
           "description": "The HTML template to use for email notifications",
           "title": "Html Email Template",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "smtp_auth": {
           "anyOf": [
@@ -934,23 +943,35 @@
         "plaintext_email_template": {
           "description": "The plaintext template to use for email notifications",
           "title": "Plaintext Email Template",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "smtp_host": {
           "description": "The mail server host to connect to",
           "title": "Smtp Host",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "smtp_port": {
           "description": "The port for the mail server connection",
           "title": "Smtp Port",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "use_starttls": {
           "default": true,
           "description": "Boolean flag indicating the use of STARTTLS",
           "title": "Use Starttls",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "kafka_enable_dlq": {
           "default": false,
@@ -960,7 +981,10 @@
             false
           ],
           "title": "Kafka Enable DLQ",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "db_version_collection": {
           "description": "The name of the collection containing DB version information for this service",
@@ -968,7 +992,10 @@
             "ifrsDbVersions"
           ],
           "title": "Db Version Collection",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "migration_wait_sec": {
           "description": "The number of seconds to wait before checking the DB version again",
@@ -978,7 +1005,10 @@
             180
           ],
           "title": "Migration Wait Sec",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "db_name": {
           "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
@@ -986,7 +1016,10 @@
             "my-database"
           ],
           "title": "Db Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "mongo_timeout": {
           "anyOf": [
@@ -1038,12 +1071,18 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "ns",
           "title": "Service Name",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead."
         },
         "service_instance_id": {
@@ -1052,7 +1091,10 @@
             "germany-bw-instance-001"
           ],
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -1075,7 +1117,10 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "lox24_base_url": {
           "default": "https://api.lox24.eu:443",
@@ -1084,13 +1129,19 @@
           "maxLength": 2083,
           "minLength": 1,
           "title": "Lox24 Base Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "lox24_token": {
           "description": "The authentication token",
           "format": "password",
           "title": "Lox24 Token",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "writeOnly": true
         },
         "lox24_timeout": {
@@ -1111,19 +1162,28 @@
           "default": "sms",
           "description": "The path for sending SMS messages",
           "title": "Lox24 Send Sms Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "lox24_auth_token_header": {
           "default": "X-LOX24-AUTH-TOKEN",
           "description": "The header for the authentication token",
           "title": "Lox24 Auth Token Header",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "lox24_sender_id": {
           "default": "GHGA",
           "description": "The sender ID to use when sending SMS messages",
           "title": "Lox24 Sender Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "smtp_timeout": {
           "anyOf": [
@@ -1145,7 +1205,10 @@
             "notifications"
           ],
           "title": "Notification Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "email_notification_type": {
           "description": "The type used for email notification events.",
@@ -1153,7 +1216,10 @@
             "email_notification"
           ],
           "title": "Email Notification Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "sms_notification_type": {
           "description": "The type used for SMS notification events.",
@@ -1161,7 +1227,10 @@
             "sms_notification"
           ],
           "title": "Sms Notification Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_servers": {
           "description": "A list of connection strings to connect to Kafka bootstrap servers.",
@@ -1174,7 +1243,10 @@
             "type": "string"
           },
           "title": "Kafka Servers",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "kafka_security_protocol": {
           "default": "PLAINTEXT",
@@ -1184,32 +1256,47 @@
             "SSL"
           ],
           "title": "Kafka Security Protocol",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_cafile": {
           "default": "",
           "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
           "title": "Kafka Ssl Cafile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_certfile": {
           "default": "",
           "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
           "title": "Kafka Ssl Certfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_keyfile": {
           "default": "",
           "description": "Optional filename containing the client private key.",
           "title": "Kafka Ssl Keyfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_password": {
           "default": "",
           "description": "Optional password to be used for the client private key.",
           "format": "password",
           "title": "Kafka Ssl Password",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "writeOnly": true
         },
         "generate_correlation_id": {
@@ -1220,7 +1307,10 @@
             false
           ],
           "title": "Generate Correlation Id",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "kafka_max_message_size": {
           "default": 1048576,
@@ -1231,7 +1321,10 @@
           ],
           "exclusiveMinimum": 0,
           "title": "Kafka Max Message Size",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_compression_type": {
           "anyOf": [
@@ -1271,7 +1364,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Max Retries",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_dlq_topic": {
           "default": "dlq",
@@ -1280,7 +1376,10 @@
             "dlq"
           ],
           "title": "Kafka DLQ Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_retry_backoff": {
           "default": 0,
@@ -1294,7 +1393,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Retry Backoff",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     },

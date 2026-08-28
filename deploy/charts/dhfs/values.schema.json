@@ -782,21 +782,30 @@
           "default": true,
           "description": "Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is.",
           "title": "Client Reraise From Retry Error",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "client_exponential_backoff_max": {
           "default": 60,
           "description": "Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly.",
           "minimum": 0,
           "title": "Client Exponential Backoff Max",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "client_num_retries": {
           "default": 3,
           "description": "Number of times to retry failed API calls.",
           "minimum": 0,
           "title": "Client Num Retries",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "client_retry_status_codes": {
           "default": [
@@ -813,27 +822,39 @@
             "type": "integer"
           },
           "title": "Client Retry Status Codes",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "per_request_jitter": {
           "default": 0.0,
           "description": "Max amount of jitter (in seconds) to add to each request.",
           "minimum": 0,
           "title": "Per Request Jitter",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "retry_after_applicable_for_num_requests": {
           "default": 1,
           "description": "Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession.",
           "exclusiveMinimum": 0,
           "title": "Retry After Applicable For Num Requests",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "http_request_timeout_seconds": {
           "default": 60.0,
           "description": "Request timeout setting in seconds.",
           "title": "Http Request Timeout Seconds",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "data_hub_crypt4gh_public_key_path": {
           "anyOf": [
@@ -922,7 +943,10 @@
           ],
           "format": "path",
           "title": "Data Hub Crypt4Gh Private Key Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "data_hub_crypt4gh_private_key_passphrase": {
           "anyOf": [
@@ -940,7 +964,10 @@
         "central_api_crypt4gh_public_key": {
           "description": "The Crypt4GH public key used by the Central API. This is used to encrypt new file encryption secrets.",
           "title": "Central Api Crypt4Gh Public Key",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "central_api_url": {
           "description": "The base URL used to connect to to the GHGA Central API",
@@ -948,7 +975,10 @@
           "maxLength": 2083,
           "minLength": 1,
           "title": "Central Api Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "data_hub_signing_key": {
           "description": "The Data Hub's private JWK for signing JWT auth tokens",
@@ -957,7 +987,10 @@
           ],
           "format": "password",
           "title": "Data Hub Signing Key",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "writeOnly": true
         },
         "storage_alias": {
@@ -968,7 +1001,10 @@
             "B01"
           ],
           "title": "Storage Alias",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "s3_endpoint_url": {
           "description": "URL to the S3 API.",
@@ -976,7 +1012,10 @@
             "http://localhost:4566"
           ],
           "title": "S3 Endpoint Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "s3_access_key_id": {
           "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
@@ -984,7 +1023,10 @@
             "my-access-key-id"
           ],
           "title": "S3 Access Key Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "s3_secret_access_key": {
           "description": "Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html",
@@ -993,7 +1035,10 @@
           ],
           "format": "password",
           "title": "S3 Secret Access Key",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "writeOnly": true
         },
         "s3_session_token": {
@@ -1043,13 +1088,19 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "dhfs",
           "description": "Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead.",
           "title": "Service Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_instance_id": {
           "description": "A string that uniquely identifies this instance across all instances of this service. This is included in log messages.",
@@ -1057,7 +1108,10 @@
             "germany-bw-instance-001"
           ],
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -1080,25 +1134,37 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "min_run_interval_seconds": {
           "default": 60,
           "description": "The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation.",
           "title": "Min Run Interval Seconds",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "interrogation_bucket_id": {
           "description": "The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS.",
           "title": "Interrogation Bucket Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "max_concurrent_parts": {
           "default": 8,
           "description": "How many file parts to process at the same time. Files are processed one at a time, so this is the whole budget for the file in flight. It lets the download of one part overlap the re-encryption of another and the upload of a third, and it is the service's memory budget: peak use is roughly max_concurrent_parts * 3 * the part size.",
           "minimum": 1,
           "title": "Max Concurrent Parts",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "library_log_level": {
           "default": "CRITICAL",
@@ -1112,7 +1178,10 @@
             "TRACE"
           ],
           "title": "Library Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "library_logger_names": {
           "default": [
@@ -1130,7 +1199,10 @@
             "type": "string"
           },
           "title": "Library Logger Names",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         }
       }
     },

@@ -780,7 +780,10 @@
           "default": "127.0.0.1",
           "description": "IP of the host.",
           "title": "Host",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_level": {
           "default": "INFO",
@@ -794,19 +797,28 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "top",
           "description": "Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead.",
           "title": "Service Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_instance_id": {
           "default": "default",
           "description": "String that uniquely identifies this service instance in log messages",
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -829,7 +841,10 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "issuer": {
           "default": "https://op.test/",
@@ -837,19 +852,28 @@
           "format": "uri",
           "minLength": 1,
           "title": "Issuer",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "user_domain": {
           "default": "home.org",
           "description": "domain name of the home organization of the test users",
           "title": "User Domain",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "client_id": {
           "default": "test-client",
           "description": "test client ID",
           "title": "Client Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "redirect_url": {
           "default": "https://client.test/oauth/callback",
@@ -857,50 +881,74 @@
           "format": "uri",
           "minLength": 1,
           "title": "Redirect Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "valid_seconds": {
           "default": 3600,
           "description": "default expiration time of access tokens in seconds",
           "exclusiveMinimum": 0,
           "title": "Valid Seconds",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "port": {
           "default": 8080,
           "description": "Port to expose the server on the specified host",
           "title": "Port",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "auto_reload": {
           "default": false,
           "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
           "title": "Auto Reload",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "workers": {
           "default": 1,
           "description": "Number of workers processes to run.",
           "title": "Workers",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "api_root_path": {
           "default": "",
           "description": "Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead.",
           "title": "Api Root Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "openapi_url": {
           "default": "/openapi.json",
           "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
           "title": "Openapi Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "docs_url": {
           "default": "/docs",
           "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
           "title": "Docs Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "cors_allowed_origins": {
           "anyOf": [
@@ -991,7 +1039,10 @@
             false
           ],
           "title": "Generate Correlation Id",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     },

@@ -1038,12 +1038,18 @@
         "central_data_stewardship_email": {
           "description": "The email address of the central data steward.",
           "title": "Central Data Stewardship Email",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "helpdesk_email": {
           "description": "The email address of the GHGA Helpdesk.",
           "title": "Helpdesk Email",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_enable_dlq": {
           "default": false,
@@ -1053,7 +1059,10 @@
             false
           ],
           "title": "Kafka Enable DLQ",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "db_version_collection": {
           "description": "The name of the collection containing DB version information for this service",
@@ -1061,7 +1070,10 @@
             "ifrsDbVersions"
           ],
           "title": "Db Version Collection",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "migration_wait_sec": {
           "description": "The number of seconds to wait before checking the DB version again",
@@ -1071,7 +1083,10 @@
             180
           ],
           "title": "Migration Wait Sec",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "mongo_dsn": {
           "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
@@ -1081,7 +1096,10 @@
           "format": "multi-host-uri",
           "minLength": 1,
           "title": "Mongo Dsn",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "db_name": {
           "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
@@ -1089,7 +1107,10 @@
             "my-database"
           ],
           "title": "Db Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "mongo_timeout": {
           "anyOf": [
@@ -1135,7 +1156,10 @@
             "notifications"
           ],
           "title": "Notification Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "email_notification_type": {
           "description": "The type used for email notification events.",
@@ -1143,7 +1167,10 @@
             "email_notification"
           ],
           "title": "Email Notification Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "sms_notification_type": {
           "description": "The type used for SMS notification events.",
@@ -1151,7 +1178,10 @@
             "sms_notification"
           ],
           "title": "Sms Notification Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "access_request_topic": {
           "description": "Name of the event topic containing access request events",
@@ -1159,13 +1189,19 @@
             "access-requests"
           ],
           "title": "Access Request Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "user_topic": {
           "default": "users",
           "description": "The name of the topic containing user events.",
           "title": "User Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "auth_topic": {
           "description": "The name of the topic containing auth-related events.",
@@ -1173,7 +1209,10 @@
             "auth-events"
           ],
           "title": "Auth Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "second_factor_recreated_type": {
           "description": "The event type for recreation of the second factor for authentication",
@@ -1181,7 +1220,10 @@
             "second_factor_recreated"
           ],
           "title": "Second Factor Recreated Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "iva_state_changed_topic": {
           "description": "The name of the topic containing IVA events.",
@@ -1189,7 +1231,10 @@
             "ivas"
           ],
           "title": "Iva State Changed Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "iva_state_changed_type": {
           "description": "The type to use for IVA state changed events.",
@@ -1197,7 +1242,10 @@
             "iva_state_changed"
           ],
           "title": "Iva State Changed Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "iva_send_code_type": {
           "description": "The type to use for IVA send code events.",
@@ -1205,13 +1253,19 @@
             "iva_send_code"
           ],
           "title": "Iva Send Code Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "nos",
           "description": "The Notification Orchestration Service controls the creation of notification events. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead.",
           "title": "Service Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_instance_id": {
           "description": "A string that uniquely identifies this instance across all instances of this service. This is included in log messages.",
@@ -1219,7 +1273,10 @@
             "germany-bw-instance-001"
           ],
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_servers": {
           "description": "A list of connection strings to connect to Kafka bootstrap servers.",
@@ -1232,7 +1289,10 @@
             "type": "string"
           },
           "title": "Kafka Servers",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "kafka_security_protocol": {
           "default": "PLAINTEXT",
@@ -1242,32 +1302,47 @@
             "SSL"
           ],
           "title": "Kafka Security Protocol",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_cafile": {
           "default": "",
           "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
           "title": "Kafka Ssl Cafile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_certfile": {
           "default": "",
           "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
           "title": "Kafka Ssl Certfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_keyfile": {
           "default": "",
           "description": "Optional filename containing the client private key.",
           "title": "Kafka Ssl Keyfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_password": {
           "default": "",
           "description": "Optional password to be used for the client private key.",
           "format": "password",
           "title": "Kafka Ssl Password",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "writeOnly": true
         },
         "generate_correlation_id": {
@@ -1278,7 +1353,10 @@
             false
           ],
           "title": "Generate Correlation Id",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "kafka_max_message_size": {
           "default": 1048576,
@@ -1289,7 +1367,10 @@
           ],
           "exclusiveMinimum": 0,
           "title": "Kafka Max Message Size",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_compression_type": {
           "anyOf": [
@@ -1329,7 +1410,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Max Retries",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_dlq_topic": {
           "default": "dlq",
@@ -1338,7 +1422,10 @@
             "dlq"
           ],
           "title": "Kafka DLQ Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_retry_backoff": {
           "default": 0,
@@ -1352,7 +1439,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Retry Backoff",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "log_level": {
           "default": "INFO",
@@ -1366,7 +1456,10 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -1389,7 +1482,10 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "portal_url": {
           "default": "https://data.ghga.de/",
@@ -1398,7 +1494,10 @@
           "maxLength": 2083,
           "minLength": 1,
           "title": "Portal Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },

@@ -1201,7 +1201,10 @@
             "{\"crv\": \"P-256\", \"kty\": \"EC\", \"x\": \"...\", \"y\": \"...\"}"
           ],
           "title": "Internal public key",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "mongo_dsn": {
           "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
@@ -1211,7 +1214,10 @@
           "format": "multi-host-uri",
           "minLength": 1,
           "title": "Mongo Dsn",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "drs_server_uri": {
           "description": "The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'.",
@@ -1219,7 +1225,10 @@
             "drs://localhost:8080/"
           ],
           "title": "DRS server URI",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "ekss_base_url": {
           "description": "URL containing host and port of the EKSS endpoint to retrieve personalized envelope from",
@@ -1227,13 +1236,19 @@
             "http://ekss:8080/"
           ],
           "title": "EKSS base URL",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "host": {
           "default": "127.0.0.1",
           "description": "IP of the host.",
           "title": "Host",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "presigned_url_expires_after": {
           "description": "Expiration time in seconds for presigned URLS. Positive integer required",
@@ -1243,14 +1258,20 @@
           ],
           "exclusiveMinimum": 0,
           "title": "Presigned URL expiration time in seconds",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "object_storages": {
           "additionalProperties": {
             "$ref": "#/$defs/S3ObjectStorageNodeConfig"
           },
           "title": "Object Storages",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "kafka_enable_dlq": {
           "default": false,
@@ -1260,13 +1281,19 @@
             false
           ],
           "title": "Kafka Enable DLQ",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "enable_opentelemetry": {
           "default": false,
           "description": "If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled.",
           "title": "Enable Opentelemetry",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "db_version_collection": {
           "description": "The name of the collection containing DB version information for this service",
@@ -1274,7 +1301,10 @@
             "ifrsDbVersions"
           ],
           "title": "Db Version Collection",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "migration_wait_sec": {
           "description": "The number of seconds to wait before checking the DB version again",
@@ -1284,21 +1314,30 @@
             180
           ],
           "title": "Migration Wait Sec",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "client_exponential_backoff_max": {
           "default": 60,
           "description": "Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly.",
           "minimum": 0,
           "title": "Client Exponential Backoff Max",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "client_num_retries": {
           "default": 3,
           "description": "Number of times to retry failed API calls.",
           "minimum": 0,
           "title": "Client Num Retries",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "client_retry_status_codes": {
           "default": [
@@ -1315,33 +1354,48 @@
             "type": "integer"
           },
           "title": "Client Retry Status Codes",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "client_reraise_from_retry_error": {
           "default": true,
           "description": "Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is.",
           "title": "Client Reraise From Retry Error",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "per_request_jitter": {
           "default": 0.0,
           "description": "Max amount of jitter (in seconds) to add to each request.",
           "minimum": 0,
           "title": "Per Request Jitter",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "retry_after_applicable_for_num_requests": {
           "default": 1,
           "description": "Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession.",
           "exclusiveMinimum": 0,
           "title": "Retry After Applicable For Num Requests",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "http_request_timeout_seconds": {
           "default": 60.0,
           "description": "Request timeout setting in seconds.",
           "title": "Http Request Timeout Seconds",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "otel_trace_sampling_rate": {
           "default": 1.0,
@@ -1349,7 +1403,10 @@
           "maximum": 1,
           "minimum": 0,
           "title": "Otel Trace Sampling Rate",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "log_level": {
           "default": "INFO",
@@ -1363,12 +1420,18 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "dcs",
           "title": "Service Name",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead."
         },
         "service_instance_id": {
@@ -1377,7 +1440,10 @@
             "germany-bw-instance-001"
           ],
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -1400,7 +1466,10 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "file_deletion_request_topic": {
           "description": "The name of the topic to receive events informing about files to delete.",
@@ -1408,7 +1477,10 @@
             "file-deletion-requests"
           ],
           "title": "File Deletion Request Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "file_deletion_request_type": {
           "description": "The type used for events indicating that a request to delete a file has been received.",
@@ -1416,7 +1488,10 @@
             "file_deletion_requested"
           ],
           "title": "File Deletion Request Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "file_internally_registered_topic": {
           "description": "Name of the topic used for events indicating that a file has been registered for download.",
@@ -1425,7 +1500,10 @@
             "file-registrations-internal"
           ],
           "title": "File Internally Registered Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "file_internally_registered_type": {
           "description": "The type used for event indicating that that a file has been registered for download.",
@@ -1433,7 +1511,10 @@
             "file_internally_registered"
           ],
           "title": "File Internally Registered Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "files_to_stage_topic": {
           "description": "Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox.",
@@ -1441,7 +1522,10 @@
             "file-staging-requests"
           ],
           "title": "Files To Stage Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "files_to_stage_type": {
           "description": "The type used for non-staged file request events",
@@ -1449,7 +1533,10 @@
             "file_staging_requested"
           ],
           "title": "Files To Stage Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "file_registered_for_download_topic": {
           "description": "Name of the topic used for events indicating that a file has been registered by the DCS for download.",
@@ -1458,7 +1545,10 @@
             "file-registrations-download"
           ],
           "title": "File Registered For Download Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "file_registered_for_download_type": {
           "description": "The type used for event indicating that a file has been registered by the DCS for download.",
@@ -1466,7 +1556,10 @@
             "file_registered_for_download"
           ],
           "title": "File Registered For Download Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "file_deleted_topic": {
           "description": "Name of the topic used for events indicating that a file has been deleted.",
@@ -1474,7 +1567,10 @@
             "file-deletions"
           ],
           "title": "File Deleted Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "file_deleted_type": {
           "description": "The type used for events indicating that a file has been deleted.",
@@ -1482,7 +1578,10 @@
             "file_deleted"
           ],
           "title": "File Deleted Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "download_served_topic": {
           "description": "Name of the topic used for events indicating that a download of a specified file happened.",
@@ -1490,7 +1589,10 @@
             "file-downloads"
           ],
           "title": "Download Served Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "download_served_type": {
           "description": "The type used for event indicating that a download of a specified file happened.",
@@ -1498,7 +1600,10 @@
             "download_served"
           ],
           "title": "Download Served Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_servers": {
           "description": "A list of connection strings to connect to Kafka bootstrap servers.",
@@ -1511,7 +1616,10 @@
             "type": "string"
           },
           "title": "Kafka Servers",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "kafka_security_protocol": {
           "default": "PLAINTEXT",
@@ -1521,32 +1629,47 @@
             "SSL"
           ],
           "title": "Kafka Security Protocol",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_cafile": {
           "default": "",
           "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
           "title": "Kafka Ssl Cafile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_certfile": {
           "default": "",
           "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
           "title": "Kafka Ssl Certfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_keyfile": {
           "default": "",
           "description": "Optional filename containing the client private key.",
           "title": "Kafka Ssl Keyfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_password": {
           "default": "",
           "description": "Optional password to be used for the client private key.",
           "format": "password",
           "title": "Kafka Ssl Password",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "writeOnly": true
         },
         "generate_correlation_id": {
@@ -1557,7 +1680,10 @@
             false
           ],
           "title": "Generate Correlation Id",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "kafka_max_message_size": {
           "default": 1048576,
@@ -1568,7 +1694,10 @@
           ],
           "exclusiveMinimum": 0,
           "title": "Kafka Max Message Size",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_compression_type": {
           "anyOf": [
@@ -1608,7 +1737,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Max Retries",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_dlq_topic": {
           "default": "dlq",
@@ -1617,7 +1749,10 @@
             "dlq"
           ],
           "title": "Kafka DLQ Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_retry_backoff": {
           "default": 0,
@@ -1631,7 +1766,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Retry Backoff",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "db_name": {
           "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
@@ -1639,7 +1777,10 @@
             "my-database"
           ],
           "title": "Db Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "mongo_timeout": {
           "anyOf": [
@@ -1687,7 +1828,10 @@
             30
           ],
           "title": "Download Bucket Cache Timeout",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "staging_speed": {
           "default": 100,
@@ -1697,7 +1841,10 @@
             500
           ],
           "title": "Staging speed in MB/s",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "retry_after_min": {
           "default": 5,
@@ -1707,7 +1854,10 @@
             10
           ],
           "title": "Minimum retry time in seconds when staging",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "retry_after_max": {
           "default": 300,
@@ -1717,7 +1867,10 @@
             300
           ],
           "title": "Maximum retry time in seconds when staging",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "auth_algs": {
           "default": [
@@ -1728,7 +1881,10 @@
             "type": "string"
           },
           "title": "Auth Algs",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "auth_check_claims": {
           "additionalProperties": true,
@@ -1741,7 +1897,10 @@
           },
           "description": "A dict of all GHGA internal claims that shall be verified.",
           "title": "Auth Check Claims",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "auth_map_claims": {
           "additionalProperties": {
@@ -1750,25 +1909,37 @@
           "default": {},
           "description": "A mapping of claims to attributes in the GHGA auth context.",
           "title": "Auth Map Claims",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "port": {
           "default": 8080,
           "description": "Port to expose the server on the specified host",
           "title": "Port",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "auto_reload": {
           "default": false,
           "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
           "title": "Auto Reload",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "workers": {
           "default": 1,
           "description": "Number of workers processes to run.",
           "title": "Workers",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "timeout_keep_alive": {
           "default": 90,
@@ -1779,25 +1950,37 @@
             5400
           ],
           "title": "Timeout Keep Alive",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "api_root_path": {
           "default": "",
           "description": "Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead.",
           "title": "Api Root Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "openapi_url": {
           "default": "/openapi.json",
           "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
           "title": "Openapi Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "docs_url": {
           "default": "/docs",
           "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
           "title": "Docs Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "cors_allowed_origins": {
           "anyOf": [
@@ -1903,7 +2086,10 @@
           "default": "/ga4gh/drs/v1",
           "description": "DRS API route",
           "title": "Api Route",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },

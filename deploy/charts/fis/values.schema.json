@@ -862,7 +862,10 @@
           "default": "127.0.0.1",
           "description": "IP of the host.",
           "title": "Host",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "mongo_dsn": {
           "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
@@ -872,7 +875,10 @@
           "format": "multi-host-uri",
           "minLength": 1,
           "title": "Mongo Dsn",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "db_version_collection": {
           "description": "The name of the collection containing DB version information for this service",
@@ -880,7 +886,10 @@
             "ifrsDbVersions"
           ],
           "title": "Db Version Collection",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "migration_wait_sec": {
           "description": "The number of seconds to wait before checking the DB version again",
@@ -890,13 +899,19 @@
             180
           ],
           "title": "Migration Wait Sec",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "enable_opentelemetry": {
           "default": false,
           "description": "If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled.",
           "title": "Enable Opentelemetry",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "ekss_api_url": {
           "description": "The base URL for the EKSS API",
@@ -907,21 +922,30 @@
           "maxLength": 2083,
           "minLength": 1,
           "title": "Ekss Api Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "client_exponential_backoff_max": {
           "default": 60,
           "description": "Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly.",
           "minimum": 0,
           "title": "Client Exponential Backoff Max",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "client_num_retries": {
           "default": 3,
           "description": "Number of times to retry failed API calls.",
           "minimum": 0,
           "title": "Client Num Retries",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "client_retry_status_codes": {
           "default": [
@@ -938,33 +962,48 @@
             "type": "integer"
           },
           "title": "Client Retry Status Codes",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "client_reraise_from_retry_error": {
           "default": true,
           "description": "Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is.",
           "title": "Client Reraise From Retry Error",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "per_request_jitter": {
           "default": 0.0,
           "description": "Max amount of jitter (in seconds) to add to each request.",
           "minimum": 0,
           "title": "Per Request Jitter",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "retry_after_applicable_for_num_requests": {
           "default": 1,
           "description": "Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession.",
           "exclusiveMinimum": 0,
           "title": "Retry After Applicable For Num Requests",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "http_request_timeout_seconds": {
           "default": 60.0,
           "description": "Request timeout setting in seconds.",
           "title": "Http Request Timeout Seconds",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "file_upload_topic": {
           "description": "Topic containing published FileUpload outbox events",
@@ -973,7 +1012,10 @@
             "file-upload-topic"
           ],
           "title": "File Upload Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "otel_trace_sampling_rate": {
           "default": 1.0,
@@ -981,7 +1023,10 @@
           "maximum": 1,
           "minimum": 0,
           "title": "Otel Trace Sampling Rate",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "log_level": {
           "default": "INFO",
@@ -995,12 +1040,18 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "fis",
           "title": "Service Name",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead."
         },
         "service_instance_id": {
@@ -1009,7 +1060,10 @@
             "germany-bw-instance-001"
           ],
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -1032,7 +1086,10 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "file_interrogations_topic": {
           "description": "The name of the topic use to publish file interrogation outcome events.",
@@ -1040,7 +1097,10 @@
             "file-interrogations"
           ],
           "title": "File Interrogations Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "interrogation_success_type": {
           "description": "The type used for events informing about successful file validations.",
@@ -1048,7 +1108,10 @@
             "interrogation_success"
           ],
           "title": "Interrogation Success Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "interrogation_failure_type": {
           "description": "The type used for events informing about failed file validations.",
@@ -1056,25 +1119,37 @@
             "interrogation_failed"
           ],
           "title": "Interrogation Failure Type",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "port": {
           "default": 8080,
           "description": "Port to expose the server on the specified host",
           "title": "Port",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "auto_reload": {
           "default": false,
           "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
           "title": "Auto Reload",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "workers": {
           "default": 1,
           "description": "Number of workers processes to run.",
           "title": "Workers",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "timeout_keep_alive": {
           "default": 90,
@@ -1085,25 +1160,37 @@
             5400
           ],
           "title": "Timeout Keep Alive",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "api_root_path": {
           "default": "",
           "description": "Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead.",
           "title": "Api Root Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "openapi_url": {
           "default": "/openapi.json",
           "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
           "title": "Openapi Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "docs_url": {
           "default": "/docs",
           "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
           "title": "Docs Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "cors_allowed_origins": {
           "anyOf": [
@@ -1213,7 +1300,10 @@
             false
           ],
           "title": "Generate Correlation Id",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "kafka_servers": {
           "description": "A list of connection strings to connect to Kafka bootstrap servers.",
@@ -1226,7 +1316,10 @@
             "type": "string"
           },
           "title": "Kafka Servers",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "kafka_security_protocol": {
           "default": "PLAINTEXT",
@@ -1236,32 +1329,47 @@
             "SSL"
           ],
           "title": "Kafka Security Protocol",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_cafile": {
           "default": "",
           "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
           "title": "Kafka Ssl Cafile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_certfile": {
           "default": "",
           "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
           "title": "Kafka Ssl Certfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_keyfile": {
           "default": "",
           "description": "Optional filename containing the client private key.",
           "title": "Kafka Ssl Keyfile",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_ssl_password": {
           "default": "",
           "description": "Optional password to be used for the client private key.",
           "format": "password",
           "title": "Kafka Ssl Password",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "writeOnly": true
         },
         "kafka_max_message_size": {
@@ -1273,7 +1381,10 @@
           ],
           "exclusiveMinimum": 0,
           "title": "Kafka Max Message Size",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_compression_type": {
           "anyOf": [
@@ -1313,7 +1424,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Max Retries",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "kafka_enable_dlq": {
           "default": false,
@@ -1323,7 +1437,10 @@
             false
           ],
           "title": "Kafka Enable DLQ",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "kafka_dlq_topic": {
           "default": "dlq",
@@ -1332,7 +1449,10 @@
             "dlq"
           ],
           "title": "Kafka DLQ Topic",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kafka_retry_backoff": {
           "default": 0,
@@ -1346,7 +1466,10 @@
           ],
           "minimum": 0,
           "title": "Kafka Retry Backoff",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "db_name": {
           "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
@@ -1354,7 +1477,10 @@
             "my-database"
           ],
           "title": "Db Name",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "mongo_timeout": {
           "anyOf": [
@@ -1406,7 +1532,10 @@
             }
           ],
           "title": "Data Hub Auth Keys",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "dhfs_version_constraint": {
           "description": "A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error.",
@@ -1415,7 +1544,10 @@
             "~=2.0"
           ],
           "title": "Dhfs Version Constraint",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },

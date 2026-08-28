@@ -779,23 +779,35 @@
         "dcs_api_url": {
           "description": "URL to the root of the DRS-compatible DCS API.",
           "title": "Dcs Api Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "host": {
           "default": "127.0.0.1",
           "description": "IP of the host.",
           "title": "Host",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "ucs_api_url": {
           "description": "URL to the root of the upload controller API.",
           "title": "Ucs Api Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "wps_api_url": {
           "description": "URL to the root of the WPS API.",
           "title": "Wps Api Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_level": {
           "default": "INFO",
@@ -809,12 +821,18 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "wkvs",
           "title": "Service Name",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead."
         },
         "service_instance_id": {
@@ -823,7 +841,10 @@
             "germany-bw-instance-001"
           ],
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -846,7 +867,10 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "storage_aliases": {
           "additionalProperties": {
@@ -857,7 +881,10 @@
           },
           "description": "Mapping of storage alias to endpoint URL for all available S3 object storages",
           "title": "Storage Aliases",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "storage_labels": {
           "additionalProperties": {
@@ -871,7 +898,10 @@
             }
           ],
           "title": "Storage Labels",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "crypt4gh_public_keys": {
           "additionalProperties": {
@@ -879,25 +909,37 @@
           },
           "description": "Mapping of storage alias to Crypt4GH public key",
           "title": "Crypt4Gh Public Keys",
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         },
         "port": {
           "default": 8080,
           "description": "Port to expose the server on the specified host",
           "title": "Port",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "auto_reload": {
           "default": false,
           "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
           "title": "Auto Reload",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "workers": {
           "default": 1,
           "description": "Number of workers processes to run.",
           "title": "Workers",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "timeout_keep_alive": {
           "default": 90,
@@ -908,25 +950,37 @@
             5400
           ],
           "title": "Timeout Keep Alive",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "api_root_path": {
           "default": "",
           "description": "Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead.",
           "title": "Api Root Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "openapi_url": {
           "default": "/openapi.json",
           "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
           "title": "Openapi Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "docs_url": {
           "default": "/docs",
           "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
           "title": "Docs Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "cors_allowed_origins": {
           "anyOf": [
@@ -1036,7 +1090,10 @@
             false
           ],
           "title": "Generate Correlation Id",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     },

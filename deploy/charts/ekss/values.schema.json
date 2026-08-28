@@ -780,7 +780,10 @@
           "default": "127.0.0.1",
           "description": "IP of the host.",
           "title": "Host",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "server_private_key_path": {
           "description": "Path to the Crypt4GH private key file",
@@ -789,7 +792,10 @@
           ],
           "format": "path",
           "title": "Server Private Key Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "vault_url": {
           "description": "URL of the vault instance to connect to",
@@ -797,18 +803,27 @@
             "http://127.0.0.1.8200"
           ],
           "title": "Vault Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "vault_path": {
           "description": "Path without leading or trailing slashes where secrets should be stored in the vault.",
           "title": "Vault Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "enable_opentelemetry": {
           "default": false,
           "description": "If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled.",
           "title": "Enable Opentelemetry",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "otel_trace_sampling_rate": {
           "default": 1.0,
@@ -816,7 +831,10 @@
           "maximum": 1,
           "minimum": 0,
           "title": "Otel Trace Sampling Rate",
-          "type": "number"
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "private_key_passphrase": {
           "anyOf": [
@@ -843,12 +861,18 @@
             "TRACE"
           ],
           "title": "Log Level",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "service_name": {
           "default": "ekss",
           "title": "Service Name",
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead."
         },
         "service_instance_id": {
@@ -857,7 +881,10 @@
             "germany-bw-instance-001"
           ],
           "title": "Service Instance Id",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "log_format": {
           "anyOf": [
@@ -880,7 +907,10 @@
           "default": true,
           "description": "Whether to include exception tracebacks in log messages.",
           "title": "Log Traceback",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "vault_role_id": {
           "anyOf": [
@@ -925,6 +955,9 @@
             },
             {
               "type": "string"
+            },
+            {
+              "type": "null"
             }
           ],
           "default": true,
@@ -941,7 +974,10 @@
             "secret"
           ],
           "title": "Vault Secrets Mount Point",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "vault_kube_role": {
           "anyOf": [
@@ -982,25 +1018,37 @@
           "description": "Path to service account token used by kube auth adapter.",
           "format": "path",
           "title": "Service Account Token Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "port": {
           "default": 8080,
           "description": "Port to expose the server on the specified host",
           "title": "Port",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "auto_reload": {
           "default": false,
           "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
           "title": "Auto Reload",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "workers": {
           "default": 1,
           "description": "Number of workers processes to run.",
           "title": "Workers",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "timeout_keep_alive": {
           "default": 90,
@@ -1011,25 +1059,37 @@
             5400
           ],
           "title": "Timeout Keep Alive",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "api_root_path": {
           "default": "",
           "description": "Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead.",
           "title": "Api Root Path",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "openapi_url": {
           "default": "/openapi.json",
           "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
           "title": "Openapi Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "docs_url": {
           "default": "/docs",
           "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
           "title": "Docs Url",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "cors_allowed_origins": {
           "anyOf": [
@@ -1139,7 +1199,10 @@
             false
           ],
           "title": "Generate Correlation Id",
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     },
