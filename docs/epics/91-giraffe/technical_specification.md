@@ -30,12 +30,12 @@ resource-search, em-transformation-service), where the study is the defining sco
 and receives a structured PID.
 This epic delivers a smaller step first, on the existing LinkML plus offline `ghga-datasteward-kit`
 stack, so lifecycle PIDs and study revisions are available before those services land.
-The full design is agreed and written up in
-[`docs/features/early-data-lifecycle.md`](../../features/early-data-lifecycle.md); this epic fixes
-the scope and the per-component work.
-Read that document and
+The design is agreed; this document is its full write-up and fixes the scope and the
+per-component work.
+Read
 [`docs/architecture/metadata-and-file-journeys.md`](../../architecture/metadata-and-file-journeys.md)
-before starting.
+— the current-state reference for the submission, accession, upload and mapping paths this epic
+changes — before starting.
 
 ### Terminology
 
