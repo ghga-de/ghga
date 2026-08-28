@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `global._topics` | Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters) | `{}` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -112,34 +111,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
 | `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
 | `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
-| `_topics.fileRegisteredEvent.topic.name` |  | `"file_internally_registered_topic"` |
-| `_topics.fileRegisteredEvent.topic.value` |  | `"internal-registrations"` |
-| `_topics.fileRegisteredEvent.types` |  | `[{"name": "file_internally_registered_type", "value": "internal_file_registered"}]` |
-| `_topics.fileRegisteredEvent.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.filesToDelete.topic.name` |  | `"file_deletion_request_topic"` |
-| `_topics.filesToDelete.topic.value` |  | `"purges"` |
-| `_topics.filesToDelete.types` |  | `[{"name": "file_deletion_request_type", "value": "file_deletion_requested"}]` |
-| `_topics.filesToDelete.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.datasetUpsertionEvent.topic.name` |  | `"dataset_change_topic"` |
-| `_topics.datasetUpsertionEvent.topic.value` |  | `"metadata-datasets"` |
-| `_topics.datasetUpsertionEvent.types` |  | `[{"name": "dataset_upsertion_type", "value": "dataset_created"}]` |
-| `_topics.datasetUpsertionEvent.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.datasetDeletionEvent.topic.name` |  | `"dataset_change_topic"` |
-| `_topics.datasetDeletionEvent.topic.value` |  | `"metadata-datasets"` |
-| `_topics.datasetDeletionEvent.types` |  | `[{"name": "dataset_deletion_type", "value": "dataset_deleted"}]` |
-| `_topics.datasetDeletionEvent.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.deadLetterQueue.topic.name` |  | `"kafka_dlq_topic"` |
-| `_topics.deadLetterQueue.topic.value` |  | `"dlq"` |
-| `_topics.deadLetterQueue.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.deadLetterQueueRetry.topic.name` |  | `null` |
-| `_topics.deadLetterQueueRetry.topic.value` |  | `"retry"` |
-| `_topics.deadLetterQueueRetry.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.accessionMapTopic.topic.name` |  | `"accession_map_topic"` |
-| `_topics.accessionMapTopic.topic.value` |  | `"accession-maps"` |
-| `_topics.accessionMapTopic.kafkaUser.operations` |  | `["Read"]` |
-| `_consumerGroup.operations` |  | `["Read"]` |
-| `_consumerGroup.resource.patternType` |  | `"literal"` |
-| `_consumerGroup.resource.type` |  | `"group"` |
 | `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
 | `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
 | `kafkaUser.clusterName` |  | `"kafka"` |
@@ -197,5 +168,18 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `config.cors_allowed_origins` | A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. | `null` |
 | `config.cors_allow_credentials` | Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. | `null` |
 | `config.cors_allowed_methods` | A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. | `null` |
+| `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. | `null` |
+| `config.cors_exposed_headers` | A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. | `null` |
+| `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"dins"` |
+| `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
+| `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
+| `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
+| `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
+| `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0012) routing to this service | `false` |
+| `httpRoute.port` |  | `8080` |
+| `httpRoute.rewritePath` | strip the base path before forwarding. Services that reconstruct their own public URLs (an OIDC discovery document, for example) need the full path instead and rely on api_root_path to route - set this to false for them. | `true` |
+| `httpRoute.rules` | Extra HTTPRoute rules rendered before the generated default rule (deduplicated) | `[]` |
+| `probe.enabled` | Render a Prometheus-Operator Probe CR blackbox-checking this service over HTTP | `false` |
+| `probe.hostname` | Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL) | `"default.ghga.dev"` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/u
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `global._topics` | Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters) | `{}` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -112,34 +111,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/u
 | `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
 | `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
 | `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
-| `_topics.fileUploadValidationSuccess.topic.name` |  | `"file_interrogations_topic"` |
-| `_topics.fileUploadValidationSuccess.topic.value` |  | `"interrogations"` |
-| `_topics.fileUploadValidationSuccess.types` |  | `[{"name": "interrogation_success_type", "value": "file_interrogation_success"}, {"name": "interrogation_failure_type", "value": "file_interrogation_failed"}]` |
-| `_topics.fileUploadValidationSuccess.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.filesToRegister.topic.name` |  | `"file_internally_registered_topic"` |
-| `_topics.filesToRegister.topic.value` |  | `"internal-registrations"` |
-| `_topics.filesToRegister.types` |  | `[{"name": "file_internally_registered_type", "value": "internal_file_registered"}]` |
-| `_topics.filesToRegister.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.filesToDelete.topic.name` |  | `"file_deletion_request_topic"` |
-| `_topics.filesToDelete.topic.value` |  | `"purges"` |
-| `_topics.filesToDelete.type.name` |  | `"file_deletion_request_type"` |
-| `_topics.filesToDelete.type.value` |  | `"file_deletion_requested"` |
-| `_topics.filesToDelete.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.deadLetterQueue.topic.name` |  | `"kafka_dlq_topic"` |
-| `_topics.deadLetterQueue.topic.value` |  | `"dlq"` |
-| `_topics.deadLetterQueue.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.deadLetterQueueRetry.topic.name` |  | `null` |
-| `_topics.deadLetterQueueRetry.topic.value` |  | `"retry"` |
-| `_topics.deadLetterQueueRetry.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.fileUpload.topic.name` |  | `"file_upload_topic"` |
-| `_topics.fileUpload.topic.value` |  | `"file-uploads"` |
-| `_topics.fileUpload.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.uploadBoxTopic.topic.name` |  | `"file_upload_box_topic"` |
-| `_topics.uploadBoxTopic.topic.value` |  | `"file-upload-boxes"` |
-| `_topics.uploadBoxTopic.kafkaUser.operations` |  | `["Write"]` |
-| `_consumerGroup.operations` |  | `["Read"]` |
-| `_consumerGroup.resource.patternType` |  | `"literal"` |
-| `_consumerGroup.resource.type` |  | `"group"` |
 | `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
 | `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
 | `kafkaUser.clusterName` |  | `"kafka"` |
@@ -201,5 +172,16 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/u
 | `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
 | `config.openapi_url` | Path to get the openapi specification in JSON format. This is relative to the specified host and port. | `"/openapi.json"` |
 | `config.docs_url` | Path to host the swagger documentation. This is relative to the specified host and port. | `"/docs"` |
+| `config.cors_allowed_origins` | A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. | `null` |
+| `config.cors_allow_credentials` | Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. | `null` |
+| `config.cors_allowed_methods` | A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. | `null` |
+| `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. | `null` |
+| `config.cors_exposed_headers` | A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. | `null` |
+| `config.max_concurrent_uploads_per_box` | Maximum number of in-progress FileUploads allowed per box at any one time. When a new upload would exceed this count, the request is rejected with 429 Too Many Requests. | `5` |
+| `config.multipart_upload_ttl_hours` | Number of hours after which an in-progress FileUpload with no activity is considered stale and will be aborted by the cleanup job. | `72` |
+| `config.cleanup_interval_minutes` | How often (in minutes) the cleanup job runs. | `60` |
+| `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"ucs"` |
+| `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
+| `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

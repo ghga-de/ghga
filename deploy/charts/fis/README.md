@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `global._topics` | Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters) | `{}` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -112,16 +111,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
 | `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
 | `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
-| `_topics.fileUploadValidationSuccess.topic.name` |  | `"file_interrogations_topic"` |
-| `_topics.fileUploadValidationSuccess.topic.value` |  | `"interrogations"` |
-| `_topics.fileUploadValidationSuccess.types` |  | `[{"name": "interrogation_success_type", "value": "file_interrogation_success"}, {"name": "interrogation_failure_type", "value": "file_interrogation_failed"}]` |
-| `_topics.fileUploadValidationSuccess.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.fileUpload.topic.name` |  | `"file_upload_topic"` |
-| `_topics.fileUpload.topic.value` |  | `"file-uploads"` |
-| `_topics.fileUpload.kafkaUser.operations` |  | `["Read"]` |
-| `_consumerGroup.operations` |  | `["Read"]` |
-| `_consumerGroup.resource.patternType` |  | `"literal"` |
-| `_consumerGroup.resource.type` |  | `"group"` |
 | `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
 | `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
 | `kafkaUser.clusterName` |  | `"kafka"` |
@@ -186,5 +175,11 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
 | `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
+| `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
+| `config.data_hub_auth_keys` | Mapping of storage (data hub) aliases to their public token signature validation keys | `null` |
+| `config.dhfs_version_constraint` | A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error. | `null` |
+| `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"fis"` |
+| `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

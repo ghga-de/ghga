@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/frontend/d
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `global._topics` | Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters) | `{}` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -112,10 +111,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/frontend/d
 | `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
 | `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
 | `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
-| `_topics` | Per-instance Kafka topics this chart owns (merged with global._topics); shape is {<key>: {topic: {name, value}, type: {name, value}, types: [...]}} - see kafkaTopicsParameters/kafkaUser below for how each field is consumed | `{}` |
-| `_consumerGroup.operations` |  | `["Read"]` |
-| `_consumerGroup.resource.patternType` |  | `"literal"` |
-| `_consumerGroup.resource.type` |  | `"group"` |
 | `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
 | `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
 | `kafkaUser.clusterName` |  | `"kafka"` |

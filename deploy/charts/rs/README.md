@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/g
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `global._topics` | Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters) | `{}` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -112,36 +111,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/g
 | `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
 | `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
 | `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
-| `_topics.uploadBoxTopic.topic.name` |  | `"file_upload_box_topic"` |
-| `_topics.uploadBoxTopic.topic.value` |  | `"file-upload-boxes"` |
-| `_topics.uploadBoxTopic.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.researchDataUploadBoxTopic.topic.name` |  | `"research_data_upload_box_topic"` |
-| `_topics.researchDataUploadBoxTopic.topic.value` |  | `"research-data-upload-boxes"` |
-| `_topics.researchDataUploadBoxTopic.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.deadLetterQueue.topic.name` |  | `"kafka_dlq_topic"` |
-| `_topics.deadLetterQueue.topic.value` |  | `"dlq"` |
-| `_topics.deadLetterQueue.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.deadLetterQueueRetry.topic.name` |  | `null` |
-| `_topics.deadLetterQueueRetry.topic.value` |  | `"retry"` |
-| `_topics.deadLetterQueueRetry.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.accessionMapTopic.topic.name` |  | `"accession_map_topic"` |
-| `_topics.accessionMapTopic.topic.value` |  | `"accession-maps"` |
-| `_topics.accessionMapTopic.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.auditRecordTopic.topic.name` |  | `"audit_record_topic"` |
-| `_topics.auditRecordTopic.topic.value` |  | `"audit-records"` |
-| `_topics.auditRecordTopic.type.name` |  | `"audit_record_type"` |
-| `_topics.auditRecordTopic.type.value` |  | `"audit_record_logged"` |
-| `_topics.auditRecordTopic.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.resourceChangeEvent.topic.name` |  | `"resource_change_topic"` |
-| `_topics.resourceChangeEvent.topic.value` |  | `"searchable-resources"` |
-| `_topics.resourceChangeEvent.types` |  | `[{"name": "resource_deletion_type", "value": "searchable_resource_deleted"}, {"name": "resource_upsertion_type", "value": "searchable_resource_upserted"}]` |
-| `_topics.resourceChangeEvent.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.studyEvent.topic.name` |  | `"study_topic"` |
-| `_topics.studyEvent.topic.value` |  | `"studies"` |
-| `_topics.studyEvent.kafkaUser.operations` |  | `["Write"]` |
-| `_consumerGroup.operations` |  | `["Read"]` |
-| `_consumerGroup.resource.patternType` |  | `"literal"` |
-| `_consumerGroup.resource.type` |  | `"group"` |
 | `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
 | `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
 | `kafkaUser.clusterName` |  | `"kafka"` |
@@ -204,5 +173,16 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/g
 | `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
 | `config.workers` | Number of workers processes to run. | `1` |
 | `config.timeout_keep_alive` | The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures. | `90` |
+| `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
+| `config.openapi_url` | Path to get the openapi specification in JSON format. This is relative to the specified host and port. | `"/openapi.json"` |
+| `config.docs_url` | Path to host the swagger documentation. This is relative to the specified host and port. | `"/docs"` |
+| `config.cors_allowed_origins` | A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. | `null` |
+| `config.cors_allow_credentials` | Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. | `null` |
+| `config.cors_allowed_methods` | A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. | `null` |
+| `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. | `null` |
+| `config.cors_exposed_headers` | A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. | `null` |
+| `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"rs"` |
+| `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
+| `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

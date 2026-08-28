@@ -490,11 +490,18 @@ def _parameter_rows(schema: dict, prefix: str = "") -> list[tuple[str, str, obje
     Mirrors _schema_for()'s own recursion rule: a node with `properties` is a
     container (recurse into its children), anything else is a leaf row - which is
     exactly the set of nodes _schema_for() gave a `default` to.
+
+    A key starting with `_` (e.g. `_topics`, `_consumerGroup`) is this repo's own
+    convention for an internal/plumbing value, not something meant to be set
+    directly - skipped here (and everything under it), though it still stays
+    documented in the schema itself for whoever needs the full picture.
     """
     properties = schema.get("properties")
     if properties:
         rows = []
         for key, prop in properties.items():
+            if key.startswith("_"):
+                continue
             path = f"{prefix}.{key}" if prefix else key
             rows.extend(_parameter_rows(prop, path))
         return rows
@@ -505,7 +512,7 @@ def _parameter_rows(schema: dict, prefix: str = "") -> list[tuple[str, str, obje
 
 
 def parameters_table_text(schema: dict) -> str:
-    """A Bitnami-style '| Name | Description | Value |' Markdown table from a schema."""
+    """A '| Name | Description | Value |' Markdown table from a values.schema.json."""
     rows = _parameter_rows(schema)
     lines = ["| Name | Description | Value |", "|------|-------------|-------|"]
     lines += [
@@ -515,11 +522,17 @@ def parameters_table_text(schema: dict) -> str:
     return "\n".join(lines)
 
 
-# Docker Hub rejects (or silently truncates - not worth relying on which) a
-# full_description over this many characters. Leave real headroom below it: a chart
-# whose table lands just under 25000 today grows past it the next time a field gains
-# a longer description, and by then this margin is the only thing standing between
-# "still fits" and "silently different from what's committed".
+# Docker Hub's PATCH API rejects a full_description over this many characters
+# outright (docker/roadmap#475: a validation error, not silent truncation) -
+# confirmed live against docker.io/bitnamicharts/haproxy's actual full_description
+# via the public API, which comes back at exactly 24998 characters ending in the
+# same trim note this file's own note below is modeled on: that content is
+# pre-truncated by Bitnami's own publishing pipeline before the PATCH, the same
+# thing this does, not something Docker Hub does for you server-side. Leave real
+# headroom below it: a chart whose table lands just under 25000 today grows past
+# it the next time a field gains a longer description, and by then this margin is
+# the only thing standing between "still fits" and the release workflow's PATCH
+# call failing outright.
 README_LENGTH_LIMIT = 25000
 README_SAFE_LENGTH = 22000
 

@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `global._topics` | Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters) | `{}` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -112,41 +111,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
 | `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
 | `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
-| `_topics.fileRegisteredEvent.topic.name` |  | `"file_registered_for_download_topic"` |
-| `_topics.fileRegisteredEvent.topic.value` |  | `"downloads"` |
-| `_topics.fileRegisteredEvent.types` |  | `[{"name": "file_registered_for_download_type", "value": "drs_object_registered"}]` |
-| `_topics.fileRegisteredEvent.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.fileDeletedEvent.topic.name` |  | `"file_deleted_topic"` |
-| `_topics.fileDeletedEvent.topic.value` |  | `"file-deletions"` |
-| `_topics.fileDeletedEvent.types` |  | `[{"name": "file_deleted_type", "value": "drs_object_deleted"}]` |
-| `_topics.fileDeletedEvent.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.filesToRegister.topic.name` |  | `"file_internally_registered_topic"` |
-| `_topics.filesToRegister.topic.value` |  | `"internal-registrations"` |
-| `_topics.filesToRegister.types` |  | `[{"name": "file_internally_registered_type", "value": "internal_file_registered"}]` |
-| `_topics.filesToRegister.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.filesToDelete.topic.name` |  | `"file_deletion_request_topic"` |
-| `_topics.filesToDelete.topic.value` |  | `"purges"` |
-| `_topics.filesToDelete.type.name` |  | `"file_deletion_request_type"` |
-| `_topics.filesToDelete.type.value` |  | `"file_deletion_requested"` |
-| `_topics.filesToDelete.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.downloadServed.topic.name` |  | `"download_served_topic"` |
-| `_topics.downloadServed.topic.value` |  | `"downloads"` |
-| `_topics.downloadServed.types` |  | `[{"name": "download_served_type", "value": "drs_object_served"}]` |
-| `_topics.downloadServed.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.unstagedDownload.topic.name` |  | `"files_to_stage_topic"` |
-| `_topics.unstagedDownload.topic.value` |  | `"staging-requests"` |
-| `_topics.unstagedDownload.type.name` |  | `"files_to_stage_type"` |
-| `_topics.unstagedDownload.type.value` |  | `"file_staging_requested"` |
-| `_topics.unstagedDownload.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.deadLetterQueue.topic.name` |  | `"kafka_dlq_topic"` |
-| `_topics.deadLetterQueue.topic.value` |  | `"dlq"` |
-| `_topics.deadLetterQueue.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.deadLetterQueueRetry.topic.name` |  | `null` |
-| `_topics.deadLetterQueueRetry.topic.value` |  | `"retry"` |
-| `_topics.deadLetterQueueRetry.kafkaUser.operations` |  | `["Read"]` |
-| `_consumerGroup.operations` |  | `["Read"]` |
-| `_consumerGroup.resource.patternType` |  | `"literal"` |
-| `_consumerGroup.resource.type` |  | `"group"` |
 | `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
 | `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
 | `kafkaUser.clusterName` |  | `"kafka"` |
@@ -207,5 +171,21 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `config.generate_correlation_id` | A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. | `true` |
 | `config.kafka_max_message_size` | The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size. | `1048576` |
 | `config.kafka_compression_type` | The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio. | `null` |
+| `config.kafka_max_retries` | The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. | `0` |
+| `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
+| `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
+| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
+| `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
+| `config.download_bucket_cache_timeout` | Time in days since last access after which a file present in the download bucket should be unstaged and has to be requested from permanent storage again for the next request. | `7` |
+| `config.staging_speed` | When trying to access a DRS object that is not yet in the download bucket, assume that this many megabytes can be staged per second. | `100` |
+| `config.retry_after_min` | When trying to access a DRS object that is not yet in the download bucket, wait at least this number of seconds before trying again. | `5` |
+| `config.retry_after_max` | When trying to access a DRS object that is not yet in the download bucket, wait at most this number of seconds before trying again. | `300` |
+| `config.auth_algs` | A list of all algorithms used for signing GHGA internal tokens. | `["ES256"]` |
+| `config.auth_check_claims` | A dict of all GHGA internal claims that shall be verified. | `{"work_type": null, "file_id": null, "user_public_crypt4gh_key": null, "iat": null, "exp": null}` |
+| `config.auth_map_claims` | A mapping of claims to attributes in the GHGA auth context. | `{}` |
+| `config.port` | Port to expose the server on the specified host | `8080` |
+| `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
+| `config.workers` | Number of workers processes to run. | `1` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

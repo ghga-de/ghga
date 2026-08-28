@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/a
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `global._topics` | Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters) | `{}` |
 | `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
@@ -112,24 +111,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/a
 | `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
 | `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
 | `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
-| `_topics.authEvents.topic.name` |  | `"auth_topic"` |
-| `_topics.authEvents.topic.value` |  | `"auth"` |
-| `_topics.authEvents.types` |  | `[{"name": "second_factor_recreated_type", "value": "second_factor_recreated"}]` |
-| `_topics.authEvents.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.ivaEvents.topic.name` |  | `"iva_state_changed_topic"` |
-| `_topics.ivaEvents.topic.value` |  | `"ivas"` |
-| `_topics.ivaEvents.types` |  | `[{"name": "iva_state_changed_type", "value": "iva_state_changed"}, {"name": "iva_send_code_type", "value": "iva_send_code"}]` |
-| `_topics.ivaEvents.kafkaUser.operations` |  | `["Write"]` |
-| `_topics.datasetChangeEvent.topic.name` |  | `"dataset_change_topic"` |
-| `_topics.datasetChangeEvent.topic.value` |  | `"metadata-datasets"` |
-| `_topics.datasetChangeEvent.types` |  | `[{"name": "dataset_deletion_type", "value": "dataset_deleted"}, {"name": "dataset_upsertion_type", "value": "dataset_created"}]` |
-| `_topics.datasetChangeEvent.kafkaUser.operations` |  | `["Read"]` |
-| `_topics.userEvents.topic.name` |  | `"user_topic"` |
-| `_topics.userEvents.topic.value` |  | `"users"` |
-| `_topics.userEvents.kafkaUser.operations` |  | `["Write"]` |
-| `_consumerGroup.operations` |  | `["Read"]` |
-| `_consumerGroup.resource.patternType` |  | `"literal"` |
-| `_consumerGroup.resource.type` |  | `"group"` |
 | `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
 | `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
 | `kafkaUser.clusterName` |  | `"kafka"` |
@@ -206,5 +187,14 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/a
 | `config.session_max_lifetime_seconds` | Maximum lifetime of a session in seconds | `43200` |
 | `config.auth_key` | internal public key for the auth service (key pair for auth adapter) | `null` |
 | `config.auth_algs` | A list of all algorithms used for signing GHGA internal tokens. | `["ES256"]` |
+| `config.auth_check_claims` | A dict of all GHGA internal claims that shall be verified. | `{"id": null, "name": null, "email": null, "iat": null, "exp": null}` |
+| `config.auth_map_claims` | A mapping of claims to attributes in the GHGA auth context. | `{}` |
+| `config.port` | Port to expose the server on the specified host | `8080` |
+| `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
+| `config.workers` | Number of workers processes to run. | `1` |
+| `config.timeout_keep_alive` | The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures. | `90` |
+| `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
+| `config.openapi_url` | Path to get the openapi specification in JSON format. This is relative to the specified host and port. | `"/openapi.json"` |
+| `config.docs_url` | Path to host the swagger documentation. This is relative to the specified host and port. | `"/docs"` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.
