@@ -18,6 +18,21 @@
 from pydantic import UUID4, BaseModel
 
 from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
+from rs.constants import (
+    EXC_ID_ACCESSION_MAP_ERROR,
+    EXC_ID_ARCHIVAL_PREREQS_NOT_MET,
+    EXC_ID_BOX_MAX_SIZE_TOO_LOW,
+    EXC_ID_BOX_NOT_FOUND,
+    EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_TITLE_EXISTS,
+    EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_GRANT_NOT_FOUND,
+    EXC_ID_INCOMPLETE_OR_FAILED,
+    EXC_ID_INTERNAL_ERROR,
+    EXC_ID_INVALID_STATE_CHANGE,
+    EXC_ID_NOT_AUTHORIZED,
+    EXC_ID_STUDY_NOT_FOUND,
+)
 
 __all__ = [
     "HttpAccessionMapError",
@@ -44,7 +59,7 @@ class HttpAccessionMapError(HttpCustomExceptionBase):
     accompanying lists are populated for each.
     """
 
-    exception_id = "accessionMapError"
+    exception_id = EXC_ID_ACCESSION_MAP_ERROR
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -79,7 +94,7 @@ class HttpAccessionMapError(HttpCustomExceptionBase):
 class HttpBoxTitleExistsError(HttpCustomExceptionBase):
     """Thrown when a FileUploadBox with the given title already exists."""
 
-    exception_id = "boxTitleExists"
+    exception_id = EXC_ID_BOX_TITLE_EXISTS
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -102,7 +117,7 @@ class HttpArchivalPrereqsError(HttpCustomExceptionBase):
     accessions).
     """
 
-    exception_id = "archivalPrereqsNotMet"
+    exception_id = EXC_ID_ARCHIVAL_PREREQS_NOT_MET
 
     def __init__(self, *, status_code: int = 409):
         """Construct message and init the exception."""
@@ -116,7 +131,7 @@ class HttpArchivalPrereqsError(HttpCustomExceptionBase):
 class HttpBoxMaxSizeTooLowError(HttpCustomExceptionBase):
     """Thrown when the requested max size is smaller than bytes already uploaded."""
 
-    exception_id = "boxMaxSizeTooLow"
+    exception_id = EXC_ID_BOX_MAX_SIZE_TOO_LOW
 
     def __init__(self, *, status_code: int = 409):
         """Construct message and init the exception."""
@@ -132,7 +147,7 @@ class HttpBoxMaxSizeTooLowError(HttpCustomExceptionBase):
 class HttpStateChangeError(HttpCustomExceptionBase):
     """Thrown when the requested box state transition is not permitted."""
 
-    exception_id = "invalidStateChange"
+    exception_id = EXC_ID_INVALID_STATE_CHANGE
 
     def __init__(self, *, status_code: int = 409):
         """Construct message and init the exception."""
@@ -146,7 +161,7 @@ class HttpStateChangeError(HttpCustomExceptionBase):
 class HttpBoxVersionError(HttpCustomExceptionBase):
     """Thrown when a request references an outdated resource version."""
 
-    exception_id = "boxVersionOutdated"
+    exception_id = EXC_ID_BOX_VERSION_OUTDATED
 
     def __init__(self, *, status_code: int = 409):
         """Construct message and init the exception."""
@@ -160,7 +175,7 @@ class HttpBoxVersionError(HttpCustomExceptionBase):
 class HttpBoxStateError(HttpCustomExceptionBase):
     """Thrown when an operation is incompatible with the box's current state."""
 
-    exception_id = "boxStateError"
+    exception_id = EXC_ID_BOX_STATE_ERROR
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -179,7 +194,7 @@ class HttpBoxStateError(HttpCustomExceptionBase):
 class HttpBoxNotFoundError(HttpCustomExceptionBase):
     """Thrown when a FileUploadBox with given ID could not be found."""
 
-    exception_id = "boxNotFound"
+    exception_id = EXC_ID_BOX_NOT_FOUND
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -198,7 +213,7 @@ class HttpBoxNotFoundError(HttpCustomExceptionBase):
 class HttpGrantNotFoundError(HttpCustomExceptionBase):
     """Thrown when an upload access grant with given ID could not be found."""
 
-    exception_id = "grantNotFound"
+    exception_id = EXC_ID_GRANT_NOT_FOUND
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -217,7 +232,7 @@ class HttpGrantNotFoundError(HttpCustomExceptionBase):
 class HttpStudyNotFoundError(HttpCustomExceptionBase):
     """Thrown when a study with given ID could not be found."""
 
-    exception_id = "studyNotFound"
+    exception_id = EXC_ID_STUDY_NOT_FOUND
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -236,7 +251,7 @@ class HttpStudyNotFoundError(HttpCustomExceptionBase):
 class HttpNotAuthorizedError(HttpCustomExceptionBase):
     """Thrown when the user is not authorized to perform the requested action."""
 
-    exception_id = "notAuthorized"
+    exception_id = EXC_ID_NOT_AUTHORIZED
 
     def __init__(self, *, status_code: int = 403):
         """Construct message and init the exception."""
@@ -252,7 +267,7 @@ class HttpIncompleteOrFailedError(HttpCustomExceptionBase):
     and/or files that failed re-encryption and need attention.
     """
 
-    exception_id = "incompleteOrFailed"
+    exception_id = EXC_ID_INCOMPLETE_OR_FAILED
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -284,7 +299,7 @@ class HttpIncompleteOrFailedError(HttpCustomExceptionBase):
 class HttpInternalError(HttpCustomExceptionBase):
     """Thrown for otherwise unhandled exceptions"""
 
-    exception_id = "internalError"
+    exception_id = EXC_ID_INTERNAL_ERROR
 
     def __init__(
         self,
