@@ -156,41 +156,55 @@
       "properties": {
         "imageRegistry": {
           "type": "string",
-          "description": "Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper)"
+          "description": "Registry override applied to every image reference in the umbrella (read by the vendored bitnami `common.images.image` helper)",
+          "default": ""
         },
         "imagePullSecrets": {
           "type": "array",
-          "description": "Pull secrets applied to every workload in the umbrella (same helper as above)"
+          "description": "Pull secrets applied to every workload in the umbrella (same helper as above)",
+          "default": []
         },
         "storageClass": {
           "type": "string",
-          "description": "Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here)"
+          "description": "Default StorageClass for any PVC in the umbrella (bitnami convention; this chart renders no PVC template itself, so currently unused here)",
+          "default": ""
         },
         "_topics": {
           "type": "object",
           "description": "Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters)",
-          "additionalProperties": true
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },
     "command": {
       "type": "array",
-      "description": "This is the actual Kubernetes `command` field"
+      "description": "This is the actual Kubernetes `command` field",
+      "default": [
+        "sh",
+        "-c"
+      ]
     },
     "commandPrefix": {
       "type": "string",
-      "description": "Path prefix prepended to `executable` before it's rendered into `command`/`args`"
+      "description": "Path prefix prepended to `executable` before it's rendered into `command`/`args`",
+      "default": ""
     },
     "commandStyle": {
       "type": "string",
-      "description": "\"shell\": wrap executable+args in `command` via a shell string (needs a shell in the image). \"exec\": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images."
+      "description": "\"shell\": wrap executable+args in `command` via a shell string (needs a shell in the image). \"exec\": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images.",
+      "default": "exec"
     },
     "executable": {
       "type": "string",
-      "description": "Executable name and arguments (will be combined into a shell command)"
+      "description": "Executable name and arguments (will be combined into a shell command)",
+      "default": "ucs"
     },
     "executableArgs": {
-      "type": "array"
+      "type": "array",
+      "default": [
+        "run-rest"
+      ]
     },
     "deployment": {
       "type": "object",
@@ -198,7 +212,8 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render the Deployment resource; disable for Job/CronJob-only charts"
+          "description": "Render the Deployment resource; disable for Job/CronJob-only charts",
+          "default": true
         }
       }
     },
@@ -208,7 +223,8 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render a one-off Job resource alongside (or instead of) the Deployment"
+          "description": "Render a one-off Job resource alongside (or instead of) the Deployment",
+          "default": false
         }
       }
     },
@@ -222,7 +238,8 @@
           "additionalProperties": true,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": "boolean",
+              "default": false
             }
           }
         }
@@ -230,39 +247,47 @@
     },
     "nameOverride": {
       "type": "string",
-      "description": "Override just the chart-name portion of generated resource names (bitnami `common.names.name` convention)"
+      "description": "Override just the chart-name portion of generated resource names (bitnami `common.names.name` convention)",
+      "default": ""
     },
     "fullnameOverride": {
       "type": "string",
-      "description": "Override the entire generated resource name, bypassing the `<release>-<chart>` convention (bitnami `common.names.fullname`)"
+      "description": "Override the entire generated resource name, bypassing the `<release>-<chart>` convention (bitnami `common.names.fullname`)",
+      "default": ""
     },
     "namespaceOverride": {
       "type": "string",
-      "description": "Override the namespace resources render into instead of `.Release.Namespace` (bitnami `common.names.namespace`)"
+      "description": "Override the namespace resources render into instead of `.Release.Namespace` (bitnami `common.names.namespace`)",
+      "default": ""
     },
     "clusterDomain": {
       "type": "string",
-      "description": "Cluster DNS domain suffix (bitnami convention); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here"
+      "description": "Cluster DNS domain suffix (bitnami convention); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here",
+      "default": "cluster.local"
     },
     "annotations": {
       "type": "object",
       "description": "Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below)",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "labels": {
       "type": "object",
       "description": "Extra labels added to the same resources' own metadata (narrower reach than commonLabels below)",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "commonLabels": {
       "type": "object",
       "description": "Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe)",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "commonAnnotations": {
       "type": "object",
       "description": "Annotations merged onto the same broad set of resources as commonLabels",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "image": {
       "type": "object",
@@ -270,40 +295,49 @@
       "properties": {
         "registry": {
           "type": "string",
-          "description": "Default image registry; overridden by global.imageRegistry when set"
+          "description": "Default image registry; overridden by global.imageRegistry when set",
+          "default": "docker.io"
         },
         "repository": {
           "type": "string",
-          "description": "Image repository path (create_charts.py fills this in per member)"
+          "description": "Image repository path (create_charts.py fills this in per member)",
+          "default": "ghga/ucs"
         },
         "tag": {
           "type": "string",
-          "description": "Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004)"
+          "description": "Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004)",
+          "default": ""
         },
         "digest": {
           "type": "string",
-          "description": "Pin the image by digest instead of tag, when set (takes precedence in the bitnami `common.images.image` helper)"
+          "description": "Pin the image by digest instead of tag, when set (takes precedence in the bitnami `common.images.image` helper)",
+          "default": ""
         },
         "pullPolicy": {
-          "description": "imagePullPolicy override; null defaults to Always for a `latest` tag, IfNotPresent otherwise"
+          "description": "imagePullPolicy override; null defaults to Always for a `latest` tag, IfNotPresent otherwise",
+          "default": null
         },
         "pullSecrets": {
           "type": "array",
-          "description": "Extra pull secrets for just this image reference"
+          "description": "Extra pull secrets for just this image reference",
+          "default": []
         }
       }
     },
     "replicaCount": {
       "type": "number",
-      "description": "Deployment replica count; ignored when autoscaling.enabled"
+      "description": "Deployment replica count; ignored when autoscaling.enabled",
+      "default": 1
     },
     "revisionHistoryLimit": {
       "type": "number",
-      "description": "Number of old ReplicaSets Kubernetes keeps around for rollback"
+      "description": "Number of old ReplicaSets Kubernetes keeps around for rollback",
+      "default": 1
     },
     "shareProcessNamespace": {
       "type": "boolean",
-      "description": "Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID)"
+      "description": "Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID)",
+      "default": false
     },
     "podSecurityContext": {
       "type": "object",
@@ -311,13 +345,15 @@
       "properties": {
         "fsGroup": {
           "type": "number",
-          "description": "Group ID Kubernetes chowns mounted volumes to"
+          "description": "Group ID Kubernetes chowns mounted volumes to",
+          "default": 1000
         }
       }
     },
     "initContainers": {
       "type": "array",
-      "description": "Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled)"
+      "description": "Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled)",
+      "default": []
     },
     "migrationInitContainer": {
       "type": "object",
@@ -325,54 +361,66 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Run a dedicated init container for DB migrations before the main container starts"
+          "description": "Run a dedicated init container for DB migrations before the main container starts",
+          "default": false
         },
         "image": {
           "type": "string",
-          "description": "Image for the migration init container; defaults to the main container's image when empty"
+          "description": "Image for the migration init container; defaults to the main container's image when empty",
+          "default": ""
         },
         "executable": {
           "type": "string",
-          "description": "Executable name and arguments run inside the migration init container"
+          "description": "Executable name and arguments run inside the migration init container",
+          "default": ""
         },
         "executableArgs": {
-          "type": "array"
+          "type": "array",
+          "default": []
         },
         "env": {
           "type": "array",
-          "description": "Extra env vars for just the migration init container"
+          "description": "Extra env vars for just the migration init container",
+          "default": []
         },
         "resources": {
           "type": "object",
-          "additionalProperties": true
+          "additionalProperties": true,
+          "default": {}
         },
         "volumeMounts": {
           "type": "array",
-          "description": "Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets)"
+          "description": "Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets)",
+          "default": []
         }
       }
     },
     "hostAliases": {
       "type": "array",
-      "description": "Extra `/etc/hosts` entries for the pod"
+      "description": "Extra `/etc/hosts` entries for the pod",
+      "default": []
     },
     "podLabels": {
       "type": "object",
       "description": "Labels applied only to the Pod template (Deployment/CronJob/Job pod spec), distinct from `labels`/`commonLabels` on the parent resource",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "podAnnotations": {
       "type": "object",
       "description": "Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "podAffinityPreset": {
       "type": "string",
-      "description": "Bitnami pod-affinity preset name (e.g. \"soft\"/\"hard\"); empty disables it"
+      "description": "Bitnami pod-affinity preset name (e.g. \"soft\"/\"hard\"); empty disables it",
+      "default": ""
     },
     "podAntiAffinityPreset": {
       "type": "string",
-      "description": "Bitnami pod-anti-affinity preset name; \"soft\" spreads replicas across nodes when possible"
+      "description": "Bitnami pod-anti-affinity preset name; \"soft\" spreads replicas across nodes when possible",
+      "default": "soft"
     },
     "nodeAffinityPreset": {
       "type": "object",
@@ -380,47 +428,57 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "Bitnami node-affinity preset type (\"soft\"/\"hard\"); empty disables it"
+          "description": "Bitnami node-affinity preset type (\"soft\"/\"hard\"); empty disables it",
+          "default": ""
         },
         "key": {
           "type": "string",
-          "description": "Node label key to match"
+          "description": "Node label key to match",
+          "default": ""
         },
         "values": {
           "type": "array",
-          "description": "Node label values to match"
+          "description": "Node label values to match",
+          "default": []
         }
       }
     },
     "affinity": {
       "type": "object",
       "description": "Raw Kubernetes affinity spec; overrides all three presets above when set",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "nodeSelector": {
       "type": "object",
       "description": "Plain node-selector labels for pod scheduling",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "tolerations": {
       "type": "array",
-      "description": "Taints the pod tolerates"
+      "description": "Taints the pod tolerates",
+      "default": []
     },
     "topologySpreadConstraints": {
       "type": "array",
-      "description": "Kubernetes pod topology spread constraints"
+      "description": "Kubernetes pod topology spread constraints",
+      "default": []
     },
     "priorityClassName": {
       "type": "string",
-      "description": "PriorityClass to schedule the pod with"
+      "description": "PriorityClass to schedule the pod with",
+      "default": ""
     },
     "schedulerName": {
       "type": "string",
-      "description": "Alternate Kubernetes scheduler to use"
+      "description": "Alternate Kubernetes scheduler to use",
+      "default": ""
     },
     "terminationGracePeriodSeconds": {
       "type": "string",
-      "description": "Grace period before SIGKILL on pod termination"
+      "description": "Grace period before SIGKILL on pod termination",
+      "default": ""
     },
     "updateStrategy": {
       "type": "object",
@@ -428,13 +486,15 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "Deployment rollout strategy (e.g. RollingUpdate/Recreate)"
+          "description": "Deployment rollout strategy (e.g. RollingUpdate/Recreate)",
+          "default": "RollingUpdate"
         }
       }
     },
     "podRestartPolicy": {
       "type": "string",
-      "description": "Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this)"
+      "description": "Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this)",
+      "default": "Always"
     },
     "ports": {
       "type": "object",
@@ -442,10 +502,18 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render the container's `ports` list below"
+          "description": "Render the container's `ports` list below",
+          "default": false
         },
         "ports": {
-          "type": "array"
+          "type": "array",
+          "default": [
+            {
+              "name": "http",
+              "containerPort": 8080,
+              "protocol": "TCP"
+            }
+          ]
         }
       }
     },
@@ -455,22 +523,26 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render a container livenessProbe from this block (minus `enabled`)"
+          "description": "Render a container livenessProbe from this block (minus `enabled`)",
+          "default": false
         },
         "tcpSocket": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
             "port": {
-              "type": "number"
+              "type": "number",
+              "default": 8080
             }
           }
         },
         "initialDelaySeconds": {
-          "type": "number"
+          "type": "number",
+          "default": 30
         },
         "periodSeconds": {
-          "type": "number"
+          "type": "number",
+          "default": 15
         }
       }
     },
@@ -480,22 +552,26 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render a container readinessProbe from this block (minus `enabled`)"
+          "description": "Render a container readinessProbe from this block (minus `enabled`)",
+          "default": false
         },
         "tcpSocket": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
             "port": {
-              "type": "number"
+              "type": "number",
+              "default": 8080
             }
           }
         },
         "initialDelaySeconds": {
-          "type": "number"
+          "type": "number",
+          "default": 30
         },
         "periodSeconds": {
-          "type": "number"
+          "type": "number",
+          "default": 15
         }
       }
     },
@@ -505,7 +581,8 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render a container startupProbe from this block (minus `enabled`)"
+          "description": "Render a container startupProbe from this block (minus `enabled`)",
+          "default": false
         }
       }
     },
@@ -515,17 +592,22 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render the container securityContext from this block (minus `enabled`)"
+          "description": "Render the container securityContext from this block (minus `enabled`)",
+          "default": true
         },
         "runAsUser": {
-          "type": "number"
+          "type": "number",
+          "default": 1000
         },
         "capabilities": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
             "drop": {
-              "type": "array"
+              "type": "array",
+              "default": [
+                "ALL"
+              ]
             }
           }
         },
@@ -534,25 +616,30 @@
           "additionalProperties": true,
           "properties": {
             "type": {
-              "type": "string"
+              "type": "string",
+              "default": "RuntimeDefault"
             }
           }
         },
         "readOnlyRootFilesystem": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "runAsNonRoot": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "allowPrivilegeEscalation": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         }
       }
     },
     "lifecycleHooks": {
       "type": "object",
       "description": "Container lifecycle hooks (postStart/preStop)",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "default": {}
     },
     "resources": {
       "type": "object",
@@ -563,10 +650,12 @@
           "additionalProperties": true,
           "properties": {
             "cpu": {
-              "type": "string"
+              "type": "string",
+              "default": "1500m"
             },
             "memory": {
-              "type": "string"
+              "type": "string",
+              "default": "2048M"
             }
           }
         },
@@ -575,10 +664,12 @@
           "additionalProperties": true,
           "properties": {
             "cpu": {
-              "type": "string"
+              "type": "string",
+              "default": "1000m"
             },
             "memory": {
-              "type": "string"
+              "type": "string",
+              "default": "1024M"
             }
           }
         }
@@ -586,27 +677,33 @@
     },
     "extraVolumes": {
       "type": "array",
-      "description": "Extra volumes for the pod (on top of the config/kafka-secret volumes this chart already renders)"
+      "description": "Extra volumes for the pod (on top of the config/kafka-secret volumes this chart already renders)",
+      "default": []
     },
     "extraVolumeMounts": {
       "type": "array",
-      "description": "Extra volume mounts for the main container (on top of the shared ones every container gets)"
+      "description": "Extra volume mounts for the main container (on top of the shared ones every container gets)",
+      "default": []
     },
     "sidecars": {
       "type": "array",
-      "description": "Extra full container specs appended alongside the main container"
+      "description": "Extra full container specs appended alongside the main container",
+      "default": []
     },
     "envVars": {
       "type": "array",
-      "description": "Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled)"
+      "description": "Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled)",
+      "default": []
     },
     "envVarsConfigMap": {
       "type": "string",
-      "description": "Name of a ConfigMap to load as bulk env vars via `envFrom`"
+      "description": "Name of a ConfigMap to load as bulk env vars via `envFrom`",
+      "default": ""
     },
     "envVarsSecret": {
       "type": "string",
-      "description": "Name of a Secret to load as bulk env vars via `envFrom`"
+      "description": "Name of a Secret to load as bulk env vars via `envFrom`",
+      "default": ""
     },
     "service": {
       "type": "object",
@@ -614,13 +711,23 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render the Service resource"
+          "description": "Render the Service resource",
+          "default": true
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "default": "ClusterIP"
         },
         "ports": {
-          "type": "array"
+          "type": "array",
+          "default": [
+            {
+              "name": "http",
+              "protocol": "TCP",
+              "port": 8080,
+              "targetPort": "http"
+            }
+          ]
         }
       }
     },
@@ -630,7 +737,8 @@
       "properties": {
         "create": {
           "type": "boolean",
-          "description": "Create a dedicated ServiceAccount for this release"
+          "description": "Create a dedicated ServiceAccount for this release",
+          "default": true
         }
       }
     },
@@ -640,31 +748,38 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render a HorizontalPodAutoscaler targeting the Deployment"
+          "description": "Render a HorizontalPodAutoscaler targeting the Deployment",
+          "default": false
         },
         "minReplicas": {
-          "type": "number"
+          "type": "number",
+          "default": 3
         },
         "maxReplicas": {
-          "type": "number"
+          "type": "number",
+          "default": 5
         },
         "targetCPU": {
           "type": "number",
-          "description": "Target average CPU utilization percentage; omit/empty to skip this metric"
+          "description": "Target average CPU utilization percentage; omit/empty to skip this metric",
+          "default": 80
         },
         "targetMemory": {
           "type": "number",
-          "description": "Target average memory utilization percentage; omit/empty to skip this metric"
+          "description": "Target average memory utilization percentage; omit/empty to skip this metric",
+          "default": 80
         },
         "metrics": {
           "type": "array",
-          "description": "Extra raw HPA metric entries appended after CPU/memory"
+          "description": "Extra raw HPA metric entries appended after CPU/memory",
+          "default": []
         }
       }
     },
     "topicPrefix": {
       "type": "string",
-      "description": "Prefix prepended to every Kafka topic name this chart renders/references"
+      "description": "Prefix prepended to every Kafka topic name this chart renders/references",
+      "default": ""
     },
     "_topics": {
       "type": "object",
@@ -680,22 +795,37 @@
               "additionalProperties": true,
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file_interrogations_topic"
                 },
                 "value": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "interrogations"
                 }
               }
             },
             "types": {
-              "type": "array"
+              "type": "array",
+              "default": [
+                {
+                  "name": "interrogation_success_type",
+                  "value": "file_interrogation_success"
+                },
+                {
+                  "name": "interrogation_failure_type",
+                  "value": "file_interrogation_failed"
+                }
+              ]
             },
             "kafkaUser": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
                 "operations": {
-                  "type": "array"
+                  "type": "array",
+                  "default": [
+                    "Read"
+                  ]
                 }
               }
             }
@@ -710,22 +840,33 @@
               "additionalProperties": true,
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file_internally_registered_topic"
                 },
                 "value": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "internal-registrations"
                 }
               }
             },
             "types": {
-              "type": "array"
+              "type": "array",
+              "default": [
+                {
+                  "name": "file_internally_registered_type",
+                  "value": "internal_file_registered"
+                }
+              ]
             },
             "kafkaUser": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
                 "operations": {
-                  "type": "array"
+                  "type": "array",
+                  "default": [
+                    "Read"
+                  ]
                 }
               }
             }
@@ -740,10 +881,12 @@
               "additionalProperties": true,
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file_deletion_request_topic"
                 },
                 "value": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "purges"
                 }
               }
             },
@@ -752,10 +895,12 @@
               "additionalProperties": true,
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file_deletion_request_type"
                 },
                 "value": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file_deletion_requested"
                 }
               }
             },
@@ -764,7 +909,10 @@
               "additionalProperties": true,
               "properties": {
                 "operations": {
-                  "type": "array"
+                  "type": "array",
+                  "default": [
+                    "Read"
+                  ]
                 }
               }
             }
@@ -779,10 +927,12 @@
               "additionalProperties": true,
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "kafka_dlq_topic"
                 },
                 "value": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "dlq"
                 }
               }
             },
@@ -791,7 +941,10 @@
               "additionalProperties": true,
               "properties": {
                 "operations": {
-                  "type": "array"
+                  "type": "array",
+                  "default": [
+                    "Write"
+                  ]
                 }
               }
             }
@@ -805,9 +958,12 @@
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "name": {},
+                "name": {
+                  "default": null
+                },
                 "value": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "retry"
                 }
               }
             },
@@ -816,7 +972,10 @@
               "additionalProperties": true,
               "properties": {
                 "operations": {
-                  "type": "array"
+                  "type": "array",
+                  "default": [
+                    "Read"
+                  ]
                 }
               }
             }
@@ -831,10 +990,12 @@
               "additionalProperties": true,
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file_upload_topic"
                 },
                 "value": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file-uploads"
                 }
               }
             },
@@ -843,7 +1004,10 @@
               "additionalProperties": true,
               "properties": {
                 "operations": {
-                  "type": "array"
+                  "type": "array",
+                  "default": [
+                    "Write"
+                  ]
                 }
               }
             }
@@ -858,10 +1022,12 @@
               "additionalProperties": true,
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file_upload_box_topic"
                 },
                 "value": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "file-upload-boxes"
                 }
               }
             },
@@ -870,7 +1036,10 @@
               "additionalProperties": true,
               "properties": {
                 "operations": {
-                  "type": "array"
+                  "type": "array",
+                  "default": [
+                    "Write"
+                  ]
                 }
               }
             }
@@ -884,17 +1053,22 @@
       "additionalProperties": true,
       "properties": {
         "operations": {
-          "type": "array"
+          "type": "array",
+          "default": [
+            "Read"
+          ]
         },
         "resource": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
             "patternType": {
-              "type": "string"
+              "type": "string",
+              "default": "literal"
             },
             "type": {
-              "type": "string"
+              "type": "string",
+              "default": "group"
             }
           }
         }
@@ -902,7 +1076,8 @@
     },
     "kafkaTopicsParameters": {
       "type": "boolean",
-      "description": "Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config"
+      "description": "Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config",
+      "default": true
     },
     "kafkaUser": {
       "type": "object",
@@ -910,17 +1085,21 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup)"
+          "description": "Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup)",
+          "default": false
         },
         "clusterName": {
-          "type": "string"
+          "type": "string",
+          "default": "kafka"
         },
         "clusterNamespace": {
-          "type": "string"
+          "type": "string",
+          "default": "strimzi"
         },
         "caCertSecretName": {
           "type": "string",
-          "description": "Secret holding the Kafka cluster's CA cert, mounted alongside the user's own TLS secret"
+          "description": "Secret holding the Kafka cluster's CA cert, mounted alongside the user's own TLS secret",
+          "default": "kafka-cluster-ca-cert"
         }
       }
     },
@@ -930,7 +1109,8 @@
       "properties": {
         "dbName": {
           "type": "string",
-          "description": "Database name; combined with dbNamePrefix and injected into config.yaml as db_name. NOTE: mongodb.dbName is the fallback used when the top-level dbName (set per-member, not defaulted here) is empty"
+          "description": "Database name; combined with dbNamePrefix and injected into config.yaml as db_name. NOTE: mongodb.dbName is the fallback used when the top-level dbName (set per-member, not defaulted here) is empty",
+          "default": "upload-controller"
         },
         "service": {
           "type": "object",
@@ -938,10 +1118,12 @@
           "properties": {
             "namespace": {
               "type": "string",
-              "description": "Together with mongodb.service.name and cluster.name, forms the Vault KV path this chart reads a dynamic MongoDB credential from"
+              "description": "Together with mongodb.service.name and cluster.name, forms the Vault KV path this chart reads a dynamic MongoDB credential from",
+              "default": "mongodb"
             },
             "name": {
-              "type": "string"
+              "type": "string",
+              "default": "mongodb"
             }
           }
         }
@@ -949,11 +1131,13 @@
     },
     "apiBasePath": {
       "type": "string",
-      "description": "Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path"
+      "description": "Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path",
+      "default": "/ucs/"
     },
     "serviceName": {
       "type": "string",
-      "description": "Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name"
+      "description": "Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name",
+      "default": "ucs-consumer"
     },
     "serviceInstanceId": {
       "type": "object",
@@ -961,7 +1145,8 @@
       "properties": {
         "fromPodName": {
           "type": "boolean",
-          "description": "Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own \"uniquely identifies this instance\" contract)."
+          "description": "Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own \"uniquely identifies this instance\" contract).",
+          "default": false
         }
       }
     },
@@ -971,13 +1156,16 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render the ConfigMap holding config.yaml and mount it into the container"
+          "description": "Render the ConfigMap holding config.yaml and mount it into the container",
+          "default": true
         },
         "mountPath": {
-          "type": "string"
+          "type": "string",
+          "default": "/etc/config.yaml"
         },
         "subPath": {
-          "type": "string"
+          "type": "string",
+          "default": "config.yaml"
         },
         "envVar": {
           "type": "object",
@@ -985,7 +1173,8 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath"
+              "description": "Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath",
+              "default": true
             }
           }
         }
@@ -1542,15 +1731,18 @@
     },
     "configPrefix": {
       "type": "string",
-      "description": "Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name"
+      "description": "Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name",
+      "default": "ucs"
     },
     "enableServiceLinks": {
       "type": "boolean",
-      "description": "Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace"
+      "description": "Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace",
+      "default": true
     },
     "successfulJobsHistoryLimit": {
       "type": "number",
-      "description": "Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own"
+      "description": "Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own",
+      "default": 5
     },
     "environment": {
       "type": "object",
@@ -1558,7 +1750,8 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Identifies which environment this release belongs to; part of the Vault secret path for the \"service\" secrets bundle"
+          "description": "Identifies which environment this release belongs to; part of the Vault secret path for the \"service\" secrets bundle",
+          "default": "default"
         }
       }
     },
@@ -1568,7 +1761,8 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials"
+          "description": "Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials",
+          "default": "default"
         }
       }
     },
@@ -1579,18 +1773,22 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render an HTTPRoute (Gateway API, ADR-0012) routing to this service"
+          "description": "Render an HTTPRoute (Gateway API, ADR-0012) routing to this service",
+          "default": false
         },
         "port": {
-          "type": "number"
+          "type": "number",
+          "default": 8080
         },
         "rewritePath": {
           "type": "boolean",
-          "description": "strip the base path before forwarding. Services that reconstruct their own public URLs (an OIDC discovery document, for example) need the full path instead and rely on api_root_path to route - set this to false for them."
+          "description": "strip the base path before forwarding. Services that reconstruct their own public URLs (an OIDC discovery document, for example) need the full path instead and rely on api_root_path to route - set this to false for them.",
+          "default": true
         },
         "rules": {
           "type": "array",
-          "description": "Extra HTTPRoute rules rendered before the generated default rule (deduplicated)"
+          "description": "Extra HTTPRoute rules rendered before the generated default rule (deduplicated)",
+          "default": []
         }
       }
     },
@@ -1600,17 +1798,20 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render a Prometheus-Operator Probe CR blackbox-checking this service over HTTP"
+          "description": "Render a Prometheus-Operator Probe CR blackbox-checking this service over HTTP",
+          "default": false
         },
         "hostname": {
           "type": "string",
-          "description": "Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL)"
+          "description": "Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL)",
+          "default": "default.ghga.dev"
         }
       }
     },
     "healthEndpoint": {
       "type": "string",
-      "description": "Path appended to the probe target URL (after the API base path)"
+      "description": "Path appended to the probe target URL (after the API base path)",
+      "default": "/health"
     },
     "destinationRule": {
       "type": "object",
@@ -1618,7 +1819,8 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render an Istio DestinationRule for this service"
+          "description": "Render an Istio DestinationRule for this service",
+          "default": false
         }
       }
     },
@@ -1628,17 +1830,32 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render a NetworkPolicy restricting ingress traffic to the pod"
+          "description": "Render a NetworkPolicy restricting ingress traffic to the pod",
+          "default": false
         },
         "ingress": {
           "type": "array",
-          "description": "Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports"
+          "description": "Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports",
+          "default": [
+            {
+              "from": [
+                {
+                  "namespaceSelector": {
+                    "matchLabels": {
+                      "ghga-ingress": "allow"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       }
     },
     "strimziApiVersion": {
       "type": "string",
-      "description": "apiVersion used for the rendered Strimzi KafkaUser resource"
+      "description": "apiVersion used for the rendered Strimzi KafkaUser resource",
+      "default": "kafka.strimzi.io/v1"
     },
     "vaultAgent": {
       "type": "object",
@@ -1646,7 +1863,8 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container"
+          "description": "Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container",
+          "default": false
         },
         "annotations": {
           "type": "object",
@@ -1654,52 +1872,65 @@
           "additionalProperties": true,
           "properties": {
             "vault.hashicorp.com/tls-skip-verify": {
-              "type": "string"
+              "type": "string",
+              "default": "false"
             },
             "vault.hashicorp.com/agent-inject": {
-              "type": "string"
+              "type": "string",
+              "default": "true"
             },
             "vault.hashicorp.com/agent-init-first": {
-              "type": "string"
+              "type": "string",
+              "default": "true"
             },
             "vault.hashicorp.com/agent-cache-enable": {
-              "type": "string"
+              "type": "string",
+              "default": "true"
             },
             "vault.hashicorp.com/agent-pre-populate-only": {
-              "type": "string"
+              "type": "string",
+              "default": "false"
             },
             "vault.hashicorp.com/agent-run-as-same-user": {
-              "type": "string"
+              "type": "string",
+              "default": "true"
             }
           }
         },
         "role": {
           "type": "string",
-          "description": "Vault auth role to assume; defaults to the release name when empty"
+          "description": "Vault auth role to assume; defaults to the release name when empty",
+          "default": ""
         },
         "rolePrefix": {
           "type": "string",
-          "description": "Prefix prepended to the resolved role name above"
+          "description": "Prefix prepended to the resolved role name above",
+          "default": ""
         },
         "caCert": {
           "type": "string",
-          "description": "Path to a custom CA cert for Vault TLS verification"
+          "description": "Path to a custom CA cert for Vault TLS verification",
+          "default": ""
         },
         "tlsSecret": {
           "type": "string",
-          "description": "Kubernetes secret providing the Vault Agent's TLS material"
+          "description": "Kubernetes secret providing the Vault Agent's TLS material",
+          "default": ""
         },
         "service": {
           "type": "string",
-          "description": "Override the Vault service address the agent talks to"
+          "description": "Override the Vault service address the agent talks to",
+          "default": ""
         },
         "tlsServerName": {
           "type": "string",
-          "description": "TLS server name override for the Vault connection"
+          "description": "TLS server name override for the Vault connection",
+          "default": ""
         },
         "pgrepPattern": {
           "type": "string",
-          "description": "Process name the Agent's \"kill -TERM\" hook searches for to restart the app on secret rotation"
+          "description": "Process name the Agent's \"kill -TERM\" hook searches for to restart the app on secret rotation",
+          "default": "python"
         },
         "secrets": {
           "type": "object",
@@ -1708,7 +1939,8 @@
             "generic": {
               "type": "object",
               "description": "Arbitrary Vault KV paths to inject as individual env vars, keyed by name; each entry needs path/parameterName (and optionally dataKey)",
-              "additionalProperties": true
+              "additionalProperties": true,
+              "default": {}
             },
             "mongodb": {
               "type": "object",
@@ -1716,15 +1948,18 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "description": "Inject a MongoDB connection string built from a Vault-issued dynamic credential"
+                  "description": "Inject a MongoDB connection string built from a Vault-issued dynamic credential",
+                  "default": false
                 },
                 "secretPath": {
                   "type": "string",
-                  "description": "Vault KV path to read the credential from; computed from mongodb.service.{namespace,name} + cluster.name when empty"
+                  "description": "Vault KV path to read the credential from; computed from mongodb.service.{namespace,name} + cluster.name when empty",
+                  "default": ""
                 },
                 "connectionString": {
                   "type": "string",
-                  "description": "Connection-string template; {{username}}/{{password}} are substituted by Vault's own templating, not Helm's"
+                  "description": "Connection-string template; {{username}}/{{password}} are substituted by Vault's own templating, not Helm's",
+                  "default": "mongodb://{{username}}:{{password}}@mongodb:27017/admin"
                 }
               }
             },
@@ -1734,14 +1969,17 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "description": "Inject every key/value pair from one Vault secret as env vars"
+                  "description": "Inject every key/value pair from one Vault secret as env vars",
+                  "default": false
                 },
                 "secretPath": {
                   "type": "string",
-                  "description": "Vault KV path to read from; computed from pathPrefix + environment.name + the release name when empty"
+                  "description": "Vault KV path to read from; computed from pathPrefix + environment.name + the release name when empty",
+                  "default": ""
                 },
                 "pathPrefix": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "operational-secrets/data/unique/apps/archive"
                 }
               }
             },
@@ -1751,25 +1989,31 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "description": "Inject GHGA's shared internal Crypt4GH public key"
+                  "description": "Inject GHGA's shared internal Crypt4GH public key",
+                  "default": false
                 },
                 "secretPath": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
                 },
                 "mountPath": {
                   "type": "string",
-                  "description": "Where to write the key when renderToFile is true"
+                  "description": "Where to write the key when renderToFile is true",
+                  "default": "/keys/crypt4gh-internal/crypt4gh.pub"
                 },
                 "dataKey": {
                   "type": "string",
-                  "description": "Field name to read within the Vault secret"
+                  "description": "Field name to read within the Vault secret",
+                  "default": "crypt4gh.pub"
                 },
                 "renderToFile": {
                   "type": "boolean",
-                  "description": "true: write to mountPath as a file. false: inject as an env var named parameterName instead"
+                  "description": "true: write to mountPath as a file. false: inject as an env var named parameterName instead",
+                  "default": true
                 },
                 "parameterName": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "CRYPT4GH_PUBLIC_KEY"
                 }
               }
             },
@@ -1779,22 +2023,28 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "description": "Inject GHGA's shared internal Crypt4GH private key (same fields as crypt4ghInternalPub above)"
+                  "description": "Inject GHGA's shared internal Crypt4GH private key (same fields as crypt4ghInternalPub above)",
+                  "default": false
                 },
                 "secretPath": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
                 },
                 "mountPath": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "/keys/crypt4gh-internal/crypt4gh.sec"
                 },
                 "dataKey": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "crypt4gh.sec"
                 },
                 "renderToFile": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "default": true
                 },
                 "parameterName": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "CRYPT4GH_PRIVATE_KEY"
                 }
               }
             },
@@ -1804,22 +2054,28 @@
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "description": "Inject GHGA's shared external-facing Crypt4GH private key (same fields as crypt4ghInternalPub above)"
+                  "description": "Inject GHGA's shared external-facing Crypt4GH private key (same fields as crypt4ghInternalPub above)",
+                  "default": false
                 },
                 "secretPath": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "operational-secrets/data/shared/managed-keys/crypt4gh-external"
                 },
                 "mountPath": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "/keys/crypt4gh-external/crypt4gh.sec"
                 },
                 "dataKey": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "crypt4gh.sec"
                 },
                 "renderToFile": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "default": true
                 },
                 "parameterName": {
-                  "type": "string"
+                  "type": "string",
+                  "default": "CRYPT4GH_PRIVATE_KEY"
                 }
               }
             }

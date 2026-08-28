@@ -204,6 +204,12 @@ def _schema_for(value, docs: dict[str, str], prefix: str = "") -> dict:
     additionalProperties stays true on every object and arrays get no `items`
     constraint, so a real per-member override can never fail `helm lint`/`helm
     template` schema validation just because this generator didn't know about it.
+
+    Every leaf (scalar, empty map/list, or null) carries its actual value as the
+    standard JSON Schema `default` keyword - not just documentation, it's also what
+    chart_readme_text()'s parameters table reads for the Value column, and what
+    editor tooling (the YAML/Helm extensions that understand values.schema.json)
+    shows as a placeholder.
     """
     schema: dict = {}
     node_type = _json_type(value)
@@ -212,13 +218,16 @@ def _schema_for(value, docs: dict[str, str], prefix: str = "") -> dict:
     description = docs.get(prefix)
     if description:
         schema["description"] = description
-    if node_type == "object":
+    if node_type == "object" and value:
         schema["additionalProperties"] = True
-        if value:
-            schema["properties"] = {
-                key: _schema_for(item, docs, f"{prefix}.{key}" if prefix else key)
-                for key, item in value.items()
-            }
+        schema["properties"] = {
+            key: _schema_for(item, docs, f"{prefix}.{key}" if prefix else key)
+            for key, item in value.items()
+        }
+    else:
+        if node_type == "object":
+            schema["additionalProperties"] = True
+        schema["default"] = value
     return schema
 
 
@@ -430,8 +439,48 @@ def mono_overlay_text(registry: str) -> str:
     return buffer.getvalue()
 
 
+def _parameter_rows(schema: dict, prefix: str = "") -> list[tuple[str, str, object]]:
+    """Flatten a values.schema.json into (dotted.name, description, default) rows.
+
+    Mirrors _schema_for()'s own recursion rule: a node with `properties` is a
+    container (recurse into its children), anything else is a leaf row - which is
+    exactly the set of nodes _schema_for() gave a `default` to.
+    """
+    properties = schema.get("properties")
+    if properties:
+        rows = []
+        for key, prop in properties.items():
+            path = f"{prefix}.{key}" if prefix else key
+            rows.extend(_parameter_rows(prop, path))
+        return rows
+    if not prefix:
+        return []
+    description = " ".join(schema.get("description", "").split()).replace("|", "\\|")
+    return [(prefix, description, schema.get("default"))]
+
+
+def parameters_table_text(schema: dict) -> str:
+    """A Bitnami-style '| Name | Description | Value |' Markdown table from a schema."""
+    rows = _parameter_rows(schema)
+    lines = ["| Name | Description | Value |", "|------|-------------|-------|"]
+    lines += [
+        f"| `{name}` | {desc} | `{json.dumps(default)}` |"
+        for name, desc, default in rows
+    ]
+    return "\n".join(lines)
+
+
+# Docker Hub rejects (or silently truncates - not worth relying on which) a
+# full_description over this many characters. Leave real headroom below it: a chart
+# whose table lands just under 25000 today grows past it the next time a field gains
+# a longer description, and by then this margin is the only thing standing between
+# "still fits" and "silently different from what's committed".
+README_LENGTH_LIMIT = 25000
+README_SAFE_LENGTH = 22000
+
+
 def chart_readme_text(
-    name: str, description: str, path: str, chart_registry: str
+    name: str, description: str, path: str, chart_registry: str, schema: dict
 ) -> str:
     """Chart root README.md — `helm package` bundles it into the .tgz (Helm convention;
     also what Artifact Hub reads as the chart's Overview, were this repo ever listed
@@ -442,7 +491,7 @@ def chart_readme_text(
     it and Helm just installs the latest published version, which is what's true at
     the time anyone actually reads this.
     """
-    return f"""\
+    header = f"""\
 # {name}
 
 {description}
@@ -457,7 +506,29 @@ helm install {name} oci://{chart_registry}/{name}-chart
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/{path}). See
 [values.yaml](values.yaml) for the full set of configurable values.
+
+## Parameters
+
 """
+    table = parameters_table_text(schema)
+    if len(header) + len(table) <= README_LENGTH_LIMIT:
+        return header + table + "\n"
+
+    budget = README_SAFE_LENGTH - len(header)
+    kept: list[str] = []
+    used = 0
+    for line in table.split("\n"):
+        used += len(line) + 1
+        if used > budget:
+            break
+        kept.append(line)
+    note = (
+        "\n\n> **Note**: this chart has more parameters than fit under Docker Hub's"
+        f" {README_LENGTH_LIMIT}-character overview limit, so the table above has been"
+        " trimmed. See [values.schema.json](values.schema.json) in this chart for"
+        " every parameter."
+    )
+    return header + "\n".join(kept) + note + "\n"
 
 
 def main() -> None:
@@ -511,6 +582,7 @@ def main() -> None:
                 description=description,
                 path=member["path"],
                 chart_registry=args.chart_registry,
+                schema=schema,
             )
         )
         print(f"Created chart for {member['package']} at {chart_dir}")
