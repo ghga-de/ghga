@@ -24,7 +24,7 @@ Hotfix branches can be made against `main` directly, then merged into `dev`.
 Feature branches are created from `dev`, but the exact structure for feature branches is deliberately left less defined in order to allow developers the freedom to use the strategy most compatible with the work and/or their preferences, especially since it is important to experiment while we are still getting accustomed to the monorepo as a team.
 
 ## Decision
-We will adopt a Git Flow variant with two long-lived branches:
+We decided for a Git Flow variant with two long-lived branches and neglected trunk-based-only and merge queues, to achieve a monorepo with transparent state and separation of concerns (releases vs work), as well as the ability to CD to staging, accepting that we have to keep `dev` and `main` in sync.
 
 - **`main` reflects the latest release.** Its HEAD is always a released state, and every release tag sits on it.
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
