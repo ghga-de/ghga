@@ -5,14 +5,19 @@
 - **Deciders:** Byron Himes
 
 ## Context
-The monorepo has released off a single `main` branch, with releases cut as tags ([ADR-0004](0004-versioning-and-release-by-tag.md)).
-That means the state of `main` is always in flux.
-Since changes are constantly being merged, `main` is more often broken than not, except for the narrow window around a release.
-This approach was fine with our polyrepo setup because the churn for a given repo was comparatively low and thus manageable.
-With this new monorepo setup, however, the entire team's work is concentrated on the same repo, so `main` gets updated multiple times per day.
-The question of  "what is in production?" is only answerable by finding the newest tag and comparing commit ranges or PRs included in the release.
-That's *doable* for a single microservice repo (not ideal), but becomes an actual headache in a monorepo.
-A favorable branching strategy would involve creating a `dev` branch to contain all unreleased work.
+In our previous polyrepo setup, branching was simple: single feature branches were created and merged directly into main.
+This worked because, usually, there was only one dev touching a given repo at any given moment and the maximum scope of the work was limited by the repository.
+There was no possibility of cross-cutting updates or sweeping changes from giant features (except in the File Services Monorepo, but that was a unique case).
+When we weren't sure about which changes had been released or not, we had to look at when the last release had occurred vs when the changes in question had been merged.
+That was doable, if not ideal, because of the small repository size and relatively low rate of change.
+Now that we've moved to a singular monorepo, the dynamic has shifted and none of that holds anymore.
+We're trying to settle on a branching strategy that balances concerns of procedural facility (shouldn't require a complicated SOP), situational clarity (what's deployed, and what changes have been merged since then?), and good change management.
+Since we made the switch to the monorepo a few weeks ago, we've continued to use the old strategy where all the feature branches stemmed from and merged directly back into a single `main` branch.
+The result is that the state of `main` is always in flux, because developers are no longer split among isolated repositories but rather touching the same repo.
+Churn is especially high right now because we're A) making adjustments to the repository tooling and B) multiple big features are in progress with more to come.
+The question of "what is in production?" is never clear because the latest release state gets quickly obscured by new updates in preparation for the _next_ release.
+A more favorable branching strategy would address these concerns by clearly isolating work-in-progress from the latest release state.
+We can do that by creating a `dev` branch to contain all unreleased work.
 When the time comes to release the latest version of the monorepo, `dev` gets merged into `main`.
 Subsequent changes continue to be merged into `dev` from feature branches.
 Hotfix branches can be made against `main` directly, then merged into `dev`.
