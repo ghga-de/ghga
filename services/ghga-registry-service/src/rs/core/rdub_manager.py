@@ -1193,7 +1193,7 @@ class RDUBManager(RDUBManagerPort):
             f.id
             for f in files
             if f.state != "cancelled"
-            and not (f.state == "failed" and f.decrypted_sha256 is None)
+            and (f.state != "failed" or f.decrypted_sha256 is not None)
         }
 
         if invalid_ids := (requested_file_ids - file_ids_in_box):
