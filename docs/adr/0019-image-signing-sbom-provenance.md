@@ -64,16 +64,24 @@ verify against, not the policy.
   workflow's OIDC claims, so a verifier matches on those claims rather than on a tag:
   - Issuer (both workflows): `https://token.actions.githubusercontent.com`
   - Subject: the run's `job_workflow_ref` claim, i.e. this repo's URL plus the publishing
-    workflow's path and the ref it ran on (`…@refs/heads/main` for merges to `main`).
-    A manual dispatch run's claim reflects the branch the dispatch UI ran against, not any
-    `ref` **input** used for lane routing; once
-    [ADR-0004](0004-versioning-and-release-by-tag.md)'s tag trigger is restored, a
-    tag-triggered run's ref becomes `refs/tags/<tag>` and the matching pattern has to widen
-    accordingly.
+    workflow's path and the ref the dispatch UI actually ran against — not any `ref`
+    **input** used for lane routing.
+    - `release.yaml`: **confirmed empirically** (2026-08-27) against a real published image
+      (`docker.io/ghga/auth-service@sha256:97af0c7a90caa4a876c07a3b5c6dbb919dbf4827fbf53146d1cc018b43b818bb`,
+      release candidate `ghga/15.3.1-rc.3`; reproduce with `verify-image.sh` at the repo
+      root) — the claim is `…/release.yaml@refs/tags/<tag>`
+      (e.g. `…/release.yaml@refs/tags/ghga/15.3.1-rc.3`). This repo's dispatch runs point
+      the "Use workflow from" picker at the release tag itself, per
+      [ADR-0004](0004-versioning-and-release-by-tag.md), so the claim reflects the tag, not
+      `main`. An earlier draft of this ADR guessed `@refs/heads/main` for this workflow;
+      that guess was wrong and is corrected here.
+    - `dev-images.yaml`: `…/dev-images.yaml@refs/heads/main` — this workflow only ever runs
+      on push to `main`, so the ref is unambiguous, but this has **not yet** been
+      independently confirmed against a real dev image the way the release lane has.
 
-  **The exact subject strings are the shape GitHub's documented OIDC claims imply, not yet
-  empirically confirmed against a real signed image** — read them off a real run
-  (`cosign verify … --output json`) before any consumer pins a policy to them.
+  Read the exact subject off a real run (`cosign verify … --output json`, or
+  `verify-image.sh` with `INSPECT=1`) before any consumer pins a policy to the
+  `dev-images.yaml` shape, which remains a prediction.
 - **SLSA rigor:** buildx-native provenance only, for now — not the
   `slsa-framework/slsa-github-generator` reusable workflow. See Alternatives.
 - **Kyverno enforcement stays out of this repo** — no policy, not even an example one.
@@ -149,8 +157,9 @@ verify against, not the policy.
   breaks verifiability would surface only at a consuming cluster's admission controller.
   Both publish workflows call one shared attestation script rather than each carrying its
   own copy, which at least keeps that path single-sourced. Closing the gap properly means
-  a consumer-side check; see "Verification identity" for the piece that cannot be confirmed
-  outside a real CI run at all.
+  a consumer-side check; see "Verification identity" — confirmed for the release lane
+  against a real published image, but the `dev-images.yaml` lane still cannot be confirmed
+  outside a real CI run for that workflow.
 - SLSA rigor is intentionally capped below what `slsa-framework/slsa-github-generator`
   would provide (an isolated, non-forgeable builder identity vs. this repo's own workflow
   self-attesting its own build). A deliberate, revisitable choice, not an oversight.
