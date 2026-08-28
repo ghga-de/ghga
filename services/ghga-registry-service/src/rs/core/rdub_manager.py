@@ -1189,10 +1189,6 @@ class RDUBManager(RDUBManagerPort):
         requested_file_ids = set(accession_map.values())
 
         # Make sure all specified file IDs are active uploads in the box.
-        # Cancelled files are excluded, as are files that never made it to the inbox
-        #  (a failed upload leaves `decrypted_sha256` unset). Files that made it to the
-        #  inbox but failed interrogation are kept, since they are expected to be
-        #  resolved rather than forgotten.
         file_ids_in_box = {
             f.id
             for f in files
