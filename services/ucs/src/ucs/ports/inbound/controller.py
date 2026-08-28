@@ -37,7 +37,8 @@ class UploadControllerPort(ABC):
     class IncompleteOrFailedError(UploadError):
         """Raised when trying to lock or archive a FileUploadBox for which
         at least one FileUpload exists which either failed the interrogation
-        step or is still being uploaded to the inbox.
+        step or is still being uploaded to the inbox. Using the `force` boolean
+        will override this error.
         """
 
         def __init__(
