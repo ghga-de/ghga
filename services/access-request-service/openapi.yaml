@@ -320,7 +320,7 @@ components:
       scheme: bearer
       type: http
 info:
-  description: A service managing access requests for the GHGA Data Portal
+  description: A service for managing requests for access to GHGA datasets
   title: Access Request Service
   version: 8.0.2
 openapi: 3.1.0

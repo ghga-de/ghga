@@ -1,5 +1,5 @@
 name: wps
-description: Work Package Service
+description: Work Package Service - a service for authorizing downloads of dataset files and uploads of research data.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

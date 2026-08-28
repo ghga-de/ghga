@@ -34,6 +34,7 @@ The following subcommands can be executed using `auth-km-jobs <command name>`:
 - `refresh-ext-keys`: Refetch the external auth (OIDC) public key set and store it in the vault
 - `refresh-all-keys`: Refresh all internal and external token signing keys in the vault
 - `generate-test-keys`: Generate and print cryptographic values for testing purposes
+- `re-encrypt-totp-tokens`: Re-encrypt all user TOTP tokens with a newly generated key
 
 ## Environment variables
 

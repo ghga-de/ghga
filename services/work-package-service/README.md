@@ -3,13 +3,30 @@
 
 # Work Package Service
 
-Work Package Service
+Work Package Service - a service for authorizing downloads of dataset files and uploads of research data.
 
 ## Description
 
-The work package service allows creating work packages for downloading or
-uploading dataset files and provides an authorization mechanism for these tasks
-by issuing access and work order tokens.
+Before a user can download the files of a dataset or upload research data, the
+client - the GHGA Data Portal or the GHGA Connector - creates a *work package*
+describing the intended piece of work. This service stores these work packages and
+acts as the authorization broker for them: it checks what the user is allowed to
+do and issues the short-lived tokens that the file services accept as proof.
+
+Creating a work package returns a work package access token that is encrypted with
+the user's public Crypt4GH key, so that only that user can make use of it. All
+subsequent calls concerning the work package are authenticated with this token
+instead of the user's regular credentials. With it, the client can request a work
+order token for one single operation at a time: downloading one file of the
+dataset, or viewing, creating, uploading, closing or deleting one file in an upload
+box. Work order tokens are signed by this service, encrypted for the user in the
+same way as the access token, and verified by the file service that carries out
+the operation.
+
+Which datasets a user may download and which upload boxes a user may write to is
+determined by querying the download and upload access API. The service keeps its
+own view of the datasets, upload boxes and file accessions themselves by consuming
+the corresponding events.
 
 ### API endpoints:
 
@@ -19,29 +36,47 @@ Creates a work package.
 
 - auth header: internal access token
 - request body:
-  - `dataset_id`: string (the ID of a dataset)
   - `type`: enum (download/upload)
-  - `file_ids`: array of strings  (null = all files of the dataset)
+  - `dataset_id`: string (the ID of a dataset, for download work packages)
+  - `research_data_upload_box_id`: string (the ID of an upload box, for upload work packages)
+  - `file_ids`: array of strings (null = all files of the dataset)
   - `user_public_crypt4gh_key`: string (the user's public Crypt4GH key)
 - response body:
   - `id`: string (the ID of the created work package)
-  - `token`: string (encrypted work and base64 encoded package access token)
+  - `token`: string (the encrypted and base64 encoded work package access token)
+  - `expires`: string (the expiration date of the access token)
 
-####  `GET /work-packages/{work_package_id}`
+#### `GET /work-packages/{work_package_id}`
 
 Gets details on the specified work package.
 
 - auth header: work package access token
 
-#### `POST /work-packages/{work_package_id}/files/{file_id}/work-order-tokens`
+#### `POST /work-packages/{work_package_id}/files/{accession}/work-order-tokens`
 
- Creates an encrypted work order token for the specified work package and file.
+Creates an encrypted work order token for downloading the specified file.
 
 - auth header: work package access token
 
+#### `POST /work-packages/{work_package_id}/boxes/{box_id}/work-order-tokens`
+
+Creates an encrypted work order token for the specified upload box.
+
+- auth header: work package access token
+- request body:
+  - `work_type`: enum (view/create/upload/close/delete)
+  - `alias`: string (the file alias, required for `create`)
+  - `file_id`: string (the file ID, required for `upload`, `close` and `delete`)
+
 #### `GET /users/{user_id}/datasets`
 
-Gets a list of all dataset IDs that can be downloaded by the user.
+Gets a list of all datasets that can be downloaded by the user.
+
+- auth header: internal access token with the user context
+
+#### `GET /users/{user_id}/boxes`
+
+Gets a list of all upload boxes that the user can upload to.
 
 - auth header: internal access token with the user context
 
