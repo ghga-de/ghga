@@ -262,36 +262,6 @@ def mono_overlay_text(registry: str) -> str:
     return buffer.getvalue()
 
 
-def chart_readme_text(
-    name: str, description: str, path: str, chart_registry: str
-) -> str:
-    """Chart root README.md — `helm package` bundles it into the .tgz (Helm convention;
-    also what Artifact Hub reads as the chart's Overview, were this repo ever listed
-    there), and release.yaml's Docker Hub overview PATCH reuses the same file.
-
-    No `--version` pin in the install snippet: this file is regenerated at every
-    release, so a pinned version here would need updating on every single one - omit
-    it and Helm just installs the latest published version, which is what's true at
-    the time anyone actually reads this.
-    """
-    return f"""\
-# {name}
-
-{description}
-
-## Installing
-
-```
-helm install {name} oci://{chart_registry}/{name}-chart
-```
-
-## Source
-
-Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/{path}). See
-[values.yaml](values.yaml) for the full set of configurable values.
-"""
-
-
 def main() -> None:
     """Regenerate all charts from workspace members."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -307,14 +277,6 @@ def main() -> None:
         default="docker.io/ghga",
         help="image registry root; the package name is appended per member",
     )
-    parser.add_argument(
-        "--chart-registry",
-        default="registry-1.docker.io/ghga",
-        help=(
-            "OCI registry root charts are published under (release.yaml's"
-            " CHART_REGISTRY); used only for each chart README's install snippet"
-        ),
-    )
     args = parser.parse_args()
 
     # resolved before the first stamp_chart(), which rmtree()s the chart directories
@@ -322,21 +284,12 @@ def main() -> None:
 
     defaults = library_defaults()
     for member in image_members():
-        description = member["description"] or member["package"]
         chart_dir = stamp_chart(
             name=member["package"],
-            description=description,
+            description=member["description"] or member["package"],
             version=version,
             app_version=version,
             values_text=member_values_text(member, args.registry, defaults),
-        )
-        (chart_dir / "README.md").write_text(
-            chart_readme_text(
-                name=member["package"],
-                description=description,
-                path=member["path"],
-                chart_registry=args.chart_registry,
-            )
         )
         print(f"Created chart for {member['package']} at {chart_dir}")
 
