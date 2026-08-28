@@ -1,5 +1,5 @@
 name: auth-km-jobs
-description: GHGA Auth Key Management Jobs
+description: GHGA Auth Key Management Jobs - manages JWT signing keys used by GHGA and re-encrypts all user TOTP tokens stored in the auth database; runs as a Kubernetes Job, either regularly or on demand.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

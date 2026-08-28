@@ -1,5 +1,5 @@
 name: ars
-description: Access Request Service
+description: Access Request Service - manages access requests and serves as a backend for the GHGA Data Portal.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes

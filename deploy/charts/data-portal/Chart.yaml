@@ -1,5 +1,5 @@
 name: data-portal
-description: data-portal
+description: GHGA Data Portal - the web front end for browsing metadata, submitting and uploading datasets, requesting access to, and downloading GHGA-hosted data.
 type: application
 
 # This is the chart version. This version number should be incremented each time you make changes
