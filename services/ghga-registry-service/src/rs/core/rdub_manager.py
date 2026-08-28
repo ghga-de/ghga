@@ -128,7 +128,7 @@ class RDUBManager(RDUBManagerPort):
         # Title uniqueness is checked upfront instead of relying on the unique index
         # to avoid chicken-egg problem with dependent FUB-RDUB creation
         if await self._box_dao.find_all(mapping={"title": title}).total_count():
-            log.error(
+            log.info(
                 "ResearchDataUploadBox creation failed because a box with the title %s"
                 + " already exists.",
                 title,
@@ -159,7 +159,7 @@ class RDUBManager(RDUBManagerPort):
         try:
             await self._box_dao.insert(box)
         except UniqueConstraintViolationError as err:
-            log.error(
+            log.info(
                 "ResearchDataUploadBox creation failed because a box with the title %s"
                 + " already exists. FileUploadBox was already created -"
                 + " will attempt cleanup.",
@@ -219,8 +219,7 @@ class RDUBManager(RDUBManagerPort):
 
         # Make sure the request is not based on outdated info
         if box.version != version:
-            # TODO: Consider if this and similar logs should be only INFO
-            log.error(
+            log.info(
                 "Can't update RDUB %s because the request is outdated.",
                 box_id,
                 extra={
@@ -398,7 +397,7 @@ class RDUBManager(RDUBManagerPort):
             error = self.BoxIncompleteOrFailedError(
                 incomplete_uploads=incomplete_uploads, need_attention=need_attention
             )
-            log.error(
+            log.info(
                 error,
                 extra={
                     "box_id": box_id,
@@ -420,7 +419,7 @@ class RDUBManager(RDUBManagerPort):
         unassigned_files = file_ids_in_box - mapped_file_ids
 
         if unassigned_files:
-            log.error(
+            log.info(
                 "Can't archive RDUB %s because not all files have been assigned an"
                 " accession.",
                 box_id,
@@ -487,7 +486,7 @@ class RDUBManager(RDUBManagerPort):
                 f"File Upload Box {box.file_upload_box_id} version is out of date."
             ) from version_err
         except FileBoxClientPort.FUBMaxSizeTooLowError as size_err:
-            log.error(
+            log.info(
                 "Can't resize FUB %s for RDUB %s because the new max_size is smaller"
                 + " than the bytes already uploaded.",
                 box.file_upload_box_id,
@@ -807,7 +806,7 @@ class RDUBManager(RDUBManagerPort):
         )
 
         if not has_access:
-            log.error(
+            log.info(
                 "User ID %s does not have access to ResearchDataUploadBox with"
                 + " ID %s OR it does not exist.",
                 user_id,
@@ -820,7 +819,7 @@ class RDUBManager(RDUBManagerPort):
             return await self._box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
-            log.error(error)
+            log.info(error)
             raise error from err
 
     async def get_research_data_upload_boxes(
@@ -955,7 +954,7 @@ class RDUBManager(RDUBManagerPort):
             error = self.BoxStateError(
                 operation="initiate FileUpload deletion", state="locked"
             )
-            log.error(error, extra=extra)
+            log.info(error, extra=extra)
             raise error
 
         try:
@@ -1021,13 +1020,13 @@ class RDUBManager(RDUBManagerPort):
             box = await self._box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
-            log.error(error)
+            log.info(error)
             raise error from err
 
         # Verify the RDUB version. The FUB version is checked separately by the owning
         #  service when the FUB is deleted.
         if box.version != version:
-            log.error(
+            log.info(
                 "Can't delete RDUB %s because the request is outdated.",
                 box_id,
                 extra={
@@ -1040,7 +1039,7 @@ class RDUBManager(RDUBManagerPort):
 
         # Make sure the RDUB isn't already 'archived'
         if box.state == "archived":
-            log.error("Can't delete RDUB %s because it is archived.", box_id)
+            log.info("Can't delete RDUB %s because it is archived.", box_id)
             raise self.BoxStateError(operation="delete the box", state="archived")
 
         # Get a list of the FileUploads tied to this box
@@ -1083,7 +1082,7 @@ class RDUBManager(RDUBManagerPort):
             await self._box_dao.delete(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
-            log.error(error)
+            log.info(error)
             raise error from err
         else:
             await self._audit_repository.log_box_deleted(box=box, user_id=user_id)
@@ -1133,12 +1132,12 @@ class RDUBManager(RDUBManagerPort):
             box = await self._box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
             error = self.BoxNotFoundError(box_id=box_id)
-            log.error(error)
+            log.info(error)
             raise error from err
 
         # Make sure requested box version is current
         if box_version != box.version:
-            log.error(
+            log.info(
                 "Accession Map update request specified version %i for RDUB %s, but"
                 + " the current version is %i.",
                 box_version,
@@ -1149,7 +1148,7 @@ class RDUBManager(RDUBManagerPort):
 
         # Don't allow changes to archived boxes
         if box.state == "archived":
-            log.error(
+            log.info(
                 "Cannot update accessions for RDUB %s because it is already archived.",
                 box_id,
                 extra={"box_id": box_id},
@@ -1166,7 +1165,7 @@ class RDUBManager(RDUBManagerPort):
             if count > 1
         ]
         if duplicate_file_ids:
-            log.error(
+            log.info(
                 "Duplicate file IDs in accession map for box %s.",
                 box_id,
                 extra={
@@ -1202,7 +1201,7 @@ class RDUBManager(RDUBManagerPort):
         }
 
         if invalid_ids := (requested_file_ids - file_ids_in_box):
-            log.error(
+            log.info(
                 "Accession map for box %s included unknown file IDs.",
                 box_id,
                 extra={
