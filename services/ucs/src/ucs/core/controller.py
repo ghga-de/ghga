@@ -859,9 +859,9 @@ class UploadController(UploadControllerPort):
 
         # Raise an error if the box is archived
         if box.state == "archived":
-            error = self.BoxStateError(box_id=box_id, box_state=box.state)
-            log.info(error)
-            raise error
+            box_state_error = self.BoxStateError(box_id=box_id, box_state=box.state)
+            log.info(box_state_error)
+            raise box_state_error
 
         # Lock the box so no new uploads can be initiated while sweeping
         if box.state == "open":
