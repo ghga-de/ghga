@@ -633,7 +633,221 @@
       "additionalProperties": true,
       "properties": {
         "host": {
+          "default": "127.0.0.1",
+          "description": "IP of the host.",
+          "title": "Host",
           "type": "string"
+        },
+        "log_level": {
+          "default": "INFO",
+          "description": "The minimum log level to capture.",
+          "enum": [
+            "CRITICAL",
+            "ERROR",
+            "WARNING",
+            "INFO",
+            "DEBUG",
+            "TRACE"
+          ],
+          "title": "Log Level",
+          "type": "string"
+        },
+        "service_name": {
+          "default": "top",
+          "description": "Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead.",
+          "title": "Service Name",
+          "type": "string"
+        },
+        "service_instance_id": {
+          "default": "default",
+          "description": "String that uniquely identifies this service instance in log messages",
+          "title": "Service Instance Id",
+          "type": "string"
+        },
+        "log_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details",
+          "examples": [
+            "%(timestamp)s - %(service)s - %(level)s - %(message)s",
+            "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+          ],
+          "title": "Log Format"
+        },
+        "log_traceback": {
+          "default": true,
+          "description": "Whether to include exception tracebacks in log messages.",
+          "title": "Log Traceback",
+          "type": "boolean"
+        },
+        "issuer": {
+          "default": "https://op.test/",
+          "description": "test issuer URL",
+          "format": "uri",
+          "minLength": 1,
+          "title": "Issuer",
+          "type": "string"
+        },
+        "user_domain": {
+          "default": "home.org",
+          "description": "domain name of the home organization of the test users",
+          "title": "User Domain",
+          "type": "string"
+        },
+        "client_id": {
+          "default": "test-client",
+          "description": "test client ID",
+          "title": "Client Id",
+          "type": "string"
+        },
+        "redirect_url": {
+          "default": "https://client.test/oauth/callback",
+          "description": "test redirect URL",
+          "format": "uri",
+          "minLength": 1,
+          "title": "Redirect Url",
+          "type": "string"
+        },
+        "valid_seconds": {
+          "default": 3600,
+          "description": "default expiration time of access tokens in seconds",
+          "exclusiveMinimum": 0,
+          "title": "Valid Seconds",
+          "type": "integer"
+        },
+        "port": {
+          "default": 8080,
+          "description": "Port to expose the server on the specified host",
+          "title": "Port",
+          "type": "integer"
+        },
+        "auto_reload": {
+          "default": false,
+          "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
+          "title": "Auto Reload",
+          "type": "boolean"
+        },
+        "workers": {
+          "default": 1,
+          "description": "Number of workers processes to run.",
+          "title": "Workers",
+          "type": "integer"
+        },
+        "api_root_path": {
+          "default": "",
+          "description": "Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead.",
+          "title": "Api Root Path",
+          "type": "string"
+        },
+        "openapi_url": {
+          "default": "/openapi.json",
+          "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
+          "title": "Openapi Url",
+          "type": "string"
+        },
+        "docs_url": {
+          "default": "/docs",
+          "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
+          "title": "Docs Url",
+          "type": "string"
+        },
+        "cors_allowed_origins": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.",
+          "examples": [
+            [
+              "https://example.org",
+              "https://www.example.org"
+            ]
+          ],
+          "title": "Cors Allowed Origins"
+        },
+        "cors_allow_credentials": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.",
+          "examples": [
+            [
+              "https://example.org",
+              "https://www.example.org"
+            ]
+          ],
+          "title": "Cors Allow Credentials"
+        },
+        "cors_allowed_methods": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.",
+          "examples": [
+            [
+              "*"
+            ]
+          ],
+          "title": "Cors Allowed Methods"
+        },
+        "cors_allowed_headers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests.",
+          "examples": [
+            []
+          ],
+          "title": "Cors Allowed Headers"
+        },
+        "generate_correlation_id": {
+          "default": true,
+          "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+          "examples": [
+            true,
+            false
+          ],
+          "title": "Generate Correlation Id",
+          "type": "boolean"
         }
       }
     },

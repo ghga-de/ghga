@@ -158,6 +158,28 @@ def library_docs() -> dict[str, str]:
         return _docs_from_schema(json.load(schema_file))
 
 
+def config_field_schemas(member: dict) -> tuple[dict, dict]:
+    """A member's (field schemas, $defs) from its config_schema.json, if it has one.
+
+    Not every member has one (tools/frontend members mostly don't). Where present,
+    these are frozen artifacts carried over from each service's pre-monorepo repo
+    (see .pre-commit-config.yaml's end-of-file-fixer exclusion for config_schema.json)
+    - nothing in this repo regenerates them, so treat this as a best-effort snapshot
+    of each field's type/description, not a live, guaranteed-current source.
+
+    $defs is pydantic's own local-ref target for nested models/enums (`$ref:
+    "#/$defs/X"`); a field schema copied without it is a dangling reference the
+    moment it's embedded in a different document, which is exactly what plugging
+    `properties` alone into this chart's own values.schema.json would produce.
+    """
+    schema_file = REPO_ROOT / member["path"] / "config_schema.json"
+    if not schema_file.is_file():
+        return {}, {}
+    with schema_file.open("r", encoding="utf-8") as f:
+        schema = json.load(f)
+    return schema.get("properties", {}), schema.get("$defs", {})
+
+
 def _json_type(value) -> str | None:
     """Map a Python value to its JSON Schema type keyword; None for null."""
     if isinstance(value, bool):
@@ -200,11 +222,58 @@ def _schema_for(value, docs: dict[str, str], prefix: str = "") -> dict:
     return schema
 
 
-def chart_values_schema(values: dict, docs: dict[str, str]) -> dict:
-    """A loose values.schema.json for one chart: documents and type-hints, never forbids."""
+# configmap.tpl always `omit`s these three from `.Values.config` and recomputes them
+# from a different top-level field instead (with its own prefix logic) - a value set
+# directly under config.<key> here is silently discarded, never reaching config.yaml.
+CONFIG_FIELDS_OVERRIDDEN_BY = {
+    "db_name": "mongodb.dbName",
+    "api_root_path": "apiBasePath",
+    "service_name": "serviceName",
+}
+
+
+def chart_values_schema(
+    values: dict,
+    docs: dict[str, str],
+    config_fields: dict | None = None,
+    config_defs: dict | None = None,
+) -> dict:
+    """A loose values.schema.json for one chart: documents and type-hints, never forbids.
+
+    config_fields/config_defs (from config_field_schemas()) overlay real per-field
+    type/description onto the `config` property specifically - everywhere else stays
+    generic, since only `config` has a per-service schema to draw on. config_defs is
+    hoisted to this document's own top-level $defs: pydantic's `$ref: "#/$defs/X"` is
+    a same-document pointer, so it only resolves if $defs lives at this schema's root,
+    not nested under `config`. No `required` is carried over from config_fields: many
+    fields the service's own Config marks required (e.g. mongo_dsn) are legitimately
+    blank in a chart's values.yaml because they're actually supplied via a Vault-injected
+    env var at runtime, not through config.yaml at all.
+    """
+    schema = _schema_for(values, docs)
+    if config_fields:
+        config_schema = schema.get("properties", {}).get("config")
+        if config_schema is not None:
+            properties = {**config_schema.get("properties", {}), **config_fields}
+            for field, real_source in CONFIG_FIELDS_OVERRIDDEN_BY.items():
+                prop = properties.get(field)
+                if prop is None:
+                    continue
+                note = (
+                    f"NOTE: this chart's configmap.tpl always overwrites config.{field}"
+                    f" with the value computed from `{real_source}` - a value set"
+                    f" directly under config.{field} is silently discarded. Set"
+                    f" `{real_source}` instead."
+                )
+                existing = prop.get("description", "").strip()
+                if existing and not existing.endswith((".", "!", "?")):
+                    existing += "."
+                prop["description"] = f"{existing} {note}".strip()
+            config_schema["properties"] = properties
     return {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        **_schema_for(values, docs),
+        **({"$defs": config_defs} if config_defs else {}),
+        **schema,
     }
 
 
@@ -431,7 +500,8 @@ def main() -> None:
             app_version=version,
             values_text=member_values_text(values, source),
         )
-        schema = chart_values_schema(values, docs)
+        config_fields, config_defs = config_field_schemas(member)
+        schema = chart_values_schema(values, docs, config_fields, config_defs)
         (chart_dir / "values.schema.json").write_text(
             json.dumps(schema, indent=2) + "\n"
         )

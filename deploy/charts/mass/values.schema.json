@@ -1,5 +1,61 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$defs": {
+    "FieldLabel": {
+      "description": "Contains the field name and corresponding user-friendly name",
+      "properties": {
+        "key": {
+          "description": "The raw field name, such as study.type",
+          "title": "Key",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "description": "A user-friendly name for the field (leave empty to use the key)",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "title": "FieldLabel",
+      "type": "object"
+    },
+    "SearchableClass": {
+      "description": "Represents a searchable artifact or resource type",
+      "properties": {
+        "description": {
+          "description": "A brief description of the resource type",
+          "title": "Description",
+          "type": "string"
+        },
+        "facetable_fields": {
+          "default": [],
+          "description": "A list of the facetable fields for the resource type (leave empty to not use faceting, use dotted notation for nested fields)",
+          "items": {
+            "$ref": "#/$defs/FieldLabel"
+          },
+          "title": "Facetable Fields",
+          "type": "array"
+        },
+        "selected_fields": {
+          "default": [],
+          "description": "A list of the returned fields for the resource type (leave empty to return all, use dotted notation for nested fields)",
+          "items": {
+            "$ref": "#/$defs/FieldLabel"
+          },
+          "title": "Selected Fields",
+          "type": "array"
+        }
+      },
+      "required": [
+        "description"
+      ],
+      "title": "SearchableClass",
+      "type": "object"
+    }
+  },
   "type": "object",
   "additionalProperties": true,
   "properties": {
@@ -716,36 +772,421 @@
       "description": "The service's own configuration payload (merged with the computed kafka/api/db/service-name values below into the rendered config.yaml)",
       "additionalProperties": true,
       "properties": {
-        "mongo_dsn": {},
+        "mongo_dsn": {
+          "description": "MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/",
+          "examples": [
+            "mongodb://localhost:27017"
+          ],
+          "format": "multi-host-uri",
+          "minLength": 1,
+          "title": "Mongo Dsn",
+          "type": "string"
+        },
         "db_name": {
+          "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
+          "examples": [
+            "my-database"
+          ],
+          "title": "Db Name",
           "type": "string"
         },
         "host": {
+          "default": "127.0.0.1",
+          "description": "IP of the host.",
+          "title": "Host",
           "type": "string"
         },
         "searchable_classes": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "EmbeddedDataset": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "description": {
-                  "type": "string"
-                },
-                "facetable_fields": {
-                  "type": "array"
-                },
-                "selected_fields": {
-                  "type": "array"
-                }
-              }
-            }
-          }
+          "additionalProperties": {
+            "$ref": "#/$defs/SearchableClass"
+          },
+          "description": "A collection of searchable_classes with facetable and selected fields",
+          "title": "Searchable Classes",
+          "type": "object"
         },
         "kafka_enable_dlq": {
+          "default": false,
+          "description": "A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries",
+          "examples": [
+            true,
+            false
+          ],
+          "title": "Kafka Enable DLQ",
           "type": "boolean"
+        },
+        "log_level": {
+          "default": "INFO",
+          "description": "The minimum log level to capture.",
+          "enum": [
+            "CRITICAL",
+            "ERROR",
+            "WARNING",
+            "INFO",
+            "DEBUG",
+            "TRACE"
+          ],
+          "title": "Log Level",
+          "type": "string"
+        },
+        "service_name": {
+          "default": "mass",
+          "title": "Service Name",
+          "type": "string",
+          "description": "NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead."
+        },
+        "service_instance_id": {
+          "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
+          "examples": [
+            "germany-bw-instance-001"
+          ],
+          "title": "Service Instance Id",
+          "type": "string"
+        },
+        "log_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details",
+          "examples": [
+            "%(timestamp)s - %(service)s - %(level)s - %(message)s",
+            "%(asctime)s - Severity: %(levelno)s - %(msg)s"
+          ],
+          "title": "Log Format"
+        },
+        "log_traceback": {
+          "default": true,
+          "description": "Whether to include exception tracebacks in log messages.",
+          "title": "Log Traceback",
+          "type": "boolean"
+        },
+        "resource_change_topic": {
+          "description": "Name of the topic used for events informing other services about resource changes, i.e. deletion or insertion.",
+          "examples": [
+            "searchable_resources"
+          ],
+          "title": "Resource Change Topic",
+          "type": "string"
+        },
+        "resource_deletion_type": {
+          "description": "Type used for events indicating the deletion of a previously existing resource.",
+          "examples": [
+            "searchable_resource_deleted"
+          ],
+          "title": "Resource Deletion Type",
+          "type": "string"
+        },
+        "resource_upsertion_type": {
+          "description": "Type used for events indicating the upsert of a resource.",
+          "examples": [
+            "searchable_resource_upserted"
+          ],
+          "title": "Resource Upsertion Type",
+          "type": "string"
+        },
+        "kafka_servers": {
+          "description": "A list of connection strings to connect to Kafka bootstrap servers.",
+          "examples": [
+            [
+              "localhost:9092"
+            ]
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Kafka Servers",
+          "type": "array"
+        },
+        "kafka_security_protocol": {
+          "default": "PLAINTEXT",
+          "description": "Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL.",
+          "enum": [
+            "PLAINTEXT",
+            "SSL"
+          ],
+          "title": "Kafka Security Protocol",
+          "type": "string"
+        },
+        "kafka_ssl_cafile": {
+          "default": "",
+          "description": "Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL.",
+          "title": "Kafka Ssl Cafile",
+          "type": "string"
+        },
+        "kafka_ssl_certfile": {
+          "default": "",
+          "description": "Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity.",
+          "title": "Kafka Ssl Certfile",
+          "type": "string"
+        },
+        "kafka_ssl_keyfile": {
+          "default": "",
+          "description": "Optional filename containing the client private key.",
+          "title": "Kafka Ssl Keyfile",
+          "type": "string"
+        },
+        "kafka_ssl_password": {
+          "default": "",
+          "description": "Optional password to be used for the client private key.",
+          "format": "password",
+          "title": "Kafka Ssl Password",
+          "type": "string",
+          "writeOnly": true
+        },
+        "generate_correlation_id": {
+          "default": true,
+          "description": "A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function.",
+          "examples": [
+            true,
+            false
+          ],
+          "title": "Generate Correlation Id",
+          "type": "boolean"
+        },
+        "kafka_max_message_size": {
+          "default": 1048576,
+          "description": "The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size.",
+          "examples": [
+            1048576,
+            16777216
+          ],
+          "exclusiveMinimum": 0,
+          "title": "Kafka Max Message Size",
+          "type": "integer"
+        },
+        "kafka_compression_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "gzip",
+                "snappy",
+                "lz4",
+                "zstd"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio.",
+          "examples": [
+            null,
+            "gzip",
+            "snappy",
+            "lz4",
+            "zstd"
+          ],
+          "title": "Kafka Compression Type"
+        },
+        "kafka_max_retries": {
+          "default": 0,
+          "description": "The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue.",
+          "examples": [
+            0,
+            1,
+            2,
+            3,
+            5
+          ],
+          "minimum": 0,
+          "title": "Kafka Max Retries",
+          "type": "integer"
+        },
+        "kafka_dlq_topic": {
+          "default": "dlq",
+          "description": "The name of the topic used to resolve error-causing events.",
+          "examples": [
+            "dlq"
+          ],
+          "title": "Kafka DLQ Topic",
+          "type": "string"
+        },
+        "kafka_retry_backoff": {
+          "default": 0,
+          "description": "The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt.",
+          "examples": [
+            0,
+            1,
+            2,
+            3,
+            5
+          ],
+          "minimum": 0,
+          "title": "Kafka Retry Backoff",
+          "type": "integer"
+        },
+        "mongo_timeout": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior).",
+          "examples": [
+            300,
+            600,
+            null
+          ],
+          "title": "Mongo Timeout"
+        },
+        "port": {
+          "default": 8080,
+          "description": "Port to expose the server on the specified host",
+          "title": "Port",
+          "type": "integer"
+        },
+        "auto_reload": {
+          "default": false,
+          "description": "A development feature. Set to `True` to automatically reload the server upon code changes",
+          "title": "Auto Reload",
+          "type": "boolean"
+        },
+        "workers": {
+          "default": 1,
+          "description": "Number of workers processes to run.",
+          "title": "Workers",
+          "type": "integer"
+        },
+        "timeout_keep_alive": {
+          "default": 90,
+          "description": "The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures.",
+          "examples": [
+            5,
+            90,
+            5400
+          ],
+          "title": "Timeout Keep Alive",
+          "type": "integer"
+        },
+        "api_root_path": {
+          "default": "",
+          "description": "Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead.",
+          "title": "Api Root Path",
+          "type": "string"
+        },
+        "openapi_url": {
+          "default": "/openapi.json",
+          "description": "Path to get the openapi specification in JSON format. This is relative to the specified host and port.",
+          "title": "Openapi Url",
+          "type": "string"
+        },
+        "docs_url": {
+          "default": "/docs",
+          "description": "Path to host the swagger documentation. This is relative to the specified host and port.",
+          "title": "Docs Url",
+          "type": "string"
+        },
+        "cors_allowed_origins": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin.",
+          "examples": [
+            [
+              "https://example.org",
+              "https://www.example.org"
+            ]
+          ],
+          "title": "Cors Allowed Origins"
+        },
+        "cors_allow_credentials": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified.",
+          "examples": [
+            [
+              "https://example.org",
+              "https://www.example.org"
+            ]
+          ],
+          "title": "Cors Allow Credentials"
+        },
+        "cors_allowed_methods": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods.",
+          "examples": [
+            [
+              "*"
+            ]
+          ],
+          "title": "Cors Allowed Methods"
+        },
+        "cors_allowed_headers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests.",
+          "examples": [
+            []
+          ],
+          "title": "Cors Allowed Headers"
+        },
+        "cors_exposed_headers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses.",
+          "examples": [
+            []
+          ],
+          "title": "Cors Exposed Headers"
         }
       }
     },
