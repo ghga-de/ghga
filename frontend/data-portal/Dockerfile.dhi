@@ -21,6 +21,7 @@ FROM --platform=$BUILDPLATFORM ${BASE}-sfw-ent-dev AS builder
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 # install pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
+# hadolint ignore=DL3018
 RUN apk add --no-cache jq
 # build the service
 WORKDIR /service
