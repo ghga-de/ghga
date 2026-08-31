@@ -386,8 +386,6 @@ async def test_bucket_not_found_raises_bucket_not_found_error(
         kwargs = {"file_upload_basics": _to_basics(file_upload)}
     elif method_name == "get_part_upload_url":
         kwargs["part_no"] = 1
-    elif method_name == "get_object_metadata":
-        kwargs["object_id"] = file_upload.object_id
     elif method_name == "abort_multipart_upload":
         kwargs = {
             "storage_alias": file_upload.storage_alias,
@@ -465,8 +463,7 @@ async def test_generic_storage_error_raises_s3_operation_error(
         }
     elif method_name == "list_all_multipart_uploads":
         kwargs = {"storage_alias": file_upload.storage_alias}
-    if extra_kwargs.pop("_object_id", False):
-        kwargs["object_id"] = file_upload.object_id
+    _ = extra_kwargs.pop("_object_id", False)
     kwargs.update(extra_kwargs)
 
     # Call the method and verify that it was translated as the generic S3OperationError
